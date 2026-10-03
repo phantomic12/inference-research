@@ -254,6 +254,10 @@
 
 _empty — see `python tools/query.py gaps`_
 
+## Models (0)
+
+_empty — see `python tools/query.py gaps`_
+
 ## Sources (221)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
@@ -531,3 +535,4 @@ Total records: **448**
 ## Gaps
 
 - [ ] Where to buy / source hardware — `data/supply/` is empty
+- [ ] Models — `data/models/` is empty

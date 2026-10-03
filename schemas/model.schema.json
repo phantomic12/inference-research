@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "model",
+  "title": "model",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "name",
+    "architecture",
+    "params_b",
+    "status",
+    "confidence",
+    "updated",
+    "sources"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "type": {
+      "const": "model"
+    },
+    "name": {
+      "type": "string"
+    },
+    "family": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "release family, e.g. llama, qwen, gpt, claude, deepseek, qwen3"
+    },
+    "vendor": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "release_year": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "architecture": {
+      "enum": [
+        "dense",
+        "moe",
+        "hybrid-mamba",
+        "hybrid-attention-ssm",
+        "ssm",
+        "recurrent",
+        "diffusion",
+        "other"
+      ]
+    },
+    "params_b": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "total parameter count in billions"
+    },
+    "active_params_b": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "active/activated params per token; equals params_b for dense"
+    },
+    "num_experts": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "experts_per_token": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "shared_expert": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "always-on shared expert (DeepSeek-style) adds to per-token active params"
+    },
+    "hidden_size": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "num_layers": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "num_kv_heads": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "head_dim": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "gqa_ratio": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "num_attention_heads / num_kv_heads"
+    },
+    "max_position_embeddings": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "context_scaling": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "YaRN, NTK-aware, LongRoPE, mrope, etc; null when native"
+    },
+    "activation": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "silu, gelu, swiglu, geglu, etc"
+    },
+    "attention_variant": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "standard, MLA (multi-head latent attention), GQA, MQA, sliding-window/hybrid, NSA, lightning attention"
+    },
+    "kv_cache_bytes_per_token": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "the single most decision-relevant number for serving; derive in notes"
+    },
+    "flops_per_token_active": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "approx 2 * active_params_b * 1e9; the per-token compute cost"
+    },
+    "open_weights": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "license": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "verified",
+        "draft",
+        "contested",
+        "deprecated"
+      ]
+    },
+    "confidence": {
+      "type": "number"
+    },
+    "updated": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "source ids; each must exist in data/sources/"
+    }
+  },
+  "additionalProperties": false
+}

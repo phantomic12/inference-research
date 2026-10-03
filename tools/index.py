@@ -69,6 +69,21 @@ def card(r: dict) -> str:
         tail = [x for x in tail if x]
         if r.get("price_basis"):
             tail.append(str(r["price_basis"])[:80])
+    elif t == "model":
+        arch = r.get("architecture") or "?"
+        tot, act = r.get("params_b"), r.get("active_params_b")
+        head = f"{arch}"
+        if arch == "moe" and tot and act:
+            head += f" {act:g}/{tot:g}B active"
+        elif tot:
+            head += f" {tot:g}B"
+        tail = []
+        if r.get("kv_cache_bytes_per_token"):
+            tail.append(f"{r['kv_cache_bytes_per_token']:,.0f} B/token KV")
+        if r.get("attention_variant"):
+            tail.append(str(r["attention_variant"]))
+        if r.get("max_position_embeddings"):
+            tail.append(f"{int(r['max_position_embeddings']):,} ctx")
     else:
         head = str(r.get("kind") or "")
         tail = [str(r.get("publisher") or "")]

@@ -114,6 +114,53 @@ One file per operation class, e.g. `flops/prefill-attention.md`.
     reproducible          bool
     notes
 
+## model
+
+A specific released model, recorded for what it does to the FLOP mix. The
+fields here exist because architecture decides which cost dominates — a dense
+GQA model, a DeepSeek-style MoE with MLA, and a hybrid Mamba model stress
+completely different hardware.
+
+    family              string|null   release family: llama, qwen, deepseek, ...
+    vendor              string|null
+    release_year        int|null
+    architecture        dense | moe | hybrid-mamba | hybrid-attention-ssm |
+                       ssm | recurrent | diffusion | other
+    params_b            number|null   total parameters, billions
+    active_params_b     number|null   activated per token; equals params_b for dense
+    num_experts         int|null
+    experts_per_token   int|null
+    shared_expert       bool|null     always-on shared expert adds to per-token active
+    hidden_size         int|null
+    num_layers          int|null
+    num_kv_heads        int|null
+    head_dim            int|null
+    gqa_ratio           number|null    attention heads / kv heads
+    max_position_embeddings int|null
+    context_scaling     string|null   YaRN, NTK-aware, LongRoPE, mrope; null if native
+    activation          string|null   silu, gelu, swiglu, geglu
+    attention_variant   string|null    standard, MLA, GQA, MQA, sliding-window/
+                       hybrid, NSA, lightning attention
+    kv_cache_bytes_per_token   number|null   the single most decision-relevant
+                       serving number; show the derivation in notes
+    flops_per_token_active     number|null   approx 2 * active_params_b * 1e9
+    open_weights        bool|null
+    license             string|null
+    notes
+
+Two rules that matter here. First, `params_b` and `active_params_b` must not be
+conflated for MoE — a 671B DeepSeek serving 37B active per token is a different
+serving problem from a dense 70B, and only one of them is the memory bottleneck.
+Second, `kv_cache_bytes_per_token` is what determines whether a model fits at
+all: at 128k context a 70B GQA model and a 671B MoE can differ by an order of
+magnitude in resident KV despite the MoE having fewer active params. Derive it
+from `num_layers * num_kv_heads * head_dim * 2 (K and V) * bytes_per_element`
+and put that arithmetic in `notes`.
+
+`benchmark.model` predates this type and stays free text. Where a benchmark
+names a model that has a record here, note the pairing rather than rewriting
+the benchmark.
+
 ## supply
 
 Where a given accelerator can actually be obtained. One record per vendor or

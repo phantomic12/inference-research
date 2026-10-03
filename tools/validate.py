@@ -164,6 +164,10 @@ def run(types: list[str], quiet: bool) -> tuple[Report, int]:
         if t == "supply":
             for a in rec.get("accelerator_ids") or []:
                 rep.warn(a in bare, f"{rid}: accelerator {a!r} not a record id (ok if planned)")
+        if t == "benchmark" and isinstance(rec.get("model"), str):
+            # benchmark.model is a free-text model NAME, not a record id; the
+            # schema allows it because benchmarks predate the model type.
+            pass
 
     del qualified
     return rep, len(records)

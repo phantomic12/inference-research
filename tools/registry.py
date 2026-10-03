@@ -15,6 +15,7 @@ DIRS = {
     "benchmark": "benchmarks",
     "gotcha": "gotchas",
     "supply": "supply",
+    "model": "models",
     "source": "sources",
 }
 
@@ -29,5 +30,6 @@ TITLES = {
     "benchmark": "Benchmarks",
     "gotcha": "Gotchas",
     "supply": "Where to buy / source hardware",
+    "model": "Models",
     "source": "Sources",
 }

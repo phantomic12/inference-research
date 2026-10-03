@@ -67,6 +67,17 @@ TEMPLATES = {
         "availability": None, "lead_time_weeks": None,
         "export_controlled": None, "notes": "",
     },
+    "model": {
+        "family": None, "vendor": None, "release_year": None,
+        "architecture": None, "params_b": None, "active_params_b": None,
+        "num_experts": None, "experts_per_token": None, "shared_expert": None,
+        "hidden_size": None, "num_layers": None, "num_kv_heads": None,
+        "head_dim": None, "gqa_ratio": None,
+        "max_position_embeddings": None, "context_scaling": None,
+        "activation": None, "attention_variant": None,
+        "kv_cache_bytes_per_token": None, "flops_per_token_active": None,
+        "open_weights": None, "license": None, "notes": "",
+    },
     "source": {
         "url": None, "publisher": None, "kind": None, "published": None,
         "accessed": TODAY, "archived_url": None, "notes": "",
