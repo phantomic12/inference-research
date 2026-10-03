@@ -1,0 +1,28 @@
+{
+  "id": "vllm-qwen38-nvfp4-gb300-nvl72-tps-per-gpu",
+  "type": "benchmark",
+  "name": "vLLM disaggregated PD serving: Qwen3.8-2.4T-A95B NVFP4 on GB300 NVL72, 5000 total TPS per GPU",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-b300"
+  ],
+  "interconnect_ids": [
+    "nvlink-5",
+    "nvswitch-5"
+  ],
+  "model": "Qwen3.8-2.4T-A95B-NVFP4",
+  "format_id": "nvfp4",
+  "metric": "tps_aggregate",
+  "value": 5000,
+  "unit": "total tokens/s per GPU (aggregate across the cluster)",
+  "methodology": "Engine: vLLM vllm/vllm-openai:nightly-a9a17 (revision v0.26.1rc1.dev1177+ga9a17e709) with NVIDIA Dynamo 1.2.0.dev20260526, srt-slurm v1.0.98 and AIPerf v0.12.0. Hardware: GB300 NVL72 cluster on one NVLink72 domain. ISL = 8192, OSL = 1024. Concurrency swept 1 to 2560; 5000 total tok/s per GPU is the high-throughput endpoint of the resulting Pareto frontier, so the specific concurrency is not a fixed stated value - it is on a chart. Decode side one endpoint of either 1xTEP8 or 1xTP4DP4+EP (8 or 16 GPUs); prefill side 1-4 endpoints of TEP8, TP4DP2+EP, or {1,2,3,4}xTP2DP4+EP using 8 to 32 GPUs each. Parallelism is a mix of TP, DP and EP rather than a single TP degree. Figure is AGGREGATE total tokens/s per GPU. GSM8K accuracy verified at 95% for every configuration.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "Vendor-published (NVIDIA GB300 hardware, NVIDIA-authored post) but unusually reproducible: exact container image, vLLM revision, Dynamo, srt-slurm and AIPerf versions are all named, and every recipe plus the accuracy recipes are public in NVIDIA/srt-slurm-recipes under recipes/multi-node/Qwen3.8/GB300/8k1k/vllm/disagg. The 5000 is a rounded headline figure from the Pareto text, not a raw counter. Pairs with the interactivity endpoint in the sibling record for the same deployment. Accelerator id is nvidia-b300 (Blackwell Ultra dies inside GB300 NVL72); that accelerator record is status=contested, so treat the 288 GB VRAM figure behind this deployment as unsettled while the throughput number itself is what NVIDIA measured on its own rack.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-nv-vllm-qwen38-pd-blog"
+  ]
+}

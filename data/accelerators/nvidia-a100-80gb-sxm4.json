@@ -41,28 +41,28 @@
     {
       "precision": "tf32",
       "tflops": 156,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-a100-datasheet"
     },
     {
       "precision": "bf16",
       "tflops": 312,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-a100-datasheet"
     },
     {
       "precision": "fp16",
       "tflops": 312,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-a100-datasheet"
     },
     {
       "precision": "int8",
       "tflops": 624,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-a100-datasheet"
     }
@@ -80,5 +80,5 @@
   "sources": [
     "nv-a100-datasheet"
   ],
-  "notes": "CRITICAL: every Tensor Core figure on the A100 datasheet is the WITH-SPARITY number (marked '*' on the sheet). Dense is exactly half: TF32 156 dense, BF16/FP16 312 dense, INT8 624 TOPS dense. FP64 9.7 and FP32 19.5 are dense and unaffected by sparsity. The two FP64 entries are the distinct CUDA-core FP64 path (9.7) and the FP64 Tensor Core path (19.5) - Ampere roughly doubles FP64 via Tensor Cores; keep them as separate rows rather than picking one. TDP 400W is the standard config; the sheet notes the HGX A100-80GB CTS SKU can be configured up to 500W. 40GB SXM4 is a separate cut with 1,555 GB/s and 250W. NOTE ON PRECISION LABELS: this schema's precision enum has no 'fp64' member, so the two 'other' rows are FP64 - 9.7 TFLOPS (the GA100 CUDA-core FP64 path) and 19.5 TFLOPS (the FP64 Tensor Core path). They are NOT duplicates: Ampere's FP64 Tensor Core roughly doubles FP64 throughput, and they are recorded separately so a reader does not have to guess which number is which."
+  "notes": "AUDIT CORRECTION: the dense/sparse flag on the tensor rows was inverted. FP16 312 / INT8 624 TFLOPS are DENSE. NVIDIA A100 page prints '312 | 624*' where * = With sparsity. These rows were previously flagged dense:false, which wrongly told a reader they were sparse.  The stored numbers are correct dense values. CRITICAL: every Tensor Core figure on the A100 datasheet is the WITH-SPARITY number (marked '*' on the sheet). Dense is exactly half: TF32 156 dense, BF16/FP16 312 dense, INT8 624 TOPS dense. FP64 9.7 and FP32 19.5 are dense and unaffected by sparsity. The two FP64 entries are the distinct CUDA-core FP64 path (9.7) and the FP64 Tensor Core path (19.5) - Ampere roughly doubles FP64 via Tensor Cores; keep them as separate rows rather than picking one. TDP 400W is the standard config; the sheet notes the HGX A100-80GB CTS SKU can be configured up to 500W. 40GB SXM4 is a separate cut with 1,555 GB/s and 250W. NOTE ON PRECISION LABELS: this schema's precision enum has no 'fp64' member, so the two 'other' rows are FP64 - 9.7 TFLOPS (the GA100 CUDA-core FP64 path) and 19.5 TFLOPS (the FP64 Tensor Core path). They are NOT duplicates: Ampere's FP64 Tensor Core roughly doubles FP64 throughput, and they are recorded separately so a reader does not have to guess which number is which."
 }

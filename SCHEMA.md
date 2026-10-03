@@ -114,6 +114,37 @@ One file per operation class, e.g. `flops/prefill-attention.md`.
     reproducible          bool
     notes
 
+## supply
+
+Where a given accelerator can actually be obtained. One record per vendor or
+channel, not per SKU — the same integrator may carry many parts, and a record
+listing them is still queryable.
+
+    kind                  oem-direct | enterprise-distributor | used-market |
+                         auction | cloud | integrator | regional-reseller |
+                         broker | self-build | unknown
+    vendor                string|null   who ultimately supplies the part
+    accelerator_ids       [string]      bare record ids obtainable here
+    region                string|null   geographic market served
+    channels              [string]      direct-quote | reseller | marketplace |
+                         auction | rental | on-prem-cloud | contact-sales
+    price_usd             number|null
+    price_basis           string|null    what the price covers: bare card, SXM
+                         module, full 8-GPU server, annual rental, per-hour
+                         cloud, incl. tax/shipping. MANDATORY whenever
+                         price_usd is set — an H100 quote means wildly
+                         different things at these bases.
+    availability          in-stock | lead-time | backorder | allocation-only |
+                         discontinued | unknown
+    lead_time_weeks       number|null
+    export_controlled     bool|null      restricted by region/entity; name the
+                         regime in notes
+    notes
+
+Supply records are the most perishable data in this repo. A price without an
+`updated` date is noise. Re-verify before trusting any figure older than a
+quarter.
+
 ## gotcha
 
     class                driver | kernel | framework | config | hardware | format |

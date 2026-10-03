@@ -1,0 +1,28 @@
+{
+  "id": "trtllm-llama31-405b-fp8-h100-tp8-tps",
+  "type": "benchmark",
+  "name": "TensorRT-LLM: Llama 3.1 405B FP8 on 8x H100 SXM 80GB (TP=8), ISL/OSL 1000/2000",
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-h100-sxm"
+  ],
+  "interconnect_ids": [
+    "nvlink-4",
+    "nvswitch-4"
+  ],
+  "model": "nvidia/Llama-3.1-405B-Instruct-FP8",
+  "format_id": "fp8-e4m3",
+  "metric": "tps_aggregate",
+  "value": 2884.69,
+  "unit": "output tokens/s (aggregate, 8 GPUs)",
+  "methodology": "TensorRT-LLM PyTorch backend, trtllm-bench throughput. Hardware: 8x NVIDIA H100 SXM 80GB, tensor-parallel size = 8, PP=1. ISL = 1000, OSL = 2000, uniform synthetic dataset, 1500 requests. Offline infinite-rate feed; concurrency not fixed and the achieved batch size is not stated. Aggregate output tokens/s over the 8-GPU TP group (about 361 tok/s per GPU). KV cache free-memory fraction 0.95; CUDA graphs 1-8192.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "Measured by NVIDIA, published in the TensorRT-LLM performance overview and reproducible with the documented `prepare_dataset.py` + `trtllm-bench throughput --backend pytorch` workflow (llm_options.yml with CUDA-graph batch sizes 1..8192, kv_cache_free_gpu_mem_fraction 0.95). Metric is 'Total Output Throughput (tokens/sec)' as trtllm-bench reports it: AGGREGATE output tokens/s across all in-flight requests at the stated TP size, under an offline infinite-rate request feed, NOT per-request and NOT per-GPU. Model weights are NVIDIA-published ModelOpt-quantized checkpoints. The page explicitly states these are reference points, not peak performance, and that batch size / parallelism were left mostly at defaults.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-nv-trtllm-perf-overview"
+  ]
+}

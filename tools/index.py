@@ -61,6 +61,14 @@ def card(r: dict) -> str:
     elif t == "gotcha":
         head = f"[{r.get('severity')}] {r.get('class')}"
         tail = [str(r.get("symptom") or "")[:200]]
+    elif t == "supply":
+        bits = [str(x) for x in (r.get("vendor"), r.get("region")) if x]
+        head = " · ".join(bits) or r.get("kind") or ""
+        price = r.get("price_usd")
+        tail = [f"${price:,}" if isinstance(price, (int, float)) else "", str(r.get("availability") or "")]
+        tail = [x for x in tail if x]
+        if r.get("price_basis"):
+            tail.append(str(r["price_basis"])[:80])
     else:
         head = str(r.get("kind") or "")
         tail = [str(r.get("publisher") or "")]

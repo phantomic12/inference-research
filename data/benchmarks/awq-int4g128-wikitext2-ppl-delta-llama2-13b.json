@@ -1,0 +1,23 @@
+{
+  "id": "awq-int4g128-wikitext2-ppl-delta-llama2-13b",
+  "type": "benchmark",
+  "name": "AWQ INT4-g128 WikiText-2 perplexity delta vs fp16, Llama-2 13B",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-meth-awq"
+  ],
+  "engine_id": "tinychat-awq",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "Llama-2 13B",
+  "format_id": "awq",
+  "metric": "quality",
+  "value": 0.09,
+  "unit": "perplexity_delta (WikiText-2 ppl points, quantized minus FP16)",
+  "methodology": "AWQ paper Table 4. Model Llama-2 13B, weight-only grouped INT4, group size 128, activations FP16. Calibration from The Pile, alpha grid search size 20. Metric: WikiText-2 test perplexity in the paper's own harness. FP16 baseline 4.88 in the same table; AWQ INT4-g128 scores 4.97.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "DELTA = +0.09 ppl (4.97 vs 4.88), from Table 4 cells. Two traps here. First, AWQ's margin over plain RTN on this cell is 0.01 ppl (4.97 vs 4.98) - inside the noise floor of a table printed to 2 decimals, yet the paper's summary claims AWQ 'consistently achieves better perplexity than GPTQ (w/ and w/o reordering)'. It does, by 0.01. Second, GPTQ scores 4.98 here, marginally WORSE than RTN's 4.98 tie. Anyone quoting 'AWQ 4-bit is essentially lossless on 13B' is quoting a rounding artifact, not a measurement. Contrast the same model in the harder INT3 row of the same table, where the methods do separate: fp16 4.88, RTN 5.52 (+0.64), GPTQ 5.48, GPTQ-R 5.41, AWQ 5.32 (+0.44) - a 0.20 ppl spread between AWQ and RTN, against 0.01 ppl in the INT4 row. So the quantizer choice matters about twenty times more when the precision budget is tight, which is why a 4-bit-only study systematically overstates how little algorithm choice matters."
+}

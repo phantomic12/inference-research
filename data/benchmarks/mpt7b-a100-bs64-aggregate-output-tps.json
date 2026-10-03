@@ -1,0 +1,23 @@
+{
+  "id": "mpt7b-a100-bs64-aggregate-output-tps",
+  "type": "benchmark",
+  "name": "Aggregate output throughput, MPT-7B static batch 64, 1x A100",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-meth-databricks-inference-tuning"
+  ],
+  "engine_id": "fastertransformer",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "MPT-7B (FP16)",
+  "format_id": null,
+  "metric": "tps_aggregate",
+  "value": 800.0,
+  "unit": "output tokens/s aggregate across all in-flight requests (64 concurrent)",
+  "methodology": "Databricks Table 2, MPT-7B row '1 x A100', batch size 64 column: peak throughput 12.5 requests/s with static batching. Hardware: 1x NVIDIA A100 40GB. IMPORTANT: this repo has no 40GB A100 accelerator record, so accelerator_ids is deliberately empty rather than pointing at the 80GB A100 records, which are a different part. Backend: FasterTransformer-based static batching. Requests: 512 input tokens, 64 output tokens, uniform. Measured by Databricks/MosaicML on their own production serving stack. DERIVED VALUE: the source table reports requests/s, not tokens/s. 12.5 req/s x 64 output tokens = 800 output tokens/s aggregate. Derivation is stated in notes because the benchmark schema has no *_basis field and forbids additional properties.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "DERIVATION BASIS: Databricks Table 2 gives 12.5 req/s at batch size 64 on 1x A100 for MPT-7B at 512 input / 64 output tokens; multiplied by the fixed 64-token output length this is 800 aggregate output tokens/s. This number is ONLY meaningful next to mpt7b-a100-bs64-per-user-decode-tps (12.5 tok/s per user) and mpt7b-a100-bs1-per-user-decode-tps (57.6 tok/s per user) - the aggregate figure is 64x the per-user figure here purely because 64 requests share it. Quoting 800 tok/s as 'the speed of this model' is the single most common misread in serving benchmarks: no individual user sees 800 tok/s. Same table, same model, same GPU: batch 1 is 0.9 req/s. Going from batch 1 to batch 64 raises aggregate throughput 13.9x while per-user decode speed FALLS 4.6x, and the blog states the tradeoff explicitly - 'with one NVIDIA A100 GPU, if we maximize throughput with a batch size of 64, latency increases by 4x while throughput increases by 14x'. The blog also warns that after the compute-bound crossover every further doubling of batch size raises latency without raising throughput."
+}

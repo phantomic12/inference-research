@@ -1,0 +1,23 @@
+{
+  "id": "mxint4-128-wikitext2-ppl-delta-llama3-1-8b-awq-gptq",
+  "type": "benchmark",
+  "name": "MXINT4-128 WikiText-2 perplexity delta vs fp16, Llama3.1-8B (AWQ+GPTQ)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-meth-mxptq"
+  ],
+  "engine_id": "mxptq-research-harness",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "Llama3.1-8B",
+  "format_id": "mxfp4",
+  "metric": "quality",
+  "value": 0.6,
+  "unit": "perplexity_delta (WikiText-2-test ppl points, quantized minus FP16)",
+  "methodology": "PTQ-with-microscaling-formats paper, Table 1, row 'A:MXINT8, W:MXINT4, Method AWQ+' - the + means GPTQ weight rounding is applied on top of AWQ. Model Llama3.1-8B, MX block size 128, all Linear layers transformed; GELU/Softmax/LayerNorm left in original format. AWQ calibration: 128 WikiText-2-train sequences of length 512, alpha grid search over [0,1) plus MSE-optimal clipping. Metric: WikiText-2 TEST perplexity. FP16 baseline 5.61; MXINT4-128 with AWQ+GPTQ scores 6.21.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "DELTA = +0.60 ppl (6.21 vs 5.61). IMPORTANT format_id caveat: the paper's MXINT4 is a signed 4-bit integer format with a shared power-of-two scale per 128-element block - it is NOT OCP MXFP4 (E2M1 elements + E8M0 scale) and NOT NVIDIA NVFP4 (E2M1 + per-block E4M3). format_id mxfp4 is the nearest existing record; do not read this number as an MXFP4 or NVFP4 quality delta without checking the mx-format definitions. The spread inside this same row is the point: RTN at A:MXINT8/W:MXINT4 scores 8.11 (+2.50) and SmoothQuant scores 8.86 (+3.25), while MXINT4 with no smoothing at A:INT8 scores 6.99. Same bit-width, same block size, same calibration set, same harness, same model - a 1.90 ppl spread driven purely by which PTQ algorithm ran. The paper's actual finding is the opposite of the folk one: MXINT beats per-channel fixed-point INT at equal width (e.g. A:MXINT8/W:MXINT4 AWQ+GPTQ 6.21 vs A:INT8/W:4 AWQ+GPTQ 6.39 on this model)."
+}

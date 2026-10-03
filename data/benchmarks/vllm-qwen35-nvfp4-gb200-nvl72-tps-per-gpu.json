@@ -1,0 +1,28 @@
+{
+  "id": "vllm-qwen35-nvfp4-gb200-nvl72-tps-per-gpu",
+  "type": "benchmark",
+  "name": "vLLM disaggregated PD serving: Qwen3.5-397B-A17B-NVFP4 on GB200 NVL72, 25K total TPS per GPU",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-gb200-nvl72"
+  ],
+  "interconnect_ids": [
+    "nvlink-5",
+    "nvswitch-5"
+  ],
+  "model": "Qwen3.5-397B-A17B-NVFP4",
+  "format_id": "nvfp4",
+  "metric": "tps_aggregate",
+  "value": 25000,
+  "unit": "total tokens/s per GPU (aggregate across the rack)",
+  "methodology": "Engine: vLLM nightly-d223c90 (vllm/vllm-openai) with async scheduling, served under disaggregated prefill/decode via NVIDIA Dynamo 1.2.0.dev20260526 and srt-slurm v1.0.32. Hardware: GB200 NVL72 cluster on one NVLink72 domain. Prompt length ISL = 8192, output length OSL = 1024, synthetic random dataset with random_range_ratio=0.8. Concurrency SWEPT from 64 to 5120; 25,000 tok/s/GPU is the best point on the resulting Pareto frontier, not a single fixed-concurrency measurement - the exact concurrency behind the headline lives in a PNG figure, so the source omits the specific batch size. Decode side fixed at one DEP8 endpoint (data parallel + expert parallel over 8 GPUs); prefill side swept over 4-8 DEP2 endpoints. Tensor-parallel size: not a single TP value - the deployment uses DEP (DP + EP) on decode and DEP2 on prefill. Figure is AGGREGATE total tokens/s per GPU across the rack, counting both prompt and generated tokens; prefix caching disabled, stream-interval 100. GSM8K accuracy 88% verified per configuration.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "Authored on NVIDIA-run GB200 hardware by vLLM/NVIDIA/Inferact contributors; treat as vendor-published even though the tooling and recipes are open source. Reproducible in practice: the exact Docker digest, Dynamo and srt-slurm versions are named, and every recipe is published in NVIDIA/srt-slurm-recipes under recipes/multi-node/Qwen3.5/GB200/8k1k/vllm/disagg with a single `srtctl run` command. The 25K figure is a rounded headline read off a Pareto chart, so treat it as ~25K, not a precise measurement. --stream-interval 100 buffers output in 100-token chunks, which inflates apparent per-token latency - do not use this record for ITL/TPOT.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-nv-vllm-qwen35-25k-tps-blog"
+  ]
+}

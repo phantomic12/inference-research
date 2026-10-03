@@ -148,6 +148,7 @@ def cmd_refs(args) -> None:
         "quantization": ["native_support", "emulated_support"],
         "gotcha": ["affects"],
         "accelerator": ["interconnect"],
+        "supply": ["accelerator_ids"],
     }.get(t, [])
     print(f"{key}  ({t})")
     print("  cites:")

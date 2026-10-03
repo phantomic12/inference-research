@@ -1,0 +1,23 @@
+{
+  "id": "spinquant-w4a4kv4-zeroshot-accuracy-delta-llama2-7b",
+  "type": "benchmark",
+  "name": "SpinQuant W4A4KV4 8-task zero-shot accuracy delta vs fp16, LLaMA-2 7B",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-meth-spin"
+  ],
+  "engine_id": "spinquant-research-harness",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "LLaMA-2 7B",
+  "format_id": "spinquant",
+  "metric": "quality",
+  "value": 2.9,
+  "unit": "accuracy_delta_pp (magnitude of the drop: average zero-shot 8-task accuracy percentage points lost vs FP16)",
+  "methodology": "SpinQuant paper Table 1, W4A4KV4 row (weights, activations AND KV cache all 4-bit). Model LLaMA-2 7B. Metric: unweighted average accuracy over eight zero-shot commonsense reasoning tasks - BoolQ, PIQA, SIQA, HellaSwag, WinoGrande, ARC-easy, ARC-challenge, OBQA. Rotations R1,R2 learned by Cayley SGD for 100 iterations on an 800-sample WikiText2 calibration set, combined with GPTQ weight rounding (the paper's chosen configuration per Table 3). FP16 baseline 66.9; SpinQuant_had W4A4KV4 scores 64.0. WikiText ppl 5.5 fp16 vs 5.9.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "DELTA = -2.9 pp (64.0 vs 66.9); value holds the magnitude, direction is in the unit and notes. Three ways this number gets misread. (1) It is the BEST published 4-bit result, not a typical one: at identical precision the same table gives LLM-QAT a 22.0-point gap and SmoothQuant a 25.0-point gap. Quoting 2.9 as 'what 4-bit quantization costs' understates the general case by roughly 7x. (2) It is NOT a hardware result. There is no INT4 tensor-core path anywhere: 4x4 INT GEMM is a research Triton kernel plus fake quantization. The accuracy is real; the throughput claim that would normally follow from it is unavailable. (3) The gap is not stable across scale - the same setting leaves 1.4 points on LLaMA-2 13B and 1.7 on 70B, so 2.9 is specifically the 7B figure. Compare the QuaRot ablation (Table 5): the same W4A4W16 setting on LLaMA-3 8B spans 58.6 (QuaRot+RTN) to 65.8 (SpinQuant_had+GPTQ), a 7-point spread between two legitimate 4-bit methods on one model."
+}

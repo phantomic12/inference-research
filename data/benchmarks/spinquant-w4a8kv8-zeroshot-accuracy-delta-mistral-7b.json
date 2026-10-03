@@ -1,0 +1,23 @@
+{
+  "id": "spinquant-w4a8kv8-zeroshot-accuracy-delta-mistral-7b",
+  "type": "benchmark",
+  "name": "SpinQuant W4A8KV8 8-task zero-shot accuracy delta vs fp16, Mistral-7B",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-meth-spin"
+  ],
+  "engine_id": "spinquant-research-harness",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "Mistral-7B",
+  "format_id": "spinquant",
+  "metric": "quality",
+  "value": 1.6,
+  "unit": "accuracy_delta_pp (magnitude of the drop: average zero-shot 8-task accuracy percentage points lost vs FP16)",
+  "methodology": "SpinQuant paper Table 1, W4A8KV8 row (4-8-8), variant SpinQuant_no_had. Model Mistral-7B. Metric: unweighted average of the same eight zero-shot commonsense reasoning tasks. Rotations R1,R2 learned via Cayley SGD (100 iterations, 800-sample WikiText2 calibration) and merged into the weights, so no forward-pass change. FP16 baseline 71.0; SpinQuant_no_had W4A8KV8 scores 69.4; RTN at the same precision scores 58.9. WikiText ppl 5.4 fp16 vs 5.7.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "DELTA = -1.6 pp (69.4 vs 71.0), i.e. 100*71.0/69.4 rounded - the paper states this exact '12.1 to 1.6' reduction and the arithmetic is internally consistent (71.0-58.9 = 12.1 against RTN; 71.0-69.4 = 1.6 for SpinQuant_no_had). Recorded as its own record because '12.1' is the number most often re-quoted, and it is the RTN gap, NOT the full-precision gap. If someone cites 12.1 as the quantization cost of W4A8KV8 on Mistral-7B they are quoting naive round-to-nearest. Also note the variant matters: SpinQuant_had scores 70.2 (0.8-point gap) at this precision, so no_had vs had is a 0.8-point swing on the same model and format, bought at the cost of online Hadamard kernels."
+}

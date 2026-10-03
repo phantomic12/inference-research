@@ -34,8 +34,9 @@ class Harness(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp(prefix="ir-test-"))
         for sub in ("tools", "schemas", "docs"):
             shutil.copytree(ROOT / sub, self.tmp / sub)
-        for d in ("accelerators", "flops", "engines", "quantization",
-                  "interconnect", "benchmarks", "gotchas", "sources"):
+        sys.path.insert(0, str(TOOLS))
+        from registry import DIRS
+        for d in DIRS.values():
             (self.tmp / "data" / d).mkdir(parents=True, exist_ok=True)
 
     def tearDown(self) -> None:

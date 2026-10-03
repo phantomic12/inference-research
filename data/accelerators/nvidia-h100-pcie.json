@@ -33,35 +33,35 @@
     {
       "precision": "tf32",
       "tflops": 378,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-h100-datasheet"
     },
     {
       "precision": "bf16",
       "tflops": 756.5,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-h100-datasheet"
     },
     {
       "precision": "fp16",
       "tflops": 756.5,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-h100-datasheet"
     },
     {
       "precision": "fp8",
       "tflops": 1513,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-h100-datasheet"
     },
     {
       "precision": "int8",
       "tflops": 1513,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-h100-datasheet"
     }
@@ -80,5 +80,5 @@
     "nv-h100-datasheet",
     "nv-h100-pcie-product-brief"
   ],
-  "notes": "CRITICAL: datasheet prints 756 TFLOPS TF32 and 1,513 BF16/FP16 and 3,026 FP8/INT8, all WITH SPARITY; dense is half (378 / 756.5 / 1,513). H100 PCIe is memory-BANDWIDTH bound relative to SXM (2,000 GB/s HBM2e vs 3,350 GB/s HBM3) while Tensor compute drops only ~24% - so at batch 1 decode the PCIe card is noticeably slower than SXM despite similar paper FLOPS. tdp_w 350 is the datasheet's '300-350W configurable' default; the product brief shows a 450W/600W cable mode capped at 350W max. Two cards bridge over NVLink at 600 GB/s. The 'other' row is FP64 26 TFLOPS (dense) - this schema's precision enum has no fp64 member."
+  "notes": "AUDIT CORRECTION: the dense/sparse flag on the tensor rows was inverted. FP16 756.5 / FP8 1513 TFLOPS are DENSE; NVIDIA prints 1,513/3,026 'With sparsity'. These rows were previously flagged dense:false, which wrongly told a reader they were sparse.  The stored numbers are correct dense values. CRITICAL: datasheet prints 756 TFLOPS TF32 and 1,513 BF16/FP16 and 3,026 FP8/INT8, all WITH SPARITY; dense is half (378 / 756.5 / 1,513). H100 PCIe is memory-BANDWIDTH bound relative to SXM (2,000 GB/s HBM2e vs 3,350 GB/s HBM3) while Tensor compute drops only ~24% - so at batch 1 decode the PCIe card is noticeably slower than SXM despite similar paper FLOPS. tdp_w 350 is the datasheet's '300-350W configurable' default; the product brief shows a 450W/600W cable mode capped at 350W max. Two cards bridge over NVLink at 600 GB/s. The 'other' row is FP64 26 TFLOPS (dense) - this schema's precision enum has no fp64 member."
 }

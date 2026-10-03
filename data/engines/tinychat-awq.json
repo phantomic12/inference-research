@@ -1,0 +1,49 @@
+{
+  "id": "tinychat-awq",
+  "type": "engine",
+  "name": "TinyChat (AWQ on-device runtime)",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-awq-paper"
+  ],
+  "repo": "mit-han-lab/llm-awq",
+  "languages": [
+    "Python",
+    "CUDA",
+    "C++"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "low-latency",
+    "minimal-deps"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda"
+  ],
+  "supported_formats": [
+    "awq"
+  ],
+  "notable_features": [
+    "Platform-specific weight packing for 4-bit SIMD registers",
+    "Fused dequant + GEMM kernels; KV cache pre-allocated and updated inside the attention kernel",
+    "Targets edge CPUs and GPUs, not datacenter serving"
+  ],
+  "hardware_caveats": [
+    "W4A16 only - activations and KV cache stay FP16, so no INT4 tensor-core op is used",
+    "Quantized conv/packing order is platform-specific: a file packed for ARM SIMD is not optimal on GPU"
+  ],
+  "best_for": [
+    "single-stream on-device generation on consumer GPUs and ARM CPUs"
+  ],
+  "avoid_for": [
+    "multi-user serving - no continuous batching or request scheduling"
+  ],
+  "docs_url": "https://github.com/mit-han-lab/llm-awq/tree/main/awq/kernels",
+  "notes": "The runtime that ships with the AWQ paper, not a general-purpose engine. Recorded here because AWQ's quality numbers were produced by evaluating quantized checkpoints with this runtime's kernels and the paper's own harness; do not read TinyChat's throughput numbers as engine benchmarks. AWQ's own speed claim in the paper is >3x over HF FP16 on desktop and mobile GPUs, not the ~4x commonly quoted from Marlin."
+}

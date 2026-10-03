@@ -14,6 +14,7 @@ DIRS = {
     "interconnect": "interconnect",
     "benchmark": "benchmarks",
     "gotcha": "gotchas",
+    "supply": "supply",
     "source": "sources",
 }
 
@@ -27,5 +28,6 @@ TITLES = {
     "interconnect": "Interconnect",
     "benchmark": "Benchmarks",
     "gotcha": "Gotchas",
+    "supply": "Where to buy / source hardware",
     "source": "Sources",
 }

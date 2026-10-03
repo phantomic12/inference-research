@@ -1,0 +1,23 @@
+{
+  "id": "mpt7b-a100-bs64-per-user-decode-tps",
+  "type": "benchmark",
+  "name": "Per-user decode tok/s, MPT-7B static batch 64, 1x A100",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-meth-databricks-inference-tuning"
+  ],
+  "engine_id": "fastertransformer",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "MPT-7B (FP16)",
+  "format_id": null,
+  "metric": "tok_s_per_user",
+  "value": 12.5,
+  "unit": "decode tokens/s experienced by one user (batch size 64, aggregate is 800)",
+  "methodology": "Databricks Table 2, MPT-7B row '1 x A100', batch size 64 column: peak throughput 12.5 requests/s with static batching, 64 requests in flight. Hardware: 1x NVIDIA A100 40GB. IMPORTANT: this repo has no 40GB A100 accelerator record, so accelerator_ids is deliberately empty rather than pointing at the 80GB A100 records, which are a different part. Backend: FasterTransformer-based static batching. Requests: 512 input tokens, 64 output tokens, uniform. Measured by Databricks/MosaicML on their own production serving stack. DERIVED VALUE: aggregate is 12.5 req/s x 64 output tokens = 800 output tokens/s; divided by the 64 concurrent requests sharing it, each user sees 800/64 = 12.5 output tokens/s, equivalent to about 80 ms per output token.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "DERIVATION BASIS: aggregate 12.5 req/s x 64 output tokens = 800 tok/s; divided by 64 concurrent requests = 12.5 tok/s per user. Read against mpt7b-a100-bs1-per-user-decode-tps (57.6 tok/s) this is a 4.6x per-user SLOWDOWN from raising batch size 1 -> 64 on identical hardware, while aggregate throughput rises 13.9x. Both directions are real and both are reported in Databricks' own words. The blog's own sanity check on this number: a TPOT of 100 ms/tok is 10 tokens/s per user, 'faster than a typical person can read' - so 80 ms is around the threshold where per-user latency stops being free. Practical reading: batch-64 serving is the right choice for cost, and the wrong choice if anyone is watching tokens appear. Note the blog's separate measured finding that overall latency scales SUB-linearly with model size (MPT-30B latency is only about 2.5x MPT-7B, Llama2-70B about 2x Llama2-13B), so per-request latency is not a proxy for model size either."
+}

@@ -1,0 +1,29 @@
+{
+  "id": "apple-m1-ultra",
+  "type": "accelerator",
+  "name": "Apple M1 Ultra (Mac Studio, 2022)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "vendor": "apple",
+  "architecture": "m-series (M1 Ultra)",
+  "release_year": 2022,
+  "process_nm": 5,
+  "form_factors": [
+    "socs"
+  ],
+  "vram_gb": 128,
+  "memory_type": "lpddr5 unified",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 800,
+  "memory_bandwidth_basis": "Apple tech specs: '800GB/s memory bandwidth' for the M1 Ultra configuration with a 64-core GPU. IMPORTANT: the 48-core GPU configuration of the SAME chip is listed at 400GB/s, so the figure scales with the SoC configuration, not just the part name. Unified-memory bandwidth, package-level, shared with the CPU - there is no separate VRAM bus.",
+  "tdp_w": 370,
+  "flops": [],
+  "interconnect": [],
+  "unified_memory": true,
+  "consumer": true,
+  "notes": "Two M1 Max dies joined by Apple's UltraFusion silicon interposer; 64-core GPU option (48-core option listed); 16-core/32-core Neural Engine; up to 128 GB unified memory.\n\ntdp_w caveat: 370 W is the Mac Studio's 'Maximum continuous power' - a SYSTEM figure covering CPU, GPU, memory and PSU losses. It is NOT a GPU TDP and must not be lined up against a discrete card's TGP (a 575 W RTX 5090 is a GPU-only figure).\n\nUNIFIED MEMORY IS NOT VRAM - read this before comparing any of these numbers to a discrete card:\n1. Capacity you can hand to a GPU kernel is smaller than the advertised capacity. On Apple Silicon the GPU can only address part of the unified pool; the OS and CPU take their share and a portion of the pool is not GPU-writable at all. A '128 GB' Mac does not present 128 GB to Metal.\n2. The bandwidth is SHARED. The figure below is the ceiling for the whole system memory subsystem and must serve CPU, GPU and everything else. A discrete card's bandwidth is a private bus serving only the GPU's frame buffer.\n3. Bigger is not faster for decode. Batch-1 LLM decode is memory-bound and roughly bandwidth-limited, so more-but-slower memory yields lower tokens/second even when the model fits. What large unified memory actually buys is CAPACITY - running a model you otherwise could not fit - plus the ability to offload layers to host RAM and pay a round-trip for them.\n4. There is no NVLink or MIG analogue. Metal exposes one GPU and one pool; you cannot partition it across GPUs.\n\nApple publishes memory BANDWIDTH and core counts but never GPU TFLOPS for these parts, which is why the flops array is EMPTY rather than filled with estimates. Any 'M-series TFLOPS' number in circulation is a third-party die-level extrapolation, not an Apple figure.\n\nConcretely vs a 24 GB RTX 4090: 128 GB advertised at 800 GB/s vs 24 GB dedicated at 1008 GB/s. Capacity ratio 5.3x, bandwidth ratio 0.79x. A 70B-class model at 4-bit fits only on the Mac; once it does fit, the 4090 decodes it faster per stream. Separate the feasibility question from the throughput question.",
+  "sources": [
+    "consumer-apple-mac-studio-2022-tech-specs"
+  ]
+}

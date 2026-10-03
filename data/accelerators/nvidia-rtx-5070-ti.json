@@ -1,0 +1,73 @@
+{
+  "id": "nvidia-rtx-5070-ti",
+  "type": "accelerator",
+  "name": "NVIDIA GeForce RTX 5070 Ti",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "vendor": "nvidia",
+  "architecture": "blackwell (GB203)",
+  "release_year": 2025,
+  "process_nm": 4,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 16,
+  "memory_type": "gddr7",
+  "memory_bus_bit": 256,
+  "memory_bandwidth_gbps": 896,
+  "memory_bandwidth_basis": "GDDR7 28 Gbps data rate x 256-bit / 8 = 896 GB/s (NVIDIA RTX Blackwell whitepaper, GeForce RTX 5070 Ti comparison table: 'Memory Clock (Data Rate) 28 Gbps', 'Memory Bandwidth 896 GB/sec'). Note this part runs 28 Gbps while the larger 5080 in the same die runs 30 Gbps.",
+  "tdp_w": 300,
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 43.9,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 87.9,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 87.9,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 175.8,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "fp4",
+      "tflops": 703,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "fp4",
+      "tflops": 1406,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    }
+  ],
+  "interconnect": [],
+  "unified_memory": false,
+  "consumer": true,
+  "notes": "Entry-level Blackwell consumer part, 8960 CUDA cores, 2452 MHz boost, 300 W TGP, PCIe Gen5, 49152 KB L2. Included briefly as the low-VRAM end of the 50 series.\n\nPRECISION CAVEAT - the single most conflated number on consumer hardware. NVIDIA's product pages advertise 'AI TOPS' (5090: 3352, 5080: 1801, 5070 Ti: 1406). The RTX Blackwell whitepaper labels the identical figure 'Peak FP4 Tensor TFLOPS with FP32 Accumulate (FP4 AI TOPS) 1676/3352', where the second value uses the 2:4 structured-sparsity feature (footnote 2: 'Effective TOPS / TFLOPS using the Sparsity Feature'). So the marketing 'AI TOPS' number is FP4 with 2:4 sparsity, not INT4, not FP16, and not dense. It is not comparable to an FP16/BF16 dense figure, to the INT4-vs-FP16 speedup ratios quoted in quantization literature, or to another vendor's dense INT8 number. Only figures NVIDIA publishes with an explicit dense/sparse split are recorded here; every flops entry's dense flag states which half it is.\n\nInference: 16 GB at 896 GB/s. Bandwidth is respectable; capacity is the binding constraint. At 16 GB a 13B-class model in 4-bit leaves very little room for KV cache at long context, whereas a 24 GB card (4090, 5080-class) fits the same model with headroom. Capacity and bandwidth are separate axes and must be read together.",
+  "sources": [
+    "consumer-nvidia-geforce-compare-specs",
+    "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+  ]
+}

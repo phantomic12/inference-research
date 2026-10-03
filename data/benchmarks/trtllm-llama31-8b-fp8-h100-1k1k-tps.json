@@ -1,0 +1,28 @@
+{
+  "id": "trtllm-llama31-8b-fp8-h100-1k1k-tps",
+  "type": "benchmark",
+  "name": "TensorRT-LLM: Llama 3.1 8B FP8 on 1x H100 SXM 80GB, ISL/OSL 1000/1000",
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-h100-sxm"
+  ],
+  "interconnect_ids": [
+    "nvlink-4",
+    "nvswitch-4"
+  ],
+  "model": "nvidia/Llama-3.1-8B-Instruct-FP8",
+  "format_id": "fp8-e4m3",
+  "metric": "tps_aggregate",
+  "value": 14991.62,
+  "unit": "output tokens/s (aggregate, 1 GPU)",
+  "methodology": "Engine: TensorRT-LLM PyTorch backend (v0.19+ workflow, no engine build), trtllm-bench throughput. Hardware: 1x NVIDIA H100 SXM 80GB (DGX H100). Tensor-parallel size = 1 (single GPU), pipeline parallel 1. Prompt length ISL = 1000, output length OSL = 1000, uniform (input/output stdev 0) from a synthetic token-norm-dist dataset of 3000 requests. Concurrency: NOT stated and NOT fixed - this is an offline max-load scenario where all requests are queued back to back, so effective concurrency is whatever the scheduler sustains; the source omits the achieved batch size / request count in flight. Figure is AGGREGATE output tokens/s for the single GPU (trtllm-bench 'Total Output Throughput'), not per-request and not per-user. KV cache free-memory fraction 0.95. CUDA graphs enabled with padding across batch sizes 1-8192.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "Measured by NVIDIA, published in the TensorRT-LLM performance overview and reproducible with the documented `prepare_dataset.py` + `trtllm-bench throughput --backend pytorch` workflow (llm_options.yml with CUDA-graph batch sizes 1..8192, kv_cache_free_gpu_mem_fraction 0.95). Metric is 'Total Output Throughput (tokens/sec)' as trtllm-bench reports it: AGGREGATE output tokens/s across all in-flight requests at the stated TP size, under an offline infinite-rate request feed, NOT per-request and NOT per-GPU. Model weights are NVIDIA-published ModelOpt-quantized checkpoints. The page explicitly states these are reference points, not peak performance, and that batch size / parallelism were left mostly at defaults.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-nv-trtllm-perf-overview"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "sglang-deepseek-v3-96xh100-output-tps-per-node",
+  "type": "benchmark",
+  "name": "SGLang: DeepSeek-V3 671B FP8 on 96x H100 with PD disaggregation + large-scale EP, 22300 output tokens/s per node",
+  "engine_id": "sglang",
+  "accelerator_ids": [
+    "nvidia-h100-sxm"
+  ],
+  "interconnect_ids": [
+    "nvlink-4",
+    "nvswitch-4",
+    "infiniband-xdr"
+  ],
+  "model": "DeepSeek-V3 (671B MoE, FP8)",
+  "format_id": "fp8-e4m3",
+  "metric": "tps_aggregate",
+  "value": 22300,
+  "unit": "output (decode) tokens/s per 8-GPU node (aggregate)",
+  "methodology": "Engine: SGLang v0.4+ with prefill-decode disaggregation and large-scale expert parallelism (DeepEP, DeepGEMM, EPLB), DP attention for MLA, and two-batch overlap. Hardware: 12 nodes x 8 H100 = 96 H100 GPUs on the Atlas Cloud, 80GB SXM variants, cross-node traffic over RDMA/InfiniBand. Prompt length 2000 tokens; output length NOT stated by the source. Concurrency NOT stated - the setup targets saturated decode nodes. Parallelism: DP attention plus large-scale EP rather than a single TP degree; the comparison baseline is vanilla TP32/TP16 style configurations. Figure is AGGREGATE output tokens/s per node (8 GPUs, about 2788 tok/s per GPU); the post also gives 52.3k INPUT tokens/s per node for the same workload, which is the prefill side. Multi-Token Prediction: two-batch overlap is used instead. Reproduction instructions at sgl-project/sglang issue 6017.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Third-party (SGLang) but notable as the H100 counterpart to the GB200 record - it is the source of the 'H100 per GPU' baseline that the GB200 post's 2.7x claim is computed against. Claimed to be the first open-source implementation to nearly match the throughput DeepSeek reported officially. Reported cost $0.20 per 1M output tokens. Cloud hardware (Atlas Cloud) means hardware SKUs are not individually verified.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-nv-sglang-h100-deepseek-ep-blog"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "id": "intel-arc-pro-b60",
+  "type": "accelerator",
+  "name": "Intel Arc Pro B60",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "vendor": "intel",
+  "architecture": "battlemage (Xe2 HPG, BMG G21)",
+  "release_year": 2025,
+  "process_nm": 5,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 24,
+  "memory_type": "gddr6",
+  "memory_bus_bit": 192,
+  "memory_bandwidth_gbps": 456,
+  "memory_bandwidth_basis": "Intel datasheet spec table: 'Bandwidth 456 GB/s' with 'Interface 192-bit' and 'Dedicated Memory 24GB of GDDR6'. Intel does not print a per-pin data rate for the B60, so the 456 GB/s and 192-bit figures are quoted verbatim rather than re-derived.",
+  "tdp_w": 200,
+  "flops": [
+    {
+      "precision": "int8",
+      "tflops": 197,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-intel-arc-pro-b60-datasheet"
+    },
+    {
+      "precision": "fp32",
+      "tflops": 12.28,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-intel-arc-pro-b60-datasheet"
+    }
+  ],
+  "interconnect": [],
+  "unified_memory": false,
+  "consumer": true,
+  "notes": "20 Xe2-HPG cores, 160 XMX engines, 20 RT units, PCIe Gen 5.0 x16 (x8 ELECTRICAL - note the mismatch: the card presents a Gen5 x16 slot but is wired x8, so host bandwidth is half of what the connector implies). Intel states 'Consumption 120-200W', a range rather than a single TDP, so 200 W is recorded as the top of Intel's reference range.\n\nPRECISION CAVEAT - Intel labels this one honestly, which is rare and worth preserving. The datasheet headline reads '197 AI TOPS Int 8 DENSE' and footnote 1 defines it as 'the peak throughput when running XMX workloads with INT8 datatype and DENSE MODELS'. So unlike NVIDIA's 'AI TOPS', this number is explicitly INT8 and explicitly DENSE, and is directly comparable to a dense INT8 tensor figure elsewhere in this repo - it is NOT an INT4 number and NOT a sparse figure.\n\nCounter-intuitive but from primary sources: 197 TOPS (24 GB, 200 W) is LOWER than the consumer B580's 233 TOPS (12 GB, 190 W). The Pro part trims clocks and TOPS in exchange for 2x capacity, workstation certification, ISV validation and SR-IOV. 'Pro' here means qualified, not faster - do not assume a Pro part out-performs the consumer SKU on throughput.\n\nInference: 24 GB dedicated GDDR6 at 456 GB/s. Identical capacity to an RTX 4090 at 45% of its bandwidth, so batch-1 memory-bound decode is markedly slower despite equal VRAM. The datasheet is explicit about the intended use: 'Scalable Multi-GPU Support' and 'optimized to run larger, more advanced AI' - i.e. pool several 24 GB cards on Linux rather than run one big model fast. Four cards = 96 GB of VRAM, at which point the bottleneck is interconnect (PCIe, no scale-up fabric), not per-card compute.\n\nNotability: 'Intel version not available for purchase. Available as Partner Branded Card' per the datasheet, which is why vendor spec pages for this part are scarce and secondary aggregator numbers for it should be treated with suspicion.",
+  "sources": [
+    "consumer-intel-arc-pro-b60-datasheet"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "gguf-q4-k-m-wikitext2-ppl-delta-llama3-1-8b",
+  "type": "benchmark",
+  "name": "GGUF Q4_K_M WikiText-2 perplexity delta vs f16, Llama-3.1-8B-Instruct",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-meth-kquant",
+    "bench-meth-vllm"
+  ],
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "Llama-3.1-8B-Instruct (F16 GGUF baseline)",
+  "format_id": "gguf-q4-k-m",
+  "metric": "quality",
+  "value": 0.24,
+  "unit": "perplexity_delta (WikiText-2 ppl points, quantized minus f16)",
+  "methodology": "Unified llama.cpp GGUF study, Table 2. Single model Llama-3.1-8B-Instruct converted to GGUF; the F16 reference is that 15317.02 MiB input file. All 13 quant configs produced from the same FP16 GGUF with official llama-quantize, scheme id as the only varying parameter (llama.cpp commit b7600). Metric: WikiText-2 perplexity computed by llama.cpp's OWN perplexity implementation (the same one llama-bench and llama-perplexity use), fetched via llama.cpp scripts/get-wikitext-2.sh, with identical runtime settings across schemes. F16 scores 7.32; Q4_K_M scores 7.56. Measured on a dual-socket Intel Xeon Platinum 8488C (96 physical cores, 192 threads) with AVX-512 and BF16.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "DELTA = +0.24 ppl (7.56 vs 7.32). engine_id is llama-cpp because perplexity came from llama.cpp's own script, not lm-eval - the study's downstream benchmarks came from lm-eval v0.4.9.2, so do not mix the two pipelines. Three misreads this guards against. (1) These WikiText-2 values are NOT comparable to the AWQ Llama-2 numbers or the MX paper's Llama numbers: different model, and a different perplexity implementation. Absolute ppl is meaningless across harnesses; only the within-table delta is real. (2) This is a WEIGHT-ONLY delta - GGUF Q4_K_M quantizes no activations. The 4.8944 bpw figure is about storage, not about a W4A4 kernel. (3) The study itself finds Q4_K_S beats Q4_K_M on BOTH axes (70.83 vs 69.41 percent size reduction, 69.17 vs 69.15 Avg, and 7.62 vs 7.56 ppl), inverting the folk 'M is better than S' rule. Q3_K_S is the outlier in the other direction: +1.64 ppl and -9.32 GSM8K points - see the separate gguf-q3-k-s record."
+}

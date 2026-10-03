@@ -1,0 +1,28 @@
+{
+  "id": "trtllm-llama2-70b-h100-fp8-batch1-request-latency",
+  "type": "benchmark",
+  "name": "TensorRT-LLM: Llama 2 70B FP8 on 8x H100 80GB, single-request latency at batch size 1",
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-h100-sxm"
+  ],
+  "interconnect_ids": [
+    "nvlink-4",
+    "nvswitch-4"
+  ],
+  "model": "Llama-2-70b (TensorRT-LLM FP8 build)",
+  "format_id": "fp8-e4m3",
+  "metric": "ttft_ms",
+  "value": 1700,
+  "unit": "ms per full request (batch 1; source states 'a single inference in 1.7 seconds')",
+  "methodology": "Engine: TensorRT-LLM v0.5.0 (published command line: build.py with --enable_fp8 --fp8_kv_cache --strongly_typed, then mpirun -n 8 gptSessionBenchmark --batch_size 14 --input_output_len 2048,1;2048,128, --warm_up 1 --num_runs 5). Hardware: DGX H100, 8x H100 80GB HBM3, TP=8, PP=1. Prompt length 2048, output length 128. Batch size 1 (one request at a time). Concurrency 1. Tensor-parallel size 8. Figure is PER-REQUEST: the source describes it as the full end-to-end time to serve one inference, so it covers prefill plus all 128 decode steps, not just first-token latency - the schema's closest honest metric is ttft_ms and the unit says so explicitly. NOT split into TTFT vs ITL by the source. Omitted by the source: clock/power settings, framework commit, container image, and whether the 1.7 s is mean or best-of-5.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "NVIDIA published the exact build and benchmark command lines, so this is reproducible modulo the unspecified commit/container. IMPORTANT: this is a vendor-selected comparison against AMD's MI300X launch claim and NVIDIA explicitly says AMD's figures used unoptimized software - read the 'H100 is 2x faster' framing in that source as vendor positioning, not a neutral result. The paired throughput point under a 2.5 s fixed response-time budget is in the same figure but is a chart-only value (see the note on the NVIDIA H100 source record).",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-nv-nvidia-h100-tensorrtllm-blog"
+  ]
+}

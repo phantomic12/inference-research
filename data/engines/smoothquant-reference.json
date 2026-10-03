@@ -1,0 +1,46 @@
+{
+  "id": "smoothquant-reference",
+  "type": "engine",
+  "name": "SmoothQuant reference implementation (PyTorch W8A8)",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-smoothquant-paper"
+  ],
+  "repo": "mit-han-lab/smoothquant",
+  "languages": [
+    "Python"
+  ],
+  "license": "MIT",
+  "first_release_year": 2022,
+  "design_goal": [
+    "minimal-deps"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "none"
+  ],
+  "supported_formats": [
+    "int8",
+    "smoothquant"
+  ],
+  "notable_features": [
+    "Offline outlier migration then INT8 linear layers",
+    "W8A8 via torch._int_mm / fake-quant W8A8W8 path",
+    "Three smoothing strengths O1 (per-channel static) / O2 (per-token dynamic) / O3 (per-tensor static)"
+  ],
+  "hardware_caveats": [
+    "The reference repo is an evaluation harness, not a serving runtime: its INT8 path is PyTorch, so its own latency numbers are not representative of the FasterTransformer INT8 kernels used for the paper's speed claims"
+  ],
+  "best_for": [
+    "reproducing the paper's accuracy numbers"
+  ],
+  "avoid_for": [
+    "latency measurement"
+  ],
+  "docs_url": "https://github.com/mit-han-lab/smoothquant",
+  "notes": "IMPORTANT methodology point for every SmoothQuant quality delta in this repo: the accuracy numbers come from this PyTorch harness (evaluated with lm-eval-harness), while the 1.51x/1.56x speedups come from the FasterTransformer INT8 integration. Accuracy and speed in that paper are NOT from the same runtime. O1-O3 are different schemes, not different strengths of one scheme: O3 is per-tensor static and is the one that loses accuracy on OPT-175B."
+}

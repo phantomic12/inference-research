@@ -1,0 +1,28 @@
+{
+  "id": "sglang-deepseek-v3-gb200-nvl72-decode-tps-per-gpu",
+  "type": "benchmark",
+  "name": "SGLang: DeepSeek 671B PD-disaggregated + large-scale EP on GB200 NVL72, 7583 decode tokens/s per GPU",
+  "engine_id": "sglang",
+  "accelerator_ids": [
+    "nvidia-gb200-nvl72"
+  ],
+  "interconnect_ids": [
+    "nvlink-5",
+    "nvswitch-5"
+  ],
+  "model": "DeepSeek-V3 (671B MoE, FP8)",
+  "format_id": "fp8-e4m3",
+  "metric": "decode_tok_s",
+  "value": 7583,
+  "unit": "decode tokens/s per GPU (aggregate decode throughput per GPU across the rack)",
+  "methodology": "Engine: SGLang with prefill-decode disaggregation and large-scale expert parallelism, using Blackwell DeepGEMM (FP8), DeepEP (NVLink-only), FlashInfer Blackwell FMHA for prefill, CUTLASS Blackwell MLA and Mooncake for KV transfer. Hardware: GB200 NVL72, 14 nodes available; 12 nodes (768 Blackwell GPUs) for decode, the remaining 2 for prefill. Model: DeepSeek 671B FP8. Prompt length 2000 tokens (the headline figure is specifically 'for 2,000-token input lengths'); output length NOT stated for the headline point - the ablation study elsewhere in the post uses input 2000 / output 100, which is probably but not certainly the headline configuration. Concurrency: NOT fixed and NOT stated - the setup deliberately uses a slowdown API to keep decode nodes saturated, so the operating point is 'saturated decode nodes' rather than a fixed batch size or user count. Tensor-parallel size: no single TP; large-scale EP is the dominant axis and TP16 vanilla is quoted only as the baseline. Figure is DECODE tokens/s per GPU, aggregate over concurrent requests, not per-request. Multi-token prediction (MTP) was NOT enabled for this figure (the post shows MTP only as a simulated baseline). Reported spread across sequence lengths: 2.5-3.4x vs H100 per GPU. Reproduction instructions referenced at sgl-project/sglang issue 7227.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "SGLang is a third-party open-source project, not NVIDIA, so this is recorded as third_party even though the hardware was NVIDIA's and NVIDIA staff were acknowledged - the kernels being benchmarked (DeepGEMM, DeepEP, FlashInfer, CUTLASS) are largely NVIDIA-authored, which is why the number is unflattering to nobody in particular. The 2.7x-over-H100 comparison reuses baselines from the SGLang H100 post rather than re-measuring H100, so it is a cross-post comparison, not a same-session A/B. The post describes the work as 'early results' and 'preliminary'.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-nv-sglang-gb200-deepseek-pd-blog"
+  ]
+}

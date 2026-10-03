@@ -1,0 +1,23 @@
+{
+  "id": "spinquant-random-vs-learned-rotation-spread-mistral-7b",
+  "type": "benchmark",
+  "name": "SpinQuant random-vs-learned rotation accuracy spread, Mistral-7B W4A4KV4",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-meth-spin"
+  ],
+  "engine_id": "spinquant-research-harness",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "Mistral-7B",
+  "format_id": "spinquant",
+  "metric": "quality",
+  "value": 16.2,
+  "unit": "accuracy_delta_pp (learned rotations minus random Hadamard rotations, identical W4A4KV4 setting)",
+  "methodology": "SpinQuant paper Table 2, ablation 'learned rotation vs random rotation'. Model Mistral-7B, 4-4-4 (W4A4KV4). Metric: unweighted average accuracy over the eight zero-shot commonsense reasoning tasks. Random Hadamard R{1,2,3,4} scores 52.4; SpinQuant_had learned rotations score 68.6, an annotated gain of +16.2 as printed by the authors. Both rotation families are output-equivalent in full precision, so the fp16 model is bit-identical in both arms - the entire spread is the quantization outcome.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "This is a measurement-variance record, not a format record, and it is the most important number in this repo for anyone publishing a quantization quality delta: it measures how far the SAME quantization recipe's result moves when only the rotation changes. 16.2 accuracy points on Mistral-7B at W4A4KV4, and the other cells in the same table show +15.7, +3.3, +2.5, +0.9 and +2.1. Section 3.2 separately reports that across 100 random seeds the spread between random rotations reaches 13 points, and that the Cayley-optimized rotation beat the best of 100 random seeds. Consequence: a quantization paper reporting one number from one seed with no seed count and no error bars has not measured its own uncertainty. The paper's own Table 4 makes the same point on LLaMA-2 7B, where Cayley+RTN at W4A4KV4 with a random Hadamard rotation gives 58.7 +/- 1.0 on 8-task accuracy but WikiText ppl 8.2 +/- 0.36, and the no-Cayley arm swings from 48.3 +/- 2.7 to 58.7 and 18.2 +/- 4.35 to 8.2 - a 4.35 perplexity standard deviation from rotation choice alone. Unseeded perplexity deltas below roughly 1 point should not be treated as signal. Mixing up cells here is easy: the +16.2 belongs to the 4-4-4 column, the +15.7 to the 4-4-16 column of the same row."
+}

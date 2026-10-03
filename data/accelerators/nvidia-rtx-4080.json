@@ -1,0 +1,51 @@
+{
+  "id": "nvidia-rtx-4080",
+  "type": "accelerator",
+  "name": "NVIDIA GeForce RTX 4080 (16 GB)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "vendor": "nvidia",
+  "architecture": "ada (AD103)",
+  "release_year": 2022,
+  "process_nm": 4,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 16,
+  "memory_type": "gddr6x",
+  "memory_bus_bit": 256,
+  "memory_bandwidth_gbps": 716.8,
+  "memory_bandwidth_basis": "GDDR6X 22.4 Gbps data rate x 256-bit / 8 = 716.8 GB/s (NVIDIA Ada whitepaper Appendix B, AD103 'GeForce RTX 4080 16 GB' column)",
+  "tdp_w": 320,
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 48.7,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-ada-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 97.5,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-ada-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 97.5,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-ada-gpu-architecture-whitepaper"
+    }
+  ],
+  "interconnect": [],
+  "unified_memory": false,
+  "consumer": true,
+  "notes": "Mid-rung Ada consumer part, 9728 CUDA cores, 2505 MHz boost, 320 W TGP, 65536 KB L2. Included mainly as the bandwidth counterpoint for the 16 GB VRAM tier.\n\nInference-relevant: 16 GB at 716.8 GB/s is ~71% of the 4090's 1008 GB/s. But the binding constraint at 16 GB is capacity, not bandwidth - a 16 GB pool leaves almost no headroom for KV cache once a 13B-class model is quantised, while a 24 GB card fits the same model with room. Read the two axes together.\n\nFP16 97.5 TFLOPS is with FP32 accumulate, dense; the sparse figure is 195. Ada whitepaper prints both as '97.5/195'.\n\nACCUMULATE-MODE DISAMBIGUATION (why there is only one fp16/fp8 entry each): NVIDIA's whitepapers print separate tensor rows per accumulate mode, and the same numeric value can appear as DENSE in one row and SPARSE in another. E.g. on the 4090 'Peak FP16 Tensor TFLOPS with FP16 Accumulate 330.3/660.6' and 'Peak FP16 Tensor TFLOPS with FP32 Accumulate 165.2/330.4' - so 330.3 is DENSE-with-FP16-accumulate and SPARSE-with-FP32-accumulate. Encoding that as a single dense:false entry would be wrong. The flops array here therefore records ONE entry per precision, always the FP32-accumulate figure, because that is what LLM inference kernels use; the FP16-accumulate variants are stated in this note instead of being mislabeled as sparse. 4080 FP16-accumulate figure: fp16 dense 194.9 / sparse 389.8 TFLOPS. The recorded fp16 97.5 entry is FP32-accumulate dense.",
+  "sources": [
+    "consumer-nvidia-ada-gpu-architecture-whitepaper"
+  ]
+}

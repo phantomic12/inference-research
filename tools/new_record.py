@@ -61,6 +61,12 @@ TEMPLATES = {
         "class": None, "affects": [], "symptom": None, "root_cause": None,
         "workaround": None, "severity": None, "notes": "",
     },
+    "supply": {
+        "kind": None, "vendor": None, "accelerator_ids": [], "region": None,
+        "channels": [], "price_usd": None, "price_basis": None,
+        "availability": None, "lead_time_weeks": None,
+        "export_controlled": None, "notes": "",
+    },
     "source": {
         "url": None, "publisher": None, "kind": None, "published": None,
         "accessed": TODAY, "archived_url": None, "notes": "",

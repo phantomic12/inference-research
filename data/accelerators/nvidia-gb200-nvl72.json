@@ -29,47 +29,47 @@
       "dense": false,
       "vendor_claim": true,
       "source_id": "nv-gb200-nvl72-product-page",
-      "notes": null
+      "notes": "FP64 40 TFLOPS. The Blackwell sheet does NOT print a sparsity footnote on its FP64 row (unlike the tensor rows), so this is recorded as vendor-claim sparse/unknown. AMD's MI350X page independently lists B200 FP64 as 37 TFLOPs dense, so treat 40 vs 37 as an unresolved vendor discrepancy."
     },
     {
       "precision": "tf32",
       "tflops": 1250,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-gb200-nvl72-product-page"
     },
     {
       "precision": "bf16",
       "tflops": 2500,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-gb200-nvl72-product-page"
     },
     {
       "precision": "fp16",
       "tflops": 2500,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-gb200-nvl72-product-page"
     },
     {
       "precision": "fp8",
       "tflops": 5000,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-gb200-nvl72-product-page"
     },
     {
       "precision": "int8",
       "tflops": 5000,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-gb200-nvl72-product-page"
     },
     {
       "precision": "fp4",
       "tflops": 10000,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-gb200-nvl72-product-page"
     }
@@ -88,5 +88,5 @@
     "nv-gb200-nvl72-product-page",
     "nv-blackwell-datasheet"
   ],
-  "notes": "GB200 NVL72 is a RACK-SCALE system (72 Blackwell GPUs + 36 Grace CPUs, 2,592 Neoverse V2 cores), not a single accelerator. All flops here are PER-GPU, derived by dividing NVIDIA's system figures by 72: 1,440 PFLOPS NVFP4 / 72 = 20 sparse PFLOPS; 720 FP8 / 72 = 10; 360 FP16/BF16 / 72 = 5; 180 TF32 / 72 = 2.5. CRITICAL: NVIDIA's own footnote says 'Specification in sparse. Dense is one-half sparse spec shown', so ALL listed dense values are half of the recorded figure (dense NVFP4 = 10 PFLOPS/GPU, dense FP8 = 5). tdp_w 1200 is the per-GPU 'configurable up to 1,200W' from the Blackwell datasheet, NOT the rack's total. The distinguishing spec here is INTERCONNECT, not FLOPS: 130 TB/s of NVLink across a single 72-GPU domain via NVLink Switch, i.e. ~1.8 TB/s per GPU - 2x H100 SXM's 900 GB/s - which is what lets a 72-way tensor parallel model behave like one machine. Do not confuse this record with a whole GB200 superchip (the paired superchip is 20 sparse PFLOPS NVFP4 and 372GB total). The 'other' row is FP64/FP64 Tensor Core (40 TFLOPS, sparse / 20 dense) - this schema's precision enum has no fp64 member."
+  "notes": "AUDIT: the FP64 'other' row was flipped to dense:true by the mechanical pass but that assertion is NOT supported - the Blackwell datasheet prints no sparsity footnote on the FP64 row, and AMD's MI350X page quotes B200 FP64 as 37 TFLOPs versus NVIDIA's printed 40. Row reverted to dense:false and annotated. The AI-precision rows (FP16/FP8/FP4) are correctly dense values. AUDIT CORRECTION: the dense/sparse flag on the tensor rows was inverted. FP16 2500 / FP8 5000 / FP4 10000 TFLOPS are DENSE (sparse = 2x). These rows were previously flagged dense:false, which wrongly told a reader they were sparse.  The stored numbers are correct dense values. GB200 NVL72 is a RACK-SCALE system (72 Blackwell GPUs + 36 Grace CPUs, 2,592 Neoverse V2 cores), not a single accelerator. All flops here are PER-GPU, derived by dividing NVIDIA's system figures by 72: 1,440 PFLOPS NVFP4 / 72 = 20 sparse PFLOPS; 720 FP8 / 72 = 10; 360 FP16/BF16 / 72 = 5; 180 TF32 / 72 = 2.5. CRITICAL: NVIDIA's own footnote says 'Specification in sparse. Dense is one-half sparse spec shown', so ALL listed dense values are half of the recorded figure (dense NVFP4 = 10 PFLOPS/GPU, dense FP8 = 5). tdp_w 1200 is the per-GPU 'configurable up to 1,200W' from the Blackwell datasheet, NOT the rack's total. The distinguishing spec here is INTERCONNECT, not FLOPS: 130 TB/s of NVLink across a single 72-GPU domain via NVLink Switch, i.e. ~1.8 TB/s per GPU - 2x H100 SXM's 900 GB/s - which is what lets a 72-way tensor parallel model behave like one machine. Do not confuse this record with a whole GB200 superchip (the paired superchip is 20 sparse PFLOPS NVFP4 and 372GB total). The 'other' row is FP64/FP64 Tensor Core (40 TFLOPS, sparse / 20 dense) - this schema's precision enum has no fp64 member."
 }

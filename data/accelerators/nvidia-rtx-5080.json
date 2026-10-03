@@ -1,0 +1,94 @@
+{
+  "id": "nvidia-rtx-5080",
+  "type": "accelerator",
+  "name": "NVIDIA GeForce RTX 5080",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-03",
+  "vendor": "nvidia",
+  "architecture": "blackwell (GB203)",
+  "release_year": 2025,
+  "process_nm": 4,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 16,
+  "memory_type": "gddr7",
+  "memory_bus_bit": 256,
+  "memory_bandwidth_gbps": 960,
+  "memory_bandwidth_basis": "GDDR7 30 Gbps data rate x 256-bit / 8 = 960 GB/s (NVIDIA RTX Blackwell whitepaper: 'Memory Clock (Data Rate) 30 Gbps', 'Memory Bandwidth 960 GB/sec'; the same figure and bus appear on the NVIDIA GeForce comparison table)",
+  "tdp_w": 360,
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 56.3,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 112.6,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 112.6,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "tf32",
+      "tflops": 56.3,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 225.1,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 900.4,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "fp4",
+      "tflops": 900.4,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "fp4",
+      "tflops": 1801,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    },
+    {
+      "precision": "int8",
+      "tflops": 450.2,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+    }
+  ],
+  "interconnect": [],
+  "unified_memory": false,
+  "consumer": true,
+  "notes": "Mid-rung Blackwell consumer part, 10752 CUDA cores, 2617 MHz boost, 360 W TGP, PCIe Gen5, 65536 KB L2, 2.62 GHz boost clock on the NVIDIA comparison table.\n\nPRECISION CAVEAT - the single most conflated number on consumer hardware. NVIDIA's product pages advertise 'AI TOPS' (5090: 3352, 5080: 1801, 5070 Ti: 1406). The RTX Blackwell whitepaper labels the identical figure 'Peak FP4 Tensor TFLOPS with FP32 Accumulate (FP4 AI TOPS) 1676/3352', where the second value uses the 2:4 structured-sparsity feature (footnote 2: 'Effective TOPS / TFLOPS using the Sparsity Feature'). So the marketing 'AI TOPS' number is FP4 with 2:4 sparsity, not INT4, not FP16, and not dense. It is not comparable to an FP16/BF16 dense figure, to the INT4-vs-FP16 speedup ratios quoted in quantization literature, or to another vendor's dense INT8 number. Only figures NVIDIA publishes with an explicit dense/sparse split are recorded here; every flops entry's dense flag states which half it is.\n\nInference: 16 GB at 960 GB/s. Bandwidth is strong for the tier; capacity is what limits it. A 16 GB pool quantised leaves almost no headroom for KV cache at long context, where a 24 GB card fits the same model comfortably. Do not rank this part against the 5090 on the 'AI TOPS' ratio - 1801 vs 3352 are both FP4+sparse, and the dense ratio (900.4 vs 1676) is the same 2x, so the marketing ratio is at least self-consistent, but neither is an FP16 number.\n\nACCUMULATE-MODE DISAMBIGUATION (why there is only one fp16/fp8 entry each): NVIDIA's whitepapers print separate tensor rows per accumulate mode, and the same numeric value can appear as DENSE in one row and SPARSE in another. E.g. on the 4090 'Peak FP16 Tensor TFLOPS with FP16 Accumulate 330.3/660.6' and 'Peak FP16 Tensor TFLOPS with FP32 Accumulate 165.2/330.4' - so 330.3 is DENSE-with-FP16-accumulate and SPARSE-with-FP32-accumulate. Encoding that as a single dense:false entry would be wrong. The flops array here therefore records ONE entry per precision, always the FP32-accumulate figure, because that is what LLM inference kernels use; the FP16-accumulate variants are stated in this note instead of being mislabeled as sparse. 5080 FP16-accumulate variants: fp16 dense 225.1 / sparse 450.2 TFLOPS; fp8 (fp16 accumulate) dense 450.2 / sparse 900.4 TFLOPS. The recorded fp16 112.6 and fp8 225.1 entries are both FP32-accumulate dense.",
+  "sources": [
+    "consumer-nvidia-geforce-compare-specs",
+    "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "id": "awq-int3g128-wikitext2-ppl-delta-opt-6-7b",
+  "type": "benchmark",
+  "name": "AWQ INT3-g128 WikiText-2 perplexity delta vs fp16, OPT-6.7B",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-meth-awq"
+  ],
+  "engine_id": "tinychat-awq",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "OPT-6.7B",
+  "format_id": "awq",
+  "metric": "quality",
+  "value": 0.53,
+  "unit": "perplexity_delta (WikiText-2 ppl points, quantized minus FP16)",
+  "methodology": "AWQ paper Table 3. Model OPT-6.7B, weight-only INT3, group size 128, activations FP16. Metric: WikiText-2 perplexity in the AWQ harness. FP16 baseline 10.86; AWQ INT3-g128 scores 11.39. The same table lists plain round-to-nearest at 23.54, a 'keep 1 percent of weights in fp16' mixed-precision variant at 11.39, and a fixed s=2 rescale at 11.92.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "DELTA = +0.53 ppl (11.39 vs 10.86). This is the record that shows why the delta must be stated against fp16 and never against RTN. Naive RTN at the same 3-bit precision costs +12.68 ppl (23.54 vs 10.86) - a number that makes 3-bit quantization look impossible. The quantizer choice is worth 12.15 ppl of that, i.e. the folk memory '3-bit destroys the model' is the RTN cell, not the format. Second trap: the protection is not monotone. The paper's scaling sweep on this exact model (Table 2) gives 23.54 at s=1, 12.87 at s=1.25, 12.48 at s=1.5, 11.92 at s=2 and 12.36 at s=4 - the optimum is interior, because scaling salient channels harder also inflates the group max Delta and damages the non-salient 97 percent. 'Protect the outliers harder' is not a free dial."
+}

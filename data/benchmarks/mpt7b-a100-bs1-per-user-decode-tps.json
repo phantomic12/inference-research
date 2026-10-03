@@ -1,0 +1,23 @@
+{
+  "id": "mpt7b-a100-bs1-per-user-decode-tps",
+  "type": "benchmark",
+  "name": "Per-user decode tok/s, MPT-7B static batch 1, 1x A100",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-meth-databricks-inference-tuning"
+  ],
+  "engine_id": "fastertransformer",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "MPT-7B (FP16)",
+  "format_id": null,
+  "metric": "tok_s_per_user",
+  "value": 57.6,
+  "unit": "decode tokens/s experienced by one user (batch size 1, so per-user == aggregate)",
+  "methodology": "Databricks Table 2, MPT-7B row '1 x A100', batch size 1 column: peak throughput 0.9 requests/s with static batching. Hardware: 1x NVIDIA A100 40GB. IMPORTANT: this repo has no 40GB A100 accelerator record, so accelerator_ids is deliberately empty rather than pointing at the 80GB A100 records, which are a different part. Backend: FasterTransformer-based static batching. Requests: 512 input tokens, 64 output tokens, uniform. Measured by Databricks/MosaicML on their own production serving stack. DERIVED VALUE: 0.9 req/s x 64 output tokens = 57.6 output tokens/s; at batch size 1 there is exactly one user, so per-user and aggregate are the same number. Equivalent to a time-per-output-token of about 17.4 ms/token.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "DERIVATION BASIS: 0.9 req/s x 64 output tokens = 57.6 tok/s at batch size 1 on 1x A100, per Databricks Table 2. This is the per-user counterpart to mpt7b-a100-bs64-aggregate-output-tps. The pair is the trap: the SAME model, SAME GPU, SAME engine, SAME request shape, and the aggregate throughput number is 13.9x larger (800 vs 57.6 tok/s) while the number the user actually feels is 4.6x SMALLER (12.5 vs 57.6 tok/s). Any throughput number without its batch size is uninterpretable. The blog makes the definitional point explicitly: throughput is 'the number of output tokens per second an inference server can generate across all users and requests', while time-per-output-token is per user, and the two trade directly against each other - at 16 concurrent queries you get higher throughput but longer per-user token latency. Note this is a static-batching measurement, which the blog says underperforms dynamic batching; continuous batching is quoted at 10x-20x better throughput than dynamic batching."
+}

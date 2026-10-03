@@ -1,0 +1,23 @@
+{
+  "id": "int4-perchannel-wikitext2-ppl-delta-llama2-7b-rtn",
+  "type": "benchmark",
+  "name": "INT4 per-channel affine WikiText-2 perplexity delta vs fp16, Llama2-7B (RTN)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-meth-mxptq"
+  ],
+  "engine_id": "mxptq-research-harness",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "Llama2-7B",
+  "format_id": "int8-channelwise",
+  "metric": "quality",
+  "value": 0.79,
+  "unit": "perplexity_delta (WikiText-2-test ppl points, quantized minus FP16)",
+  "methodology": "PTQ-with-microscaling-formats paper, Table 1, row 'A:INT8, W:4, RTN' - plain round-to-nearest, no AWQ, no GPTQ, no SmoothQuant. Model Llama2-7B. Fixed-point per-channel affine quantization for both activations and weights; calibration 128 random WikiText-2-train sentences, MinMaxObserver for ranges. Metric: WikiText-2 TEST perplexity. FP16 baseline 5.12; INT8-activation / INT4-weight RTN scores 5.91 - the figure the paper's own text quotes directly as the naive-quantization cost.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "DELTA = +0.79 ppl (5.91 vs 5.12). This record is the control. In the same table and the same model: RTN 5.91, GPTQ 5.45, SmoothQuant 5.60, AWQ 5.43, AWQ+GPTQ at INT4 5.37, AWQ+GPTQ at MXINT4 5.53. So the honest spread for '4-bit Llama2-7B on WikiText-2' is 5.37 to 5.91 - 0.54 ppl - and every one of those six numbers is presented somewhere as 'the 4-bit perplexity'. Quoting any single one without naming the algorithm, the activation precision, the group/block size and the harness version is the most common unreproducible claim in quantization work. format_id int8-channelwise is the nearest existing record; the activation side here is W8A8 per-channel affine, so read this together with the smoothquant record rather than as a weight-only AWQ/GPTQ number."
+}

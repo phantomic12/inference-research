@@ -1,0 +1,23 @@
+{
+  "id": "gguf-q3-k-s-gsm8k-accuracy-delta-llama3-1-8b",
+  "type": "benchmark",
+  "name": "GGUF Q3_K_S GSM8K accuracy delta vs f16, Llama-3.1-8B-Instruct",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-meth-kquant"
+  ],
+  "engine_id": "lm-eval-harness",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "Llama-3.1-8B-Instruct (Q3_K_S GGUF)",
+  "format_id": "gguf-q3-k-m",
+  "metric": "quality",
+  "value": -9.32,
+  "unit": "accuracy_delta_pp (GSM8K percentage points, quantized minus f16)",
+  "methodology": "Unified llama.cpp GGUF study, Table 2, GSM8K column. Model Llama-3.1-8B-Instruct as Q3_K_S GGUF - the largest compression in the table at 77.23 percent size reduction. Metric: GSM8K flexible-extract, scored by EleutherAI lm-evaluation-harness v0.4.9.2 against the same checkpoint's F16 GGUF baseline, 5-shot prompting, default harness and llama.cpp configurations, Llama-3.1 chat template. F16 scores 77.63; Q3_K_S scores 68.31. Q3_K_M is 73.16 and Q3_K_L 74.07 in the same column.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "DELTA = -9.32 pp (68.31 vs 77.63), the paper's own arithmetic. This is the clearest record in the repo that PERPLEXITY IS NOT A QUALITY PROXY for reasoning. Q3_K_S costs +1.64 ppl on WikiText-2 (7.32 to 8.96) - a 22 percent relative perplexity increase - while costing 9.32 points of GSM8K, 12.7 points of unweighted benchmark average and 4.19 points of MMLU. Moving within the 3-bit family recovers most of the reasoning loss at nearly no further perplexity cost: Q3_K_M is 7.96 ppl with 73.16 GSM8K, Q3_K_L is 7.81 ppl with 74.07. The study states the mechanism directly - task sensitivity depends on how quantization error interacts with a benchmark's computation pattern, not on distributional fit alone - and notes that Q5_0, Q5_1 and Q5_K_S share identical 7.43 ppl yet differ markedly on GSM8K and IFEval. format_id points at gguf-q3-k-m because that is the existing record for the 3-bit K-quant family; the measured scheme is Q3_K_S, for which no separate record id exists (creating quantization records was outside this slice)."
+}

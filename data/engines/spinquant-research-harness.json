@@ -1,0 +1,48 @@
+{
+  "id": "spinquant-research-harness",
+  "type": "engine",
+  "name": "SpinQuant research harness (fake-quant + Triton INT4 kernels)",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-spinquant-paper"
+  ],
+  "repo": "facebookresearch/SpinQuant",
+  "languages": [
+    "Python",
+    "CUDA"
+  ],
+  "license": "MIT",
+  "first_release_year": 2024,
+  "design_goal": [
+    "minimal-deps"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda"
+  ],
+  "supported_formats": [
+    "int4",
+    "spinquant"
+  ],
+  "notable_features": [
+    "Cayley SGD on the Stiefel manifold to learn rotation matrices R1,R2 (and online Hadamard R3,R4)",
+    "Evaluated largely with fake quantization, plus research Triton INT4 GEMM kernels",
+    "Two variants: SpinQuant_no_had (rotations merged into weights, zero forward-pass change) and SpinQuant_had (needs online Hadamard kernels)"
+  ],
+  "hardware_caveats": [
+    "NO hardware INT4 tensor-core path: W4A4KV4 accuracy is a fake-quant / research-kernel result, not a silicon result",
+    "SpinQuant_had needs an online Hadamard kernel, ~8% of network latency overhead per the paper"
+  ],
+  "best_for": [
+    "understanding what W4A4 costs when activations AND KV cache are quantized"
+  ],
+  "avoid_for": [
+    "production deployment as-is"
+  ],
+  "docs_url": "https://github.com/facebookresearch/SpinQuant",
+  "notes": "Recorded because the SpinQuant W4A4 quality deltas are harness numbers, and 'there is no INT4 tensor-core path for 4x4' is the whole point of the format record. The rotation matrices are ~0.26% of weight size and are folded into the checkpoint."
+}

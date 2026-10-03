@@ -161,6 +161,9 @@ def run(types: list[str], quiet: bool) -> tuple[Report, int]:
         if t == "accelerator":
             for a in rec.get("interconnect") or []:
                 rep.warn(a in bare, f"{rid}: interconnect {a!r} not a record id (ok if planned)")
+        if t == "supply":
+            for a in rec.get("accelerator_ids") or []:
+                rep.warn(a in bare, f"{rid}: accelerator {a!r} not a record id (ok if planned)")
 
     del qualified
     return rep, len(records)

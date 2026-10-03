@@ -1,0 +1,52 @@
+{
+  "id": "nvidia-rtx-6000-ada",
+  "type": "accelerator",
+  "name": "NVIDIA RTX 6000 Ada Generation",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "vendor": "nvidia",
+  "architecture": "ada (AD102)",
+  "release_year": 2022,
+  "process_nm": 4,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 48,
+  "memory_type": "gddr6 with ECC",
+  "memory_bus_bit": 384,
+  "memory_bandwidth_gbps": 960,
+  "memory_bandwidth_basis": "Datasheet spec table prints 'Memory interface 384-bit' and 'Memory bandwidth 960 GB/s' directly (implying a 20 Gbps GDDR6 part at 384-bit). Note the Ada whitepaper's AD102 column prints 1008 GB/s, which is the 21 Gbps GDDR6X consumer part on the same 384-bit width - do not carry one number onto the other card.",
+  "tdp_w": 300,
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 91.1,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-6000-ada-datasheet"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 728.5,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-6000-ada-datasheet"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 1457,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "consumer-nvidia-rtx-6000-ada-datasheet"
+    }
+  ],
+  "interconnect": [],
+  "unified_memory": false,
+  "consumer": true,
+  "notes": "Workstation part: 18176 CUDA cores, 568 4th-gen Tensor cores, 142 3rd-gen RT cores, 300 W total board power, PCIe 4.0 x16, dual slot full height, 4x DisplayPort 1.4a. 48 GB GDDR6 WITH ECC - a capacity and reliability tier no consumer Ada card offers, which is why this card stayed common for local LLMs after the 4090 arrived.\n\nPRECISION CAVEAT: the datasheet's headline 'Tensor performance 1457.0 TFLOPS' carries footnote 4 'Effective FP8 teraFLOPS (TFLOPS) using the new sparsity feature'. So 1457 is FP8 WITH 2:4 sparsity; the dense FP8 figure is 728.5. Both are recorded above with dense flags. Any comparison of this card's '1457 TFLOPS' against a Blackwell card's '4000 AI TOPS' compares sparse-FP8 against sparse-FP4 - different operations, not a like-for-like speedup.\n\nNo NVLink ('NVIDIA NVLink: No' in the datasheet), so multi-GPU is PCIe-bound. ECC is the meaningful differentiator for long-running inference servers, where a silent bit flip in a 24 GB consumer card is unrecoverable.",
+  "sources": [
+    "consumer-nvidia-rtx-6000-ada-datasheet",
+    "consumer-nvidia-ada-gpu-architecture-whitepaper"
+  ]
+}

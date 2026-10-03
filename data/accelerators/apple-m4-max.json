@@ -1,0 +1,29 @@
+{
+  "id": "apple-m4-max",
+  "type": "accelerator",
+  "name": "Apple M4 Max (MacBook Pro 14-inch, 2024)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "vendor": "apple",
+  "architecture": "m-series (M4 Max)",
+  "release_year": 2024,
+  "process_nm": 3,
+  "form_factors": [
+    "socs"
+  ],
+  "vram_gb": 128,
+  "memory_type": "lpddr5x unified",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 546,
+  "memory_bandwidth_basis": "Apple tech specs: '546GB/s memory bandwidth' for the M4 Max with 16-core CPU / 40-core GPU - the highest published bandwidth for a single M4 Max package; the 14-core CPU / 32-core GPU configuration is listed at 410GB/s. Unified-memory bandwidth, package-level, shared with the CPU.",
+  "tdp_w": null,
+  "flops": [],
+  "interconnect": [],
+  "unified_memory": true,
+  "consumer": true,
+  "notes": "M4 Max: 32-core or 40-core GPU, 16-core Neural Engine, up to 128 GB unified memory, 14-inch MacBook Pro (2024).\n\nmemory_type recorded as lpddr5x is a package-level characterisation, NOT an Apple-published spec for this part; Apple specifies only 'unified memory'. tdp_w is null because Apple publishes no SoC power figure for this machine.\n\nUNIFIED MEMORY IS NOT VRAM - read this before comparing any of these numbers to a discrete card:\n1. Capacity you can hand to a GPU kernel is smaller than the advertised capacity. On Apple Silicon the GPU can only address part of the unified pool; the OS and CPU take their share and a portion of the pool is not GPU-writable at all. A '128 GB' Mac does not present 128 GB to Metal.\n2. The bandwidth is SHARED. The figure below is the ceiling for the whole system memory subsystem and must serve CPU, GPU and everything else. A discrete card's bandwidth is a private bus serving only the GPU's frame buffer.\n3. Bigger is not faster for decode. Batch-1 LLM decode is memory-bound and roughly bandwidth-limited, so more-but-slower memory yields lower tokens/second even when the model fits. What large unified memory actually buys is CAPACITY - running a model you otherwise could not fit - plus the ability to offload layers to host RAM and pay a round-trip for them.\n4. There is no NVLink or MIG analogue. Metal exposes one GPU and one pool; you cannot partition it across GPUs.\n\nApple publishes memory BANDWIDTH and core counts but never GPU TFLOPS for these parts, which is why the flops array is EMPTY rather than filled with estimates. Any 'M-series TFLOPS' number in circulation is a third-party die-level extrapolation, not an Apple figure.\n\nInference read: 546 GB/s shared vs the 4090's 1008 GB/s dedicated and the 5090's 1792 GB/s dedicated. The 128 GB capacity is what makes this part interesting for large-model work, not the bandwidth. Against a 16 GB discrete card the capacity win is decisive (a 30B model in 4-bit fits here and not there); against a 32 GB 5090 the bandwidth deficit is decisive for tokens/second.",
+  "sources": [
+    "consumer-apple-macbook-pro-14-m4-max-tech-specs"
+  ]
+}

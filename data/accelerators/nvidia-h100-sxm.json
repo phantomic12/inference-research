@@ -33,35 +33,35 @@
     {
       "precision": "tf32",
       "tflops": 494.5,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-h100-datasheet"
     },
     {
       "precision": "bf16",
       "tflops": 989.5,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-h100-datasheet"
     },
     {
       "precision": "fp16",
       "tflops": 989.5,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-h100-datasheet"
     },
     {
       "precision": "fp8",
       "tflops": 1979,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-h100-datasheet"
     },
     {
       "precision": "int8",
       "tflops": 1979,
-      "dense": false,
+      "dense": true,
       "vendor_claim": true,
       "source_id": "nv-h100-datasheet"
     }
@@ -81,5 +81,5 @@
     "nv-h100-datasheet",
     "nv-h100-pcie-product-brief"
   ],
-  "notes": "CRITICAL: the datasheet prints 989 TFLOPS TF32 / 1,979 BFLOAT16+FP16 / 3,958 FP8+INT8, ALL MARKED 'WITH SPARITY'. The dense numbers recorded here are exactly half (494.5 / 989.5 / 1,979). Quoting NVIDIA's printed 1,979 'FP16 TFLOPS' as a dense figure overstates real dense throughput by 2x. FP64 34 and FP32 67 are dense and sparsity-independent. TDP is configurable up to 700W. NVLink 900 GB/s bidirectional per GPU. The 'other' row is FP64 34 TFLOPS (dense) - this schema's precision enum has no fp64 member."
+  "notes": "AUDIT CORRECTION: the dense/sparse flag on the tensor rows was inverted. FP16 989.5 / FP8 1979 TFLOPS are DENSE. NVIDIA prints 989 TF32 / 1,979 FP16 / 3,958 FP8 'WITH SPARITY' (sparse = 2x). These rows were previously flagged dense:false, which wrongly told a reader they were sparse.  The stored numbers are correct dense values. CRITICAL: the datasheet prints 989 TFLOPS TF32 / 1,979 BFLOAT16+FP16 / 3,958 FP8+INT8, ALL MARKED 'WITH SPARITY'. The DENSE numbers recorded here are exactly half of NVIDIA's printed sparse figures (494.5 TF32 / 989.5 BF16+FP16 / 1,979 FP8+INT8). Quoting NVIDIA's printed 1,979 'FP16 TFLOPS' as a dense figure overstates real dense throughput by 2x - and note NVIDIA's own marketing copy, the AMD MI300X page footnote and the H200 spec table all label 1,979 as the WITH-SPARITY figure, so anyone reading the sheet without the footnote halves it twice. FP64 34 and FP32 67 are dense and sparsity-independent. TDP is configurable up to 700W. NVLink 900 GB/s bidirectional per GPU. The 'other' row is FP64 34 TFLOPS (dense) - this schema's precision enum has no fp64 member."
 }
