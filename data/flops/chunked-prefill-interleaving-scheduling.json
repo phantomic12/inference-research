@@ -1,0 +1,39 @@
+{
+  "id": "chunked-prefill-interleaving-scheduling",
+  "type": "flop",
+  "name": "Chunked prefill and prefill/decode interleaving: deciding when to interrupt a prefill for a decode step",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Not an arithmetic mechanism; it is the knob that decides the arithmetic-intensity mix of a step. A full prefill step has AI ~ prompt_length (large-M GEMM, compute-bound); a decode step has AI = batch (memory-bound). Chunked prefill splits a long prompt into chunks of `max_num_batched_tokens` and admits at most one chunk per scheduler iteration, so the prefill's compute-rich contribution to a step is bounded, and decode iterations interleave between chunks. That is the point: a step that is mostly prefill chunk plus decode rows has a higher average AI than a pure decode step, which converts idle bandwidth into tokens, but it also has per-iteration shape variation that fights CUDA Graphs' static-configuration requirement. SARATHI's framing is the same lever stated differently - piggybacking decodes onto chunked prefills rather than giving them their own iteration.",
+  "bound_by": "both",
+  "scales_with": [
+    "max_num_batched_tokens (the chunk size - the direct knob on how much prefill can be admitted into one step)",
+    "prompt_length (how many chunks a request needs, and therefore how many decode iterations it waits behind)",
+    "batch_size (decode rows riding along with the chunk)",
+    "scheduler_priority_policy (prefill-first starves decode ITL; decode-first inflates TTFT)",
+    "num_concurrent_requests (arrival pressure determines whether chunking or full-prefill admission dominates)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-b200",
+    "google-tpu-v6e",
+    "nvidia-rtx-4090"
+  ],
+  "workarounds": [
+    "Chunked prefill with an explicit max_num_batched_tokens budget so a long prompt cannot stall decode ITLs (vLLM, SGLang, TRT-LLM all expose this)",
+    "Piggyback decodes onto the chunked prefill iteration instead of giving each its own step (SARATHI, arXiv 2308.16369)",
+    "Prefill/decode disaggregation, which removes the interleaving decision entirely - at the cost of the KV handoff; vLLM's docs state chunked prefill reaches the same tail-ITL goal and disaggregation is preferred only because chunk size is hard to tune",
+    "Decode-side slot reservation deferred until prefill signals readiness, so a long prefill does not hold decode's destination KV capacity (SGLang's prefill_complete allocation policy)",
+    "CUDA-Graph-compatible chunk shapes via a separate compilation path, at the cost of not capturing the mixed step"
+  ],
+  "notes": "Design consequence: chunked prefill is the cheap version of disaggregation and disaggregation is the reliable version. The scheduling decision - when to interrupt a prefill for a decode step - is a pure latency/throughput trade with no correctness component *if the implementation is sound*, which it demonstrably is not always: vLLM issue #55524 (Mamba2 exact-replay RFC) exists precisely because prefill, chunked prefill and decode do not currently produce identical bits for recurrent models, and its scope notes that batch-invariant mode must reject prefix caching, KV connectors, speculative decoding and micro-batching for Mamba2. So for SSM/hybrid models, chunked prefill and disaggregation both carry a numerics risk that dense attention models do not - the SSM state is carried across chunk boundaries and its update kernels are not batch-invariant. Also recorded: SGLang's docs identify DP-attention imbalance as a distinct problem from prefill interruption - in data-parallel attention one DP worker can take a prefill batch while another handles a decode batch, which disaggregation fixes by construction. And a scheduling pathology worth naming: prefill-first priority in a chunked-prefill scheduler starves in-flight decodes for the entire burst (FlashML-org/FreeToken#483 reports this on DeepSeek-V4 in production).",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-vllm-disagg-prefill-docs",
+    "pd-sglang-pd-disagg-docs",
+    "pd-distserve-osdi24-paper"
+  ]
+}

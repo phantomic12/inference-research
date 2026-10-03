@@ -1,0 +1,70 @@
+{
+  "id": "lmcache",
+  "type": "engine",
+  "name": "LMCache",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-lmcache-docs",
+    "pd-gh-lmcache-4463-packed-kv-silent-corruption",
+    "pd-gh-vllm-52617-lmcache-pd-hit-diverges",
+    "pd-vllm-disagg-prefill-docs"
+  ],
+  "repo": "LMCache/LMCache",
+  "languages": [
+    "Python",
+    "Go",
+    "C++",
+    "CUDA"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "design_goal": [
+    "low-latency",
+    "TTFT-reduction",
+    "vendor-neutral KV reuse",
+    "KV-tiering"
+  ],
+  "scheduling": [
+    "prefix-cache",
+    "radix-cache",
+    "disaggregated-prefill-decode",
+    "KV-tiering"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "npu"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "A KV cache management layer, not a GPU kernel library - it turns KV from temporary state into persistent, cross-engine reusable state",
+    "Runs as a standalone daemon process so 'KV cache will not be lost even if the inference engine crashes (i.e., no fate-sharing with engines)'; MP mode serves one or more engine instances from a shared store",
+    "Tiered offload across CPU memory, local disk (SSD) and remote backends, with reuse across requests, sessions and engine instances",
+    "Pluggable storage and transport backends behind one interface: CPU RAM, local disk, Redis/Valkey, Mooncake, InfiniStore, S3-compatible object storage, NIXL, GDS",
+    "PD disaggregation and KV transfer over NVLink, RDMA or TCP through transport layers such as NIXL",
+    "Non-prefix KV reuse: reuse cached blocks at any prompt position, with selective recompute for quality recovery (CacheBlend)",
+    "Production-grade KV observability: request- and token-level prefix-cache hit metrics, lifecycle and per-user usage metrics, Kubernetes health metrics",
+    "Pluggable SERDE interface for compression, token dropping and custom serialisation"
+  ],
+  "hardware_caveats": [
+    "Multi-platform support including a no-GPU development mode, but the fast paths are accelerator-specific",
+    "The KV-layout coupling is the sharp edge: LMCache's correctness depends on the engine's KV cache layout, and vLLM 0.26's fused/packed layout silently corrupted restores until it was fixed",
+    "Layout changes are not version-gated - a vLLM PR changing the block layout broke existing LMCache versions with no error"
+  ],
+  "best_for": [
+    "Long-context agentic, multi-turn and RAG workloads where TTFT is dominated by repeated prefill of a shared prefix",
+    "Fleets serving the same corpus across multiple engines or replicas, where a shared KV store beats per-engine prefix caches",
+    "Deployments that want the engine decoupled from cache lifetime (daemon process, no fate-sharing)"
+  ],
+  "avoid_for": [
+    "Workloads with no prefix reuse and no KV pressure - the layer adds a hop for nothing",
+    "Pinning to an engine version without checking the KV layout, because the compatibility failure is silent",
+    "Correctness-critical serving without an output-equivalence test against a monolithic baseline - LMCache P/D has a documented 9/9 failure against exactly that oracle"
+  ],
+  "docs_url": "https://docs.lmcache.ai/",
+  "notes": "Research prototype or production system? Production infrastructure with heavy adoption (Apache-2.0, ~12k stars, active). It is a layer, not a serving engine: it plugs into vLLM, SGLang and others rather than replacing them. KV transfer path: two distinct paths that are often conflated. (1) PD handoff - 'Support KV cache transfer from prefill workers to decode workers over NVLink, RDMA, or TCP through transport layers such as NIXL'. (2) Tiered offload - CPU RAM and local disk on the node, remote backends (Mooncake, InfiniStore, Redis/Valkey, S3, GDS) off-node. Correctness is the headline risk, and it is well documented upstream: LMCache #4463 records silent wrong KV on vLLM 0.26's packed layout ('A request served from the LMCache CPU tier produces different output than the same request computed from scratch. There is no exception and no warning'); Dynamo #14416 generalises it across three connectors and three LMCache issues; and vLLM #52617 shows the PD path itself diverging from a monolithic baseline at token 0 in 9/9 comparisons while native NIXL and Mooncake passed the same oracle. The pattern across all three is the same lesson: a KV cache is keyed on tokens but validated on layout, dtype, TP size, attention backend and adapter identity, and anything omitted from that key becomes silent corruption."
+}

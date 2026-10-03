@@ -1,0 +1,76 @@
+{
+  "id": "mooncake",
+  "type": "engine",
+  "name": "Mooncake",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-mooncake-repo",
+    "pd-mooncake-fast25-paper",
+    "pd-mooncake-protocols-doc",
+    "pd-gh-mooncake-4209-tcp-queue-full-hang",
+    "pd-sglang-pd-disagg-docs",
+    "pd-lmcache-docs"
+  ],
+  "repo": "kvcache-ai/Mooncake",
+  "languages": [
+    "C++",
+    "Python",
+    "CUDA",
+    "Go",
+    "Rust"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "KV-cache-tiering",
+    "production-scale overload handling"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache",
+    "disaggregated-prefill-decode",
+    "KVCache-centric scheduler"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "npu",
+    "tpu"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "Transfer Engine (TE): a unified batched-data-movement interface across storage, network and accelerator environments, with 'multiple transport protocols, topology-aware routing, multi-NIC bandwidth aggregation, and automatic failover'",
+    "Mooncake Store: a distributed KV cache (and model-weight store) built on the Transfer Engine",
+    "KVCache-centric disaggregated architecture separating prefill and decode clusters, plus a disaggregated KV cache pool built from otherwise-idle CPU, DRAM and SSD in the GPU cluster",
+    "KVCache-centric scheduler that maximises effective throughput subject to latency SLOs, rather than assuming all requests are served",
+    "Prediction-based early-rejection policy for overloaded conditions - an explicit admission-control feature rather than an implicit one",
+    "The broadest transport matrix in the ecosystem: tcp, rdma, efa (AWS libfabric SRD), nvmeof, nvlink (MNNVL inter-node), nvlink_intra, hip, barex, cxl, shm, musa (MTLink), ascend, hylink, tpu, mpcomm, flagcx",
+    "Won USENIX FAST 2025 Best Paper; published in ACM Trans. Storage (doi 10.1145/3773772)"
+  ],
+  "hardware_caveats": [
+    "The TCP path is not merely a slower RDMA - it has its own failure mode: the first transfer after an idle gap fails with lane queue-full rejections and the decode side hangs until timeout (Mooncake #4209)",
+    "Transport choice is deployment-specific and wrong choices are silent: auto-selected GPU-affine NICs on PCIe-passthrough VMs can pick a PIX-adjacent partner where GPUDirect RDMA does not work at all",
+    "shm is documented as 'same-host DRAM copies without NIC loopback' - useful but not a GPU-to-GPU path",
+    "Non-CUDA support exists as separate PyPI wheels (ROCm, NPU, MUSA, EFA, non-CUDA), so accelerator coverage is real but packaged per target"
+  ],
+  "best_for": [
+    "Long-context production serving where the KV working set exceeds HBM and the idle CPU/DRAM/SSD in the cluster can be used as a real KV tier",
+    "Overloaded deployments that need admission control rather than unbounded queueing",
+    "Heterogeneous fabrics - the transport matrix (RDMA, EFA, NVLink, CXL, shared memory, vendor-specific fabrics) is unmatched",
+    "Serving stacks that want a KV tier that outlives the engine process (the Store is a separate service)"
+  ],
+  "avoid_for": [
+    "Latency-sensitive single-request serving where a KV hop is pure overhead",
+    "Hosts without an RDMA-capable NIC, if you intend to run the RDMA protocol - TCP works but carries the queue-full hang",
+    "Small clusters with no idle DRAM/SSD to contribute - the disaggregated cache pool is the main differentiator and it needs spare capacity"
+  ],
+  "docs_url": "https://kvcache-ai.github.io/Mooncake/",
+  "notes": "Research prototype or production system? Production. This is the serving platform for Kimi, with a FAST'25 Best Paper and an ACM Trans. Storage journal version, and the README documents production integration into vLLM (2024-12-16), SGLang (2025-04-10) and others. KV transfer path: the Transfer Engine, whose protocol is chosen per deployment - RDMA verbs over an HCA for inter-node, EFA/libfabric SRD on AWS, nvlink (MNNVL) for inter-node GPU-to-GPU, nvlink_intra for intra-node NVLink, hip for AMD, shm for same-host DRAM, plus nvmeof/cxl for deeper tiers. It is simultaneously a PD-disaggregation system and a KV-tier system, which is why it sources both flop records. Reported results: up to 525% throughput increase in certain simulated scenarios while adhering to SLOs, and 75% more requests handled under real workloads - both from the paper abstract, so treat them as the authors' own figures. Adoption surface is broad enough to be a compatibility target rather than just a dependency: it is an LMCache storage/transport backend, an SGLang transfer backend, and a vLLM connector family (MooncakeConnector, MooncakeStoreConnector, ECMooncakeConnector). It also maintains a public known-issues tracker (#2647)."
+}

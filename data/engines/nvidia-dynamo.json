@@ -1,0 +1,74 @@
+{
+  "id": "nvidia-dynamo",
+  "type": "engine",
+  "name": "NVIDIA Dynamo",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-dynamo-repo",
+    "pd-dynamo-disagg-py",
+    "pd-nixl-repo",
+    "pd-vllm-nixl-connector-docs",
+    "pd-gh-dynamo-12463-rdma-failure-silent-garbage",
+    "pd-gh-trtllm-17665-nixl-notify-hang"
+  ],
+  "repo": "ai-dynamo/dynamo",
+  "languages": [
+    "Rust",
+    "Python",
+    "Go"
+  ],
+  "license": "Apache-2.0 (README badge and SPDX headers; GitHub's license API reports NOASSERTION because some bundled paths ship NVIDIA-proprietary components, e.g. NIXL's ucx IB modules)",
+  "first_release_year": 2025,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "multi-model",
+    "datacenter-scale orchestration",
+    "SLA-based autoscaling"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache",
+    "chunked-prefill",
+    "disaggregated-prefill-decode",
+    "KV-aware-routing",
+    "SLA-based-planner"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "Orchestration layer ABOVE the inference engines - the README is explicit that it 'doesn't replace SGLang, TensorRT-LLM, or vLLM, it turns them into a coordinated multi-node inference system'; backend support matrix lists all three for disaggregated serving",
+    "Disaggregated serving with independently scalable prefill and decode pools",
+    "KV-aware routing to avoid redundant prefill computation across replicas",
+    "SLA-based Planner for autoscaling against measured latency, and a profiler that derives cost models for disaggregated deployments (per-engine disagg templates for vLLM, SGLang, TRT-LLM)",
+    "KVBM block manager for GPU/host KV tiering - marked complete for TensorRT-LLM and vLLM, in progress for SGLang",
+    "KV transfer via NIXL (NixlConnector), Mooncake and LMCache connectors",
+    "Rust core with Python extensibility; frontend/worker split with graph-deployment CRDs for Kubernetes"
+  ],
+  "hardware_caveats": [
+    "NVIDIA-originated: the disaggregation and NIXL paths are built on CUDA/UCX, so the CUDA support is first-class and anything else is secondary",
+    "NIXL itself is Linux-only - 'macOS and Windows are not currently supported; use a Linux host or container/VM' - so the whole KV-transfer stack is Linux-only",
+    "NIXL was tested with UCX 1.23.x and needs GDRCopy for maximum RDMA performance (works without it, slower)",
+    "Multi-node disaggregated deployments require an RDMA-capable fabric; the known-failure cases in the tracker are all fabric-configuration failures rather than code failures"
+  ],
+  "best_for": [
+    "Multi-node production serving where prefill and decode need to be scaled and costed independently",
+    "Kubernetes-based deployments that want an OpenAI-compatible frontend, SLA-driven autoscaling and KV-aware routing as one stack",
+    "Fleets that already run vLLM, SGLang or TensorRT-LLM and want disaggregation without changing engine"
+  ],
+  "avoid_for": [
+    "Single-node or single-GPU serving, where the README itself says 'If you're running a single model on a single GPU, your inference engine alone is probably sufficient'",
+    "Non-Linux hosts - the NIXL dependency alone rules out Windows and macOS",
+    "Workloads that need bit-reproducible output across prefill and decode pools without extra configuration; the KV compatibility hash omits batch-invariance mode and some connectors have no model-level check at all"
+  ],
+  "docs_url": "https://docs.nvidia.com/dynamo/latest",
+  "notes": "KV transfer path: NIXL as the primary connector (NixlConnector), with UCX as the default transport and RDMA/GPUDirect for inter-node, plus Mooncake and LMCache as alternative connectors and KVBM for GPU/host tiering. UCX-specific env vars are required - the vLLM connector guide notes NCCL variables such as NCCL_IB_HCA do not apply to the NIXL path. Does Dynamo supersede or complement the Triton/TRT-LLM paths? Complement, and by design it does not try to replace them: it is an orchestration layer that drives them. The TRT-LLM maintainer response on issue #17665 is the clearest statement of the relationship - 'TensorRT-LLM disaggregated serving is now planned to fully adopt the Python transceiver', i.e. Dynamo supplies the runtime and TRT-LLM supplies the transceiver implementation. Handoff contract as implemented (components/src/dynamo/common/backend/disagg.py): prefill workers have max_tokens clamped to 1 because 'producing more than one token is wasted compute and breaks the prefill->decode handoff contract', and a decode-mode worker raises if the request arrives without a prefill_result, so a missing handoff is a hard error rather than a silent recompute. Its tracker also shows the operational surface is still young: open multi-node hang reports (#11914), a UCX_NET_DEVICES silent-garbage root cause (#12463, triaged urgent), an LMCache-on-vLLM silent cache corruption report (#14416), and an RFC to bind batch-invariance into KV namespaces (#58263 in vLLM)."
+}

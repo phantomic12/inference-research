@@ -1,0 +1,40 @@
+{
+  "id": "speculative-decoding-bandwidth-trade-at-batch",
+  "type": "flop",
+  "name": "Speculative decoding at scale: draft versus verify cost, and why the win shrinks as batch grows",
+  "class": "speculative_verify",
+  "arithmetic_intensity": "Both passes are memory-bound in the same way a decode GEMM is, and that is the entire reason the scheme has a ceiling. Draft: AI ~ k (reads the draft weights once for k positions). Verify: AI ~ k (reads the target weights once for k positions). A plain decode step has AI = 1. So speculative decoding raises arithmetic intensity by roughly k on both passes - it converts k sequential memory-bound steps into one memory-bound step plus k cheap ones. The batch dependence is the sharp part: a real decode step at batch B already has AI = B, so a k=4 speculative step at batch B has AI = B + k - the increment shrinks as a fraction of the total. That is why it is a latency optimization, not a throughput one: the idle bandwidth it converts does not exist once B is large. Speculative decoding is therefore a bandwidth trade, and the win is bounded by both (1 + draft_cost/target_cost) and the acceptance rate - quoting a speedup without the acceptance rate and k is an incomplete claim.",
+  "bound_by": "memory",
+  "scales_with": [
+    "batch_size (the dominant term: the relative benefit of raising AI from 1 to k shrinks as B grows)",
+    "draft_k (the AI increment; multiplies the k x V logit tensor and the k x L attention work)",
+    "acceptance_rate (the other half of the realised speedup)",
+    "draft_model_size (sets draft_cost/target_cost, the overhead fraction)",
+    "context_length (verify attention flops scale as k x L and become compute-relevant)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "workarounds": [
+    "Use a free drafter - n-gram or prompt-lookup needs no weights at all and costs only a KV/memory lookup",
+    "Early-exit the draft model at a chosen layer depth instead of running a separate model",
+    "Tree/multi-candidate drafting with a verification-aware acceptance test to raise accepted tokens per pass",
+    "Keep speculative decoding in the latency regime: disable it for throughput-oriented batches, or size batches so B stays small",
+    "Fused rejection sampling over the k x V logits in one pass"
+  ],
+  "notes": "The disaggregation connection is direct and worth stating: disaggregated serving creates a decode pool that is deliberately run at whatever batch the prefill pool's output rate dictates, and speculative decoding is only worth enabling in that pool if the decode batch stays low. Two production caveats with sources. First, speculative decoding does not compose freely with disaggregation - SGLang issue #36140 reports DFLASH speculative decoding crashing when the decode side receives spec_info=None under PD disaggregation. Second, combining speculative decoding with a reuse mechanism is a known correctness hazard rather than just a tuning problem: vLLM issue #43559 measured ~20% accuracy loss from MTP plus prefix caching together (neither alone), and this repo already has that as a gotcha; issue #53670 records EAGLE/MTP prefix-cache last-block drops corrupting a 1,648-token response. So the rule is: speculative decoding's cost model is bandwidth, and its interaction surface with every KV-reuse mechanism is correctness.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-speculative-decoding",
+    "flop-speculative-sampling-deepmind",
+    "gotcha-vllm-issue-43559-mtp-prefix-caching-accuracy",
+    "gotcha-vllm-issue-53670-eagle-last-block-drop",
+    "pd-gh-sglang-36140-dflash-spec-under-pd"
+  ]
+}

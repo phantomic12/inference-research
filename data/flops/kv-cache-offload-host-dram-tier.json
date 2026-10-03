@@ -1,0 +1,41 @@
+{
+  "id": "kv-cache-offload-host-dram-tier",
+  "type": "flop",
+  "name": "KV-cache offload to a CPU/DRAM tier: bytes over PCIe, why it is bandwidth-bound, and when it beats recompute",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "AI = 0 in the strict sense - offload is a DMA copy with no arithmetic - so cost = KV bytes / PCIe bandwidth, and the useful question is never 'how fast is the copy' but 'is the copy cheaper than the recompute it replaces'. That comparison is a flop-versus-byte trade between two different roofs: recomputing a KV block costs ~2 x active_params x block_tokens FLOPs on the compute roof, while loading it costs C_block bytes over the PCIe roof. vLLM's docs make offload DMA-based and asynchronous ('Transfers between GPU and CPU use DMA (cudaMemcpyAsync) and run asynchronously alongside model computation, so offloading adds minimal CPU- and GPU-core overhead'), which is what makes the offload direction nearly free and the load direction the one that costs TTFT. The vendor's own measured claim is a ratio, not a bandwidth: loading from the CPU tier 'reduces TTFT by X2-X22' depending on prompt size (H100, 500GB DRAM, GPU prefix caching disabled so CPU hits are isolated).",
+  "bound_by": "memory",
+  "scales_with": [
+    "kv_bytes_resident (linear in context_length x live sequences - offload is a capacity mechanism, so the volume is whatever does not fit in HBM)",
+    "pcie_generation_and_width (Gen4 x16 vs Gen5 x16 is roughly a 2x difference and it is the dominant term in the load path)",
+    "block_size / blocks_per_chunk (larger chunks amortise per-transfer overhead into larger, more efficient host I/Os)",
+    "host_dram_capacity (how much can be kept resident rather than staged)",
+    "gpu_preemption_rate (the win case: preempted sequences would otherwise recompute)",
+    "tier_depth (anything below the CPU primary tier costs two hops, since only CPU has direct GPU access)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x",
+    "intel-arc-pro-b60"
+  ],
+  "workarounds": [
+    "Async DMA offload with prefetch so a cold cache never stalls the step (vLLM OffloadingConnector; CUDA/ROCm/XPU only)",
+    "Offload before preemption so a preempted sequence resumes instead of recomputing - the win case the vLLM blog leads with",
+    "Use the CPU tier as the mandatory staging tier for deeper tiers, and accept the two-hop cost rather than assuming a direct SSD path (TieringOffloadingSpec)",
+    "Cap per-request offload/load with max_offload_tokens and max_load_tokens so one long request cannot evict the hot set for everyone",
+    "fp8 or int8 KV cache to halve the bytes that cross PCIe",
+    "Keep the hot prefix on GPU and use the DRAM tier only for the cold tail - the tier only helps once the hot set fits in HBM"
+  ],
+  "notes": "When it wins, per vLLM's own blog, is NOT primarily 'requests share a common prefix' - that is the prefix-cache argument, and the blog explicitly separates the two cases: 'KV cache offloading can be useful even for workloads where requests share no common prefix', because under high concurrency the GPU runs out of KV, the engine preempts a running request and discards its KV, and 'the cost for re-computing the KV values can be avoided by offloading the KV cache to a larger tier (such as CPU DRAM) before the request is pre-empted'. So the honest statement of the win condition is: long context (large C_block) plus low batch (idle compute to trade) plus preemption pressure. When it loses: when the hot working set fits in HBM anyway (the transfer is pure overhead), when the request is short (fixed transfer overhead dominates a small block), and when the working set is so large that the DRAM tier thrashes - note the deeper-tier structure means anything below CPU pays GPU->CPU->SSD, so a slow SSD is worse than no tier. Portability bound worth stating plainly: vLLM's OffloadingConnector 'currently supports CUDA, ROCm, and XPU only'. The failure mode that follows from offload is correctness, not speed: a KV tier that serves a block which does not match the current model, adapter, layout or kernel configuration produces wrong output with no error. See the LMCache packed-layout corruption gotcha and vLLM #58263 on the missing compatibility fields in the offload namespace.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-vllm-kv-offloading-docs",
+    "pd-vllm-kv-offload-blog",
+    "pd-mooncake-fast25-paper",
+    "pd-lmcache-docs"
+  ]
+}

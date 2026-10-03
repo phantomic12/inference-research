@@ -1,0 +1,70 @@
+{
+  "id": "llm-d",
+  "type": "engine",
+  "name": "llm-d",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-llmd-repo",
+    "pd-vllm-disagg-prefill-docs",
+    "pd-gh-vllm-56828-p2p-peer-down-no-fail"
+  ],
+  "repo": "llm-d/llm-d",
+  "languages": [
+    "Python",
+    "Shell"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2025,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "Kubernetes-native production serving",
+    "vendor-neutral orchestration",
+    "operational excellence"
+  ],
+  "scheduling": [
+    "prefix-cache",
+    "load-aware routing",
+    "predicted-latency scheduling",
+    "disaggregated-prefill-decode",
+    "tiered-prefix-cache",
+    "wide-expert-parallelism"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "awq",
+    "gptq"
+  ],
+  "notable_features": [
+    "CNCF sandbox project founded by Red Hat, Google Cloud, IBM Research, CoreWeave and NVIDIA - deliberately vendor-neutral where Dynamo is NVIDIA-originated",
+    "Same layering as Dynamo: orchestration and optimisation ABOVE vLLM and SGLang, which 'handle efficiently running large language models on accelerators'",
+    "Intelligent routing: prefix-cache- and load-aware balancing, plus experimental predicted-latency-based scheduling",
+    "Advanced KV-cache management: 'tiered offloading to CPU or disk and precise global indexing of the KV cache state' to increase the effective working set for multi-turn requests",
+    "PD disaggregation combined with wide expert parallelism for very large models (DeepSeek-R1, GPT-OSS class)",
+    "SLO-aware autoscaling from live inference signals, intelligent flow control for multi-tenancy, and OpenAI-compatible Batch APIs",
+    "Well-lit-path guides with benchmarked recipes and Helm charts, plus accelerator/network/configuration matrices"
+  ],
+  "hardware_caveats": [
+    "Kubernetes is the deployment substrate; the differentiator is Helm/operator work, so a bare-metal shop gains less",
+    "Vendor-neutral in governance, but the tested recipes and partner benchmarks are NVIDIA- and AMD-centric; other accelerators are 'points of contact' rather than benchmarked paths",
+    "Prefix-cache-aware routing only pays if replicas actually share prefixes - without a shared KV index the routing decision is guesswork"
+  ],
+  "best_for": [
+    "Kubernetes production serving where PD disaggregation and tiered KV need to be operated rather than hand-rolled",
+    "Shops that want disaggregation without betting on a single vendor's stack, given the CNCF governance and multi-vendor founding",
+    "Multi-turn or long-context workloads where the effective KV working set exceeds per-replica HBM"
+  ],
+  "avoid_for": [
+    "Non-Kubernetes deployments - the value is in the operator, planner and guides",
+    "Single-node serving, where none of the four themes apply",
+    "Workloads with no prefix locality, where prefix-cache-aware routing adds a hop for no reuse"
+  ],
+  "docs_url": "https://www.llm-d.ai",
+  "notes": "KV transfer path: llm-d does not define its own transport - it composes the engines' connectors (NIXL/UCX, Mooncake) for the PD handoff and implements its own GPU->CPU/disk tiering with a global KV index. Partner-reported performance claims in the README, attributed as such: 'Up to 70% higher tokens/sec with prefill/decode disaggregation vs standard vLLM - GPT-OSS on NVIDIA B200 (p6-b200), AWS'; '10-30% throughput improvement with disaggregated serving on identical infrastructure - GPT-OSS-120B and Llama 3.3 70B on AMD MI300X, Oracle'; '3x higher output throughput and 2x faster TTFT with prefix-cache-aware routing vs round-robin - Llama 3.1 70B on 4x AMD MI300X, Tesla / Red Hat'; '40% reduction in TTFT and ITL with predicted-latency scheduling vs heuristics on NVIDIA GPUs, Google'. These are vendor blog figures, not independent measurements, and the PD number is a throughput comparison that vLLM's own docs would call into question ('Disaggregated prefill DOES NOT improve throughput' - a claim about a fixed-SLO single-node setup, so the two are not measuring the same thing). Recorded as a production system, not a paper, but with the caveat that most of its published numbers come from partners."
+}

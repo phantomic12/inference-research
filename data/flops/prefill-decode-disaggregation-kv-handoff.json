@@ -1,0 +1,48 @@
+{
+  "id": "prefill-decode-disaggregation-kv-handoff",
+  "type": "flop",
+  "name": "Prefill/decode disaggregation: the KV handoff tax that separates a compute-bound phase from a memory-bound phase",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "The handoff itself is AI = 0 - it is a copy, not arithmetic - so its cost is KV bytes / link bandwidth, and that ratio is the entire design constraint. Volume per request = (prompt_tokens + 1) x 2 (K and V) x num_kv_heads x head_dim x num_layers x kv_dtype_bytes, plus any MLA latent. Write it as C_bytes, and note that C_bytes is a strict lower bound on the bytes that must cross because prefill computed them and decode will read them. What makes disaggregation able to win at all is that the two phases it is separating sit at opposite points on the roofline: prefill runs a large-M GEMM (M = prompt length) so AI is high and it is compute-bound, while decode runs an M = batch GEMM so AI = batch and it is memory-bound on weights. Colocating them forces one scheduling policy and one parallelism plan onto two different bottlenecks - DistServe's stated finding is that colocating 'leads to strong prefill-decoding interferences' and 'couples the resource allocation and parallelism plans for both phases'. The payoff condition is therefore a time budget, not a FLOP budget: disaggregation wins only if the added TTFT from waiting for the handoff (C_bytes / B_link + handoff handshake latency) is smaller than the tail-ITL and interference it removes. Splitwise makes the same argument in power terms - token generation 'do[es] not require the compute capability of the latest GPUs, and can be run with lower power and cost' - and reports 1.4x throughput at 20% lower cost, or 2.35x throughput at equal cost and power.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "prompt_length (C_bytes is linear in prompt tokens - long-context requests pay the tax hardest)",
+    "num_kv_heads x head_dim x num_layers x kv_cache_dtype (the multiplicative KV volume factor; GQA and fp8 KV shrink it directly)",
+    "tensor_parallel_degree (a KV block sharded across N ranks needs N-1 extra transfers per block read on the decode side)",
+    "interconnect_bandwidth (B_link: NVLink/NVSwitch intra-node vs RDMA/InfiniBand inter-node - this is the single biggest lever)",
+    "handoff handshake round-trips (a fixed per-request latency that dominates when C_bytes is small, e.g. short prompts)",
+    "request arrival rate (concurrency on the decode pool determines whether the decode pool's fixed cost is amortised)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-gb200-nvl72",
+    "amd-instinct-mi300x",
+    "intel-arc-pro-b60"
+  ],
+  "workarounds": [
+    "Place prefill and decode in the same NVLink/NVSwitch domain so the handoff crosses the scale-up backplane rather than the NIC (Splitwise's explicit choice)",
+    "Use a same-host shared-memory or CUDA-IPC path so the copy never touches a NIC loopback - Mooncake's `shm` protocol is documented as 'same-host DRAM copies without NIC loopback', and `nvlink_intra` covers intra-node GPU-to-GPU",
+    "Keep prefill and decode KV in shared GPU memory and isolate compute with CUDA MPS instead of moving KV at all (Semi-PD's design, arXiv:2504.19867)",
+    "Quantize or compress KV before it crosses the link, so bandwidth is paid on fewer bytes",
+    "Overlap the transfer with decode of already-resident sequences (NixlConnector's fully async send/recv) so the link is not on the critical path",
+    "Bound the prefiller's buffer lifetime from measured link speed - vLLM exposes kv_lease_duration, and a rising vllm:nixl_num_kv_expired_reqs means the lease is too short for the network",
+    "Choose chunked prefill instead when the goal is only tail-ITL control: vLLM's own docs note chunked prefill 'can achieve the same goal' and disaggregation 'is a much more reliable way' only because chunk size is hard to tune"
+  ],
+  "notes": "Cost model, stated as the record's central claim: TTFT_disagg = T_queue_prefill + C_bytes / B_link + t_handshake + T_first_decode_step, and the win versus colocated serving is the reduction in tail ITL plus the ability to size the two pools independently. What limits it, in order: (1) B_link. Inter-node RDMA is an order of magnitude below intra-node NVLink, so a disaggregated deployment that straddles nodes pays a strictly worse handoff than one that does not - DistServe handles this by 'plac[ing] the two phases according to the serving cluster's bandwidth', i.e. placement is part of the algorithm. (2) t_handshake and control-plane round-trips. These are fixed costs that do not shrink with bandwidth, and they are where the failure modes live: see the TensorRT-LLM NIXL completion-notification hang (the receiver waits with no timeout and no retry) and the vLLM P2P peer-down issue (per-rank peer identity means one dead rank does not stop new loads to its siblings). (3) The vLLM docs' blunt statement that 'Disaggregated prefill DOES NOT improve throughput.' That is the single most important correction to the vendor framing, and it is upstream's own text. DistServe's reported 7.4x/12.6x is a goodput metric under joint TTFT and TPOT SLOs, which is a different quantity from throughput at fixed SLO - do not quote the two interchangeably. (4) Mooncake adds a second tier on top: it 'leverages the underutilized CPU, DRAM, and SSD resources of the GPU cluster to implement a disaggregated cache of KVCache', which moves the handoff off the critical path entirely for repeat prefixes but adds a DRAM hop for cold ones. Numerics consequence that is easy to miss and is recorded as a gotcha rather than here: because decode resumes from KV produced by a different process on different hardware, any numerical difference between the two pools' kernels, attention backend or quantisation becomes a persistent output difference that no error surfaces. vLLM's own issue #58263 documents that the KV compatibility hash omits the batch-invariance flag and the attention backend, and that other connectors have no model-level check at all.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-distserve-osdi24-paper",
+    "pd-splitwise-msr-paper",
+    "pd-vllm-disagg-prefill-docs",
+    "pd-vllm-nixl-connector-docs",
+    "pd-dynamo-disagg-py",
+    "pd-mooncake-protocols-doc",
+    "pd-semipd-repo",
+    "pd-gh-trtllm-17665-nixl-notify-hang",
+    "pd-gh-vllm-56828-p2p-peer-down-no-fail"
+  ]
+}

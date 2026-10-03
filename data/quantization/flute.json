@@ -2,7 +2,7 @@
   "id": "flute",
   "type": "quantization",
   "name": "FLUTE (lookup-table engine for LUT-quantized LLMs)",
-  "scheme": "hqq",
+  "scheme": "flute",
   "bits": "non-uniform 3-bit weight-only (also applied as an extension of NormalFloat quantization); activations fp16",
   "weight_group_size": 128,
   "activation_scheme": "None - weight-only. The contribution is the KERNEL, not the format: offline restructuring of the quantized weight matrix to minimize unpacking bit-manipulation, plus vectorized and duplicated lookup tables to escape shared-memory bandwidth limits.",
@@ -18,7 +18,7 @@
     "FLUTE (Flexible Lookup Table Engine), Microsoft. Fuses dequantization into the matmul. Claimed 2-4x faster than existing GEMM kernels at batch < 32 with quantization group size 128, described as typical for LLM inference."
   ],
   "quality_delta": "No direct quality number in the abstract. As an application of the engine the paper extends NormalFloat quantization and quantizes LLaMA3 'obtaining competitive quantization performance against strong baselines while obtaining an end-to-end throughput increase of 1.5 to 2x'. Quality is described only comparatively; none recorded.",
-  "notes": "weight_group_size is 128 because the paper states it explicitly as the typical LLM inference configuration at which FLUTE's speedup is quoted - this is one of the few records in the repo where the group size is sourced rather than guessed. FLUTE is the right record for the argument that 3-bit weight-only is a KERNEL problem as much as a format problem: non-evenly-divisible bit widths like 3 bits make packing and unpacking dominate, and the fix is offline restructuring rather than a better grid. Enum mismatch: 'hqq' is nearest (non-uniform codebook quantization); the FLUTE engine is orthogonal to both NF4 and GPTQ and composes with either.",
+  "notes": "weight_group_size is 128 because the paper states it explicitly as the typical LLM inference configuration at which FLUTE's speedup is quoted - this is one of the few records in the repo where the group size is sourced rather than guessed. FLUTE is the right record for the argument that 3-bit weight-only is a KERNEL problem as much as a format problem: non-evenly-divisible bit widths like 3 bits make packing and unpacking dominate, and the fix is offline restructuring rather than a better grid. Enum mismatch: 'hqq' is nearest (non-uniform codebook quantization); the FLUTE engine is orthogonal to both NF4 and GPTQ and composes with either. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'hqq' (a proxy recorded while the enum lacked a legal value) and is now 'flute'. ",
   "status": "verified",
   "confidence": 0.75,
   "updated": "2026-10-03",

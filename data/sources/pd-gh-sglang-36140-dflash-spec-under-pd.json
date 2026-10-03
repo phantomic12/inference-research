@@ -1,0 +1,15 @@
+{
+  "id": "pd-gh-sglang-36140-dflash-spec-under-pd",
+  "type": "source",
+  "name": "SGLang issue #36140: DFLASH speculative decoding unsupported under PD disaggregation (spec_info None crash, then watchdog self-kill)",
+  "url": "https://github.com/sgl-project/sglang/issues/36140",
+  "publisher": "sgl-project/sglang",
+  "kind": "forum",
+  "published": "2026-08-24",
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "Open as of 2026-10-03. Speculative decoding under disaggregation is per-algorithm, not automatic: 'DSPARK and EAGLE both work under PD, but DFLASH has no disagg wiring.' Crash 1: SpeculativeAlgorithm.build_disagg_draft_input() implements EAGLE and DSPARK but returns None for DFLASH, so DisaggDecodeScheduleBatchMixin never sets batch.spec_info for relayed requests and the first update_running_batch on the decode side dies with AttributeError: 'NoneType' object has no attribute 'prepare_for_decode' at sglang/srt/speculative/spec_utils.py:1010. A contributing factor named by the reporter: the PD-decode event loop also runs update_running_batch on IDLE batches, which never go through build_disagg_draft_input at all. Crash 2 follows once crash 1 is locally patched. Env: lmsysorg/sglang:kimi-k3 (0.5.16-based), Kimi-K3 + Kimi-K3-DFlash draft, 8x RTX 6000D sm_120 across 4 prefill + 4 decode nodes, KV transfer Mooncake RDMA 0.3.12.post1. Relevant because it shows the decode-side relay path is a distinct code path from the normal decode path, which is where disaggregation-specific state handling gaps live.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}
