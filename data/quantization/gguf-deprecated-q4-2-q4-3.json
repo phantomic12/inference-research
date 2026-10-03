@@ -1,0 +1,27 @@
+{
+  "id": "gguf-deprecated-q4-2-q4-3",
+  "type": "quantization",
+  "name": "GGUF Q4_2 / Q4_3 (REMOVED types, type ids 4 and 5 reserved as DEPRECATED)",
+  "scheme": "gguf-q5-1",
+  "bits": "n/a - removed. The enum slots survive as .type_name = \"DEPRECATED\" with blck_size = 0, type_size = 0, is_quantized = false",
+  "weight_group_size": null,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-rtx-4090",
+    "intel-arc-b580",
+    "intel-arc-pro-b60"
+  ],
+  "kernels": [],
+  "quality_delta": "n/a - no quality figure is published for a removed type; recorded as deprecated rather than given a fabricated delta. The live legacy figures are in the sibling records (gguf-q4-0, gguf-legacy-q4-1).",
+  "notes": "Weight-only: activations are promoted to q8_K for the dot product and the matmul runs at fp16/bf16, so native_support is deliberately EMPTY and the whole accelerator ecosystem is emulated_support. No accelerator has a GGUF quant path in silicon - this is the single most commonly botched field in this repo. VERIFIED REMOVED, and this is worth recording because older tooling and old forum posts still name them. In ggml/include/ggml.h the enum keeps the slots but comments them out: `// GGML_TYPE_Q4_2 = 4, support has been removed` and `// GGML_TYPE_Q4_3 = 5, support has been removed`. In ggml/src/ggml.c the type-trait table still has entries at those indices but they are stubs: `[4] = { // GGML_TYPE_Q4_2 .type_name = \"DEPRECATED\", .blck_size = 0, .type_size = 0, .is_quantized = false }` and identically for [5]. They are NOT in the official quantizer's QUANT_OPTIONS table and there is no dequantize function wired to them (unlike every live type, they have no .to_float). So a GGUF claiming q4_2/q4_3 tensors cannot be loaded by current ggml. The old q2_0 / q3_0 / q4_0-series naming from pre-k-quant llama.cpp is likewise reduced to: q1_0 (QK1_0 = 128, 1.125 bpw per the tool), q2_0 (QK2_0 = 64, '2.25 bpw quantization (group 64)'), q4_0, q5_0, q8_0, plus the activated intermediates q8_1 and q8_K. q2_0 and q1_0 are still selectable but are legacy dead ends. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'gguf-q4_0' (a proxy recorded while the enum lacked a legal value) and is now 'gguf-q5-1'. ",
+  "status": "deprecated",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab2-ggml-common-header",
+    "qlab2-llama-quant-cpp",
+    "qlab2-llamafile-support-docs",
+    "qlab2-quantize-options-table"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "olive-quant-stack",
+  "type": "quantization",
+  "name": "Microsoft Olive (Onnx LIVE) - hardware-targeted ONNX optimization / quantization composer",
+  "scheme": "int8",
+  "bits": "not a single format: Olive runs search over conversion + quantization passes and emits whichever ONNX quant configuration wins for the declared target. Quantization algorithms were expanded in Olive 0.8.0 (2025-03) and again in 0.9.2 (2025-08)",
+  "weight_group_size": null,
+  "activation_scheme": "target-dependent; NPU support arrived in Olive 0.9.0 (2025-05)",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-pcie",
+    "nvidia-l40s",
+    "nvidia-l4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10",
+    "nvidia-a30",
+    "nvidia-rtx-4090",
+    "intel-arc-b580",
+    "amd-instinct-mi300x",
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "Olive emits an ONNX graph + external data; the runtime kernels are ONNX Runtime's, not Olive's",
+    "per-tensor / per-channel quantization configs searched against a latency+accuracy constraint"
+  ],
+  "quality_delta": "n/a - no quality delta published. Null + note.",
+  "notes": "EXISTS (MIT, ~2.4k stars, 2k+ commits) and is NOT a quantizer in the llama.cpp sense - it is a search orchestrator. Its own framing, quoted: 'Given a model and targeted hardware, Olive composes the best suitable optimization techniques to output the most efficient ONNX model(s) for inferencing on the cloud or edge, while taking a set of constraints such as accuracy and latency into consideration.' So the quant format is an OUTPUT of a search, not an input, and the record deliberately does not claim a group size or a bit width - null rather than a guess. WHY IT IS WORTH RECORDING even with those nulls: it is the Microsoft-side answer to 'which quant should I pick', it is the tool the ONNX Runtime ecosystem expects to sit between a PyTorch checkpoint and an ORT session, and it is where NPU targets enter the picture (Olive 0.9.0, May 2025). Its own quickstart installs `transformers onnxruntime-genai` together, and the docs ship an Olive blog specifically on exploring optimal quantization settings for small language models (Oct 2025). SCOPE CAVEATS: examples moved to a separate olive-recipes repository in Sep 2025; and the ONNX Runtime GenAI builder README explicitly lists 'Olive integration' as still PENDING, so the two do not yet compose. quantization_record is a null-scheme-leaning record by design.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab2-olive-readme",
+    "qlab2-ortgenai-model-builder"
+  ]
+}

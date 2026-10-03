@@ -1,0 +1,28 @@
+{
+  "id": "cachegen",
+  "type": "quantization",
+  "name": "CacheGen (KV cache tensor encoding + bandwidth-adaptive streaming)",
+  "scheme": "kv-eviction",
+  "bits": "adaptive per-part compression level; the paper reports a 3.5-4.3x reduction in KV cache SIZE with negligible response-quality impact",
+  "weight_group_size": null,
+  "activation_scheme": "Not a fixed-bit scheme at all - a custom tensor ENCODER that exploits KV distributional properties to produce a compact bitstream with negligible decoding overhead, with the compression level adapted to available bandwidth (raising compression, or recomputing KV on the fly, when bandwidth drops).",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "CacheGen (UChi-JCL/CacheGen) - a context-loading module integrated with a serving system, not a GEMM kernel."
+  ],
+  "quality_delta": "From the abstract: reduces KV cache size by 3.5-4.3x and total delay in fetching and processing contexts by 3.2-3.7x, with negligible impact on LLM response quality, versus systems that reuse the KV cache.",
+  "notes": "Boundary record, and a genuinely different mechanism from everything else in the KV family. CacheGen targets TRANSFER BANDWIDTH, not GPU capacity: it compresses a cached context so it can be shipped from a remote store quickly, which is the multi-turn and RAG-prefix-reuse case. Compare CacheGen with Pensieve (same problem, GPU/CPU tiering instead of compression) and with KIVI (GPU capacity instead of bandwidth). The adaptive compression level is worth noting: it will raise compression or recompute when bandwidth degrades, so its quality is a function of network conditions at runtime, not a fixed property of the checkpoint. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-eviction'. ",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab-cachegen-paper"
+  ]
+}

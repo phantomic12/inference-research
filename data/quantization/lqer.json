@@ -1,0 +1,28 @@
+{
+  "id": "lqer",
+  "type": "quantization",
+  "name": "LQER (low-rank quantization error reconstruction)",
+  "scheme": "lqer",
+  "bits": "w4a8 (4-bit weights, 8-bit activations) - claimed near-lossless",
+  "weight_group_size": null,
+  "activation_scheme": "8-bit activations. Weights are represented as quantized values PLUS a low-rank correction: an activation-induced scale matrix drives the singular-value distribution of the quantization error towards a favourable shape, letting a truncated SVD absorb the residual. Claimed to work without knowledge distillation, grid search, or gradient-based iterative optimization.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "Reference implementation open-sourced (ChengZhang-98/lqer). Notable: the computation pattern avoids Scatter/Gather from irregular high-precision weight locations, unlike Atom."
+  ],
+  "quality_delta": "From the abstract: 'near-lossless W4A8 quantization on various LLMs and downstream tasks' without knowledge distillation, grid search, or gradient iterative optimization; near-lossless on six downstream tasks while using 1.36x fewer hardware resources than the leading state-of-the-art method. No per-task numbers in the abstract; none recorded.",
+  "notes": "Enum mismatch: 'gptq' is the closest enum since the base grid is a grouped weight quantizer like GPTQ, but LQER is not a GPTQ variant - it adds a low-rank term to the weight representation, which is a different tradeoff (slightly more memory, much less error) than GPTQ's error-compensation across columns. That 'mixed precision with a structural rather than a sparsity-based split' idea is the same family as Atom and Macaron. Note the activations here are 8-bit, so LQER is W4A8, not W4A4 - it does not need rotations because 8-bit activations have no outliers severe enough to require removing. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'gptq' (a proxy recorded while the enum lacked a legal value) and is now 'lqer'. ",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab-lqer-paper"
+  ]
+}

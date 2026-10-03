@@ -1,0 +1,34 @@
+{
+  "id": "bitsandbytes-load-in-4bit",
+  "type": "quantization",
+  "name": "Transformers bitsandbytes integration (load_in_4bit / load_in_8bit via BitsAndBytesConfig)",
+  "scheme": "bitsandbytes-nf4",
+  "bits": "4-bit weights stored as NF4 or FP4; nested/double quantization adds a second pass over the already-quantized weights to store their own scales, saving a further 0.4 bits/parameter. 8-bit path is LLM.int8()",
+  "weight_group_size": null,
+  "activation_scheme": "none - weight-only. The 4-bit matmul dequantizes to the compute dtype, which is why bnb_4bit_compute_dtype matters",
+  "native_support": [
+    "nvidia-rtx-4090",
+    "nvidia-l40s",
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10",
+    "intel-gaudi2",
+    "intel-gaudi3"
+  ],
+  "emulated_support": [
+    "intel-arc-b580",
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "bitsandbytes Linear4bit / Linear8bitLt replacing torch.nn.Linear",
+    "bitsandbytes optim module - 8-bit versions of common optimizers (training-side, separate from inference)"
+  ],
+  "quality_delta": "n/a - the transformers doc gives no controlled perplexity delta for the 4-bit path. Null + note.",
+  "notes": "THE GOTCHA, captured accurately: bnb_4bit_quant_type selects the 4-bit DATA TYPE (nf4 or fp4) and bnb_4bit_compute_dtype selects the DTYPE THE DEQUANTIZED MATMUL RUNS IN - the documented example sets bnb_4bit_compute_dtype=torch.bfloat16. The doc's guidance is that for inference bnb_4bit_quant_type 'does not have a huge impact on performance', but you should keep bnb_4bit_compute_dtype and dtype consistent 'to remain consistent with the model weights'. NF4 is the QLoRA-derived type for weights initialized from a normal distribution and is the one to use for training 4-bit base models. So the real decision is the COMPUTE dtype and the load path, not nf4-vs-fp4. HARDWARE FLOOR, documented as a table: NF4/FP4 quantization needs NVIDIA Pascal (GTX 10X0 / P100) or newer; LLM.int8() needs Turing (RTX 20X0 / T4) or newer; 8-bit optimizers need Pascal or newer. Supported platforms are NVIDIA GPUs on CUDA 11.8-13.0 (Linux x86-64, Linux aarch64, Windows), Intel XPU (Linux and Windows x86-64), Intel Gaudi HPU (Linux x86-64, Gaudi2 and Gaudi3) and CPU (Linux x86-64/aarch64, Windows x86-64). Note what is NOT on that list: no ROCm/HIP and no AMD GPU entry, so on this repo's AMD accelerators bitsandbytes is effectively absent - that is a real portability limit, not an oversight. OTHER BEHAVIOURAL FACTS worth carrying: non-Linear modules such as torch.nn.LayerNorm are left at the default torch dtype, changeable via the `dtype` parameter (dtype='auto' takes it from config.json). CPU offload works for the 8-bit path (llm_int8_enable_fp32_cpu_offload=True) and weights dispatched to CPU are stored in float32 and are NOT converted to 8-bit - so a partly-offloaded model has mixed precision by construction. 8- and 4-bit training is only supported for training EXTRA parameters. The outlier threshold for LLM.int8() defaults to 6. Pushing quantized weights to the Hub requires recent versions of both transformers and bitsandbytes, and quantized models can be dequantized back (`model.dequantize()`) with possible quality loss.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab2-transformers-bnb-doc"
+  ]
+}

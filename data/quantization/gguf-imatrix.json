@@ -1,0 +1,30 @@
+{
+  "id": "gguf-imatrix",
+  "type": "quantization",
+  "name": "GGUF imatrix (importance matrix) - the calibration file that determines WHICH weights get more bits",
+  "scheme": "gguf-imatrix",
+  "bits": "not a format - a per-tensor activation-energy file. It changes the effective bits of an existing quant choice, not the nominal bits of a type",
+  "weight_group_size": null,
+  "activation_scheme": "none - weight-only quantization tool; the imatrix is an offline calibration input to llama-quantize, not an activation format",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-rtx-4090",
+    "intel-arc-b580",
+    "intel-arc-pro-b60"
+  ],
+  "kernels": [
+    "llama-imatrix (offline calibration pass)",
+    "llama-quantize --imatrix (rounding-error weighting)"
+  ],
+  "quality_delta": "n/a - the imatrix is a calibration artifact, not a quantization format, so it has no quality_delta of its own. Its effect is to REMOVE part of the quantization delta of the format it is applied to. IMPORTANT: the official per-type ppl strings in the llama.cpp quantizer (Q4_K_M +0.1754, Q5_K_M +0.0569, Q6_K +0.0217, Q8_0 +0.0026 on Llama-3-8B) are measured WITH the standard imatrix workflow, so those figures already include imatrix benefit and must not be quoted as no-imatrix numbers.",
+  "notes": "SCHEMA MISMATCH: the scheme enum has no value for a calibration artifact; 'gguf-q4_k_m' is the closest existing value and the true name is in `name`. Requested enum addition: 'gguf-imatrix'. THIS IS THE MAJOR PRACTICAL LEVER NOBODY RECORDS. An imatrix is a per-tensor table of sum-of-squared activations (Sigma(Act^2)) measured by running a calibration corpus through the fp16/bf16 model, and it is fed back into llama-quantize as `--imatrix file_name` to weight the rounding-error objective per weight, so weights with high activation energy get their bits spent more carefully. It applies ACROSS FORMATS - every ggml type, every bit width, legacy and k-quant and i-quant alike. FILE FORMAT: recent llama-imatrix writes GGUF by default (`--output-format {gguf,dat}`, default gguf); the legacy binary .dat format is selected by passing a non-.gguf extension, and the two convert both ways via `--in-file` + `--output-format` (llama.cpp PR 9400). Multiple imatrices combine with repeated `--in-file`, which is how you merge calibration sets. IT CHANGES THE TYPE SCHEDULE, NOT JUST THE ROUNDING - this is the verified, under-appreciated part. src/llama-quant.cpp branches on `!qs.has_imatrix` in at least five places, so supplying an imatrix changes which tensors get which ggml type, not merely how they are rounded: IQ3_XXS ffn_down becomes Q4_K/Q3_K in the first n_layer/8 layers only WITHOUT an imatrix; IQ4_NL and IQ4_XS get promoted to Q5_K in the first n_layer/8 ffn_down layers only WITHOUT an imatrix; IQ3_XXS attn_v becomes IQ3_S (rather than Q4_K) when n_gqa < 4 AND no imatrix; and the Q4_0/Q5_0 -> Q4_1/Q5_1 ffn_down guard applies only WITH one. Four independent places, one direction. In the other direction, the OUTPUT tensor's data is not collected (`--process-output` defaults to false, because the README says it is better not to use the imatrix for output.weight) and llama-quantize can leave it unquantized with `--leave-output-tensor`. CALIBRATION DATA QUALITY DOMINATES: the README documents `--show-statistics` per-tensor metrics - % Active (how alive the tensor is), Shannon entropy and NORMALIZED entropy E(norm) = -sum p log2 p / log2 N which the README says 'can be used to determine how well a prompt exercises the model's capabilities', ZD Score (from section 3.1 Layer Importance Scores of arXiv:2406.17415) and CosSim against the previous layer's tensor. A corpus that never exercises a tensor will produce a small, misleading importance for it. One honest caveat the README itself raises: all these statistics are computed on SQUARED activations, not raw activations, so they are less reliable than raw values and cosine similarity can mislead if a tensor contains opposite vectors. For MoE models this matters doubly - a calibration set that under-exercises rarely-routed experts produces exactly the inter-expert calibration imbalance documented in the MoE-quant literature (qlab2-arxiv-moequant, qlab2-arxiv-quantmoebench). PRACTICAL RECIPE from the README: `./llama-imatrix -m model.gguf -f calibration.txt -ngl 99` then `./llama-quantize --imatrix imatrix.gguf in.gguf out.gguf q4_k_m`. Use `-ngl` because GPU offload makes imatrix computation much faster. `--parse-special` for custom tokenizers like <|im_start|>; `--chunk N` to skip poor leading data; `--no-ppl` to skip perplexity and go faster. `--allow-requantize` is warned against in the quantizer README ('can severely reduce quality compared to quantizing from 16bit or 32bit') - imatrix is for quantizing from a high-precision checkpoint, not for re-quantizing an existing quant. `--pure` disables the k-quant mixtures and is the only way to produce a single-type file for kernel benchmarking. native_support is empty and emulated_support lists the same ecosystem as the GGUF types, because an imatrix does not change where a format can run - only how well it runs there. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'gguf-q4_k_m' (a proxy recorded while the enum lacked a legal value) and is now 'gguf-imatrix'. ",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab2-imatrix-readme",
+    "qlab2-llama-quant-cpp",
+    "qlab2-quantize-options-table",
+    "quant-llamacpp-quantize-readme"
+  ]
+}

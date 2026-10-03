@@ -1,0 +1,28 @@
+{
+  "id": "shadowkv",
+  "type": "quantization",
+  "name": "ShadowKV (low-rank key cache on GPU, value cache offloaded)",
+  "scheme": "kv-cache-quant",
+  "bits": "none by quantization; keys are compressed by a LOW-RANK representation and values are offloaded to CPU rather than reduced in precision.",
+  "weight_group_size": null,
+  "activation_scheme": "None. Stores the low-rank key cache on GPU and offloads the value cache, with an accurate KV selection strategy that reconstructs minimal sparse KV pairs on the fly to keep decoding latency low.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "bytedance/ShadowKV implementation, evaluated on A100."
+  ],
+  "quality_delta": "From the abstract: supports up to 6x larger batch sizes and boosts throughput by up to 3.04x on an A100 GPU without sacrificing accuracy, evaluated on RULER, LongBench and Needle-In-A-Haystack across Llama-3.1-8B, Llama-3-8B-1M, GLM-4-9B-1M, Yi-9B-200K, Phi-3-Mini-128K and Qwen2-7B-128K.",
+  "notes": "Boundary record, and the one with the most interesting overlap with the rotation family: ShadowKV's low-rank key representation and QuaRot/SpinQuant's rotation-based approaches are both attacks on the fact that the key cache is highly redundant. Low rank says the redundancy is linear; incoherent rotation says it is an outlier problem. The paper's motivation is also a critique of prior sparse-attention work - that those methods either failed to cut GPU memory enough or paid significant decoding latency from CPU offloading - which is why the on-the-fly sparse reconstruction matters. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'spinquant' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. ",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab-shadowkv-paper"
+  ]
+}

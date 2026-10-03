@@ -1,0 +1,28 @@
+{
+  "id": "squeezellm",
+  "type": "quantization",
+  "name": "SqueezeLLM (dense-and-sparse quantization, up to 3-bit)",
+  "scheme": "squeezellm",
+  "bits": "3-bit weights (paper claims lossless compression to ultra-low precisions of up to 3-bit); activations fp16",
+  "weight_group_size": null,
+  "activation_scheme": "None - weight-only. Two components: (i) sensitivity-based non-uniform quantization that searches for the optimal bit-precision assignment using second-order information; (ii) a dense-and-sparse decomposition that stores outliers and sensitive weight values in a sparse format rather than spending a uniform grid on them.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "The paper frames the whole problem as memory-bandwidth-bound at single-batch, not compute-bound - the same framing that later becomes the \"weight-only is a memory optimization\" argument."
+  ],
+  "quality_delta": "From the abstract: on LLaMA models, 3-bit quantization 'significantly reduces the perplexity gap from the FP16 baseline by up to 2.1x as compared to the state-of-the-art methods with the same memory' budget. The 2.1x is a RATIO OF THE GAP, not an absolute perplexity; do not read it as 'PPL is 2.1x worse'.",
+  "notes": "This is the paper that named the thing most blog coverage gets wrong: the abstract's opening claim is that the bottleneck for generative LLM inference is MEMORY BANDWIDTH, not compute, at single batch. That is precisely the w4a16 argument - you shrink weights to move fewer bytes, compute stays fp16. SqueezeLLM is therefore in the same regime as GPTQ/AWQ/EXL2, NOT in the W4A4 regime. Its dense-and-sparse outlier handling is the same idea as LLM.int8()'s mixed-precision decomposition and Atom's block-outlier scheme, applied to weights rather than activations. Enum mismatch: 'hqq' is nearest because both search for non-uniform quantization parameters from second-order information. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'hqq' (a proxy recorded while the enum lacked a legal value) and is now 'squeezellm'. ",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab-squeezellm-paper"
+  ]
+}

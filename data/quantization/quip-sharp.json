@@ -1,0 +1,28 @@
+{
+  "id": "quip-sharp",
+  "type": "quantization",
+  "name": "QuIP# (Hadamard incoherence processing + E8 lattice codebooks)",
+  "scheme": "quip",
+  "bits": "2, 3 and 4-bit weight-only (<=4 bits per weight); activations fp16",
+  "weight_group_size": null,
+  "activation_scheme": "None. Weight-only PTQ. The mechanism is INCOHERENCE PROCESSING: an orthogonal transform (randomized Hadamard) is applied so weights and activations become approximately incoherent (spherically symmetric, sub-Gaussian with low maximum coherence), which is what makes very low bit grids viable. Then E8-lattice vector-quantization codebooks exploit that ball-shaped sub-Gaussian distribution.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "quip-sharp reference implementation (Cornell-RelaxML); hardware-efficient E8 codebooks chosen specifically to be decodable in few integer ops."
+  ],
+  "quality_delta": "The abstract claims 'state-of-the-art results in extreme compression regimes (<=4 bits per weight)', 'enables new behaviors in PTQ scaling', and 'supports fast inference', with no numeric perplexity in the abstract. No number recorded.",
+  "notes": "Enum mismatch: 'hqq' is the closest existing value (both use learned/optimized codebooks). Two things worth carrying forward. First, QuIP# is a successor to QuIP v1 (Chee et al. 2023); the v1 preprint was not retrievable this session and is NOT recorded - do not create a separate quip record claiming details from the v2 paper. Second, the incoherent-rotations idea is the same family as QuaRot and SpinQuant and is the reason W4A4 became plausible at all: rotate, then quantize. Where SpinQuant LEARNS the rotation and QuIP#/QuaRot use a fixed or randomized Hadamard, that difference is the substantive distinction among the three. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'hqq' (a proxy recorded while the enum lacked a legal value) and is now 'quip'. ",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab-quip-sharp-paper"
+  ]
+}

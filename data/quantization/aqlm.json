@@ -1,0 +1,28 @@
+{
+  "id": "aqlm",
+  "type": "quantization",
+  "name": "AQLM (additive / multi-codebook quantization)",
+  "scheme": "aqlm",
+  "bits": "2, 3 and 4-bit weights (targeting sub-4-bit); activations remain fp16, so this is w2a16 / w3a16",
+  "weight_group_size": null,
+  "activation_scheme": "None. AQLM is weight-only. Each weight vector is represented as a sum of codeword lookups from a small learned codebook rather than as a single point on a uniform grid - input-adaptive additive quantization with codebooks jointly optimized across each transformer block.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "Paper ships fast GPU and CPU implementations for token generation (fast lookup, no per-element dequantization)."
+  ],
+  "quality_delta": "From the paper's abstract: AQLM is 'the first scheme that is Pareto optimal in terms of accuracy-vs-model-size when compressing to less than 3 bits per parameter' and 'significantly improves upon all known schemes in the extreme compression (2bit) regime'. No specific perplexity number in the abstract; none recorded.",
+  "notes": "Enum mismatch: 'hqq' is the closest existing value because both are codebook-based quantizers solved by iterative optimization rather than a fixed grid. The real distinguishing property is ADDITIVE decomposition - a weight is a sum of codeword indices, so effective bits are non-integer and not comparable to a plain k-bit grid. This is the reference point for the whole sub-4-bit regime: at 2 bits, uniform-grid methods (GPTQ, AWQ, round-to-nearest) collapse, and the labs that succeed do it by changing the representation (additive codebooks, incoherent rotations, dense-and-sparse outlier splits) rather than by tuning the grid. Compare the ternary record: ternary is a 2-level grid (-1,0,+1); AQLM is a learned multi-codebook sum. Both are sub-4-bit but they are not the same thing. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'hqq' (a proxy recorded while the enum lacked a legal value) and is now 'aqlm'. ",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab-aqlm-paper"
+  ]
+}

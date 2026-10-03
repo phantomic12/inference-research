@@ -5,7 +5,7 @@
   "scheme": "bitsandbytes-int8",
   "bits": "w8a16 (mixed-precision decomposition: >99.9% of values multiplied in 8-bit, outlier dims in fp16)",
   "weight_group_size": null,
-  "activation_scheme": "vector-wise (per inner-product / per-row) quantization constants for activations; outlier feature dimensions routed to a separate fp16 matmul",
+  "activation_scheme": "Vector-wise quantization: SEPARATE NORMALIZATION CONSTANTS FOR EACH INNER PRODUCT in the matrix multiplication. The second half of the scheme is the MIXED-PRECISION DECOMPOSITION: systematically-emergent outlier FEATURE DIMENSIONS (not outlier values, not outlier tokens - specific dimensions of the activation vector) are isolated into a second 16-bit matrix multiplication, while more than 99.9% of values are still multiplied in 8-bit. The outliers are discovered at runtime per matmul, so the split is dynamic, not a static per-layer decision.",
   "native_support": [],
   "emulated_support": [
     "nvidia-h100-sxm",
@@ -18,13 +18,14 @@
     "bitsandbytes Linear8bitLt",
     "LLM.int8() vector-wise matmul + mixed-precision decomposition kernel"
   ],
-  "quality_delta": "From the paper: a 175B-parameter 16/32-bit checkpoint can be loaded, converted to int8 and used with no performance degradation, with more than 99.9% of values multiplied in 8-bit (quant-llmint8-paper). No numeric benchmark delta is tabulated in the abstract, so none recorded.",
-  "notes": "The important structural point: LLM.int8() is NOT W8A8. It is vector-wise 8-bit weights AND 8-bit activations, but the systematic outlier channels are split out into a second fp16 matrix multiply, so there is no true int8 x int8 tensor-core op running for the whole layer. That decomposition is what makes it work at all; it also makes it slow - it was a memory-saving technique, not a speed technique. Contrast with SmoothQuant, which genuinely reaches hardware W8A8 by moving difficulty into the weights upfront. Group size null: constants are per vector, not per fixed-size weight group.",
+  "quality_delta": "From the primary paper (qlab-llmint8-paper): a 175B-parameter 16/32-bit checkpoint can be loaded, converted to Int8 and used immediately with no performance degradation, because the mixed-precision decomposition keeps 'more than 99.9% of values multiplied in 8-bit' while the outlier dimensions go through fp16. The authors frame the entire result as 'it is possible to perform inference in LLMs with up to 175B parameters without any performance degradation'. No numeric benchmark delta is tabulated in the abstract, so no perplexity or accuracy number is recorded here.",
+  "notes": "The important structural point: LLM.int8() is NOT W8A8. It is vector-wise 8-bit weights AND 8-bit activations, but the systematic outlier channels are split out into a second fp16 matrix multiply, so there is no true int8 x int8 tensor-core op running for the whole layer. That decomposition is what makes it work at all; it also makes it slow - it was a memory-saving technique, not a speed technique. Contrast with SmoothQuant, which genuinely reaches hardware W8A8 by moving difficulty into the weights upfront. Group size null: constants are per vector, not per fixed-size weight group. UPGRADE (2026-10-03): activation_scheme and quality_delta now cite the primary paper (arXiv 2208.07339, read directly) rather than relying on a secondary description. The precise wording matters and is now correct: LLM.int8() isolates outlier FEATURE DIMENSIONS into a 16-bit matmul while >99.9% of values remain 8-bit - that is the mixed-precision decomposition that the method is named for. Why it is not a true int8xint8 path: the layer's arithmetic is split between an int8 GEMM and an fp16 GEMM, so no single int8 tensor-core instruction covers the layer. That is the same trap as W4A4-without-hardware: low precision in the DATA does not imply low precision in the ARITHMETIC. The family resemblance worth keeping explicit - LLM.int8()'s mixed-precision decomposition, Atom's mixed-precision block-outliers, SqueezeLLM's dense-and-sparse split, and KVQuant's per-vector dense-and-sparse are four papers independently arriving at 'keep the outliers in higher precision'. QuaRot is the counterargument to that family: rotate them away instead, and retain nothing.",
   "status": "verified",
   "confidence": 0.75,
   "updated": "2026-10-03",
   "sources": [
     "quant-llmint8-paper",
-    "quant-torch-qlora-paper"
+    "quant-torch-qlora-paper",
+    "qlab-llmint8-paper"
   ]
 }

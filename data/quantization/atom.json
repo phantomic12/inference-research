@@ -1,0 +1,28 @@
+{
+  "id": "atom",
+  "type": "quantization",
+  "name": "Atom (mixed-precision block-outlier low-bit quantization for serving)",
+  "scheme": "atom",
+  "bits": "w4a4 (4-bit weights AND 4-bit activations) with mixed-precision outlier channels retained at higher precision",
+  "weight_group_size": null,
+  "activation_scheme": "4-bit activations with a mixed-precision, fine-grained process: a small set of outlier channels/blocks is kept at higher precision while the dense bulk is 4-bit. The paper's motivation is explicitly that 8-bit weight-activation schemes cannot leverage modern GPUs' 4-bit integer operators, so it targets the 4-bit regime to hit real hardware paths.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "Purpose-built CUDA kernels with low-bit operators, evaluated on A800-class hardware in the paper. Faster than the INT8 baseline because it actually uses the 4-bit integer operators."
+  ],
+  "quality_delta": "From the abstract: end-to-end throughput up to 7.73x versus FP16 and 2.53x versus INT8 quantization at the same latency target, with negligible accuracy loss, in the serving context. These are throughput figures from the authors' own system on their own kernels - vendor-style numbers, not independent. No perplexity figure in the abstract.",
+  "notes": "This is one of the clearest instances of the distinction the repo cares about. Atom is W4A4 and it DOES have a hardware story, because it is built around 4-bit integer operators - but that is an integer-operator path on datacenter GPUs, not the FP4 tensor-core path that Blackwell introduced. Contrast nvfp4, which is W4A4 with a genuine FP4 tensor-core path. Atom's outlier channels at higher precision are the mixed-precision escape hatch that keeps 4-bit activations workable without needing to learn a rotation first; compare LLM.int8() and QuaRot, which solve the same problem differently. Enum matches ('wq4a4') because it is literally W4A4; no mismatch to report here. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'wq4a4' (a proxy recorded while the enum lacked a legal value) and is now 'atom'. ",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab-atom-paper"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "zeroquant-v2",
+  "type": "quantization",
+  "name": "ZeroQuant-V2 (systematic PTQ study + low-rank compensation LoRC)",
+  "scheme": "zeroquant",
+  "bits": "study spans w4a16 and w4a8; also covers weight-only and activation-only variants across 125M-176B models",
+  "weight_group_size": null,
+  "activation_scheme": "None introduced. The paper's own conclusion is that activation quantization is the weak point: 'none of the current methods can achieve the original model quality for quantization with either INT4-weight or INT4-weight-and-INT8-activation'. Its contribution is Low-Rank Compensation (LoRC), which adds low-rank matrices to recover model quality after quantization at minimal size increase.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "intel-arc-b580",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "None shipped; inherits GPTQ's approach."
+  ],
+  "quality_delta": "No single number in the abstract. The finding itself is the result: activation quantization is more susceptible to damage than weight quantization, and smaller models often tolerate activation quantization better than larger ones.",
+  "notes": "Enum mismatch: 'gptq' is the closest enum because ZeroQuant-V2 is a weight-only PTQ method in the GPTQ lineage (it evaluates and extends RTN, GPTQ and ZeroQuant rather than introducing a new grid format). Request the parent add 'zeroquant'. Two things a reader should not get wrong: (1) this is ZeroQuant V2, distinct from the v1 record; v1's headline is INT8 weight+activation with layer-by-layer distillation for BERT and GPT-3 style models, v1 has no separate record here and would need one added; (2) the 'group-wise 3-bit' claim sometimes attributed to ZeroQuant-V2 is NOT supported by the abstract - the abstract mentions no 3-bit configuration at all. Do not record 3-bit for this method without reading the experiments section. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'gptq' (a proxy recorded while the enum lacked a legal value) and is now 'zeroquant'. ",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab-zeroquant-v2-paper"
+  ]
+}

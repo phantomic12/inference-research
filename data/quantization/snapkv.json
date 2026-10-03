@@ -1,0 +1,28 @@
+{
+  "id": "snapkv",
+  "type": "quantization",
+  "name": "SnapKV (observation-window KV selection) - NOT KV quantization",
+  "scheme": "kv-eviction",
+  "bits": "none - selects important KV POSITIONS per attention head from an observation window; no bits are reduced.",
+  "weight_group_size": null,
+  "activation_scheme": "None. Fine-tuning-free: each attention head is observed to focus on stable prompt-attention features during generation, and this pattern can be read off an 'observation window' at the end of the prompt. SnapKV then selects clustered important KV positions per head.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "Runs in HuggingFace implementations with minor changes, and fits 380K context tokens on a single A100-80GB."
+  ],
+  "quality_delta": "From the abstract: 3.6x increase in generation speed and 8.2x memory-efficiency improvement over baseline at 16K-token inputs, comparable performance across 16 long-sequence datasets, and only a negligible accuracy drop on Needle-in-a-Haystack.",
+  "notes": "Boundary record. SnapKV's fine-tuning-free property is what distinguishes it operationally from learned approaches - it works on any checkpoint with no retraining and no calibration pipeline, which is why it spread into serving stacks faster than most of this literature. Its observation-window trick is the same underlying fact H2O identified (attention concentrates) applied at the prompt level rather than the token level. The 8.2x memory-efficiency figure at 16K tokens is a prompt-length-specific measurement; memory savings from eviction scale with context length, so quoting it outside that regime would be misleading. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-eviction'. ",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab-snapkv-paper"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "pensieve",
+  "type": "quantization",
+  "name": "Pensieve (multi-tier conversation-state KV cache) - NOT KV quantization",
+  "scheme": "kv-eviction",
+  "bits": "none - no bits reduced. Retains and reuses conversation state across requests in a multi-tier cache.",
+  "weight_group_size": null,
+  "activation_scheme": "None. Maintains conversation state across requests so multi-turn history is not reprocessed; a multi-tier caching strategy uses both GPU and CPU memory, and the paper generalizes PagedAttention to support attention against a GPU cache spread over non-contiguous memory.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "Generalizes the PagedAttention kernel to attention over multiple input tokens against non-contiguous GPU cache."
+  ],
+  "quality_delta": "From the abstract: 1.14x-3.0x the throughput of vLLM and TensorRT-LLM with significantly reduced latency, in the multi-turn conversation setting.",
+  "notes": "Boundary record, and the clearest statement of the non-quantization case: Pensieve solves the SAME problem as KIVI - a multi-turn conversation's KV cache does not fit - by storing it across tiers instead of compressing it. Since lossless storage is strictly better than lossy compression when the constraint is host memory rather than GPU memory, Pensieve is the correct answer when an offload path exists and KIVI is the correct answer when it does not. Including it so a reader does not conclude that the whole multi-turn problem requires quantization. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-eviction'. ",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab-pensieve-paper"
+  ]
+}
