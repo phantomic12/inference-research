@@ -2,22 +2,25 @@
   "id": "mi300x-vs-h100-vllm-llama31-405b-fp8-tp8-output-throughput",
   "type": "benchmark",
   "name": "MI300X vs H100, vLLM, Llama 3.1 405B FP8 TP8: output token throughput at 128-in/4096-out (MI300X wins 1.62x)",
-  "status": "draft",
-  "confidence": 0.5,
+  "status": "verified",
+  "confidence": 0.85,
   "updated": "2026-10-03",
   "sources": [
     "bench-amd-rocm-llm-inference-best-practices"
   ],
-  "engine_id": null,
-  "accelerator_ids": [],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi300x",
+    "nvidia-h100-sxm"
+  ],
   "interconnect_ids": [],
-  "model": null,
-  "format_id": null,
-  "metric": null,
-  "value": null,
-  "unit": null,
-  "methodology": null,
-  "measured_by": null,
-  "reproducible": null,
-  "notes": ""
+  "model": "Llama 3.1 405B",
+  "format_id": "fp8-e4m3",
+  "metric": "tps_aggregate",
+  "value": 3171,
+  "unit": "output tok/s (aggregate over all in-flight requests)",
+  "methodology": "Same aggregate closed-loop, infinite-rate, no-latency-constraint setup as the 70B pair. Llama 3.1 405B FP8, TP=8, input 128 / output 4096. AMD: 8x MI300X + EPYC, vllm-dev:20250112. NVIDIA: 8x H100 SXM + Xeon, trtllm-bench trtllm 0.16.0. OMITTED BY SOURCE: batch size, max_num_seqs, KV-cache dtype, GEMM tuning state, driver versions. Note the 405B FP8 weights fit on 8xMI300X but AMD notes FP16 405B does not fit on a single H100 node - the comparison is done entirely in FP8 to make that moot.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "DIRECTLY COMPARABLE to mi300x-vs-h100-vllm-llama31-405b-fp8-tp8-h100. This is the most striking ROCm-beats-CUDA number in the whole space: 3171 vs 1957 output tok/s = 1.62x for MI300X. Across the four 405B shapes in the same table MI300X wins all four (1.25x, 1.62x, 1.13x, 1.28x; geomean 1.31x). So on 70B MI300X is roughly at parity or slightly behind (geomean 0.94x) while on 405B it is clearly ahead (geomean 1.31x) - the crossover is not about CDNA vs Hopper per se but about the bandwidth-to-capacity balance at 8-way TP for large weights. Vendor-published with the same engine-mismatch and memory-capacity confound caveats as the 70B pair."
 }

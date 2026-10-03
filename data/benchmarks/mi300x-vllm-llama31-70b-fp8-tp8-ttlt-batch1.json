@@ -2,22 +2,25 @@
   "id": "mi300x-vllm-llama31-70b-fp8-tp8-ttlt-batch1",
   "type": "benchmark",
   "name": "MI300X vs H100, vLLM, Llama 3.1 70B FP8 TP8 batch 1: end-to-end time-to-last-token at 128-in/2048-out",
-  "status": "draft",
-  "confidence": 0.5,
+  "status": "verified",
+  "confidence": 0.85,
   "updated": "2026-10-03",
   "sources": [
     "bench-amd-rocm-llm-inference-best-practices"
   ],
-  "engine_id": null,
-  "accelerator_ids": [],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi300x",
+    "nvidia-h100-sxm"
+  ],
   "interconnect_ids": [],
-  "model": null,
-  "format_id": null,
-  "metric": null,
-  "value": null,
-  "unit": null,
-  "methodology": null,
-  "measured_by": null,
-  "reproducible": null,
-  "notes": ""
+  "model": "Llama 3.1 70B",
+  "format_id": "fp8-e4m3",
+  "metric": "itl_ms",
+  "value": 19089,
+  "unit": "ms (time to last token, end-to-end, batch 1, per request)",
+  "methodology": "PER-REQUEST latency, not aggregate. TTLT = total time from input submission to generation of all output tokens. Batch size 1 (single request in flight), TP=8, Llama 3.1 70B FP8, input 128 / output 2048. MI300X 19089 ms vs H100 20923 ms. The source gives the full batch sweep 1,2,4,8,16,32,64,128 for both hardware, plotted as throughput-vs-latency curves; only the batch-1 rows are reproduced as text here. OMITTED BY SOURCE: KV-cache dtype, scheduler settings, GEMM tuning, driver versions, and whether the client and server were co-located.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "DIRECTLY COMPARABLE to mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-ttlt-batch1-h100. At batch 1 MI300X is 1.10x BETTER on end-to-end latency (lower ms) despite being behind on aggregate throughput at high batch - which is the expected shape when decode is bandwidth-bound and MI300X has ~5 TB/s vs H100's ~3.35 TB/s HBM3. The latency advantage inverts by batch 64 (0.91x) and 128 (0.94x). metric is itl_ms because the schema has no end-to-end latency field; note the semantic mismatch: this is total request latency, NOT inter-token latency. Treat itl_ms in this record as 'time to last token'."
 }

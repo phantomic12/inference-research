@@ -1,0 +1,28 @@
+{
+  "id": "mi355x-mlperf-v6-0-llama2-70b-wmxfp4-offline-tokens",
+  "type": "benchmark",
+  "name": "MI355X, MLPerf Inference v6.0 Offline: Llama 2 70B WMXFP4 on 8xMI355X, aggregate output throughput",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-amd-mlperf-v6-0-raw-log-amd-mi355x"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi355x"
+  ],
+  "interconnect_ids": [
+    "amd-xgmi",
+    "pcie-gen5"
+  ],
+  "model": "Llama 2 70B (WMXFP4 weights, FP8 KV cache, UINT8 scales)",
+  "format_id": "mxfp4",
+  "metric": "tps_aggregate",
+  "value": 103480,
+  "unit": "output tokens/s (aggregate, MLPerf 'Tokens per second')",
+  "methodology": "AGGREGATE, offline batch scenario: MLPerf Offline processes all samples in one batch, no concurrency ceiling and no latency constraint (the TTFT<=2s / TPOT<=200ms values in the log are inherited harness defaults and are not binding in Offline). Samples per second 365.738. Hardware: 8x AMD Instinct MI355X, 288GB HBM3E each, XGMI accelerator interconnect, PCIe Gen5 x16 host link, 8x EPYC 9575F host, 3.0TB host memory. TP=8 implied by the 8-GPU node and the submission's single-node 8-GPU configuration. Software stack, verbatim from the MLCommons system JSON: PyTorch 2.9.1+git8907517, ROCm 7.0.0, vllm-11b6af52, aiter-6af8b687, hipblaslt-1.0.0.70000-38~22.04, Ubuntu 22.04.5 LTS. Harness parameters: min_duration 3600000 ms, min_query_count 24576 accuracy samples, samples_per_query 1465200, accuracy target 99.9. OMITTED BY SOURCE: actual input and output sequence lengths are fixed by the MLPerf Llama2-70B reference implementation rather than published in the log; max_num_seqs, max_num_batched_tokens, and QuickReduce layer-drop configuration are not in the summary log (the AMD repro guide shows the same commands, which is what makes this reproducible).",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "PRIMARY AUDITED NUMBER: this is a verbatim MLCommons harness log from an audited MLPerf v6.0 closed-division submission, not a marketing figure. AMD's repro guide (bench-amd-mlperf-v6-0-repro-guide) prints essentially identical sample/token-per-second figures from a re-run, which is unusually strong evidence of reproducibility. Scale note: 103480 tok/s on ONE 8-GPU node. AMD's multi-node 87-GPU (11-node) Llama 2 70B Server run reached 1016375 tok/s and the Offline run 1.04211e+06 tok/s - see mi355x-mlperf-v6-0-llama2-70b-87gpu-offline-tokens. That is roughly 10x, i.e. ~93-98% scaling efficiency, and is AMD's first MLPerf entry above 1M tok/s. Caveat: this is a 99.9%-accuracy quantized model (WMXFP4), so it is not comparable to FP8 or FP16 figures in this repo without accounting for quantization."
+}

@@ -1,0 +1,30 @@
+{
+  "id": "mi355x-mlperf-v6-0-llama2-70b-87gpu-offline-tokens",
+  "type": "benchmark",
+  "name": "MI355X, MLPerf Inference v6.0 Offline multi-node: Llama 2 70B WMXFP4 on 87xMI355X across 11 nodes",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-amd-mlperf-v6-0-repro-guide",
+    "bench-amd-mlperf-v6-0-submission"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi355x"
+  ],
+  "interconnect_ids": [
+    "amd-xgmi",
+    "pcie-gen5",
+    "ethernet-uec"
+  ],
+  "model": "Llama 2 70B (WMXFP4 weights, FP8 KV cache, UINT8 scales)",
+  "format_id": "mxfp4",
+  "metric": "tps_aggregate",
+  "value": 1042110,
+  "unit": "output tokens/s (aggregate, MLPerf 'Tokens per second', 1.04211e+06)",
+  "methodology": "AGGREGATE, MLPerf Offline scenario at cluster scale: 87 GPUs across 11 nodes (AMD's system id is 87xMI355X_22xEPYC_9575F, i.e. 22 EPYC 9575F hosts). Samples per second 3629.98. TP size is not stated as a single number in the log because the multi-node submission uses a distributed SUT over ZMQ with workers on all nodes rather than one TP group; the source states device_count equals the total healthy GPUs across the cluster. Assume large-scale TP/EP spanning all 11 nodes. Software: same per-node stack as the single-node submission (PyTorch 2.9.1+git8907517, ROCm 7.0.0, vllm-11b6af52, aiter-6af8b687). Model: Llama 2 70B WMXFP4, FP8 KV cache, UINT8 scales, from amd/Llama-2-70b-chat-hf-WMXFP4-AMXFP4-KVFP8-Scale-UINT8-6.0MLPerf-GPTQ. OMITTED BY SOURCE: exact TP size, number of replicas vs one giant TP group, network fabric and topology, input/output sequence lengths. Reproducible is false at this scale: the repro guide describes the procedure but 11 nodes is not something an individual can re-run.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "This is the 'first MLPerf submission over one million tokens/sec' figure AMD headlines for Llama 2 70B in the Closed division. AMD reports 93% scaling efficiency for Offline and Server and 98% for Interactive on this 11-node run. The paired Server-scenario number for the same cluster is 1016375 tok/s at 3591.83 samples/s, from the same source - recorded separately rather than here to avoid conflating scenarios. The single-node 8-GPU figure is 103480 tok/s (mi355x-mlperf-v6-0-llama2-70b-wmxfp4-offline-tokens); 87/8 = 10.9x more GPUs for 10.07x the throughput, which is the arithmetic behind AMD's 93% claim."
+}

@@ -2,22 +2,25 @@
   "id": "mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-output-throughput",
   "type": "benchmark",
   "name": "MI300X vs H100, vLLM, Llama 3.1 70B FP8 TP8: output token throughput at 128-in/2048-out",
-  "status": "draft",
-  "confidence": 0.5,
+  "status": "verified",
+  "confidence": 0.85,
   "updated": "2026-10-03",
   "sources": [
     "bench-amd-rocm-llm-inference-best-practices"
   ],
-  "engine_id": null,
-  "accelerator_ids": [],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi300x",
+    "nvidia-h100-sxm"
+  ],
   "interconnect_ids": [],
-  "model": null,
-  "format_id": null,
-  "metric": null,
-  "value": null,
-  "unit": null,
-  "methodology": null,
-  "measured_by": null,
-  "reproducible": null,
-  "notes": ""
+  "model": "Llama 3.1 70B",
+  "format_id": "fp8-e4m3",
+  "metric": "tps_aggregate",
+  "value": 15105,
+  "unit": "output tok/s (aggregate over all in-flight requests)",
+  "methodology": "AGGREGATE (not per-request) output token throughput under a closed-loop client fed requests at an infinite rate: 'no delay between messages', no latency constraint, saturation load. Model Llama 3.1 70B, FP8 weights. Tensor parallel TP=8 on both platforms. Input length 128 tokens, output length 2048 tokens, fixed. AMD side: 8x MI300X (192GB HBM3 each), EPYC host, vllm-dev:20250112 docker, benchmark harness per ROCm/MAD standalone-benchmarking procedure. NVIDIA side: 8x H100 SXM, Xeon host, trtllm-bench inside trtllm 0.16.0, following NVIDIA's own TensorRT-LLM perf-benchmarking doc. AMD states 'measurements were made with the same method as TRT-LLM published throughput data', i.e. method parity is asserted by AMD, not independently audited, and the two engines are NOT the same (vLLM vs TensorRT-LLM). OMITTED BY SOURCE: actual batch size / scheduler max_num_seqs, KV-cache dtype, GEMM tuning state, number of concurrent sequences resident, driver and ROCm/CUDA versions, clock/power limits. A local inference client on the host is a shared-resource risk on the EPYC side.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "DIRECTLY COMPARABLE to mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-h100 - same source table, same run conditions, only the silicon differs. Read the pair together. MI300X 15105 vs H100 15810 output tok/s = 0.96x, i.e. MI300X is ~4% behind on this shape. This is one of four rows for Llama 3.1 70B FP8 TP8 in the same table (128/4096 -> 0.92x, 500/2000 -> 0.87x, 2048/2048 -> 1.00x; geomean 0.94x). The pattern AMD highlights: MI300X does relatively better as output length grows, attributed to higher memory bandwidth shortening TPOT; it does worse at 500-token prompts. MI300X has 192GB HBM vs H100's 80GB, so the comparison is not memory-capacity-neutral - AMD argues the larger HBM lets the whole model plus KV cache sit on fewer GPUs and avoids AllReduce, which is a real confound when reading 'MI300X vs H100' as 'CDNA3 vs Hopper'."
 }

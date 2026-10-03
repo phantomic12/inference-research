@@ -1,0 +1,28 @@
+{
+  "id": "mi355x-mlperf-v6-0-gpt-oss-120b-offline-tokens",
+  "type": "benchmark",
+  "name": "MI355X, MLPerf Inference v6.0 Offline: gpt-oss-120b (MXFP4/FP8 MoE) on 8xMI355X, aggregate output throughput",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-amd-mlperf-v6-0-raw-log-amd-gpt-oss-120b"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi355x"
+  ],
+  "interconnect_ids": [
+    "amd-xgmi",
+    "pcie-gen5"
+  ],
+  "model": "gpt-oss-120b (MoE, WMXFP4 weights, FP8-e4m3 activations)",
+  "format_id": "mxfp4",
+  "metric": "tps_aggregate",
+  "value": 95004,
+  "unit": "output tokens/s (aggregate, MLPerf 'Tokens per second')",
+  "methodology": "AGGREGATE, MLPerf Offline scenario (single batch, no latency ceiling). Samples per second 69.1714. gpt-oss-120b is the MoE workload NEW in MLPerf Inference v6.0: 117B total params, configurable reasoning effort, split performance/accuracy datasets. Same 8xMI355X / 8xEPYC 9575F system and same software stack as the Llama 2 70B Offline record (PyTorch 2.9.1+git8907517, ROCm 7.0.0, vllm-11b6af52, aiter-6af8b687). Quantization per the AMD submission write-up: AMD Quark, weights and activations quantized to OCP MXFP4 or OCP FP8-E4M3, calibrated on the full MLCommons inference calibration dataset. Harness parameters: samples_per_query 184800, min_duration 2400000 ms, accuracy 6396 performance samples / 4395 accuracy samples, and note this benchmark's binding constraints are tighter than Llama 2 70B's: TTFT<=3s, TPOT<=80ms. OMITTED BY SOURCE: input/output sequence lengths (fixed by the MLPerf reference implementation), max_num_seqs, expert-parallel configuration, and the reasoning-effort level used for the run.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "PRIMARY AUDITED NUMBER from a verbatim MLCommons MLPerf v6.0 closed-division harness log. Useful as the MI355X MoE datapoint: 95004 tok/s aggregate on one node vs 103480 tok/s for the much denser Llama 2 70B, because gpt-oss-120b is MoE and spends far more time on attention over a 128K-token-class context. AMD attributes part of its result to FP8 queries in the unified attention kernel (reducing query-path memory traffic and using native FP8 tensor ops for QK^T) and to GEAK-driven Triton tuning worth ~8-10% end-to-end. Multi-node: AMD's 12-node / 94-GPU gpt-oss-120b Offline run also broke 1M tok/s. Do not compare directly against the Llama 2 70B number as if the models were similar work."
+}

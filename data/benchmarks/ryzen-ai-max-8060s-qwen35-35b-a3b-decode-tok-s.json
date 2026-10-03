@@ -1,0 +1,25 @@
+{
+  "id": "ryzen-ai-max-8060s-qwen35-35b-a3b-decode-tok-s",
+  "type": "benchmark",
+  "name": "AMD Ryzen AI Max+ Radeon 8060S iGPU (RDNA 3.5) under Ollama: Qwen3.5 35B-A3B MoE generation throughput, 100% GPU offload",
+  "status": "verified",
+  "confidence": 0.6,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-amd-ryzen-ai-max-uma-ollama"
+  ],
+  "engine_id": "ollama",
+  "accelerator_ids": [
+    "amd-radeon-8060s-ryzen-ai-max"
+  ],
+  "interconnect_ids": [],
+  "model": "Qwen3.5 35B-A3B (MoE, 3B active)",
+  "format_id": null,
+  "metric": "decode_tok_s",
+  "value": 42.04,
+  "unit": "tok/s generation throughput (per-request, 100% GPU offload)",
+  "methodology": "PER-REQUEST generation throughput from 'ollama run qwen3.5:35b --verbose'. Prompt processing 154.52 tok/s in the same run. 100% of model layers offloaded to the integrated GPU (AMD states ollama reports '100% GPU'). 20.5 GB model footprint. Hardware: AMD Ryzen AI Max+ with Radeon 8060S integrated graphics (RDNA 3.5) and up to 128GB unified memory shared between CPU and GPU. APU-class: CPU and GPU share one memory pool and one thermal envelope, so this is not a discrete-GPU number. OMITTED BY SOURCE: the specific Ryzen AI Max+ SKU (3950X / 3970X / 'Max' branding are not distinguished), the GPU clock, the number of GPU compute units or WDDM, ROCm version, Ollama version, prompt length, output length, thread count, batch size, and the quantization used (implied by Ollama's default Q4_K_M for this model but never stated). Reproducible is false: too many unstated parameters, and the SKU is ambiguous.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "The most decision-relevant non-CUDA consumer datapoint here: ~42 tok/s for a 35B MoE running entirely on an APU's integrated RDNA 3.5 iGPU, using the CPU's unified memory as VRAM. Sibling figures in the same source: Qwen3.5 9B dense at 29.84 tok/s (6.2 GB), and Qwen3.5 122B-A10B MoE at 8.59 tok/s (76 GB, split 61% GPU / 39% CPU - i.e. partially offloaded to CPU because it does not fit cleanly). Note the non-monotonicity worth flagging: the 35B MoE (3B active) is FASTER than the 9B dense (29.84 tok/s) despite being 3.5x larger, because only 3B parameters are active per token and MoE decode is bandwidth-bound on the active experts, not the full weight set. That is the same effect that makes the Apple 30B-A3B row fast, seen on AMD silicon. ACCELERATOR ID CAVEAT: no record exists in data/accelerators/ for the Radeon 8060S / Ryzen AI Max APU; this is a planned id and the validator will warn. The nearest existing AMD RDNA-family records are amd-radeon-pro-vii (gfx906, 2019) and the Instinct MI-series, neither of which is this part - the Radeon Pro VII specifically is a 2019 CDNA1 part and does NOT support modern ROCm LLM paths, so no RDNA/Vulkan decode measurement for gfx906 was obtainable from a citable source and none is recorded. Confidence is held at 0.6 because this is a vendor blog with no engine version, no prompt/output length and no SKU - reproducible in spirit, not in practice."
+}

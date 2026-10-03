@@ -170,8 +170,9 @@
 - **UFI (Ultra Express Fabric)** (`interconnect/ufi-ultra-express-fabric`) — None GB/s
 - **AMD xGMI (Socket/Inter-Chip Global Memory Interconnect)** (`interconnect/amd-xgmi`) — None GB/s
 
-## Benchmarks (39)
+## Benchmarks (54)
 
+- **AMD Ryzen AI Max+ Radeon 8060S iGPU (RDNA 3.5) under Ollama: Qwen3.5 35B-A3B MoE generation throughput, 100% GPU offload** (`benchmarks/ryzen-ai-max-8060s-qwen35-35b-a3b-decode-tok-s`) — 42.04 tok/s generation throughput (per-request, 100% GPU offload) · Qwen3.5 35B-A3B (MoE, 3B active) on amd-radeon-8060s-ryzen-ai-max via ollama
 - **AWQ INT3-g128 WikiText-2 perplexity delta vs fp16, OPT-6.7B** (`benchmarks/awq-int3g128-wikitext2-ppl-delta-opt-6-7b`) — 0.53 perplexity_delta (WikiText-2 ppl points, quantized minus FP16) · OPT-6.7B on ? via tinychat-awq
 - **AWQ INT4-g128 WikiText-2 perplexity delta vs fp16, Llama-2 13B** (`benchmarks/awq-int4g128-wikitext2-ppl-delta-llama2-13b`) — 0.09 perplexity_delta (WikiText-2 ppl points, quantized minus FP16) · Llama-2 13B on ? via tinychat-awq
 - **AWQ INT4-g128 WikiText-2 perplexity delta vs fp16, Llama-2 7B** (`benchmarks/awq-int4g128-wikitext2-ppl-delta-llama2-7b`) — 0.13 perplexity_delta (WikiText-2 ppl points, quantized minus FP16) · Llama-2 7B on ? via tinychat-awq
@@ -180,14 +181,23 @@
 - **GGUF Q3_K_S GSM8K accuracy delta vs f16, Llama-3.1-8B-Instruct** (`benchmarks/gguf-q3-k-s-gsm8k-accuracy-delta-llama3-1-8b`) — -9.32 accuracy_delta_pp (GSM8K percentage points, quantized minus f16) · Llama-3.1-8B-Instruct (Q3_K_S GGUF) on ? via lm-eval-harness
 - **GGUF Q4_K_M WikiText-2 perplexity delta vs f16, Llama-3.1-8B-Instruct** (`benchmarks/gguf-q4-k-m-wikitext2-ppl-delta-llama3-1-8b`) — 0.24 perplexity_delta (WikiText-2 ppl points, quantized minus f16) · Llama-3.1-8B-Instruct (F16 GGUF baseline) on ? via llama-cpp
 - **GGUF Q5_0 GSM8K 'delta' vs f16 - quantization scoring ABOVE baseline** (`benchmarks/gguf-q5-0-gsm8k-accuracy-delta-llama3-1-8b`) — 1.45 accuracy_delta_pp (GSM8K percentage points, quantized MINUS f16 - i.e. scored ABOVE baseline) · Llama-3.1-8B-Instruct (Q5_0 GGUF) on ? via lm-eval-harness
-- **H100 reference column for MI300X vs H100, vLLM/TRT-LLM, Llama 3.1 405B FP8 TP8: output token throughput at 128-in/4096-out** (`benchmarks/mi300x-vs-h100-vllm-llama31-405b-fp8-tp8-h100`) — None · None on ? via None
-- **H100 reference column for MI300X vs H100, vLLM/TRT-LLM, Llama 3.1 70B FP8 TP8 batch 1: end-to-end time-to-last-token** (`benchmarks/mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-ttlt-batch1-h100`) — None · None on ? via None
-- **H100 reference column for MI300X vs H100, vLLM/TRT-LLM, Llama 3.1 70B FP8 TP8: output token throughput at 128-in/2048-out** (`benchmarks/mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-h100`) — None · None on ? via None
+- **H100 reference column for MI300X vs H100, vLLM/TRT-LLM, Llama 3.1 405B FP8 TP8: output token throughput at 128-in/4096-out** (`benchmarks/mi300x-vs-h100-vllm-llama31-405b-fp8-tp8-h100`) — 1957 output tok/s (aggregate over all in-flight requests) · Llama 3.1 405B on nvidia-h100-sxm via vllm
+- **H100 reference column for MI300X vs H100, vLLM/TRT-LLM, Llama 3.1 70B FP8 TP8 batch 1: end-to-end time-to-last-token** (`benchmarks/mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-ttlt-batch1-h100`) — 20923 ms (time to last token, end-to-end, batch 1, per request) · Llama 3.1 70B on nvidia-h100-sxm via vllm
+- **H100 reference column for MI300X vs H100, vLLM/TRT-LLM, Llama 3.1 70B FP8 TP8: output token throughput at 128-in/2048-out** (`benchmarks/mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-h100`) — 15810 output tok/s (aggregate over all in-flight requests) · Llama 3.1 70B on nvidia-h100-sxm via vllm
 - **INT4 per-channel affine WikiText-2 perplexity delta vs fp16, Llama2-7B (RTN)** (`benchmarks/int4-perchannel-wikitext2-ppl-delta-llama2-7b-rtn`) — 0.79 perplexity_delta (WikiText-2-test ppl points, quantized minus FP16) · Llama2-7B on ? via mxptq-research-harness
-- **MI300X vs H100, vLLM, Llama 3.1 405B FP8 TP8: output token throughput at 128-in/4096-out (MI300X wins 1.62x)** (`benchmarks/mi300x-vs-h100-vllm-llama31-405b-fp8-tp8-output-throughput`) — None · None on ? via None
-- **MI300X vs H100, vLLM, Llama 3.1 70B FP8 TP8 batch 1: end-to-end time-to-last-token at 128-in/2048-out** (`benchmarks/mi300x-vllm-llama31-70b-fp8-tp8-ttlt-batch1`) — None · None on ? via None
-- **MI300X vs H100, vLLM, Llama 3.1 70B FP8 TP8: output token throughput at 128-in/2048-out** (`benchmarks/mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-output-throughput`) — None · None on ? via None
+- **Intel Arc Pro B70, MLPerf Inference v6.1 Offline: Llama 2 70B on 4x Arc Pro B70 (GDDR6), aggregate output throughput** (`benchmarks/arc-pro-b70-mlperf-v6-1-llama2-70b-offline-tokens`) — 2464.98 output tokens/s (aggregate; harness labels it '(inferred)') · Llama 2 70B (MLPerf v6.1 submission) on intel-arc-pro-b70 via vllm
+- **Intel Gaudi 2, MLPerf Inference v4.0 Offline: Llama 2 70B fp8 on 8xGaudi 2, aggregate output throughput** (`benchmarks/gaudi2-mlperf-v4-0-llama2-70b-offline-tokens`) — 8034.85 output tokens/s (aggregate, MLPerf 'Tokens per second') · Llama 2 70B (fp8 weights, vLLM-fork) on intel-gaudi2 via vllm
+- **MI300X vs H100, vLLM, Llama 3.1 405B FP8 TP8: output token throughput at 128-in/4096-out (MI300X wins 1.62x)** (`benchmarks/mi300x-vs-h100-vllm-llama31-405b-fp8-tp8-output-throughput`) — 3171 output tok/s (aggregate over all in-flight requests) · Llama 3.1 405B on amd-instinct-mi300x, nvidia-h100-sxm via vllm
+- **MI300X vs H100, vLLM, Llama 3.1 70B FP8 TP8 batch 1: end-to-end time-to-last-token at 128-in/2048-out** (`benchmarks/mi300x-vllm-llama31-70b-fp8-tp8-ttlt-batch1`) — 19089 ms (time to last token, end-to-end, batch 1, per request) · Llama 3.1 70B on amd-instinct-mi300x, nvidia-h100-sxm via vllm
+- **MI300X vs H100, vLLM, Llama 3.1 70B FP8 TP8: output token throughput at 128-in/2048-out** (`benchmarks/mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-output-throughput`) — 15105 output tok/s (aggregate over all in-flight requests) · Llama 3.1 70B on amd-instinct-mi300x, nvidia-h100-sxm via vllm
+- **MI355X, MLPerf Inference v6.0 Offline multi-node: Llama 2 70B WMXFP4 on 87xMI355X across 11 nodes** (`benchmarks/mi355x-mlperf-v6-0-llama2-70b-87gpu-offline-tokens`) — 1042110 output tokens/s (aggregate, MLPerf 'Tokens per second', 1.04211e+06) · Llama 2 70B (WMXFP4 weights, FP8 KV cache, UINT8 scales) on amd-instinct-mi355x via vllm
+- **MI355X, MLPerf Inference v6.0 Offline: Llama 2 70B WMXFP4 on 8xMI355X, aggregate output throughput** (`benchmarks/mi355x-mlperf-v6-0-llama2-70b-wmxfp4-offline-tokens`) — 103480 output tokens/s (aggregate, MLPerf 'Tokens per second') · Llama 2 70B (WMXFP4 weights, FP8 KV cache, UINT8 scales) on amd-instinct-mi355x via vllm
+- **MI355X, MLPerf Inference v6.0 Offline: gpt-oss-120b (MXFP4/FP8 MoE) on 8xMI355X, aggregate output throughput** (`benchmarks/mi355x-mlperf-v6-0-gpt-oss-120b-offline-tokens`) — 95004 output tokens/s (aggregate, MLPerf 'Tokens per second') · gpt-oss-120b (MoE, WMXFP4 weights, FP8-e4m3 activations) on amd-instinct-mi355x via vllm
+- **MLX-LM on 64GB Apple M4 Max: Qwen3-30B-A3B-Instruct-2507 4-bit generation throughput (128 tokens)** (`benchmarks/mlx-m4-max-qwen3-30b-a3b-4bit-decode-tok-s`) — 113.33 tok/s (generation of 128 tokens, per-request, batch 1) · Qwen3-30B-A3B-Instruct-2507 (MLX 4-bit, mlx-community repo) on apple-m4-max via mlx-lm
+- **MLX-LM on 64GB Apple M4 Max: Qwen3-4B-Instruct-2507 bf16 prompt processing at 2048 tokens** (`benchmarks/mlx-m4-max-qwen3-4b-fp16-prefill-tok-s`) — 1780.63 tok/s (prompt processing of a 2048-token prompt, batch 1) · Qwen3-4B-Instruct-2507 (bf16, original Qwen repo) on apple-m4-max via mlx-lm
+- **MLX-LM on MacBook Pro 14-inch M3 Pro 18GB: Qwen3-4B-Instruct-2507 4-bit generation throughput** (`benchmarks/mlx-m3-pro-qwen3-4b-4bit-decode-tok-s`) — 44.62 tok/s (generation of 128 tokens, per-request, batch 1) · Qwen3-4B-Instruct-2507 (MLX 4-bit, mlx-community) on apple-m3-max via mlx-lm
 - **MXINT4-128 WikiText-2 perplexity delta vs fp16, Llama3.1-8B (AWQ+GPTQ)** (`benchmarks/mxint4-128-wikitext2-ppl-delta-llama3-1-8b-awq-gptq`) — 0.6 perplexity_delta (WikiText-2-test ppl points, quantized minus FP16) · Llama3.1-8B on ? via mxptq-research-harness
+- **MangoBoost on 4-node MI300X with LLMboost: highest recorded MLPerf Llama 2 70B Offline result (~103K tok/s)** (`benchmarks/mi325x-mlperf-v5-0-mangoboost-llama2-70b-offline`) — 103000 output tokens/s (aggregate; source states 'around 103K tokens/sec') · Llama 2 70B (MLPerf reference, W8A8 per AMD's Quark recipe) on amd-instinct-mi300x via vllm
 - **Per-user decode tok/s, MPT-7B static batch 1, 1x A100** (`benchmarks/mpt7b-a100-bs1-per-user-decode-tps`) — 57.6 decode tokens/s experienced by one user (batch size 1, so per-user == aggregate) · MPT-7B (FP16) on ? via fastertransformer
 - **Per-user decode tok/s, MPT-7B static batch 64, 1x A100** (`benchmarks/mpt7b-a100-bs64-per-user-decode-tps`) — 12.5 decode tokens/s experienced by one user (batch size 64, aggregate is 800) · MPT-7B (FP16) on ? via fastertransformer
 - **Perplexity: Llama 2 70B FP8 on 8x H100 80GB, TP=2 / batch 128, 767 output tokens/s per GPU** (`benchmarks/perplexity-llama2-70b-h100-fp8-tp2-bs128-tps-per-gpu`) — 767 output tokens/s per GPU (aggregate across concurrent requests) · Llama-2-70B on nvidia-h100-sxm via tensorrt-llm
@@ -207,9 +217,14 @@
 - **TensorRT-LLM: Llama 3.3 70B FP4 on 1x B200 180GB, ISL/OSL 1000/2000** (`benchmarks/trtllm-llama33-70b-fp4-b200-tp1-tps`) — 6725.03 output tokens/s (aggregate, 1 GPU) · nvidia/Llama-3.3-70B-Instruct-FP4 on nvidia-b200 via tensorrt-llm
 - **TensorRT-LLM: Llama 3.3 70B FP8 on 2x H100 SXM 80GB (TP=2), ISL/OSL 1000/2000** (`benchmarks/trtllm-llama33-70b-fp8-h100-tp2-1k2k-tps`) — 3708.93 output tokens/s (aggregate, 2 GPUs) · nvidia/Llama-3.3-70B-Instruct-FP8 on nvidia-h100-sxm via tensorrt-llm
 - **TensorRT-LLM: Llama 3.3 70B FP8 on 2x H200 SXM 141GB (TP=2), ISL/OSL 1000/2000** (`benchmarks/trtllm-llama33-70b-fp8-h200-tp2-1k2k-tps`) — 5790.36 output tokens/s (aggregate, 2 GPUs) · nvidia/Llama-3.3-70B-Instruct-FP8 on nvidia-h200-sxm via tensorrt-llm
+- **llama.cpp on 8xMI300X: DeepSeek-V3 671B Q4_K_M decode throughput at batch 1, 256 generated tokens** (`benchmarks/llama-cpp-mi300x-deepseek-v3-671b-q4-decode-tok-s`) — 36.53 tok/s (tg256, per-request, batch 1, all layers on GPU) · DeepSeek-V3 671B (Q4_K_M, 376.65 GiB) on amd-instinct-mi300x via llama-cpp
+- **llama.cpp on 8xMI300X: DeepSeek-V3 671B Q4_K_M prompt processing at 512-token prompts** (`benchmarks/llama-cpp-mi300x-deepseek-v3-671b-q4-prefill-tok-s`) — 439.14 tok/s (pp512, aggregate prompt processing) · DeepSeek-V3 671B (Q4_K_M, 376.65 GiB) on amd-instinct-mi300x via llama-cpp
+- **llama.cpp on Radeon AI PRO R9700 (gfx1201, RDNA4): Bonsai-27B Q1_0 decode throughput, batch 1** (`benchmarks/llamacpp-radeon-r9700-gfx1201-q1-0-decode-tok-s`) — 61.66 tok/s (tg64, mean of two interleaved runs: 61.97 and 61.34) · Bonsai-27B (Q1_0, 3.53 GiB) on amd-radeon-ai-pro-r9700 via llama-cpp
+- **llama.cpp under ROCm on 2x RX 7900 XTX (gfx1100): Qwen3.8-27B Q4_K_XL batch-1 tensor-split decode throughput** (`benchmarks/llamacpp-rx7900xtx-gfx1100-qwen3-27b-q4-batch1-decode-tok-s`) — 47.06 tok/s (batch-1 tensor-split decode across 2 cards) · Qwen3.8-27B (Q4_K_XL, 17.545 GB) on amd-radeon-rx-7900-xtx via llama-cpp
 - **vLLM disaggregated PD serving: Qwen3.5-397B-A17B-NVFP4 on GB200 NVL72, 25K total TPS per GPU** (`benchmarks/vllm-qwen35-nvfp4-gb200-nvl72-tps-per-gpu`) — 25000 total tokens/s per GPU (aggregate across the rack) · Qwen3.5-397B-A17B-NVFP4 on nvidia-gb200-nvl72 via vllm
 - **vLLM disaggregated PD serving: Qwen3.8-2.4T-A95B NVFP4 on GB300 NVL72, 180 generated tokens/s per user** (`benchmarks/vllm-qwen38-nvfp4-gb300-nvl72-interactivity`) — 180 generated tokens/s per user · Qwen3.8-2.4T-A95B-NVFP4 on nvidia-b300 via vllm
 - **vLLM disaggregated PD serving: Qwen3.8-2.4T-A95B NVFP4 on GB300 NVL72, 5000 total TPS per GPU** (`benchmarks/vllm-qwen38-nvfp4-gb300-nvl72-tps-per-gpu`) — 5000 total tokens/s per GPU (aggregate across the cluster) · Qwen3.8-2.4T-A95B-NVFP4 on nvidia-b300 via vllm
+- **vLLM on single MI300X: Meta-Llama-3-8B-Instruct FP16 end-to-end latency, 512 input / 512 output, ROCm 6.2 untuned baseline** (`benchmarks/vllm-mi300x-llama3-8b-fp16-latency-512in-512out`) — 4600 ms (average end-to-end latency; source says 'over 4.60 seconds') · Meta-Llama-3-8B-Instruct on amd-instinct-mi300x via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
 ## Gotchas (20)
@@ -465,7 +480,7 @@ _empty — see `python tools/query.py gaps`_
 
 ## Coverage
 
-Total records: **433**
+Total records: **448**
 
 | group | records |
 |---|---|

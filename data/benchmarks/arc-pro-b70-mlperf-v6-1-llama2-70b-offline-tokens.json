@@ -1,0 +1,27 @@
+{
+  "id": "arc-pro-b70-mlperf-v6-1-llama2-70b-offline-tokens",
+  "type": "benchmark",
+  "name": "Intel Arc Pro B70, MLPerf Inference v6.1 Offline: Llama 2 70B on 4x Arc Pro B70 (GDDR6), aggregate output throughput",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-intel-arc-pro-b70-mlperf-v6-1-llama2-70b"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "intel-arc-pro-b70"
+  ],
+  "interconnect_ids": [
+    "pcie-gen5"
+  ],
+  "model": "Llama 2 70B (MLPerf v6.1 submission)",
+  "format_id": null,
+  "metric": "tps_aggregate",
+  "value": 2464.98,
+  "unit": "output tokens/s (aggregate; harness labels it '(inferred)')",
+  "methodology": "AGGREGATE, MLPerf Inference v6.1 Offline scenario. Samples per second 8.47815. Hardware, verbatim from the MLCommons system JSON: 4x Intel Arc Pro B70, 32GB GDDR6 each, 2800 MHz, PCIe Gen5 x16 host link, air-cooled, 1x Intel Xeon 698X (86 cores), 125GB DDR5-6400 host memory, Ubuntu 24.04.4 LTS, framework PyTorch in a Docker container. Harness parameters: target_qps 8.7, samples_per_query 24576, min_duration 600000 ms, min_query_count 24576, ttft_latency 2000000000 ns, tpot_latency 200000000 ns. The submission README names the container intel/intel-optimized-pytorch:mlperf-inference_llama_xpu_26.04 and the entry points run_benchmark.sh with MODEL=llama2-70b and SCENARIO=Offline. OMITTED BY SOURCE: TP size (never stated; the model must be sharded across 4 GPUs but the config is only in the container), input/output sequence lengths, quantization scheme used for this run (NOT stated - unlike the Gaudi 2 submission this one has no explicit fp8/w8a8 flag in the log), KV-cache dtype, and the exact vLLM version. IMPORTANT: the harness prints 'Tokens per second (inferred): 2464.98' for this benchmark, i.e. the figure is derived from samples/s and a nominal token count, not directly instrumented.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "PRIMARY AUDITED NUMBER and, as far as this slice goes, the only Intel non-Gaudi accelerator LLM throughput in MLCommons' results - Intel submitted Gaudi-class systems to v4.0 and then Arc Pro B50/B60/B70 GPU systems to v5.1/v6.0/v6.1, all running the same llama2-70b benchmark. The arc-pro-b70 accelerator id is referenced here but has NO record in data/accelerators/ in this repo; the validator flags this as a warning, which is intentional and correct: the benchmark is worth recording even though the accelerator record is someone else's slice. Because quantization is unstated and the token count is 'inferred', this number must not be compared directly against the fp8 Gaudi 2 record or the WMXFP4 MI355X record. What it does establish cleanly is that a 4x32GB GDDR6 GPU box can serve Llama 2 70B at all, at ~2.5K tok/s."
+}

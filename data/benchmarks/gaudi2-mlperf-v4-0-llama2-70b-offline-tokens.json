@@ -1,0 +1,28 @@
+{
+  "id": "gaudi2-mlperf-v4-0-llama2-70b-offline-tokens",
+  "type": "benchmark",
+  "name": "Intel Gaudi 2, MLPerf Inference v4.0 Offline: Llama 2 70B fp8 on 8xGaudi 2, aggregate output throughput",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-intel-gaudi2-mlperf-v4-0-llama2-70b"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "intel-gaudi2"
+  ],
+  "interconnect_ids": [
+    "pcie-gen4",
+    "ethernet-uec"
+  ],
+  "model": "Llama 2 70B (fp8 weights, vLLM-fork)",
+  "format_id": "fp8-e4m3",
+  "metric": "tps_aggregate",
+  "value": 8034.85,
+  "unit": "output tokens/s (aggregate, MLPerf 'Tokens per second')",
+  "methodology": "AGGREGATE, MLPerf Inference v4.0 Offline scenario (all samples in one batch, no latency ceiling). Samples per second 27.5567. Hardware, verbatim from the MLCommons system JSON: 8x Intel Gaudi 2 OAM accelerators, 96GB HBM2E each, 6 on-chip SRAM engines, 1800 MHz, accelerator-to-accelerator interconnect 24x 100Gb/s Ethernet on a 10x L3 fat-tree, host link 4x PCIe 4.0 x16, 2x Intel Xeon Platinum 8380 (40 cores each, 2.3 GHz), 1024GB DDR4-3200, air-cooled. Software: PyTorch 2.1.1, synapseAI 1.14.98, Ubuntu 22.04. Engine and configuration from the submission's own scenarios.yaml: command 'python/main.py --bs 1024 --scenario Offline --fp8 --output_dir', plus 'run_tgi_server.sh --bs 768 --scenario Server --fp8 --output_dir'. That is vLLM-fork on Gaudi with FP8 weights, TP=8, offline batch 1024, server batch 768. Calibration used neural-compressor with num_gpus 8 and --bf16 along with FT config Llama-2-70b-L8x8-ft-w8a8-calibration_1000.pkl; headroom set to 1.1-1.43 and perf model perf_models/llama_greedy.pt. Harness parameters: min_duration 600000 ms, samples_per_query 98304, performance_sample_count 24576. OMITTED BY SOURCE: input/output sequence lengths (fixed by the MLPerf reference implementation), max_model_len, KV-cache dtype, and the concrete vLLM-fork commit.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "PRIMARY AUDITED NUMBER: verbatim MLCommons harness log from Intel's own MLPerf Inference v4.0 closed-division submission, the first vendor LLM results for Gaudi 2 and still the most complete publicly specified one. Reproducible because the submission ships the full recipe: container image path, calibration command, command line, and flags are all in the repo. Paired Server-scenario figure from the same submission is 6287.47 completed tokens/s at 21.60 samples/s with TTFT median 411669838 ns and TPOT median 114388704 ns - deliberately not recorded as a separate point here to keep the record count focused, but it is in the same log file and is the better number for interactive-serving comparisons. SANITY CHECK AGAINST THE AMD NUMBERS IN THIS REPO: 8034.85 tok/s on 8x Gaudi 2 (768GB HBM2E aggregate) vs 103480 tok/s on 8x MI355X (2304GB HBM3E aggregate) for the same MLPerf Llama 2 70B benchmark. Those are not like-for-like (three MLPerf versions apart, different quantization regimes - Gaudi 2 used w8a8 FT, MI355X used WMXFP4 - and different memory capacity per card), so the honest reading is that the 13x gap is dominated by memory capacity and quantization era, not demonstrated silicon superiority. Recorded here so nobody mistakes the Gaudi number for a current-generation datapoint."
+}

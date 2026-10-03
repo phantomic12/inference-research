@@ -1,0 +1,25 @@
+{
+  "id": "llamacpp-rx7900xtx-gfx1100-qwen3-27b-q4-batch1-decode-tok-s",
+  "type": "benchmark",
+  "name": "llama.cpp under ROCm on 2x RX 7900 XTX (gfx1100): Qwen3.8-27B Q4_K_XL batch-1 tensor-split decode throughput",
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-llamacpp-issue-28863-rx7900xtx-tensor-split"
+  ],
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "amd-radeon-rx-7900-xtx"
+  ],
+  "interconnect_ids": [],
+  "model": "Qwen3.8-27B (Q4_K_XL, 17.545 GB)",
+  "format_id": null,
+  "metric": "decode_tok_s",
+  "value": 47.06,
+  "unit": "tok/s (batch-1 tensor-split decode across 2 cards)",
+  "methodology": "PER-REQUEST decode throughput, batch 1, single stream - explicitly framed as the llama-server serving case for one user at a time on this hardware class. Tensor-split across 2x RX 7900 XTX under ROCm on gfx1100. Model Qwen3.8-27B at Q4_K_XL, 17.545 GB, which streams once per token at batch 1. Accompanying measured arithmetic, which is the reason this is worth a record: the pair moves 825.7 GB/s = 43.0% of their combined 1920 GB/s DRAM peak, leaving 57% of aggregate bandwidth idle. Single-card baseline is 632.5 of 960 GB/s = 65.9% UMC on the faster card, 623.5 on the other. So adding a second card delivers only 1.31x throughput despite neither card being bandwidth-saturated. The issue decomposes this into a 1.518x solo-inefficiency factor and a 1.532x tensor-split penalty, 2.326x combined. OMITTED BY SOURCE: exact llama.cpp commit and ROCm version, prompt length, generation length, KV-cache size, thread count, which ROCm backend path, and clock state. Projections in the issue (72.1 tok/s at per-card-equal efficiency, 109.4 tok/s at 100% UMC) are explicitly labelled projections from measured bandwidths and are NOT recorded as measurements.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Valuable precisely because it quantifies a failure mode that generic tok/s figures hide: consumer-RDNA multi-card tensor parallelism underperforms badly on consumer cards, where the only link between GPUs is PCIe rather than a fabric. 1.31x for 2x the hardware is a poor result, and the per-card DRAM utilisation drops from 65.9% to 43.0% when the split is introduced - the split actively makes each card less efficient. Cross-checked against a second model in the same issue: a 7B at Q8_0 keeps 63.9% of its solo per-card bandwidth when split, so the penalty is a roughly constant fraction that multiplies whatever the batch-1 kernel already achieves. PRACTICAL TAKEAWAY: on RDNA, do the arithmetic before assuming a second card buys you a second card's worth of tokens per second. ACCELERATOR ID CAVEAT: no accelerators/amd-radeon-rx-7900-xtx record exists in this repo; planned id, validator will warn. measured_by third_party and status draft: community research issue, no build or version pinned. The underlying measurement (47.06 t/s, 825.7 GB/s, 65.9%/43.0%) is concrete and cross-checked within the issue; the derived percentages are the author's own arithmetic on those measurements."
+}

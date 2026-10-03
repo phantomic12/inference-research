@@ -1,0 +1,25 @@
+{
+  "id": "mlx-m4-max-qwen3-4b-fp16-prefill-tok-s",
+  "type": "benchmark",
+  "name": "MLX-LM on 64GB Apple M4 Max: Qwen3-4B-Instruct-2507 bf16 prompt processing at 2048 tokens",
+  "status": "verified",
+  "confidence": 0.6,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-apple-mlx-lm-qwen3-benchmarks"
+  ],
+  "engine_id": "mlx-lm",
+  "accelerator_ids": [
+    "apple-m4-max"
+  ],
+  "interconnect_ids": [],
+  "model": "Qwen3-4B-Instruct-2507 (bf16, original Qwen repo)",
+  "format_id": null,
+  "metric": "prefill_tok_s",
+  "value": 1780.63,
+  "unit": "tok/s (prompt processing of a 2048-token prompt, batch 1)",
+  "methodology": "Prompt processing throughput for a 2048-token prompt at batch 1. Command: mlx_lm.benchmark --model Qwen/Qwen3-4B-Instruct-2507 -p 2048 -g 128. Hardware 64GB Apple M4 Max; mlx 0.29.2.dev20251008+85a8824a8, mlx-lm 0.28.2, macOS 26.1. MMLU Pro 64.05 for the bf16 row; peak memory 9.02 GB; generation 52.47 tok/s in the same run. Note MLX-LM's --prefill-step-size default is 2048, so the whole 2048-token prompt is processed in one step here - this is the favourable end of the prefill-speed-vs-peak-memory trade. OMITTED BY SOURCE: GPU core count of the M4 Max SKU, trial count, thermal state, prefill step size if it differed from the 2048 default.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "Recorded deliberately as the prefill-side counterpart to mlx-m4-max-qwen3-30b-a3b-4bit-decode-tok-s, because the asymmetry is the point: ~1781 tok/s prefill against ~52 tok/s generation on the same chip, a ~34x gap driven by the arithmetic intensity difference between the two phases. Anyone reasoning about MacStudio-class capacity should note that prefill is essentially free and decode is what costs. Same unmerged-PR caveat as its sibling (mlx-lm PR #552, closed Aug 2026, never merged), hence measured_by=vendor but confidence 0.6 and the notes say so explicitly. Curiosity from the same table worth knowing: prefill barely moves with quantization on this model (bf16 1780.63, q8 1606.57, q4 1622.27) while generation nearly doubles (52.47 -> 134.52). That is the signature of a bandwidth-bound decode and a compute-bound prefill, and it means on Apple silicon you lose nothing by quantizing prefill and gain a great deal on decode."
+}

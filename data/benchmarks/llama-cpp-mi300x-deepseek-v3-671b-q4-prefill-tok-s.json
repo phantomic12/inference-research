@@ -1,0 +1,28 @@
+{
+  "id": "llama-cpp-mi300x-deepseek-v3-671b-q4-prefill-tok-s",
+  "type": "benchmark",
+  "name": "llama.cpp on 8xMI300X: DeepSeek-V3 671B Q4_K_M prompt processing at 512-token prompts",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-amd-llama-cpp-mi300x-deepseek"
+  ],
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "amd-instinct-mi300x"
+  ],
+  "interconnect_ids": [
+    "amd-xgmi",
+    "amd-infinity-fabric-link"
+  ],
+  "model": "DeepSeek-V3 671B (Q4_K_M, 376.65 GiB)",
+  "format_id": "gguf-q4-k-m",
+  "metric": "prefill_tok_s",
+  "value": 439.14,
+  "unit": "tok/s (pp512, aggregate prompt processing)",
+  "methodology": "Prompt processing (pp) throughput at -p 512, i.e. a 512-token prompt processed in batches of the llama-bench default ubatch size 2048 - so at 512 tokens the whole prompt fits in one ubatch. Command, repetitions and hardware as in llama-cpp-mi300x-deepseek-v3-671b-q4-decode-tok-s: 8x MI300X gfx942, -ngl 999, build 66906cd8, ROCm 6.4.0, 5 repeats, mean +/- sd. Value 439.14 +/- 1.68 tok/s. Sibling pp points: pp1024 = 439.02, pp2048 = 432.00, pp4096 = 420.19, pp16 = 47.71. OMITTED BY SOURCE: attention sink/implementation choice, flash-attention on/off, KV-cache size, thread count.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "Recorded mainly because it exposes the prefill/decode asymmetry that dominates inference economics on non-CUDA parts: 439 tok/s prefill vs 36.5 tok/s decode on the same model and the same 8 GPUs - a ~12x gap. On batch-1 single-stream serving you are decode-bound and pay for prefill you mostly do not use; on throughput serving the ratio inverts the calculus. Prompt processing also shows the classic small-batch ramp: 47.71 tok/s at pp16 rising to ~439 at pp512, then flattening and slightly declining to 420 at pp4096."
+}

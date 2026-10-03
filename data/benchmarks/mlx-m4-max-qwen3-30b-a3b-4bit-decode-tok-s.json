@@ -1,0 +1,25 @@
+{
+  "id": "mlx-m4-max-qwen3-30b-a3b-4bit-decode-tok-s",
+  "type": "benchmark",
+  "name": "MLX-LM on 64GB Apple M4 Max: Qwen3-30B-A3B-Instruct-2507 4-bit generation throughput (128 tokens)",
+  "status": "verified",
+  "confidence": 0.6,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-apple-mlx-lm-qwen3-benchmarks"
+  ],
+  "engine_id": "mlx-lm",
+  "accelerator_ids": [
+    "apple-m4-max"
+  ],
+  "interconnect_ids": [],
+  "model": "Qwen3-30B-A3B-Instruct-2507 (MLX 4-bit, mlx-community repo)",
+  "format_id": null,
+  "metric": "decode_tok_s",
+  "value": 113.33,
+  "unit": "tok/s (generation of 128 tokens, per-request, batch 1)",
+  "methodology": "PER-REQUEST generation throughput, batch 1, 128 tokens generated after a 2048-token prompt. Fully specified command: mlx_lm.benchmark --model mlx-community/Qwen3-30B-A3B-Instruct-2507-4bit -p 2048 -g 128. Hardware: 64GB Apple M4 Max. Software: mlx 0.29.2.dev20251008+85a8824a8, mlx-lm 0.28.2, macOS 26.1. Quality metric alongside: MMLU Pro 70.71 for the 4-bit row. Peak memory 18.20 GB. MLX-LM's benchmark runs repeated trials internally and averages; the source does not state the trial count. OMITTED BY SOURCE: GPU core count within the M4 Max (40-core vs 32-core SKUs differ materially), memory bandwidth, thermal state (M4 Max throttles on sustained generation), whether the KV cache used a prompt cache, and the trial count. The bf16 row for the same model is marked :skull: (did not fit / not run).",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "Recorded as the flagship Apple-silicon MoE decode number with unusually complete methodology for MLX, which is rare - prompt length, generation length, model repo, mlx version, mlx-lm version and OS are all stated. CONFIDENCE CAPPED AT 0.6 AND STATUS verified-from-an-unmerged-PR: this table comes from mlx-lm PR #552, which was closed WITHOUT merging in Aug 2026 by maintainer zcbenz citing review capacity. These are the MLX-LM project's own numbers (Apple-authored, hence measured_by=vendor) but they never received maintainer sign-off and are not in the merged tree. The precision sweep in the same table is the more valuable artefact than any single point: for Qwen3-30B-A3B on M4 Max, q8 = 83.16, q6 = 94.14, q5 = 101.00, q4 = 113.33 generation tok/s, with MMLU Pro falling 72.46 -> 72.41 -> 71.97 -> 70.71 and peak memory 33.46 -> 25.82 -> 22.01 -> 18.20 GB. On unified memory the decode rate rises monotonically as weights shrink, which is the expected bandwidth-bound behaviour and makes 4-bit the obvious operating point on a 64GB part. See also mlx-m4-max-qwen3-4b-fp16-prefill-tok-s for the prefill side and the 40-core question."
+}

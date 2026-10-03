@@ -1,0 +1,29 @@
+{
+  "id": "mi325x-mlperf-v5-0-mangoboost-llama2-70b-offline",
+  "type": "benchmark",
+  "name": "MangoBoost on 4-node MI300X with LLMboost: highest recorded MLPerf Llama 2 70B Offline result (~103K tok/s)",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-amd-mlperf-v6-0-submission",
+    "bench-amd-vllm-rocm-optimize-fp8-gemm"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi300x"
+  ],
+  "interconnect_ids": [
+    "amd-infinity-fabric-link",
+    "pcie-gen5"
+  ],
+  "model": "Llama 2 70B (MLPerf reference, W8A8 per AMD's Quark recipe)",
+  "format_id": "int8-w8a8",
+  "metric": "tps_aggregate",
+  "value": 103000,
+  "unit": "output tokens/s (aggregate; source states 'around 103K tokens/sec')",
+  "methodology": "AGGREGATE, MLPerf Inference v5.0 Llama 2 70B Offline scenario (published 2025-04-02), run by PARTNER MangoBoost, not by AMD: a 4-node MI300X cluster driven by MangoBoost's proprietary 'LLMboost' stack. The 103K figure is quoted by AMD as the highest-ever Offline performance recorded in MLPerf for Llama 2 70B at that time. Useful corroborating context from the same AMD v5.0 write-up about the 8xMI325X submission: offline scenario ran at batch sizes near the maximum - 65K for prefill, 2048 for decode - with multi-step decode scheduling (num_scheduler_steps) to amortise CPU scheduling overhead, and a custom load-balancing algorithm across multiple vLLM instances. OMITTED BY SOURCE: node count of the MangoBoost system is 4 nodes but GPU count per node, TP size, quantization scheme actually shipped, engine version, and the exact vLLM flags are all absent. 'Around 103K' is also rounded - do not treat 103000 as an exact measured figure.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "The only genuinely third-party (non-AMD-authored) AMD number recorded here: MangoBoost is an AMD OEM partner and LLMboost is their commercial stack, so it is vendor-adjacent, not independent. Still worth recording because it demonstrates MI300X (CDNA3, 192GB) reaching 4-node Llama 2 70B Offline throughput on the order of a single 8-GPU MI355X node. The number is quoted second-hand (AMD's blog citing MangoBoost's own blog), so confidence is capped at 0.7 and the value is stored rounded. This is a W8A8-era result (MLPerf v5.0) and is NOT comparable to the MI355X MXFP4 v6.0 numbers without accounting for both quantization and node count. The v5.0 blog also notes MLPerf Llama 2 70B drew 45 submissions from 16 organizations that round, which is useful context for how selective the leaderboard was."
+}

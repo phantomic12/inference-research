@@ -2,22 +2,24 @@
   "id": "mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-h100",
   "type": "benchmark",
   "name": "H100 reference column for MI300X vs H100, vLLM/TRT-LLM, Llama 3.1 70B FP8 TP8: output token throughput at 128-in/2048-out",
-  "status": "draft",
-  "confidence": 0.5,
+  "status": "verified",
+  "confidence": 0.85,
   "updated": "2026-10-03",
   "sources": [
     "bench-amd-rocm-llm-inference-best-practices"
   ],
-  "engine_id": null,
-  "accelerator_ids": [],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-h100-sxm"
+  ],
   "interconnect_ids": [],
-  "model": null,
-  "format_id": null,
-  "metric": null,
-  "value": null,
-  "unit": null,
-  "methodology": null,
-  "measured_by": null,
-  "reproducible": null,
-  "notes": ""
+  "model": "Llama 3.1 70B",
+  "format_id": "fp8-e4m3",
+  "metric": "tps_aggregate",
+  "value": 15810,
+  "unit": "output tok/s (aggregate over all in-flight requests)",
+  "methodology": "NVIDIA half of a head-to-head published by AMD. Same aggregate closed-loop, infinite-rate, no-latency-constraint setup as the paired MI300X record. Llama 3.1 70B FP8, TP=8, input 128 / output 2048. 8x H100 SXM on a Xeon host, measured with trtllm-bench in trtllm 0.16.0 following NVIDIA's published TensorRT-LLM perf-benchmarking method. Engine field is set to vllm because that is the engine of the comparison; the NVIDIA number itself was produced by TensorRT-LLM, not vLLM - this asymmetry is the single biggest caveat on the pair. OMITTED BY SOURCE: batch size, max_num_seqs, KV-cache dtype, GEMM tuning state, TensorRT-LLM engine flags, CUDA/driver version, power limits.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "DIRECTLY COMPARABLE to mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-output-throughput. IMPORTANT HONESTY CAVEAT: this is NVIDIA data measured by AMD, not by NVIDIA. NVIDIA does not publish a matching 128/2048 Llama 3.1 70B FP8 TP8 vLLM figure in this source. Also engine-mismatched (TensorRT-LLM on NVIDIA, vLLM on AMD), so the delta blends silicon and software. It should be read as 'AMD's best effort at parity under its own harness', not as an independent CUDA benchmark."
 }

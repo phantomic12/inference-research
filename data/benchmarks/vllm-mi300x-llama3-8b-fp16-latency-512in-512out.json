@@ -1,0 +1,25 @@
+{
+  "id": "vllm-mi300x-llama3-8b-fp16-latency-512in-512out",
+  "type": "benchmark",
+  "name": "vLLM on single MI300X: Meta-Llama-3-8B-Instruct FP16 end-to-end latency, 512 input / 512 output, ROCm 6.2 untuned baseline",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-amd-vllm-rocm-optimize-fp8-gemm"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi300x"
+  ],
+  "interconnect_ids": [],
+  "model": "Meta-Llama-3-8B-Instruct",
+  "format_id": null,
+  "metric": "itl_ms",
+  "value": 4600,
+  "unit": "ms (average end-to-end latency; source says 'over 4.60 seconds')",
+  "methodology": "PER-REQUEST average latency, batch size 1, 10 iterations. Fully re-runnable: python3 benchmarks/benchmark_latency.py --input-len 512 --output-len 512 --num-iters 10 --model meta-llama/Meta-Llama-3-8B-Instruct with PYTORCH_TUNABLEOP_ENABLED=0 (the untuned control arm). Single MI300X. ROCm 6.2, rocm/vllm:latest prebuilt container, FP16 weights (no FP8 quantization, no FP8 KV cache, no GEMM tuning). The tuned arm of the same experiment printed 'Avg latency: 4.3067230121872855 seconds', which the source rounds to 'over 4.60 seconds' for the untuned arm. OMITTED BY SOURCE: batch size is implied 1 by benchmark_latency.py but never stated; vLLM and PyTorch versions; driver version; whether CUDA graphs were enabled.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "Recorded as the control arm of a three-way ROCm 6.2 vLLM optimization experiment, all three arms on one MI300X with identical command shape: FP16 untuned >4.60 s; FP16 GEMM-tuned 4.307 s (-6.5%); FP8 quantized 4.13 s (-10%); FP8 + GEMM tuned '<3.40 s' (-~26%). That is a clean, self-contained, fully re-runnable demonstration of what ROCm 6.2 stack work buys on MI300X, and it is one of very few such numbers published outside a marketing deck. Value is stored as 4600 ms because the source only says 'over 4.60 seconds' - this is a LOWER BOUND, not a measurement, hence confidence 0.7. The FP8+tuned arm's 'under 3.40 s' is likewise a bound and is deliberately NOT recorded as a point value."
+}

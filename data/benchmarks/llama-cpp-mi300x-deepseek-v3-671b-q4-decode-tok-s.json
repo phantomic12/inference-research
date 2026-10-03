@@ -1,0 +1,28 @@
+{
+  "id": "llama-cpp-mi300x-deepseek-v3-671b-q4-decode-tok-s",
+  "type": "benchmark",
+  "name": "llama.cpp on 8xMI300X: DeepSeek-V3 671B Q4_K_M decode throughput at batch 1, 256 generated tokens",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-amd-llama-cpp-mi300x-deepseek"
+  ],
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "amd-instinct-mi300x"
+  ],
+  "interconnect_ids": [
+    "amd-xgmi",
+    "amd-infinity-fabric-link"
+  ],
+  "model": "DeepSeek-V3 671B (Q4_K_M, 376.65 GiB)",
+  "format_id": "gguf-q4-k-m",
+  "metric": "decode_tok_s",
+  "value": 36.53,
+  "unit": "tok/s (tg256, per-request, batch 1, all layers on GPU)",
+  "methodology": "PER-REQUEST decode throughput, batch 1, single stream - llama.cpp's tg test. Exactly reproducible from the published command: ./build/bin/llama-bench -m DeepSeek-V3-Q4_K_M-00001-of-00009.gguf -p 16,32,...,4096 -n 64,128,256 -ngl 999. Each test repeated 5 times (llama-bench default -r) with mean and standard deviation reported. This record is the tg256 point: 36.53 +/- 0.01 tok/s. Sibling points from the same run: tg64 = 37.36 +/- 0.03, tg128 = 37.04 +/- 0.02. Hardware: 8x AMD Instinct MI300X, each gfx942:sramecc+:xnack-, wave size 64, VMM off. All 999 layers offloaded to GPU (-ngl 999; model has fewer than 999 layers). Build: 66906cd8 (b5997), ROCm 6.4.0, Ubuntu 24.04. Prefill from the same run for context: pp16 = 47.71, pp128 = 180.11, pp512 = 439.14, pp2048 = 432.00, pp4096 = 420.19 tok/s. OMITTED BY SOURCE: prompt length used during the tg tests (tg is decode-only and independent of the -p list), KV-cache size, batch size beyond the implicit 1, thread count, and clock state.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "The single most useful llama.cpp-on-ROCm datapoint in the repo because it is fully re-runnable: model file, flags, build hash and ROCm version are all published. These numbers only exist at this level because AMD upstreamed a wavefront-64 MMQ rework into llama.cpp (ggml-org/llama.cpp#14624, July 2025). Before it, llama.cpp hardcoded WARP_SIZE=32 (NVIDIA's warp size) in shared-memory tile sizing, which made AMD's wave64 CDNA hardware unable to reach full compute. So a llama.cpp decode number on MI300X is a statement about an AMD-tuned fork state, not about stock llama.cpp on arbitrary hardware. Note 36.5 tok/s for a 671B MoE at Q4 is respectable: 376.65 GiB of weights spread over 8 MI300X (1536 GB total) fits comfortably, which is exactly the case MI300X's 192GB/card enables."
+}
