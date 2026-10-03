@@ -83,6 +83,14 @@ def card(r: dict) -> str:
             tail.append(str(r["attention_variant"]))
         if r.get("max_position_embeddings"):
             tail.append(f"{int(r['max_position_embeddings']):,} ctx")
+    elif t == "paper":
+        venue = (r.get("venue") or "?").replace("-preprint", "")
+        arx = f"arXiv:{r['arxiv_id']}" if r.get("arxiv_id") else "no arXiv"
+        head = f"{r.get('category') or '?'} · {venue}"
+        tail = [str(r.get("year") or ""), arx]
+        tail = [x for x in tail if x]
+        if r.get("adoption"):
+            tail.append(str(r["adoption"]))
     else:
         head = str(r.get("kind") or "")
         tail = [str(r.get("publisher") or "")]

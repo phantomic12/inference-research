@@ -78,6 +78,12 @@ TEMPLATES = {
         "kv_cache_bytes_per_token": None, "flops_per_token_active": None,
         "open_weights": None, "license": None, "notes": "",
     },
+    "paper": {
+        "arxiv_id": None, "venue": None, "year": None, "category": None,
+        "authors": [], "affiliations": [], "problem": None, "mechanism": None,
+        "hardware_relevance": [], "speedup_reported": None, "adoption": None,
+        "code_url": None, "open_weights": None, "notes": "",
+    },
     "source": {
         "url": None, "publisher": None, "kind": None, "published": None,
         "accessed": TODAY, "archived_url": None, "notes": "",

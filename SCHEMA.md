@@ -114,6 +114,47 @@ One file per operation class, e.g. `flops/prefill-attention.md`.
     reproducible          bool
     notes
 
+## paper
+
+A research paper, recorded because this repo is an inference-research repo and
+most of the field's progress is published as papers long before it ships in an
+engine. Distinct from `source`: a `source` is a document you cited, a `paper` is
+a contribution with a method, a claim, and an adoption status.
+
+    arxiv_id             string|null   e.g. 2408.11743
+    venue                arxiv-preprint | neurips | icml | iclr | acl | emnlp |
+                         naacl | cvpr | iccv | eccv | osdi | sosp | nsdi | atc |
+                         eurosys | asplos | micro | isca | mlsys | vldb | sigmod |
+                         kdd | www | interspeech | icassp | colm | other
+    year                 int|null
+    category             attention | kv-cache | quantization | moe | ssm |
+                         speculative-decoding | serving-systems | scheduling |
+                         distillation | long-context | position-encoding |
+                         sparsity | pruning | routing | inference-time-compute |
+                         agentic | multimodal | speech | embedding | retrieval |
+                         structured-output | security | cluster | interconnect |
+                         training-inference-bridge | other
+    authors              [string]
+    affiliations         [string]
+    problem              string|null   the bottleneck it attacks, one sentence
+    mechanism            string|null   how it works, concrete enough to implement
+    hardware_relevance   [string]      bare accelerator ids where the benefit is
+                         hardware-dependent
+    speedup_reported     string|null   the paper's OWN claim, always with baseline
+                         and settings. Never a bare number — a "3x speedup" with
+                         no baseline is worse than null
+    adoption             in-production | in-upstream-engine | research-only |
+                         abandoned | unknown
+    code_url             string|null
+    open_weights         bool|null
+    notes
+
+`adoption` is the field that separates a citation from an instruction. A method
+that is research-only and a method merged into vLLM differ enormously in what you
+should do, and the paper's own framing hides that. `speedup_reported` must
+always carry its baseline — self-reported speedups without a stated baseline are
+the single most misleading number in this domain.
+
 ## model
 
 A specific released model, recorded for what it does to the FLOP mix. The
@@ -196,7 +237,15 @@ quarter.
 
     class                driver | kernel | framework | config | hardware | format |
                          toolchain | measurement
-    affects              [string]   engine ids, accelerator ids, or format ids
+    affects              [string]   record ids only: engine, accelerator,
+                                    quantization or interconnect ids
+    concepts             [string]   free-text scope markers that are NOT record
+                                    ids: decoding/scheduling concepts (kv-cache,
+                                    prefix-caching, speculative-decoding,
+                                    tensor-parallel), software stacks (rocm,
+                                    sycl, oneapi, vulkan, cuda, triton, pytorch),
+                                    model names, architecture codenames
+                                    (hopper-sm90, gfx1100). Not id-resolved.
     symptom              string
     root_cause           string
     workaround           string

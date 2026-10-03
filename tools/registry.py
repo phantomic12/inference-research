@@ -16,6 +16,7 @@ DIRS = {
     "gotcha": "gotchas",
     "supply": "supply",
     "model": "models",
+    "paper": "papers",
     "source": "sources",
 }
 
@@ -31,5 +32,6 @@ TITLES = {
     "gotcha": "Gotchas",
     "supply": "Where to buy / source hardware",
     "model": "Models",
+    "paper": "Papers",
     "source": "Sources",
 }
