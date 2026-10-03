@@ -1,0 +1,41 @@
+{
+  "id": "tensor-core-instruction-generations-wgmma-tcgen05",
+  "type": "flop",
+  "name": "Tensor-core instruction generations: wmma/mma (Ampere) -> wgmma (Hopper) -> tcgen05 (Blackwell)",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "This is the layer that determines what a kernel can possibly do. Three generations exist and they change how a kernel must be STRUCTURED, not just how fast it runs. (1) Ampere and earlier: warp-level wmma (implicit load/store of fragments, the compiler handles element distribution) and mma (explicit fragment layout, the programmer handles it). Both are warp-synchronous - the whole warp participates, the accumulators live in registers, and the instruction blocks until it is issued in the warp's own issue stream. (2) Hopper: wgmma, issued by a warpgroup of four contiguous warps (the first warp's warp-rank must be a multiple of 4). It is ASYNCHRONOUS and runs in a separate async proxy, so it needs wgmma.fence, fence.proxy.async, commit_group and wait_group to be correct; M is always 64 (shapes are .m64nNk16 for f16/bf16/tf32 and .m64nNk32 for fp8 and int8), the accumulator can be in registers or shared memory, and sparse variants exist. The payoff is concrete: per the FA-3 author blog, without wgmma the older mma.sync reaches only about two thirds of Hopper tensor-core peak. (3) Blackwell: tcgen05, where the MMA is launched by a SINGLE THREAD rather than a warp or warpgroup, accumulates in dedicated on-chip Tensor Memory instead of registers, and can be issued across TWO CTAs in a cluster. TMEM is a 2D array - on sm_100a/sm_100f, 512 columns x 128 lanes per CTA with 32-bit cells - dynamically allocated by a single warp in units of 32 columns with power-of-2 counts, and everything allocated must be deallocated before the kernel exits. The largest single-CTA BF16/FP16 UMMA tile is 128x256x16, about twice the largest Hopper WGMMA atom, and 2-CTA mode reaches 256x256x16.",
+  "bound_by": "compute",
+  "scales_with": [
+    "architecture generation",
+    "CTA group size (1 or 2 for tcgen05)",
+    "accumulator location (registers vs TMEM), which determines how many pipeline stages fit before spilling",
+    "precision (fp8 and fp4 paths have their own kinds and larger MMA_K)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10",
+    "nvidia-rtx-4090",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-gb200-nvl72",
+    "nvidia-rtx-5090"
+  ],
+  "workarounds": [
+    "Choose the instruction generation from the target arch, not from preference: wgmma needs sm_90a, tcgen05 needs sm_100a, and neither is available on the base sm_90/sm_100 targets",
+    "On Hopper use wgmma with TMEM-free register accumulators and accept the register pressure; on Blackwell move accumulators to TMEM and keep more MMAs in flight",
+    "Exploit single-thread UMMA launch to cut register pressure and enable warp specialization with fewer warps doing MMA",
+    "Use 2-CTA MMA only when both CTAs of the pair can stay resident for the instruction's duration, and keep the CTA group size constant across all TMEM and tensor-core ops in a kernel",
+    "Keep clusters (required for 2-CTA MMA and distributed shared memory) in mind: cluster level is applicable only on sm_90 and higher"
+  ],
+  "notes": "Why this is a real decision input and not trivia: a Hopper-only kernel library tells you a consumer Blackwell part gets a worse path, and CUTLASS's README states the trap explicitly - sm100a-compiled kernels are NOT compatible with RTX 50 series (SM120) because SM120 has a different compute capability from datacenter SM100. Hopper's extended static shared memory is 228 KB per CTA (vs the 48 KB default elsewhere), which is what makes the large Hopper tiles possible; Blackwell entries go further with 328 KB shared-memory allocations. The accumulator-location change is the deeper generational difference: registers force a serial schedule once pressure bites, TMEM does not, which is why FA-4's backward pass can keep MMAs in flight while CUDA cores do elementwise work where FA-3 could not.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "kern-ptx-isa",
+    "kern-flashattention-3-blog",
+    "kern-flashattention-4-blog",
+    "kern-cutlass-github",
+    "kern-thunderkittens-github"
+  ]
+}

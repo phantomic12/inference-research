@@ -1,0 +1,85 @@
+{
+  "id": "vllm-pooling-models",
+  "type": "engine",
+  "name": "vLLM pooling models (embedding, rerank, late interaction)",
+  "repo": "vllm-project/vllm",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "multi-model",
+    "batch-inference-only"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "chunked-prefill",
+    "prefix-cache"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "cpu",
+    "xpu",
+    "tpu",
+    "metal"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "fp8",
+    "awq",
+    "gptq",
+    "mxfp4",
+    "nvfp4"
+  ],
+  "notable_features": [
+    "This record isolates vLLM's pooling-model capability (embedding, reranking, late interaction, classification). The general vLLM engine already has its own record as engines/vllm; this one exists because the pooling path has a different architecture list, different endpoints and, per the project's own docs, a different maturity story.",
+    "The most complete pooling API surface of any engine here: OpenAI-compatible /v1/embeddings, Cohere-compatible /v2/embed, Jina-and-Cohere-compatible reranking at /rerank, /v1/rerank and /v2/rerank, /score and /v1/score, /classify and /pooling.",
+    "A real task taxonomy rather than one embeddings call: four pooling tasks (classify, embed, token_classify, token_embed) and five pooling types (CLS for BERT-like bidirectional models, LAST for GPT-like causal models, MEAN, ALL for token-wise, STEP for a sliding window of tokens), selected via PoolerConfig or --pooler-config.task and --pooler-config.pooling_type.",
+    "Three distinct scoring functions in one engine, which is unusual and genuinely useful: cross-encoder (linear classifier over classify), late-interaction (MaxSim over token_embed), and bi-encoder (cosine similarity over embed). The late-interaction path is the only first-class ColBERT-style scoring in a mainstream serving engine.",
+    "The broadest embedding architecture table in this slice: BertModel, BertSpladeSparseEmbeddingModel (naver/splade-v3), BgeM3EmbeddingModel, Gemma2Model, Gemma3TextModel (google/embeddinggemma-300m), GteModel, GteNewModel (mGTE-TRM), JinaEmbeddingsV5Model with task-specific LoRA adapters, LlamaBidirectionalModel (nvidia/llama-nemotron-embed-1b-v2), LlamaModel/MistralModel (intfloat/e5-mistral-7b-instruct), ModernBertModel, NomicBertModel, Qwen2Model, Qwen3Model (Qwen/Qwen3-Embedding-0.6B), RobertaModel/RobertaForMaskedLM, VoyageQwen3BidirectionalEmbedModel (voyageai/voyage-4-nano) and XLMRobertaModel, plus any generative model via automatic --convert.",
+    "An equally broad cross-encoder/reranker table: BertForSequenceClassification, GemmaForSequenceClassification (BAAI/bge-reranker-v2-gemma), GteNewForSequenceClassification, LlamaBidirectionalForSequenceClassification (nvidia/llama-nemotron-rerank-1b-v2), ModernBertForSequenceClassification, Qwen2ForSequenceClassification (mixedbread-ai/mxbai-rerank-base-v2), Qwen3ForSequenceClassification (Qwen/Qwen3-Reranker-0.6B), RobertaForSequenceClassification and XLMRobertaForSequenceClassification (BAAI/bge-reranker-v2-m3).",
+    "Handles the ecosystem's awkward models explicitly rather than refusing them: bge-m3 ships extra sparse AND ColBERT weights, gte-Qwen2 needs --trust-remote-code for its tokenizer, jina-embeddings-v3's multi-task LoRA is merged rather than selected, jina-v5 task adapters are merged at load time via --hf-overrides, and models with a too-generic architectures field (GteNewModel) are selected via --hf-overrides.",
+    "Per-model score templates are shipped in examples/pooling/score/template/ for the rerankers that need a specific prompt format (bge-reranker-v2-gemma, nemotron-rerank, mxbai_rerank_v2, qwen3_reranker), with both offline and online examples.",
+    "The Transformers modeling backend covers encoder-only architectures directly, so an embedding model without a bespoke vLLM implementation can still run with claimed-identical performance to a native implementation.",
+    "SPLADE is supported natively via BertSpladeSparseEmbeddingModel (naver/splade-v3), giving a sparse-embedding path in a mainstream engine."
+  ],
+  "hardware_caveats": [
+    "The project's own documentation undercuts the performance case: 'We currently support pooling models primarily for convenience. This is not guaranteed to provide any performance improvements over using Hugging Face Transformers or Sentence Transformers directly', with optimisation tracked in issue 21796. This is a first-party statement that the pooling path is a capability, not a speed win.",
+    "It is still the heaviest engine in this slice by a wide margin: CUDA-version pinning, continuous-batching infrastructure, paged KV and a model executor tuned for generation. Running a 110M encoder under it means paying decode-engine overhead for a workload that does not need decode.",
+    "Automatic conversion via --convert classify turns any generative model into a classifier, which is a convenience but also a footgun: converted models are not validated as rerankers and a wrong conversion produces plausible-looking scores.",
+    "Several architectures need --trust-remote-code, --hf-overrides or a manually specified pooling_type, so 'it is supported' sometimes means 'it is supported after three flags'. The gte-Qwen2 tokenizer issue and the mxbai/Qwen3 reranker conversions are documented examples.",
+    "BGE-M3's sparse and ColBERT heads are a special case with its own docs page, and jina-embeddings-v3 has a documented limitation: vLLM temporarily only supports text-matching tasks by merging LoRA weights.",
+    "Continuous batching and paged KV are decode-era machinery that a pooling model largely does not need; they are recorded here because they exist in the shared server, not because they help embeddings.",
+    "Supported hardware is the NVIDIA/AMD/Intel/TPU list already recorded for vLLM generally; Apple Silicon is not a documented primary target for this path."
+  ],
+  "best_for": [
+    "One server for both generation and retrieval: if you already run vLLM for chat, adding an embedding and a reranker endpoint on the same deployment removes an entire service.",
+    "Late-interaction (ColBERT-style) scoring as a first-class endpoint - the only mainstream engine here with MaxSim over token_embed in its API.",
+    "The widest architecture coverage for embedding and reranking of any engine recorded here, including the awkward ones (bge-m3 multi-head, jina multi-task LoRA, bidirectional Llama embedders, Voyage Qwen3 bidirectional).",
+    "Serving an embedding model with no bespoke vLLM implementation, via the Transformers modeling backend.",
+    "Sparse retrieval with SPLADE without leaving the vLLM deployment.",
+    "Teams that value one scheduler, one metrics stack and one auth surface over per-task engine optimality."
+  ],
+  "avoid_for": [
+    "Maximum encoder throughput per GPU-second: the docs disclaim any performance advantage, and TEI exists precisely for that.",
+    "Small-model, high-QPS embedding workloads where the decode engine's overhead dominates a 110M encoder's actual cost.",
+    "Deployments that want a small container and fast boot - vLLM is the opposite shape.",
+    "Anyone who wants embeddings to be the primary workload rather than a side API on a generation server."
+  ],
+  "docs_url": "https://docs.vllm.ai/en/latest/models/pooling_models/",
+  "notes": "COMPUTE-BOUND at batch 1 for a BERT-size encoder, identical in mechanism to every other encoder here and the exact inverse of vLLM's own decode path: a bidirectional encoder does one attention pass over all input tokens with no KV cache and no autoregressive weight streaming, so its arithmetic intensity is high and the weights are re-read once per batch rather than once per token. That is worth stating inside vLLM specifically because vLLM is built around the opposite regime. In decode, the paged-KV and continuous-batching machinery exists because every generated token must re-stream the whole weight set at roughly 1 flop per byte; in pooling, none of that applies, which is exactly why the project says in its own docs that pooling support is a convenience and offers no performance guarantee over plain Transformers or Sentence Transformers. The hardware-selection consequence is the inversion rule again: an embedding/rerank tier wants FLOPS and core count, not HBM bandwidth - a part chosen for its bandwidth to maximise decode tok/s will underperform here relative to its FLOPS. The two pooling tasks that are most often confused on hardware are token_embed and late-interaction scoring. token_embed is pure encoder work (compute-bound, batch-friendly) and simply returns one vector per token, which multiplies the output memory by sequence length. Late-interaction SCORING is different in kind: it is a MaxSim operation against an index, so it behaves like the ColBERT query-time phase recorded in engines/colbert-reference - bandwidth- and capacity-bound on the index rather than FLOPs-bound, and scaling with corpus size rather than with batch size. A single vLLM deployment can therefore contain a compute-bound phase (embedding and encoding), a capacity-bound phase (late-interaction retrieval), and a batch-scaling phase (cross-encoder reranking, where cost is candidates x sequence length because every pair is a full forward pass with no caching or early exit). Note also that Qwen3-Reranker and the bidirectional Llama rerankers reintroduce a KV cache and a weight footprint of 0.6B-8B, drifting toward prefill behaviour. Architectures - can serve: essentially every architecture in the two documented tables above, dense and sparse, single-vector and token-wise, plus automatic --convert for generative models used as classifiers. Cannot serve, or with documented caveats: jina-embeddings-v3 beyond text-matching (LoRA merged rather than selected); Qwen2-family embedders and rerankers without --trust-remote-code or explicit --hf-overrides; BGE-M3's sparse and ColBERT heads, which have a separate documentation path rather than the standard path; and Apple Silicon as a primary target. Confidence 0.85: the task and pooling-type taxonomy, the endpoint list, the architecture tables and the performance disclaimer are all read directly from the vLLM docs at the current release, but the disclaimer is itself a statement that the path is not optimised, so nothing quantitative is claimed.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "embed-vllm-pooling-models-docs",
+    "embed-vllm-online-serving-docs"
+  ]
+}

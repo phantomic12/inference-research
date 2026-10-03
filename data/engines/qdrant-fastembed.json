@@ -1,0 +1,64 @@
+{
+  "id": "qdrant-fastembed",
+  "type": "engine",
+  "name": "Qdrant FastEmbed",
+  "repo": "qdrant/fastembed",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "minimal-deps",
+    "low-latency",
+    "edge/serverless",
+    "batch-inference-only"
+  ],
+  "scheduling": [
+    "data-parallel-encoding"
+  ],
+  "supported_backends": [
+    "onnxruntime",
+    "cuda"
+  ],
+  "supported_formats": [
+    "onnx"
+  ],
+  "notable_features": [
+    "A library, not a server: no HTTP layer, no scheduler, no model registry. It is what Qdrant uses internally and what you embed in a Lambda function.",
+    "ONNX Runtime only, by explicit design. The README states it does not require a GPU and does not download gigabytes of PyTorch dependencies, and makes the ONNX-Runtime-faster-than-PyTorch claim as a project claim.",
+    "GPU is opt-in via a separate package (fastembed-gpu) and an explicit providers=[\"CUDAExecutionProvider\"] argument - the default install is CPU.",
+    "Data parallelism for encoding large datasets, which is the right shape for a library: batch the corpus, saturate the cores, no queueing policy needed.",
+    "Three embedding families: TextEmbedding (dense, default BAAI/bge-small-en-v1.5 at 384 dims), SparseTextEmbedding (SPLADE++), and LateInteractionTextEmbedding for colbert-ir/colbertv2.0 - the ColBERT multi-vector path in a first-party package.",
+    "Image embeddings as well as text, using the same mechanism.",
+    "add_custom_model lets you register any ONNX encoder with explicit pooling=PoolingType.MEAN, normalization and dim, so a model outside the built-in list is a few lines rather than a fork. The docs show loading a pre-optimized or quantized onnx/model_O4.onnx variant.",
+    "Ships as part of the qdrant-client[fastembed] integration, so embed-and-store is one call."
+  ],
+  "hardware_caveats": [
+    "CPU-first by default. The default install runs on CPU execution providers; GPU needs the extra package and an explicit provider argument, so an unconfigured deployment silently gets CPU throughput.",
+    "ONNX only. No GGUF, no safetensors, no AWQ/GPTQ/EXL2. Quantization is whatever ONNX variant you point model_file at, which means it is chosen at export time rather than at load time.",
+    "Model quality ceiling is set by the built-in list plus whatever you register by hand. There is no generic Transformer fallback, so a new architecture needs an ONNX export before it can run here.",
+    "It is a library: no batching policy, no backpressure, no per-request concurrency control. Multi-tenant serving belongs to the calling application.",
+    "The README's 'better than OpenAI Ada-002' claim is an accuracy comparison on MTEB with no methodology section; treat it as a marketing claim, not a measurement."
+  ],
+  "best_for": [
+    "Ingest pipelines and one-off batch embedding where there is no server to run - CI, notebooks, ETL, Lambda.",
+    "CPU-only or constrained environments where pulling in PyTorch is unacceptable; the dependency footprint is the main reason to choose it.",
+    "Local RAG stacks around Qdrant: qdrant-client[fastembed] makes embedding and indexing a single path.",
+    "Heterogeneous model fleets where you want to mix dense, SPLADE sparse and ColBERT late-interaction encoders in one process - rare among lightweight libraries."
+  ],
+  "avoid_for": [
+    "Multi-user serving with SLAs - there is no server here.",
+    "GPU-first throughput work: the CUDA path exists but the project is organised around CPU batch encoding.",
+    "Anything needing a decoding KV cache, obviously; and anything needing int8/fp8 chosen at runtime.",
+    "Situations where you need a maintained model-support list covering the whole MTEB frontier."
+  ],
+  "docs_url": "https://qdrant.github.io/fastembed/",
+  "notes": "COMPUTE-BOUND at batch 1 for a BERT-size encoder, and the hardware consequence is unusually direct here because the library's default target is a CPU with no GPU at all. For a bidirectional encoder there is no autoregressive step and no KV cache: every input token gets a full attention pass in one shot, so the cost is dense GEMM plus an unhalved O(L^2) attention matrix. Unlike LLM decode at batch 1 - where a single weight is streamed per token, arithmetic intensity is about 1 flop per byte, and the part is bandwidth-bound - the encoder's weights are re-read once per batch rather than once per token, so the same bytes are amortized across every token in every sequence in the batch. That is why a 110M-parameter encoder in fp16 (about 220 MB) is a reasonable thing to run on a many-core CPU, and why this library can honestly claim to be competitive without a GPU: data parallelism over a corpus converts the CPU's cheap FLOPS into throughput while its bandwidth matters only once per batch. Practical consequence: if you DO put this on a GPU, pick for FLOPS and cache behaviour, not HBM bandwidth - the model fits in cache and bandwidth is not the constraint. Data parallelism (encode large datasets) is listed in scheduling because it is the batching mechanism the README describes, but note it is a library-level strategy, not a serving scheduler. Architectures: can serve dense bi-encoders (BERT, XLM-RoBERTa, BGE, E5, multilingual variants), SPLADE++ sparse encoders, ColBERT-style late-interaction multi-vector encoders via LateInteractionTextEmbedding, and CLIP-family image encoders through the ONNX path. Cannot serve: generative models; any architecture without an ONNX export; anything needing runtime-selected quantization. Confidence 0.78 - all capability claims are read directly off the README, but there is no benchmark methodology in the repo, so nothing quantitative is claimed here.",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-03",
+  "sources": [
+    "embed-qdrant-fastembed-github"
+  ]
+}

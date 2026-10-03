@@ -1,0 +1,37 @@
+{
+  "id": "llamacpp-mmq-int8-dp4a-gemm",
+  "type": "flop",
+  "name": "llama.cpp MMQ: INT8 activation quantization with per-arch tile configs, no tensor cores",
+  "class": "quantization_overhead",
+  "arithmetic_intensity": "A different answer to the same problem, and the reason llama.cpp's quantized numbers are not comparable to Marlin's or Machete's. MMQ quantizes the ACTIVATIONS to q8_1 blocks of 32 elements and performs the dot product in INT8 accumulating to INT32, using DP4A where available. So the multiply-accumulates are integer SIMT instructions, not tensor-core MMAs - the FLOP:byte ratio the tensor cores exploit is not available at all. It buys portability: per-arch config headers exist for Ampere, Blackwell, CDNA, GCN, RDNA2/3/4/5 and Pascal (DP4A), the block size is a fixed 32 with three different scale/data layouts, MMQ_ITER_K is 256 (512 for FP4) and MMQ_NWARPS is 8. Notably, DP4A is used only while fp16 tensor cores are unavailable or the batch is small (MMQ_DP4A_MAX_BATCH_SIZE 64), which is itself a tensor-core-adjacent threshold.",
+  "bound_by": "memory",
+  "scales_with": [
+    "batch_size",
+    "weight quantization type (a dedicated block_fp4_mmq type exists)",
+    "num_SMs (MMQ_NWARPS 8 per block is a fixed occupancy choice)",
+    "arch (per-arch tile configs differ)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-rtx-4090",
+    "nvidia-rtx-3090",
+    "nvidia-rtx-5070-ti",
+    "nvidia-rtx-5080",
+    "amd-instinct-mi300x",
+    "amd-instinct-mi250x"
+  ],
+  "workarounds": [
+    "Quantize activations to q8_1 blocks of 32 so the dequant cost is a shift per block",
+    "Three scale/data layout variants (D4, DS4, D2S6) chosen per quantization type to make the layout copyable to shared memory as a contiguous block",
+    "Per-arch tile configuration headers instead of one universal kernel",
+    "MMQ_ITER_K 256, raised to 512 for FP4"
+  ],
+  "notes": "Practical decision input: on a consumer or datacenter GPU, llama.cpp reaches 4-bit throughput through integer SIMT dot products with a broad arch reach (including RDNA and CDNA), while Marlin and Machete reach it through tensor cores on a narrower arch list. Neither is strictly better - MMQ works on more parts, Machete reaches much higher tensor-core utilization where it applies - and any comparison must state which path was taken. Verified from the kernel header only; the existing llama.cpp engine and quantization records in this repo are the place for its benchmark numbers.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "kern-llamacpp-mmq-source",
+    "flop-marlin",
+    "quant-ggml-header"
+  ]
+}

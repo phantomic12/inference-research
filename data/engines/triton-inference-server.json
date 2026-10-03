@@ -1,0 +1,79 @@
+{
+  "id": "triton-inference-server",
+  "type": "engine",
+  "name": "Triton Inference Server",
+  "repo": "triton-inference-server/server",
+  "languages": [
+    "C++",
+    "Python",
+    "Go"
+  ],
+  "license": "BSD-3-Clause",
+  "first_release_year": 2018,
+  "design_goal": [
+    "production-serving",
+    "multi-framework",
+    "multi-model",
+    "observability"
+  ],
+  "scheduling": [
+    "dynamic-batching",
+    "sequence-batching",
+    "ensemble-pipelines"
+  ],
+  "supported_backends": [
+    "cuda",
+    "tensorrt",
+    "onnxruntime",
+    "openvino",
+    "pytorch",
+    "rapids-fil",
+    "inferentia",
+    "cpu"
+  ],
+  "supported_formats": [
+    "onnx",
+    "pytorch",
+    "savedmodel",
+    "tensorrt-plan",
+    "fil"
+  ],
+  "notable_features": [
+    "The general-purpose production serving layer where embedding and rerank models actually get deployed at scale, and the vendor-supported answer for teams who already run Triton: a retrieval model is something you drop into a model repository, not a separate service to operate.",
+    "Framework-agnostic by design: TensorRT, PyTorch, ONNX, OpenVINO, Python (custom backends written in Python) and RAPIDS FIL, plus a documented Backend API for writing your own backend and pre/post-processing.",
+    "Dynamic batching AND sequence batching with implicit state management for stateful models. The sequence batcher is the piece that matters for cross-encoder rerankers, which take a correlated query-document pair as one stateful unit rather than two independent sequences.",
+    "Model pipelines via Ensembling or Business Logic Scripting. This is how a real RAG serving tier is assembled: a preprocessing model, the embedding model, the vector-database lookup as a BLS python step calling out to storage, and the cross-encoder reranker as the final model, composed into one pipeline behind one endpoint.",
+    "HTTP/REST and gRPC based on the community KServe inference protocol v2, plus C and Java in-process APIs for embedding Triton directly into an application (edge and in-process use cases).",
+    "Observability is first-class: metrics for GPU utilization, server throughput and server latency; NVIDIA AI Enterprise support available.",
+    "Explicit temporal-release coupling: the README pins main-branch examples to release 2.73.0 and the 26.09 container on NGC, a real operational signal about how the project versions."
+  ],
+  "hardware_caveats": [
+    "Triton runs on NVIDIA GPUs, x86 and ARM CPU, and AWS Inferentia. It is the least vendor-neutral engine in this slice by a wide margin, and that is the price of the production maturity.",
+    "Graph compilation is part of the workflow: the TensorRT backend requires building an engine plan for the target GPU, so a hardware change means a rebuild, and there is no generic-kernel JIT-free fallback equivalent to TEI's path.",
+    "Deployment is container-first. The README recommends Docker images and treats a source build as the unsupported-platform path, which is a heavier operational commitment than pip-installing a Rust or Python server.",
+    "The model repository layout, config.pbtxt and version directories are a genuine learning curve; the payoff is versioned model management and ensembles, which no lightweight engine here offers.",
+    "Reranker batching via the sequence batcher requires modelling the query-document pair as state. A naive dynamic-batching config can silently mis-batch cross-encoders, since the two halves of a pair must not be scheduled independently.",
+    "The README carries an explicit warning that main tracks under-development progress toward the next release, so examples on main can be ahead of the stable container."
+  ],
+  "best_for": [
+    "Organisations already standardised on Triton who need embedding and rerank served alongside everything else, with one operational surface and one observability stack.",
+    "Full RAG serving pipelines: embedding, storage lookup and cross-encoder rerank composed as an ensemble behind a single KServe-protocol endpoint.",
+    "In-process and edge embedding via the C API, which no HTTP-serving engine in this slice offers.",
+    "Heterogeneous model formats in one repository: ONNX for the encoder, TensorRT plans for the hot path, a Python backend for anything custom.",
+    "Situations where model versioning (multiple version directories, hot loading) is an operational requirement."
+  ],
+  "avoid_for": [
+    "A single embedding model on a single GPU, where TEI gives better encoder throughput for a fraction of the setup cost.",
+    "Non-NVIDIA hardware: ROCm, Metal and Apple Silicon are not supported targets.",
+    "Fast iteration on model architecture: export and engine build are slower than pointing a flag at a Hub model.",
+    "Serverless scale-to-zero: containers with prebuilt engines are the opposite of a small image that boots in seconds."
+  ],
+  "docs_url": "https://github.com/triton-inference-server/server",
+  "notes": "COMPUTE-BOUND for the encoder phase at batch 1, the same structural fact as every other encoder here: a BERT-size encoder does one bidirectional attention pass over all input tokens with no KV cache and no autoregressive streaming, so its arithmetic is dense GEMM with high arithmetic intensity and it wants FLOPS rather than HBM bandwidth. This is the exact inverse of an LLM decode part on the same GPU, where one weight is streamed per generated token at roughly 1 flop per byte and bandwidth alone decides tok/s. The practical hardware-selection consequence for a Triton deployment: the right box for an embedding/rerank tier is a high-FLOPS, high-core-count part (or simply many cheap cores), and buying HBM bandwidth for it is buying the wrong resource, whereas that same GPU bought for a decode tier would be justified by exactly that bandwidth. Two Triton-specific nuances are worth recording. First, cross-encoder rerankers take a correlated (query, passage) pair, so Triton reaches for its sequence batcher and implicit state management rather than plain dynamic batching, which means rerank serving is configured differently from embedding serving in the same server and the batching knobs do not transfer between the two phases. Second, the ensemble/BLS capability is where retrieval serving genuinely diverges from LLM serving: the vector-database lookup is not a model at all, it is a python business-logic step, which is exactly why a retrieval pipeline needs a general serving layer rather than a purpose-built encoder server. Can serve: anything expressible as an ONNX/PyTorch/TensorRT/OpenVINO/FIL graph, so all dense bi-encoders (BERT, XLM-RoBERTa, BGE, E5, GTE), cross-encoder rerankers (bge-reranker class, jina-reranker, the cross-encoder/ms-marco family), SPLADE sparse encoders via ONNX, CLIP-family multimodal encoders, and even a late-interaction ColBERT encoder if you accept token-wise output as a custom output tensor. Cannot serve: token-by-token generative decoding without the TensorRT-LLM backend or a custom Python backend; and Triton provides no pooling abstraction, so CLS versus MEAN versus LAST is your config problem rather than a framework feature, which is a real ergonomic difference from TEI. Confidence 0.8: the backend list, batching features, protocol and release pinning are quoted from the README, but Triton is a container platform rather than a single inference implementation, so what it can serve is bounded by its backends rather than by any model list.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "embed-triton-inference-server-github"
+  ]
+}

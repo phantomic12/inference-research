@@ -1,0 +1,21 @@
+{
+  "id": "huawei-hccs",
+  "type": "interconnect",
+  "name": "Huawei HCCS (Hierarchical Chip-to-Chip Scale)",
+  "kind": "other",
+  "version": "HCCS, Ascend 910B generation",
+  "bandwidth_gbps": 30,
+  "bandwidth_basis": "PER PORT, UNIDIRECTIONAL. The figure comes from the secondary aggregation this repo already holds for the Ascend 910B (asic-ascend-910b-secondary, kind 'review'), which records 'HCCS 3x30 GB/s' - three ports at 30 GB/s each. No direction convention is stated and Huawei has published no datasheet, so the recorded value is the per-port rate exactly as reported and the aggregate is left to the reader. STATUS CONTESTED BY CONSTRUCTION: every number here is analyst, teardown or supply-chain reporting rather than a primary Huawei document, so this record is status contested with low confidence. That is a property of the source base, not a hedge - if you find a primary HCCS specification, this record should be revisited.",
+  "link_count": 3,
+  "topology": "Point-to-point chip-to-chip ports, three per accelerator, giving roughly 90 GB/s of chip-to-chip bandwidth per part. No switch part is documented in the sources retrieved; the 910B systems scale out with many chips and Huawei's software stack (CANN) is what manages the collective traffic.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "None published.",
+  "notes": "The scale-up link for the Ascend 910B, and the record whose headline purpose is to make the constraint explicit rather than to look respectable. THE NUMBER IS THE PROBLEM: roughly 90 GB/s per chip of chip-to-chip bandwidth against H100's 450 GB/s per direction of NVLink 4 is about a fifth of the fabric, and it is on a part whose memory bandwidth is itself contested (~1.2-1.6 TB/s against H100's 4.8 TB/s of HBM3e). Both ratios point the same way, and they are the reason tensor parallelism across many Ascend chips is expensive. THE INFERENCE CONSEQUENCE, stated plainly because it is the useful thing this record carries: on a slow scale-up fabric the winning sharding strategy is to use the FEWEST chips that hold the model and prefer pipeline parallelism over tensor parallelism. Pipeline parallelism needs only point-to-point transfers at stage boundaries and is roughly linear in stage count; tensor parallelism needs all-reduce bandwidth at every single layer boundary, so its cost grows with TP degree exactly where this fabric is weakest. That is the same argument as the one recorded on aws-neuronlink, and it arrives from the opposite direction: AWS is slow in absolute terms but has the chip count to hold models; Ascend 910B has neither the fabric nor, on the contested figures, the memory bandwidth, so the design pushes toward many small nodes instead of few large ones. STATUS AND SOURCING, stated up front: CONTESTED, low confidence. Huawei publishes no 910B datasheet and no HCCS specification. The 3x30 GB/s figure, and every other number in this record, comes from the secondary aggregation already held on the accelerator record (asic-ascend-910b-secondary), which itself aggregates SemiAnalysis, TechInsights and CSET reporting. Nothing here is vendor-confirmed. KIND: filed as 'other' because HCCS is a proprietary vendor fabric with no entry in the schema's interconnect enum and no analogue in the named families.",
+  "status": "contested",
+  "confidence": 0.45,
+  "updated": "2026-10-03",
+  "sources": [
+    "asic-ascend-910b-secondary"
+  ]
+}

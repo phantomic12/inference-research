@@ -1,0 +1,34 @@
+{
+  "id": "lmcache-kv-tier-outside-attention",
+  "type": "flop",
+  "name": "KV-cache tiering (LMCache): deciding, outside the kernel, how much KV the attention kernel must read from HBM",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "Not an arithmetic mechanism at all, which is why it matters as a kernel-level decision input. A KV tier between the GPU and host/remote storage changes how many bytes the decode attention kernel pulls from HBM, but it does not change the attention FLOPs at all. The strongest version of the effect is prefix reuse: if a shared prefix KV is resident in GPU memory because a cache tier kept it there, every request reading that prefix does zero HBM traffic for it. So the practical AI of decode attention is set by cache hit rate, not only by the kernel's tiling.",
+  "bound_by": "memory",
+  "scales_with": [
+    "context_length",
+    "prefix sharing rate across requests",
+    "GPU HBM capacity (the tier only helps once the hot set fits)",
+    "batch_size"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x",
+    "intel-arc-pro-b60"
+  ],
+  "workarounds": [
+    "Keep the shared prefix KV resident on GPU across requests",
+    "Move cold KV to host or device memory and fetch on demand, trading bandwidth for capacity",
+    "Compress or quantize KV before it leaves the GPU so the transfer, not the attention kernel, pays for the precision reduction"
+  ],
+  "notes": "Recorded because it is the largest single lever on decode-attention bytes that lives entirely outside the attention kernel, and because it interacts with kernels rather than being orthogonal to them: a paged KV layout (see the paged-attention record) is what makes selective block eviction and prefix sharing possible at all, and a quantized KV format changes what can be transferred cheaply. LMCache itself is a cache/movement layer, not a GPU kernel library, and no performance number is taken from it here.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "kern-lmcache-github",
+    "flop-pagedattention-vllm",
+    "flop-flashinfer"
+  ]
+}

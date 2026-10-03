@@ -1,0 +1,33 @@
+{
+  "id": "deepgemm-mqa-lightning-indexer-scoring",
+  "type": "flop",
+  "name": "DeepGEMM FP8/FP4 MQA scoring kernels for the lightning indexer",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The indexer computes, per token i and each KV token j in its span, a compressed scalar logit: reconstruct kv_j by applying the per-token KV scale (kv[0][j,:] * kv[1][j]), take q[i] . kv_j, apply ReLU, multiply by a per-head weight, and sum over heads. The FLOPs are a small GEMM per token against a reduced KV; what makes it a kernel is that KV is read in FP8/FP4 with MXFP4/MXFP8 data and packed UE8M0 scales on SM100, and the output is a dense [seq_len, max_seqlen_k] buffer whose row i holds only its valid KV span - i.e. it writes ragged scores into a rectangular tensor, which is a memory-layout and masking problem as much as a math problem. Two variants exist, non-paged for prefill and paged for decode, because the page indirection changes the KV access pattern.",
+  "bound_by": "both",
+  "scales_with": [
+    "context_length",
+    "hidden_width",
+    "num_heads (the per-head weighted sum)",
+    "precision (fp8, fp4)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-b200",
+    "nvidia-h100-sxm",
+    "nvidia-gb200-nvl72"
+  ],
+  "workarounds": [
+    "Fuse the KV dequant into the scoring loop by keeping the scale next to the data",
+    "Compressed logit output (sum over heads after a ReLU) instead of a full attention score matrix",
+    "Separate paged and non-paged kernels because the indirection changes the access pattern",
+    "MXFP4/MXFP8 with packed UE8M0 scales on SM100; fp8 on SM90"
+  ],
+  "notes": "This is the mechanism behind DeepSeek's lightning-indexer / DSA path and is worth recording separately from attention itself because it is an attention-adjacent kernel whose cost is driven by context length but whose arithmetic is a weighted ReLU-MQA, not softmax attention - so the usual prefill-attention AI derivation does not apply to it. The paged/non-paged split mirrors every other kernel family in this repo and is a general lesson: an index that works for a dense cache usually needs a second implementation for a paged cache. Data-type detail from the README: on SM100 q and kv arrive as (data, scale) tuples where q may be MXFP4 or MXFP8 with packed UE8M0 scales and the weights tensor is BF16 on SM100.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "kern-deepgemm-github",
+    "kern-ptx-isa"
+  ]
+}

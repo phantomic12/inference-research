@@ -1,0 +1,36 @@
+{
+  "id": "deepep-expert-parallel-dispatch-combine",
+  "type": "flop",
+  "name": "DeepEP expert-parallel dispatch/combine: an all-to-all that is itself a kernel and overlaps compute",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "Not FLOPs - bytes, and specifically bytes that cross NVLink or RDMA rather than HBM. Dispatch moves each routed token's activation to the rank owning its expert; combine moves expert outputs back. The kernel-level content is the overlap: num_sms bounds how many SMs the communication kernel occupies so expert GEMMs can run concurrently, and defer_epilogue=True with async_with_compute_stream=True returns an EventOverlap so the dispatch epilogue runs on the current stream while compute proceeds. With do_cpu_sync=False (the decode path) the kernel avoids a CPU synchronization entirely, allocating outputs to configured capacity and exposing psum_num_recv_tokens_per_expert for the downstream grouped GEMM to find valid ranges - that is the difference between a decode step that stalls on a host round trip and one that does not. FP8 dispatch halves the bytes on the wire.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "num_experts and experts_per_token (total bytes moved is tokens x topk)",
+    "hidden_width",
+    "interconnect bandwidth (NVLink intranode, RDMA internode)",
+    "num_sms (communication/compute overlap budget)",
+    "expert redundancy (NVLink weight and gradient exchange for redundant experts)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "nvidia-gb200-nvl72"
+  ],
+  "workarounds": [
+    "num_sms to cap the comm kernel's SM footprint and leave SMs for the expert GEMM",
+    "FP8 dispatch to halve wire bytes",
+    "do_cpu_sync=False for decode, with GPU-side receive counts consumed by the masked grouped GEMM",
+    "defer_epilogue + async_with_compute_stream for an explicit overlap handle",
+    "lb_prefetch_weights / lb_reduce_grads to move expert weights and quantization scales over NVLink before the expert compute and accumulate redundant experts' FP32 gradients after"
+  ],
+  "notes": "Hardware scope is explicit and worth quoting: 'EP dispatch and combine require GPU SMs; zero-SM RDMA EP is not supported', requires NVIDIA Hopper or newer, NVLink intranode plus RDMA internode, and auto-detects bandwidth with nvidia-smi and ibstat. So on a part without NVLink (or on a PCIe-only host) DeepEP is not the path, and expert parallelism becomes bandwidth-bound on the slowest transport rather than hidden behind MMA. Two claims NOT to conflate: 'dispatch/combine overlap' reduces exposed latency, while DeepGEMM's Mega MoE reduces the actual HBM round trips by fusing the stages. Ascend ports exist (DeepEP-Ascend).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "kern-deepep-github",
+    "kern-deepgemm-github"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "fp8-kv-cache-cudagraph-python-scatter-corruption",
+  "type": "gotcha",
+  "name": "An FP8 KV cache write path in Python is graph-unsafe and silently corrupts attention under CUDA graphs while --enforce-eager looks fine",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "fp8-e5m2",
+    "kv-cache-quantization",
+    "cuda-graphs",
+    "minimax-m3",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "symptom": "8x A800-80GB (SM80, no native FP8 tensor cores), TP=8, MiniMax-M3-AWQ-INT4 (weight-only int4), launched with --kv-cache-dtype fp8_e5m2 --max-model-len 1048576 --attention-backend TRITON_ATTN --block-size 128 --enable-chunked-prefill: the server boots, accepts the 1M-token window, and generates pure garbage. Adding --enforce-eager makes output perfectly coherent (but only 5.2 tok/s, unusable for an 8-TP MoE). Any CUDA-graph mode is garbage. Separately, fp8 (e4m3) is refused outright on SM80 with 'type fp8e4nv not supported in this architecture', so only e5m2 loads at all.",
+  "root_cause": "The bf16 KV path writes through a fused CUDA op (reshape_and_cache_flash) that is graph-safe. The fp8 path goes through MiniMaxM3SparseAttention._insert_kv, plain Python that allocates a fresh tensor and does an advanced-index scatter (idx_cache[slot_mapping] = ...). Under graph capture that write corrupts the index-K cache, the sparse indexer then picks the wrong top-k blocks, and attention reads the wrong KV. This one mechanism explains all three observations (bf16+graph fine, fp8+graph garbage, fp8+eager fine). The garbage is NOT an fp8 precision problem - the reporter measured e5m2 write/read round-trip error on SM80 at 4.5% and the full kernel at 12-16%, normal for a 2-mantissa-bit format.",
+  "workaround": "Decorate _insert_kv with @eager_break_during_capture (the codebase's own idiom), route dense-layer KV writes through the CUDA reshape_and_cache_flash with a software fp8 convert, and relax the SM89 guards to SM80. That gives coherent output, a full 1,048,576-token window (pool ~1.22M tokens), needle retrieval at ~100k depth, an 840k-token prompt prefilling clean, and ~86 tok/s decode - about 90% of the bf16 baseline, i.e. on SM80 fp8 KV buys memory, not speed. The reporter was porting the patch to main at filing time.",
+  "severity": "blocker",
+  "notes": "The decisive experiment is the one to copy: --enforce-eager good + CUDA graphs garbage isolates the cause to a graph-unsafe write, not to precision. Fixing this also unblocks the whole 1M-context class on SM80, which needs fp8 KV for capacity. Side note: #39137's over-broad e5m2 gate was already fixed on main by #45040.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-vllm-50881-fp8kv-cudagraph-scatter"
+  ]
+}

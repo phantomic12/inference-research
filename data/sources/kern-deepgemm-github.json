@@ -1,0 +1,15 @@
+{
+  "id": "kern-deepgemm-github",
+  "type": "source",
+  "name": "DeepGEMM GitHub repository (DeepSeek)",
+  "status": "draft",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "url": "https://github.com/deepseek-ai/DeepGEMM",
+  "publisher": "deepseek-ai",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "README, MIT. Requirements: NVIDIA SM90 or SM100, CUDA >= 12.9, CUTLASS >= 4.0. Mechanism-relevant facts: grouped GEMMs are M-axis-grouped only (N and K fixed) because experts share a shape, and each expert segment must be aligned to the GEMM M block size; the masked grouped GEMM variant exists specifically for 'the inference decoding phase, when CUDA graph is enabled and the CPU is unaware of the number of tokens each expert receives', taking DeepEP low-latency kernel output as input. Scale-factor formats differ per arch (SM90 fp32, SM100 packed UE8M0 four-per-int) and the LHS scale must be TMA-aligned and transposed, which is a hard layout constraint on any engine that wants the fastest path. Mega MoE 'fuses and overlaps EP dispatch, linear 1 and linear 2 (FP8xFP4 or FP8xFP8), SwiGLU, and EP combine into a single mega-kernel, overlapping NVLink communication and tensor core computation' and requires multi-process launch with symmetric memory. Kernels are JIT-compiled at runtime through DeepJIT, so no CUDA compile at install. Up to 1550 TFLOPS on H800 is DeepSeek's own claim."
+}

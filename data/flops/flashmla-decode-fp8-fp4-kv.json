@@ -1,0 +1,36 @@
+{
+  "id": "flashmla-decode-fp8-fp4-kv",
+  "type": "flop",
+  "name": "FlashMLA decode: FP8/FP4 KV cache with scales inlined per token (DeepSeek MLA)",
+  "class": "decode_attention",
+  "arithmetic_intensity": "The mechanism is a change in bytes moved, achieved by changing the KV cache element size, not by changing the attention math. MLA decode reads one KV head per token instead of a full K and V pair per head, so the cache is already much smaller than a GQA cache; FlashMLA pushes that to quantized cache formats. V4.1 (head_dim 512) stores 528 bytes/token: 512 bytes of float8_e4m3 over all 512 dims plus 16 bytes of float8_e8m0 scales, one scale per 32 consecutive e4m3 values. The fp4 variant is 288 bytes/token: 256 bytes of e2m1 (two values per byte, even index in the low nibble) plus 32 bytes of float8_e4m3 scales, one per 16 e2m1 values, valid only for extra_k_cache when k_cache is in the V4.1 format. The scales are stored in the same contiguous token record as the data, which is what lets the kernel dequantize in-register without a second scale fetch. FLOPs are unchanged except that the PV product and the dequant run in lower precision; the win is that KV bytes per token drop from bf16 (1024 bytes for the 512-dim head, K-side) to 528 or 288, i.e. roughly 2x or 3.5x less KV traffic for the same context.",
+  "bound_by": "memory",
+  "scales_with": [
+    "context_length (the whole point - traffic scales with it)",
+    "head_dim",
+    "num_kv_heads",
+    "kv cache precision (fp8 vs fp4 vs bf16)",
+    "token-level sparsity (the indices tensor makes decode compute only the selected top-k tokens)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "huawei-ascend-910b"
+  ],
+  "workarounds": [
+    "Quantized KV cache with per-token inlined scales (e8m0 for fp8, e4m3 for fp4) so dequant is free in the attention kernel",
+    "Token-level sparse attention: pass an indices tensor of shape (batch, seq_len_q, topk) giving the page-block index and offset of each selected token, so the kernel never touches unselected KV at all",
+    "Tile-scheduler metadata computed once before the decode loop rather than per step",
+    "Split decoding with num_splits",
+    "Register-spill check in the build (the build fails if any kernel spills, with CUTLASS FMHA kernels exempted)"
+  ],
+  "notes": "Hardware scope is tight and moves: the 2026.09.30 release requires NVIDIA SM100/SM103 with CUDA >= 13.1 (CUDA 13.2+ recommended because it provides the native cvt.rn.bf16x2 conversions the quantized decoding kernels use; on CUDA 13.1 they fall back to a slower widening through FP32), and it REMOVED Hopper support and earlier models (V3/V3.2/V4.0) while changing the KV cache format, so an older checkout is required for those. Decode supports only FP8 and FP4 KV cache - bfloat16 KV is explicitly not supported. This is a sharp example of the arch-support-matrix effect: a Hopper part gets an older FlashMLA or a different MLA path entirely, and the kernel choice changes the KV cache FORMAT, which changes what an engine must store. FlashMLA also ports to Ascend 950 (CANN >= 9.2.0) behind the same Python API. All TFlops figures (up to 1024 TFlops decode and 1350 TFlops sparse prefill on B200; 640/410 for the 2025 sparse kernels) are DeepSeek's own measurements, unverified here.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "kern-flashmla-github",
+    "kern-ptx-isa"
+  ]
+}

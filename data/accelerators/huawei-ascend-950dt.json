@@ -1,0 +1,71 @@
+{
+  "id": "huawei-ascend-950dt",
+  "type": "accelerator",
+  "name": "Huawei Ascend 950DT NPU (per-accelerator, Atlas 650E / 950 SuperPoD)",
+  "vendor": "asic-other",
+  "architecture": "da-vinci (950-series)",
+  "release_year": 2026,
+  "process_nm": null,
+  "form_factors": [
+    "oam"
+  ],
+  "vram_gb": 96,
+  "memory_type": "on-chip memory (Huawei-developed; not HBM)",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 500,
+  "memory_bandwidth_basis": "PER NPU, DERIVED BY DIVISION from the server figure: the Atlas 650E specification gives '8 x 96 GB total, 4.0 TB/s peak memory bandwidth', so each 950DT carries 96 GB at 4.0/8 = 500 GB/s. Huawei states the 4.0 TB/s server figure directly and does not publish a per-NPU breakdown; the division is arithmetic, not a claim. Note this is ON-CHIP memory, not HBM - Huawei describes it as 'Huawei's self-developed on-chip memory', which is a materially different memory technology from the HBM2e on the 910 generation and should not be compared to HBM3 bandwidth numbers without reading the vendor's wording. Source cn-huawei-atlas-650e-spec.",
+  "flops": [
+    {
+      "precision": "fp16",
+      "tflops": 425,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "cn-huawei-atlas-650e-spec"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 425,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "cn-huawei-atlas-650e-spec"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 803.75,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "cn-huawei-atlas-650e-spec"
+    },
+    {
+      "precision": "other",
+      "tflops": 1560,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "cn-huawei-atlas-650e-spec"
+    },
+    {
+      "precision": "fp4_block_scaled",
+      "tflops": 1560,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "cn-huawei-atlas-650e-spec"
+    }
+  ],
+  "tdp_w": null,
+  "interconnect": [
+    "huawei-ub-link",
+    "ethernet",
+    "roce"
+  ],
+  "unified_memory": true,
+  "consumer": false,
+  "notes": "THE HIERARCHY POINT: this generation breaks the pattern that the whole 910 line was stuck in, and it does so in a way that matters specifically for inference. The per-NPU numbers are derived by dividing Huawei's server figures by 8 (Atlas 650E: 8 NPUs, 12.48 PFLOPS mxFP4, 6.43 PFLOPS mxFP8/FP8/HiF8, 3.40 PFLOPS FP16/BF16, 8 x 96 GB, 4.0 TB/s), giving roughly 1560 / 804 / 425 TFLOPS per NPU - note that FP8 is only 1.9x FP16 and mxFP4 only 3.7x FP16, which is a deliberately narrow precision ladder compared to Blackwell's roughly 2x-per-step. THAT is the important number for a serving study: the 4:1 FP16-to-FP4 spread means low-precision decode acceleration is worth much less here than on an NVIDIA part, and there is no FP4-with-FP8-accumulate story to tell. Everything quoted is a VENDOR THEORETICAL figure and Huawei's own page carries the disclaimer 'Theoretical computing power may have a <1% error in actual testing' - so these are clock-derived peak numbers, not measurements. The genuinely novel part is memory, not compute: 96 GB per NPU of Huawei-developed on-chip memory at 500 GB/s per NPU, and at SuperPoD scale '256 TB unified global memory addressing & memory semantics' across up to 1024 NPUs. UNIFIED GLOBAL MEMORY ACROSS 1024 NPUS IS THE HEADLINE. If real, it removes the tensor-parallel-collectives problem that constrains every GPU-based serving stack, because a KV cache can be addressed as one flat address space rather than replicated per rank - that is a fundamentally different memory model from NVLink domains and it is the first credible non-Apple unified-memory story in a datacenter part. Scale-up link is UB Link 2.0: 784 GB/s bidirectional per NPU intra-server, 1.68 TB/s per NPU in 16-NPU full-mesh, 1.72 PB/s across a 1024-NPU SuperPoD - which is roughly 1.7 TB/s per chip and therefore about 3.5x the local memory bandwidth, an unusually healthy scale-up-to-local ratio and the exact inverse of the 910B's HCCS problem. Scale-out is UBoE and RoCE at 400 Gbps per NPU unidirectional. Atlas 650E is 14U air-cooled at ~14.5 kW with 2 x 950 CPUs; Atlas 950 SuperPoD is a 44OU cabinet of 64 NPUs at ~100 kW liquid-cooled, and scales to 1024 NPUs. Software: MindIE on CANN (cn-huawei-mindie). Note the predecessor-generation comparison is not apples to apples: 910C used SMIC 7 nm and HBM2e, this uses on-chip memory, and Huawei does not publish a process node for 950DT.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "cn-huawei-atlas-650e-spec",
+    "cn-huawei-atlas-950-superpod-spec",
+    "cn-huawei-mindie"
+  ]
+}

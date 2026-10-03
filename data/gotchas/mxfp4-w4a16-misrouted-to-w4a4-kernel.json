@@ -1,0 +1,26 @@
+{
+  "id": "mxfp4-w4a16-misrouted-to-w4a4-kernel",
+  "type": "gotcha",
+  "name": "compressed-tensors MXFP4 weight-only checkpoints are dispatched to a W4A4 kernel on SM100+, costing ~7.6 average points across AIME/GSM8K/MATH-500",
+  "class": "format",
+  "affects": [
+    "vllm",
+    "mxfp4",
+    "compressed-tensors",
+    "nvfp4",
+    "marlin-moe",
+    "nvidia-b200",
+    "sm100"
+  ],
+  "symptom": "A compressed-tensors MXFP4 checkpoint with input_activations: null (i.e. MXFP4 weights, group_size=32, no activation quantization) served on B200 with --dtype bfloat16 logs 'Using FlashInferMxfp4LinearKernel for MXFP4 GEMM' and then scores far below a weight-only quant should: Qwen3-8B on AIME-24 51.25%, AIME-25 42.08%, GSM8K 93.86%, MATH-500 95.13%, avg 70.58%, against a BF16 baseline of 75.00 / 62.71 / 95.15 / 96.60 / 82.36. Nothing errors. Manually switching to MarlinMxfp4Kernel recovers AIME-24 66.67%, AIME-25 55.83%, GSM8K 94.62%, MATH-500 95.53%, avg 78.16%.",
+  "root_cause": "Dispatch keys on the GPU having native FP4 rather than on what the checkpoint declares. When the compressed-tensors MXFP4 scheme has input_quant is None / input_activations: null, vLLM still routes to the FlashInfer MXFP4 linear kernel, which is the W4A4 path, quantizing activations to FP4 that the checkpoint never asked to be quantized. The intended contract is MXFP4 weights + no activation quantization -> MXFP4 W4A16 method -> BF16/FP16 activations -> Marlin MXFP4 W4A16 kernel. Only a checkpoint that explicitly declares compatible MXFP4 activation quantization should reach the native FP4 kernel.",
+  "workaround": "Select MarlinMxfp4Kernel for MXFP4 weight-only checkpoints (vLLM PR #56803 fixes the dispatch to do this). Check the startup log line naming the MXFP4 GEMM kernel before trusting any MXFP4 quality number: 'Using FlashInferMxfp4LinearKernel' on a checkpoint whose config has input_activations null is the tell.",
+  "severity": "major",
+  "notes": "The most dangerous shape in this repo: the corrupted number (70.58% avg) is still a plausible score, and it sits between the Marlin result and badly enough below BF16 that it reads as 'MXFP4 costs ~12 points'. W4A16 weight-only quantization is expected to be near-lossless, so an 11.8-point drop invites exactly the wrong conclusion. The 7.58-point gap between the two kernels on identical weights is the part that is attributable to the bug; the rest is quantization loss. Same-harness comparison is stated (same system prompts, sampling config, and evaluation harness across all three rows).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-vllm-56770-mxfp4-w4a16-as-w4a4"
+  ]
+}

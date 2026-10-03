@@ -1,0 +1,27 @@
+{
+  "id": "flashinfer-bf16q-fp8kv-spec-decode-corrupts-swa",
+  "type": "gotcha",
+  "name": "Disabling FlashInfer Q-quantization with an FP8 KV cache and speculative decoding silently corrupts sliding-window models on SM100",
+  "class": "kernel",
+  "affects": [
+    "vllm",
+    "flashinfer",
+    "fp8-e4m3",
+    "kv-cache-quantization",
+    "speculative-decoding",
+    "sliding-window-attention",
+    "nvidia-b200",
+    "sm100"
+  ],
+  "symptom": "1x B200 (SM100), vLLM 0.23.1rc1.dev843, flashinfer-python 0.6.14, serving RedHatAI/gemma-4-31B-it-NVFP4 (50 of 60 layers SWA, window 1024) with --attention-backend FLASHINFER --kv-cache-dtype fp8_e4m3 --speculative-config MTP num_speculative_tokens=7 and --attention-config '{\"disable_flashinfer_q_quantization\": true}': output is fluent and well-formed but contains sporadic wrong tokens and short repetition loops, e.g. 'a Saga breaks a transaction into a sequence of a sequence of a sequence of local transactions'. With deeper speculation (k=64 suffix decoding) it degenerates into full runaway repetition. Corruption needs seq_len to pass the 1024-token window, so short prompts stay clean.",
+  "root_cause": "Two independent defects. (1) Kernel: flashinfer's trtllm-gen spec-as-decode kernel trtllm_batch_decode_with_kv_cache with q_len_per_req=8 and BF16-Q + FP8-KV mis-computes sliding-window attention once seq_len > window at certain seq_len/page alignments, with errors up to ~1.8 confined to single (query-row, head) pairs. FP8-Q, no-window and q_len<=4 controls on identical inputs are clean; characterized standalone at flashinfer-ai/flashinfer#3864. vLLM routes spec-decode verify onto exactly this kernel (use_trtllm_attention forces trtllm for decode when has_spec), so the flag turns a supported-looking config into silent corruption for any SWA model. (2) Scale bookkeeping in vllm/v1/attention/backends/flashinfer.py: FlashInferImpl.forward computes bmm1_scale *= _q_scale_float * _k_scale_float unconditionally, applying q_scale even when the flag keeps Q in BF16 so nothing was quantized and there is nothing to de-scale; the XQA helper get_xqa_bmm1_scale already implements the correct conditional but is only used for XQA decode. The BF16-Q + FP8-KV trtllm prefill path additionally dequantizes with _k_scale/_v_scale and then still passes bmm1_scale = sm_scale * q_scale * k_scale and bmm2_scale = v_scale, double-applying k/v scales. Defect (2) is inert when all scales are 1.0, which is why the repro does not show it.",
+  "workaround": "Drop the --attention-config disable_flashinfer_q_quantization flag, or drop --speculative-config, or drop quantized KV - any one of the three makes output clean. The reporter's ask to vLLM is to reject or warn on this combination for SWA models on SM100 until the kernel is fixed. Note the fix is NOT to reach for --enforce-eager: the corruption reproduces under --enforce-eager too, which rules out a cudagraph cause.",
+  "severity": "blocker",
+  "notes": "The cleanest available statement of why 'quantized KV' and 'speculative decoding' are not independently safe: each is correct alone and either is fine on its own here. Attribution matrix from the reporter, all temp-0 on the same NVFP4 checkpoint: fp8-Q + spec clean; bf16-Q + no spec clean; bf16-Q + spec corrupted under both -O3 cudagraphs and --enforce-eager. Also a good example of a bug that hides behind the common _q_scale=_k_scale=_v_scale=1.0 assumption.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-vllm-47847-flashinfer-bf16q-fp8kv-spec-swa"
+  ]
+}

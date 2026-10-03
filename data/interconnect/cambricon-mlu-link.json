@@ -1,0 +1,22 @@
+{
+  "id": "cambricon-mlu-link",
+  "type": "interconnect",
+  "name": "Cambricon MLU-Link (chiplet / multi-chip scale-up)",
+  "kind": "other",
+  "version": "MLU-Link, MLU370 generation",
+  "bandwidth_gbps": 200,
+  "bandwidth_basis": "PER CHIP, AS PUBLISHED. Cambricon's MLU370 chip overview states MLU-Link provides 200 GB/s of chip-to-chip bandwidth per chip. No direction convention is stated by the vendor and no per-link breakdown is published, so the figure is recorded exactly as given rather than halved or doubled - this is one of the figures in this repo where the vendor's flat per-chip rate is the only available number and splitting it by direction would be an invention. Note the same page's 256 TOPS INT8 is a DIE-level figure for the two-chiplet configuration and is 2x the S4/S8 card figure, so die and card numbers from this vendor must not be mixed; the 200 GB/s is quoted per chip alongside the die-level figure and inherits that same ambiguity.",
+  "link_count": null,
+  "topology": "Chiplet-to-chiplet and chip-to-chip, used on the dual-die X4 and X8 variants. The S4 and S8 inference cards are single configurations that do not use MLU-Link for scale-up, so the two are different products in this family rather than different SKUs of one part.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "None published. No Cambricon switch part exists in the sources retrieved, so the domain is built from direct links and the scale-up boundary is the multi-chip configuration on one card or baseboard.",
+  "notes": "The scale-up link for the Cambricon MLU370 family, and the record that makes an inverted ratio explicit. PUBLISHED FIGURE: 200 GB/s per chip of MLU-Link chip-to-chip bandwidth, from the vendor's die-level chip overview, alongside a die-level 256 TOPS INT8. The card-level S4/S8 parts publish 192 TOPS INT8 card - exactly half the die figure, because the die figure is for the dual-chiplet X4/X8 configuration - so a reader must not compare the 200 GB/s against the card-level 307.2 GB/s of LPDDR5 bandwidth as though both described the same SKU. THE INVERTED RATIO IS THE POINT, and it is why this record is worth having: on a normal GPU the scale-up fabric is several times FASTER than local memory bandwidth (NVLink 4 at 450 GB/s per direction against 3.35 TB/s of HBM is slower, but Infinity Fabric and NVSwitch exist precisely to keep the ratio from collapsing as memory bandwidth outruns fabric). On MLU370 it is the reverse in character rather than in raw number: 200 GB/s of scale-up against a part with NO HBM at all and only 307.2 GB/s of local LPDDR5 bandwidth means the scale-up link is a large fraction of local bandwidth, which is respectable for a chiplet interconnect on a high-density card and is not the limiting factor for this part. The limiting factor is that MLU370 has no HBM tier, so its arithmetic intensity ceiling is far left of every HBM part in this repo and the card is a high-density inference part rather than a large-model serving part. INFERENCE RELEVANCE: if you do shard an MLU370 across two chips you are not fabric-limited, you are limited by LPDDR5 bandwidth - which is an unusual situation in this repo and worth knowing before optimising the interconnect side. VARIANT CAVEAT: MLU-Link appears on the X4/X8 dual-die train+infer parts; the S4/S8 inference cards do not use it for scale-up. KIND: filed as 'other' because MLU-Link is a proprietary vendor interconnect with no entry in the schema's enum and no analogue in the named families.",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-03",
+  "sources": [
+    "asic-cambricon-mlu370-chip",
+    "asic-cambricon-mlu370-s4"
+  ]
+}

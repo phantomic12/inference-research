@@ -1,0 +1,33 @@
+{
+  "id": "gcp-cloud-tpu-v4-v5e-v5p",
+  "type": "supply",
+  "name": "Google Cloud TPU v4 / v5e / v5p (per chip-hour, in a pod)",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "sup-cloud-gcp-tpu-pricing"
+  ],
+  "kind": "cloud",
+  "vendor": "google",
+  "accelerator_ids": [
+    "google-tpu-v5e",
+    "google-tpu-v5p",
+    "google-tpu-v4",
+    "google-tpu-v6e"
+  ],
+  "region": "us-central1 (v5e, v4), us-east1 and us-east5 (v5p, v6e), plus europe-west1/4, asia-northeast1, asia-southeast1, us-south1",
+  "channels": [
+    "rental",
+    "on-demand",
+    "spot",
+    "reserved",
+    "per-pod"
+  ],
+  "price_usd": 1.2,
+  "price_basis": "PER CHIP-HOUR in USD, not per VM - Google states this explicitly. v5e $1.20/chip-h on-demand (us-central1, us-east5, us-west1, us-west4); $1.416 us-south1 Dallas; $1.32132 europe-west1; $1.56 europe-west4 and asia-southeast1. v5p $4.20/chip-h (us-east5, us-east1). v4 $3.22/chip-h (us-central2). v6e Trillium $2.70 (us-east1, us-east5). DWS Flex-start halves v5e to $0.60 and v5p to $2.10; 3-year commitment takes v5e to $0.54 and v5p to $1.89. Published 2026-10-03.",
+  "availability": "lead-time",
+  "lead_time_weeks": null,
+  "export_controlled": null,
+  "notes": "Cloud TPU is the cheapest credible accelerator hour in this slice on a like-for-like basis: TPU v5e at $1.20 per chip-hour is less than AWS g6's L4 ($1.67) and far under any H100 hour, and v5p at $4.20 is under AWS p5's on-demand $6.88. But three structural caveats make it NOT a drop-in substitute for a GPU hour. (1) UNIT: the price is per CHIP inside a pod, and the page warns that the console displays VM-hours - a v4 host with 4 chips shows as $12.88/h which is exactly 4 x $3.22 - so reading the console figure as a per-VM price understates by the chip count, and the minimum billable object is a slice, not a chip. (2) QUOTA, not payment, is the gate: the page directs you to the Cloud TPU quota policy to learn how to request quota, so availability is lead-time-bound, not credit-bound. (3) Portability: XLA/JAX only. Every engine, kernel and quantization path elsewhere in this repo is CUDA-shaped. Also note the discount ladder here is the deepest in the whole slice - DWS Flex-start at 50% off on-demand and a 3-year commitment at 55% off for v5e - and unlike GCP's accelerator-optimized VMs, TPU consumption does carry 1-year and 3-year CUDs. TPU v4 and v3 are legacy pods; Ironwood at $12.00/chip-h in us-central1 is the newest and by far the most expensive per chip."
+}

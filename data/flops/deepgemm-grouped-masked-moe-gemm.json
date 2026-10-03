@@ -1,0 +1,39 @@
+{
+  "id": "deepgemm-grouped-masked-moe-gemm",
+  "type": "flop",
+  "name": "DeepGEMM grouped/masked GEMM and Mega MoE: shaping MoE expert GEMMs for decode and for NVLink overlap",
+  "class": "moe_experts",
+  "arithmetic_intensity": "Grouped GEMM changes the tiling, not the math: instead of B separate GEMMs each with a token-thin M, the tokens routed to one expert are concatenated so the expert's GEMM has a usable M dimension, which is what keeps tensor cores busy. DeepGEMM groups ONLY the M axis and requires N and K fixed, because experts in an MoE share a shape - that is the constraint that makes grouped GEMM viable for MoE at all. Each expert segment must be aligned to the GEMM M block size, which is a hard layout requirement (get_mk_alignment_for_contiguous_layout). The masked variant exists because decode with CUDA graphs cannot know the token counts: the kernel takes a mask and computes only the valid portions, which trades a little wasted work inside tiles for removing a CPU sync from the critical path. Mega MoE is the different claim: it 'fuses and overlaps EP dispatch, linear 1 and linear 2 (FP8xFP4 or FP8xFP8), SwiGLU, and EP combine into a single mega-kernel, overlapping NVLink communication and tensor core computation' - that reduces both bytes (activations never round-trip HBM between the routed stages) and idle time (NVLink waits hidden behind MMA), at the cost of requiring a multi-process launch with a symmetric memory buffer.",
+  "bound_by": "both",
+  "scales_with": [
+    "num_experts (group count, and the M-block alignment per expert)",
+    "experts_per_token",
+    "expert intermediate width",
+    "tokens per expert (the M dimension that determines whether the tile is efficient)",
+    "precision (fp8, fp4, bf16)",
+    "interconnect (Mega MoE's overlap is against NVLink)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-gb200-nvl72",
+    "nvidia-rtx-4090"
+  ],
+  "workarounds": [
+    "M-grouped contiguous layout for prefill/training where token counts are known",
+    "Masked grouped GEMM for decode under CUDA graphs, fed by DeepEP's low-latency output",
+    "K-grouped GEMM for MoE weight backward (M and N fixed instead)",
+    "FP8 with per-group scaling: SM90 wants fp32 scale factors, SM100 wants packed UE8M0 (four per int) and a TMA-aligned transposed LHS scale layout",
+    "Locality domains to keep expert weights resident near the SMs that use them",
+    "Mega MoE to fuse dispatch/combine/experts/SwiGLU and overlap NVLink"
+  ],
+  "notes": "Hardware scope: requires NVIDIA SM90 or SM100, CUDA >= 12.9, CUTLASS >= 4.0. A DeepGEMM Ascend port exists (separate repo) so the same library targets NPUs too, which makes it the rare MoE GEMM library that is not CUDA-only. JIT at runtime via DeepJIT means no CUDA compile at install but a per-shape compile on first use - a cold-start consideration distinct from a compile-time library. Scale-format divergence between SM90 and SM100 is a concrete example of an arch requirement that changes the DATA LAYOUT an engine must produce, not just which instruction is issued. The 1550 TFLOPS on H800 figure is DeepSeek's own measurement.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "kern-deepgemm-github",
+    "kern-deepep-github",
+    "kern-cutlass-github"
+  ]
+}

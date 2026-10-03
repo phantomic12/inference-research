@@ -1,0 +1,67 @@
+{
+  "id": "clip-as-service",
+  "type": "engine",
+  "name": "CLIP-as-service",
+  "repo": "jina-ai/clip-as-service",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2018,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "multimodal",
+    "microservice"
+  ],
+  "scheduling": [
+    "batching",
+    "multi-model-per-gpu"
+  ],
+  "supported_backends": [
+    "cuda",
+    "tensorrt",
+    "onnxruntime",
+    "pytorch"
+  ],
+  "supported_formats": [
+    "pytorch-bin",
+    "safetensors",
+    "onnx"
+  ],
+  "notable_features": [
+    "Multimodal by design - it embeds images AND text into a shared space, which is the defining use case (text-to-image / image-to-image search) and is why it belongs in the retrieval-runtime niche at all.",
+    "Ships three inference backends for the same model: TensorRT, ONNX Runtime, and PyTorch without JIT. That is an unusual and genuinely useful amount of backend choice for a small project.",
+    "Also does cross-modal RANKING, not just embedding - the /rank endpoint scores images and texts against each other (e.g. 'is there a man in the photo'). This is a late-fusion cross-encoder in the CLIP family, distinct from the bi-encoder embedding path.",
+    "Non-blocking duplex streaming on requests AND responses, gRPC with TLS and compression, HTTPS, WebSocket, async clients - a real microservice surface.",
+    "Elastic: scales multiple CLIP models up and down on a single GPU with automatic load balancing.",
+    "Claims 800 QPS with default config (single replica, PyTorch no JIT) on a GeForce RTX 3090 - a project/vendor benchmark, not independently reproduced, and the footnote is explicit about the config.",
+    "Integrates with the Jina/DocArray neural-search ecosystem."
+  ],
+  "hardware_caveats": [
+    "Effectively DORMANT. Last push was 2024-01-23 - over two and a half years stale as of this record. This is the single most important operational fact about it; the capabilities below describe what the code does, not a maintained product.",
+    "The 800 QPS figure is bandwidth-agnostic in the way that CLIP inference is not compute-bound in the LLM sense - CLIP is a ViT/BERT-style encoder pair, so it is dense-GEMM, compute-bound work, and the number depends on image resolution and batch size in ways the footnote does not spell out.",
+    "TensorRT backend requires a graph export/compile step (unlike PyTorch-without-JIT), reintroducing exactly the model-compilation friction that TEI and FastEmbed design out.",
+    "GPU-only in practice for the throughput claims; there is no documented CPU serving path for image encoding at any useful rate.",
+    "CLIP models are frozen at whatever checkpoints Jina last published - no support for newer open multimodal encoders by construction."
+  ],
+  "best_for": [
+    "Zero-shot image/text retrieval and cross-modal ranking where you want a service rather than a library.",
+    "Multimodal RAG over image corpora (clip-as-service is what Jina's own image-search stack used).",
+    "Studying the bi-encoder (embed) vs cross-encoder (rank) split for CLIP, since both live behind one API.",
+    "Legacy Jina/DocArray pipelines still in production."
+  ],
+  "avoid_for": [
+    "Anything new: the project is dormant and will not track newer architectures or checkpoint formats.",
+    "Text-only embedding or text reranking - TEI and Infinity do both better and are actively maintained.",
+    "Production roadmaps that need security patches or dependency updates."
+  ],
+  "docs_url": "https://clip-as-service.jina.ai/",
+  "notes": "COMPUTE-BOUND at batch 1 for a CLIP-size encoder, same mechanism as text encoders - bidirectional ViT/text-transformer forward passes, no KV cache, no autoregressive streaming - with one multimodal twist that matters for hardware selection: cost scales with IMAGE RESOLUTION and PATCH COUNT, not just sequence length. A 336px ViT image is ~576 patches after patch embedding, which is a longer 'sequence' than a typical 128-token text passage, so vision encoding is the more expensive of the two modalities by a wide margin. Because the whole forward pass is dense GEMM with weights re-read once per batch, buy FLOPS and cache capacity, not HBM bandwidth - the inverse of an LLM decode part. The rank (cross-modal cross-encoder) path is more compute-bound still, as with any cross-encoder: every image-text pair must be fully encoded, so there is no caching and no early exit, and scoring k candidates costs roughly k full forward passes. Can serve: CLIP-family bi-encoders (image and text into a shared space) and CLIP-family cross-modal cross-encoders for ranking. Cannot serve: modern multimodal embedding models (Jina CLIP v2/v3, BGE-VL, ColPali, GME) - the project froze in early 2024; text-only rerankers (bge-reranker class, which are XLM-RoBERTa cross-encoders with no vision tower); late-interaction multi-vector retrieval; generative models. Confidence 0.62 - the capabilities are quoted from the README and verified to exist, but dormancy since 2024-01-23 means this describes a frozen artifact. Recorded anyway because it is a real, still-reachable service in the multimodal-retrieval niche and its dormancy is itself the useful fact.",
+  "status": "verified",
+  "confidence": 0.62,
+  "updated": "2026-10-03",
+  "sources": [
+    "embed-clip-as-service-github"
+  ]
+}

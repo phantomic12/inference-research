@@ -1,0 +1,15 @@
+{
+  "id": "kern-flashattention-4-blog",
+  "type": "source",
+  "name": "FlashAttention-4: Algorithm and Kernel Pipelining Co-Design for Asymmetric Hardware Scaling",
+  "status": "draft",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "url": "https://tridao.me/blog/2026/flash4/",
+  "publisher": "Tri Dao",
+  "kind": "blog",
+  "published": "2026-03-05",
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "Author blog; paper at github.com/Dao-AILab/flash-attention/blob/main/assets/fa4_paper.pdf. Mechanism claims: on B200 each of 148 SMs has 256 KB of tensor memory; the largest single-CTA UMMA tile for BF16/FP16 is 128x256x16, about 2x the largest Hopper WGMMA atom, issued by a single thread, which eases register pressure and makes larger tiles and deeper pipelines practical; 2-CTA MMA executes one UMMA across a CTA pair in a cluster spanning both TMEMs, scaling to 256x256x16. Feeds and speeds per SM at M=N=D=128: tensor cores 8192 ops/cycle, exponential unit 16 ops/cycle, shared memory 128 bytes/cycle; forward clock-cycles per tile 1024 / 1024 / 768; backward (5 MMAs) 2560 / 1024 / 3328 - so forward is bound by compute AND exponential while backward is bound by shared-memory bandwidth. Also: UMMA tile launched by one thread removes Hopper's warpgroup register-pressure spilling pain points; UMMA can source operand A from TMEM; tcgen05.mma can be issued across 2 CTAs; the backward stores transposed intermediates directly into TMEM in the operand-A layout the dV/dK MMAs consume, which removes a shared-memory round trip. Reported up to 1605 TFLOPs/s BF16 on B200 (71% utilization), 1.1-1.3x cuDNN 9.13 forward, 2.1-2.7x Triton, and 1.3x vs cuDNN 9.13 overall - all author/vendor claims. Notes cuDNN 9.13+ incorporated several of these techniques."
+}

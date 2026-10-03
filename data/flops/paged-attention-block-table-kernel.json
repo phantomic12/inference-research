@@ -1,0 +1,35 @@
+{
+  "id": "paged-attention-block-table-kernel",
+  "type": "flop",
+  "name": "PagedAttention kernels: block-table indirection for the decode KV cache",
+  "class": "decode_attention",
+  "arithmetic_intensity": "Paging changes no arithmetic. It changes the memory layout so that decode attention reads a list of contiguous pages via a per-request block table instead of one dense per-request cache. FLOPs are identical and total bytes are identical; what changes is coalescing efficiency and the absence of per-request reallocation copies when the sequence grows. Its real payoff is capacity (no wasted padding in the cache) and the elimination of defragmentation copies, which is a memory-capacity and CPU-overhead win rather than a bytes-per-token win. Recorded as decode_attention.",
+  "bound_by": "memory",
+  "scales_with": [
+    "context_length",
+    "batch_size",
+    "page size (page_block_size must be a multiple of 256 in FlashAttention's paged path, a hard kernel constraint)",
+    "num_kv_heads"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Block table indirection inside the attention kernel instead of copying blocks to make them contiguous",
+    "Page size chosen as a multiple of the kernel's vectorized load width (256 in FA-2's paged path)",
+    "Fused cache update: FA-2's flash_attn_with_kvcache writes the new K/V into the cache and does the attention in one kernel, avoiding a separate append kernel",
+    "Rotary embedding applied inside the same kernel as the cache write",
+    "Block-sparse attention plans on top of paging to skip fully-masked pages"
+  ],
+  "notes": "Introduced as a kernel feature in FA-2 2.5 (credited in the README changelog). Two hard constraints visible in the source: page_block_size must be a multiple of 256, and the block_table is per (batch, max_num_blocks_per_seq) int32 - so a kernel that hard-codes page size will not accept another engine's cache. Paging is the substrate that split-KV and cascade attention both assume; it is also why a given model on the same GPU gets different decode-attention behavior between an engine with a paged cache and one with a dense cache.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-pagedattention-vllm",
+    "kern-flashattention-github",
+    "flop-flashinfer"
+  ]
+}

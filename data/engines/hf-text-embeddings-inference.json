@@ -1,0 +1,84 @@
+{
+  "id": "hf-text-embeddings-inference",
+  "type": "engine",
+  "name": "HuggingFace Text Embeddings Inference (TEI)",
+  "repo": "huggingface/text-embeddings-inference",
+  "languages": [
+    "Rust",
+    "Python",
+    "CUDA"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "minimal-deps",
+    "serverless",
+    "batch-inference-only"
+  ],
+  "scheduling": [
+    "token-based-dynamic-batching",
+    "backpressure"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "metal",
+    "cpu-avx512",
+    "mkl",
+    "onnxruntime",
+    "arm64-neon"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "onnx"
+  ],
+  "notable_features": [
+    "Purpose-built: this is a retrieval-serving engine, not an LLM engine. There is no decode loop, no KV cache and no sampling - the entire serving surface is encode, rerank, classify, sparse-encode and tokenize.",
+    "Token-based dynamic batching. --max-batch-tokens (default 16384) is the primary throughput knob and the README frames it as a hardware-sizing control, not just a queue limit; --max-concurrent-requests defaults to 512 and refusing rather than queueing is the documented backpressure mechanism.",
+    "Rust core (candle) with no model graph compilation step - the README advertises this directly, and it is the operational difference from TensorRT/Triton paths where you export or compile first.",
+    "Pooling is a first-class, overridable knob: --pooling accepts cls, mean, splade and last-token, defaults to whatever the model's 1_Pooling/config.json says, and splade requires the loaded model to be a ForMaskedLM.",
+    "Reranking is first-class since v0.4.0 (CamemBERT, RoBERTa, XLM-RoBERTa, GTE sequence-classification cross-encoders) served at /rerank; /predict serves ordinary sequence classification.",
+    "Sparse retrieval path: SPLADE pooling plus an /embed_sparse endpoint, which is a different memory profile from dense pooling.",
+    "Safetensors AND ONNX weight loading, plus a --dense-path override for Sentence-Transformers models that need a 2_Dense projection head (e.g. NovaSearch/stella_en_400M_v5).",
+    "Prompts are deployment configuration, not code: --default-prompt / --default-prompt-name resolve against the Sentence-Transformers prompts dictionary, so query:/passage: prefixes are a server flag.",
+    "OpenTelemetry tracing (--otlp-endpoint) and a Prometheus /metrics endpoint; gRPC as well as HTTP; --api-key for bearer auth; --auto-truncate off makes the server refuse to start rather than silently truncate.",
+    "Small container images and fast boot are explicit design goals - the serverless pitch."
+  ],
+  "hardware_caveats": [
+    "CUDA GPUs with compute capability below 7.5 are not supported (V100, Titan V, GTX 1000 series). Builds are per-architecture cargo features: candle-cuda-turing for Turing, candle-cuda for Ampere and later.",
+    "The Docker image is pinned to a compute capability: you must build or select the image matching the GPU you will actually run on (75 Turing, 80 Ampere, 86 A10, 89 Ada, 90 Hopper, 100 B200/GB200, 120 RTX 50-series, 121 DGX Spark GB10).",
+    "Flash Attention is OFF by default in the Turing image because of precision issues; it must be re-enabled with USE_FLASH_ATTENTION=True. Numerical parity with the other images is therefore not automatic.",
+    "Blackwell images (100, 120, 121) are labelled experimental in the README.",
+    "ROCm support is documented only for AMD Instinct MI200 and MI300 series via /dev/kfd and /dev/dri. Consumer Radeon is not mentioned.",
+    "The ARM64 CPU Docker image runs on CPU cores only - the README explicitly says there is no Metal/MPS support through Docker. Apple Silicon acceleration comes from the local cargo -F metal build or the Homebrew path, not from the container.",
+    "CPU builds come in several flavours (ort ONNX backend recommended on x86, mkl for Intel, metal on M1/M2); on ARM64 hosts without NVIDIA GPUs only the CPU Dockerfile is offered.",
+    "--dtype accepts only float16 and float32. There is no int8 or fp8 path, so quantization has to have happened at export time - the opposite trade-off from GGUF.",
+    "docs/openapi.json lists the route surface and it is NOT symmetric with OpenAI: the OpenAI-compatible embedding route is /v1/embeddings, but the rerank route is /rerank with no /v1/rerank alias in that document. Clients written against Cohere or Jina will need a shim."
+  ],
+  "best_for": [
+    "Production embedding and reranking serving in general - this is the reference implementation most teams reach for first, and it is what Hugging Face itself deploys.",
+    "Serverless and scale-to-zero: small images, fast boot, no graph compilation, and a startup cost measured in seconds rather than minutes.",
+    "Mixed embedding architectures in one fleet: BERT, CamemBERT, XLM-RoBERTa, NomicBERT, JinaBERT (Alibi), MPNet, ModernBERT, and RoPE decoder backbones Mistral, Alibaba GTE, Qwen2, Qwen3 and Gemma3 are all in the supported list.",
+    "Lexical/hybrid retrieval where SPLADE sparse embeddings matter, and for reranking a first-stage candidate set with a cross-encoder.",
+    "Apple Silicon and ROCm deployments where a PyTorch-based server would drag in a large dependency tree."
+  ],
+  "avoid_for": [
+    "Anything generative. There is no completion endpoint at all.",
+    "Pre-Volta NVIDIA GPUs.",
+    "Late-interaction (ColBERT) multi-vector serving - the pooling options are cls, mean, splade and last-token; there is no token-wise output mode, so a ColBERT model cannot be served correctly here.",
+    "Token-level or sparse-neuron embedding models that need more than mean/cls/last pooling.",
+    "Model families outside the supported list; support is a maintained enumeration, not a generic Transformer fallback.",
+    "Workloads that need int8/fp8 - only float16 and float32 are selectable at runtime."
+  ],
+  "docs_url": "https://github.com/huggingface/text-embeddings-inference",
+  "notes": "COMPUTE-BOUND, NOT MEMORY-BOUND, at batch 1 for a BERT-size encoder - and this inverts the hardware-selection rule that applies to an LLM decode part. Autoregressive decode at batch 1 is memory-bound because exactly one weight is streamed per generated token and the arithmetic intensity is ~1 flop per byte, so HBM bandwidth decides tok/s. An encoder has no autoregressive step: every input token gets a full bidirectional attention pass in one shot, with no KV cache to reuse and no weight streaming to amortize. The dominant costs are the same GEMMs an LLM prefill does (attention QK^T and AV are O(L^2) with no causal halving, since both halves are computed) plus a pooling reduction that is memory-cheap. So the encoder wants FLOPS - dense low-precision tensor throughput - not bandwidth. Practical consequences recorded here: (a) the README's own guidance to raise --max-batch-tokens 'until the model is compute bound' is an explicit statement that batching is how you convert spare bandwidth into throughput, and that beyond that point more batch does nothing; (b) arithmetic-intensity crossover for a bge-base-class model at 512 tokens sits around batch 8-32, far lower than for LLM decode, which is why token-based dynamic batching is the whole game here; (c) a bandwidth-optimized part (large HBM, modest FLOPS) is the wrong buy for a dedicated embedding box, and a high-FLOPS low-capacity part can be the right one because a 110M encoder in fp16 is ~220 MB of weights that fit in almost any cache hierarchy. This is also why TEI's insistence on no graph compilation matters less for embeddings than for generation: the arithmetic is dense GEMM, which tensor cores handle generically, so a JIT-free Rust path costs little. Reranking sits even more firmly on the compute side than embedding: a cross-encoder must run the FULL query+passage pair through every layer, so its FLOP count scales with (query_len + passage_len) and there is no early exit and no cache to amortize - bge-reranker-large on a top-100 candidate set is roughly 100x the FLOPs of embedding those 100 passages once. That is why reranking is normally restricted to a short candidate list while embedding runs over the whole corpus. TeiBackend variants: the README documents the backend selection indirectly through cargo features and Docker image variants rather than a single named enum - candle (default Rust), ort (ONNX Runtime), mkl (Intel CPU), metal (Apple), and candle-cuda / candle-cuda-turing. 'candle' is recorded in supported_backends implicitly as the CPU-default path; ort and mkl are listed because the README names them as the recommended x86 CPU builds. supported_formats lists onnx because the README states ONNX weight loading; safetensors likewise. Confidence is 0.88 rather than higher because the route surface and the pooling/dtype options come from docs/openapi.json and --help output rather than prose, and because TEI's model support moves faster than its docs.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "embed-hf-tei-github",
+    "embed-hf-tei-openapi"
+  ]
+}

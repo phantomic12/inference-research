@@ -1,0 +1,27 @@
+{
+  "id": "nvfp4-fused-moe-w13-global-scale-mismatch",
+  "type": "gotcha",
+  "name": "NVFP4 fused-MoE loading detects mismatched gate/up global scales, warns once, and then dequantizes the up half with the gate half's scale anyway",
+  "class": "format",
+  "affects": [
+    "vllm",
+    "nvfp4",
+    "modelopt",
+    "compressed-tensors",
+    "quark",
+    "moe",
+    "glm-5-3-flash",
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "symptom": "ModelOptNvFp4FusedMoE.process_weights_after_loading fuses gate_proj and up_proj into w13 and keeps only the gate per-tensor global scale. When a checkpoint ships different scale_2 for the two, the up half of w13 is dequantized with the gate half's global scale - a silently mis-scaled model. The only signal is a single logger.warning_once ('w1_weight_scale_2 must match w3_weight_scale_2. Accuracy may be affected.') at startup, with no runtime signal afterwards.",
+  "root_cause": "Loader design choice, not a computation bug: modelopt.py keeps w13_weight_scale_2 = layer.w13_weight_scale_2[:, 0].contiguous() (the gate column) after checking allclose against the up column and warning on mismatch. How far apart they can be, measured from checkpoints on disk reading only weight_scale_2 scalars with no GPU: dealignai/GLM-5.3-Flash-ABLITERATED-NVFP4 (modelopt 0.45.0) has 8,563 of 12,384 gate/up pairs differing (69.1%), ratio median 1.077 / p99 1.69 / max 10.0, all 43 MoE layers affected, worst layer 272 of 288 experts mismatched. RadixArk/Qwen3.8-Flash-Next-NVFP4 and mazinb/Qwen3.8-Flash-Next-Uncensored-NVFP4 (both modelopt 0.46.0) tie the scales exactly on all 24,576 pairs. So it is a checkpoint-producer property, not universal.",
+  "workaround": "Grep the startup log for the w1_weight_scale_2/w3_weight_scale_2 warning before trusting an NVFP4 MoE quality number. The check is cheap and needs no GPU: read the ...experts.N.gate_proj.weight_scale_2 and matching up_proj.weight_scale_2 scalars from the safetensors and compare. Until a maintainer picks a policy, vLLM PR #55073 reconciles them per expert using their shared maximum and rescales each half's E4M3 block scales to preserve the original effective dequantization scale, reusing the same max-scale policy as vLLM's fused FP8 paths.",
+  "severity": "major",
+  "notes": "The E4M3 block-scale range is why the obvious fix is not free: the per-block scales have limited range, so rescaling one half into the other's global scale trades one error for another. Two NVFP4 formats with identical-looking checkpoints can therefore differ by up to 10x on one half's effective dequantization scale - and a max-10.0 ratio is far outside 'rounding'. Worth noting the reporter explicitly declined to file a patch unilaterally because what to do on detection is a maintainer design call; the PR came separately. Not to be conflated with nvfp4-marlin-bf16-garbled-output, which is an exponent-widening defect in dequant itself.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-vllm-54974-nvfp4-w13-global-scale"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "marlin-weight-only-int4-gemm",
+  "type": "flop",
+  "name": "Marlin weight-only INT4 GEMM: repacking so dequant is free and tensor cores stay saturated",
+  "class": "quantization_overhead",
+  "arithmetic_intensity": "Marlin does not change the FLOPs; it removes the dequantization tax by moving it offline and restructuring the kernel so dequant and MMA are ordered so neither pipeline stalls. The author's framing is a ratio: 'as long as we perform less than 25-50 (tensor core) multiply-accumulates per 4-bit quantized weight' - i.e. per 4-bit weight element, not per block - the FLOP:byte ratio of the GPU permits near-ideal 4x speedup, and the theoretical benefit of weight-only quantization should extend to batch sizes 4-8x larger than prior kernels achieved. The mechanism is fourfold: (1) asynchronous global weight loads issued ahead of all compute, including activation loads, with an eviction-immediate cache policy so one-shot weights do not pollute L2; (2) quantized weights AND group scales reshuffled offline into a layout that dequantizes directly into tensor-core organization, so no separate dequant pass exists; (3) careful interleaving of dequant and tensor-core instructions so both pipelines stay saturated; (4) striped partitioning of the output so real (smaller) matrices and varied GPUs still perform well. The payoff is stated as essentially ideal speedup up to the maximum possible 3.87x at all batch sizes, versus prior kernels hitting ~3.87x at batch 1 and degrading quickly as batch grows.",
+  "bound_by": "compute",
+  "scales_with": [
+    "batch_size (the whole design target - hold the 4x speedup as batch grows)",
+    "group size (128 in the author's benchmarks; scales add 0.125 bits of storage overhead at g128)",
+    "weight shape (striped partitioning is what makes small matrices work)",
+    "GPU clock (the author finds reduced clocks hurt prior kernels' relative speedup but not Marlin's)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-a10",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-rtx-3090",
+    "nvidia-rtx-4090",
+    "nvidia-l40s"
+  ],
+  "workarounds": [
+    "Offline weight and scale repacking into a tensor-core-friendly layout (marlin.Layer.pack)",
+    "Async weight prefetch with immediate-eviction L2 policy",
+    "Interleave dequant instructions between MMA instructions rather than batching them",
+    "Striped output partitioning instead of contiguous blocks"
+  ],
+  "notes": "Critical limitation stated in the README: requires CUDA >= 11.8 and 'NVIDIA GPU with compute capability >= 8.0 (Ampere or Ada, Marlin is not yet optimized for Hopper)'. So on Hopper, Marlin is the fallback path, not the fast path - which is precisely why Machete exists (see the machete-weight-only record). Repo is Apache-2.0; upstream repo IST-DASLab/marlin last had a push in 2024-09, so treat it as maintained-but-quiet and prefer the vendored copy inside whichever engine you are measuring. The 3.87x figure and the 'ideal at all batch sizes' claim are the authors' own measurements at locked base GPU and memory clocks.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-marlin-repo",
+    "flop-marlin",
+    "kern-flashattention-github"
+  ]
+}

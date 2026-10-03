@@ -1,0 +1,26 @@
+{
+  "id": "flashinfer-b12x-moe-runs-w4a16-as-w4a4",
+  "type": "gotcha",
+  "name": "FlashInfer's b12x MoE backend silently defaults quant_mode to W4A4, so a weight-only NVFP4 checkpoint is computed at the wrong activation precision",
+  "class": "config",
+  "affects": [
+    "vllm",
+    "flashinfer",
+    "nvfp4",
+    "compressed-tensors",
+    "moe",
+    "marlin-moe",
+    "qwen3-6-35b-a3b-nvfp4"
+  ],
+  "symptom": "Qwen3.6-35B-A3B-NVFP4 (quant_algo W4A16_NVFP4 for mlp.experts) served with --moe-backend flashinfer_b12x runs the FP4xFP4 micro-kernel (MoEMicroKernel in blackwell_sm12x.moe_micro_kernel, BF16 activations quantized to FP4 in-kernel) instead of the W4A16 kernel in moe_w4a16_kernel.py (FP4 weights dequantized to BF16). The Marlin backend marlin_moe_wna16 does the latter, which is what the checkpoint intends. No error; the kernel runs and returns plausible text at W4A4 precision on a W4A16 checkpoint.",
+  "root_cause": "A handoff bug across two layers. vLLM's ModelOptNvFp4FusedMoE.__init__ reads quant_algo W4A16_NVFP4 from hf_quant_config.json, sets self.use_a16 = True, and asks the backend oracle for activation_key=None - but FlashInferB12xExperts._ensure_wrapper() then constructs B12xMoEWrapper with no quant_mode and no activation_precision argument. In flashinfer/fused_moe/cute_dsl/b12x_moe.py the wrapper defaults activation_precision='fp4', quant_mode=None, and _normalize_quant_mode in blackwell_sm12x/moe_dispatch.py returns 'w4a16' only if activation_precision == 'bf16' - so it resolves to 'nvfp4'. From there the wrapper allocates nvfp4 workspaces and launch_sm120_moe() skips the 'w4a16' branch. moe_w4a16_kernel.py is never reached because nothing ever asked for it. The class comment's reasoning - 'b12x performs in-kernel BF16->FP4 activation quant, so W4A16 checkpoints are runtime-compatible' - treats W4A16 as 'will not crash', not 'will run at the intended precision'.",
+  "workaround": "Use the Marlin backend (the reference W4A16 path), or set FLASHINFER_B12X_FORCE_MOE_W4A16=1, which _normalize_quant_mode checks first and which returns 'w4a16' directly. Do not accept a b12x trace showing MoEMicroKernel for a checkpoint whose quant_algo says W4A16.",
+  "severity": "major",
+  "notes": "A silent-precision-loss case with a measured cost: GSM8K accuracy 0.9037 on the correct W4A16 kernel versus 0.9136 for the Marlin reference (1192 vs 1205 correct of the same set), latency 1080 s vs 833 s. The gap is ~1 point, which is exactly the size of quality regression that ships unnoticed and gets attributed to the quantization format rather than to backend selection. Same family of bug as mxfp4-w4a16-misrouted-to-w4a4-kernel - two independent reports of the same class.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-vllm-56535-flashinfer-b12x-w4a16-as-w4a4"
+  ]
+}
