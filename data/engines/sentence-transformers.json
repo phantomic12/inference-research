@@ -1,0 +1,67 @@
+{
+  "id": "sentence-transformers",
+  "type": "engine",
+  "name": "Sentence Transformers",
+  "repo": "UKPLab/sentence-transformers",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2019,
+  "design_goal": [
+    "minimal-deps",
+    "research-friendly",
+    "training-and-inference",
+    "batch-inference-only"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "cpu",
+    "onnx",
+    "openvino"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "onnx",
+    "openvino"
+  ],
+  "notable_features": [
+    "The de facto reference library for retrieval models, and the training as well as inference path - it can fine-tune embedding, reranker, sparse and multi-vector models, which no serving engine in this slice can do.",
+    "Four model families behind one API: SentenceTransformer for dense embeddings, CrossEncoder for reranking, SparseEncoder, and MultiVector for ColBERT-style late-interaction token-level embeddings.",
+    "Over 15,000 pre-trained Sentence Transformers models on the Hub, including many MTEB leaders - the breadth is the point.",
+    "Optional ONNX and OpenVINO extras, so the same model definition can be exported for a lighter runtime; ImageEmbedder and (per the extras list) audio/video handling extend it past text.",
+    "Requires Python 3.10+, PyTorch 2.2+ and - as of this revision - transformers v5.0+, which is a real dependency-floor change for anyone on an older stack.",
+    "The repo now redirects to huggingface/sentence-transformers; the UKPLab URL still resolves."
+  ],
+  "hardware_caveats": [
+    "No serving. There is no HTTP server, no batching scheduler and no concurrency policy in this package - SentenceTransformer.encode() is a blocking call. Production embedding serving means wrapping it yourself or using TEI/Infinity/Xinference.",
+    "Because it is PyTorch-first, the dependency weight is the whole ballgame: the library exists to be convenient, and convenience costs you the multi-GB torch install that FastEmbed and TEI both avoid.",
+    "Multi-vector (ColBERT) mode is available here, but the library produces the token-level embeddings; it does not build or serve a PLAID-style index, so the memory blow-up of late interaction lands on the caller.",
+    "transformers v5.0+ is a hard floor in the current README; model cards and downstream code written against transformers v4 will need work.",
+    "Late-interaction output means memory scales with sequence length, not just batch - the storage cost is not an inference-runtime concern but it is the reason this mode is separate."
+  ],
+  "best_for": [
+    "The correctness baseline: if you want to know what a model's real embedding quality is, this is the implementation the leaderboards measure.",
+    "Training and fine-tuning embedding, reranker, sparse or multi-vector models - nothing else in this slice trains.",
+    "Offline batch embedding where throughput per GPU-second is not the point.",
+    "Model research and ablations across pooling strategies, since pooling configuration lives in the same object as the weights."
+  ],
+  "avoid_for": [
+    "Production multi-tenant serving - no scheduler, no backpressure, no metrics, no auth.",
+    "CPU-constrained or serverless deployments where a PyTorch dependency is disqualifying; use FastEmbed or TEI.",
+    "Memory-constrained environments running ColBERT-style multi-vector models without planning for the index.",
+    "Pinned stacks that cannot move to transformers v5."
+  ],
+  "docs_url": "https://www.sbert.net/",
+  "notes": "COMPUTE-BOUND at batch 1 for a BERT-size encoder, for the same structural reason as every other encoder here: bidirectional attention over the full sequence in a single forward pass, no KV cache, no autoregressive weight streaming, so the arithmetic is dense GEMM and the only memory-bound regime is the very first weight read. The library-level hardware consequence is different from the serving engines' though: SentenceTransformers makes no batching policy at all, so the caller supplies the batch, and the practical rule is that you must batch or you leave the machine idle. That is the opposite failure mode from LLM decode, where you might accept batch 1 because the weights stream anyway and a single request saturates the link - for an encoder, batch 1 leaves most of the FLOPS on the table because the same weights must be re-read for the next request. Hardware selection: a BERT-size encoder at 110-560M params is 220 MB - 1.1 GB in fp16, so capacity is never the binding constraint; buy FLOPS. A bandwidth-rich, FLOPS-poor part (large HBM, weak tensor throughput) will underperform here relative to its LLM-decode reputation, which is the inverse of what that same part is good for. Pooling is the second hardware-relevant decision and it lives in this library's model definition rather than in a runtime flag: mean vs cls vs last changes both the output semantics and the cost of the final reduction (mean reduces over L vectors, cls takes one) - the reduction itself is cheap either way, so this is a quality decision rather than a hardware one, but it is worth noting that pooling is the one part of an encoder forward pass that is memory-bound rather than compute-bound. Architectures: can serve dense bi-encoders (the full sentence-transformers catalogue, 15000+ models), cross-encoders/rerankers, sparse encoders (SPLADE family), and ColBERT-style multi-vector encoders - the widest architectural coverage of anything in this slice, because 'whatever transformers can load' is the actual contract. Cannot serve: generative models without dropping to AutoModel; and it cannot serve late interaction end-to-end (no index, no MaxSim retrieval). Confidence 0.85.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "embed-sbert-github"
+  ]
+}

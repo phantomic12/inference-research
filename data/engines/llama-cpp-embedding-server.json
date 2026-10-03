@@ -1,0 +1,75 @@
+{
+  "id": "llama-cpp-embedding-server",
+  "type": "engine",
+  "name": "llama.cpp embedding and rerank server paths",
+  "repo": "ggml-org/llama.cpp",
+  "languages": [
+    "C",
+    "C++",
+    "CUDA",
+    "Metal",
+    "Vulkan"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "minimal-deps",
+    "low-latency",
+    "edge-and-local",
+    "single-binary"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "parallel-slots"
+  ],
+  "supported_backends": [
+    "cuda",
+    "metal",
+    "vulkan",
+    "cpu",
+    "hip",
+    "sycl"
+  ],
+  "supported_formats": [
+    "gguf",
+    "safetensors"
+  ],
+  "notable_features": [
+    "This record isolates the embedding and rerank capability of the llama.cpp server rather than re-describing the whole engine, which already has its own record as engines/llama-cpp.",
+    "Pooling is an explicit, documented flag: --pooling {none,mean,cls,last,rank}, defaulting to the model default when unspecified. This is a wider set than TEI's cls/mean/splade/last-token, because rank is the pooling a reranker needs and none yields per-token output.",
+    "OpenAI API compatible chat completions, responses AND embeddings routes, plus a reranking endpoint (added via ggml-org/llama.cpp PR #9510).",
+    "Anthropic Messages API compatible chat completions alongside the OpenAI surface, so it can be dropped into either ecosystem.",
+    "Continuous batching with parallel multi-user slots (--parallel, default auto) and --max-client-batch-size style batching already present, which means the batching machinery an encoder wants is already built and tuned.",
+    "GGUF means embedding and rerank models can use the same weight format and the same quantization story as LLMs - a real operational advantage if you already run llama.cpp and do not want a second weight pipeline.",
+    "Works with no GPU at all, across CUDA, Metal (Apple Silicon), Vulkan, CPU and HIP."
+  ],
+  "hardware_caveats": [
+    "The engine is architected for autoregressive decode, so the embedding path inherits decode-era machinery that an encoder does not need: continuous batching, KV cache management, --numa tuning and a decode-shaped server. This is why the batching knobs here are tuned around slots and context rather than around max-batch-tokens as in TEI.",
+    "GGUF quantization interacts badly with small encoders in one specific way: quantizing a 300M-parameter reranker to Q4 usually costs more accuracy than it saves memory, because the model already fits in almost any cache or unified-memory budget. GGUF's value for LLMs does not automatically transfer to encoders.",
+    "Pooling type must match the checkpoint's training configuration (mean vs cls vs rank changes the output semantics, not just the performance), and llama.cpp defaults to the model default rather than enforcing it.",
+    "The reranking endpoint is newer and less exercised than the embeddings route; the README cites the PR rather than documenting the request/response shape in detail.",
+    "No SPLADE or sparse-embedding path and no late-interaction multi-vector support: --pooling none gives raw per-token output, which is a building block for ColBERT but not a served ColBERT.",
+    "Encoder-specific throughput on Metal and Vulkan is not documented separately from LLM throughput."
+  ],
+  "best_for": [
+    "Serving an embedding model in GGUF alongside LLMs in one binary, one API surface and one deployment.",
+    "Edge, desktop and Apple Silicon retrieval where GGUF weights and a single static binary are the constraint.",
+    "CPU-only embedding and reranking at modest scale.",
+    "Reranking with a GGUF-converted cross-encoder, using --pooling rank.",
+    "Anyone already running llama.cpp who wants /v1/embeddings without adding a second runtime."
+  ],
+  "avoid_for": [
+    "Maximum encoder throughput on datacenter GPUs: a purpose-built encoder server (TEI) is the better tool.",
+    "Sparse or hybrid retrieval (SPLADE, BM25-style learned sparse) - not supported.",
+    "Late-interaction ColBERT serving end to end - per-token output exists but MaxSim retrieval and the index do not.",
+    "Multi-tenant scheduler semantics designed for encoders: --max-batch-tokens-style token budgeting is absent."
+  ],
+  "docs_url": "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
+  "notes": "COMPUTE-BOUND at batch 1 for a BERT-size encoder, the same structural fact as everywhere else in this slice: one bidirectional attention pass over all input tokens, no KV cache reuse, no autoregressive weight streaming, therefore dense GEMM with arithmetic intensity far above the ~1 flop per byte that makes LLM decode bandwidth-bound. The hardware consequence is the same inversion - for embeddings, buy FLOPS and cache capacity rather than HBM bandwidth. What is distinctive about llama.cpp in this niche is that the encoder workload fits its existing design better than one might expect, for two reasons. First, GGUF removes the whole quantization-tension problem: a 300M encoder in Q8 is ~300 MB and fits anywhere, so the GGUF ecosystem's usual memory-driven motivation largely evaporates and you can keep quantization mild to preserve reranker accuracy. Second, and more interestingly, the encoder path is the rare case where llama.cpp's batch machinery is genuinely useful rather than vestigial: continuous batching and parallel slots exist for decode, but an encoder with no KV cache and uniform per-sequence work is an ideal batching workload, so those knobs transfer cleanly. The one place llama.cpp's decode heritage actively hurts is the KV cache: the server is architected around it and around slot/context accounting, so the token-budgeting knob an encoder deployment actually wants (TEI's --max-batch-tokens) has no analogue here, and an operator has to reason in slots instead. Architectures - can serve: single-vector dense embedding of any BERT-family or GGUF-converted encoder via mean/cls/last pooling; cross-encoder reranking via rank pooling (the flag that exists for exactly this); raw per-token output via --pooling none, which is a building block for ColBERT-style encoders. Cannot serve: SPLADE and other learned-sparse encoders; ColBERT end to end (no MaxSim, no index, no late-interaction storage); multimodal encoders requiring a projector graph; and anything generative on the embedding route. Confidence 0.72: the flag set and the existence of the embeddings and reranking routes are quoted from the server README at master, but llama.cpp's server surface changes weekly and there is no published encoder benchmark, so all throughput claims are absent by design rather than by omission.",
+  "status": "verified",
+  "confidence": 0.72,
+  "updated": "2026-10-03",
+  "sources": [
+    "embed-llamacpp-server-readme"
+  ]
+}

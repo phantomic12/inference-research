@@ -1,0 +1,38 @@
+{
+  "id": "sm120-vs-sm100a-kernel-binary-incompatibility",
+  "type": "flop",
+  "name": "Consumer Blackwell (SM120) vs datacenter Blackwell (SM100a): one architecture name, two incompatible kernel targets",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "A pure compatibility fact with an immediate performance consequence, and the clearest example in this slice of a kernel-library support matrix changing the arithmetic. CUTLASS's README states it outright: 'The NVIDIA Blackwell SM100 architecture used in the datacenter products has a different compute capability than the one underpinning NVIDIA Blackwell GeForce RTX 50 series GPUs (SM120). As a result, kernels compiled for Blackwell SM100 architecture with arch conditional features (using sm100a) are not compatible with RTX 50 series GPUs.' The 5th-gen tensor-core PTX instructions are 'architecture-accelerated features' requiring an sm_90a or sm100a target, so a kernel using them simply does not exist for SM120 - the part falls back to the previous generation's path. Additional SM120 constraints from the ISA: sub-byte types are not supported for cp.async.bulk.tensor with direction .shared::cluster.global on sm_120a, which limits cluster-mapped FP4 pipelines specifically on consumer Blackwell. ThunderKittens lists SM120 as a settable ARCH but is 'mainly built and tested for Hopper and Blackwell' with full Blackwell support carrying MXFP8 and NVFP4 precision. FlashInfer's own support table separates SM100/SM103 (B200/B300) from SM120/SM121 (RTX 50, DGX Spark) as different rows and warns not all features are supported across all compute capabilities.",
+  "bound_by": "compute",
+  "scales_with": [
+    "compute capability of the target part",
+    "which kernel library and which engine",
+    "precision (sub-byte types are affected first)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "nvidia-rtx-5090",
+    "nvidia-rtx-5080",
+    "nvidia-rtx-5070-ti",
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "workarounds": [
+    "Compile and select kernels per compute capability rather than per architecture family name",
+    "Expect datacenter-only paths (2-CTA MMA, cluster-direction TMA with sub-byte types, FP4 MMA_K=128) to be unavailable on SM120 and plan a fallback",
+    "Check each library's stated support matrix for the exact capability number, not the marketing architecture name",
+    "Treat a library that only ships sm100a kernels as not supporting consumer Blackwell at all"
+  ],
+  "notes": "This is why two parts both sold as 'Blackwell' can land on entirely different kernels for the same model and engine - and therefore different decode throughput - even though their datasheets share a family name. FlashInfer makes the same split explicit by listing SM100/SM103 and SM120/SM121 as separate rows and separately noting that BF16 GEMM is for SM10.0+ while FP4 GEMM (NVFP4/MXFP4) is 'for Blackwell GPUs' without promising SM120. Where I have NOT asserted the Ampere-era sparsity deprecation on datacenter parts: the PTX ISA documents mma.sp for later architectures and CUTLASS lists FP4 2:4 sparsity among Blackwell features, so the honest statement is that the feature exists in the ISA while the DEPLOYMENT history of Ampere 2:4 sparsity in shipping frameworks is a separate question this repo should not guess at.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "kern-cutlass-github",
+    "kern-ptx-isa",
+    "kern-thunderkittens-github",
+    "kern-flashinfer-github"
+  ]
+}

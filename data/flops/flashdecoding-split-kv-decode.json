@@ -1,0 +1,37 @@
+{
+  "id": "flashdecoding-split-kv-decode",
+  "type": "flop",
+  "name": "FlashDecoding / split-KV attention: turning a single-token decode into a bandwidth-saturating GEMM",
+  "class": "decode_attention",
+  "arithmetic_intensity": "The problem it solves is parallelism, not arithmetic. At batch 1 the decode step's attention has L query rows total, so a non-split kernel launches far fewer CTAs than the GPU has SMs and runs at a small fraction of memory bandwidth while the KV cache streams from HBM. Split-KV divides the KV sequence across S thread blocks, each computing a partial softmax, then merges the S partials with log-sum-exp in a second kernel. Bytes read from HBM are identical (every KV element still read once) and FLOPs are identical plus a small merge cost; what changes is achieved bandwidth and SM utilization. Recorded as decode_attention because that is the class it serves; the same mechanism appears inside FA-2 2.2 ('we split the loading across different thread blocks, with a separate kernel to combine results' for iterative decoding with very small query seqlen).",
+  "bound_by": "memory",
+  "scales_with": [
+    "context_length (the more KV there is to split, the more the split pays)",
+    "batch_size (as batch rises the split count needed falls, and eventually the split is unnecessary)",
+    "num_kv_heads and head_dim",
+    "num_SMs (the split count is capped by SM availability and by the combine kernel's cost)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "workarounds": [
+    "Split the KV dimension across thread blocks, partial-softmax each split, merge with log-sum-exp",
+    "Choose split count per (batch, seqlen): too few splits leaves SMs idle, too many makes the merge kernel dominate",
+    "Fuse the combine into the following op (or into the next layer's QKV projection) to avoid a separate launch",
+    "Paged KV cache so each block's KV read is a contiguous page rather than a strided gather",
+    "FP8 or FP4 KV cache: the only lever that changes the bytes-per-token of this class, since GQA/MQA shrinks K and V heads but the cache is still re-read every step"
+  ],
+  "notes": "Split-KV is the standard answer to 'decode attention is memory-bound but my GPU is underutilized' - note that it does not change arithmetic intensity, only achieved bandwidth. Interaction worth knowing: the split-K count interacts with CUDA graph capture (a fixed split count keeps the graph static) and with paged attention's variable per-request lengths (a fixed split count across ragged sequences is what makes it graph-capturable; per-request dynamic splits break capture). FlashInfer's plan/template layer makes the split count a scheduling decision rather than a kernel constant.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-flashdecoding",
+    "kern-flashattention-github",
+    "flop-flashinfer"
+  ]
+}

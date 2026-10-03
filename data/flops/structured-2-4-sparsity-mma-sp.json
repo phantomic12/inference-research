@@ -1,0 +1,34 @@
+{
+  "id": "structured-2-4-sparsity-mma-sp",
+  "type": "flop",
+  "name": "2:4 structured sparsity (mma.sp): halving bytes by dropping exactly half of every four",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The only mechanism in this repo that genuinely reduces work rather than reducing overhead: the tensor core skips the zero elements. From the PTX ISA, mma.sp has a dense-equivalent shape list and a sparse counterpart at doubled K - half-precision .m16n8k16 dense becomes .m16n8k32 sparse, fp8 .m16n8k32 dense becomes .m16n8k64 sparse - and the operand A is stored sparse with a metadata operand. The metadata rules are strict and are the real engineering constraint: for .f16/.bf16 at 2:4 granularity each four-element sub-chunk of a row has two zeros and two non-zeros, only the non-zeros are stored, and two 2-bit indices in the metadata record their positions; values 0b0000, 0b0101, 0b1010 and 0b1111 are INVALID and result in undefined behavior. Granularity is type-dependent and NOT uniformly 2:4 - tf32 is 1:2, and u4/s4 is pair-wise 4:8 with the zeros clustered in two-element sub-chunks. Metadata can be stored by one thread of each group of four or by a thread-pair depending on shape (the 'sparsity selector' operand), and from PTX 8.5 there are .sp::ordered_metadata variants with a restricted set of meaningful index values. wgmma has the same story at warpgroup level (mma_async.sp, sparse .f16/.bf16 at K=32 and sparse fp8 at K=64).",
+  "bound_by": "memory",
+  "scales_with": [
+    "sparsity pattern (only exactly-2-of-every-4 qualifies)",
+    "metadata format (plain vs ordered_metadata)",
+    "architecture generation (mma.sp, wgmma.mma_async.sp, and sparse tcgen05 kinds)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-a10",
+    "nvidia-l40s"
+  ],
+  "workarounds": [
+    "Prune to an exactly 2:4 pattern offline so the metadata is valid - a 'mostly sparse' weight does not qualify",
+    "Store only the non-zeros plus a 2-bit-index metadata operand, which is what makes the byte saving real",
+    "Pick the metadata format (plain vs ordered_metadata) that matches your pruning implementation",
+    "For FP4 on Blackwell, CUTLASS lists 2:4 sparsity support for FP4 as a separate feature - sparsity and sub-byte precision compose, which is the largest single byte reduction available"
+  ],
+  "notes": "Two practical cautions. First, the arithmetic saving is real but the applicability is narrow: the pattern must be exactly 2:4 (or 1:2 for tf32, 4:8 pair-wise for int4), and an unstructured or irregularly sparse weight does not benefit at all - the hardware is not a general sparse engine. Second, there is a generation-dependent history here: Ampere's sparsity support was largely dropped from the datacenter line after a sparsity-format deprecation, so a sparsity number on an A100 datasheet is not a promise about a Hopper or Blackwell part; this record deliberately does not assert that deprecation, since the PTX ISA still documents mma.sp for sm_90 and later, and CUTLASS lists 2:4 sparsity for FP4 among its Blackwell features. CUTLASS's CuTe DSL also gained 'asynchronous atomic TMA reduce-store and sparse MMA operations'. Whether a given LLM checkpoint has a prunable 2:4 pattern is a property of the model, not the GPU - check the checkpoint before planning around it.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "kern-ptx-isa",
+    "kern-cutlass-github"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "flashattention-io-aware-tiling",
+  "type": "flop",
+  "name": "FlashAttention IO-aware tiling (FA1): eliminating the S x S HBM round trip",
+  "class": "prefill_attention",
+  "arithmetic_intensity": "Does not raise AI arithmetically - the FLOP count of causal attention is unchanged. It removes bytes: the naive path writes the L x L score matrix to HBM and reads it back, adding Theta(L^2) HBM traffic on top of the Theta(L*d) KV traffic, which drops the effective AI from Theta(L) to well below the ridge point for most lengths. FA-1's tiling loads Q/K/V blocks HBM->SRAM once, keeps the running softmax accumulator in registers and never writes S to HBM, so bytes revert to the Theta(L*d) ideal. The claim to make precisely is 'reduces HBM traffic by removing the S x S materialization', NOT 'reduces attention FLOPs'.",
+  "bound_by": "compute",
+  "scales_with": [
+    "context_length (the bytes saved scale as L^2, the useful KV bytes as L)",
+    "batch_size (all batch sequences become one big GEMM pair)",
+    "head_dim (the S tile size per KV byte loaded)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-rtx-4090",
+    "nvidia-rtx-3090",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Tiling: read K/V tiles HBM->SRAM once, accumulate softmax statistics in registers, rescale the running output when the block max changes",
+    "Recompute rather than store: the backward pass regenerates S from Q,K instead of reading it back, trading FLOPs for bytes",
+    "Shared-memory capacity forces the tile shape: a BLOCK_M x BLOCK_N score tile must fit in SMEM alongside the Q and K/V tiles, so BLOCK_N is bounded by SMEM not by theory",
+    "Block-sparse / causal-mask skipping of fully-masked tiles (halves the useful flops on a causal mask without changing bytes)"
+  ],
+  "notes": "This is the mechanism every later attention kernel inherits; FA-2 through FA-4 and FlashInfer all keep the tiling and change something else on top of it. Why it matters as a decision input: before FA-1, a part with weak FLOPs but strong bandwidth could not hide the S x S round trip, so long-context attention failed on memory traffic alone; after FA-1 the same part is limited by tensor-core throughput. Speedup vs PyTorch standard attention is 2-4x wallclock per the author's recap, larger on slower GPU memory - author claim. Caveat: the AI = L flop/byte ideal assumes each KV element is read from HBM exactly once, which real kernels only approach; the deficit shows up as low tensor-core utilization at small seqlen or low occupancy.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-flashattention",
+    "kern-flashattention-github",
+    "flop-roofline-williams-2008"
+  ]
+}

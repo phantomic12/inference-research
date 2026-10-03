@@ -1,0 +1,70 @@
+{
+  "id": "xinference",
+  "type": "engine",
+  "name": "Xorbits Inference (Xinference)",
+  "repo": "xorbitsai/inference",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "multi-model",
+    "minimal-deps",
+    "low-latency",
+    "general-purpose-serving"
+  ],
+  "scheduling": [
+    "dynamic-batching"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "cpu",
+    "vulkan",
+    "apple-mps",
+    "opencl"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "gguf",
+    "onnx"
+  ],
+  "notable_features": [
+    "One server for LLM, embedding, rerank, speech and multimodal models, published as an EMNLP 2024 System Demonstrations paper (aclanthology 2024.emnlp-demo.30) rather than as a side project.",
+    "The broadest documented BUILT-IN retrieval model catalogue of any engine here, and it is a maintained list rather than a claim. Embeddings: the bge family (base/large/small, en/zh, v1.5, bge-m3), e5-large-v2, gte-base/large/gte-Qwen2, jina-embeddings-v2 base/small en/zh, jina-v3, jina-v4, jina-v5-omni-nano/small, jina-clip-v2, plus gme-Qwen2-VL-2B/7B-Instruct. Rerankers: bge-reranker-base/large, bge-reranker-v2-m3, bge-reranker-v2-gemma, bge-reranker-v2-minicpm-layerwise, jina-reranker-v2/v3/m0, MiniCPM-reranker, R3-rerank-0.6b, Qwen3-Reranker-0.6B/4B/8B and Qwen3-VL-Reranker-2B/8B.",
+    "That reranker list is the strategically interesting part: Qwen3-Reranker and Qwen3-VL-Reranker are DECODER-based and MULTIMODAL rerankers. TEI's documented rerank set is BERT-family only (CamemBERT, RoBERTa, XLM-RoBERTa, GTE, ModernBERT), so for decoder-based or vision-language reranking Xinference covers ground that TEI does not.",
+    "Web UI, cURL, a CLI and a Python client over the same instance; Kubernetes deployment documented; pip install xinference[all].",
+    "Eight localised READMEs (zh-CN, zh-TW, ja-JP, ko, de, fr, es, pt-BR), an unusually thorough localisation set for an inference server and a signal about the intended user base."
+  ],
+  "hardware_caveats": [
+    "The built-in catalogue is Xinference's own curated set. A model absent from that list needs a custom model definition, which is a real configuration surface rather than a --model-id flag.",
+    "GPU compute-capability floors and driver support are documented far more thinly than the NVIDIA LLM path; the README does not enumerate them the way TEI does.",
+    "Backends are selected per model, so a heterogeneous deployment can have uneven throughput characteristics that are hard to compare.",
+    "GGUF and safetensors both load for LLM work, but the retrieval models in the catalogue are essentially all safetensors or ONNX. Do not expect a GGUF embedding model.",
+    "The acceleration story is inherited from the LLM path; no encoder-specific ROCm or Vulkan maturity claim is made here."
+  ],
+  "best_for": [
+    "Teams running a mixed fleet (chat models plus embedding plus rerank) behind one server and one UI instead of three deployments.",
+    "Decoder-based rerankers (Qwen3-Reranker) and multimodal rerankers (Qwen3-VL-Reranker, jina-clip-v2, GME-Qwen2-VL), where BERT-cross-encoder engines like TEI have no coverage.",
+    "Chinese-language and broader APAC deployments, given the documentation set.",
+    "Kubernetes-based serving where a web UI plus CLI plus Python client over one instance is operationally valuable."
+  ],
+  "avoid_for": [
+    "Maximum encoder throughput on a single NVIDIA GPU: TEI is purpose-built for that and publishes its own benchmark.",
+    "Architectures outside the built-in catalogue unless you are willing to write a model definition.",
+    "Deployment simplicity: this is a large general-purpose server, not a single-purpose one."
+  ],
+  "docs_url": "https://inference.readthedocs.io/",
+  "notes": "COMPUTE-BOUND at batch 1 for a BERT-size encoder, for the standard structural reason: bidirectional single-pass attention over all input tokens, no KV cache, no autoregressive weight streaming, so the arithmetic is dense GEMM with high arithmetic intensity. Hardware-selection consequence is the same inversion as the rest of this slice: for the encoder half, buy FLOPS and capacity rather than HBM bandwidth. The weights of a 300M encoder are read once per batch, not once per token, so bandwidth is not the constraint; a bandwidth-rich FLOPS-poor part underperforms here relative to its LLM-decode reputation. What makes Xinference interesting in this niche is not that it computes embeddings differently but that it puts three very different compute profiles under one roof. (a) Dense bi-encoders: compute-bound and highly batch-friendly, since batching amortizes the one-time weight read across every sequence in the batch. (b) BERT-class cross-encoder rerankers: compute-bound AND candidate-count-scaled, because every (query, passage) pair is a full forward pass with no caching and no early exit, so reranking a top-100 candidate set costs roughly 100 full-length encoder passes. This makes reranking the dominant cost in most RAG pipelines per unit of work, and it is the line item most often under-budgeted. (c) Decoder-based rerankers such as Qwen3-Reranker: the one case here where a KV cache does exist, because they score by generating a token, so their profile drifts toward LLM prefill rather than pure encoder. They remain compute-bound like an encoder, but their weights are 0.6B-8B against a BERT reranker's ~300M, which reintroduces a capacity constraint that the BERT-class rerankers do not have. Architectures - can serve: dense bi-encoders across the bge/e5/gte/jina/xlm-roberta catalogues; cross-encoder rerankers including BERT-family, decoder-based (Qwen3-Reranker) and multimodal (Qwen3-VL-Reranker, jina-clip-v2, GME-Qwen2-VL); multimodal embedding via gme-Qwen2-VL. Cannot serve, or no evidence of: late-interaction ColBERT multi-vector output (no MaxSim token-wise path documented), SPLADE sparse embeddings, and any generative model beyond the LLM path. Confidence 0.75: repo existence, Apache-2.0 licence, first commit year 2023-06-14, star count and both model catalogues are verified directly from GitHub and the docs; the backend and hardware vocabulary are normalised from the README's general acceleration story rather than an encoder-specific statement, and no benchmark with methodology is quoted.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "embed-xinference-github",
+    "embed-xinference-embedding-catalog",
+    "embed-xinference-rerank-catalog"
+  ]
+}

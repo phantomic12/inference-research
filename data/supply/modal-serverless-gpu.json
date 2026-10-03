@@ -1,0 +1,34 @@
+{
+  "id": "modal-serverless-gpu",
+  "type": "supply",
+  "name": "Modal serverless GPU containers (per-second, autoscale to zero)",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "sup-cloud-modal-pricing"
+  ],
+  "kind": "cloud",
+  "vendor": null,
+  "accelerator_ids": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "nvidia-a10",
+    "nvidia-l4"
+  ],
+  "region": "multi-region with a regional price multiplier (see notes)",
+  "channels": [
+    "serverless",
+    "rental"
+  ],
+  "price_usd": 3.95,
+  "price_basis": "per GPU-hour, converted from the page's per-second figures: H100 SXM5 $0.001097/sec = $3.95/hr; H200 SXM $0.001261 = $4.54; B200 $0.001736 = $6.25; B300 $0.001972 = $7.10; A100 80GB $0.000694 = $2.50; A100 40GB $0.000583 = $2.10; L40S $0.000542 = $1.95; A10 $0.000306 = $1.10; L4 $0.000222 = $0.80; T4 $0.000164 = $0.59. Egress $0.04/GiB with 1 TiB/mo free (Starter) or 10 TiB (Team). Fetched 2026-10-03.",
+  "availability": "in-stock",
+  "lead_time_weeks": null,
+  "export_controlled": null,
+  "notes": "$3.95/H100-hour makes Modal the second-cheapest H100 in this slice after Runpod's PCIe, and $0.80 for L4 is the cheapest L4 published anywhere here (vs $0.85 on GCP g2 and $1.67 on AWS g6). But two modifiers on the plan table matter more than the base rate and are easy to miss: 'Region selection 1.15 - 1.75x base prices' and, more importantly, 'Non-preemptible execution 3x base prices'. If you need a container that will NOT be preempted - which for a serving endpoint you probably do - your real H100 rate is $11.85/hr, the most expensive in the slice, not $3.95. Read that row before quoting. Also note Modal bills CPU and memory separately and continuously (a physical core = 2 vCPU, $0.0000131/core/sec; memory $0.00000222/GiB/sec), so a GPU-only comparison understates the all-in cost relative to a hyperscaler VM where vCPU and RAM are bundled into the instance price. On that integrated basis Modal's H100 is not cheaper than AWS p5. What you are buying is scale-to-zero: containers spin up in 1-2 seconds with no minimum billing period and a 60-second default keepalive, versus 10+ minutes to provision a hyperscaler VM where the idle time is billable. CRITICAL CONSTRAINT, stated by Modal itself: AWS, GCP and Azure cloud credits are NOT applicable to Modal usage. Modal transacts through the AWS and GCP marketplaces for committed spend, and offers $30/mo free on Starter and $100/mo on Team, plus up to $10k for academics."
+}

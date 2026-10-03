@@ -1,0 +1,33 @@
+{
+  "id": "machete-weight-only-hopper-gemm",
+  "type": "flop",
+  "name": "Machete weight-only 4-bit GEMM: CUTLASS 3.x tiles plus an offline prepacked int4 B operand, Hopper only",
+  "class": "quantization_overhead",
+  "arithmetic_intensity": "Same class of claim as Marlin - no FLOP change, dequant removed from the runtime path - but achieved differently: Machete keeps CUTLASS's Hopper WGMMA tensor-core mainloop and changes the B OPERAND LAYOUT instead. The kernel source is explicit that LayoutB is ColumnMajor only 'not actually used since B has the prepacked layout', and the tile K extent is computed as 128*8/sizeof_bits<MmaType> so the same integer-tile arithmetic is expressed in the quantized bit width. Weights, group scales and group zeros are prepacked offline into the exact fragment organization WGMMA consumes, so the inner loop issues MMA on already-correctly-laid-out data. Alignments are all 128-bit. The arithmetic consequence: this is a tensor-core bf16/fp16 GEMM over int4 weights dequantized into the MMA fragments on the fly, NOT a hardware int4 tensor-core path - there is no int4 MMA instruction being used.",
+  "bound_by": "compute",
+  "scales_with": [
+    "batch_size (M dimension; the kernel is a GEMM so small M is inefficient)",
+    "group size (gated by query_machete_supported_group_sizes)",
+    "hidden_width"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-pcie",
+    "nvidia-h200-sxm"
+  ],
+  "workarounds": [
+    "Offline prepacking of B weights, scales and zeros into the WGMMA fragment layout",
+    "Build on CUTLASS 3.x collective GEMM with ArchTag Sm90 and OpClassTensorOp",
+    "Compute TileShapeK from the quantized bit width rather than from element count"
+  ],
+  "notes": "The engine-level support matrix is the most decision-relevant fact and is hard-coded in vLLM: get_min_capability() returns 90, and can_implement() returns False with the message 'Machete requires compute capability of 90 (Hopper)' as well as 'Machete only supported on CUDA'. So a Hopper box gets Machete, an Ampere or Ada box falls through to Marlin, a consumer Blackwell (SM120) is not SM90 so also falls through, and ROCm is excluded outright. That is one model, one quantization format, three different kernels depending on the engine and the GPU - the support matrix of the kernel library, not the model, is what determines decode throughput. Also worth noting: because it is CUTLASS-based it inherits the sm_90a arch-accelerated-feature requirement, so building it for a different arch does not work at all.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "kern-machete-vllm-source",
+    "kern-machete-vllm-python",
+    "kern-cutlass-github",
+    "kern-ptx-isa"
+  ]
+}

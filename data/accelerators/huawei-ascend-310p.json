@@ -1,0 +1,57 @@
+{
+  "id": "huawei-ascend-310p",
+  "type": "accelerator",
+  "name": "Huawei Ascend 310P (Da Vinci edge inference NPU)",
+  "vendor": "asic-other",
+  "architecture": "da-vinci (310-series)",
+  "release_year": 2022,
+  "process_nm": 12,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 24,
+  "memory_type": "lpddr4x",
+  "memory_bus_bit": 384,
+  "memory_bandwidth_gbps": 204.8,
+  "memory_bandwidth_basis": "DERIVABLE FROM PRIMARY SOURCE: LPDDR4X 384-bit at 4266 Mbit/s = 384/8 * 4266e6/1e9 = 204.8 GB/s. Taken verbatim from the Atlas 300I Pro hardware user guide (cn-huawei-atlas-300i-pro-spec), which states capacity 24 GB, bit width 384 bits, rate 4266 Mbit/s, total bandwidth 204.8 GB/s. The Atlas 300V Pro guide (cn-huawei-atlas-300v-pro-spec) gives the identical memory subsystem with 48 GB instead of 24 GB - capacity doubles, bandwidth does not move.",
+  "flops": [
+    {
+      "precision": "fp16",
+      "tflops": 70,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "cn-cn-ai-accelerator-wiki"
+    },
+    {
+      "precision": "int8",
+      "tflops": 140,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "cn-cn-ai-accelerator-wiki"
+    },
+    {
+      "precision": "int8",
+      "tflops": 176,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "cn-cn-ai-accelerator-wiki"
+    }
+  ],
+  "tdp_w": 72,
+  "interconnect": [
+    "pcie"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "THE HIERARCHY POINT: this is the part of Ascend that is actually a serving part rather than a training part, and the reason it belongs in a memory-bound inference study is stark: 204.8 GB/s against a 24 GB (or 48 GB) LPDDR4X pool. For a 7B-class model in FP16 that is ~14 GB of weights against 0.2 TB/s of headroom - batch 1 decode is entirely weight-streaming, and the arithmetic-intensity ceiling sits around 60-70 FLOP/byte at best. NO COMPUTE FIGURE IS VENDOR-PUBLISHED. Huawei's own documentation for every 310-series card states core counts (8 Da Vinci AI cores, 8 Huawei CPU cores at 1.9 GHz on Atlas 300I Pro) and memory, and publishes NO INT8 or FP16 throughput anywhere. The 70 TFLOPS FP16 and 140-176 TOPS INT8 figures come from an uncited community wiki (cn-cn-ai-accelerator-wiki) and are recorded with vendor_claim: false at low confidence; the two INT8 entries deliberately keep BOTH 140 and 176, because the split is probably chip-vs-card or SKU-variant, not a source disagreement - do not read the higher as peak sustained. CONFLICT ON CORE COUNT, KEPT: the Huawei guide says 8 AI cores; the wiki and some board-level sources say 10 (the Orange Pi AI Station built on this silicon describes 10 AI cores at up to 1.08 GHz alongside 16 CPU cores). The card vendors are clearly shipping more than one 310-series binning; Huawei's documentation does not enumerate the variants. VIRTUALIZATION IS THE REAL PRODUCT FEATURE for this part and is absent from every spec table: one 310-series processor splits into up to 7 virtual NPUs of 1, 2 or 4 AI cores with memory and codec divided proportionally (cn-huawei-atlas-300i-pro-spec). That is a density story, not a throughput story - these cards sell by the slot. The older Ascend 310 (2018, cn-hisilicon-wikipedia) is a genuinely different and much weaker part: 2 Da Vinci cores at 500 MHz, 16 TOPS INT8 / 8 TOPS FP16, 8 W, TSMC 12 nm FFC, 8 MB on-chip buffer, and only 51.2 GB/s of memory per processor per the Atlas 300I model 3010 guide (cn-huawei-atlas-300i-3010-spec, which is the cleanest statement of the per-die split anywhere). Do not conflate 310 with 310P. Software is CANN; see the MindIE source cn-huawei-mindie and the serving record for what that means for vLLM. Third-party hobbyist measurement exists on this silicon (r/LocalLLaMA reports ~150 tok/s on Llama 3 for a 96 GB Atlas 300I Duo against ~220 tok/s for a 4090, and the card is sold on Taobao for roughly USD 265 in 32 GB form) which is useful evidence that it really does serve LLMs, but it is not a reproducible benchmark and is not recorded as one.",
+  "status": "draft",
+  "confidence": 0.4,
+  "updated": "2026-10-03",
+  "sources": [
+    "cn-huawei-atlas-300i-pro-spec",
+    "cn-huawei-atlas-300v-pro-spec",
+    "cn-huawei-atlas-300i-3010-spec",
+    "cn-hisilicon-wikipedia",
+    "cn-cn-ai-accelerator-wiki"
+  ]
+}

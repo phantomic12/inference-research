@@ -1,0 +1,22 @@
+{
+  "id": "aws-neuronlink",
+  "type": "interconnect",
+  "name": "AWS NeuronLink (Neuron chip-to-chip scale-up)",
+  "kind": "other",
+  "version": "NeuronLink, Inferentia2 / Trainium2 generation",
+  "bandwidth_gbps": 192,
+  "bandwidth_basis": "PER CHIP. AWS's Inf2 instance page states 'Inf2 instances support 192 GB/s of NeuronLink, a high-speed, nonblocking interconnect' and describes it as connecting up to 12 Inferentia2 chips, with 'data flows directly between' them for models too large for one chip. The figure is stated by AWS as a flat 192 GB/s with NO direction qualifier, so it is recorded exactly as published rather than halved - unlike the NVIDIA figures in this repo, which are explicitly bidirectional aggregates and are halved in nvswitch-4 and nvlink-4. This asymmetry is deliberate and is why cross-vendor bandwidth comparisons in this repo must check each record's basis field. AWS publishes no NeuronLink rate for Trainium2 separately from Inferentia2, so the same figure is carried here for both, flagged in notes rather than restated as a distinct measurement.",
+  "link_count": null,
+  "topology": "Non-blocking, and AWS uses that word explicitly. Scale-up domain is one EC2 instance: Inf2 holds up to 12 Inferentia2 chips, Trn2.48xlarge holds 16 Trainium2 chips, and a Trainium2 UltraServer spans 64 chips across 4 instances. The link is chip-to-chip and bypasses the host CPU for transfers, which is the property that makes multi-chip tensor parallelism viable at all - a path through host memory would halve effective bandwidth and add a hop.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "No switch part is published; the domain is bounded by the instance. Cross-instance and cross-node scaling is the job of EFA (see aws-efa), not NeuronLink. So on Neuron hardware the scale-up/scale-out boundary is the EC2 instance, which sits at a different granularity than the 8-GPU NVSwitch domain.",
+  "notes": "The scale-up fabric for both Inferentia2 and Trainium2 in this repo. AWS states 192 GB/s NeuronLink on the Inf2 page and does not publish a distinct NeuronLink rate for Trainium2, so the same figure is carried for both parts rather than inventing a Trainium2-specific number. CONTEXT THAT SETS THE SCALE: the 192 GB/s is roughly 40-45% of NVLink 4's 450 GB/s per direction on an H100 SXM, and roughly a fifth of the bidirectional aggregate a reader would compare it against if they ignored this record's basis. So on raw fabric bandwidth Neuron is well behind NVSwitch for tensor parallelism at high degree - and the reason AWS parts still work for large-model inference is capacity and the chip count available per instance, not fabric speed: 12 chips x 32 GB on Inf2, 16 chips x 96 GB on Trn2.48xlarge. THAT IS THE INFERENCE RELEVANCE, and it is a capacity-first rather than bandwidth-first argument: with a slow fabric you want the fewest chips that hold the model, and you want pipeline parallelism (which needs only point-to-point transfers per stage boundary, not all-to-all) over wide tensor parallelism (which needs all-reduce bandwidth at every layer). AWS's own framing supports this - the Inf2 page justifies NeuronLink specifically 'for ultra-large models that do not fit into a single chip'. Two independent Neuron notes for a reader who confuses them: NeuronLink is chip-to-chip INSIDE an instance, and EFA (see aws-efa) is the scale-out network BETWEEN instances and hosts; conflating them is the single most common error with AWS interconnect diagrams. Also note the compiler story interacts here - Neuron autocasts FP32/FP16 models down to BF16/FP8/cFP8 at compile time, which reduces the bytes that have to cross this link, and is a cheaper lever than the fabric itself. KIND: filed as 'other' because NeuronLink has no entry in the schema's interconnect enum and is not a member of any named family.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "asic-aws-inf2-instances",
+    "asic-aws-trainium-product"
+  ]
+}

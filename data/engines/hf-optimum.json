@@ -1,0 +1,69 @@
+{
+  "id": "hf-optimum",
+  "type": "engine",
+  "name": "HuggingFace Optimum",
+  "repo": "huggingface/optimum",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2021,
+  "design_goal": [
+    "minimal-deps",
+    "cross-platform",
+    "hardware-portability",
+    "export-and-run"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "onnxruntime",
+    "openvino",
+    "tensorrt",
+    "cuda",
+    "rocm",
+    "amd-npu",
+    "inferentia2",
+    "trainium",
+    "intel-gaudi",
+    "furiosa"
+  ],
+  "supported_formats": [
+    "onnx",
+    "safetensors",
+    "openvino-ir"
+  ],
+  "notable_features": [
+    "The export-and-run toolkit that most of the other runtimes in this slice are built on or feed: Infinity uses optimum for its ONNX/TensorRT backend, FastEmbed is ONNX-based, TEI loads ONNX weights, and TEI/ONNX Runtime GenAI all sit downstream of an Optimum export.",
+    "Extends Transformers, Diffusers, TIMM and Sentence-Transformers rather than replacing them, so a model definition stays the same object across backends.",
+    "The widest accelerator-extras table in the HuggingFace ecosystem, and it is the fastest way to see which inference stacks exist for a given part: ONNX, ONNX Runtime, ONNX Runtime GPU, OpenVINO, NVIDIA TensorRT-LLM, AMD Instinct GPUs plus Ryzen AI NPU, AWS Trainium and Inferentia (neuronx), Intel Gaudi HPU (Gaudi, Gaudi2, Gaudi3), and FuriosaAI.",
+    "Separate packages per accelerator rather than one fat package, so a minimal install stays small; the README documents the --upgrade --upgrade-strategy eager requirement for the extras.",
+    "This matters for encoders more than for LLMs: a 300M BERT encoder exports to ONNX in seconds and runs on any of the ten backends above, whereas the same flexibility for a 70B decoder is a much heavier proposition."
+  ],
+  "hardware_caveats": [
+    "This is a TOOLKIT, not a serving runtime. There is no HTTP server, no batching scheduler and no concurrency control. Records belong in this repo because it is the thing that decides which runtime a model ends up on, not because you deploy it.",
+    "Quantization and export happen at export time and are baked into the ONNX graph. Switching precision means re-exporting, not flipping a runtime flag - the same operational constraint that applies to every ONNX-path engine here.",
+    "Support is uneven across extras. ONNX and OpenVINO are mature; Trainium, Gaudi and Furiosa are best-effort integrations whose depth varies by model family.",
+    "Some accelerators in the table (AMD Instinct, Ryzen AI NPU, Intel Gaudi, Furiosa) have far less encoder-specific validation than the NVIDIA and CPU paths, so 'Optimum supports this backend' does not mean 'this backend is fast for your embedding model'."
+  ],
+  "best_for": [
+    "Porting an embedding or reranker model to a non-default accelerator without writing a custom runtime.",
+    "ONNX-based encoder deployment in general: the canonical export path for BERT-class retrieval models.",
+    "CPU-only or constrained targets (OpenVINO on Intel, ONNX Runtime on CPU) where a PyTorch service is too heavy.",
+    "Deciding, early, which serving engine to target for a new retrieval model."
+  ],
+  "avoid_for": [
+    "Production serving as-is: there is no server here.",
+    "Assuming backend parity in quality or speed across the ten accelerator extras.",
+    "Workflows that need runtime-switchable quantization."
+  ],
+  "docs_url": "https://huggingface.co/docs/optimum/index",
+  "notes": "COMPUTE-BOUND at batch 1 for a BERT-size encoder, same as every other encoder here: a bidirectional single-pass encoder with no KV cache and no autoregressive streaming runs dense GEMM, so it wants FLOPS, not bandwidth - the inverse of an LLM decode part. The reason this matters for Optimum specifically is that Optimum is where the hardware target gets CHOSEN. A retrieval team that exports a 300M encoder to ONNX and lands it on an ONNX Runtime CPU provider gets compute-bound behaviour on cores; the same ONNX graph on a CUDA provider gets compute-bound behaviour on tensor cores. In both cases the arithmetic intensity is high and the weight read is amortized across the batch, so a bandwidth-limited accelerator is a poor fit for the workload regardless of which backend name appears in the install command - and conversely a modest GPU with strong low-precision throughput will beat a bandwidth monster at this task. The second point Optimum makes is about the NPU-class entries in its table (Ryzen AI NPU, Gaudi, Inferentia, Trainium, Furiosa): those are compute-rich, bandwidth-poor devices, which is structurally the RIGHT shape for a compute-bound encoder and the wrong shape for LLM decode. So a NPU that would be a poor decode part can be a good embedding part, and this is the clearest place in the repo to state the inversion as an actionable purchasing rule. Can serve: whatever Transformers or Sentence-Transformers can load, exported to ONNX or OpenVINO - so dense bi-encoders, cross-encoder rerankers, sparse encoders and CLIP-family multimodal encoders all export cleanly, and late-interaction encoders export but the MaxSim index is still the caller's problem. Cannot serve: generative token-by-token decoding on most backends (TensorRT-LLM extra exists but that is a different engine); and nothing here serves late-interaction retrieval end to end. Confidence 0.78: the accelerator-extras table is quoted directly from the README and the repo metadata is verified, but the per-backend quality and speed for encoders is not documented anywhere in the project, so those are characterised rather than claimed.",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-03",
+  "sources": [
+    "embed-hf-optimum-github"
+  ]
+}

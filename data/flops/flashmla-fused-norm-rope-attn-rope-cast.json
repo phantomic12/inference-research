@@ -1,0 +1,31 @@
+{
+  "id": "flashmla-fused-norm-rope-attn-rope-cast",
+  "type": "flop",
+  "name": "FlashMLA fused norm-RoPE-attention-RoPE-cast kernel: absorbing per-token scalar work into the attention kernel",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "This kernel changes nothing about the attention arithmetic; it removes kernels and bytes at the boundaries. It fuses Q-norm (V4 only, not V4.1), Q-RoPE, core attention, the conjugate O-RoPE and the cast of the output to FP8 into a single kernel. Each of those steps on its own is memory-bound elementwise work over the same tensors, so fusing them removes one HBM round trip per step and one kernel launch each. The stated cost is that Q_b and the Wv weights must be permuted in advance - i.e. the mechanism is paid for with an offline layout change, which is a real constraint because it makes the weight preparation model-specific. Author claim: the fused kernel still reaches the same or slightly higher TFlops while eliminating the small-kernel overhead, and the decode path of the fused kernel was optimized 10-15% in the 2026.09.30 release.",
+  "bound_by": "both",
+  "scales_with": [
+    "hidden_width (elementwise norm/RoPE/cast cost is proportional to width, not to context)",
+    "context_length (only through the attention part)",
+    "batch_size (fewer launches matters most at small batch)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "huawei-ascend-910b"
+  ],
+  "workarounds": [
+    "Fuse every elementwise op that touches a tensor the attention kernel already has in registers",
+    "Pre-permute Q_b and Wv weights offline to make the fused RoPE register-friendly",
+    "Recommend the fused kernel over the standalone sparse prefill/decode kernels in DeepSeek's own testing"
+  ],
+  "notes": "Depends on TileLang, TileKernels and DeepGEMM to run the tests, i.e. it is a stack rather than a standalone kernel. CUDA only - Ascend is not supported for this kernel even though the sparse prefill/decode kernels are. This is the general 'kernel-boundary tax' pattern: at decode batch 1, several small elementwise kernels over hidden-dim tensors can cost as much in launch and round-trip overhead as the attention itself, and the fix is always fusion into whichever kernel already holds the tensor. Recorded as custom_kernel.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "kern-flashmla-github",
+    "kern-tilekernels-github"
+  ]
+}

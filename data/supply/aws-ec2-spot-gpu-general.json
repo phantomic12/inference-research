@@ -1,0 +1,32 @@
+{
+  "id": "aws-ec2-spot-gpu-general",
+  "type": "supply",
+  "name": "AWS EC2 Spot Instances (interruptible GPU capacity, general)",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "sup-cloud-aws-ec2-spot-pricing",
+    "sup-cloud-aws-ec2-price-list-use1"
+  ],
+  "kind": "cloud",
+  "vendor": null,
+  "accelerator_ids": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l4",
+    "nvidia-l40s"
+  ],
+  "region": "all AWS commercial regions",
+  "channels": [
+    "spot",
+    "rental"
+  ],
+  "price_usd": null,
+  "price_basis": "NO price_usd recorded, deliberately. AWS advertises a discount of 'up to 90% off compared to On-Demand' and states prices 'adjust gradually based on long-term trends in supply and demand', but the concrete per-SKU spot table renders client-side from describe-spot-price-history and spot-price.s3.amazonaws.com/spotprice.js returned HTTP 403 when fetched 2026-10-03. A derived or remembered spot rate would be invented.",
+  "availability": "unknown",
+  "lead_time_weeks": null,
+  "export_controlled": null,
+  "notes": "A structural record rather than a price record. Spot is the cheapest credible route to AWS Hopper and Blackwell capacity by a wide margin when it works - independent neocloud evidence elsewhere in this slice puts H100 spot at roughly 40% of the on-demand rate - and it is the real answer to the p5 allocation problem. The catch is interruption: AWS reclaims Spot instances on a two-minute warning, and the p5 SKUs are exactly those with the deepest demand pools and therefore the worst interruption profile. Practical guidance: Spot for fault-tolerant training with checkpoint resume, never for an interactive inference endpoint; Capacity Blocks when the pool must still be there tomorrow. 'Up to 90% off' is a ceiling across all EC2 SKUs, not the H100 discount specifically. Note the same mutual-exclusion logic as on Google Cloud, where the pricing page states explicitly that Spot VMs and preemptible VMs cannot receive CUDs or SUDs: never model a Spot instance as if it were also earning a commitment discount."
+}

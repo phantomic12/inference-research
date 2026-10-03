@@ -1,0 +1,50 @@
+{
+  "id": "huawei-ascend-910c",
+  "type": "accelerator",
+  "name": "Huawei Ascend 910C (dual-910B package)",
+  "vendor": "asic-other",
+  "architecture": "da-vinci (dual 910B chiplet)",
+  "release_year": 2025,
+  "process_nm": 7,
+  "form_factors": [
+    "oam",
+    "mcm"
+  ],
+  "vram_gb": 128,
+  "memory_type": "hbm2e",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 2800,
+  "memory_bandwidth_basis": "NOT VENDOR-PUBLISHED AND NOT DIRECTLY OBSERVED - this is a 2x scaling of the disputed 910B figure, not a measurement. If a 910B die carries 64 GB of HBM2e, two of them carry 128 GB, and the ~1.2-1.6 TB/s range reported for a single 910B (see the huawei-ascend-910b record, source asic-ascend-910b-secondary) doubles to ~2.4-3.2 TB/s; 2800 GB/s is recorded as the midpoint. Treat as an order-of-magnitude figure. The real 910C-shipped systems that ARE documented are the Atlas 650E and 950 SuperPoD lines (cn-huawei-atlas-650e-spec, cn-huawei-atlas-950-superpod-spec), but those use the 950DT NPU generation, not 910C, and are recorded separately.",
+  "flops": [
+    {
+      "precision": "fp16",
+      "tflops": 752,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "cn-hisilicon-wikipedia"
+    },
+    {
+      "precision": "int8",
+      "tflops": 1280,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "cn-hisilicon-wikipedia"
+    }
+  ],
+  "tdp_w": 800,
+  "interconnect": [
+    "huawei-hccs",
+    "ethernet"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "THE HIERARCHY POINT: the 910C is not a new chip, it is two 910B dies in one package, which is the single most important structural fact about it and the reason its numbers must never be quoted without the word 'dual'. ALL FIGURES HERE ARE DOUBLED FROM A DISPUTED BASE and are flagged vendor_claim: false: FP16 752 TFLOPS and INT8 1280 TOPS are exactly 2x the 376 TFLOPS / 640 TOPS central estimates already recorded (and flagged contested) on the 910B record. If the 910B FP16 figure is really 320 rather than 376, the 910C is 640; if the 910B is really 600, the 910C is 1200. Anyone using these numbers inherits the parent record's uncertainty doubled. Process is SMIC N+2 (a second-generation 7 nm), against N+1 for the 910B - real but modest. THE ONE FIGURE THAT IS NOT DERIVED AND IS MORE TRUSTWORTHY THAN ANY SPEC IS THE MEASURED ONE: DeepSeek researchers, who have no commercial interest in flattering Huawei, put 910C inference at roughly 60% of H100 inference performance, and DeepSeek-R1 was trained on H800 and runs inference on 910C. That 60% is a whole-system, real-model, real-workload number and should be weighted far above the 752 TFLOPS. The resulting tension is the real story: theoretical compute on paper is close to H100-class but measured inference efficiency is 60%, and the gap is HCCS. Huawei's answer to that gap was to stop trying to scale chips and start buying optical bandwidth - CloudMatrix 384 ships 384 910C chips across 16 racks (12 compute, 4 network) using 6912 800G LPO optical transceivers for entirely optical intra- and inter-rack connectivity, is reported at RMB 60mn (about USD 8.2mn) per set, and reportedly outperforms GB200 NVL72 on raw throughput while drawing roughly 4x the power and delivering 2.3x worse performance per watt. Power at ~800 W for the package is an estimate by doubling the 910B's disputed 310-400 W, and is the least reliable field here. Reported 2025 shipment plans were over 800,000 units of 910B+910C combined. Vendor is asic-other because 'huawei' is not in the schema enum; the real vendor is Huawei HiSilicon.",
+  "status": "contested",
+  "confidence": 0.45,
+  "updated": "2026-10-03",
+  "sources": [
+    "cn-hisilicon-wikipedia",
+    "asic-ascend-910b-secondary",
+    "cn-huawei-atlas-650e-spec"
+  ]
+}

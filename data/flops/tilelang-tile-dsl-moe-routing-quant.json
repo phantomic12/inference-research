@@ -1,0 +1,32 @@
+{
+  "id": "tilelang-tile-dsl-moe-routing-quant",
+  "type": "flop",
+  "name": "TileLang / TileKernels: a tile DSL as the middle layer between hand-written CUDA and Triton",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The point of a tile DSL is that the author writes tiles and the compiler decides the instruction selection, register/shared-memory allocation and async-copy pipelining. That means the same source can target NVIDIA SM90/SM100 and Huawei Ascend 950 with identical Python APIs, selected automatically at runtime - a portability claim no hand-written CUDA kernel can make. What it costs is the hardware ceiling: a DSL cannot emit an instruction the abstraction does not model, so the fastest path is still whatever the DSL exposes (here: FP8/FP4 block-scaled casts, fused SwiGLU+quant, MoE top-k routing and scoring, RoPE, fused RMSNorm in the Engram gate). Recorded as custom_kernel with class custom_kernel because the mechanism of interest is the compilation layer, not any single op.",
+  "bound_by": "both",
+  "scales_with": [
+    "hardware backend (SM90 / SM100 / Ascend 950)",
+    "op (routing, quantization, norm fusion)",
+    "precision (FP8 and FP4 casts)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "huawei-ascend-910b"
+  ],
+  "workarounds": [
+    "Write the kernel once in TileLang and let the backend select NVIDIA vs Ascend",
+    "Per-token, per-block and per-channel FP8/FP4 casting as standalone or fused-with-SwiGLU kernels",
+    "Sinkhorn normalization and mix splitting/application for manifold hyperconnection",
+    "RoPE and Rand kernels in the same library so a model needing several elementwise ops gets them from one stack"
+  ],
+  "notes": "Requirements are specific: Python 3.12+, PyTorch 2.13+, TileLang 0.1.15+, and either NVIDIA SM90/SM100 with CUDA >= 13.1 or Ascend 950 with CANN >= 9.2.0. DeepSeek ships this because FlashMLA's fused-norm-rope-attn-rope-cast kernel test depends on TileLang, TileKernels AND DeepGEMM - i.e. the modern stack is layered: DSL -> kernel library -> GEMM library. The claim 'most kernels achieve performance close to the hardware's compute or memory bandwidth limits' is DeepSeek's own and carries no numbers, so treat it as unquantified. Note also that the repo's own claim of 'dozens of highly optimized kernels' is what makes it a useful proxy for what a well-tuned tile DSL can and cannot reach.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "kern-tilekernels-github",
+    "kern-flashmla-github"
+  ]
+}

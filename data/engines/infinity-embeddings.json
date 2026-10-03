@@ -1,0 +1,69 @@
+{
+  "id": "infinity-embeddings",
+  "type": "engine",
+  "name": "Infinity embedding and reranking server",
+  "repo": "michaelfeil/infinity",
+  "languages": [
+    "Python",
+    "C++"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "multi-model",
+    "minimal-deps"
+  ],
+  "scheduling": [
+    "dynamic-batching"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "cpu",
+    "apple-mps",
+    "aws-inferentia2",
+    "onnxruntime",
+    "tensorrt"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "onnx",
+    "ctranslate2"
+  ],
+  "notable_features": [
+    "The only engine in this slice that spans the whole retrieval stack in one process: text embeddings, reranking, CLIP, CLAP and ColPali, multi-model at once, with the orchestration done by Infinity itself.",
+    "Three interchangeable inference backends behind one API - PyTorch, Optimum (ONNX/TensorRT) and CTranslate2 - selected per model rather than per deployment. That is a genuine operational advantage: the same serving contract across three kernel stacks.",
+    "FlashAttention is used to get the most out of NVIDIA CUDA, AMD ROCm, CPU, AWS INF2 and Apple MPS - the same compute-bound assumption as TEI, stated as an explicit design choice.",
+    "Dynamic batching plus tokenization dedicated to worker threads, so tokenization does not serialize behind the forward pass. For encoders this matters more than it looks: tokenization is a real fraction of a 100M-param encoder's wall clock, unlike a 70B decode where it is noise.",
+    "OpenAPI aligned to OpenAI's embeddings specification, so existing SDKs work; FastAPI-based; CLI v2 can launch everything via environment variable or argument.",
+    "Adopters listed in the README span Baseten, RunPod, TrueFoundry, Vast.ai, SAP AI Core, BentoML, Hugging Face chat-ui and others - real production use, not a demo."
+  ],
+  "hardware_caveats": [
+    "Name collision that matters for research: infiniflow/infinity is a different, unrelated project - an AI-native vector DATABASE with hybrid search, 4733 stars. It does not run embedding inference by default; it is a retrieval store. The serving engine here is michaelfeil/infinity. Do not conflate the two when grepping citations.",
+    "Apple MPS is supported but is the least-documented accelerator path in the README; the AWS INF2 path is mentioned alongside CUDA/ROCm/CPU rather than detailed.",
+    "Because the backend (PyTorch / ONNX-TensorRT / CTranslate2) is a per-model choice, peak throughput is not uniform across models in one deployment - a model served on the ONNX path and one on the PyTorch path in the same process will not behave comparably under load.",
+    "Last push 2026-03-24, so the project is active but no longer moving at the pace of TEI; dependency churn in the Optimum/CTranslate2 chain is the operational risk to watch."
+  ],
+  "best_for": [
+    "One server for embeddings AND reranking, when you would otherwise run two deployments and reconcile their batching policies.",
+    "Multi-model and multi-modal retrieval: CLIP/CLAP/ColPali alongside text encoders, with Infinity doing the orchestration.",
+    "Apple Silicon and AWS Inferentia2 deployments - unusual accelerator coverage for a retrieval-serving engine.",
+    "Teams that want per-model backend selection (ONNX/TensorRT for some models, PyTorch+FlashAttention for others) behind one HTTP contract.",
+    "Anyone who wants a ColPali-style multimodal retriever without building one."
+  ],
+  "avoid_for": [
+    "Expecting the vendor-grade operational polish of TEI - smaller project, slower cadence, thinner documentation of failure modes.",
+    "Deployments where every model must run on one backend for reproducible benchmarking.",
+    "CUDA compute capabilities below what FlashAttention supports, or ROCm configurations the README does not cover."
+  ],
+  "docs_url": "https://michaelfeil.github.io/infinity/",
+  "notes": "COMPUTE-BOUND at batch 1 for a BERT-size encoder, same mechanism as TEI and for the same reason: a bidirectional encoder runs full attention over all input tokens in a single pass with no KV cache and no autoregressive streaming, so the cost is dense GEMM plus a full (non-causal, hence unhalved) attention matrix rather than a bandwidth-bound weight-streaming loop. What makes Infinity's README unusually explicit about this is that it names FlashAttention as the throughput lever across five accelerator families - a compute-efficiency story, not a bandwidth story. Hardware selection consequence: prefer FLOPS and cache-friendly capacity over HBM bandwidth. An encoder of 100-500M params in fp16 is 200 MB - 1 GB of weights, which fits in the L2 of a server GPU or even in unified memory on Apple Silicon; the interesting question is not 'does the model fit' but 'how many FLOPs can you throw at it', which in practice means: fill --max-batch-tokens / the dynamic-batch queue with short passages and let FlashAttention amortize. Contrast with an LLM decode part on the same machine, where the correct instinct is the opposite - buy bandwidth, accept low occupancy. For reranking the compute-boundedness is even stronger and needs stating explicitly, because it is the single most under-budgeted line item in RAG pipelines: a cross-encoder must encode the concatenated query+passage for EVERY candidate, so reranking a top-k of k costs roughly k times a full-length forward pass with zero opportunity for caching or early exit. bge-reranker-v2-m3 class models at 512-1024 tokens make a top-100 rerank one to two orders of magnitude more FLOPs than embedding the entire candidate set was. Architectures served: because it wraps three general-purpose backends rather than a bespoke encoder implementation, the coverage is 'any model the HuggingFace text-embeddings tag carries' - BERT/XLM-RoBERTa/GTE/E5-class encoders, Qwen/Mistral/Gemma decoder-based embedders, CLIP and ColPali. Can serve: dense bi-encoders, cross-encoders, CLIP-family and late-interaction-multimodal. Cannot serve well: models needing token-wise output for ColBERT MaxSim in a single-vector store, and quantized formats outside what ONNX/CTranslate2 can express. confidence 0.82: the backend and accelerator claims are quoted from the README, but the README gives no benchmark table with methodology, so throughput claims are unquantified here.",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "embed-infinity-embeddings-github"
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "id": "colbert-reference",
+  "type": "engine",
+  "name": "ColBERT reference implementation",
+  "repo": "stanford-futuredata/colbert",
+  "languages": [
+    "Python"
+  ],
+  "license": "MIT",
+  "first_release_year": 2020,
+  "design_goal": [
+    "research",
+    "quality-first",
+    "batch-inference-only"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "cpu"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "pytorch-bin"
+  ],
+  "notable_features": [
+    "The reference implementation of late interaction: encodes each passage into a MATRIX of token-level embeddings rather than a single vector, and scores with a MaxSim operator at query time.",
+    "Its significance to this repo is that it moves the cost of retrieval out of FLOPs and into memory/storage: the paper's own framing is that the interaction step is 'cheap yet powerful' precisely because the expensive part (full pairwise cross-encoding) was already avoided at index time.",
+    "ColBERTv2 (on the new_api branch, arXiv 2112.01488) adds PLAID-style candidate generation so only the top candidates get full MaxSim - the standard architecture for making late interaction tractable.",
+    "Pipeline shape is explicit: preprocess a TSV collection, train or load a checkpoint, index the collection (encode every passage to a matrix on disk and build the search structures), then issue queries. The indexing step is where the memory cost materialises.",
+    "Requires Python 3.7+ and PyTorch 1.6+ per the README, and uses HuggingFace Transformers underneath - it is a research artifact, not a hardened server.",
+    "Formats MS MARCO Passage Ranking TSV data directly; ships a public ColBERTv2 checkpoint and a public LoTTE benchmark."
+  ],
+  "hardware_caveats": [
+    "Research code: the repo's last push is 2025-10-14 with the v0.2.0 README documenting Python 3.7+/PyTorch 1.6+ - a decade-old dependency floor relative to the current ecosystem. Do not treat it as production-deployable.",
+    "Late interaction INVERTS the usual arithmetic-intensity intuition for a GPU. A ColBERT query is a short sequence but the MaxSim step is a sparse matrix product over every candidate's token matrix, so query-time cost scales with corpus size and is bandwidth-bound on the index rather than compute-bound in the encoder. Hardware selection therefore needs BOTH: a high-FLOPS part for encoding the corpus, and high-bandwidth/high-capacity RAM or storage for the index, which is the opposite mix from what an LLM decode part wants.",
+    "Memory blow-up: ColBERTv2's abstract states late interaction 'inflates the space footprint of these models by an order of magnitude' relative to single-vector models. For a 180M-param ColBERT at 512 tokens with 128-dim per-token vectors in fp16, that's on the order of 128-dim x 512 tokens x 2 bytes x ~1M passages = ~130 GB - before any compression. This is why PLAID candidate generation and/or dimensionality/padding-aware storage are mandatory, not optional.",
+    "Not a server: no HTTP API, no scheduler, no batching policy. It is a library you call.",
+    "ColPali (the multimodal late-interaction successor) is NOT in this repo - the colpali-engine repositories do not appear to exist at the canonical URLs checked. Recorded as an open gap rather than invented."
+  ],
+  "best_for": [
+    "Understanding late interaction properly - this is the code that defines the MaxSim operator and the index structure.",
+    "Building a custom late-interaction retrieval system, or reimplementing candidate generation (PLAID-style) for your own corpus.",
+    "Benchmarking late interaction against single-vector retrieval where index size is a first-class constraint.",
+    "Academic work on retrieval where the ColBERTv2 checkpoint and LoTTE benchmark are the reference points."
+  ],
+  "avoid_for": [
+    "Production serving - this is research code with an old dependency floor.",
+    "Deployments where index size cannot be a concern - if you cannot store ~100x a single-vector index, use a bi-encoder or a sparse encoder.",
+    "Anyone wanting a maintained ColBERT server: none of the canonical server repos (stanford-futuredata/PLAID, jina-ai/PLAID, vidore/colpali-engine) resolved at their expected URLs when checked, so this niche is thinly served."
+  ],
+  "docs_url": "https://arxiv.org/abs/2004.12832",
+  "notes": "COMPUTE-BOUND at batch 1 for the ENCODER, then MEMORY-BOUND at QUERY TIME - this engine is the clearest illustration in the repo that 'compute-bound vs memory-bound' is a per-PHASE question, not a per-engine one. Encoding a passage is exactly like a BERT forward pass (bidirectional attention, single pass, no KV cache, no autoregressive streaming): it is dense-GEMM, compute-bound work, so encoding the corpus wants FLOPS, and batch the corpus aggressively to amortize the one-time weight read. But the MaxSim query step is the opposite: after encoding, the per-token embeddings live in an index, and scoring a query against the corpus is a sparse-matrix operation whose cost scales with how much of that index you touch per query - it is bandwidth/capacity-bound on RAM and storage, not FLOPs. So a ColBERT system needs a high-FLOPS GPU to build the index and then a large-memory machine (or PLAID candidate generation to shrink the working set) to serve queries. Contrast with an LLM decode part, which is memory-bound end to end and where you buy bandwidth; and contrast with a bi-encoder, which is compute-bound end to end and where you buy FLOPS and can throw the index at any vector database. The other hardware-relevant cost is the pooling/OUTPUT representation itself, which for ColBERT is the whole point: instead of one d-dim vector per passage you emit one d-dim vector PER TOKEN, so output memory scales as O(tokens x d) rather than O(d). ColBERTv2's abstract quantifies this as an order-of-magnitude space-footprint inflation over single-vector models. Architectures: can serve ColBERT / ColBERTv2 late-interaction multi-vector retrieval and (in principle) any BERT-family encoder in a multi-vector configuration. Cannot serve: single-vector dense embedding as a drop-in (the output shape is wrong for a standard vector DB unless you flatten it, which defeats the purpose); generative models; and ColPali / multimodal late interaction is absent from this repo. Not a serving runtime - index-and-query library. Confidence 0.72: the paper claims are primary-source and high-confidence (arXiv abstracts quoted directly), but the repo itself is stale research code, so any operational statement here is characterisation rather than documented fact. The ColPali gap is recorded explicitly because several canonical colpali-engine repo URLs 404'd when checked on 2026-10-03.",
+  "status": "verified",
+  "confidence": 0.72,
+  "updated": "2026-10-03",
+  "sources": [
+    "embed-colbert-github",
+    "embed-colbert-paper",
+    "embed-colbertv2-paper"
+  ]
+}

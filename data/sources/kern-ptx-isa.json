@@ -1,0 +1,15 @@
+{
+  "id": "kern-ptx-isa",
+  "type": "source",
+  "name": "NVIDIA CUDA PTX ISA 9.4 documentation",
+  "status": "draft",
+  "confidence": 0.98,
+  "updated": "2026-10-03",
+  "url": "https://docs.nvidia.com/cuda/parallel-thread-execution/index.html",
+  "publisher": "NVIDIA",
+  "kind": "whitepaper",
+  "published": null,
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "Primary ISA reference, PTX ISA version 9.4. Facts used: (1) Warp level - wmma (implicit load/store) vs mma (explicit fragment distribution); shape/dtype table including mma .e4m3/.e5m2 at .m16n8k32 (PTX 8.4) and .m16n8k16 (8.7), .e3m2/.e2m3/.e2m1 at .m16n8k32 (8.7), and block-scaled mma with .ue8m0 scale at .m16n8k32 and .e2m1 x (.ue8m0/.ue4m3) at .m16n8k64 (8.7). (2) Sparsity - mma.sp exists for f16/bf16/tf32/int8/int4/fp8; 2:4 granularity for half, bf16, int8 and fp8 with two 2-bit metadata indices (and ordered_metadata variants from PTX 8.5), 1:2 for tf32, 4:8 pair-wise for u4/s4. (3) sm_90a extended static shared memory 228 KB vs the 48 KB per-CTA default everywhere else. (4) wgmma = four contiguous warps (warp-rank of first warp a multiple of 4), M always 64, dense f16/bf16/tf32 and fp8 .m64nNk32, sparse variants, plus wgmma.fence/commit_group/wait_group proxy machinery. (5) tcgen05 - dedicated Tensor Memory, on sm_100a/sm_100f a 2D 512-column x 128-lane matrix of 32-bit cells per CTA, dynamically allocated by a single warp in units of 32 columns with power-of-2 counts and mandatory deallocation; tcgen05.mma shape table keyed on .kind (f16, f8f6f4, mxf8f6f4, mxf4, mxf4nvf4, tf32, i8, ti16), CTA group size 1 or 2, and sparse variants. (6) cp.async.bulk.tensor is TMA, non-blocking, with mbarrier or bulk-group completion; .shared::cluster.global is 'optimized for' sm_90a/sm_100a/sm_100f/sm_103a/sm_103f/sm_107a/sm_107f/sm_110a/sm_110f and 'may have substantially reduced performance on other targets', and sub-byte types are not supported for .shared::cluster.global on sm_120a. (7) Clusters are applicable only on sm_90 and higher."
+}

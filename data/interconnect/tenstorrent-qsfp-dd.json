@@ -1,0 +1,23 @@
+{
+  "id": "tenstorrent-qsfp-dd",
+  "type": "interconnect",
+  "name": "Tenstorrent QSFP-DD fabric (Wormhole 200G, Blackhole 800G)",
+  "kind": "ethernet",
+  "version": "QSFP-DD, Wormhole and Blackhole generations",
+  "bandwidth_gbps": 25,
+  "bandwidth_basis": "PER PORT, UNIDIRECTIONAL, WORMHOLE AS THE REFERENCE POINT. Tenstorrent's per-AI-card spec tables publish a port count and a port SPEED, not a Gbps bandwidth, so the conversion is arithmetic on the vendor's own number and is flagged as such: Wormhole cards list '2x QSFP-DD 200G (Active)', which is 200 Gb/s = 200/8 = 25 GB/s per port per direction, giving the recorded 25. Blackhole cards list '4x QSFP-DD 800G (Passive)', i.e. 800 Gb/s = 100 GB/s per port per direction, four ports. Both conversions assume Gb/s is the port's line rate and treat '200G'/'800G' as per port, which is how these tables are conventionally read; no direction is stated by the vendor, so the per-direction reading is assumed rather than quoted. If a reader needs the bidirectional aggregate, double these. Wormhole n300 lists 'Internal Chip-to-Chip 200G' as a separate in-card row, distinct from the QSFP-DD ports - do not merge the two.",
+  "link_count": 2,
+  "topology": "Standard switched Ethernet ports on each card, daisy-chained into racks rather than switched into one large non-blocking domain. Wormhole: 2x QSFP-DD 200G plus 2x Warp 100 Bridge connectors per card. Blackhole: 4x QSFP-DD 800G passive per card, and the in-card Warp bridges are gone from the published Blackhole connectivity row - the architecture change from Wormhole to Blackhole moved scale-up capacity from 200G QSFP-DD plus bridges onto four passive 800G ports. This is a scale-OUT mechanism in the ordinary Ethernet sense, despite Tenstorrent marketing the cards' multi-card capability as scale-up.",
+  "scale_up": false,
+  "scale_out": true,
+  "switching": "External Ethernet switching. There is no Tenstorrent switch part, and the domain is not non-blocking in the NVSwitch sense - it is ordinary switched Ethernet whose oversubscription and tail-latency behaviour is the usual. That is the honest characterisation and it matters for collectives.",
+  "notes": "The multi-card fabric for both Tenstorrent parts in this repo, and the record that resolves the 'is Tenstorrent's multi-card link scale-up or scale-out?' question: it is scale-OUT over commodity Ethernet ports, so it belongs with ethernet-uec and roce rather than with nvswitch-4 or amd-xgmi, even though Tenstorrent markets the multi-card configuration under the banner of scaling up. PUBLISHED PORT COUNTS (Tenstorrent per-AI-card spec tables): Wormhole n150/n300 - '2x Warp 100 Bridge, 2x QSFP-DD 200G (Active)', plus a separate 'Internal Chip-to-Chip 200G' row; Blackhole p150/p100 - '4x QSFP-DD 800G (Passive)' with no Warp bridge row. The per-port conversions to 25 GB/s and 100 GB/s per direction are arithmetic on the vendor's Gb/s port ratings and are the only derivation in this record; treat them as such. INFERENCE RELEVANCE: at 25 GB/s per port (Wormhole) a multi-card Tensor Parallel group is fabric-limited almost immediately - each layer boundary ships activations across these ports, so TP degree beyond a small number is bandwidth-starved on any part whose local memory is already the bottleneck. This compounds with the memory story already recorded on the accelerator: Wormhole has 288 GB/s of GDDR6 and is decisively memory-bound at batch 1, so its interconnect is not the binding constraint locally, but crossing cards makes it one. Blackhole's move to four 800G ports quadruples the fabric per card (100 GB/s x 4 = 400 GB/s per port-direction aggregate) against 512 GB/s of local memory, which is a much healthier ratio and is the real argument for the p150 over the n150 at high TP degree. Wormhole's separate in-card Warp 100 bridges and 200G internal chip-to-chip path are a DIFFERENT mechanism again - they link two ASICs inside one card - and must not be conflated with the QSFP-DD scale-out ports; the tenstorrent-warp100 accelerator reference covers that bridge path. NOTE ON THE 'warp100' vs 'warp 100' SPELLING: Tenstorrent's tables write 'Warp 100', capital W, so the accelerator's tenstorrent-warp100 slug is a deliberate normalisation to the repo's lowercase slug convention rather than a typo - do not 'correct' it to match the vendor's capitalisation.",
+  "status": "verified",
+  "confidence": 0.72,
+  "updated": "2026-10-03",
+  "sources": [
+    "asic-tenstorrent-wormhole-docs",
+    "asic-tenstorrent-blackhole-docs",
+    "asic-tenstorrent-cards-shop"
+  ]
+}
