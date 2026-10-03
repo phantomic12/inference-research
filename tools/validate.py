@@ -150,6 +150,9 @@ def run(types: list[str], quiet: bool) -> tuple[Report, int]:
             for a in rec.get("accelerator_ids") or []:
                 rep.warn(a in bare, f"{rid}: accelerator {a!r} not a record id (ok if planned)")
         if t == "gotcha":
+            # `affects` holds record ids and is id-resolved. `concepts` holds
+            # free-text scope markers (concepts, software stacks, model names,
+            # arch codenames) that have no record, so it is NOT resolved.
             for a in rec.get("affects") or []:
                 rep.warn(a in bare, f"{rid}: affects {a!r} not a record id (ok if planned)")
         if t == "flop":
