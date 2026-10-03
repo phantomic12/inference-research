@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "flop",
+  "title": "flop",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "name",
+    "class",
+    "bound_by",
+    "status",
+    "confidence",
+    "updated",
+    "sources"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "type": {
+      "const": "flop"
+    },
+    "name": {
+      "type": "string"
+    },
+    "class": {
+      "enum": [
+        "prefill_attention",
+        "decode_gemm",
+        "decode_attention",
+        "moe_routing",
+        "moe_experts",
+        "norm_softmax",
+        "sampling",
+        "embedding",
+        "speculative_draft",
+        "speculative_verify",
+        "kv_transfer",
+        "quantization_overhead",
+        "custom_kernel"
+      ]
+    },
+    "arithmetic_intensity": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "bytes moved per flop, and at what batch size"
+    },
+    "bound_by": {
+      "enum": [
+        "memory",
+        "compute",
+        "both",
+        "interconnect",
+        "launch_overhead"
+      ]
+    },
+    "scales_with": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "knobs that change this cost: batch, context_length, hidden_width, num_experts, ..."
+    },
+    "affected_by_hardware": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "workarounds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "verified",
+        "draft",
+        "contested",
+        "deprecated"
+      ]
+    },
+    "confidence": {
+      "type": "number"
+    },
+    "updated": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "source ids; each must exist in data/sources/"
+    }
+  },
+  "additionalProperties": false
+}

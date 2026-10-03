@@ -1,0 +1,30 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  records:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate records
+        run: python tools/validate.py
+      - name: Tool self-tests
+        run: python tools/test_tools.py
+      - name: Check index is regenerated
+        run: |
+          python tools/index.py
+          if ! git diff --quiet -- docs/00-index.md; then
+            echo "docs/00-index.md is stale. Run: python tools/index.py && git commit"
+            git --no-pager diff -- docs/00-index.md
+            exit 1
+          fi
+      - name: Report coverage
+        run: |
+          python tools/query.py stats
+          python tools/query.py gaps
