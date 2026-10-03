@@ -1,0 +1,73 @@
+{
+  "id": "jan",
+  "type": "engine",
+  "name": "Jan",
+  "repo": "janhq/jan",
+  "languages": [
+    "Rust",
+    "TypeScript",
+    "C++"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "ease-of-use",
+    "edge/mobile",
+    "multi-model",
+    "low-latency",
+    "cross-platform"
+  ],
+  "scheduling": [
+    "parallel-model-loading"
+  ],
+  "supported_backends": [
+    "cpu-avx512",
+    "cpu-avx2",
+    "cuda",
+    "rocm",
+    "hip",
+    "vulkan",
+    "metal"
+  ],
+  "supported_formats": [
+    "gguf",
+    "safetensors"
+  ],
+  "notable_features": [
+    "A Tauri desktop app (Rust core, web front-end) with an OpenAI-compatible local server on localhost:1337, so other applications can use whatever Jan has loaded.",
+    "Backend variants are a first-class build concept: engine builds are selected with JAN_ENGINE_VARIANT from the tokens cpu, vulkan, metal, cuda12, cuda13, and hip/rocm, composable with '-'.",
+    "Ships an mlx-server component alongside the llama.cpp engine, so Apple Silicon has a native MLX path in addition to llama.cpp/Metal.",
+    "Custom assistants, MCP integration for agentic use, and cloud-provider connectors (OpenAI, Anthropic, Mistral, Groq, MiniMax) alongside local models.",
+    "Available as Windows exe, macOS universal dmg, Linux deb and AppImage, plus Microsoft Store and Flathub."
+  ],
+  "hardware_caveats": [
+    "The build-time engine variant is a real fork in the road: picking JAN_ENGINE_VARIANT=cpu gives you a CPU-only build and no GPU path at all. There is no runtime backend switching comparable to llama.cpp's --gpu flag across variants.",
+    "Windows build requires VS 2022 Build Tools (MSVC x64 workload + Windows SDK), LLVM, Ninja and CMake on PATH; the bundled llama.cpp engine builds with Ninja + clang-cl. The CUDA Toolkit is needed only for the cuda12/cuda13 variants.",
+    "Windows-specific build trap: an nvcc 'Could not open output file' error during the llama.cpp build means the build path crossed Windows' 260-character MAX_PATH limit, because nvcc does not honour the long-path opt-in. The build script relocates the engine build tree to %LOCALAPPDATA%\\jan-engine automatically; if it still happens set JAN_ENGINE_BUILD_DIR to a short path or move the checkout closer to the drive root.",
+    "make dev must be run from Git Bash on Windows, since make dispatches recipes through sh — a plain cmd.exe will not work.",
+    "macOS 13.6+ required; the published minimum RAM guidance is 8GB for 3B models, 16GB for 7B and 32GB for 13B. Apple Silicon builds also need the MetalToolchain Xcode component.",
+    "Windows 10+ with GPU support for NVIDIA/AMD/Intel Arc is stated as the minimum for a decent experience, but the actual backend you get depends entirely on which engine variant was built."
+  ],
+  "best_for": [
+    "A desktop ChatGPT replacement for a non-technical user who wants a GUI and a working download-and-go experience.",
+    "Apple Silicon users who want an app that uses MLX rather than only llama.cpp.",
+    "Offline, private use where cloud connectors are optional rather than the default.",
+    "Feeding a local OpenAI-compatible endpoint to other apps at localhost:1337.",
+    "Users who want assistants and MCP in one place instead of assembling separate tools."
+  ],
+  "avoid_for": [
+    "Headless/server deployments — this is a desktop app with a sidecar server, not a serving stack.",
+    "Anyone needing to change backends at runtime; the backend is chosen at build time.",
+    "Benchmarking or performance work — Jan adds a desktop layer, not kernel speed.",
+    "Multi-user concurrency.",
+    "Linux Arm64, which is documented only as a how-to issue link rather than a first-class release artifact."
+  ],
+  "docs_url": "https://jan.ai/docs",
+  "notes": "The engine-variant set (cpu, vulkan, metal, cuda12, cuda13, hip/rocm) is the most accurate description of Jan's real backend matrix, so supported_backends reflects that rather than a claim that all are present in any one build. GitHub reports the license as NOASSERTION while the README states Apache 2.0; recorded as Apache-2.0 per the project's own statement, with the discrepancy noted. Jan is a UI layer over llama.cpp plus MLX; the kernel-level backend detail belongs to the llama.cpp and MLX records.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "cpuedge-jan-github"
+  ]
+}

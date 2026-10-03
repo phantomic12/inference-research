@@ -1,0 +1,73 @@
+{
+  "id": "vllm-cpp",
+  "type": "engine",
+  "name": "vllm.cpp",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-03",
+  "sources": [
+    "engine-vllm-cpp-github"
+  ],
+  "repo": "mudler/vllm.cpp",
+  "languages": [
+    "C++",
+    "CUDA",
+    "Metal",
+    "Vulkan",
+    "SPIR-V"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2026,
+  "design_goal": [
+    "minimal-deps",
+    "no-Python",
+    "throughput-first",
+    "single-binary"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "radix-cache",
+    "prefix-cache"
+  ],
+  "supported_backends": [
+    "cuda",
+    "metal",
+    "vulkan",
+    "cpu-avx512"
+  ],
+  "supported_formats": [
+    "gguf",
+    "safetensors",
+    "exl3",
+    "mxfp4",
+    "nvfp4"
+  ],
+  "notable_features": [
+    "Ports vLLM's serving core - continuous batching, block-paged KV, the V1 scheduler, automatic prefix caching, speculative decoding - into from-scratch C++20 with no Python and no PyTorch at inference time",
+    "Ships SGLang's scheduling ideas as documented toggles: RadixAttention, LPM cache-aware admission, jump-forward decoding",
+    "Does NOT use ggml: it reads GGUF and follows llama.cpp's C ABI style but has its own portable vt:: tensor runtime",
+    "Versioned flat C ABI (include/vllm.h, VLLM_ABI_VERSION) with append-only fields, so embedders can rely on it",
+    "Claims token-for-token identical output to vLLM as its correctness gate, plus prebuilt CPU/CUDA/Vulkan/Metal/MLX release archives"
+  ],
+  "hardware_caveats": [
+    "Under heavy development by its own README: internals, CLI flags and server behaviour can change between commits, so tracking main means expecting breakage",
+    "Independent and unofficial - not affiliated with, endorsed by, or sponsored by the vLLM project, the PyTorch Foundation or the Linux Foundation",
+    "Kernel coverage is uneven by format: TQ1_0/TQ2_0 GGUF loading is unsupported even though Vulkan has ternary matmul and fused-MoE kernels for them",
+    "AMD path is brand new: EXL3 gained a native ROCm path validated only on gfx1151 with no CPU fallbacks; discrete AMD validation and competitive performance are explicitly unmeasured",
+    "Several architectures are token-gated but not speed-gated (GLM-5.3's real 201.83 GiB artifact has never completed a load), and multimodal HTTP input has CPU tests with synthetic weights with real-checkpoint parity unverified",
+    "Its performance claims are self-reported by the project against its own vLLM oracle on one GB10 machine; the concurrency sweep from c2 to c32 is inside the stated 0.5% noise band, and one headline comparison is marked SUPERSEDED in its own docs"
+  ],
+  "best_for": [
+    "Deploying a single binary with no Python runtime where vLLM-equivalent scheduling is still wanted",
+    "Reproducing vLLM scheduling semantics token-for-token outside the PyTorch ecosystem",
+    "Constraints where a 66 MiB binary versus a multi-gigabyte Python install is the deciding factor"
+  ],
+  "avoid_for": [
+    "Production deployments that need a stable API surface - the project says so itself",
+    "AMD GPUs, where the path exists but is essentially unvalidated",
+    "Any claim of measured superiority over vLLM: the published comparison is one machine, one model, self-measured, and mostly inside its own noise band"
+  ],
+  "docs_url": "https://github.com/mudler/vllm.cpp/blob/main/docs/FEATURES.md",
+  "notes": "Benchmark numbers in the README (Qwen3.6-27B NVFP4 on NVIDIA GB10: 86.05 tok/s at c1 rising to 1095.01 tok/s at c32 vs vLLM's 82.32 to 1076.25; 45.45 vs 41.94 tok/s on Qwen3-8B MXFP4) are vendor self-reported and were NOT independently reproduced here. Recorded for traceability only; no benchmark record was created because this slice does not own benchmarks/."
+}

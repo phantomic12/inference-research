@@ -1,0 +1,119 @@
+{
+  "id": "amd-instinct-mi350x",
+  "type": "accelerator",
+  "name": "AMD Instinct MI350X",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "amd-mi350x-product-page",
+    "amd-rocm-compatibility-matrix"
+  ],
+  "vendor": "amd",
+  "architecture": "CDNA4 (gfx950)",
+  "release_year": 2025,
+  "process_nm": 3,
+  "form_factors": [
+    "oam"
+  ],
+  "vram_gb": 288,
+  "memory_type": "hbm3e",
+  "memory_bus_bit": 8192,
+  "memory_bandwidth_gbps": 8000,
+  "memory_bandwidth_basis": "'8 TB/s' per the AMD spec table, which lists 'Memory Clock 8 GHz' on an 8192-bit interface. AMD does not publish the arithmetic; treat as 'up to 8 TB/s' vendor figure.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 144.2,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350x-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 144.2,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350x-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 2300.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350x-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 4600.0,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "amd-mi350x-product-page"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 2300.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350x-product-page"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 4600.0,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "amd-mi350x-product-page"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 4600.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350x-product-page"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 9200.0,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "amd-mi350x-product-page"
+    },
+    {
+      "precision": "fp6",
+      "tflops": 9200.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350x-product-page"
+    },
+    {
+      "precision": "fp4",
+      "tflops": 9200.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350x-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 4600.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350x-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 9200.0,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "amd-mi350x-product-page"
+    }
+  ],
+  "tdp_w": 1000,
+  "interconnect": [
+    "amd-infinity-fabric-link",
+    "amd-xgmi",
+    "pcie-gen5"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "Air-cooled sibling of the MI355X. Same CDNA4 silicon, same 288 GB HBM3E, same 8 TB/s, same 8192-bit interface, same 185B transistors, same 8 XCDs / 256 CUs / 16,384 SPs / 1024 matrix cores. It differs ONLY in clock and power: 2200 MHz and 1000W (passive OAM) versus the MI355X's 2400 MHz and 1400W (passive & active).\n\nAMD's own MI355X brochure explains the split: MI355X's higher power budget lets it 'sustain higher performance over time, minimizing throttling and maximizing throughput during prolonged or intensive workloads'. So the real difference is sustained, not burst.\n\nSame eight-die caveat: 288 GB is one package address space across 8 XCDs, not multiple devices.\n\nCompute ratio to MI355X is 2300/2500 = 0.92 on FP16 matrix, matching the 2200/2400 = 0.917 clock ratio exactly - consistent with the same die.\n\nTwo fp16 entries on purpose: 144.2 TFLOPS is the VECTOR path, 2300 TFLOPS is the MATRIX path. TF32 is software-emulated on CDNA4 (AMD footnote), so there is no native TF32 figure to carry over from MI300X. Sparse figures are exactly 2x dense. MXFP6/MXFP4 at 9200 PFLOPs are the headline inference datatypes and are quoted without a sparse companion.\n\n7 scale-up Infinity Fabric links at 153 GB/s (product page; the MI355X datasheet gives the more precise 153.6) plus one 128 GB/s scale-out link. ROCm LLVM target gfx950."
+}

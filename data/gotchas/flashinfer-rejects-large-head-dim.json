@@ -1,0 +1,24 @@
+{
+  "id": "flashinfer-rejects-large-head-dim",
+  "type": "gotcha",
+  "name": "Forcing the FlashInfer attention backend fails on head_dim 256/512 models",
+  "class": "kernel",
+  "affects": [
+    "vllm",
+    "flashinfer",
+    "gemma-4-31b-it",
+    "nvidia-rtx-pro-6000",
+    "blackwell-sm120"
+  ],
+  "symptom": "Engine init aborts with: ValueError: Selected backend AttentionBackendEnum.FLASHINFER is not valid for this configuration. Reason: ['head_size not supported']. Reproduces for the bf16 base model, an FP8 checkpoint and an NVFP4 checkpoint of google/gemma-4-31b-it on an RTX PRO 6000 (SM120), whose config reports head_dim=256 and global_head_dim=512.",
+  "root_cause": "FlashInfer's template instantiations do not cover these head sizes for this configuration, and vLLM's backend selection validates head_size before choosing a kernel. The override is accepted by the CLI and only fails at engine init.",
+  "workaround": "Drop the attention_config override and let vLLM choose; the same model loads and runs correctly under TRITON_ATTN. If you need FlashInfer specifically, check head_size support for your shape before selecting it.",
+  "severity": "major",
+  "notes": "The reporter asks for either support or an earlier, clearer rejection at argument-parse time rather than an engine-init failure. Distinguish this from gotcha-sm120-sparse-mla-block-size, which is a different SM120 kernel-set gap (page_block_size, not head_size).",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "gotcha-vllm-issue-40677-flashinfer-head-size"
+  ]
+}

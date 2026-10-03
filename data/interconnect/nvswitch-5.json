@@ -1,0 +1,22 @@
+{
+  "id": "nvswitch-5",
+  "type": "interconnect",
+  "name": "NVIDIA NVLink Switch 5",
+  "kind": "nvswitch",
+  "version": "NVLink Switch 5",
+  "bandwidth_gbps": 900,
+  "bandwidth_basis": "PER GPU, PER DIRECTION. NVIDIA's spec table gives 'NVLink Switch GPU-to-GPU Bandwidth 1,800 GB/s' - BIDIRECTIONAL AGGREGATE per GPU pair; recorded per-direction value is half, 900 GB/s. Total aggregate published for the 72-GPU NVL72 configuration is 130 TB/s. A switch fabric and a direct-attached NVLink 5 link deliver the same per-GPU rate; only the domain size changes.",
+  "link_count": 72,
+  "topology": "Switched non-blocking fabric supporting both 8-GPU and 72-GPU NVLink domains (GB200/GB300 NVL72).",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "Nine-switch-class rack-scale domain with SHARP in-network reduction and multicast. NVIDIA states NVLink scale-out lets NVL72 support 9x the GPU count of a single 8-GPU system while keeping communication in balance with compute.",
+  "notes": "Blackwell generation. The step change is domain size, not link speed: 8 -> 72 GPUs in one non-blocking domain. Inference consequence: a 70B-class model at 4-bit fits comfortably in one 8-GPU domain, so TP degree beyond 8 buys little and instead adds all-reduce traffic that scales with TP degree - the NVL72 domain is aimed at MoE expert parallelism (many low-bandwidth, latency-tolerant all-to-all transfers) and trillion-parameter weights rather than at more TP. NVIDIA's table is marked preliminary.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-nvlink-switch-spec",
+    "link-nvlink-nvswitch-inference-blog"
+  ]
+}

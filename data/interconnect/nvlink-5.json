@@ -1,0 +1,22 @@
+{
+  "id": "nvlink-5",
+  "type": "interconnect",
+  "name": "NVIDIA NVLink 5.0",
+  "kind": "nvlink",
+  "version": "5.0",
+  "bandwidth_gbps": 50,
+  "bandwidth_basis": "PER LINK, UNIDIRECTIONAL. NVIDIA's spec table gives 1,800 GB/s NVLink bandwidth per GPU for the fifth generation - a BIDIRECTIONAL AGGREGATE across 18 links. Per-direction aggregate is 900 GB/s per GPU; per link per direction is 1800 / 18 / 2 = 50 GB/s, the recorded value. The NVIDIA developer blog repeats '1,800 GB/s per GPU', confirming the aggregate is not a per-direction rate.",
+  "link_count": 18,
+  "topology": "Direct GPU-to-GPU links on the device, plus switch trays that extend NVLink into a 72-GPU NVLink domain (GB200/GB300 NVL72).",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "NVLink 5 Switch supports both 8-GPU and 72-GPU domains; the 72-GPU domain is what makes NVL72 a single non-blocking fabric rather than 9 separate 8-GPU islands.",
+  "notes": "Blackwell generation. Doubles the per-link rate versus NVLink 4 at the same 18 links. Inference consequence: tensor-parallel sharding wants the highest per-direction fabric rate available, because every layer boundary ships activations across the link. The bidirectional aggregate figure that dominates marketing is not what a single collective move sees. For inference this is the generation where tensor parallelism plus expert parallelism inside one NVL72 rack becomes fabric-legal rather than a compromise: 130 TB/s total aggregate per the vendor table. Note the vendor table is marked preliminary and subject to change.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-nvlink-switch-spec",
+    "link-nvlink-nvswitch-inference-blog"
+  ]
+}

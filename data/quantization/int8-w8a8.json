@@ -1,0 +1,38 @@
+{
+  "id": "int8-w8a8",
+  "type": "quantization",
+  "name": "INT8 W8A8 (weight-only scheme, per-tensor / per-channel)",
+  "scheme": "int8",
+  "bits": "w8a8",
+  "weight_group_size": null,
+  "activation_scheme": "per-tensor symmetric INT8 dynamic activation scaling (or per-channel/rowwise where noted separately); no outlier decomposition, no smoothing",
+  "native_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl",
+    "nvidia-l40s",
+    "nvidia-l4",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x",
+    "amd-instinct-mi250x"
+  ],
+  "emulated_support": [
+    "amd-radeon-pro-vii",
+    "nvidia-a10"
+  ],
+  "kernels": [
+    "TensorRT-LLM INT8 plugins",
+    "cutlass INT8 GEMM",
+    "AMD Quark INT8 path (ROCm)",
+    "torch._int_mm"
+  ],
+  "quality_delta": null,
+  "notes": "Plain W8A8 is the format where weight-vs-activation precision actually equals compute precision: int8 weights multiplied by int8 activations with an int32 accumulate, which is what the INT8 tensor cores on Ampere/Hopper and the CDNA3 matrix cores actually execute. Contrast with AWQ/GPTQ/NF4/EXL2 above, which are w4a16: their 4-bit weights are dequantized to fp16 and nothing low-precision ever reaches the tensor core. INT8 tensor-core support is native from Ampere (SM80) on NVIDIA and from CDNA2 on AMD; Ada and Hopper inherit it. MI300X lists native int8 at 2614.9 TFLOPs dense (2x its fp16) in the accelerator record, and AMD's ROCm docs describe Quark's INT8 support on Instinct as the intended path (quant-rocm-quant-doc). group_size null: per-tensor and per-channel are different schemes and the allowed enum has int8-channelwise for the latter, kept separate. No quality delta recorded: W8A8 without outlier handling (i.e. not SmoothQuant) is exactly the case the SmoothQuant paper reports as accuracy-destroying, and I found no clean controlled fp16 delta for the plain variant.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-trtllm-quantization",
+    "quant-rocm-quant-doc",
+    "quant-smoothquant-paper"
+  ]
+}

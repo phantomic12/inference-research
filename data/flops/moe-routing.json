@@ -1,0 +1,37 @@
+{
+  "id": "moe-routing",
+  "type": "flop",
+  "name": "MoE gating: router GEMM, softmax/top-k, and the token scatter-gather around it",
+  "class": "moe_routing",
+  "arithmetic_intensity": "The router projection itself is tiny and bandwidth-bound: for t tokens, flops = 2*t*d_router*E while bytes = 2*d_router*E (weights, read once) + 2*t*d (activations), so AI is a small constant that grows only weakly with token count and is dominated by reading the router weights. The softmax and top-k over E experts touch a t x E tensor (2*t*E bytes) for O(t*E) flops - again ~1 flop/byte. The expensive part of routing is not arithmetic at all: it is the permutation that moves each token to its k selected experts' devices, which is a network transfer whose cost is k*t*(hidden bytes)/link bandwidth. DeepSpeed-MoE (arXiv 2201.05596) reports up to 7.3x better latency/cost than prior MoE inference systems, and the gains come from exactly these system-level mechanisms rather than from the router math.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "num_experts (router GEMM width, top-k selection width, and softmax length all grow with E)",
+    "top_k (per-token scatter volume and all-to-all volume scale with k)",
+    "expert_parallel_degree (the all-to-all appears only when experts are sharded across devices)",
+    "hidden_width (bytes per token moved)",
+    "batch_size (all-to-all message size)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "google-tpu-v5e",
+    "nvidia-b200-sxm"
+  ],
+  "workarounds": [
+    "Fused MoE kernels that do gather -> grouped GEMM -> scatter in one launch instead of materializing the permuted activation in HBM",
+    "Expert capacity factor / token dropping to make expert GEMMs static-shape (costs quality; MegaBlocks, arXiv 2211.15841, shows the block-sparse alternative that avoids dropping)",
+    "DeepSpeed-MoE style expert pruning and merging to cut total MoE model size (reported up to 3.7x)",
+    "All-to-all overlap with compute and expert-parallel communication/computation fusion",
+    "Locality-aware / top-k-of-k routing variants that keep a token on fewer devices"
+  ],
+  "notes": "Design consequence: routing is a network problem wearing an arithmetic costume. Hardware and interconnect choices for MoE should be judged on all-to-all latency and whether expert parallelism can be laid out to keep most experts resident on one device, not on router FLOPS. Engine authors should expect router cost to show up as bubbles and jitter rather than as steady compute time, and should measure MoE decode with expert-parallel communication visible. Small E (few experts) or high top_k both push this class toward being the bottleneck rather than the expert GEMMs.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-deepspeed-moe",
+    "flop-megablocks",
+    "flop-roofline-williams-2008"
+  ]
+}

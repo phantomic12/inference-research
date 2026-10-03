@@ -1,0 +1,33 @@
+{
+  "id": "gguf-q6-k",
+  "type": "quantization",
+  "name": "GGUF Q6_K (6-bit K-quant)",
+  "scheme": "gguf-q6_k",
+  "bits": "6.5633 avg (llama.cpp measured, Llama-3.1-8B)",
+  "weight_group_size": 256,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl",
+    "nvidia-l40s",
+    "nvidia-l4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10"
+  ],
+  "kernels": [
+    "ggml dequantize_block_q6_K + get_rows",
+    "ggml-cuda mul_mat_vec / mul_mat_q"
+  ],
+  "quality_delta": "Llama-3.1-8B-Instruct (quant-gguf-kquant-study): WikiText-2 ppl 7.35 vs 7.32 F16 (+0.03, within noise); unweighted mean 69.23 vs 69.47; size 6283 MiB (-58.98%). GSM8K reported 58.98 vs 77.63 for F16, which is a 18-point drop inconsistent with a +0.03 perplexity change and with the paper's own claim that Q6_K is near-baseline - treat the Q6_K GSM8K cell as unverified.",
+  "notes": "Q6_K has no S/M/L variant: 6-bit elements over a 256-value super-block with per-16 sub-block scales quantized to 8 bits. Effectively the last 'no visible loss' tier before Q8_0. Weight-only: activations stay in FP16/BF16 at runtime, so there is no '4-bit activations with hardware support' claim to make here. ggml has bespoke dequantize+gemm kernels per type, but no accelerator has a GGUF/k-quant path in silicon; everything is dequantized on the fly. vLLM explicitly labels its GGUF support experimental and under-optimized and positions it as a memory-footprint tool (quant-vllm-gguf-doc). Cost is real though: in llama.cpp's Llama-3.1-8B table Q6_K decodes at 58.67 tok/s vs Q8_0's 50.93 and F16's 29.17, so it is not free - and the study's Pareto analysis explicitly finds Q6_K and Q8_0 *dominated* by Q5_0 (less reduction AND higher AvgLoss).",
+  "status": "contested",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-gguf-kquant-study",
+    "quant-llamacpp-quantize-readme",
+    "quant-ggml-header",
+    "quant-vllm-gguf-doc"
+  ]
+}

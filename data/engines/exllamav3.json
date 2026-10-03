@@ -1,0 +1,72 @@
+{
+  "id": "exllamav3",
+  "type": "engine",
+  "name": "ExLlamaV3",
+  "repo": "turboderp-org/exllamav3",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA"
+  ],
+  "license": "MIT",
+  "first_release_year": 2025,
+  "design_goal": [
+    "low-latency",
+    "throughput-first",
+    "single-user",
+    "quantization-coverage",
+    "research"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "prefix-cache"
+  ],
+  "supported_backends": [
+    "cuda",
+    "cpu-avx512",
+    "cpu-avx2"
+  ],
+  "supported_formats": [
+    "exl3",
+    "safetensors",
+    "hf"
+  ],
+  "notable_features": [
+    "EXL3 quantization is a streamlined variant of QTIP (Cornell RelaxML): Hessians computed on the fly plus a fused Viterbi kernel make conversion a single pass — minutes for small models, hours for 70B+ on one consumer GPU.",
+    "2-8 bit KV/attention cache quantization, so the cache is not stuck at fp16.",
+    "Flexible tensor-parallel and expert-parallel inference aimed at consumer hardware, not multi-node racks.",
+    "Deliberate CPU offload feature for running large MoE models with limited GPU resources, with AVX2 and AVX512 paths.",
+    "Triton-based attention, cache and recurrent kernels — the package does not import without triton-windows on Windows.",
+    "Transformers plugin plus an OpenAI-compatible API via TabbyAPI; very broad HF architecture coverage including multimodal (DeepSeek V4, GLM 4.7/5.3 Flash, Qwen 3.5, Gemma 4, MiMo).",
+    "Vendors Marlin and Flash Linear Attention kernels (chunked linear-attention prefill under exllamav3/vendor/fla)."
+  ],
+  "hardware_caveats": [
+    "NVIDIA-first: requires PyTorch with CUDA 12.4+ (flavor extras cu124/cu126/cu128/cu129/cu130/cu132). Minimum torch 2.6.0. No ROCm, Metal, or Vulkan path documented.",
+    "On Windows the triton-windows package is a declared dependency — attention, cache and recurrent kernels are Triton, and ExLlamaV3 will not import without it.",
+    "The PyPI package ships no prebuilt extension: it requires the CUDA toolkit and build prerequisites (VS Build Tools on Windows, gcc on Linux, python-dev headers). Prebuilt wheels exist on the releases page.",
+    "Isolated builds (`uv sync`, `pip install .`) do not see your installed torch and instead JIT-compile the extension on first import, which takes minutes once per torch version. Use `--no-build-isolation` or a release wheel to avoid that.",
+    "If you have both an AMD and an NVIDIA GPU, llama.cpp-style backend selection issues do not apply here, but multi-GPU assumes CUDA; tensor- and expert-parallel are NVIDIA topologies.",
+    "Some listed architectures are explicitly unsupported: Gemma 4 E2B/E4B (the README notes them unsupported), and MiMo-V2.6-Flash has no audio support."
+  ],
+  "best_for": [
+    "Current-generation NVIDIA consumer cards: best-quality low-bit quants plus explicit MoE expert/tensor parallelism for machines that are not a datacenter.",
+    "Fitting a large MoE model into a single card with CPU offload for the leftover experts.",
+    "Single-user interactive decode speed where cache precision matters (2-8 bit cache).",
+    "Architecture coverage: the HF list is the broadest of any engine here.",
+    "Fast one-pass quantization from HF safetensors to EXL3."
+  ],
+  "avoid_for": [
+    "AMD, Intel, or Apple hardware.",
+    "CPU-only inference — the CPU path exists but only as an offload target for MoE, not as the primary engine.",
+    "Simplicity: build-time CUDA/Triton setup is real work compared to llama.cpp or ONNX paths.",
+    "Serving workloads that need paged KV across many concurrent users; the generator does dynamic batching but the project is single-user oriented."
+  ],
+  "docs_url": "https://github.com/turboderp-org/exllamav3",
+  "notes": "EXL3 is a different format from EXL2 — no checkpoint compatibility between them. The repo was created 2025-04-06 (GitHub API) and is actively pushed as of access date, so this is the live successor to the archived exllamav2 record. Architecture-support caveats noted per-README; the very broad architecture table is maintained continuously and should be re-read rather than trusted long-term.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "cpuedge-exllamav3-github"
+  ]
+}

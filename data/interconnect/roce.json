@@ -1,0 +1,22 @@
+{
+  "id": "roce",
+  "type": "interconnect",
+  "name": "RoCE (RDMA over Converged Ethernet)",
+  "kind": "roce",
+  "version": "RoCEv2",
+  "bandwidth_gbps": null,
+  "bandwidth_basis": "NULL - deliberately. RoCE is a TRANSPORT, not a physical interconnect: it runs RDMA over ordinary Ethernet layer 2 and layer 3, so it has no link rate of its own and its bandwidth is whatever the underlying Ethernet port provides. The IBTA states RoCE was first specified in 2010 and is defined within the overarching InfiniBand Architecture specification. Recording a number here would duplicate the Ethernet record and imply RoCE has independent bandwidth.",
+  "link_count": null,
+  "topology": "Any Ethernet topology that can carry lossless RDMA - typically a leaf-spine fabric, but constrained by the requirement for lossless operation (PFC / priority flow control, DCB) and typically single-path rather than multi-path. Contrast with InfiniBand, which gets losslessness and multipath from the subnet manager.",
+  "scale_up": false,
+  "scale_out": true,
+  "switching": "Ethernet switching, but with a congestion-control caveat that InfiniBand does not have: PFC-based lossless Ethernet can suffer from deadlock and incast collapse, so scale-out collectives may need traffic engineering or credit-based flow control. The Ultra Ethernet Consortium exists specifically to address this class of problem - see ethernet-uec.",
+  "notes": "Scale-out tier, and the reason Ethernet reached AI clusters at all: it keeps RDMA semantics and host-bypass while reusing commodity NICs, cables and switches. Inference consequence: the practical gap versus InfiniBand is not raw line rate - both reach 400-800 Gb/s per port - but tail latency under incast, which directly becomes inter-token-latency variance in decode. This is the motivation for the Ultra Ethernet Consortium's claim of 'as ubiquitous and cost-effective as Ethernet' with a redesigned communications stack. Port-level bandwidth is inherited from ethernet-uec, not recorded here. Deliberately null so no reader mistakes a per-port Ethernet figure for a RoCE property.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-ibta-specification",
+    "link-uec-specification-1-0-3"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "optimum-quanto",
+  "type": "quantization",
+  "name": "optimum-quanto (Hugging Face quantization library)",
+  "scheme": "optimum-quanto",
+  "bits": "int2 / int4 / int8 / float8 weights (and optional int8/float8 activations)",
+  "weight_group_size": null,
+  "activation_scheme": "optional int8 or float8 activations; when only weights are quantized the runtime is 16-bit compute, when activations are quantized too it becomes a true low-precision matmul",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "optimum-quanto CUDA kernels: int8-int8, fp16-int4, bf16-int8, bf16-int4"
+  ],
+  "quality_delta": "Qualitative only, from the project README: models compiled with int8/float8 weights and float8 activations are 'very close to the full-precision models', and inference latency with quantized-weights-only is comparable to full precision where optimized kernels exist (quant-quanto-readme). No numeric benchmark delta published - hence quality_delta left as this qualitative statement rather than null only.",
+  "notes": "Notable for one specific claim: optimum-quanto provides an accelerated int8-int8 matmul, i.e. a real low-precision x low-precision kernel rather than dequant-to-fp16 - so quanto W8A8 (weights AND activations quantized) sits on the same side of the w4a16/w8a8 line as SmoothQuant, and quanto int4 weights alone sit on the other. The README's own summarization of its tradeoff: latency is comparable to full precision only when quantizing weights alone, and device memory divides roughly by float_bits/int_bits. It also supports int2, which is well outside what the tensor cores can consume. Unlike ModelOpt this library is hardware-agnostic - the int8-int8 kernel is a CUDA kernel, and nothing in it makes use of a tensor-core INT8 opcode being absent elsewhere.",
+  "status": "verified",
+  "confidence": 0.65,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-quanto-readme"
+  ]
+}

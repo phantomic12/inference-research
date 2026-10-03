@@ -1,0 +1,41 @@
+{
+  "id": "amd-radeon-pro-vii",
+  "type": "accelerator",
+  "name": "AMD Radeon Pro VII",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "amd-radeon-pro-vii-product-page",
+    "amd-rocm-system-requirements"
+  ],
+  "vendor": "amd",
+  "architecture": "GCN5.1 (gfx906, Vega20)",
+  "release_year": 2019,
+  "process_nm": 7,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 16,
+  "memory_type": "hbm2",
+  "memory_bus_bit": 4096,
+  "memory_bandwidth_gbps": 1024,
+  "memory_bandwidth_basis": "AMD's spec table says 'Memory Bandwidth: Up to 1024 GB/s' on a 4096-bit interface with no memory-clock figure given. 1024 GB/s at 4096 bits implies a 2.0 Gbps effective per-pin rate. The page's own prose is looser ('running over a 1 TB per second memory bus'). Use 1024 GB/s as AMD's ceiling figure; it is a maximum, not a measured or typical figure, and there is no published clock to re-derive it from.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 13.1,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-radeon-pro-vii-product-page"
+    }
+  ],
+  "tdp_w": 250,
+  "interconnect": [
+    "amd-infinity-fabric-link",
+    "pcie-gen4"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "The user-owned workstation card, so worth the detail. Vega20 (GCN5.1), TSMC 7nm, 60 CUs / 3,840 SPs, 16 GB HBM2 with ECC on a 4096-bit interface, up to 1024 GB/s, PCIe 4.0 x16, 250W TBP, active cooling, full height / 267mm / double slot.\n\nCRITICAL CAVEAT: THIS CARD IS NOT ROCm-SUPPORTED. AMD's current ROCm system-requirements table lists 'AMD Radeon PRO VII | GCN5.1 | gfx906 | Unsupported' with the explicit note that 'The current ROCm release does not support this hardware. The HIP runtime might continue to run applications for an unsupported GPU, but prebuilt ROCm libraries are not officially supported and will cause runtime errors.' Same for Radeon VII (gfx906) and Instinct MI50/MI25. The only community route is ROCm/TheRock nightly builds, which AMD explicitly says is 'not part of the official ROCm release'.\n\nThat makes gfx906 a fundamentally different proposition from every other record in this directory: it is a legacy GCN workstation card with no Matrix Cores, no FP8, no BF16 matrix path, no TF32, no sparsity - and no supported ROCm path. There is exactly ONE flops entry above (fp32, 13.1 TFLOPs) because AMD's spec table publishes nothing else for this SKU. The vector FP64 rate is not listed on this page; GCN5's 1:2 FP64:FP32 ratio would give ~6.5 TFLOPS, and the page's memory of 'Peak Double Precision (FP64) 6.5 TFLOPs' does appear in the archived page - that figure is AMD-stated but is not in the flops list because the schema enum has no fp64.\n\nNotably, this card is 1/100th of an MI300X's FP16 throughput and has 1/12th the memory bandwidth at 1/12th the capacity. For LLM inference it is bandwidth-starved: 16 GB of HBM2 at ~1 TB/s. A 7B model at fp16 does not fit in 16 GB; at 4-bit it barely does, leaving almost nothing for KV cache. Usable only for small models, aggressive quantization, or short contexts.\n\nTwo features it does have that later Instinct parts dropped: display outputs (6x, FrameLock/GenLock for broadcast via the FirePro S400 sync module), and an Infinity Fabric Link 2 bridge connector for peer-to-peer GPU-to-GPU memory pooling between two cards - AMD describes this as forming 'a combined pool of GPU memory'. For a two-card workstation that halves the PCIe path and adds a direct P2P link, which is the only scale-up story on this card.\n\nARCHITECTURE NAMING: gfx906 is shared with Radeon VII and Instinct MI50/MI50X. Do not assume a card reporting gfx906 is this SKU.\n\nSource caveat: the live AMD product URL 404s today; all figures come from a Wayback Machine capture of 2021-02-16. Confidence is 0.85 rather than higher for that reason, and because AMD never published a memory clock for this part."
+}

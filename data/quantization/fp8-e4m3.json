@@ -1,0 +1,41 @@
+{
+  "id": "fp8-e4m3",
+  "type": "quantization",
+  "name": "FP8 E4M3 (per-tensor / per-block scaled)",
+  "scheme": "fp8-e4m3",
+  "bits": "w8a8 (fp8 weights, fp8 activations, fp32 accumulate)",
+  "weight_group_size": null,
+  "activation_scheme": "per-tensor scale, or per-16/32-value block scale (blockwise/rowwise variants are recorded separately as fp8-blockwise and int8-channelwise). No smoothing, no outlier decomposition.",
+  "native_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl",
+    "nvidia-l4",
+    "nvidia-l40s",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "emulated_support": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10",
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "TensorRT-LLM FP8 (per tensor) plugins",
+    "cutlass FP8 GEMM",
+    "FlashAttention-3 / FA2 FP8 paths",
+    "Transformer Engine FP8",
+    "FlashInfer FP8 GEMM"
+  ],
+  "quality_delta": "No controlled fp16 delta was located in the primary sources read for this record. Vendor checkpoint claims (Llama-3.1-8B-Instruct-FP8 et al. shipped by NVIDIA) exist but are not a perplexity comparison, so none recorded.",
+  "notes": "E4M3 (1 sign, 4 exp, 3 mantissa, max 448) is the FP8 variant chosen for *activations and weights* in the Blackwell/Hopper recipes because 3 mantissa bits preserve more relative precision; E5M2 is preferred where range matters more (gradients, and the KV cache). This is the format where the weight-vs-activation distinction flips: FP8 is genuinely w8a8 with fp32 accumulate, so the low-precision operands actually reach the tensor core. Hardware-native from Hopper on NVIDIA (H100 accelerator record lists native fp8 at 1979 TFLOPs sparse, 2x its fp16) and from CDNA3 on AMD - MI300X lists 2614.9 TFLOPs dense fp8, again 2x fp16 (quant-rocm-quant-doc confirms Quark targets this on Instinct). NOT native on Ampere (the A100 accelerator record has no fp8 entry) so FP8 on A100 is emulation by upcast. TensorRT-LLM's hardware matrix marks FP8(per tensor) Y on Hopper, Ada, Blackwell sm100/103 and Rubin, and no on Ampere (quant-trtllm-quantization).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-trtllm-quantization",
+    "quant-nvfp4-te-docs",
+    "quant-rocm-quant-doc",
+    "quant-nvfp4-blog"
+  ]
+}

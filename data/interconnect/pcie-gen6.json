@@ -1,0 +1,22 @@
+{
+  "id": "pcie-gen6",
+  "type": "interconnect",
+  "name": "PCI Express 6.0",
+  "kind": "pcie",
+  "version": "6.0 (64 GT/s, PAM4/FLIT)",
+  "bandwidth_gbps": 128,
+  "bandwidth_basis": "x16, PER DIRECTION. DERIVED, not quoted: no primary PCI-SIG page stating an x16 aggregate was retrievable, so the figure is computed from the specification's line rate. PCIe 6.0 signals at 64 GT/s using PAM4 with FLIT framing, i.e. 128 Gb/s of raw payload per lane, so 16 lanes = 2,048 Gb/s = 256 GB/s BIDIRECTIONAL AGGREGATE. The recorded per-direction value is the 128 GB/s half. Contrast with the encoded table value used for pcie-5: the switch to PAM4 is what makes the per-lane number jump.",
+  "link_count": 16,
+  "topology": "Point-to-point host-to-device, up to 16 lanes, with flit-level framing and signalling changes versus PCIe 5.0. Shares the physical layer with CXL 4.0.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "Optional PCIe switch fabric, as for PCIe 5.0 - store-and-forward, no in-network compute.",
+  "notes": "Inference consequence: at 128 GB/s per direction x16, a PCIe 6.0 host link is roughly 3.5x the per-direction rate of PCIe 5.0 but still about 3.5x below NVLink 4 per direction, so it does not change the guidance in pcie-gen5 - a tensor-parallel plan sized on PCIe 6.0 is still fabric-bound. The encoding change is the real risk: PAM4/FLIT and the retired receiver-sensitivity margin make Gen6 a materially different SI and retimer problem from Gen5, and NVIDIA's own comparison language treats PCIe Gen6 as the yardstick NVLink-C2C beats by 3.5x on area efficiency. Revision currency: PCI Express Base Specification Revisions 7.1 and 6.5 are both dated 2026-09-17 on the PCI-SIG index, so PCIe 6.0 is a shipped generation, not a preview. Confidence is deliberately low - the number is arithmetic from the line rate, and should be re-verified against the Base Specification x16 payload table before use.",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-pcisig-specifications",
+    "link-nvlink-c2c-product-page"
+  ]
+}

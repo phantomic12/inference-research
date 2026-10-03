@@ -1,0 +1,24 @@
+{
+  "id": "intel-dgpu-vulkan-or-sycl-agentic-stall",
+  "type": "gotcha",
+  "name": "On Intel Arc dGPUs, llama.cpp agentic workloads stall and enabling FA can cut prompt processing ~15x",
+  "class": "hardware",
+  "affects": [
+    "llama-cpp",
+    "intel-arc-pro-b50",
+    "vulkan",
+    "sycl",
+    "oneapi"
+  ],
+  "symptom": "On a Ryzen 5600g with Intel Arc Pro B50 (Battlemage), agentic coding with Devstral 2 small 24b or GPT-OSS 120b stalls in the first few agent steps; prompt processing drops to single digits and effectively stops once context reaches 4k-8k tokens. Measured without FA: ~300 tok/s pp; with FA enabled: ~15-20 tok/s. SYCL is worse - black screen and OOM when context fills, with 8 GB still free on the GPU.",
+  "root_cause": "Not established. The reporter tried Vulkan and SYCL, latest devel kernels and mesa 26.0, multiple llama.cpp builds including one with XE2 improvements, FA on/off, ctk/ctv q8_0 on/off, various UB/B combinations and several offloading strategies, on both Windows and Linux, with no configuration that works.",
+  "workaround": "No reliable workaround reported. Intel dGPU support in llama.cpp should be treated as experimental for long-context or agentic workloads; validate on your exact SKU before committing to it.",
+  "severity": "major",
+  "notes": "Confidence is medium: it is one user's hardware-specific report with no maintainer diagnosis, but the configuration sweep is thorough and the FA regression is quantified. The FA-on pp drop parallels gotcha-vulkan-flash-attn-slower on a different vendor's stack, which suggests FA dispatch is the thing to A/B first on any non-CUDA backend.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "gotcha-llamacpp-issue-18808-intel-dgpu-agentic-stall"
+  ]
+}

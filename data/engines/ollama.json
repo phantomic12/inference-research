@@ -1,0 +1,77 @@
+{
+  "id": "ollama",
+  "type": "engine",
+  "name": "Ollama",
+  "repo": "ollama/ollama",
+  "languages": [
+    "Go",
+    "C++",
+    "C"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "ease-of-use",
+    "multi-model",
+    "cross-platform",
+    "low-latency",
+    "minimal-deps"
+  ],
+  "scheduling": [
+    "parallel-request-model-loading",
+    "vram-aware-model-scheduling",
+    "none-within-a-sequence"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "hip",
+    "metal",
+    "vulkan",
+    "cpu-avx512",
+    "cpu-avx2",
+    "arm64-neon"
+  ],
+  "supported_formats": [
+    "gguf",
+    "safetensors"
+  ],
+  "notable_features": [
+    "`ollama pull <model>` and it handles download, quantization choice, Modelfile templating and serving — the lowest-friction path from a model name to an API.",
+    "Bundles its own llama.cpp fork, tracked in the repo as a submodule with an explicit LLAMA_CPP_VERSION pin file. It also carries MLX and MLX-C as vendored components and has MLX-specific packages, which is why the Apple path is not purely llama.cpp.",
+    "A scheduler that keeps multiple models resident and uses VRAM data reported by the GPU libraries to decide what to keep loaded and what to evict.",
+    "Exposes OpenAI- and Anthropic-compatible endpoints alongside its native API.",
+    "Works on CPU-only and CPU-only-with-no-GPU-at-all machines; the GPU is optional."
+  ],
+  "hardware_caveats": [
+    "Ollama bundles its own llama.cpp fork rather than tracking upstream continuously — the LLAMA_CPP_VERSION pin is the authoritative record of which upstream commit it is on. Expect a lag between an upstream llama.cpp release and the Ollama release carrying it.",
+    "NVIDIA: compute capability 5.0+ and driver 550+; compute capability 5.0-6.2 requires driver 570+. Anything older needs a source build.",
+    "AMD: requires the ROCm v7 driver on Linux and a ROCm v7 / HIP7-capable stack on Windows, and the ROCm library does not cover every AMD GPU. The docs give an explicit escape hatch — HSA_OVERRIDE_GFX_VERSION=10.3.0 to run an unsupported card on a nearby LLVM target — and list the supported targets (gfx908, gfx90a, gfx942, gfx950, gfx1030, gfx1100/1101/1102, gfx1150/1151, gfx1200/1201).",
+    "Vulkan is the widest-coverage GPU path and is enabled by default when installed: it covers Intel and AMD cards ROCm does not, and works on Windows and Linux. Disable with OLLAMA_VULKAN=0.",
+    "The scheduler depends on VRAM data the GPU libraries report. Under Vulkan, exposing that needs extra capabilities or root; without it Ollama falls back to approximate model sizes for best-effort scheduling. On Linux, AMD users may also need to add the ollama user to the render group, and SELinux can block container access to GPU devices.",
+    "Mixed iGPU/dGPU systems: the docs recommend keeping Vulkan enabled but pointing GGML_VK_VISIBLE_DEVICES at the discrete GPU index, because the iGPU's Vulkan path can be unstable.",
+    "Linux suspend/resume can make NVIDIA GPU discovery fail and silently fall back to CPU; the documented workaround is reloading nvidia_uvm."
+  ],
+  "best_for": [
+    "Getting from 'I want to run this model' to a working API in one command — nothing else in this list is this easy.",
+    "Single-user laptop and desktop chat across mixed hardware, including machines with no supported CUDA or ROCm path.",
+    "Switching between several small models quickly — the resident-model scheduler makes this cheap.",
+    "AMD users on a card ROCm does not list: Vulkan just works.",
+    "App integration where an OpenAI-compatible endpoint at a fixed port is the integration contract."
+  ],
+  "avoid_for": [
+    "Chasing peak tok/s — it is a distribution layer, and the bundled llama.cpp fork is a pin, not a tuning surface.",
+    "Production multi-tenant serving with paged KV and per-request scheduling policy.",
+    "Cases where you must be on the very latest llama.cpp kernels or quantization types.",
+    "Air-gapped environments with no registry access; the model pull path is the product."
+  ],
+  "docs_url": "https://docs.ollama.com",
+  "notes": "The scheduling field is deliberately non-standard to be honest: Ollama's scheduler is about which models stay resident in VRAM across requests (load/evict), not about batching sequences within one model the way vLLM/SGLang/TGI do. 'none-within-a-sequence' is my wording, not the project's; a reader looking for continuous batching will not find it here. No quantitative throughput claim is recorded because the docs make none. The llama.cpp-vs-fork lag is inferred from the LLAMA_CPP_VERSION pin mechanism plus the project's own bundling practice, not from an explicit statement in the docs — treat the direction as certain and the magnitude as unmeasured.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "cpuedge-ollama-github",
+    "cpuedge-ollama-gpu-docs"
+  ]
+}

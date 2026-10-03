@@ -1,0 +1,77 @@
+{
+  "id": "amd-instinct-mi250x",
+  "type": "accelerator",
+  "name": "AMD Instinct MI250X",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "amd-mi250x-product-page",
+    "amd-mi300x-datasheet"
+  ],
+  "vendor": "amd",
+  "architecture": "CDNA2 (gfx90a)",
+  "release_year": 2021,
+  "process_nm": 6,
+  "form_factors": [
+    "oam"
+  ],
+  "vram_gb": 128,
+  "memory_type": "hbm2e",
+  "memory_bus_bit": 8192,
+  "memory_bandwidth_gbps": 3200,
+  "memory_bandwidth_basis": "8192-bit interface x 1.6 GHz memory clock. AMD's spec table states 'Memory Clock 1.6 GHz' and 'Peak Memory Bandwidth 3.2 TB/s'. At 8192 bits, 3.2 TB/s implies a 3.125 Gbps effective per-pin rate; AMD's own datasheets for the MI200 series quote 'up to 1.6 TB/s' per GCD, so 3.2 TB/s is the 2-die aggregate of two 4096-bit HBM2e channels. Treated here as a package aggregate.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 47.9,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi250x-product-page"
+    },
+    {
+      "precision": "fp32",
+      "tflops": 95.7,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi250x-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 383.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi250x-product-page"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 383.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi250x-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 383.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi250x-product-page"
+    },
+    {
+      "precision": "int4",
+      "tflops": 383.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi250x-product-page"
+    }
+  ],
+  "tdp_w": 560,
+  "interconnect": [
+    "amd-infinity-fabric-link",
+    "amd-xgmi",
+    "pcie-gen4"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "TWO GPU dies in ONE package - this is the part most often misread. vram_gb 128 is the WHOLE OAM module, i.e. 2 x 64 GB HBM2e, one 64 GB stack set per GCD (2 x 4096-bit = 8192-bit total). Do NOT read '128 GB' as one 128GB device, and do NOT read it as two 64GB devices either: the two GCDs on MI250X are exposed as a SINGLE logical accelerator to the software stack (ROCm presents one MI250X device; the MI250 SKU exists precisely as the 1-die cut-down at 208 CUs). A reader who assumes two independently usable 64 GB devices will get the memory sizing right by accident but the NUMA/communication model wrong.\n\nAMD's own page makes the vector/matrix distinction explicit and it is easy to miss: 'Peak Single Precision Matrix (FP32) 95.7' vs 'Peak Single Precision (FP32) 47.9'. Both entries are recorded above. Same split for FP64: 95.7 matrix, 47.9 vector.\n\nNO TF32, NO FP8, NO STRUCTURED SPARSITY on CDNA2 - the MI300X datasheet footnote states this explicitly ('The MI200 Series does not support TF32, FP8, or sparsity'). Every entry above is therefore dense-only, and no sparse figure can be claimed for this part. This is the hard generation boundary: MI250X -> MI300X is where AMD gains FP8 and sparsity.\n\nINT4 at 383 TOPs is listed by AMD but note INT8 and INT4 are the SAME number here - AMD's spec table lists 'Peak INT4 Performance 383 TOPs' and 'Peak INT8 Performance 383 TOPs'. There is no 4-bit throughput advantage over 8-bit on CDNA2.\n\nFP64 is not in the flops list (schema enum has no fp64); AMD publishes 95.7 TFLOPS Matrix and 47.9 TFLOPS Vector for MI250X. That FP64 capability is why MI250X powered Frontier and remained competitive in scientific HPC well after its AI specs were overtaken.\n\nMI300X's datasheet quantifies the jump: MI300X offers '13.7x the peak AI/ML workload performance using FP8 with sparsity compared to MI250X using FP16' - that is FP8-sparse vs FP16-dense, so the like-for-like dense FP16 number is 8x.\n\n500W TDP, 560W peak, passive OAM, PCIe 4.0 x16 host, 8 Infinity Fabric links at 100 GB/s. ROCm LLVM target gfx90a. First AMD Instinct part with a Matrix Core INT8 path."
+}

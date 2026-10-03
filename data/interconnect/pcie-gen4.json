@@ -1,0 +1,22 @@
+{
+  "id": "pcie-gen4",
+  "type": "interconnect",
+  "name": "PCI Express 4.0",
+  "kind": "pcie",
+  "version": "4.0 (16 GT/s)",
+  "bandwidth_gbps": 15.75,
+  "bandwidth_basis": "x16, PER DIRECTION. DERIVED from the 16 GT/s line rate and 128b/130b line coding used by the PCIe 4.0 generation: 16 GT/s x 128/130 = 15.75 Gb/s of payload per lane per direction, so x16 = 252 Gb/s = 31.5 GB/s BIDIRECTIONAL AGGREGATE, and the recorded per-direction value is the 15.75 GB/s half. Exactly half the rate of PCIe 5.0 x16 per direction (see pcie-gen5), which is the generational relationship PCI-SIG's own doubling-per-generation cadence implies.",
+  "link_count": 16,
+  "topology": "Point-to-point host-to-device (root complex to endpoint), up to 16 lanes. Becomes a shared fabric only via PCIe switches or host bridges.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "Optional PCIe switch, store-and-forward, no in-network reduction - collectives pay full hop latency per traversal.",
+  "notes": "This is the generation that carried the first wave of PCIe-hosted multi-GPU inference boxes (MI100/MI210/MI250/MI250X-era parts). Inference consequence: 15.75 GB/s per direction at x16 is roughly 29x below NVLink 4 per direction and is the clearest example of the trap in pcie-gen5 - tensor parallel over PCIe 4.0 x16 costs dramatically more per layer boundary than the same sharding over NVLink, because activations must cross the host link while HBM bandwidth sits idle. Real deployments compensated by keeping tensor-parallel groups inside a single device and using pipeline parallelism across PCIe. Derived arithmetic, so the x16 payload table is worth re-checking against the PCI Express Base Specification if this figure gets cited in a benchmark.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-wikipedia-cxl",
+    "link-pcisig-specifications"
+  ]
+}

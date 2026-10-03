@@ -1,0 +1,71 @@
+{
+  "id": "mistral-rs",
+  "type": "engine",
+  "name": "mistral.rs",
+  "status": "draft",
+  "confidence": 0.68,
+  "updated": "2026-10-03",
+  "sources": [
+    "engine-mistralrs-github"
+  ],
+  "repo": "EricLBuehler/mistral.rs",
+  "languages": [
+    "Rust",
+    "Python",
+    "CUDA"
+  ],
+  "license": "MIT",
+  "first_release_year": 2024,
+  "design_goal": [
+    "minimal-deps",
+    "multi-model",
+    "single-binary",
+    "agentic-workloads"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache"
+  ],
+  "supported_backends": [
+    "cuda",
+    "metal",
+    "cpu-avx512",
+    "cpu-avx2"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "gguf",
+    "gptq",
+    "uqff",
+    "isq"
+  ],
+  "notable_features": [
+    "Rust engine built on Hugging Face Candle, shipping as a single prebuilt binary with a Rust crate and a Python package",
+    "Serves both OpenAI-compatible /v1 and Anthropic Messages endpoints from one process, with a built-in web UI at /ui",
+    "Full multimodal in one engine: text, vision, video, audio, speech generation, image generation and embeddings",
+    "Its own UQFF quantization format plus ISQ (in-situ quantization), plus GGUF and GPTQ loading",
+    "Multi-GPU via NCCL tensor parallelism with P2P layer mapping, plus multi-node and ring attention",
+    "Built-in agentic runtime: web search, local Python and shell execution, MCP integration, OpenAI-compatible Skills bundles",
+    "mistralrs tune recommends quantization and device mapping from the model config and detected hardware; mistralrs doctor diagnoses CUDA/Metal issues"
+  ],
+  "hardware_caveats": [
+    "CUDA is the only accelerated Linux path; the prebuilt binary matrix is Metal on Apple Silicon, per-GPU CUDA or CPU on Linux, and CPU-only on Windows. Windows therefore has no GPU acceleration out of the box",
+    "Optional cuTile acceleration requires NVIDIA's separately installed tileiras tool, so the fastest CUDA path is not self-contained",
+    "Accelerator-specific Python wheels (CUDA, Metal, MKL, Accelerate) are separate artifacts from the main package, so an install can silently land without acceleration",
+    "Its published BF16 prefill/decode comparisons against vLLM are self-reported and mixed: it wins on Gemma 4 E4B across GB10/B200/H100 but loses badly on the 26B-A4B MoE at prefill (e.g. 2766 vs 26295 tok/s on H100 SXM), so do not generalise from the small dense model",
+    "The supported-models reference is generated from the loader registry, so coverage is exactly what that registry lists - 45+ architectures as claimed, with no fallback for the rest"
+  ],
+  "best_for": [
+    "A single Rust binary with OpenAI plus Anthropic API parity and a built-in web UI",
+    "Mixed text/vision/video/audio workloads in one process",
+    "Embedders that want an inference engine as a library with both Rust and Python surfaces"
+  ],
+  "avoid_for": [
+    "Multi-node MoE at scale, where the published numbers trail vLLM substantially",
+    "Windows GPU inference, which the prebuilt matrix covers only on CPU",
+    "Anyone needing a comparable, third-party-measured benchmark record for this engine"
+  ],
+  "docs_url": "https://docs.mistralrs.dev/",
+  "notes": "Benchmark figures in the README are project self-reported for v0.8.2 (mean tok/s, decode 256 generated tokens, prompt lengths 128-16384) and were not independently reproduced. 'isq' is the project's own in-situ quantization; 'uqff' is its UQFF format. Block-diffusion text generation (DiffusionGemma) is integrated with paged attention and prefix caching per the README."
+}

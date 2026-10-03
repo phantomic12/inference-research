@@ -1,0 +1,60 @@
+{
+  "id": "flashinfer",
+  "type": "engine",
+  "name": "FlashInfer",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "engine-flashinfer-github",
+    "engine-sglang-install"
+  ],
+  "repo": "flashinfer-ai/flashinfer",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2025,
+  "design_goal": [
+    "kernel-library",
+    "low-latency",
+    "customizable"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "A kernel library for LLM serving, not a serving engine: attention, sampling and fused-MoE primitives that other engines call into",
+    "JIT compilation with a cubin cache and a pluggable JIT cache provider, plus prebuilt flashinfer-cubin artifacts",
+    "Default attention backend for SGLang and selectable in vLLM, so it changes those engines' performance more than it provides a runtime of its own",
+    "Customizable attention plans and prefill/decode splits; paper at arXiv:2501.01005",
+    "Profiler tooling for kernel-level inspection"
+  ],
+  "hardware_caveats": [
+    "CUDA-only and sm75+ only - it is explicitly unsupported below compute capability 7.5, which excludes Volta and older",
+    "Requires JIT compilation on first use, so cold start and cache-miss environments pay a compile cost; stale caches are a known failure mode and the documented fix is a forced reinstall plus deleting ~/.cache/flashinfer",
+    "Not an engine: you cannot serve a model with it alone. Scheduling is 'none' because it owns no scheduler",
+    "Kernels are tuned for NVIDIA's architecture; there is no HIP, ROCm, Metal or Vulkan path",
+    "When it misbehaves on sm75+ parts, the engines' documented fallback is to switch attention and sampling back to Triton and PyTorch"
+  ],
+  "best_for": [
+    "Squeezing attention and sampling throughput inside SGLang or vLLM on NVIDIA GPUs",
+    "Researching custom attention plans and sampling strategies against a real serving harness",
+    "As the default attention path when you have already committed to SGLang"
+  ],
+  "avoid_for": [
+    "Non-NVIDIA hardware, or NVIDIA parts below sm75",
+    "Environments where JIT compilation at runtime is unacceptable",
+    "Serving on its own - pair it with an engine"
+  ],
+  "docs_url": "https://docs.flashinfer.ai/",
+  "notes": "supported_formats is essentially empty by design: it consumes tensors from a host engine rather than loading checkpoints. Included here because it is a genuine, widely deployed GPU inference component that changes engine performance characteristics, and because its sm75 floor is the kind of hardware boundary this knowledge base exists to record."
+}

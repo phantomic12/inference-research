@@ -1,0 +1,34 @@
+{
+  "id": "gguf-q4-0",
+  "type": "quantization",
+  "name": "GGUF Q4_0 (legacy block-4 symmetric)",
+  "scheme": "gguf-q4_0",
+  "bits": "4.5 (classic block format; Q4_0 measured 4.4597 bpw in the IQ sweep, Q4_0 as a legacy 4-bit type is quoted as ~4)",
+  "weight_group_size": 32,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl",
+    "nvidia-l40s",
+    "nvidia-l4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10"
+  ],
+  "kernels": [
+    "ggml dequantize_row_q4_0 + get_rows",
+    "ggml-cuda mul_mat_vec_q4_0_q8_0 / mul_mat_q4_0_q8_1",
+    "ggml-cpu AVX2/AVX-512 dequant+dot kernels"
+  ],
+  "quality_delta": "Llama-3.1-8B-Instruct (quant-gguf-kquant-study): WikiText-2 ppl 7.74 vs 7.32 F16; GSM8K 71.03 vs 77.63 (-6.60); IFEval 71.88 vs 78.93; mean 67.98 vs 69.47; size 4438 MiB (-71.03%).",
+  "notes": "Legacy format: symmetric block-wise 4-bit over blocks of K=32, one FP16 scale per block, no zero-point, codes in [-8,7] packed as nibbles (quant-gguf-kquant-study). It predates k-quants and has no super-block hierarchy. Q4_0 is *worse* on perplexity than both Q4_K_S (7.62) and Q4_K_M (7.56) at comparable size - the direct evidence that format design beats the nominal bit-width label. Weight-only: activations stay in FP16/BF16 at runtime, so there is no '4-bit activations with hardware support' claim to make here. ggml has bespoke dequantize+gemm kernels per type, but no accelerator has a GGUF/k-quant path in silicon; everything is dequantized on the fly. vLLM explicitly labels its GGUF support experimental and under-optimized and positions it as a memory-footprint tool (quant-vllm-gguf-doc). Q4_0 does have good prompt-processing throughput (97.35 pp512 vs 79.57 F16 in that study) but poor decode (4.36 vs 2.83).",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-gguf-kquant-study",
+    "quant-llamacpp-quantize-readme",
+    "quant-ggml-header",
+    "quant-vllm-gguf-doc"
+  ]
+}

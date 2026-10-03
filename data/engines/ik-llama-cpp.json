@@ -1,0 +1,77 @@
+{
+  "id": "ik-llama-cpp",
+  "type": "engine",
+  "name": "ik_llama.cpp",
+  "repo": "ikawrakow/ik_llama.cpp",
+  "languages": [
+    "C++",
+    "C",
+    "Python"
+  ],
+  "license": "MIT",
+  "first_release_year": 2024,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "research",
+    "cpu-first",
+    "quantization-coverage"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cpu-avx512",
+    "cpu-avx2",
+    "cuda",
+    "arm64-neon"
+  ],
+  "supported_formats": [
+    "gguf",
+    "iq-k-s",
+    "iq-k-r4",
+    "iq-k-s-r4",
+    "iq-k-ss",
+    "trellis-kt",
+    "q4_k_m",
+    "mxfp4",
+    "nvfp4"
+  ],
+  "notable_features": [
+    "Extra quantization types that upstream did not have: Trellis quants (IQ1_KT, IQ2_KT, IQ3_KT, IQ4_KT) and the IQK family (IQ2_K, IQ2_KS, IQ2_K_R4, IQ3_K, IQ3_K_R4, IQ4_K, IQ4_KS, IQ4_KS_R4, IQ4_KSS, IQ5_K, IQ5_KS, IQ5_KS_R4, IQ6_K) — a much wider low-bit menu than mainline.",
+    "Features that landed here first and were later upstreamed: MLA, quant repacking, fused delta-net (Gated Delta Net), tensor parallel, MTP, DFlash.",
+    "Faster CPU inference than mainline in many cases, which is the project's stated reason for existing.",
+    "Published Docker/Podman images for cpu-swap, cpu-server, cpu-full, cu12-swap, cu12-server, cu12-full.",
+    "Build-time ISA gating: a vanilla Release build silently falls back to the AVX2 path on AVX-512 hardware unless the extra CPU build flags are set."
+  ],
+  "hardware_caveats": [
+    "The single most important caveat, stated by the project: the only fully functional and performant compute backends are CPU (AVX2 or better, ARM NEON or better) and CUDA on Turing or newer. The maintainer explicitly asks users not to file issues about ROCm, Vulkan, Metal, old NVIDIA GPUs, or AVX CPUs because they will not be fixed. So this is a CPU-or-modern-CUDA engine despite living inside llama.cpp.",
+    "On AVX-512 CPUs (AMD Zen4, Intel Sapphire Rapids and newer) the IQK quantized GEMM kernels (the HAVE_FANCY_SIMD path) need additional build flags per docs/build.md. Without them a Release build looks like it works but runs the AVX2 path — the most likely cause of 'why is my Zen4 not fast'.",
+    "Do not use `-rtr` with hybrid CPU/GPU MoE inference. It repacks everything left in RAM to row-interleaved format, and because not all quant types have a CUDA row-interleaved implementation, those matmuls get forced to the CPU, typically lowering prompt-processing speed. The README calls out k-quants (K2_K, Q3_K, Q4_K, Q5_K, Q6_K) specifically as having no CUDA row-interleaved path.",
+    "Users report gibberish output when combining split-mode graph parallel with partial GPU offload (`--cpu-moe`, `--n-cpu-moe`, tensor overrides). Workaround: add `-cuda graphs=0`.",
+    "Unsloth `_XL` quantized models that contain f16 tensors are likely to not work; the project asks users to avoid them.",
+    "Fork was created June 2024 and was last synced with upstream llama.cpp in August 2024, per the README, yet the model-support list in the same README runs to late-2026 architectures. This is an internally inconsistent statement in the primary source, recorded rather than resolved."
+  ],
+  "best_for": [
+    "Maximum decode speed on a modern x86 CPU, especially AVX-512 parts (Zen4, Sapphire Rapids+) built with the documented flags.",
+    "Sub-4-bit quality-preserving quants on consumer hardware — the reason to pick this fork over mainline.",
+    "Fitting a big MoE model on limited VRAM by leaving experts on the CPU, when you read the caveats and it still helps.",
+    "Deliberately low-bit research: Bonsai 1-bit and bitnet models are supported.",
+    "Early access to new architectures and kernels before upstream lands them."
+  ],
+  "avoid_for": [
+    "AMD GPUs, Intel GPUs, or anything wanting ROCm, Vulkan, or Metal — the project will not support them.",
+    "NAND-flash-like cheap VRAM setups where you will hit the `-rtr` / k-quant CPU-fallback trap.",
+    "Graph parallel plus partial offload without reading the `-cuda graphs=0` note.",
+    "Production serving that needs a maintained upstream base — this is a single-maintainer fork.",
+    "Machines older than AVX2 on x86."
+  ],
+  "docs_url": "https://github.com/ikawrakow/ik_llama.cpp/blob/main/docs/build.md",
+  "notes": "Architecture list in the README is extremely long and clearly kept current (includes DeepSeek V4, GLM 5.x, Qwen 3.8, Mistral 4, Gemma 4), which contradicts the 'last synced with upstream in August 2024' line in the same file. I record the contradiction rather than pick a side; the practical read is that the CPU/CUDA kernels are hand-maintained ahead of upstream while merging is intermittent. Status 'verified' applies to the backends/formats/caveats, which are stated directly; the sync-date claim is contested-by-itself-source and confidence is held at 0.85.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "cpuedge-ik-llama-cpp-github"
+  ]
+}

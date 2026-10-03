@@ -1,0 +1,22 @@
+{
+  "id": "nvswitch-4",
+  "type": "interconnect",
+  "name": "NVIDIA NVLink Switch 4",
+  "kind": "nvswitch",
+  "version": "NVLink Switch 4",
+  "bandwidth_gbps": 450,
+  "bandwidth_basis": "PER GPU, PER DIRECTION. NVIDIA's spec table gives 'NVLink Switch GPU-to-GPU Bandwidth 900 GB/s' - BIDIRECTIONAL AGGREGATE between a GPU pair. The recorded per-direction value is half, 450 GB/s. Switch silicon does not raise the per-GPU rate; it removes the topology constraint. Total aggregate for the 8-GPU domain is 7.2 TB/s as published.",
+  "link_count": 8,
+  "topology": "Switched, non-blocking all-to-all across an 8-GPU domain inside one server. Every GPU reaches every other GPU at full NVLink rate simultaneously.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "The switch is the point: NVSwitch replaces the partial mesh with a non-blocking fabric and adds SHARP in-network reduction and multicast acceleration, so all-reduce reductions happen inside the switch instead of at the GPUs.",
+  "notes": "Hopper generation, 8-GPU domains. This is where multi-GPU inference is actually won or lost. NVIDIA's own developer blog states NVSwitch gives non-blocking 900 GB/s GPU-to-GPU bandwidth on Hopper, 'eliminating the bandwidth degradation seen in point-to-point topologies', and reports up to 1.5x higher throughput than point-to-point for Llama 3.1 70B on H200 across real-time response budgets and batch sizes. Two consequences: (1) on a partial mesh the slowest path dictates collective time, so NVSwitch is worth more than its per-GPU bandwidth alone implies; (2) SHARP in-network reduction removes reduction traffic from the fabric, which matters more as TP degree rises because TP all-reduce volume scales with TP degree.",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-nvlink-switch-spec",
+    "link-nvlink-nvswitch-inference-blog"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "hqq",
+  "type": "quantization",
+  "name": "HQQ (half-quadratic quantization)",
+  "scheme": "hqq",
+  "bits": "2-8 (calibration-free; commonly quoted at 2, 3, 4 bpw)",
+  "weight_group_size": null,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-l40s",
+    "nvidia-a10",
+    "amd-instinct-mi300x"
+  ],
+  "kernels": [
+    "HQQ dequant kernels in optimum-quanto / HF HQQ integration",
+    "torch.compile dequant path"
+  ],
+  "quality_delta": "Only a cross-model claim, not a controlled fp16 delta: HQQ-quantized Llama-2-70B at 2-bit is reported as outperforming full-precision Llama-2-13B at comparable memory (quant-hqq-blog). The comparable controlled claim is speed: HQQ quantizes Llama-2-70B in under 5 minutes, reported as >50x faster than GPTQ (quant-hqq-blog).",
+  "notes": "HQQ is calibration-free by design: it minimizes weight-reconstruction error directly with a half-quadratic (proximal) solver rather than using a calibration set to minimize layer-output error. The upstream claim is that this reaches calibration-based quality at calibration-free speed, which is a genuinely different tradeoff from AWQ/GPTQ, not a weaker version of them. Weight-only - group size is not part of the defining scheme, hence null rather than a guess. Provenance warning: HQQ has NO arXiv paper. The only primary technical source found is the Dropbox/Mobius engineering blog (the 2023 post republished 2025-10-22 with an editor's note), so every HQQ number here is vendor-claim-grade and confidence is kept low. Do not cite an 'HQQ paper'.",
+  "status": "draft",
+  "confidence": 0.55,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-hqq-blog"
+  ]
+}

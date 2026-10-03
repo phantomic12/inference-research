@@ -1,0 +1,33 @@
+{
+  "id": "awq",
+  "type": "quantization",
+  "name": "AWQ (activation-aware weight quantization)",
+  "scheme": "awq",
+  "bits": "w4a16",
+  "weight_group_size": 128,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x"
+  ],
+  "kernels": [
+    "AWQ TinyChat fused dequant+mma kernels",
+    "vLLM awq_marlin",
+    "vLLM machete (AWQ path)",
+    "TensorRT-LLM AWQ plugins",
+    "GPTQModel/AWQ GEMM"
+  ],
+  "quality_delta": "From the AWQ paper itself, OPT-6.7B under INT3-g128: WikiText perplexity 43.2 for plain RTN vs 13.0 when the salient 1% of weights are identified by activation distribution and kept in FP16; AWQ's per-channel scaling is the hardware-efficient alternative to that mixed-precision layout (quant-awq-paper). No fp16-vs-AWQ delta number was quoted in the abstract, so no second figure.",
+  "notes": "This is the canonical example of the distinction that matters: AWQ is w4a16. Weights are 4-bit; activations and the KV cache stay 16-bit, so there is NO hardware 4-bit-activation path and nothing on an INT4 tensor core is being used. Group size 128 is the scheme's defining choice and the file layout - it is not a tunable, so 'AWQ group 64' is not a thing AWQ itself defines. Runtime support is entirely software dequant-to-fp16 inside a fused GEMM; the TensorRT-LLM hardware matrix confirms W4A16 AWQ is supported on Ampere/Ada/Hopper/Blackwell as a weight-only path, not as a tensor-core INT4 op (quant-trtllm-quantization). Third-party kernel claims about ~4x come from Marlin, not from AWQ's own TinyChat, which reports >3x over HF FP16 on desktop and mobile GPUs (quant-awq-paper).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-awq-paper",
+    "quant-trtllm-quantization",
+    "quant-marlin-repo"
+  ]
+}

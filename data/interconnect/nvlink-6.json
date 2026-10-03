@@ -1,0 +1,22 @@
+{
+  "id": "nvlink-6",
+  "type": "interconnect",
+  "name": "NVIDIA NVLink 6.0",
+  "kind": "nvlink",
+  "version": "6.0",
+  "bandwidth_gbps": 41.7,
+  "bandwidth_basis": "PER LINK, UNIDIRECTIONAL, CONTESTED. NVIDIA's spec table gives 3,000 GB/s per GPU and 36 max links per GPU, both labelled preliminary: 3000 / 36 = 83.3 GB/s per link bidirectional, so 41.7 GB/s per link per direction - the recorded value. A secondary source instead states 3.6 TB/s bidirectional per GPU for NVLink 6, which would imply 3.6 TB/s / 36 / 2 = 50 GB/s per link per direction. The two readings differ by the link count assumed. Recorded value follows the vendor page; the alternative is in notes.",
+  "link_count": 36,
+  "topology": "Direct GPU-to-GPU links plus switch fabric; Vera Rubin NVL72 connects 72 GPUs all-to-all as one non-blocking compute fabric.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "NVLink 6 Switch spans 8-GPU and 72-GPU domains. NVIDIA states the NVL72 rack interconnects every GPU pair at 3 TB/s and adds SHARP in-network reduction, plus control-plane resilience and hot-swappable switch trays.",
+  "notes": "Vera Rubin generation. Unresolved disagreement, both figures retained: (a) NVIDIA product page, 3,000 GB/s bidirectional per GPU and 216 TB/s for the NVL72 rack (link-nvlink-switch-spec); (b) secondary source, 3.6 TB/s bidirectional per GPU and 260 TB/s per rack from nine switches (link-wikipedia-nvlink). Note that 72 x 3 TB/s = 216 TB/s is internally consistent, which favours (a), while 3.6 TB/s = 100 GB/s per link bidirectional exactly matches the NVLink 5 per-link rate and so favours (b). NVIDIA marks the whole table preliminary. Inference consequence: tensor-parallel sharding wants the highest per-direction fabric rate available, because every layer boundary ships activations across the link. The bidirectional aggregate figure that dominates marketing is not what a single collective move sees. NVIDIA quotes NVLink 6 as 12x PCIe Gen6 and 1.7x the previous generation; the 1.7x claim is consistent with (a) (3000/1800 = 1.67) rather than (b) (3600/1800 = 2.0).",
+  "status": "contested",
+  "confidence": 0.6,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-nvlink-switch-spec",
+    "link-wikipedia-nvlink"
+  ]
+}

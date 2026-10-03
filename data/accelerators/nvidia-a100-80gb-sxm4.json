@@ -1,0 +1,84 @@
+{
+  "id": "nvidia-a100-80gb-sxm4",
+  "type": "accelerator",
+  "name": "NVIDIA A100 80GB SXM4",
+  "vendor": "nvidia",
+  "architecture": "ampere",
+  "release_year": 2020,
+  "process_nm": 7,
+  "form_factors": [
+    "sxm"
+  ],
+  "vram_gb": 80,
+  "memory_type": "HBM2e",
+  "memory_bus_bit": 5120,
+  "memory_bandwidth_gbps": 2039,
+  "memory_bandwidth_basis": "HBM2e 2.039 TB/s as published (nv-a100-datasheet). Bus width 5120-bit is the standard GA100 HBM2e interface; the datasheet does not print the bus width, only the aggregate 2039 GB/s.",
+  "flops": [
+    {
+      "precision": "other",
+      "tflops": 9.7,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "nv-a100-datasheet",
+      "notes": null
+    },
+    {
+      "precision": "other",
+      "tflops": 19.5,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "nv-a100-datasheet",
+      "notes": null
+    },
+    {
+      "precision": "fp32",
+      "tflops": 19.5,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "nv-a100-datasheet"
+    },
+    {
+      "precision": "tf32",
+      "tflops": 156,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-a100-datasheet"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 312,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-a100-datasheet"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 312,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-a100-datasheet"
+    },
+    {
+      "precision": "int8",
+      "tflops": 624,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-a100-datasheet"
+    }
+  ],
+  "tdp_w": 400,
+  "interconnect": [
+    "nvlink-3",
+    "nvswitch"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "nv-a100-datasheet"
+  ],
+  "notes": "CRITICAL: every Tensor Core figure on the A100 datasheet is the WITH-SPARITY number (marked '*' on the sheet). Dense is exactly half: TF32 156 dense, BF16/FP16 312 dense, INT8 624 TOPS dense. FP64 9.7 and FP32 19.5 are dense and unaffected by sparsity. The two FP64 entries are the distinct CUDA-core FP64 path (9.7) and the FP64 Tensor Core path (19.5) - Ampere roughly doubles FP64 via Tensor Cores; keep them as separate rows rather than picking one. TDP 400W is the standard config; the sheet notes the HGX A100-80GB CTS SKU can be configured up to 500W. 40GB SXM4 is a separate cut with 1,555 GB/s and 250W. NOTE ON PRECISION LABELS: this schema's precision enum has no 'fp64' member, so the two 'other' rows are FP64 - 9.7 TFLOPS (the GA100 CUDA-core FP64 path) and 19.5 TFLOPS (the FP64 Tensor Core path). They are NOT duplicates: Ampere's FP64 Tensor Core roughly doubles FP64 throughput, and they are recorded separately so a reader does not have to guess which number is which."
+}

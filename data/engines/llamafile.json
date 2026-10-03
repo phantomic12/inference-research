@@ -1,0 +1,83 @@
+{
+  "id": "llamafile",
+  "type": "engine",
+  "name": "llamafile",
+  "repo": "mozilla-ai/llamafile",
+  "languages": [
+    "C++",
+    "C",
+    "Go"
+  ],
+  "license": "Apache-2.0 for the project; its changes to llama.cpp and whisper.cpp are MIT, per the repo README",
+  "first_release_year": 2023,
+  "design_goal": [
+    "minimal-deps",
+    "single-file-distribution",
+    "edge/mobile",
+    "ease-of-use",
+    "cross-platform"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cpu-avx512",
+    "cpu-avx2",
+    "cuda",
+    "rocm",
+    "hip",
+    "metal",
+    "vulkan",
+    "arm64-neon"
+  ],
+  "supported_formats": [
+    "gguf",
+    "mxfp4",
+    "nvfp4",
+    "q4_k_m",
+    "f16",
+    "bf16",
+    "iq-quants (with caveat)"
+  ],
+  "notable_features": [
+    "Model weights are appended to the executable: one file is both the runtime and the model, and it maps itself into memory (an `ape` loader is extracted to $TMPDIR on UNIX).",
+    "Ships as a family of *files*: the same single-file idea applied to whisper.cpp (whisperfile) and stable-diffusion.cpp (diffusionfile), so an app can ship LLM + ASR + image gen with no installer.",
+    "GPU DSOs (ggml-cuda / ggml-rocm / ggml-vulkan) are loaded at runtime from the executable's directory first, then the bundle, then ~/.llamafile/v/<version>, then $HOME — so a hand-built DSO overrides the shipped one.",
+    "On macOS it compiles a small Metal module on first run using the Xcode Command Line Tools instead of shipping a prebuilt one.",
+    "Silently falls back to CPU inference if no GPU backend can be set up; `--gpu nvidia|amd|vulkan` forces a backend and turns that quiet fallback into a startup error.",
+    "Also ships Whisperfile, the same trick applied to speech-to-text."
+  ],
+  "hardware_caveats": [
+    "AMD64 CPUs must have AVX or llamafile prints an error and refuses to run; AVX512, AVX2, FMA, F16C and VNNI are enabled conditionally at runtime. ARM64 requires ARMv8a, which covers Apple Silicon and 64-bit Raspberry Pi.",
+    "There is NO Intel oneAPI/SYCL backend. Per the support docs, Vulkan is what covers Intel and other hardware that CUDA and ROCm do not.",
+    "Zen4 is called out specifically: its AVX512 is very good and speeds up bf16 llamafiles. So on AMD the ISA generation, not just vendor, decides CPU throughput.",
+    "NVIDIA and AMD owners must pass `-ngl 999` to enable offloading; Metal offloads by default. Multiple GPUs are split evenly, and multi-GPU is documented as possibly broken on Radeon (workaround: HIP_VISIBLE_DEVICES=0).",
+    "The bundled CUDA library is size-optimized and OMITS the IQ-quant kernels (IQ1_*, IQ2_*, IQ3_*, IQ4_*). Offloading an IQ-quant model to NVIDIA therefore leaves just those layers on the CPU — output is correct, those layers just get no acceleration. The Metal and ROCm builds are not size-optimized and do include full IQ-quant GPU support.",
+    "On Windows only executables under 4GB can run, so any self-contained llamafile above 4GB will not work; use the binary with external GGUF weights, or run under WSL (which also lifts the 4GB limit).",
+    "Vulkan on macOS goes through MoltenVK; the docs say Apple Silicon users normally want the built-in Metal backend instead.",
+    "CUDA via cuBLAS on Windows requires building from an x64 MSVC command prompt; release binaries ship prebuilt DLLs and are the recommended path."
+  ],
+  "best_for": [
+    "Handing someone a model with zero install friction: email one file, they double-click it.",
+    "Air-gapped, edge, kiosk, or locked-down machines where you cannot install a Python or CUDA stack.",
+    "Ship a complete local AI app (LLM + speech-to-text + image gen) as portable executables per platform.",
+    "Getting a consumer GPU working without CUDA: Intel Arc and anything else ROCm does not cover run via the bundled Vulkan path.",
+    "Single-user laptop chat where simplicity beats tuning."
+  ],
+  "avoid_for": [
+    "Multi-user or throughput serving — scheduling is none, one model per process.",
+    "Squeezing maximum tok/s out of a CUDA or ROCm box; the bundled CUDA DSO is size-optimized and drops IQ-quant kernels, and upstream llama.cpp/forks are faster.",
+    "Anyone needing Intel oneAPI/SYCL, DirectML, or OpenVINO paths.",
+    "Production serving where you need paged KV, continuous batching, or a scheduler.",
+    "Bundling models over 4GB into a Windows executable."
+  ],
+  "docs_url": "https://docs.mozilla.ai/llamafile",
+  "notes": "Record focuses on llamafile as a distribution/packaging engine; the underlying llama.cpp kernels and ggml backend list belong to the llama.cpp record. Two version-sensitive claims worth re-checking on upgrade: (a) the IQ-quant exclusion applies to the size-optimized NVIDIA CUDA DSO shipped in releases — the docs say the Metal and ROCm builds are not size-optimized, and building a full CUDA library restores IQ acceleration; (b) the 0.10.x series is explicitly described by the project as not yet tested on every GPU and platform, with the AMD and Windows paths called best-effort. The support page was last updated roughly 2 months before access. I did not attempt to source a quantitative Vulkan-vs-native-backend performance gap; no primary source was found, so no such number is recorded here.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "cpuedge-llamafile-github",
+    "cpuedge-llamafile-support-docs"
+  ]
+}

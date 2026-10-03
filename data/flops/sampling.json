@@ -1,0 +1,35 @@
+{
+  "id": "sampling",
+  "type": "flop",
+  "name": "Logit processing and token sampling",
+  "class": "sampling",
+  "arithmetic_intensity": "Also memory-bound and batch-invariant in the worst way. Reading the final logits for a vocab V from HBM costs 2*V bytes per token at bf16 (a single fp32 row is 4*V), and the softmax/top-k/renormalize arithmetic is a few multiples of V - so AI is on the order of 1-2 flop/byte and, critically, is essentially INDEPENDENT of batch: every sequence in the batch pays its own 2*V bytes even though the sampler is one kernel. The catch-all cost is the last hidden state (2*hidden_width bytes) and, on large-vocab models, the LM head weight matrix (2*hidden_width*V bytes) - the LM head is itself a GEMM over vocab-sized output and for big vocabs is a second full decode GEMM. For Llama-2-class vocab 32k and hidden 4096, the logits alone are ~256 KB per token at fp32.",
+  "bound_by": "memory",
+  "scales_with": [
+    "vocab_size (logit bytes per token scale linearly with V)",
+    "batch_size (logit bytes scale linearly with B - sampling gets no batching benefit per token)",
+    "num_sampled_candidates (multiple-return sampling multiplies the softmax work)",
+    "temperature_and_top_p (compute cost of the sort/partial-sort, not memory)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "amd-radeon-pro-vii"
+  ],
+  "workarounds": [
+    "Fused sampling kernels (top-k / top-p / Gumbel) that read the logits once from HBM and do selection in registers",
+    "FlashInfer-style JIT-sampled sampling to avoid materializing the full V-wide distribution",
+    "LM-head quantization, or keeping the LM head in a lower precision, since it is a bandwidth cost like any other decode GEMM",
+    "Speculative sampling's rejection scheme, which replaces sampling from a V-wide distribution with a V-wide comparison against draft tokens",
+    "Batched sampling that coalesces many sequences' logits into one memory transaction"
+  ],
+  "notes": "Design consequence: sampling is small in flops and embarrassingly memory-bound, so its cost shows up as inter-token latency variance - a latency spike at the end of every step. Sampling cost per token is roughly fixed regardless of batch, so at high batch it becomes a small share of step time; at batch 1 it is a real share of it. Engine authors should fuse it rather than splitting softmax, top-k and multinomial draw into separate kernels, each of which re-reads the same V-wide vector. Hardware: nothing here stresses tensor cores; a part with modest FLOPS and high bandwidth serves sampling perfectly well, and on very large-vocab models the LM head deserves to be budgeted as a decode GEMM rather than as 'just sampling'.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-roofline-williams-2008",
+    "flop-speculative-sampling-deepmind",
+    "flop-nvidia-inference-optimization"
+  ]
+}

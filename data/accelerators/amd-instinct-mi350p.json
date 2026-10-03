@@ -1,0 +1,117 @@
+{
+  "id": "amd-instinct-mi350p",
+  "type": "accelerator",
+  "name": "AMD Instinct MI350P",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "amd-mi350p-product-page",
+    "amd-rocm-compatibility-matrix"
+  ],
+  "vendor": "amd",
+  "architecture": "CDNA4 (gfx950)",
+  "release_year": 2025,
+  "process_nm": 3,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 144,
+  "memory_type": "hbm3e",
+  "memory_bus_bit": 4096,
+  "memory_bandwidth_gbps": 4000,
+  "memory_bandwidth_basis": "'4 TB/s' per the AMD spec table on a 4096-bit interface - exactly half the 8192-bit MI350X/MI355X, with correspondingly half the memory (144GB vs 288GB). The page gives no memory-clock figure for this part, so the 4 TB/s is a vendor figure without published arithmetic.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 72.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350p-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 72.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350p-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 1150.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350p-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 2300.0,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "amd-mi350p-product-page"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 1150.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350p-product-page"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 2300.0,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "amd-mi350p-product-page"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 2300.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350p-product-page"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 4600.0,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "amd-mi350p-product-page"
+    },
+    {
+      "precision": "fp6",
+      "tflops": 4600.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350p-product-page"
+    },
+    {
+      "precision": "fp4",
+      "tflops": 4600.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350p-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 2300.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi350p-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 4600.0,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "amd-mi350p-product-page"
+    }
+  ],
+  "tdp_w": 600,
+  "interconnect": [
+    "pcie-gen5"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "The CDNA4 part you can actually buy as a normal add-in card, and the only CDNA4 SKU without an OAM/8-GPU-platform story. Exactly HALF of an OAM part in every dimension: 128 CUs vs 256, 8192 SPs vs 16,384, 512 matrix cores vs 1024, 73B transistors vs 185B, 144 GB vs 288 GB, 4096-bit vs 8192-bit, 4 TB/s vs 8 TB/s, 128 MB Infinity Cache vs 256 MB.\n\nNote the page does NOT state a release year for MI350P (no 'Launch Date' field), so release_year 2025 is inferred from it shipping alongside the June 2025 MI350 series - treat it as approximate.\n\nPower is the interesting part: 600W max TBP but 450W TBP is configurable, and the card uses a standard 12V-2x6 connector rather than a 54V UBB. That makes it deployable in ordinary air-cooled servers. Passive cooling, full height / 267mm / double slot, Linux x86_64 only.\n\nNo Infinity Fabric links are listed on the spec page - scale-up beyond the card is PCIe only. That is a real limitation for multi-GPU inference: the OAM parts get a 153 GB/s scale-up mesh, this card gets PCIe Gen5 x16 (128 GB/s bidirectional) per card.\n\nCDNA4 software surface is confirmed on the product page: OpenMP, OpenCL, HIP, ROCm, TensorFlow, PyTorch, ONNX-RT, SGLang, JAX, Triton, Kokkos, RAJA. That is the broadest explicitly-listed framework support of any part here and worth noting for inference engine selection.\n\nTF32 is software-emulated on CDNA4. Sparse figures are 2x dense. Two fp16 entries on purpose: 72 TFLOPS vector, 1150 TFLOPS matrix. MXFP6/MXFP4 at 4600 PFLOPs. ROCm LLVM target gfx950."
+}

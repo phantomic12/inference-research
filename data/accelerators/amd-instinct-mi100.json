@@ -1,0 +1,77 @@
+{
+  "id": "amd-instinct-mi100",
+  "type": "accelerator",
+  "name": "AMD Instinct MI100",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "amd-mi100-product-page",
+    "amd-rocm-mi100-microarch",
+    "amd-mi100-acceptance-guide"
+  ],
+  "vendor": "amd",
+  "architecture": "CDNA1 (gfx908)",
+  "release_year": 2020,
+  "process_nm": 7,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 32,
+  "memory_type": "hbm2",
+  "memory_bus_bit": 4096,
+  "memory_bandwidth_gbps": 1228,
+  "memory_bandwidth_basis": "ROCm's architecture reference gives the derivation directly: 'four stacks of HBM generation 2 for a total of 32GB with a 4,096bit-wide memory interface. The peak memory bandwidth of the attached HBM2 is 1.228 TB/sec at a memory clock frequency of 1.2 GHz.' 4096 bits x 2.4 Gbps effective / 8 = 1228.8 GB/s. AMD's product page rounds this to '1.2 TB/s'.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 23.1,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-rocm-mi100-microarch"
+    },
+    {
+      "precision": "fp32",
+      "tflops": 46.1,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-rocm-mi100-microarch"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 184.6,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-rocm-mi100-microarch"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 92.3,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-rocm-mi100-microarch"
+    },
+    {
+      "precision": "int8",
+      "tflops": 92.3,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi100-product-page"
+    },
+    {
+      "precision": "int4",
+      "tflops": 92.3,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi100-product-page"
+    }
+  ],
+  "tdp_w": 300,
+  "interconnect": [
+    "amd-infinity-fabric-link",
+    "pcie-gen4"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "First CDNA part, first Instinct card without the 'Radeon' brand name (AMD dropped it at MI100), and the first with a genuine Matrix Core. TSMC 7nm, 120 CUs / 7,680 SPs, 1502 MHz peak engine clock.\n\nTWO PRECISION ASYMMETRIES THAT ARE EASY TO GET WRONG:\n\n1. FP32: vector and matrix are DIFFERENT on CDNA1 - 23.1 TFLOPS vector, 46.1 TFLOPS matrix. AMD's product page only shows 'Peak Single Precision (FP32) 23.1' and 'Peak Single Precision Matrix (FP32) 23.1' - the page lists the SAME number twice, but ROCm's architecture reference table says Vector FP32 = 128 FLOPS/clock/CU (23.1 TFLOPS) and Matrix FP32 = 256 FLOPS/clock/CU (46.1 TFLOPS). The product page's matrix figure appears to be an error, or at minimum does not reflect the architecture reference. Recorded as contested within the notes; both numbers present, sourced separately.\n\n2. BF16 is HALF of FP16 on CDNA1 - 92.3 vs 184.6 TFLOPS, because Matrix BF16 is 512 FLOPS/clock/CU against Matrix FP16's 1024 (ROCm microarch table). This reversed on CDNA2 and later: from MI250X onward BF16 == FP16. So a MI100 with a BF16 path is half speed versus the same die's FP16 path, and that gap does not exist on any later Instinct part.\n\nFP64: 11.5 TFLOPS vector per AMD's product page, and ROCm's reference derives it explicitly as '4 SIMD units x 16 elements per instruction x 120 CU x 1.5 GHz'. That is the only FP64 number; there is no FP64 matrix path on CDNA1 at all (contrast MI250X's 2x matrix FP64). Not in the flops list because the schema enum has no fp64.\n\nINT8 and INT4 are both 92.3 TOPs - no 4-bit advantage. No TF32, no FP8, no structured sparsity.\n\nMemory: 32 GB HBM2 on 4096 bits, 1228 GB/s - the bandwidth figure is the tightest number in this repo because AMD publishes the derivation. For a memory-bound decode at batch 1, 1.23 TB/s on 32 GB is a very different operating point from a 5-8 TB/s HBM3 part: small models fit, but the KV cache is capped at 32 GB.\n\n300W TDP, passively cooled, PCIe 4.0 x16 (also PCIe 3.0 x16), 3 Infinity Fabric links at 92 GB/s. Four-GPU 'hive' topologies via an Infinity Fabric bridge card in adjacent slots - the MI100-era scale-up story was PCIe-adjacent pairs, not the all-to-all mesh of later parts. ROCm LLVM target gfx908."
+}

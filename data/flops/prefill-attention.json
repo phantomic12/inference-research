@@ -1,0 +1,40 @@
+{
+  "id": "prefill-attention",
+  "type": "flop",
+  "name": "Attention over the prompt (prefill / training-style causal attention)",
+  "class": "prefill_attention",
+  "arithmetic_intensity": "Prefill attention AI grows linearly with sequence length, not with model size. First-order derivation for causal attention over d-dimensional heads, reading K and V once from HBM with perfect tiling: flops = 2*L^2*d (QK^T) + 2*L^2*d (PV) = 4*L^2*d; bytes = 2 tensors * L*d elements * 2 bytes (bf16) = 4*L*d. AI = L flop/byte, i.e. Theta(seqlen) - the L query rows are what amortize each KV byte. On H100 SXM the dense-bf16 roofline balance point is ~295 flop/byte (989 TFLOPS dense / 3.35 TB/s), so prefill attention crosses from memory-bound to compute-bound at roughly L ~ 300 tokens and is firmly compute-bound beyond a few hundred. At L=8k, AI ~8,000 flop/byte, about 27x the ridge point: long-context prefill is a tensor-core problem, not a bandwidth problem. In fp8 (1979 dense TFLOPS) the ridge is ~590 and the crossover moves to roughly L ~ 600.",
+  "bound_by": "compute",
+  "scales_with": [
+    "context_length (linearly in AI, quadratically in total flops)",
+    "batch_size (attention for a whole batch is one big GEMM pair - AI unchanged)",
+    "num_heads and head_dim",
+    "causal_mask (halves the flops vs a dense mask, does not change bytes)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "amd-radeon-pro-vii",
+    "nvidia-b200-sxm"
+  ],
+  "workarounds": [
+    "FlashAttention tiling: load Q/K/V tiles to SRAM once, keep the running softmax accumulator in registers, never materialize the S x S score matrix in HBM (arXiv 2205.14135)",
+    "FlashAttention-2 work partitioning: FA-1 reached only 25-40% of peak FLOPS/s from poor thread-block/warp partitioning and redundant shared-memory traffic (arXiv 2307.08691)",
+    "Block-sparse / causal-masked kernels that skip fully-masked tiles",
+    "Chunked prefill so a long prompt is split into cache-friendly pieces instead of one huge attention call",
+    "FP8 or BF16 tensor cores - attention is the most compute-dense part of prefill, so precision reduction buys real TFLOPS here",
+    "MQA/GQA to shrink K and V, which cuts bytes but not flops - it lowers the ridge crossing point, making attention memory-bound sooner"
+  ],
+  "notes": "Design consequence: prefill is where the tensor cores should be busy, and a part whose peak FLOPS is weak relative to its bandwidth will look fine on short prompts and fall over on long ones. Hardware that is bandwidth-rich and FLOPS-poor (consumer GDDR parts with narrow buses, parts marketed on TOPS but short on sustained bf16) will pass a short-prompt benchmark and fail a 32k-context one. Engine authors should pick the attention backend and the prefill chunk size as a function of prompt length, and should benchmark with realistic long prompts - a short-prompt prefill number says almost nothing about this class. Caveat: the AI = L/2 derivation assumes perfect tiling and that each KV element is read from HBM exactly once; FlashAttention's whole point is that real kernels get close to this in the ideal case, and fall short when occupancy is low or when the KV cache exceeds what the tiling can amortize.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-roofline-williams-2008",
+    "flop-flashattention",
+    "flop-flashattention-2",
+    "flop-nvidia-h100-specs",
+    "flop-llm-inference-roofline-survey",
+    "flop-nvidia-inference-optimization"
+  ]
+}

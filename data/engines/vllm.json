@@ -1,0 +1,88 @@
+{
+  "id": "vllm",
+  "type": "engine",
+  "name": "vLLM",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-03",
+  "sources": [
+    "engine-vllm-github",
+    "engine-vllm-install-gpu",
+    "engine-vllm-feature-matrix",
+    "engine-vllm-quant-matrix",
+    "engine-vllm-prefix-caching",
+    "engine-vllm-metal-github"
+  ],
+  "repo": "vllm-project/vllm",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "throughput-first",
+    "multi-model",
+    "general-purpose serving"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache",
+    "chunked-prefill"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "xpu",
+    "metal",
+    "cpu-avx512"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "awq",
+    "gptq",
+    "marlin",
+    "fp8",
+    "fp4",
+    "nvfp4",
+    "mxfp4",
+    "gguf",
+    "bitsandbytes",
+    "compressed-tensors",
+    "modelopt"
+  ],
+  "notable_features": [
+    "V1 engine: separate frontend / engine-core process split so the server process cannot be killed by a model execution fault",
+    "Automatic prefix caching reuses the KV blocks of any shared prompt prefix across requests",
+    "Chunked prefill interleaves prefill and decode steps to bound TTFT under long prompts",
+    "Speculative decoding (n-gram, EAGLE, MTP) and LoRA adapters at runtime",
+    "Wide quantization menu with a hardware x format compatibility matrix published in the docs",
+    "OpenAI-compatible server plus a separate disaggregated prefill/decode path"
+  ],
+  "hardware_caveats": [
+    "Linux only: the project states it does not support Windows natively; WSL or a community fork is required",
+    "CUDA path needs compute capability 7.5 or newer (T4 and up); Volta is excluded from chunked prefill and automatic prefix caching",
+    "ROCm path is pinned hard: prebuilt wheels exist only for specific ROCm versions (documented table: rocm700 for vLLM 0.14.0-0.18.0, rocm721 for nightly after a named commit), Python 3.12, glibc >= 2.35. MI350 needs ROCm 7.0+, Ryzen AI MAX / AI 300 needs ROCm 7.0.2+",
+    "ROCM wheels bundle their own PyTorch and ROCm kernels, so mixing with another ROCm or PyTorch build forces a source build",
+    "On ROCm the encoder-decoder (enc-dec) feature is unsupported; multi-step is also unsupported on AMD in the feature x hardware matrix, and async output is unsupported on AMD and on CPU",
+    "CUDA graphs are unavailable on the CPU backend and on the Intel GPU platform (tracking issue linked from the feature matrix)",
+    "Quantization is not portable across accelerators: Marlin (GPTQ/AWQ/FP8/FP4) has no AMD, Intel or CPU path; AWQ and GPTQ have no AMD GPU path; bitsandbytes and DeepSpeedFP have no AMD/Intel/CPU path; FP8 needs Ada or newer",
+    "Apple Silicon is not an in-tree backend: it requires the separately maintained vLLM-Metal plugin (see [[vllm-metal]])"
+  ],
+  "best_for": [
+    "Multi-user servers with high request concurrency, where continuous batching plus paged KV is what actually buys throughput",
+    "Workloads with heavy shared prefixes (long documents queried repeatedly, multi-turn chat) because automatic prefix caching removes repeated prefill",
+    "Broad model and quantization coverage when you want one engine rather than a per-quantization specialist",
+    "Production serving where an OpenAI-compatible API and Kubernetes-friendly serving options matter"
+  ],
+  "avoid_for": [
+    "Single-user laptop chat, where install size and startup cost dominate and nothing needs paged KV",
+    "Hardware without a maintained kernel path - every accelerator gain is tied to a bespoke kernel set that has to be compiled and validated per platform",
+    "Windows hosts, without accepting WSL",
+    "AMD GPUs when you need enc-dec models, multi-step scheduling, async output, or Marlin-kernel quantizations"
+  ],
+  "docs_url": "https://docs.vllm.ai/en/latest/",
+  "notes": "Backend terms used here: 'cuda' = NVIDIA; 'rocm' = AMD ROCm/HIP builds; 'xpu' = Intel GPU (SYCL-based, vllm-xpu-kernels, Python 3.12 only, tensor parallel supported, pipeline parallel beta on a single node via mp); 'metal' only via the out-of-tree vLLM-Metal plugin, not upstream. Quantization support per hardware is transcribed from the docs' Implementation x Hardware table; the same page warns the chart changes as vLLM evolves, so treat per-cell support as of 2026-10-03. Supported AMD gfx targets listed by the docs: MI200s (gfx90a), MI300 (gfx942), MI350 (gfx950), Radeon RX 7900 (gfx1100/1101), Radeon RX 9000 (gfx1200/1201), Ryzen AI MAX / AI 300 (gfx1151/1150)."
+}

@@ -1,0 +1,41 @@
+{
+  "id": "aws-trainium2",
+  "type": "accelerator",
+  "name": "AWS Trainium2",
+  "vendor": "amazon",
+  "architecture": "NeuronCore (4th generation)",
+  "release_year": 2024,
+  "process_nm": 5,
+  "form_factors": [
+    "oam"
+  ],
+  "vram_gb": 96,
+  "memory_type": "hbm3",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 2875,
+  "memory_bandwidth_basis": "Derived, not published per chip: Trn2.48xlarge holds 16 Trainium2 chips with 1.5 TB HBM3 and 46 TB/s aggregate (aws.amazon.com/ec2/instance-types/trn2). 1.5 TB / 16 = 96 GB per chip and 46 TB/s / 16 = 2875 GB/s per chip. Per-chip figures are corroborated by the Trn2.3xlarge row, which lists 1 chip with 96 GB.",
+  "flops": [
+    {
+      "precision": "fp8",
+      "tflops": 1300,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "asic-aws-trn2-instances"
+    }
+  ],
+  "tdp_w": null,
+  "interconnect": [
+    "aws-neuronlink",
+    "aws-efa"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "IMPORTANT: AWS does not publish a Trainium2 datasheet. The per-chip numbers here are DIVIDED OUT of the published Trn2 instance aggregates, so they carry the vendor-claim flag and lower confidence: 20.8 FP8 PFLOPS / 16 chips = 1300 TFLOPS FP8 per chip. Trainium2 ships with 8 HBM3 stacks per chip and NeuronLink chip-to-chip links inside each instance; Trn2.48xlarge = 16 chips, UltraServer = 64 chips across 4 instances at 83.2 FP8 PFLOPS and 6 TB HBM3 / 185 TB/s. BF16/FP16 per-chip peak is not published in either source, so it is left out rather than assumed to be half the FP8 number. The relevant architecture point for inference is Neuron's automatic casting: FP32 and FP16 models are autocast down to BF16/FP8/cFP8 at compile time, which changes effective throughput without changing the peak number. Trainium3 (144 GB HBM3e, 4.9 TB/s, 8 large cores with Tensor/Vector/Scalar/GPSIMD engines, hardware W4A8) exists and is shipping per the Trainium product page; it is deliberately not modelled here.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "asic-aws-trn2-instances",
+    "asic-aws-trainium-product"
+  ]
+}

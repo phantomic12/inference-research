@@ -1,0 +1,38 @@
+{
+  "id": "moe-experts",
+  "type": "flop",
+  "name": "MoE expert GEMMs (the sparse feed-forward compute)",
+  "class": "moe_experts",
+  "arithmetic_intensity": "MoE AI is worse than dense by exactly the activation sparsity factor. With E experts, top-k, total params N and batch B: each token touches k/E of the parameters, so flops = 2*B*N*(k/E) while bytes = 2*N (the whole expert set is touched once a batch is large enough to hit most experts, so weights are not amortized as favorably). AI = B*(k/E) flop/byte. Concretely with k=8, E=64 the sparsity factor is 1/8, so AI = B/8 and the batch needed to reach H100's ~295 flop/byte ridge is roughly 8x higher than for a dense model of the same total size - about 1200-2400. That is the core MoE inference tax: MoE buys training FLOPs, not inference bandwidth, and the memory roof does not know the model is sparse.",
+  "bound_by": "memory",
+  "scales_with": [
+    "batch_size (AI = B*k/E - the dominant lever, and it is harder to move than in the dense case)",
+    "num_experts and top_k (through the k/E sparsity factor)",
+    "expert_intermediate_size",
+    "expert_parallel_degree (sharding splits the bytes across devices and adds all-to-all)",
+    "weight_dtype"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-b200-sxm",
+    "google-tpu-v5e"
+  ],
+  "workarounds": [
+    "Fused MoE kernels: gather tokens, run the expert GEMM and scatter back in a single kernel so the permuted activation never round-trips through HBM",
+    "Block-sparse GEMM formulations (MegaBlocks, arXiv 2211.15841) that handle expert-size dynamism without padding to the max expert",
+    "Expert pruning and merging to shrink total MoE size (DeepSpeed-MoE reports up to 3.7x)",
+    "int4/fp8 expert weights plus expert-parallel placement so each device's expert shard fits a larger active batch",
+    "Grouped GEMM / bmm layouts so each expert's GEMM has a usable M dimension rather than a token-thin matrix"
+  ],
+  "notes": "Design consequence: a MoE model with the same parameter count as a dense model is not faster to serve - it is slower, because you must stream every expert weight to get k/E of the work done. Serving MoE well demands a high active batch, which means latency-optimized MoE serving and throughput-optimized MoE serving are different products. Hardware designers should read MoE inference as a bandwidth problem with a bigger weight footprint and a smaller flops-per-byte, not as a compute win. Interconnect choice matters twice over: once for weights staying local, once for the all-to-all. MegaBlocks' central point is worth carrying over to inference - padding every expert's token group to the largest expert wastes flops and bytes in exactly the regime that is already bandwidth-starved.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-deepspeed-moe",
+    "flop-megablocks",
+    "flop-roofline-williams-2008",
+    "flop-nvidia-h100-specs"
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "id": "aws-inferentia2",
+  "type": "accelerator",
+  "name": "AWS Inferentia2",
+  "vendor": "amazon",
+  "architecture": "NeuronCore (2nd generation)",
+  "release_year": 2022,
+  "process_nm": 7,
+  "form_factors": [
+    "custom"
+  ],
+  "vram_gb": 32,
+  "memory_type": "hbm",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 820,
+  "memory_bandwidth_basis": "Vendor-published per-chip figure: the Inferentia page states 190 TFLOPS FP16 per chip and 32 GB HBM per chip. Bandwidth derived from the Inf2 instance aggregate: 12 chips give 384 GB and 9.8 TB/s, i.e. 32 GB and ~817 GB/s per chip. AWS describes this as 10x the memory bandwidth of first-generation Inferentia.",
+  "flops": [
+    {
+      "precision": "fp16",
+      "tflops": 190,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "asic-aws-inferentia-product"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 380,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "asic-aws-inferentia-product"
+    }
+  ],
+  "tdp_w": null,
+  "interconnect": [
+    "aws-neuronlink",
+    "aws-efa"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "The only per-chip published compute number is 190 TFLOPS FP16 (vendor page). The FP8 row at 380 TFLOPS is an INFERENCE from the 2.3 PFLOPS 'up to' instance aggregate over 12 chips, and is flagged vendor_claim false and dense because AWS never states whether that aggregate is dense or sparse; treat it as an upper bound, not a measured dense peak. Inf2 supports FP32, TF32, BF16, FP16, UINT8 and configurable FP8 (cFP8); AWS's autocast path takes high-precision FP32/FP16 models and casts them down, with stochastic rounding available to protect accuracy. Two NeuronCores per chip (versus four on gen 1) is the reason a single chip reaches 190 TFLOPS where gen 1 spread its cores wider. NeuronLink at 192 GB/s lets data move chip-to-chip without touching the CPU, which is what makes multi-chip tensor parallelism viable for models that do not fit one 32 GB part. Contrast with Trainium2: same vendor, same NeuronLink, but Inferentia2 is inference-only and 32 GB, while Trainium2 is 96 GB and mixed-use.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "asic-aws-inferentia-product",
+    "asic-aws-inf2-instances"
+  ]
+}

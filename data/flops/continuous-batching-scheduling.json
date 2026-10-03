@@ -1,0 +1,38 @@
+{
+  "id": "continuous-batching-scheduling",
+  "type": "flop",
+  "name": "Iteration-level scheduling: the overlap of prefill and decode in one batch",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Not a flop class in isolation - it is the class that decides which flop classes a step contains. Orca's iteration-level scheduling admits a new request as soon as any sequence in the running batch finishes, so the batch never sits at one sequence and the decode GEMM's AI (= B) actually climbs. In a naive static batch, a step is either prefill-dominated (compute-bound, long TTFT) or decode-dominated (memory-bound, low per-token throughput) and neither uses the machine well. Mixing them is the point: prefill tokens are compute-rich and raise AI for the step's GEMMs, while the KV bytes the decode rows pull keep the step bandwidth-heavy. The cost is that a mixed step's shapes vary per iteration, which is exactly what fights CUDA Graphs' static-configuration requirement.",
+  "bound_by": "both",
+  "scales_with": [
+    "batch_size (the lever that makes continuous batching worth having)",
+    "arrival_rate_and_sequence_length_distribution (whether steps are prefill- or decode-dominated)",
+    "num_concurrent_requests (throughput mode vs latency mode)",
+    "scheduler_policy (prefill-first vs decode-first vs chunked-prefill preemption changes the mix)",
+    "kv_cache_pressure (preemption and swapping add kv_transfer work to a step)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-b200-sxm"
+  ],
+  "workarounds": [
+    "Iteration-level scheduling / continuous batching (Orca, OSDI 2022): admit and retire sequences per iteration rather than per batch",
+    "Chunked prefill to bound the prefill chunk added to a step, so a long prompt cannot stall decode ITLs",
+    "Preemption by recompute or swap when KV memory is exhausted, trading compute or PCIe traffic for a smaller batch",
+    "Load-balanced scheduling compatible with CUDAGraph's static configuration (FlashInfer, arXiv 2501.01005)",
+    "Priority scheduling that separates TTFT-sensitive from throughput-sensitive traffic into different admission classes"
+  ],
+  "notes": "Design consequence: this is the class that turns the decode-gemm AI=B result into an actual throughput number. Because AI = B, the entire throughput story of an inference service is 'what is the average effective B', and continuous batching is the mechanism that keeps B high as requests arrive and complete. A hardware or engine decision should follow from: a part is under-utilized in exactly the regime where B is small, so anything that raises the average B - batching, speculative decoding's batch-k verify, chunked prefill, multi-model serving - converts idle bandwidth into tokens. The trade is explicit and unavoidable: latency-serving (small B, memory-bound, launch-overhead-sensitive) and throughput-serving (large B, compute-bound) stress different hardware properties, and one engine tuned for the second can be the wrong choice for the first. Record the scheduler policy alongside any throughput benchmark, because 'continuous batching' alone does not specify whether long prompts are chunked or preempted.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-orca-osdi22",
+    "flop-pagedattention-vllm",
+    "flop-flashinfer",
+    "flop-nvidia-cuda-graphs",
+    "flop-nvidia-inference-optimization"
+  ]
+}

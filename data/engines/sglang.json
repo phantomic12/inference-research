@@ -1,0 +1,77 @@
+{
+  "id": "sglang",
+  "type": "engine",
+  "name": "SGLang",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "engine-sglang-github",
+    "engine-sglang-install"
+  ],
+  "repo": "sgl-project/sglang",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA",
+    "Rust"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "agentic-workloads",
+    "research-friendly"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "radix-cache",
+    "prefix-cache",
+    "chunked-prefill"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "metal",
+    "xpu",
+    "tpu",
+    "cpu-avx512"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "fp8",
+    "awq",
+    "gptq",
+    "mxfp4",
+    "nvfp4"
+  ],
+  "notable_features": [
+    "RadixAttention: a radix tree over the KV cache so any shared prefix, not just an exact-prefix match, is reused",
+    "SGLang language primitives (radix cache, jump-forward decoding, LPM cache-aware admission) are exposed as first-class knobs",
+    "Strong RL-rollout story: the same engine is used to generate training rollouts, and SGLang Diffusion adds image/video generation in the same package",
+    "OpenAI-compatible server, a Rust component in the tree, and sgl-router for multi-model routing",
+    "Separate backends for TPU (SGL-JAX and SGL-torchtpu) alongside the main PyTorch path"
+  ],
+  "hardware_caveats": [
+    "CUDA 13 is required: the CUDA 12.9 wheel/image lane is retired because PyTorch 2.14 publishes no CUDA 12.9 builds, and SGLang 0.5.19 is the last release with a CUDA 12 lane",
+    "FlashInfer is the default attention backend and only supports sm75 and above; on sm75+ devices with FlashInfer problems the documented fallback is --attention-backend triton --sampling-backend pytorch",
+    "Many dependencies publish pre-release wheels only, so uv installs silently land on an old version (0.5.9) unless --prerelease=allow is passed",
+    "The documented supported-hardware list is narrower than vLLM's: NVIDIA A100/H100/H200/H800/H20/B200/B300/GB200/GB300 plus select RTX 30/40/50, and AMD MI300X/MI325X/MI350X/MI355X. No consumer AMD Radeon entry",
+    "TPU support is split across sibling projects (SGL-JAX, SGL-torchtpu), so TPU parity with the main CUDA path is not automatic",
+    "Apple Silicon and Intel support exist but are documented on separate hardware-platform pages with far less detail than the NVIDIA path"
+  ],
+  "best_for": [
+    "Agentic and RL workloads where many requests share long, branching context - the radix cache reuses partial prefixes, not just exact ones",
+    "Serving latency-sensitive multi-turn conversation, because prefix reuse removes the re-prefill of chat history",
+    "Teams that want to experiment with scheduling policy rather than just tune it"
+  ],
+  "avoid_for": [
+    "Environments pinned to CUDA 12 - there is no supported lane any more",
+    "Installs where a silently downgraded dependency is acceptable risk; the pre-release dependency set is a real operational hazard",
+    "Consumer AMD Radeon cards, which are not in the documented support list"
+  ],
+  "docs_url": "https://docs.sglang.io/",
+  "notes": "Scheduling terms: 'radix-cache' is the distinguishing mechanism (radix tree over KV blocks); 'prefix-cache' is used here in the looser sense that the radix cache provides prefix reuse generally. AMD entry is Instinct-class only per the README's supported-hardware table. TPU and NPU paths are separate projects, so 'tpu' here means supported but not first-class in this repo."
+}

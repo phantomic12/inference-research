@@ -1,0 +1,40 @@
+{
+  "id": "decode-attention",
+  "type": "flop",
+  "name": "Attention over the KV cache in the decode step",
+  "class": "decode_attention",
+  "arithmetic_intensity": "Structurally ~1 flop/byte at bf16, at EVERY context length and EVERY batch size. Per decoded token with one query row: flops = 2*L*d (QK^T) + 2*L*d (PV) = 4*L*d; bytes = 2 tensors (K and V) * L*d * 2 bytes = 4*L*d. The cancellation is the same as in prefill attention, but here the query count is 1 instead of L, so the AI collapses to 1 flop/byte and stays there. The consequence is sharper than for prefill: because flops and bytes both scale linearly in context length, growing the context does NOT raise arithmetic intensity, and batching does NOT raise it either (AI is independent of B). Only halving the bytes per element helps: an fp8 KV cache gives 2 flop/byte, and GQA/MQA shrink K and V by the group factor without changing the flops, which is the only structural fix. Compare H100 SXM's ~295 flop/byte ridge: KV-cache attention is ~300x below it.",
+  "bound_by": "memory",
+  "scales_with": [
+    "context_length (bytes AND flops both linear - AI flat, so cost per token grows linearly with context)",
+    "batch_size (bytes and flops both linear - AI flat, batching does not amortize this class)",
+    "num_kv_heads (GQA/MQA is the only knob that cuts bytes without cutting flops)",
+    "kv_cache_dtype (fp8/int8 KV roughly halves the bytes and doubles AI)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "amd-radeon-pro-vii",
+    "nvidia-b200-sxm",
+    "google-tpu-v5e"
+  ],
+  "workarounds": [
+    "FlashDecoding: split the KV sequence across thread blocks and merge partial softmax results via log-sum-exp, because a single decode step has far too little parallel work to fill the GPU (crfm.stanford.edu FlashDecoding blog)",
+    "FlashInfer block-sparse and composable KV-cache formats to cut redundancy and improve access patterns (arXiv 2501.01005)",
+    "fp8 / int8 KV cache quantization - the only lever that raises AI for this class",
+    "Grouped-query or multi-query attention to shrink the K/V head count",
+    "KV cache offload to host or device memory for cold context, which trades bandwidth for capacity",
+    "Prefix/radix cache reuse so long shared prefixes are not re-read (SGLang RadixAttention, arXiv 2312.07104)"
+  ],
+  "notes": "This is the class that makes long-context serving expensive, and the reason is structural rather than a kernel deficiency: a decode step reads the entire KV cache to produce one token, and no amount of batching or tiling changes the bytes-per-flop ratio. Hardware implication: parts with high memory bandwidth and a large pool (HBM, and unified/Apple-style memory) win long-context decode; small-VRAM consumer parts degrade roughly linearly in context length once the KV cache no longer fits and paging begins. Engine implication: measure long-context inter-token latency separately from short-context latency - a part that looks fine at 2k can be an order of magnitude off at 32k, and continuous batching will not save it because AI is batch-invariant. Engineering corollary: since flops scale linearly too, better math (fp8 attention, sparsity) does help here, unlike in the weight-GEMM case where flops are already negligible.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-flashdecoding",
+    "flop-roofline-williams-2008",
+    "flop-flashinfer",
+    "flop-nvidia-h100-specs",
+    "flop-llm-inference-roofline-survey"
+  ]
+}

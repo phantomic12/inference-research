@@ -1,0 +1,33 @@
+{
+  "id": "gguf-q4-k-m",
+  "type": "quantization",
+  "name": "GGUF Q4_K_M (4-bit K-quant, medium)",
+  "scheme": "gguf-q4_k_m",
+  "bits": "4.8944 avg (llama.cpp measured, Llama-3.1-8B)",
+  "weight_group_size": 256,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl",
+    "nvidia-l40s",
+    "nvidia-l4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10"
+  ],
+  "kernels": [
+    "ggml dequantize_block_q4_K + get_rows",
+    "ggml-cuda mul_mat_vec / mul_mat_q"
+  ],
+  "quality_delta": "Llama-3.1-8B-Instruct (quant-gguf-kquant-study): WikiText-2 ppl 7.56 vs 7.32 F16 (+0.24, the smallest perplexity cost of any 4-bit option measured); GSM8K 69.41 vs 77.63; IFEval 72.35 vs 78.93; unweighted mean 69.15 vs 69.47 (-0.46% AvgLoss); size 4685 MiB (-69.41%).",
+  "notes": "The most widely used llama.cpp quant and the default in most tutorials. Important structural point most blog posts get wrong: Q4_K_M is *not* pure 4-bit weights - at 4.8944 bpw it is wider than Q5_0's advertised class and wider than the classic Q4_0, because the k-quant super-block spends real bits on quantized sub-block scales/mins. That is where its quality advantage comes from, not from clever rounding. Weight-only: activations stay in FP16/BF16 at runtime, so there is no '4-bit activations with hardware support' claim to make here. ggml has bespoke dequantize+gemm kernels per type, but no accelerator has a GGUF/k-quant path in silicon; everything is dequantized on the fly. vLLM explicitly labels its GGUF support experimental and under-optimized and positions it as a memory-footprint tool (quant-vllm-gguf-doc). In that study Q4_K_S dominates Q4_K_M on both axes (more reduction, lower AvgLoss), which is the opposite of the conventional 'Q4_K_M is better than Q4_K_S' folk rule - recorded as contested rather than resolved.",
+  "status": "contested",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-gguf-kquant-study",
+    "quant-llamacpp-quantize-readme",
+    "quant-ggml-header",
+    "quant-vllm-gguf-doc"
+  ]
+}

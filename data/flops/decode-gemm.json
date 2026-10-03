@@ -1,0 +1,42 @@
+{
+  "id": "decode-gemm",
+  "type": "flop",
+  "name": "Dense weight GEMMs in the decode step (the per-token matmul tax)",
+  "class": "decode_gemm",
+  "arithmetic_intensity": "At batch B, decode GEMM reads every weight exactly once and does 2*B flops per weight. bf16 weights: bytes = 2*N_params, flops = 2*B*N_params, so AI = B flop/byte - exactly B, i.e. ~1 flop/byte at batch 1. This is the single most important number in LLM inference: on H100 SXM the dense-bf16 balance point is ~295 flop/byte (989 dense TFLOPS / 3.35 TB/s; the 1,979 TFLOPS figure on NVIDIA's spec page is the sparsity-marked number and is 2x dense), so a batch-1 decode GEMM sits ~295x below the ridge and runs at a small fraction of peak FLOPS purely because it is waiting on HBM. The roofline says: to be compute-bound in bf16 you need batch on the order of 150-300; in fp8 (1979 dense TFLOPS) roughly half that. Real kernels hit their crossover earlier than the ideal roofline because the memory-bound path reaches a higher fraction of peak bandwidth than the compute-bound path reaches of peak FLOPS, so measured crossovers for bf16 GEMV-style decode land well below the 295 batch figure.",
+  "bound_by": "memory",
+  "scales_with": [
+    "batch_size (AI = B, this is the only lever that moves decode off the memory roof)",
+    "num_params",
+    "hidden_width / intermediate_size (bytes and flops both scale with it, so AI is unchanged)",
+    "dtype (fp8 or int4 weights cut bytes directly and raise AI proportionally)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "amd-radeon-pro-vii",
+    "nvidia-b200-sxm",
+    "intel-gaudi3",
+    "google-tpu-v5e"
+  ],
+  "workarounds": [
+    "Continuous batching / iteration-level scheduling (Orca, OSDI 2022) - admit new sequences the instant one finishes so B never sits at 1",
+    "Weight quantization to fp8/int8/int4 - the only intervention that reduces bytes without reducing work",
+    "GEMV-specific kernels for B=1 and small B instead of tiling a GEMM the shape of which wastes the tensor cores",
+    "CUDA Graphs / kernel fusion to remove per-op launch overhead, which is a real fraction of step time at B=1",
+    "Speculative decoding - verify k tokens in one weight pass, amortizing the same bytes over k positions",
+    "MARLIN-style mixed-precision GEMM that keeps 4-bit weights bandwidth-bound up to batch 16-32 (arXiv 2408.11743)"
+  ],
+  "notes": "The design consequence runs in both directions. For hardware: memory bandwidth, not peak TOPS, sets single-stream decode throughput, so a part with high FLOPS and modest bandwidth is a throughput part, not a latency part. For engine authors: the only real cure for a latency-bound decode is to raise B (continuous batching) or to shrink the bytes read per token (quantization, sparsity, small models) - adding FLOPS does nothing. Note also that AI = B assumes weights are read once per step and reused across the batch, which is exactly why batching is such a large win and why weight-cache-friendly parts with large L2 win at small batch. A useful sanity check for any decode benchmark: if B was not reported, the tok/s number is not interpretable.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-roofline-williams-2008",
+    "flop-nvidia-h100-specs",
+    "flop-orca-osdi22",
+    "flop-marlin",
+    "flop-llm-inference-roofline-survey",
+    "flop-nvidia-inference-optimization"
+  ]
+}

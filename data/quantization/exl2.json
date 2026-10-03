@@ -1,0 +1,29 @@
+{
+  "id": "exl2",
+  "type": "quantization",
+  "name": "EXL2 (GPTQ with mixed per-tensor bitrate)",
+  "scheme": "exl2",
+  "bits": "2-8 adjustable (target average bits-per-weight, e.g. 2.5 / 3.0 / 4.0 / 5.0 bpw builds)",
+  "weight_group_size": null,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-l40s",
+    "nvidia-a10",
+    "amd-instinct-mi300x"
+  ],
+  "kernels": [
+    "exllamav2 EXL2 GEMM / dequantize kernels",
+    "exllamav2 Q4/Q6/Q8 KV-cache modes"
+  ],
+  "quality_delta": null,
+  "notes": "EXL2 uses the same optimization method as GPTQ and supports 2,3,4,5,6,8-bit, but mixes quantization levels within a model - and, per the upstream README, can apply multiple quantization levels to each individual linear layer - to hit any target average bitrate between 2 and 8 bpw (quant-exl2-readme). That mixed-precision layout is why it needs its own kernels and cannot be served by the Marlin/AWQ path. Weight-only: activations are 16-bit. The upstream repo is now archived with development moved to ExLlamaV3, so this record describes a format that is in maintenance, not in active development. No quality delta recorded: the README publishes throughput (Llama2-7B EXL2 4.0 bpw at 185 tok/s on a 3090 Ti, 211 on a 4090) but no perplexity or benchmark deltas vs fp16, and none was found elsewhere.",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-exl2-readme",
+    "quant-gptq-paper"
+  ]
+}

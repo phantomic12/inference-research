@@ -1,0 +1,43 @@
+{
+  "id": "kv-transfer",
+  "type": "flop",
+  "name": "KV cache movement: block copy, prefix sharing, prefill-to-decode handoff, and offload",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "Pure data movement, AI = 0 - no flops at all, so every definition of this class is a bandwidth or interconnect problem. Volume per token is 2 (K and V) x num_kv_heads x head_dim x layers x kv_dtype_bytes; for a 32-layer, hidden-4096, GQA-8-head, bf16 model that is on the order of hundreds of KB per token. At a 32k context that is several GB of KV per sequence, which is why PagedAttention's near-zero-waste block management was worth 2-4x end-to-end throughput at the same latency vs Orca and FasterTransformer, more so at longer sequences and larger models (arXiv 2309.06180). The copy that dominates is not the write of new KV but the movement implied by preemption, rescheduling, prefix sharing, and multi-node sharding - each of which is a full pass over the cache.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "context_length (cache bytes grow linearly; this is the whole story)",
+    "batch_size x live_sequences (total cache footprint)",
+    "num_kv_heads (GQA shrinks it directly)",
+    "kv_cache_dtype",
+    "tensor_parallel_degree (a KV block sharded across N devices must be gathered before attention, adding N-1 transfers per block read)",
+    "prefix sharing rate (how much can be deduplicated instead of copied)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-b200-sxm",
+    "google-tpu-v5e",
+    "amd-radeon-pro-vii"
+  ],
+  "workarounds": [
+    "PagedAttention: fixed-size KV blocks copied by reference rather than contiguous reallocation, giving near-zero waste and flexible sharing within and across requests (arXiv 2309.06180)",
+    "Prefix caching / radix cache over the KV so shared system prompts and multi-turn prefixes are read once (SGLang RadixAttention, arXiv 2312.07104)",
+    "Block-sparse and composable KV layouts so attention reads only the blocks a sequence owns (FlashInfer, arXiv 2501.01005)",
+    "fp8 / int8 KV cache to halve the volume",
+    "Grouped-query attention to cut K/V head count, and windowed or sliding-window KV for long context",
+    "Async offload to host memory with prefetch so a cold cache does not stall the step",
+    "Keeping a sequence's blocks device-resident across a scheduler preemption instead of swapping it out"
+  ],
+  "notes": "Design consequence: KV movement is the class that decides whether a long-context service is viable at all, and it is the one that most rewards hardware with fast local memory and low-latency scale-up links rather than fast FLOPs. Three things a hardware or engine decision should follow from. (1) Footprint is a first-class constraint, not a secondary one: with paged KV the same VRAM buys substantially larger batches, and larger batches are what move decode GEMMs off the memory roof - so the two optimizations compound. (2) Under tensor parallelism, every KV block read is preceded by an all-gather over NVLink/xGMI; KV-bound long-context decode therefore becomes interconnect-bound, and this is the strongest argument for wide high-bandwidth scale-up links in long-context serving. (3) Cache reuse beats cache speed when it is available: prefix/radix caching eliminates the traffic rather than accelerating it, and for RAG, multi-turn chat and agent workloads with long shared prefixes that is the larger win.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-pagedattention-vllm",
+    "flop-sglang",
+    "flop-flashinfer",
+    "flop-nvidia-inference-optimization",
+    "flop-orca-osdi22"
+  ]
+}

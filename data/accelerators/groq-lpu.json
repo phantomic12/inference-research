@@ -1,0 +1,47 @@
+{
+  "id": "groq-lpu",
+  "type": "accelerator",
+  "name": "Groq LPU (Language Processing Unit, Tensor Streaming Processor)",
+  "vendor": "groq",
+  "architecture": "Tensor Streaming Processor / LPU",
+  "release_year": 2019,
+  "process_nm": 14,
+  "form_factors": [
+    "oam"
+  ],
+  "vram_gb": 0.23,
+  "memory_type": "sram (on-chip only, no DRAM tier)",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 80000,
+  "memory_bandwidth_basis": "Vendor claim, 'upwards of 80 terabytes/second' of on-chip SRAM bandwidth, contrasted in the same paragraph with GPU off-chip HBM at 'about eight terabytes/second'. This is SRAM bandwidth, not memory capacity bandwidth, and is roughly 10x a current GPU HBM interface.",
+  "flops": [
+    {
+      "precision": "fp16",
+      "tflops": 188,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "asic-groq-lpu-technology"
+    },
+    {
+      "precision": "int8",
+      "tflops": 750,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "asic-groq-lpu-technology"
+    }
+  ],
+  "tdp_w": null,
+  "interconnect": [
+    "groq-lpu-interconnect"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "PARTIAL SPEC, and the reason for low confidence: Groq's own architecture page publishes no per-chip compute or memory-capacity figure at all. The 230 MB SRAM capacity, 188 TFLOPS FP16 and 750 TOPS INT8 recorded here come from press coverage of the original GroqChip (widely attributed to Groq's Hot Chips 2021 presentation) and are NOT confirmed on groq.com, which is why they are flagged vendor_claim false. Groq confirms only: on-chip SRAM, no off-chip HBM, 14 nm, and 80 TB/s SRAM bandwidth. THE ARCHITECTURAL POINT, which is what matters for inference: SRAM-only with no DRAM tier means there is no weight-streaming path. A model larger than 230 MB must be tiled across many chips and the tapeout is fixed at compile time, so the compiler statically schedules all data movement and the result is a deterministic assembly line with no dynamic scheduling, no cache misses and no variance. That is why Groq's headline latency figures hold under load, and also why a single-chip spec sheet is misleading: reported 70B-class configurations have needed on the order of hundreds of chips. Do not compare this record's flops against a GPU's flops as if capacity were comparable. On generation naming: Groq's own silicon is still the LPU line; 'Groq 3 LPX' is NVIDIA-branded silicon produced under the December 2025 non-exclusive licensing agreement with NVIDIA, so records for the two must not be conflated. Since that deal, NVIDIA has become a consumer of Groq IP and Groq an NVIDIA Cloud Partner, but Groq states its own roadmap and architecture remain Groq-led.",
+  "status": "verified",
+  "confidence": 0.55,
+  "updated": "2026-10-03",
+  "sources": [
+    "asic-groq-lpu-technology",
+    "asic-groq-nvidia-3lpx"
+  ]
+}

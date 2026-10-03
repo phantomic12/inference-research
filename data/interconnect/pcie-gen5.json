@@ -1,0 +1,23 @@
+{
+  "id": "pcie-gen5",
+  "type": "interconnect",
+  "name": "PCI Express 5.0",
+  "kind": "pcie",
+  "version": "5.0 (32 GT/s)",
+  "bandwidth_gbps": 31.5,
+  "bandwidth_basis": "x16, PER DIRECTION. PCIe 5.0 signals at 32 GT/s per lane with 128b/130b line coding, giving 3.938 GB/s per lane per direction and 63.015 GB/s per lane-set BIDIRECTIONAL AGGREGATE at x16. The recorded value is the per-direction half, 63.015 / 2 = 31.5 GB/s. The per-lane and x16 figures come from a secondary source's encoding table; the 32 GT/s line rate is corroborated by AMD shipping MI300X OAM modules on a 'PCIe 5.0 x16' bus.",
+  "link_count": 16,
+  "topology": "Point-to-point host-to-device by default (root complex to endpoint), up to 16 lanes. Becomes a shared fabric only through PCIe switches or host bridges, in which case ordering and oversubscription apply.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "Optional. A PCIe switch creates a shared domain, but it is store-and-forward with no in-network reduction, so collectives pay full hop latency per traversal and get no SHARP-equivalent.",
+  "notes": "PCIe sits between scale-up and scale-out and is the bottleneck people forget: it is the host attach path for PCIe accelerators, so an 8-GPU node on PCIe has 31.5 GB/s per direction per GPU versus 450 GB/s per direction per GPU for NVLink 4 on Hopper - roughly 14x less per-direction fabric bandwidth for tensor parallel. Consequence: tensor-parallel sharding across PCIe is dramatically worse than across NVLink, because every TP boundary moves activations at the slower of the two rates. PCIe SKUs with an NVLink bridge (e.g. H100 NVL) are the vendor's way of recovering scale-up bandwidth while staying on a cheaper host attach - the accelerator still attaches at 31.5 GB/s, but peers talk over NVLink. Treat PCIe as scale-up-capable but bandwidth-poor; do not size a TP plan off a PCIe host link.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-amd-mi300x-specs",
+    "link-wikipedia-cxl",
+    "link-pcisig-specifications"
+  ]
+}

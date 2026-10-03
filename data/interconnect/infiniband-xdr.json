@@ -1,0 +1,22 @@
+{
+  "id": "infiniband-xdr",
+  "type": "interconnect",
+  "name": "InfiniBand XDR (Quantum-2)",
+  "kind": "infiniband",
+  "version": "XDR, 200 Gb/s per lane",
+  "bandwidth_gbps": 200,
+  "bandwidth_basis": "PER LANE, PER DIRECTION. The IBTA Volume 2 Release 2.1 notes state the physical layer is defined 'at data rates up through XDR at 200 Gb/s per lane', so the recorded value is that per-lane per-direction rate. link_count 4 is the standard 4-lane NDR/XDR port width giving the familiar 800 Gb/s port - the IBTA FAQ states InfiniBand link speeds currently reach 800 Gb/s. Distinguish carefully from InfiniBand's speed nomenclature, where 'NDR' is the 400 Gb/s generation and 'XDR' is 800 Gb/s, each quoted as a whole-port figure while the underlying lane rate is 200 Gb/s.",
+  "link_count": 4,
+  "topology": "Switched fat-tree with a centrally managed subnet manager providing routing and multiple paths between nodes, so simple leaf/aggregation/spine switches suffice without per-switch management.",
+  "scale_up": false,
+  "scale_out": true,
+  "switching": "Managed switched fabric. A fat-tree with a typical 1:1 uplink-to-downlink ratio is non-blocking; a 2:1 ratio caps aggregate bisection bandwidth at half the sum of downlink bandwidth, which is exactly where all-to-all collectives (MoE expert parallel, TP across nodes) lose their bandwidth.",
+  "notes": "The scale-out baseline for AI clusters, and the counterweight to NVLink. Reach differentiates it: copper to 400 Gb/s in-rack, active optical cabling to 100 m, fiber to 10 km. Current specification state: Volume 1 and Volume 2 Release 2.1, both published 2026-07-31, with Volume 2 explicitly covering XDR at 200 Gb/s per lane and adding CMIS 5.4 support and updated XDR data rate support; Volume 1 grew from 2156 to 2294 pages and added Multipath Reliable Connection work. Inference consequence: scale-out fabrics are the tier where the oversubscription ratio, not the link rate, decides performance - a 2:1 fat-tree halves effective all-to-all bandwidth regardless of the 200 Gb/s lane rate. Pair with nvswitch-4/5 for the scale-up tier: they are different jobs and different failure modes.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-ibta-specification",
+    "link-ibta-release-2-1"
+  ]
+}

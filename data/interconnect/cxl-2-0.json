@@ -1,0 +1,22 @@
+{
+  "id": "cxl-2-0",
+  "type": "interconnect",
+  "name": "Compute Express Link 2.0",
+  "kind": "cxl",
+  "version": "2.0 (32 GT/s)",
+  "bandwidth_gbps": 31.5,
+  "bandwidth_basis": "x16, PER DIRECTION, full duplex. CXL 2.0 runs on the PCIe 5.0 physical layer (32 GT/s with 128b/130b coding): 3.938 GB/s per lane per direction, 63.015 GB/s BIDIRECTIONAL AGGREGATE at x16, so the recorded per-direction value is 31.5 GB/s. The consortium's own 4.0 page confirms 2.0 is the 32 GT/s base of the family and that 4.0 'doubles the bandwidth from 64GTs to 128GTs'.",
+  "link_count": 16,
+  "topology": "Point-to-point device attachment over PCIe PHY, extended with switching and memory pooling so a single host can reach pooled memory devices across a CXL domain.",
+  "scale_up": false,
+  "scale_out": false,
+  "switching": "CXL 2.0 is where switching and memory pooling enter the family: multiple hosts can share a switched pool of memory devices, coherently, unlike DDR.",
+  "notes": "Inference consequence: CXL is a memory-capacity and coherency tier, not a tensor-parallel tier. At 31.5 GB/s per direction it is roughly 7x below PCIe 5.0 host attach per lane set on any realistic comparison of use, and 14x below NVLink 4, so KV-cache spilling to CXL memory saves HBM capacity but costs latency on every attention read. CXL 2.0 is sufficient for that only when the spill is streaming-batched; per-token sequential KV reads over CXL latency will show up directly in inter-token latency. The consortium page confirms full backward compatibility down to CXL 1.0/1.1.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-cxl-about",
+    "link-wikipedia-cxl"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "amd-infinity-fabric-link",
+  "type": "interconnect",
+  "name": "AMD Infinity Fabric link (4th generation)",
+  "kind": "infinity-band",
+  "version": "4th generation (MI300/MI325 class)",
+  "bandwidth_gbps": 64,
+  "bandwidth_basis": "PER LINK, UNIDIRECTIONAL, CONTESTED. AMD's MI300X board table states 'Infinity Fabric Links: 8' and 'Peak Infinity Fabric Link Bandwidth: 128 GB/s' WITHOUT stating a direction. If 128 GB/s is a bidirectional aggregate, the per-direction value is 64 GB/s (recorded); if it is already per-direction, the value should be 128 GB/s. Both readings are retained in notes. The direction-agnostic 128 GB/s figure is the only one AMD publishes, so it is quoted verbatim in notes.",
+  "link_count": 8,
+  "topology": "Die-to-die links inside a 3D-via Chiplet package, plus package-to-package links wiring up to 8 OAM modules into one platform. The MI325X platform integrates 8 fully connected MI325X OAM modules on an industry-standard OCP design via 4th-generation Infinity Fabric links, giving a fully-connected 8-way scale-up domain.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "No switch part for scale-up; the domain is built from direct point-to-point links. Scale-out beyond the platform is handled by external networking, not by Infinity Fabric.",
+  "notes": "AMD's scale-up fabric and the closest analogue to NVLink in the x86 ecosystem. Inference consequence: an 8-way fully connected OAM platform gives collective bandwidth comparable in shape to an NVSwitch 8-GPU domain - no partial mesh, no bisection penalty for small groups - which makes 8-GPU tensor parallel viable without a switch part. DIRECTION AMBIGUITY, both figures retained: AMD's MI300X page gives 128 GB/s peak Infinity Fabric link bandwidth with no direction stated (link-amd-mi300x-specs); under the bidirectional reading the per-direction value is 64 GB/s, under a per-direction reading it is 128 GB/s (link-amd-mi300x-specs, same source). A 64 GB/s per-direction Infinity Fabric link is roughly 7x below NVLink 4 per direction, so multi-GPU inference bandwidth headroom on 8-way MI300X is materially tighter than on 8-way H100 and pipeline-parallel sharding is the more natural fit than very wide tensor parallel. MI300X also exposes a 256 MB last-level cache, which changes how much traffic reaches the fabric at all. No separate xGMI record was created: no primary AMD page retrieved stated an xGMI rate or generation, and rather than invent one, note that xGMI is AMD's die-to-die link and its published rates belong to the Infinity Fabric family pages.",
+  "status": "contested",
+  "confidence": 0.6,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-amd-mi300x-specs",
+    "link-amd-mi300-series-specs"
+  ]
+}

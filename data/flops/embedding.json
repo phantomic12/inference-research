@@ -1,0 +1,34 @@
+{
+  "id": "embedding",
+  "type": "flop",
+  "name": "Embedding lookup and output projection over the vocabulary",
+  "class": "embedding",
+  "arithmetic_intensity": "Input embedding is a pure gather: ~0 flops against hidden_width*2 bytes read per token, so AI is effectively zero and it is strictly a memory-access pattern problem. The output side (LM head, untied) is a real GEMM: flops = 2*hidden_width*V against bytes = 2*hidden_width*V + 2*V, giving AI ~1 flop/byte at batch 1 - the same regime as decode_gemm, because it is literally a weight matrix of vocab_width. Tied embeddings mean one weight matrix serves both directions, but the lookup and the GEMM pull opposite access patterns: random row gather versus dense streaming. A batched input-embedding gather across B tokens has AI still ~0 - bytes scale with B exactly as flops do (there are no flops).",
+  "bound_by": "memory",
+  "scales_with": [
+    "vocab_size",
+    "hidden_width",
+    "batch_size (gather bytes scale linearly; AI unchanged)",
+    "tying (whether one matrix serves lookup and projection)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "amd-radeon-pro-vii",
+    "amd-ryzen-strix-point"
+  ],
+  "workarounds": [
+    "Keep the embedding table in the fastest memory tier and co-locate it with the sampler that reads the logits",
+    "Fused embedding gather that avoids a separate gather-then-copy pass",
+    "Quantize the embedding / LM-head matrix - it is a large weight matrix and behaves like any other decode GEMM",
+    "CPU-resident or unified-memory embeddings for small vocabularies where the GPU table would not be reused enough to pay for its footprint"
+  ],
+  "notes": "Design consequence: this class is why a decoding engine's per-token time does not scale down with model optimizations that only touch transformer layers. On small models, especially small-vocab small-hidden ones, the embedding and LM head are a non-trivial fraction of the bandwidth budget. It is also the class most sensitive to memory tiering rather than to FLOPs: the input gather is a scattered read whose latency, not bandwidth, sets the cost, so parts with large caches and good random-access latency win. On unified-memory parts (Apple silicon, AMD APU designs) embedding tables and small LM heads can be shared with the host rather than duplicated, which matters when VRAM is the scarce resource.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-roofline-williams-2008",
+    "flop-nvidia-inference-optimization"
+  ]
+}

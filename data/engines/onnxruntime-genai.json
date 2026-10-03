@@ -1,0 +1,77 @@
+{
+  "id": "onnxruntime-genai",
+  "type": "engine",
+  "name": "ONNX Runtime GenAI",
+  "repo": "microsoft/onnxruntime-genai",
+  "languages": [
+    "C++",
+    "C",
+    "Python",
+    "C#",
+    "Java"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "edge/mobile",
+    "cross-platform",
+    "research",
+    "minimal-deps",
+    "multi-model"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cpu-avx512",
+    "cpu-avx2",
+    "cuda",
+    "directml",
+    "openvino",
+    "qnn",
+    "webgpu",
+    "amd-gpu",
+    "tensorrt-rtx",
+    "arm64-neon"
+  ],
+  "supported_formats": [
+    "onnx",
+    "onnx-int4"
+  ],
+  "notable_features": [
+    "Implements the generative loop on top of ONNX Runtime: pre/post-processing, the ORT inference call, logits processing, search and sampling, KV cache management, and grammar specification for tool calling.",
+    "The broadest EPU coverage of any engine here: CPU, CUDA, DirectML, OpenVINO, QNN (Qualcomm NPU), WebGPU, AMD GPU, and TensorRT-RTX.",
+    "Official architectures include Granite, Granite MoE Hybrid, Phi, and gpt-oss — Microsoft-adjacent models — plus Llama, Mistral, Qwen, Gemma, DeepSeek, Nemotron, InternLM2, SmolLM3, ERNIE 4.5, ChatGLM, Whisper and LFM2 (language + vision + speech).",
+    "Builds for x86, x64 and arm64 on Linux, Windows, Mac and Android; Objective-C bindings exist, iOS requires building from source.",
+    "Powers Foundry Local, Windows ML and the Visual Studio Code AI Toolkit — real shipping products, not experiments.",
+    "Multi-LoRA and speculative decoding listed as features."
+  ],
+  "hardware_caveats": [
+    "Quantization coverage is limited and comes from the ONNX quantization toolchain, not from the engine: the documented CPU example is a pre-exported int4 block-quantized ONNX tree (e.g. cpu-int4-rtn-block-32-acc-level-4). You must pick a quantization variant that already exists on the Hub or produce one with Optimum; the engine does not invent quant schemes.",
+    "Because quantization is baked into the exported ONNX graph, switching precision means re-exporting the model, not flipping a runtime flag — a real operational difference from GGUF/EXL2 workflows.",
+    "The iOS binding requires a source build (marked with ^ in the README's API table).",
+    "Main-branch examples track main and can be ahead of the latest stable release; the README tells you to check out the matching version tag (e.g. v0.11.5) for examples matching a stable install.",
+    "Architecture support is a maintained list, not a blanket promise — stable diffusion and multi-modal models are still under development or on the roadmap at access time."
+  ],
+  "best_for": [
+    "ONNX-first teams and Windows/Foundry Local users who want a supported, vendor-backed path rather than a hobby project.",
+    "NPUs and other accelerators that only ONNX Runtime targets: QNN for Qualcomm, DirectML for broad Windows GPU support, WebGPU for browsers.",
+    "Arm64 and Android devices, where GGUF tooling is thin and an ONNX export with an int4 variant is often the only viable path.",
+    "Offline/on-device features embedded in a larger ONNX-based product — one runtime, one dependency graph.",
+    "Specifying model architecture coverage deliberately: Granite, Phi and gpt-oss are first-class."
+  ],
+  "avoid_for": [
+    "Maximum tok/s on a CUDA or AMD GPU — GPU-first engines exist for that.",
+    "Workloads needing GGUF/EXL2/GPTQ quantization flexibility; the format choice is made at export time and is narrow.",
+    "Multi-user serving — no scheduler beyond the batch/batch_size search options.",
+    "Any architecture not in the supported list; the list moves and needs re-checking per release."
+  ],
+  "docs_url": "https://onnxruntime.ai/docs/genai",
+  "notes": "Backend names in supported_backends follow the README's own 'Hardware Acceleration' row (CPU, CUDA, DirectML, NvTensorRtRtx, OpenVINO, QNN, WebGPU, AMD GPU) normalized to the repo's vocabulary where they map cleanly; directml, qnn, webgpu, amd-gpu and tensorrt-rtx are extensions of the schema's example enum, which describes rather than enumerates it. Qualcomm NPU is recorded as qnn rather than npu because QNN is Qualcomm-specific and NPU alone would imply vendor neutrality. 'Limited quantization coverage' is a characterization of the workflow, not a quoted claim — the README does not say the words.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "cpuedge-onnxruntime-genai-github"
+  ]
+}

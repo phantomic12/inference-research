@@ -1,0 +1,33 @@
+{
+  "id": "int8-channelwise",
+  "type": "quantization",
+  "name": "INT8 W8A8 rowwise / per-channel",
+  "scheme": "int8-channelwise",
+  "bits": "w8a8",
+  "weight_group_size": null,
+  "activation_scheme": "per-row (per-output-channel) activation scales computed on the fly; weights scaled per output channel. Rowwise scaling rather than per-tensor is what keeps outliers from dominating.",
+  "native_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl",
+    "nvidia-l40s",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x"
+  ],
+  "emulated_support": [
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "TensorRT-LLM FP8(rowwise)/INT8 rowwise GEMM plugins",
+    "cutlass rowwise-scaled GEMM",
+    "AMD Quark"
+  ],
+  "quality_delta": null,
+  "notes": "Rowwise (per-output-channel) scaling is the modern default for 8-bit serving and is a separate recipe from per-tensor: the TensorRT-LLM support matrix lists 'FP8(rowwise)' and 'FP8(per tensor)' as distinct columns and they have different hardware coverage - rowwise is Y on Ada, Hopper, Blackwell and Rubin, while block scaling is *not* Y on Ada (quant-trtllm-quantization). For INT8 the analogue is the rowwise path. Recorded separately from int8 because the granularity, not just the bit-width, is what determines whether a kernel exists. No fp16 delta recorded - AMD's Quark documentation describes the capability and available FP8 checkpoints but publishes no controlled perplexity comparison.",
+  "status": "verified",
+  "confidence": 0.65,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-trtllm-quantization",
+    "quant-rocm-quant-doc"
+  ]
+}

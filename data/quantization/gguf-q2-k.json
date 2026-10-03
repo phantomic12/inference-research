@@ -1,0 +1,33 @@
+{
+  "id": "gguf-q2-k",
+  "type": "quantization",
+  "name": "GGUF Q2_K / Q2_K_S (2-bit K-quant)",
+  "scheme": "gguf-q2_k",
+  "bits": "2.63 avg (Q2_K_S 2.9697 bpw, Q2_K 3.1593 bpw as measured by llama.cpp on Llama-3.1-8B)",
+  "weight_group_size": 256,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl",
+    "nvidia-l40s",
+    "nvidia-l4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10"
+  ],
+  "kernels": [
+    "ggml dequantize_block_q2_K + get_rows",
+    "ggml-cuda mul_mat_vec / mul_mat_q"
+  ],
+  "quality_delta": "Only the unified Llama-3.1-8B-Instruct study was found for the 2-bit K-quant tier. The closest measured point is Q3_K_S (3.9960 bpw, same family): WikiText-2 ppl 8.96 vs 7.32 FP16, GSM8K 68.31 vs 77.63, IFEval 71.87 vs 78.93, unweighted 5-benchmark mean 65.49 vs 69.47 (quant-gguf-kquant-study). No published perplexity for plain Q2_K/Q2_K_S was located, so none recorded.",
+  "notes": "Q2_K is the most aggressive point in the K-quant family and the practical floor. Structurally a 256-value super-block split into 16 sub-blocks of 16, where the 2-bit codes carry an extra per-sub-block min that recovers some dynamic range - the 'K' in k-quant. This is a Q*_K type, NOT the legacy Q2_0, which the allowed scheme enum has no slot for. Weight-only: activations stay in FP16/BF16 at runtime, so there is no '4-bit activations with hardware support' claim to make here. ggml has bespoke dequantize+gemm kernels per type, but no accelerator has a GGUF/k-quant path in silicon; everything is dequantized on the fly. vLLM explicitly labels its GGUF support experimental and under-optimized and positions it as a memory-footprint tool (quant-vllm-gguf-doc). Llama.cpp CPU decode on that study's dual Xeon 8488C: Q2_K_S 90.01 tok/s tg128 vs 29.17 for F16, but Q2_K 79.85 and prompt processing *drops* to 784.45 vs 923.49 tok/s (quant-llamacpp-quantize-readme). Below ~3 bits expect visible multi-step-reasoning loss.",
+  "status": "verified",
+  "confidence": 0.72,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-llamacpp-quantize-readme",
+    "quant-gguf-kquant-study",
+    "quant-vllm-gguf-doc",
+    "quant-ggml-header"
+  ]
+}

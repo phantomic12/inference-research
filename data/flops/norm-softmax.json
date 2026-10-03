@@ -1,0 +1,33 @@
+{
+  "id": "norm-softmax",
+  "type": "flop",
+  "name": "RMSNorm, LayerNorm, and softmax / activation elementwise work",
+  "class": "norm_softmax",
+  "arithmetic_intensity": "The most memory-bound class in the model - AI well below 1 flop/byte, and it does not improve with batch or context. RMSNorm on a t x d activation: flops ~ 4*t*d (square, sum, scale) against bytes = 2*t*d*2 = 4*t*d read plus 2*t*d*2 = 4*t*d written, so AI ~ 4*t*d/8*t*d = 0.5 flop/byte at bf16 - half a flop per byte, the worst ratio of any class here. Softmax is the same story: O(t*d) reads with O(t*d) writes and a single pass of transcendentals. Fusing norm+matmul or norm+residual keeps the intermediate in registers and roughly halves the traffic; leaving them separate costs a full read-plus-write of the activation for no arithmetic benefit.",
+  "bound_by": "memory",
+  "scales_with": [
+    "hidden_width (bytes and flops both linear, AI unchanged)",
+    "batch_size (both linear, AI unchanged)",
+    "context_length (only via the token count t)",
+    "fused_vs_unfused (the biggest single lever on this class)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "amd-radeon-pro-vii"
+  ],
+  "workarounds": [
+    "Fused RMSNorm+quantization or RMSNorm+matmul epilogues so the norm's output never round-trips HBM",
+    "Persistent / vectorized norm kernels that read once and write once",
+    "Fused GELU / SwiGLU activation into the preceding GEMM epilogue",
+    "Fused softmax inside the attention kernel (this is what FlashAttention's online-softmax accumulation does implicitly)"
+  ],
+  "notes": "Design consequence: this class is pure overhead - it is a few percent of the flops and can be a double-digit percentage of the time in a bandwidth-starved decode step, because decode is exactly the regime where bandwidth is the wall. Any engine that leaves norms, activations and residual adds as separate kernels is paying an avoidable HBM round trip per layer per token. For hardware designers the corollary is that low-precision elementwise and transcendental throughput is not a first-class concern, but memory-system efficiency and the ability to fuse matter more than it does in a compute-bound workload. It also means this class is essentially free to hide under a compute-bound prefill and nearly free to expose in a memory-bound decode - which is an argument for fusing specifically on the decode path.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-flashattention",
+    "flop-roofline-williams-2008"
+  ]
+}

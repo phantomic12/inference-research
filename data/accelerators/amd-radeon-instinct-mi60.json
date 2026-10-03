@@ -1,0 +1,55 @@
+{
+  "id": "amd-radeon-instinct-mi60",
+  "type": "accelerator",
+  "name": "AMD Radeon Instinct MI60",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "amd-mi60-product-page",
+    "amd-rocm-system-requirements"
+  ],
+  "vendor": "amd",
+  "architecture": "GCN5.1 (gfx906, Vega20)",
+  "release_year": 2018,
+  "process_nm": 7,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 32,
+  "memory_type": "hbm2",
+  "memory_bus_bit": 4096,
+  "memory_bandwidth_gbps": 1024,
+  "memory_bandwidth_basis": "AMD's spec table: 'Memory Interface 4096-bit, Memory Clock 1 GHz, Memory Bandwidth 1024 GB/s'. Same GCN5.1 memory subsystem as the MI50 and Radeon Pro VII - 4096-bit at 2.0 Gbps effective. The MI60 page states it flatly as 1024 GB/s rather than the MI50 datasheet's 'up to 1 TB/s'.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 14.7,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi60-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 29.5,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi60-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 58.9,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi60-product-page"
+    }
+  ],
+  "tdp_w": 300,
+  "interconnect": [
+    "amd-infinity-fabric-link",
+    "pcie-gen4"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "The fastest GCN5.1 Instinct card, and the only source for its figures is an archived AMD page (2018-11-22) - the live URL 404s. 64 CUs / 4,096 SPs, 1800 MHz peak engine clock, up to 29.5 TFLOPS FP16, 14.7 TFLOPS FP32, 7.4 TFLOPS FP64, up to 58.9 TOPS INT8, 32 GB HBM2 ECC, 4096-bit, 1024 GB/s, 300W, passively cooled, full height / 267mm / double slot, PCIe 4.0 x16 plus PCIe 3.0 x16.\n\nAMD markets it as 'The World's First PCIe Gen 4 x16 Capable GPU' and, at the time, 'the world's fastest double precision PCIe accelerator' - the FP64 story (7.4 TFLOPS, GCN5's 1:2 FP64:FP32 ratio) was its actual differentiator against NVIDIA in 2018, not AI throughput.\n\nMI60 vs MI50X: the MI60 has 64 CUs / 4096 SPs / 1800 MHz versus the MI50's 60 / 3840 / (lower), giving 29.5 vs 26.5 TFLOPS FP16 and 58.9 vs 53.6 TOPS INT8. Same 32 GB HBM2 and same 1024 GB/s. So the MI60 is a compute bump on an identical memory configuration - the flops go up 11%, the bandwidth does not move at all.\n\nINT8 at 58.9 TOPS is 2x FP16, the GCN5 signature noted on the MI50X record too.\n\nScale-up: 2 Infinity Fabric Links at 100 GB/s peak (AMD's page says 'up to 200 GB/s peer-to-peer' for the pair, i.e. 100 GB/s per link), supporting 'up to 2 GPU hives of 4 MI60 GPUs in a single server at up to 6x the speed of PCIe 3.0'. Far less scale-up bandwidth than any CDNA part.\n\nNOT ROCm-SUPPORTED TODAY: gfx906 is listed Unsupported in AMD's current ROCm system-requirements table (MI50/MI25/Radeon Pro VII/Radeon VII all share gfx906). Community-enabled only via ROCm/TheRock nightly builds, which AMD says are not part of the official release.\n\nHistorical note on branding: MI60 is one of the last Instinct parts carrying the 'Radeon' brand. AMD dropped it at MI100 in November 2020. It is also one of the last Instinct cards able to output display - the MI50/MI60 generation kept display output, which the CDNA parts dropped."
+}

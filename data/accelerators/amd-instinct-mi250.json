@@ -1,0 +1,77 @@
+{
+  "id": "amd-instinct-mi250",
+  "type": "accelerator",
+  "name": "AMD Instinct MI250",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "amd-mi250-product-page",
+    "amd-rocm-compatibility-matrix"
+  ],
+  "vendor": "amd",
+  "architecture": "CDNA2 (gfx90a)",
+  "release_year": 2021,
+  "process_nm": 6,
+  "form_factors": [
+    "oam"
+  ],
+  "vram_gb": 128,
+  "memory_type": "hbm2e",
+  "memory_bus_bit": 8192,
+  "memory_bandwidth_gbps": 3200,
+  "memory_bandwidth_basis": "Same memory configuration as the MI250X: 8192-bit interface, 'Memory Clock 1.6 GHz', 3.2 TB/s peak. The 128 GB is a package-level figure and the memory subsystem is NOT what distinguishes this SKU from the MI250X.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 45.3,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi250-product-page"
+    },
+    {
+      "precision": "fp32",
+      "tflops": 90.5,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi250-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 362.1,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi250-product-page"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 362.1,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi250-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 362.1,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi250-product-page"
+    },
+    {
+      "precision": "int4",
+      "tflops": 362.1,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi250-product-page"
+    }
+  ],
+  "tdp_w": 560,
+  "interconnect": [
+    "amd-infinity-fabric-link",
+    "amd-xgmi",
+    "pcie-gen4"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "IMPORTANT: despite having HALF the compute of the MI250X, the MI250 has the SAME 128 GB of memory and the same 3.2 TB/s. That is counter-intuitive and worth stating plainly, because it inverts the usual capacity/compute trade-off.\n\nAMD's spec table: MI250 = 208 CUs / 13,312 SPs; MI250X = 220 CUs / 14,080 SPs. Ratio 208/220 = 0.945, and 362.1/383 = 0.945 - the compute is exactly proportional to CU count.\n\nBut both SKUs ship 128 GB HBM2e on an 8192-bit interface at 3.2 TB/s. Per the MI300X datasheet and AMD's CDNA2 documentation, a CDNA2 GCD carries 64 GB; the MI250 is the single-GCD cut-down. If it is one GCD, how does it have 128 GB? AMD's published MI250 figures say 128 GB / 8192-bit / 3.2 TB/s regardless. Two readings are possible and AMD does not resolve them on this page: (a) the MI250 OAM is still a 2-GCD package with more CUs fused off for yield, keeping the full 128 GB memory and bandwidth; or (b) the SKU is memory-rich by design. Either way the actionable fact for a reader is that memory is NOT halved - do not assume 64 GB.\n\nThis is a CONTESTED point about the physical die count that I could not resolve from AMD's own product pages; recording it rather than guessing. What is not contested: the memory figures, the CU counts, and the flops, all straight from AMD's spec table.\n\nSame generation limits as the MI250X: no TF32, no FP8, no structured sparsity. All entries dense-only. Vector/matrix FP32 split (45.3 vector / 90.5 matrix) is preserved as two entries.\n\n500W TDP / 560W peak, passive OAM, PCIe 4.0 x16, 8 Infinity Fabric links at 100 GB/s. ROCm LLVM target gfx90a."
+}

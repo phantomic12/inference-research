@@ -1,0 +1,30 @@
+{
+  "id": "bitsandbytes-int8",
+  "type": "quantization",
+  "name": "LLM.int8() / bitsandbytes int8 (vector-wise with 16-bit outliers)",
+  "scheme": "bitsandbytes-int8",
+  "bits": "w8a16 (mixed-precision decomposition: >99.9% of values multiplied in 8-bit, outlier dims in fp16)",
+  "weight_group_size": null,
+  "activation_scheme": "vector-wise (per inner-product / per-row) quantization constants for activations; outlier feature dimensions routed to a separate fp16 matmul",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "nvidia-a10",
+    "amd-instinct-mi300x"
+  ],
+  "kernels": [
+    "bitsandbytes Linear8bitLt",
+    "LLM.int8() vector-wise matmul + mixed-precision decomposition kernel"
+  ],
+  "quality_delta": "From the paper: a 175B-parameter 16/32-bit checkpoint can be loaded, converted to int8 and used with no performance degradation, with more than 99.9% of values multiplied in 8-bit (quant-llmint8-paper). No numeric benchmark delta is tabulated in the abstract, so none recorded.",
+  "notes": "The important structural point: LLM.int8() is NOT W8A8. It is vector-wise 8-bit weights AND 8-bit activations, but the systematic outlier channels are split out into a second fp16 matrix multiply, so there is no true int8 x int8 tensor-core op running for the whole layer. That decomposition is what makes it work at all; it also makes it slow - it was a memory-saving technique, not a speed technique. Contrast with SmoothQuant, which genuinely reaches hardware W8A8 by moving difficulty into the weights upfront. Group size null: constants are per vector, not per fixed-size weight group.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-llmint8-paper",
+    "quant-torch-qlora-paper"
+  ]
+}

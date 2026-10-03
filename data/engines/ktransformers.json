@@ -1,0 +1,70 @@
+{
+  "id": "ktransformers",
+  "type": "engine",
+  "name": "KTransformers",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "engine-ktransformers-github"
+  ],
+  "repo": "kvcache-ai/ktransformers",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "design_goal": [
+    "heterogeneous CPU-GPU",
+    "research",
+    "consumer-hardware MoE"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "prefix-cache",
+    "expert-offload-scheduling"
+  ],
+  "supported_backends": [
+    "cuda",
+    "cpu-avx512",
+    "cpu-avx2",
+    "npu-ascend"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "fp8",
+    "int4",
+    "rawint4"
+  ],
+  "notable_features": [
+    "Keeps attention and most of the dense weights on the GPU while streaming MoE experts from CPU RAM, so huge MoE models run on consumer GPUs",
+    "CPU-GPU expert scheduling, native BF16 and FP8 per-channel precision paths, and native RAWINT4 routed experts for Kimi K2.5/K2.6",
+    "Day-0 model support cadence (GLM-5, MiniMax-M2/M2.5/M3, Kimi-K2.5, DeepSeek-V4-Flash, GLM-5.2, GLM-5.3-flash)",
+    "Also an SFT path: MoE LoRA and full-parameter fine-tuning including block-FP8 LoRA and BF16 full fine-tuning, wired through LlamaFactory",
+    "AVX512 x86 including AMD servers, and an AVX2-only CPU backend for lower-end hosts",
+    "Ascend NPU support with CPU expert offload (DeepSeek-V4-Flash on a single NPU)",
+    "1M-token context and multimodal input on consumer GPUs via the GLM-5.3-flash path"
+  ],
+  "hardware_caveats": [
+    "It is a research project first: the CPU-GPU split is tuned per model, and an unsupported architecture falls back to something much slower",
+    "The whole premise is that experts live in system RAM - you need enough RAM and memory bandwidth for the offloaded experts, and a discrete GPU is strongly implied for the resident half",
+    "CPU capability still gates throughput: AMX was originally required for the fine-tuning path, relaxed in v0.7.0 to compatible AVX512 x86, and an AVX2-only backend exists for inference but is a separate tutorial",
+    "Ascend NPU support is CPU-expert-offload dependent, so the NPU is not doing the expert math",
+    "Fine-tuning and inference are now split between kt-kernel and a LlamaFactory cookbook, and the original integrated framework was moved to archive/ - so docs and code are in two places",
+    "Day-0 support means a working tutorial, not parity with a datacenter engine on the same model"
+  ],
+  "best_for": [
+    "Running a very large MoE model on a consumer GPU with large system RAM, when datacenter hardware is not available",
+    "Researching heterogeneous placement and expert scheduling - that is what the project is for",
+    "MoE fine-tuning on a single workstation-class machine"
+  ],
+  "avoid_for": [
+    "Datacenter serving, where a CUDA-first engine with expert parallelism is the right tool",
+    "Dense models that fit comfortably in VRAM, where plain vLLM or llama.cpp is simpler",
+    "Production use without reading the per-model tutorial, because behaviour varies sharply per architecture"
+  ],
+  "docs_url": "https://kvcache-ai.github.io/ktransformers/",
+  "notes": "Scheduling terms are approximate here: KTransformers is not a paged-KV serving engine in the vLLM sense. It does its own cache management plus CPU-GPU expert scheduling, so only 'prefix-cache' and 'expert-offload-scheduling' are recorded as literal mechanisms. Published as SOSP 2025 (doi 10.1145/3731569.3764843)."
+}

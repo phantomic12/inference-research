@@ -1,0 +1,75 @@
+{
+  "id": "koboldcpp",
+  "type": "engine",
+  "name": "KoboldCpp",
+  "repo": "LostRuins/koboldcpp",
+  "languages": [
+    "C++",
+    "C",
+    "Python"
+  ],
+  "license": "AGPL-3.0 for KoboldCpp and KoboldAI Lite; bundled GGML, llama.cpp and stable-diffusion.cpp remain MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "ease-of-use",
+    "minimal-deps",
+    "single-file-distribution",
+    "multi-modal",
+    "multi-model"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "hip",
+    "vulkan",
+    "metal",
+    "cpu-avx512",
+    "cpu-avx2",
+    "arm64-neon"
+  ],
+  "supported_formats": [
+    "gguf",
+    "ggml-legacy-bin"
+  ],
+  "notable_features": [
+    "One executable, zero install — a GUI launcher opens on double-click and the web UI is served at localhost:5001.",
+    "Far more than text: the same process serves Stable Diffusion/SDXL/SD3/Flux image generation and editing, video generation (WAN 2.2, LTX2.3), Whisper speech-to-text and multimodal audio, TTS (Qwen3TTS, Kokoro, OuteTTS, Parler, Dia), and music (ACE Step).",
+    "Bundled KoboldAI Lite WebUI with memory, world info, author notes, character cards, and the classic llama.cpp WebUI.",
+    "Speaks many API dialects at once: KoboldAI, OpenAI, Ollama, A1111/Forge, ComfyUI, Whisper, XTTS and OpenAI speech clients.",
+    "An integrated agent (launchable from the Admin tab or with `--agent`) plus MCP server support and tool calling.",
+    "Can connect the UI to external providers instead of a local model (AI Horde, OpenAI-compatible, Anthropic, OpenRouter, Gemini, Grok, Mistral) via `--nomodel`."
+  ],
+  "hardware_caveats": [
+    "Release binaries are backend-specific and this is the single most practical constraint: `koboldcpp.exe` / `koboldcpp-linux-x64` are CUDA builds, `koboldcpp-nocuda.exe` / `koboldcpp-linux-x64-nocuda` are the smaller CPU+Vulkan builds, and `koboldcpp-oldpc.exe` / `-oldpc` exist for older CPUs and GPUs.",
+    "A dedicated GPU is optional. Model size and context length determine memory need, not GPU presence.",
+    "AMD: there is no ROCm build in the main release. The README points AMD users at Vulkan in the mainline release as a starting point and lists a third-party ROCm fork (YellowRoseCx/koboldcpp-rocm) whose maintenance status must be checked yourself. Arch users have separate `koboldcpp-cuda` and `koboldcpp-hipblas` AUR packages.",
+    "macOS binaries are Apple Silicon ARM64 only (`koboldcpp-mac-arm64`); Intel Macs require a source build.",
+    "For ARM/Termux builds, LLAMA_PORTABLE=1 disables native ARM instruction optimizations — a real speed cost, and the reason it exists is to keep the build working at all.",
+    "Docker is explicitly discouraged for local use: it targets expert cloud-GPU use on x86-64 Ubuntu, may perform poorly on Windows/macOS, ARM systems may fail, and CPU feature detection can select slower fallback binaries.",
+    "Backward compatibility with legacy GGML `.bin` models is retained, but some newer features are unavailable for those files."
+  ],
+  "best_for": [
+    "Roleplay, creative writing, and story workflows — the bundled KoboldAI Lite UI is built for it and nothing else is this complete.",
+    "A single-user home box that should do text, images, speech, and music without five separate installs.",
+    "AMD owners who have no working ROCm path and want a working local GPU experience today via Vulkan.",
+    "People who want a GUI instead of flags: the launcher exposes every backend and tensor-split setting.",
+    "Offline creative tooling with zero dependency chain."
+  ],
+  "avoid_for": [
+    "Serving many concurrent users — no scheduler, no continuous batching, single model per process.",
+    "Maximum tok/s on a CUDA box: it is a llama.cpp fork and the tuning surface is not where upstream effort goes.",
+    "Licenses that forbid AGPL — KoboldCpp itself is AGPL-3.0 even though its bundled llama.cpp parts are MIT.",
+    "Anything needing a production-grade API surface; it is a UI-first personal tool."
+  ],
+  "docs_url": "https://github.com/LostRuins/koboldcpp/wiki",
+  "notes": "As of access the default branch is `concedo`, not master. The project maintains a `koboldcpp.com` phishing warning, which is a reasonable signal about ecosystem maturity. Treated here as a distribution/UX engine over llama.cpp kernels; the ggml backend matrix and quantization-type coverage belong to the llama.cpp record. I did not find a primary-source statement of how much slower the Vulkan path is than native CUDA/HIP for this project, so no number is claimed.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "cpuedge-koboldcpp-github"
+  ]
+}

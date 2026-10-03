@@ -1,0 +1,47 @@
+{
+  "id": "google-tpu-v4",
+  "type": "accelerator",
+  "name": "Google Cloud TPU v4",
+  "vendor": "google",
+  "architecture": "v4",
+  "release_year": 2021,
+  "process_nm": 7,
+  "form_factors": [
+    "custom"
+  ],
+  "vram_gb": 32,
+  "memory_type": "hbm2",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 1200,
+  "memory_bandwidth_basis": "Vendor-published per-chip HBM2 bandwidth of 1200 GBps; bus width not stated, so it cannot be derived from bit width.",
+  "flops": [
+    {
+      "precision": "bf16",
+      "tflops": 275,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "asic-tpu-v4-specs"
+    },
+    {
+      "precision": "int8",
+      "tflops": 275,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "asic-tpu-v4-specs"
+    }
+  ],
+  "tdp_w": 192,
+  "interconnect": [
+    "cloud-tpu-ici"
+  ],
+  "unified_memory": true,
+  "consumer": false,
+  "notes": "Per-chip figures; one pod is 4096 chips at 1.1 EFLOPS BF16/INT8. 275 TFLOPS is the shared bf16-or-int8 peak (the docs state '275 teraflops (bf16 or int8)', i.e. INT8 is NOT 2x BF16 here, unlike the v5/v6 line). TDP 192 W is the documented measured maximum; min/mean are 90/170 W. Memory hierarchy: two TensorCores per chip share one unified 32 GiB HBM2 space, with an on-chip Cmem SRAM feed tier that the v4 paper describes. That SRAM feed tier is the reason v4 decode is not simply DRAM-bound: Google added 8-bit mode support and faster MXU weight-loading specifically to allow lower batch sizes. Interconnect is ICI over 3D mesh, reconfigurable into a torus, with optical circuit switches between cubes.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "asic-tpu-v4-specs",
+    "asic-tpu-v4-paper"
+  ]
+}

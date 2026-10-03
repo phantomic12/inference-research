@@ -1,0 +1,37 @@
+{
+  "id": "quantization-overhead",
+  "type": "flop",
+  "name": "Quantization runtime cost: dequant, scale unpacking, and batch crossover",
+  "class": "quantization_overhead",
+  "arithmetic_intensity": "Quantization changes the bytes-per-flop ratio of every weight GEMM by the compression factor: a 4-bit weight format cuts weight bytes 4x versus bf16, so decode GEMM AI goes from ~B to ~4B flop/byte and the effective ridge crossing batch drops by roughly the compression factor. The overhead is that unpacking scales and converting to a compute-representable form costs real work and real memory traffic. The question that matters for serving is when quantized kernels stop paying: Marlin reports that for 4-bit weights, batches up to 16-32 still get close to the maximum ~4x quantization speedup, with batches up to 64-128 seeing gradually decreasing but still significant acceleration, and up to 2.8x end-to-end integrated with vLLM (arXiv 2408.11743). That crossover is the whole engineering question - below it, quantization is nearly free speedup; above it, the dequant traffic starts to be paid on every step.",
+  "bound_by": "both",
+  "scales_with": [
+    "bits (directly sets the bytes and hence AI)",
+    "weight_group_size (smaller groups mean more scales to unpack - more overhead per element)",
+    "batch_size (THE crossover knob: AI = bits_compound_factor * B, so the batch at which dequant stops paying is set by bits)",
+    "activation_quantization_scheme (per-tensor vs per-channel dynamic quantization adds work)",
+    "hardware_native_support (emulated dequant-to-fp16 pays overhead a native path does not)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "amd-radeon-pro-vii",
+    "nvidia-b200-sxm"
+  ],
+  "workarounds": [
+    "MARLIN-style mixed-precision GEMM: asynchronous memory access, complex task scheduling/pipelining and bespoke quantization support, keeping 4-bit weight traffic bandwidth-bound up to batch 16-32 and useful to 64-128 (arXiv 2408.11743)",
+    "Native low-precision tensor-core paths (FP8 / INT8 / FP4 on device) so dequant is fused into the load rather than done in a separate pass",
+    "Pre-quantized weights so the format is not re-derived per launch",
+    "Fused dequant-into-shared-memory GEMM epilogues rather than a separate dequant kernel",
+    "Asymmetric group-wise scale layout that allows vectorized 4-bit loads"
+  ],
+  "notes": "Design consequence: the reason quantization speedups are quoted as 'up to 4x' is that they are batch-conditional, and the condition is a batch number. An engine that quantizes for a latency target (batch 1) gets nearly the full win; an engine that quantizes to serve high concurrency gets a decaying fraction of it, because batching already raised AI and the weight bytes stopped being the binding constraint. Hardware designers should treat 'does it have a native int4/fp8 path' as the decisive question and 'what is the batch crossover of that path' as the second. Also note the asymmetry the Marlin result exposes: a format with no native support is emulated by dequantizing to fp16, which converts a bandwidth win into a bandwidth cost - the dequantized intermediate must be written and re-read, so a '4-bit' model can run slower than bf16 on hardware without a native path. KV-cache quantization is a separate decision recorded under kv_transfer and decode_attention: it does not touch the GEMM ridge at all, it halves the attention and transfer traffic.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-marlin",
+    "flop-roofline-williams-2008",
+    "flop-nvidia-h100-specs"
+  ]
+}

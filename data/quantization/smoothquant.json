@@ -1,0 +1,38 @@
+{
+  "id": "smoothquant",
+  "type": "quantization",
+  "name": "SmoothQuant (W8A8 via offline outlier migration)",
+  "scheme": "smoothquant",
+  "bits": "w8a8",
+  "weight_group_size": null,
+  "activation_scheme": "per-tensor (or per-token) dynamic INT8 scaling, but preceded by an offline, mathematically equivalent per-input-channel transformation that divides activations by s_j and multiplies the corresponding weight columns by s_j, with s_j = max|X_j|^alpha / max|W_j|^(1-alpha). alpha=0.5 in the paper's default setting. Runtime activations need no rescaling.",
+  "native_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl",
+    "nvidia-l40s",
+    "nvidia-l4",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x",
+    "amd-instinct-mi250x"
+  ],
+  "emulated_support": [
+    "amd-radeon-pro-vii",
+    "nvidia-a10"
+  ],
+  "kernels": [
+    "TensorRT-LLM SmoothQuant W8A8 path (smoothing folded into the checkpoint)",
+    "cutlass INT8 GEMM",
+    "vLLM SmoothQuant config over torch._int_mm",
+    "AMD Quark INT8/FP8"
+  ],
+  "quality_delta": "From the paper, OPT-175B under INT8 with the most aggressive O3 setting: 7 zero-shot benchmarks plus WikiText perplexity, reported as maintaining the FP16 model's accuracy (quant-smoothquant-paper); up to 1.56x speedup and 2x memory reduction, and the v7 body text gives the more precise 1.51x speedup / 1.96x memory saving for OPT-175B, BLOOM-176B, GLM-130B, MT-NLG 530B. No per-benchmark delta table transcribed here - the paper's Table 3 has it and I did not read the cells.",
+  "notes": "This is the record that makes the w4a16 vs w4a4 distinction concrete. SmoothQuant produces a TRUE W8A8 model: int8 weights times int8 activations with int32 accumulate, on real INT8 tensor cores. The method's whole point is to spend accuracy budget where hardware has headroom - it moves quantization difficulty from activations (which have outliers and no hardware tolerance) into weights (which do not), using a transformation that is exactly equivalent in full precision. Unlike LLM.int8() there is no runtime outlier decomposition and no mixed-precision split, so the whole layer runs in int8. Note the alpha hyperparameter: at alpha=0.5 the paper splits difficulty evenly; the abstract claims INT8 for ALL matrix multiplications in OPT/BLOOM/GLM/MT-NLG/Llama-1-2/Falcon/Mistral/Mixtral, which is a strong claim worth re-checking per model before relying on it. Hardware-native int8 on Ampere+ NVIDIA and CDNA2+/CDNA3 AMD. ModelOpt and vLLM both expose SmoothQuant as a PTQ recipe that folds the smoothing into the checkpoint before the int8 GEMM.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-smoothquant-paper",
+    "quant-trtllm-quantization",
+    "quant-rocm-quant-doc"
+  ]
+}

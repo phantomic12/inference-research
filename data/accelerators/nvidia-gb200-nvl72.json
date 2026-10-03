@@ -1,0 +1,92 @@
+{
+  "id": "nvidia-gb200-nvl72",
+  "type": "accelerator",
+  "name": "NVIDIA GB200 NVL72 (per-accelerator)",
+  "vendor": "nvidia",
+  "architecture": "blackwell",
+  "release_year": 2024,
+  "process_nm": 4,
+  "form_factors": [
+    "oam",
+    "mcm"
+  ],
+  "vram_gb": 186,
+  "memory_type": "HBM3e",
+  "memory_bus_bit": 8192,
+  "memory_bandwidth_gbps": 8000,
+  "memory_bandwidth_basis": "System figure 576 TB/s / 72 GPUs = 8 TB/s per GPU (13.4TB HBM3E total). The per-accelerator number is derived by dividing the NVL72 system spec; NVIDIA publishes the system figure, not a per-GPU one.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 80,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "nv-gb200-nvl72-product-page"
+    },
+    {
+      "precision": "other",
+      "tflops": 40,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-gb200-nvl72-product-page",
+      "notes": null
+    },
+    {
+      "precision": "tf32",
+      "tflops": 1250,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-gb200-nvl72-product-page"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 2500,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-gb200-nvl72-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 2500,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-gb200-nvl72-product-page"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 5000,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-gb200-nvl72-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 5000,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-gb200-nvl72-product-page"
+    },
+    {
+      "precision": "fp4",
+      "tflops": 10000,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-gb200-nvl72-product-page"
+    }
+  ],
+  "tdp_w": 1200,
+  "interconnect": [
+    "nvlink-5",
+    "nvswitch"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "nv-gb200-nvl72-product-page",
+    "nv-blackwell-datasheet"
+  ],
+  "notes": "GB200 NVL72 is a RACK-SCALE system (72 Blackwell GPUs + 36 Grace CPUs, 2,592 Neoverse V2 cores), not a single accelerator. All flops here are PER-GPU, derived by dividing NVIDIA's system figures by 72: 1,440 PFLOPS NVFP4 / 72 = 20 sparse PFLOPS; 720 FP8 / 72 = 10; 360 FP16/BF16 / 72 = 5; 180 TF32 / 72 = 2.5. CRITICAL: NVIDIA's own footnote says 'Specification in sparse. Dense is one-half sparse spec shown', so ALL listed dense values are half of the recorded figure (dense NVFP4 = 10 PFLOPS/GPU, dense FP8 = 5). tdp_w 1200 is the per-GPU 'configurable up to 1,200W' from the Blackwell datasheet, NOT the rack's total. The distinguishing spec here is INTERCONNECT, not FLOPS: 130 TB/s of NVLink across a single 72-GPU domain via NVLink Switch, i.e. ~1.8 TB/s per GPU - 2x H100 SXM's 900 GB/s - which is what lets a 72-way tensor parallel model behave like one machine. Do not confuse this record with a whole GB200 superchip (the paired superchip is 20 sparse PFLOPS NVFP4 and 372GB total). The 'other' row is FP64/FP64 Tensor Core (40 TFLOPS, sparse / 20 dense) - this schema's precision enum has no fp64 member."
+}

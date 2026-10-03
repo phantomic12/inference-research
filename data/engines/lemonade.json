@@ -1,0 +1,81 @@
+{
+  "id": "lemonade",
+  "type": "engine",
+  "name": "Lemonade",
+  "repo": "lemonade-sdk/lemonade",
+  "languages": [
+    "C++",
+    "Python",
+    "JavaScript"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2025,
+  "design_goal": [
+    "ease-of-use",
+    "edge/mobile",
+    "multi-model",
+    "minimal-deps",
+    "multi-modal"
+  ],
+  "scheduling": [
+    "router-policy-based-model-selection",
+    "job-system-with-exclusive-ops"
+  ],
+  "supported_backends": [
+    "cpu-avx512",
+    "cpu-avx2",
+    "cuda",
+    "rocm",
+    "hip",
+    "vulkan",
+    "metal",
+    "npu"
+  ],
+  "supported_formats": [
+    "gguf",
+    "flm",
+    "onnx"
+  ],
+  "notable_features": [
+    "An engine-and-backend registry rather than a single engine: the README's supported-configurations table lists per-modality engines (llamacpp, flm, vllm, whispercpp, kokoro, openmoss, thinksound, acestep, sd-cpp, trellis, onnxruntime) each with its own backend/device/OS requirements. Backends are installable at runtime through POST /v1/install.",
+    "AMD-first NPU story: `flm` on XDNA2 NPU (Windows, Linux) and `ryzenai-llm` on XDNA2 NPU (Windows), plus `whispercpp` on XDNA2 NPU — few other engines target Ryzen AI directly.",
+    "Also carries experimental paths into the GPU-serving world: `llamacpp-hrx` on gfx1100/gfx1151, `vllm` experimental on Strix Halo iGPU (gfx1151), and `ds4` for AMD Strix Halo.",
+    "Multi-dialect API in one server: OpenAI-compatible, Ollama-compatible, Anthropic-compatible, llama.cpp-specific, Lemonade-specific, and an MCP gateway.",
+    "Model lifecycle as a first-class API: /v1/pull, /v1/load, /v1/unload, /v1/delete, model aliases, and /v1/models/{id}/options to save per-model recipes without loading.",
+    "Experimental routing engine: name a `collection.router` model in the model field and the server picks a candidate by first-matching policy rule, reporting the match via an x-lemonade-route header. Rules can be keyword/regex/metadata based or backed by an embedding, classifier, or LLM.",
+    "A resumable job system (steps, pause/interrupt/resume, when/branch expressions) whose lifecycle survives client disconnect and server restart; exclusive ops hold a Router slot so normal traffic queues.",
+    "Serves its own API reference from the running server at GET /v1/docs, so docs match the installed version and work offline.",
+    "Model downloads come from Hugging Face Hub or ModelScope depending on the source selected."
+  ],
+  "hardware_caveats": [
+    "The backend/device/OS matrix is per engine, not global, and several entries are explicitly marked experimental. `lemonade backends` is the authoritative check for your machine — the README says so explicitly.",
+    "ROCm support is AMD-generation-scoped: the README's platform table lists gfx1151 (Strix Halo, Windows/Ubuntu, Ryzen AI MAX+ Pro 395), gfx120X (RDNA4, Radeon AI PRO R9700, RX 9070 XT/GRE/9070, RX 9060 XT) and gfx110X (RDNA3, Radeon PRO W7900/W7800/W7700/V710, RX 7900 XTX/XT/GRE, 7800 XT, 7700 XT).",
+    "The experimental vllm backend is limited to Strix Halo iGPU (gfx1151) on Linux. Do not read the presence of a vllm backend as general vLLM support.",
+    "`ryzenai-llm` (NPU) is Windows-only; `flm` (NPU) is Windows and Linux. The NPU story is XDNA2-specific — earlier Ryzen AI NPU generations are not covered here.",
+    "The onnxruntime text-classification path is CPU-only and marked experimental (x86_64 on Windows, arm64 on Linux, arm64 on macOS).",
+    "Serving is single-node local: there is no distributed scheduler, and exclusive ops (load/unload/chat) serialize against other traffic by design."
+  ],
+  "best_for": [
+    "AMD Ryzen AI / Strix Halo machines, where it is the most complete story available for NPU plus iGPU plus dGPU in one server.",
+    "One server for text, images, video, speech-to-text, TTS, audio and even 3D and classification — the modality coverage is unmatched by anything else here.",
+    "Replacing a mix of local AI services with one process that speaks OpenAI, Ollama and Anthropic dialects simultaneously.",
+    "Desktop-app integration: the model lifecycle endpoints (download, pre-load, unload, inspect resources) exist specifically so native apps can feel responsive.",
+    "Prompt-routing experiments: policy-based model selection with classifier/embedding/keyword rules."
+  ],
+  "avoid_for": [
+    "Production multi-tenant serving — it is a local desktop server, and exclusive ops block normal traffic.",
+    "Anything requiring a proven scheduler with paged KV and continuous batching.",
+    "CUDA performance work — CUDA is present but this is not a CUDA-tuning project.",
+    "Non-AMD NPUs; the NPU support is XDNA2 and the x86_64-class Windows path.",
+    "Anything needing the documented status other than experimental — several of the most interesting paths are experimental."
+  ],
+  "docs_url": "https://lemonade-server.ai/docs/",
+  "notes": "scheduling is recorded as router-policy-based model selection rather than a sequence-level scheduler, because that is what the project actually implements — it picks between models, it does not batch sequences within one. There is no evidence of continuous batching or paged KV in the sources read. The '100% free and private' framing is project marketing; the privacy-relevant verifiable part is that the only outbound contacts documented are Hugging Face Hub and ModelScope for model download and registry lookup. Note the repo also contains a large UI design-system spec (DESIGN.md) that has nothing to do with the engine; ignored.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "cpuedge-lemonade-github",
+    "cpuedge-lemonade-api"
+  ]
+}

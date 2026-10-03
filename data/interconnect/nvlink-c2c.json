@@ -1,0 +1,23 @@
+{
+  "id": "nvlink-c2c",
+  "type": "interconnect",
+  "name": "NVIDIA NVLink-C2C (second generation)",
+  "kind": "sxm-c2c",
+  "version": "NVLink-C2C 2nd generation",
+  "bandwidth_gbps": 900,
+  "bandwidth_basis": "PER DIRECTION, PER LINK. NVIDIA's Grace CPU page states second-generation NVLink-C2C provides 'up to 1.8 TB/s of bidirectional bandwidth'; the recorded 900 GB/s is the per-direction half. This is confirmed internally by the same page giving 900 GB/s for the coherent CPU-to-CPU link in the Grace CPU Superchip (two CPUs at 900 GB/s each = 1.8 TB/s aggregate across the pair) and by the H100 page describing the Grace-Hopper CPU-GPU link as 900 GB/s.",
+  "link_count": 1,
+  "topology": "Point-to-point die-to-die chip-to-chip link. Integrates at PCB level, in a multi-chip module, or across a silicon interposer / wafer-level connection. One such link joins a Grace CPU to a Hopper GPU (GH200), two Grace CPUs to each other, or two Blackwell GPUs plus a Grace CPU in GB200.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "No switching - it is a direct coherent CPU-GPU or CPU-CPU link. Its significance is that it provides hardware coherence and load/store access, so a Grace-Hopper superchip exposes one flat memory space rather than requiring explicit copies.",
+  "notes": "Inference consequence: NVLink-C2C plus coherence is what makes large-model inference on GH200 feasible with KV cache and weights spilled to LPDDR5X - the 1 TB/s of LPDDR5X bandwidth acts as a coherent overflow tier rather than requiring manual prefetch. NVIDIA claims 6x the energy efficiency and 3.5x the area efficiency of a PCIe Gen6 PHY on its own silicon. Do not compare the 900 GB/s figure against a PCIe x16 per-direction figure without checking direction: it is a full-duplex coherent link, not an aggregate of two directions. The same PHY family also feeds NVLink Switch silicon, which is why the technology appears in both the C2C and switch contexts. A '7x faster than PCIe Gen5' claim on the Grace page could not be reconciled with the recorded PCIe 5 x16 numbers under any direction convention, so it is deliberately not repeated as a figure here.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-grace-cpu-product-page",
+    "link-nvlink-c2c-product-page",
+    "link-h100-product-page"
+  ]
+}

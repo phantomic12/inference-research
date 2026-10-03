@@ -1,0 +1,76 @@
+{
+  "id": "amd-instinct-mi210",
+  "type": "accelerator",
+  "name": "AMD Instinct MI210",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "amd-mi210-product-page",
+    "amd-rocm-compatibility-matrix"
+  ],
+  "vendor": "amd",
+  "architecture": "CDNA2 (gfx90a)",
+  "release_year": 2022,
+  "process_nm": 6,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 64,
+  "memory_type": "hbm2e",
+  "memory_bus_bit": 4096,
+  "memory_bandwidth_gbps": 1600,
+  "memory_bandwidth_basis": "4096-bit interface x 1.6 GHz memory clock = 1.6 TB/s, stated directly in AMD's spec table. Half the MI250X's 8192-bit bus, and exactly half its bandwidth - this part is a genuine single-GCD CDNA2 card, unlike the MI250 whose memory does not halve.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 22.6,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi210-product-page"
+    },
+    {
+      "precision": "fp32",
+      "tflops": 45.3,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi210-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 181.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi210-product-page"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 181.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi210-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 181.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi210-product-page"
+    },
+    {
+      "precision": "int4",
+      "tflops": 181.0,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi210-product-page"
+    }
+  ],
+  "tdp_w": null,
+  "interconnect": [
+    "amd-infinity-fabric-link",
+    "pcie-gen4"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "The single-die CDNA2 part, and the last MI-series card sold as a normal PCIe add-in rather than an OAM module. 104 CUs / 6,656 SPs - exactly half the MI250X's 220/14,080 - so 181 TFLOPS FP16 vs 383, 22.6/45.3 TFLOPS FP32 vector/matrix vs 47.9/95.7.\n\nUnlike the MI250, the MI210's memory DOES halve with the compute: 64 GB HBM2e on 4096 bits at 1.6 TB/s, versus the MI250X's 128 GB / 8192-bit / 3.2 TB/s. Same 1.6 GHz memory clock in both cases.\n\ntdp_w is null because AMD's MI210 page has no TDP or TBP field at all (the MI100/MI250X pages do). The card is passively cooled, full height, 267mm, double slot, and draws auxiliary power from the PCIe slot; the 300W-class figure commonly quoted for MI210-family cards is not confirmed on this page, so it is left null rather than invented.\n\n3 Infinity Fabric links at 100 GB/s each (the MI250X OAM has 8) - this is a real scaling difference for multi-GPU inference on PCIe cards: no all-to-all mesh.\n\nSame generation limits: no TF32, no FP8, no structured sparsity (MI300X datasheet footnote). All flops entries dense-only. INT8 and INT4 are both 181 TOPs - no 4-bit advantage on CDNA2.\n\nROCm LLVM target gfx90a. Matrix FP32 is 2x vector FP32, the same CDNA2 asymmetry as MI250X."
+}

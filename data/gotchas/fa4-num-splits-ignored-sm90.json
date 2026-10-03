@@ -1,0 +1,26 @@
+{
+  "id": "fa4-num-splits-ignored-sm90",
+  "type": "gotcha",
+  "name": "vLLM 0.30.0's FA4 kernel ignores num_splits on SM90, costing up to 48% decode throughput",
+  "class": "kernel",
+  "affects": [
+    "vllm",
+    "vllm-flash-attn",
+    "nvidia-h100-sxm",
+    "nvidia-h200",
+    "gemma-4-26b-a4b-it",
+    "hopper-sm90"
+  ],
+  "symptom": "Decode on H100 (SM90) is 48% slower per token than on v0.26.0 at batch 1 and 36% slower at batch 4 for google/gemma-4-26B-A4B-it at ~5.9k context, while TTFT is flat at 61 ms on both. Results stay correct, so nothing fails. Kernel sweep at Gemma-4 global-layer shapes: v0.26.0 goes 385 -> 20 us as num_splits rises 1 -> 64, v0.30.0 stays flat at ~356-363 us.",
+  "root_cause": "The fork sync that v0.30.0 pins (506341a, from vllm-project/vllm#54819) moved the split count into a BlockInfo field. BlockInfo.get_n_block_min_max in vllm_flash_attn/cute/block_info.py still takes num_splits but overwrites it on the non-packed path. flash_fwd_sm100.py constructs BlockInfo(..., num_splits=num_splits) but flash_fwd_sm90.py does not, so on SM90 the default Int32(1) is used: split 0 covers the whole KV range and splits 1..N-1 get n_block_min == n_block_max. The combine kernel weights the empty splits at zero, so outputs stay correct. Gemma-4's global layers are the worst case (1 query token, 2 KV heads), leaving only 2 of an H100's 132 SMs with work.",
+  "workaround": "Set attention_backend=TRITON_ATTN (recovers ~70% of the gap), or pin vllm_flash_attn to 6d11b3c or later, which is flash-attention#198 (merged 2026-09-28) and adds num_splits=num_splits to the BlockInfo call in flash_fwd_sm90.py. Affects v0.30.0 and main (9cd61de, one commit behind); v0.26.0-v0.29.0 are unaffected.",
+  "severity": "major",
+  "notes": "A launch-config diff will not reveal this: the global-layer kernel goes from 18.5 us to 311 us per launch with an identical grid [2,66,1], 384 threads and 205,824 B shared memory. The same CTAs launch; only one split per head has work. Rule out batching, model runner, multimodal, MoE configs and torch 2.13's fused QK-norm+RoPE (~1.5%) before blaming them.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "gotcha-vllm-issue-59362-fa4-num-splits-sm90",
+    "gotcha-flash-attention-pr-198-sm90-splitkv"
+  ]
+}

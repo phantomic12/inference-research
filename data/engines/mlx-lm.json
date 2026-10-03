@@ -1,0 +1,70 @@
+{
+  "id": "mlx-lm",
+  "type": "engine",
+  "name": "MLX-LM",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "engine-mlx-lm-github",
+    "engine-mlx-lm-server"
+  ],
+  "repo": "ml-explore/mlx-lm",
+  "languages": [
+    "Python",
+    "C++",
+    "Metal"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "edge/mobile",
+    "Apple-only",
+    "low-latency",
+    "developer-UX"
+  ],
+  "scheduling": [
+    "prefix-cache",
+    "prompt-cache",
+    "batched-decode"
+  ],
+  "supported_backends": [
+    "metal"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "mlx-quantized-4bit",
+    "mlx-quantized-8bit",
+    "mlx-quantized-bf16"
+  ],
+  "notable_features": [
+    "mlx-lm is the LLM package on top of Apple's MLX array framework; Apple Silicon is the only target",
+    "Rotating fixed-size KV cache (--max-kv-size) to cap memory at some quality cost",
+    "Prompt caching to disk and in memory, reusable as a prefix across turns",
+    "Configurable prefill step size (--prefill-step-size, default 2048) to trade peak memory against prompt speed",
+    "Batched generation (batch_generate_response, BatchGenerator) plus a threaded OpenAI-compatible server with separate decode and prompt concurrency knobs",
+    "First-party quantization pipeline that converts and uploads models to the mlx-community HF org",
+    "Distributed inference and fine-tuning via mx.distributed, with a --pipeline switch for pipeline rather than tensor parallelism",
+    "Speculative decoding via --draft-model / --num-draft-tokens"
+  ],
+  "hardware_caveats": [
+    "Apple Silicon and macOS only - MLX has no CUDA, ROCm, Linux-CPU or Windows path. This is a hard boundary, not a preference",
+    "mlx_lm.server exposes batching, but --kv-bits (4 or 8 bit KV cache quantization) explicitly disables batching and serves one request at a time, so enabling KV quantization costs you concurrency",
+    "Models much larger than system RAM are slow unless macOS 15+ wired-memory behaviour is in play; the limit is raised with sysctl iogpu.wired_limit_mb, and without it you get a [WARNING] that the model will likely be slow",
+    "Adapters (LoRA) and draft models cannot be combined with distributed mode - the loader raises on that combination",
+    "Distributed mode also loses adapter support entirely, and the prompt cache and quantized-KV paths are separate features from batching",
+    "Large-model speed relies on MLX wiring model and cache memory outside the normal allocator, which needs macOS 15 or newer"
+  ],
+  "best_for": [
+    "Local Mac development and personal use, where Metal is fast and battery/thermals matter",
+    "Quantized models from mlx-community that were converted specifically for MLX, since those are the tuned path",
+    "Fine-tuning or LoRA work on Apple Silicon, which mlx-lm supports natively including on quantized models"
+  ],
+  "avoid_for": [
+    "Any shared or multi-tenant server - you want vLLM-Metal (see [[vllm-metal]]) if you need paged KV and real continuous batching on a Mac",
+    "Non-Apple hardware, without exception",
+    "Workloads needing KV-cache quantization and request concurrency at the same time"
+  ],
+  "docs_url": "https://github.com/ml-explore/mlx-lm",
+  "notes": "'prefix-cache' here is mlx-lm's prompt cache (an LRU of saved prompt KV plus explicit prompt-cache files), not a radix tree and not vLLM's block-level automatic prefix caching. mlx-lm's own quantized formats (4-bit, 8-bit, and bf16) are distinct from GGUF and from AWQ/GPTQ; safetensors is the on-disk container. The batching flags --decode-concurrency (default 32) and --prompt-concurrency (default 8) come from reading mlx_lm/server.py directly."
+}

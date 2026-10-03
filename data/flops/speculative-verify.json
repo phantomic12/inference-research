@@ -1,0 +1,34 @@
+{
+  "id": "speculative-verify",
+  "type": "flop",
+  "name": "Speculative decoding: target-model verification pass",
+  "class": "speculative_verify",
+  "arithmetic_intensity": "The verify pass runs the target model over k draft positions as a batch-k forward pass. flops = 2*k*N_target, bytes = 2*N_target (weights read ONCE for all k positions) plus k times the KV-cache attention and norm work. Weights dominate: AI ~ k flop/byte. So verify is the same memory-bound regime as decode_gemm but with k instead of 1 - it is the mechanism by which speculative decoding converts k sequential memory-bound steps into one memory-bound step plus k cheap ones. Two costs are easy to forget: the attention over k queries against the full KV cache, whose flops grow as k*L (so it becomes compute-relevant for long context), and the V-wide logits for all k positions, which are k times the sampling cost and can dominate when k is large.",
+  "bound_by": "memory",
+  "scales_with": [
+    "draft_k (AI = k; also multiplies the logit and attention work)",
+    "context_length (verify attention flops scale as k*L and become compute-relevant)",
+    "vocab_size (k*V logits to compare)",
+    "num_accepted_tokens (realized speedup, the other half of the cost model)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-b200-sxm"
+  ],
+  "workarounds": [
+    "Tree attention masks so a tree draft verifies in one masked pass rather than k separate paths",
+    "Batch the draft and verify passes so the draft model's tiny batch is not serialized with the target's",
+    "Fused rejection-sampling kernel that compares all k drafts against the target distribution in one pass over the k x V logits",
+    "Constrained / guided decoding so the acceptance test can be tightened rather than sampled",
+    "Adaptive draft_k - shorten the draft when acceptance rate drops"
+  ],
+  "notes": "Design consequence: verify is where speculative decoding's hidden cost lives, and it is what determines whether the scheme helps at long context or in a high-throughput regime. Two structural facts: (1) verify reads the target weights once for k positions, so it can never exceed roughly the arithmetic-intensity of a batch-k decode GEMM - a hardware part with poor FLOPs-per-byte will not gain from speculative decoding in proportion; (2) the k x V logit tensor and the k*L attention cost both grow with the knobs that are supposed to be free (k, context). Practically, engines that expose speculative decoding should report the acceptance rate and the effective k, since realized speedup = (1 + draft/target_cost) x acceptance - two different quantities that are routinely conflated. Also note the exactness property: Leviathan et al. show the combined draft+verify scheme leaves the target distribution unchanged, so any quality difference means the implementation is not doing modified rejection sampling correctly.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-speculative-decoding",
+    "flop-speculative-sampling-deepmind"
+  ]
+}

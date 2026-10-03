@@ -1,0 +1,23 @@
+{
+  "id": "nvlink-4",
+  "type": "interconnect",
+  "name": "NVIDIA NVLink 4.0",
+  "kind": "nvlink",
+  "version": "4.0",
+  "bandwidth_gbps": 25,
+  "bandwidth_basis": "PER LINK, UNIDIRECTIONAL. NVIDIA's spec table gives 900 GB/s NVLink bandwidth per GPU for the fourth generation, and that figure is BIDIRECTIONAL AGGREGATE across 18 links (the H100 product page likewise says 900 GB/s of GPU-to-GPU interconnect). Per-direction aggregate is therefore 450 GB/s per GPU, and per link per direction is 900 / 18 / 2 = 25 GB/s, which is the recorded value. This is the single most commonly mangled number in the domain: 'NVLink 4 is 50 GB/s' is the bidirectional per-link rate, and '900 GB/s' is the bidirectional per-GPU total, not per-direction.",
+  "link_count": 18,
+  "topology": "Point-to-point GPU-to-GPU links, exposed on both sides of the card (NVLink bridge on PCIe SKUs such as H100 NVL, direct in SXM/ HGX baseboards). Switched via NVSwitch 4 for a non-blocking 8-GPU server domain.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "NVSwitch 4 (see nvswitch-4) turns the 8-GPU node from a partial mesh into a non-blocking all-to-all fabric at the same 900 GB/s per-GPU rate.",
+  "notes": "Hopper generation. Inference consequence: tensor-parallel sharding wants the highest per-direction fabric rate available, because every layer boundary ships activations across the link. The bidirectional aggregate figure that dominates marketing is not what a single collective move sees. NVLink 4 doubles the link count over NVLink 3 at the same per-link rate, so the gain is links, not link speed - a useful reminder that aggregate fabric bandwidth is link_count x per-link rate. Inference practical note: H100 NVL pairs expose only the NVLink bridge path, so a 2-GPU H100 NVL node has the same 450 GB/s per-direction aggregate as a fully-wired SXM H100 despite being PCIe-hosted.",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-nvlink-switch-spec",
+    "link-h100-product-page",
+    "link-wikipedia-nvlink"
+  ]
+}

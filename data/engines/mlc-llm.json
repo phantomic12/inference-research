@@ -1,0 +1,72 @@
+{
+  "id": "mlc-llm",
+  "type": "engine",
+  "name": "MLC-LLM",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "engine-mlc-llm-github",
+    "engine-mlc-llm-quickstart"
+  ],
+  "repo": "mlc-ai/mlc-llm",
+  "languages": [
+    "C++",
+    "Python",
+    "TypeScript",
+    "Rust"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "compiler-based",
+    "cross-platform",
+    "edge/mobile",
+    "minimal-deps"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "prefix-cache"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "vulkan",
+    "metal",
+    "opencl",
+    "webgpu",
+    "wasm"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "mlc-compiled",
+    "q4f16",
+    "q4f32"
+  ],
+  "notable_features": [
+    "An ML compiler (TVM/Relax + TensorIR) ahead of the runtime, so a model is compiled to a per-target artifact rather than JIT-kernel-specialised at serve time",
+    "One MLCEngine behind Python, REST, JavaScript/WebGPU, iOS and Android, all with an OpenAI-compatible API",
+    "Platform matrix is genuinely broad: CUDA, ROCm, Vulkan, Metal, OpenCL, WebGPU/WASM, OpenVINO-free",
+    "Published pre-compiled model artifacts on Hugging Face under the HF://mlc-ai/...-MLC naming, so no local compile step is required to start",
+    "WebLLM is the same compiler targeting the browser"
+  ],
+  "hardware_caveats": [
+    "Models must be compiled per target; loading a prebuilt artifact on an unsupported target means going through the compiler yourself",
+    "On Windows and Linux the Vulkan path requires a working Vulkan loader - the docs tell you to install libvulkan-loader via conda to avoid 'vulkan not found' failures",
+    "Hardware coverage is uneven in practice: the README's matrix marks AMD/NVIDIA Vulkan and CUDA, Intel Vulkan, Apple and AMD Metal on macOS, WebGPU/WASM in browsers, Metal on iOS, and OpenCL on Adreno/Mali for Android - but the rows mix targets, so 'supported' means a build exists, not that performance is competitive",
+    "The MLX-style compile step means model updates require recompiling an artifact; you cannot just point at a new safetensors checkpoint and serve",
+    "Throughput and features trail the CUDA-specialised engines on datacenter NVIDIA parts, which is the usual reason it is not chosen there"
+  ],
+  "best_for": [
+    "Deploying one model to many target classes - browser, phone, iOS, Mac, Windows/Linux GPU - from a single compile pipeline",
+    "In-browser and on-device inference with an OpenAI-compatible API and no server",
+    "Intel, Adreno, Mali or other GPUs without a vendor-tuned inference stack"
+  ],
+  "avoid_for": [
+    "Maximum datacenter throughput on NVIDIA, where a purpose-built CUDA engine wins",
+    "Rapid model iteration, where the compile artifact is a step between a new checkpoint and a running server",
+    "Anyone who does not want a compiler in the loop"
+  ],
+  "docs_url": "https://llm.mlc.ai/docs/",
+  "notes": "'mlc-compiled' is MLC's own artifact format; q4f16/q4f32 are the published quantization variants (group-quantized weights with f16 or f32 scales). WebLLM (mlc-ai/web-llm) is the browser deployment of the same compiler and is recorded here as part of MLC-LLM rather than as a separate engine record."
+}

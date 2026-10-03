@@ -1,0 +1,36 @@
+{
+  "id": "wq4a4",
+  "type": "quantization",
+  "name": "W4A4 (4-bit weights and 4-bit activations, general term)",
+  "scheme": "wq4a4",
+  "bits": "w4a4",
+  "weight_group_size": null,
+  "activation_scheme": "per-group or per-token INT4 asymmetric activation scales. Achieving usable W4A4 requires outlier handling - learned rotations (SpinQuant/QuaRot/QuIP#) or QAT - because unhandled activation outliers make naive W4A4 collapse.",
+  "native_support": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-radeon-pro-vii",
+    "amd-instinct-mi300x"
+  ],
+  "kernels": [
+    "TensorRT-LLM W4A8 AWQ / W4A8 GPTQ plugins (the only W4 paths with real GEMMs)",
+    "FP4/NVFP4 cutlass block-scaled GEMM on Blackwell",
+    "Triton fake-quant research kernels"
+  ],
+  "quality_delta": null,
+  "notes": "A category record, not a single scheme: 'W4A4' in the wild usually means one of three very different things, and conflating them is the single most common error in quantization blog posts. (1) Integer W4A4 with INT4 tensor cores - does not exist on shipping NVIDIA or AMD parts; Hopper and older have no INT4 path at all and Ampere-era 'INT4' marketing was sparsity, not 4-bit multiply. (2) FP4 W4A4 - this IS native, on Blackwell, and that is exactly what nvfp4 is. (3) Simulated/fake W4A4 in research papers - SpinQuant, QuaRot, QuIP# - which measure quality but buy no speed without custom kernels. Note TensorRT-LLM's own naming: it ships W4A16 and W4A8 variants of AWQ and GPTQ and no W4A4 row at all (quant-trtllm-quantization), which is the honest state of the art. The distinction to carry away: '4-bit weights with 16-bit compute' (AWQ, GPTQ, NF4, EXL2, all GGUF k-quants) is a memory optimization; '4-bit weights and 4-bit activations with hardware support' currently exists only for FP4 on Blackwell.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-trtllm-quantization",
+    "quant-nvfp4-blog",
+    "quant-spinquant-paper",
+    "quant-gguf-kquant-study"
+  ]
+}

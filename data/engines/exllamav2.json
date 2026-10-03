@@ -1,0 +1,68 @@
+{
+  "id": "exllamav2",
+  "type": "engine",
+  "name": "ExLlamaV2",
+  "repo": "turboderp-org/exllamav2",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "low-latency",
+    "throughput-first",
+    "single-user",
+    "quantization-coverage",
+    "research"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "prefix-cache"
+  ],
+  "supported_backends": [
+    "cuda"
+  ],
+  "supported_formats": [
+    "exl2",
+    "gptq",
+    "safetensors",
+    "hf"
+  ],
+  "notable_features": [
+    "EXL2 is its reason to exist: mixed per-matrix bitrates (2.0-8.0 bpw) with column-level importance remapping, so sensitive weight columns get more bits at the same average bitrate. The original README claims Llama2 70B on a single 24GB GPU at 2.55 bpw, and 13B models at 2.65 bpw within 8GB.",
+    "Dynamic generator: dynamic batching, smart prompt caching, and K/V cache deduplication in one API.",
+    "Paged attention via Flash Attention 2.5.7+ as of v0.1.0+.",
+    "Q4 K-cache mode, with the README stating it performs better than the old FP8 cache; the dynamic generator does not support FP8 cache.",
+    "TabbyAPI is the official recommended server (OpenAI-compatible, HF model download, embeddings, HF Jinja2 chat templates)."
+  ],
+  "hardware_caveats": [
+    "NVIDIA-only. Requires the CUDA Toolkit plus gcc (Linux) or Visual Studio Build Tools (Windows), and an appropriate PyTorch build. There is no CPU, ROCm, or Metal path.",
+    "The repo is ARCHIVED. The README carries a note that the project is archived for now and development continues on ExLlamaV3. Use V3 for new work.",
+    "Slow CPUs are called out as a potential bottleneck for these GPU-side kernels — ExLlamaV2 moves a lot of data per token and CPU-side work can gate it.",
+    "Some early EXL2 models used no GQA, which effectively capped context at 2048 tokens. Not a current-model problem but a trap when picking old conversions off the Hub.",
+    "All speed figures in the README are the author's own ('in my tests'), on a 3090Ti/4090, comparing against ExLlama V1 — not against llama.cpp or vLLM."
+  ],
+  "best_for": [
+    "Getting a very large model into a single consumer NVIDIA GPU card — EXL2's variable-bpwinth trick is the whole point.",
+    "Single-user local interactive use where decode tok/s on one card is what matters.",
+    "2-3 bpw territory where generic quants fall apart and you want per-model calibration.",
+    "Reference-quality community EXL2 conversions (turboderp, LoneStriker, bartowski are the named sources)."
+  ],
+  "avoid_for": [
+    "New projects — it is archived; start on ExLlamaV3 (EXL3) instead.",
+    "AMD, Intel, Apple, or CPU-only hardware of any kind.",
+    "Multi-user serving that needs paged KV across many concurrent sequences — paged attention exists but the project is single-user-oriented.",
+    "Anyone needing a maintained dependency chain."
+  ],
+  "docs_url": "https://github.com/turboderp-org/exllamav2",
+  "notes": "Kept as a distinct record from exllamav3 because EXL2 vs EXL3 is a format break, not a version bump — a V2 checkpoint will not load in V3. Status 'verified' with the archived status recorded explicitly rather than marked 'deprecated', since the code still runs and the EXL2 model corpus is large and still in use; 'deprecated' would imply removal guidance the source does not make. Performance figures quoted in notable_features are the author's own claims and are not reproduced as benchmark records here because methodology (batch size, prompt/output length) is not specified in the README.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "cpuedge-exllamav2-github",
+    "cpuedge-exllamav3-github"
+  ]
+}

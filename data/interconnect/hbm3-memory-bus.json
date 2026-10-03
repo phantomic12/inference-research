@@ -1,0 +1,22 @@
+{
+  "id": "hbm3-memory-bus",
+  "type": "interconnect",
+  "name": "HBM3 on-package memory bus",
+  "kind": "other",
+  "version": "HBM3 (5.2 Gbps per pin, 8192-bit)",
+  "bandwidth_gbps": 5325,
+  "bandwidth_basis": "PER PACKAGE, PER DIRECTION - the schema's per-link field is not the natural granularity here, so read this as a package aggregate. AMD's own derivation, quoted verbatim from the MI300X page: memory bus interface 8192 bits, memory data rate 5.2 Gbps, 'for total peak memory bandwidth of 5.325 TB/s (8,192 bits memory bus interface * 5.2 Gbps memory data rate / 8)'. 8192 / 8 = 1024 pins per die across 8 dies; link_count 64 records 1024 parallel lanes of 5.2 Gbps. HBM uses separate read and write data paths sharing one command bus, so the full 5.325 TB/s is available in each direction and the figure is NOT a bidirectional aggregate to be halved.",
+  "link_count": 64,
+  "topology": "On-package, on the same interposer as the compute dies. Not a fabric - there are no cables, no switches, no topology, and no distance.",
+  "scale_up": false,
+  "scale_out": false,
+  "switching": "None. It is a wide parallel bus, not a switched network.",
+  "notes": "Included deliberately as a distinct tier, because it is the tier that actually bounds LLM decode and it is routinely confused with the interconnect tiers. The inference consequence: at 5.3 TB/s per package (MI300X) or 3 TB/s per GPU (H100, per NVIDIA's own H100 page), HBM bandwidth is 10-20x the per-direction rate of the best scale-up fabric (NVLink 4 at 450 GB/s per direction per GPU). That ratio is why decode is memory-bandwidth-bound rather than fabric-bound at batch 1, and why tensor parallel only becomes the right answer once per-device HBM is exhausted. The practical ordering of tiers: HBM bus (TB/s, package-local) > NVLink/NVSwitch and Infinity Fabric (hundreds of GB/s per direction, scale-up domain) > PCIe/CXL (tens of GB/s per direction, attach and memory expansion) > InfiniBand/RoCE/Ethernet (per-port, scale-out, fabric-limited). Crossing from tier 1 to tier 2 is the expensive step, which is why sharding decisions should exhaust HBM before paying for fabric. Bandwidth figure and derivation are AMD's; the H100 3 TB/s comparison figure is NVIDIA's.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "link-amd-mi300x-specs",
+    "link-h100-product-page"
+  ]
+}

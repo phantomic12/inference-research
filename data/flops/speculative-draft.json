@@ -1,0 +1,33 @@
+{
+  "id": "speculative-draft",
+  "type": "flop",
+  "name": "Speculative decoding: draft-model proposal pass",
+  "class": "speculative_draft",
+  "arithmetic_intensity": "The draft pass reads the draft model's weights for k tokens' worth of positions at once. With a draft of size N_d, flops = 2*k*N_d against bytes = 2*N_d (weights) + small activations, giving AI ~ k flop/byte - the batch-k of a batched decode GEMM. So the draft pass is memory-bound exactly like decode_gemm, at effective batch k; it is cheap only because N_d is a small fraction of N_target. It also runs the full KV-cache attention and norm/sample work for k positions, so its overhead is not purely the GEMMs. The design condition for the whole scheme is that the draft's per-step latency must stay below the target model's single-token latency, which is why DeepMind's speculative sampling argues parallel scoring of a short continuation costs about the same as sampling one target token (arXiv 2302.01318).",
+  "bound_by": "memory",
+  "scales_with": [
+    "draft_k (number of speculative positions - AI = k, and this is the entire lever)",
+    "draft_model_size (N_d relative to N_target sets the overhead fraction)",
+    "draft_depth or tree width (for tree/multi-candidate variants, which multiply draft work)",
+    "context_length (draft KV attention grows with context like any attention)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-b200-sxm"
+  ],
+  "workarounds": [
+    "Use the cheapest possible draft: an n-gram / prompt-lookup drafter needs no weights at all and costs only a KV/memory lookup",
+    "Early-exit the draft model at a chosen layer depth rather than running a full separate model",
+    "Run the draft pass on a smaller colocated device, or concurrently with the target model's previous step's tail",
+    "Tree / multi-candidate drafting with a verification-aware acceptance test to raise accepted tokens per draft pass"
+  ],
+  "notes": "Design consequence: speculative decoding is a bandwidth trade, not a compute trade. It can only pay when the target model is memory-bound (low batch, small weights) - which is exactly why its benefit shrinks as batch grows and CI/engines expose it as a latency optimization rather than a throughput one. Hardware implication: the win needs a device that can hold both models and re-read the target weights less often; a part too small to co-reside simply cannot use it. The accounting trap is that draft cost is real work, so speedup is bounded by (1 + draft_cost/target_cost) and by the acceptance rate - quoting the speedup without the acceptance rate and k is not a complete claim.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-speculative-decoding",
+    "flop-speculative-sampling-deepmind"
+  ]
+}

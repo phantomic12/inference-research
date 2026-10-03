@@ -1,0 +1,72 @@
+{
+  "id": "openvino-genai",
+  "type": "engine",
+  "name": "OpenVINO GenAI",
+  "repo": "openvinotoolkit/openvino.genai",
+  "languages": [
+    "C++",
+    "Python",
+    "JavaScript"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "low-latency",
+    "edge/mobile",
+    "research",
+    "ease-of-use",
+    "multi-model"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "prefix-cache"
+  ],
+  "supported_backends": [
+    "cpu-avx512",
+    "cpu-avx2",
+    "intel-gpu",
+    "npu"
+  ],
+  "supported_formats": [
+    "openvino-ir",
+    "int4-weight-only",
+    "int8"
+  ],
+  "notable_features": [
+    "Continuous batching inside the library itself, with prefix caching that reuses KV cache fragments across repeated queries — and it is actually used, by OpenVINO Model Server for LLM serving.",
+    "Speculative decoding with two models of different sizes where the large model periodically corrects the small one.",
+    "KV cache token eviction: prunes low-impact tokens to shrink the cache.",
+    "Sparse attention for prefill in two modes, Tri-shape and XAttention.",
+    "Runs on OpenVINO Runtime's CPU, GPU and NPU devices with the same code — the LLMPipeline device string is 'CPU' or 'GPU' with no other change.",
+    "Multi-LoRA for text, image and video: load many adapters, select active ones per generation, blend with alpha coefficients.",
+    "Beyond LLM text: VLM, Diffusers image generation (SD, Flux), video (LTX), Whisper ASR, SpeechT5 TTS, embeddings and text rerank for RAG.",
+    "Self-contained: no external dependencies needed to run generative models, since tokenization is bundled via openvino-tokenizers."
+  ],
+  "hardware_caveats": [
+    "The whole point is Intel: CPU, Intel GPU and NPU. OpenVINO Runtime's platform support matrix (linked as system-requirements for the current 2026 release) defines what actually works; there is no CUDA or ROCm path.",
+    "Models must be exported to OpenVINO IR first, via optimum-cli export openvino (documented in the quickstart). Quantization is baked in at export (the quickstart shows --weight-format int4), so precision changes are an export-time decision.",
+    "CPU-only inference is the primary target and the docs describe it as friendly to PC and laptop execution — but throughput on CPU is fundamentally bandwidth-bound, so expect single-digit tok/s for larger models regardless of optimization method.",
+    "Device string must match the model: the pipeline is constructed with a device ('CPU', 'GPU', 'NPU') and the model must have been compiled/optimized for it."
+  ],
+  "best_for": [
+    "Intel Xeon, Core Ultra and Arc hardware where you want a vendor-supported engine rather than a community fork.",
+    "Intel NPU deployment — this is one of the few engines with a first-class NPU story alongside ONNX Runtime's QNN path.",
+    "Getting the largest model you can onto a PC without a discrete GPU, using int4 weight-only export plus speculative decoding.",
+    "Prefix-heavy workloads (system prompts, few-shot, repeated documents) where the prefix cache actually pays.",
+    "Serving many users on Intel hardware: the continuous batching here is real, not aspirational."
+  ],
+  "avoid_for": [
+    "NVIDIA or AMD GPUs.",
+    "Maximum tok/s per GPU on any vendor.",
+    "Flexible runtime quantization switching — precision is fixed at export.",
+    "GGUF/EXL2 ecosystems; this is IR-only."
+  ],
+  "docs_url": "https://openvinotoolkit.github.io/openvino.genai/",
+  "notes": "scheduling claims continuous-batching and prefix-cache because the README states OpenVINO GenAI implements a continuous batching approach with prefix caching, and states it is used within OpenVINO Model Server. The distinction matters: the library provides the capability, OVMS is the serving front. Whether the in-process pipeline uses batching without OVMS in front is not stated — if that distinction matters to a reader, verify against doc/dynamic.md or the OVMS docs. Backend naming: 'intel-gpu' and 'npu' are recorded generically rather than as gpu-specific entries since OpenVINO abstracts the device; the honest mapping is 'the accelerator OpenVINO Runtime enumerates', which on Intel means Arc iGPU/dGPU and Core Ultra NPU.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "cpuedge-openvino-genai-github"
+  ]
+}

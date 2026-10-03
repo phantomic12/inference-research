@@ -1,0 +1,37 @@
+{
+  "id": "nvfp4",
+  "type": "quantization",
+  "name": "NVFP4 (Blackwell block-scaled E2M1 + E4M3)",
+  "scheme": "nvfp4",
+  "bits": "w4a4 (fp4 weights and fp4 activations with hardware-native block-scaled tensor-core path)",
+  "weight_group_size": 16,
+  "activation_scheme": "two-level: an FP8 E4M3 scale shared by each 16-value micro-block, plus a per-tensor FP32 global scale. s_global = global_amax/(448*6), s_block = (block_amax/6)/s_global.",
+  "native_support": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "TensorRT-LLM NVFP4 plugins (NVFP4 KV cache path)",
+    "cutlass block-scaled FP4 GEMM",
+    "Transformer Engine NVFP4 recipe",
+    "Marlin-based NVFP4 variant in vLLM"
+  ],
+  "quality_delta": "NVIDIA, DeepSeek-R1-0528, FP8 vs NVFP4, seven benchmarks (vendor-reported): MMLU-Pro 85% vs 84%, GPQA Diamond 81% vs 80%, HLE 15% vs 14%, LiveCodeBench 77% vs 76%, SciCode 40% vs 40%, Math-500 98% vs 98%, AIME 2024 89% vs 91%. The blog states this as '1% or less accuracy degradation versus FP8' (quant-nvfp4-blog). This is a vendor comparison against an FP8 baseline, not against fp16, and is vendor-claim-grade.",
+  "notes": "This is the record that most needs the two distinctions kept separate. (1) NVFP4 is genuinely w4a4: the element format is E2M1 (1 sign, 2 exp, 1 mantissa, values ~-6..6) and BOTH weights and activations are quantized to it, with a Blackwell hardware path - unlike MXFP4 and unlike every w4a16 scheme above. (2) NVFP4 is NOT the OCP microscaling format: the element format is the same E2M1, but the scale differs in two ways - NVFP4 uses a *power-of-two-free* E4M3 FP8 scale per **16** values, whereas MX uses an E8M0 power-of-two scale per **32** values - plus NVFP4's second per-tensor FP32 level. NVIDIA's own blog gives the quantitative reason: encoding the scale itself in E4M3 rather than E8M0 drops the scale-encoding MSE from 0.72 to 0.08 (quant-nvfp4-blog). Native only on Blackwell: TensorRT-LLM's hardware matrix marks NVFP4 Y on Blackwell sm120, sm100/103 and Rubin, and no on Hopper/Ada/Ampere (quant-trtllm-quantization). GGML exposes it as GGML_TYPE_NVFP4 = 40, commented '4 blocks, E4M3 scale' (quant-ggml-header), so llama.cpp can read the format but there is no non-Blackwell path. Vendor memory/energy claims (~3.5x vs FP16, 25x/50x energy efficiency vs H100) are in the blog and are marketing, not measurements.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-nvfp4-blog",
+    "quant-nvfp4-te-docs",
+    "quant-nvfp4-paper",
+    "quant-trtllm-quantization",
+    "quant-ggml-header"
+  ]
+}

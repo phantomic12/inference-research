@@ -1,0 +1,73 @@
+{
+  "id": "tensorrt-llm",
+  "type": "engine",
+  "name": "TensorRT-LLM",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "engine-trtllm-github",
+    "engine-trtllm-architecture",
+    "engine-trtllm-install",
+    "engine-trtllm-parallel"
+  ],
+  "repo": "NVIDIA/TensorRT-LLM",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "single-vendor NVIDIA optimization"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "in-flight batching",
+    "disaggregated prefill/decode"
+  ],
+  "supported_backends": [
+    "cuda"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "fp8",
+    "nvfp4",
+    "awq",
+    "gptq",
+    "int4",
+    "marlin"
+  ],
+  "notable_features": [
+    "PyExecutor background loop with a Scheduler, KVCacheManager, ModelEngine and Sampler; requests are fetched, scheduled, KV-allocated, then run",
+    "Overlap Scheduler is on by default: it launches GPU work for step n+1 while the CPU processes step n, at the cost of one extra decoding step of pipeline depth",
+    "CUDA Graph capture with padding up to the nearest captured batch size, documented as worth up to 22% end-to-end throughput on some models",
+    "Full parallelism menu: TP, PP, DP, EP, CP and Wide-EP with an expert-parallel load balancer for MoE",
+    "Disaggregated prefill/decode serving and day-0 support cadence for new open-weight models",
+    "Also hosts a diffusion VisualGen pipeline for image/video generation"
+  ],
+  "hardware_caveats": [
+    "CUDA only - there is no ROCm, Metal, Vulkan or CPU path. This is the defining constraint of the engine",
+    "Version pinning is severe: the pip wheel is built against a specific PyTorch and CUDA Toolkit (docs show CUDA Toolkit 13.1 and a pinned torch cu130 wheel), and a documented failure mode is pip replacing your CUDA-13-compatible torch with a CUDA 12.8 build, leaving an unusable install until you lock torch with a constraints file",
+    "The wheel is not interchangeable with the NGC container's torch; inside an NGC PyTorch container you must use the prebuilt wheel shipped at /app/tensorrt_llm instead of the PyPI one",
+    "Slurm clusters need MPI rebuilt with Slurm support or the launcher aborts; this is called out as a general MPI+Slurm issue but it bites in practice",
+    "DeepGEMM expert-parallel kernels hard-abort after a 60s barrier budget (DG_JIT_BARRIER_TIMEOUT_SECONDS) and the resulting device-side assert poisons the CUDA context, so the first Python traceback points at an unrelated kernel",
+    "MoE scaling features (Wide-EP, EPLB, one-sided all-to-all over NVLink, DWDP) are written against NVLink topologies such as NVL72, so their published wins do not transfer to PCIe-only boxes"
+  ],
+  "best_for": [
+    "Maximum throughput on a fixed NVIDIA fleet, especially MoE models where expert parallelism and load balancing are the bottleneck",
+    "Deployments that can afford a build-time/version-lock step in exchange for hand-tuned kernels, CUDA graphs and the overlap scheduler",
+    "Latency-bound single-request serving on datacenter NVIDIA parts"
+  ],
+  "avoid_for": [
+    "Any non-NVIDIA accelerator",
+    "Environments where you cannot control the CUDA and PyTorch versions, or where an unexpected pip resolution would be unrecoverable",
+    "Teams that need to support many model architectures without NVIDIA adding support for each"
+  ],
+  "docs_url": "https://nvidia.github.io/TensorRT-LLM/",
+  "notes": "'paged-kv' and 'in-flight batching' both apply: the KVCacheManager allocates blocks and requests are added to a running batch rather than waiting for it to drain. Format support is recorded conservatively - the engine's own quantization path plus Model Optimizer checkpoints (FP8/FP4) are the well-trodden ones. Whether Marlin kernels are selectable inside TRT-LLM was not confirmed from the pages read, so treat that entry as uncertain."
+}

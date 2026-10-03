@@ -1,0 +1,65 @@
+{
+  "id": "vllm-metal",
+  "type": "engine",
+  "name": "vLLM-Metal",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "engine-vllm-metal-github",
+    "engine-vllm-install-gpu"
+  ],
+  "repo": "vllm-project/vllm-metal",
+  "languages": [
+    "Python",
+    "C++",
+    "Metal",
+    "MLX"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2026,
+  "design_goal": [
+    "Apple-only",
+    "low-latency",
+    "serve-vLLM-semantics-on-Mac"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache"
+  ],
+  "supported_backends": [
+    "metal"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "mlx-quantized-4bit",
+    "mlx-quantized-8bit"
+  ],
+  "notable_features": [
+    "A vLLM hardware plugin, not a fork: upstream vLLM supplies the API server, the scheduler and the paged block manager, mlx_lm supplies the token-wise model layers, and the plugin owns the request-aware attention path",
+    "Unified paged varlen Metal kernel is the default attention backend as of v0.2.0, which the project credits with 83x TTFT and 3.6x throughput versus v0.1.0",
+    "Uses M5 NAX tensor units for MHA, GQA and MQA prefill",
+    "Speculative decoding support in the plugin",
+    "OpenAI-compatible API server, installable via Homebrew or a curl installer that needs no compiler"
+  ],
+  "hardware_caveats": [
+    "Apple Silicon on macOS 15 (Sequoia) or newer only - there is no other backend and no non-Apple path",
+    "It is community maintained, not upstream vLLM. vLLM's own install docs point at it as a separate package, so its feature set and stability track the plugin, not vLLM",
+    "Works best with models from the mlx-community HF org that were quantized for MLX; other checkpoints may not hit the tuned paths",
+    "Model coverage is a growing set with a separate supported-models matrix, so an architecture not on that list is unsupported",
+    "Kernel gains are hardware-generation specific - the NAX prefill acceleration is an M5 feature and does not exist on earlier Apple Silicon"
+  ],
+  "best_for": [
+    "Running vLLM's serving semantics (paged KV, continuous batching, prefix caching) on a Mac",
+    "Local development against a vLLM-compatible API on Apple Silicon",
+    "Serving a model that fits in unified memory with acceptable single-user latency"
+  ],
+  "avoid_for": [
+    "Multi-tenant datacenter serving - unified memory bandwidth does not compete with HBM",
+    "Non-Apple Silicon, or macOS older than 15",
+    "Production use where the plugin's release cadence and community-maintained status are unacceptable risk; upstream vLLM itself treats this as a community path"
+  ],
+  "docs_url": "https://docs.vllm.ai/projects/vllm-metal/en/latest/",
+  "notes": "Splitting from [[vllm]]: vLLM upstream has no Metal backend of its own and documents vLLM-Metal as the path for Apple Silicon. The 83x TTFT / 3.6x throughput figures in the plugin's news section are self-reported by the project for its own v0.1.0-to-v0.2.0 transition and were not independently reproduced."
+}

@@ -1,0 +1,68 @@
+{
+  "id": "litellm",
+  "type": "engine",
+  "name": "LiteLLM",
+  "repo": "BerriAI/litellm",
+  "languages": [
+    "Python",
+    "Rust",
+    "TypeScript"
+  ],
+  "license": "MIT, except content under the enterprise/ directory which is separately licensed",
+  "first_release_year": 2023,
+  "design_goal": [
+    "multi-model",
+    "ease-of-use",
+    "low-latency",
+    "observability",
+    "routing"
+  ],
+  "scheduling": [
+    "load-balancing",
+    "request-routing",
+    "fallback-chain",
+    "rate-limit-aware-retries"
+  ],
+  "supported_backends": [
+    "none (proxy layer - no local compute backend of its own)"
+  ],
+  "supported_formats": [
+    "passthrough (speaks OpenAI, Anthropic, Bedrock, Vertex, Azure, and native provider formats; model formats are irrelevant because it is not loading weights)"
+  ],
+  "notable_features": [
+    "A gateway/proxy, not an inference engine: it exposes one OpenAI- (or native-)format API across 100+ upstream providers, including vLLM, NVIDIA NIM and self-hosted OpenAI-compatible servers.",
+    "Rust core with a Python SDK, positioned by the project as a fast, lightweight gateway.",
+    "Cost tracking, guardrails, load balancing and logging as first-class features.",
+    "Also an MCP gateway.",
+    "Native provider formats, not just OpenAI-shaped: Anthropic, Bedrock and Vertex requests pass through with their own shapes where needed.",
+    "Helm chart, Terraform and vscode-extension in-repo for deployment."
+  ],
+  "hardware_caveats": [
+    "This record has no local compute backend and that is the point: LiteLLM never loads weights and never touches a GPU, CPU or NPU. supported_backends is recorded as an explicit 'none' rather than left empty so a reader querying by backend does not mistake it for a missing value.",
+    "Latency is added, not removed. Every request pays at least one extra network hop, so it is the wrong layer for a single-user local model — it exists for fleets.",
+    "Licensing is split: everything outside the enterprise/ directory is MIT, everything under it is under enterprise/LICENSE. Embedding in a product needs the license split read, not just the repo badge.",
+    "Because it routes across providers, an upstream that lacks a feature makes that feature appear intermittently missing — the gateway unifies the API surface, not the capability surface."
+  ],
+  "best_for": [
+    "One API key and one billing surface across many cloud providers.",
+    "Fallback and load balancing across heterogeneous deployments — including a local llama.cpp or vLLM box as one target among cloud providers.",
+    "Cost attribution and observability for LLM traffic, with an OpenTelemetry flush endpoint.",
+    "Teams standardizing on the OpenAI shape so a model or vendor can be swapped without touching application code.",
+    "MCP gatewaying in front of many tools or models."
+  ],
+  "avoid_for": [
+    "Single-user local inference — pure added latency and an extra process.",
+    "Anything where you need the model's throughput characteristics to be what you measure end to end.",
+    "Cutting dependency count; a Rust core plus Python SDK plus provider SDKs is not minimal.",
+    "Any assumption that API compatibility implies capability parity across providers."
+  ],
+  "docs_url": "https://docs.litellm.ai/docs/",
+  "notes": "Included per the delegated brief's allowance for a genuinely distinct serving/routing layer. It is deliberately scoped to the routing/proxy role and touches no inference kernel, so it does not overlap the GPU-serving engines other agents cover. supported_formats records passthrough behaviour rather than weight formats because no weight format reaches this layer — a weight-format query against this record will correctly return nothing useful. Scheduling fields are request-level (which upstream, in what order, with what fallback), not sequence-level; there is no continuous batching or paged KV here.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "cpuedge-litellm-github",
+    "cpuedge-litellm-license"
+  ]
+}

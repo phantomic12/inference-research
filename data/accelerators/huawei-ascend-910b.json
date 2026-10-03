@@ -1,0 +1,47 @@
+{
+  "id": "huawei-ascend-910b",
+  "type": "accelerator",
+  "name": "Huawei Ascend 910B",
+  "vendor": "asic-other",
+  "architecture": "da-vinci (Ascend 910B)",
+  "release_year": 2023,
+  "process_nm": 7,
+  "form_factors": [
+    "oam"
+  ],
+  "vram_gb": 64,
+  "memory_type": "hbm2e",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 1400,
+  "memory_bandwidth_basis": "NOT VENDOR-PUBLISHED. Huawei has never released an Ascend 910B datasheet. This is the midpoint of the ~1.2-1.6 TB/s range reported by analysts and teardowns (aiwiki aggregation of SemiAnalysis, TechInsights and CSET). The 910B4 variant is a cut-down part with 32 GB and, per community kernel notes, ~800 GB/s - a factor of two against the main 910B.",
+  "flops": [
+    {
+      "precision": "bf16",
+      "tflops": 376,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "asic-ascend-910b-secondary"
+    },
+    {
+      "precision": "int8",
+      "tflops": 640,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "asic-ascend-910b-secondary"
+    }
+  ],
+  "tdp_w": 400,
+  "interconnect": [
+    "huawei-hccs",
+    "ethernet"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "STATUS CONTESTED and low confidence because there is no primary source at all - every figure here is analyst estimate, teardown or supply-chain reporting. Disagreements kept rather than resolved: (1) BF16/FP16 compute is reported as ~320 TFLOPS, ~376 TFLOPS (SemiAnalysis), up to ~400, and up to ~600 in some supply-chain reporting; 376 is recorded as the central estimate. (2) Memory is reported as 64 GB HBM2e on 910B1-910B3 but 32 GB on the 910B4 cut-down. (3) Bandwidth is given as a ~1.2-1.6 TB/s range with no agreed figure. (4) TDP is quoted as 310-400 W; 400 W recorded as the upper end. Vendor is set to asic-other because 'huawei' is not in the schema enum; the real vendor is Huawei HiSilicon. THE HIERARCHY POINT: the memory story is what makes 910B interesting rather than the compute. 64 GB HBM2e at ~1.2-1.6 TB/s gives a BF16 intensity around 270-310 FLOP/byte, and its scale-up link HCCS is three ports at only 30 GB/s each - roughly 90 GB/s per chip of chip-to-chip bandwidth against H100's 450 GB/s of NVLink. That HCCS number is the real constraint: tensor parallelism across many chips is expensive, which is precisely why Huawei's systems scale out with many chips and why CloudMatrix-style rack designs emerged. For inference this part is bandwidth-bound at batch 1 with a weak scale-up path, and the software story is the binding constraint: CANN/MindIE rather than CUDA, with vLLM and torch_npu ports of varying maturity. Widely deployed in Chinese clusters under NVIDIA supply restrictions (Baidu, ByteDance, iFlytek) and used to train DeepSeek-family models. 910C pairs two 910B dies in one package.",
+  "status": "contested",
+  "confidence": 0.45,
+  "updated": "2026-10-03",
+  "sources": [
+    "asic-ascend-910b-secondary"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "ternary",
+  "type": "quantization",
+  "name": "Ternary / 1.58-bit quantization (general)",
+  "scheme": "ternary",
+  "bits": "1.58 avg (weights in {-1, 0, +1})",
+  "weight_group_size": 32,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-l4",
+    "nvidia-a10",
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "bitblas (BitBLAS reference kernels)",
+    "llama.cpp ternary/bitnet build paths (research)"
+  ],
+  "quality_delta": null,
+  "notes": "Ternary weights -1/0/+1 average 1.58 bits per weight (log2(3)), which is where the name comes from, and the int8-packed representation is why the practical bit width with scale metadata is sometimes quoted higher. The framing that matters: ternary LLM quantization is a TRAINING-TIME recipe, not a post-training one. There is no such thing as PTQ-ing an existing fp16 LLM to 1.58 bits and keeping its quality - you quantize during training with the weights constrained to the ternary set. quality_delta is null here deliberately because the headline 'matches fp16 perplexity' claims are all from-from-scratch training runs at matched size and token budget (see bitnet-b158), not from converting a trained model; GPTQ does report a ternary 'extreme quantization' result but on OPT-175B where it degrades substantially, and no comparable number was transcribed. Hardware: no accelerator has a ternary matrix-multiply path; INT8 tensor cores will not run it, and the whole point is the energy win from accumulating in low precision on custom silicon, which is what the BitNet paper explicitly calls an open design target ('opens the door for designing specific hardware').",
+  "status": "verified",
+  "confidence": 0.6,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-gptq-paper",
+    "quant-torch-qlora-paper"
+  ]
+}

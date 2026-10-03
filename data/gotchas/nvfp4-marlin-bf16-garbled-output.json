@@ -1,0 +1,24 @@
+{
+  "id": "nvfp4-marlin-bf16-garbled-output",
+  "type": "gotcha",
+  "name": "NVFP4 models with --dtype bfloat16 produce garbled output on any GPU without native FP4",
+  "class": "format",
+  "affects": [
+    "vllm",
+    "nvfp4",
+    "nvidia-geforce-rtx-4090",
+    "nvidia-tesla-v100",
+    "nvidia-blackwell-sm100"
+  ],
+  "symptom": "vllm serve of any NVFP4 model with --dtype bfloat16 on SM < 100 (e.g. RTX 4090 SM89, V100 SM70) loads, starts and serves, but every response is garbled. Measured on GLM-4.7-Flash-NVFP4: 54.7% of output values are zero and cos_sim is 0.22 against an FP32 reference; GSM8K 5-shot is garbled.",
+  "root_cause": "These GPUs take the Marlin FP4 dequantization path. dequant_fp8_scales<nv_bfloat162, kFE4M3fn> in csrc/quantization/marlin/dequant.h widens the S0E5M3 scale exponent (5-bit, bias 15) to BF16 (8-bit, bias 127) by copying only the low 4 exponent bits into position, producing BF16 exponent E4 0 0 0 E3 E2 E1 E0 instead of E4 !E4 !E4 !E4 E3 E2 E1 E0. For real model scales (E4=0) the scale is read as about 2^-112 instead of about 2^0, so weight x scale underflows to zero.",
+  "workaround": "Serve with --dtype float16 on pre-Blackwell-datacenter parts: the FP16 path maps the 5-bit exponent directly onto FP16's 5-bit exponent and is unaffected. Otherwise use a GPU with native FP4 (SM100+) or pick a different format. Upstream fix is PR #34577.",
+  "severity": "blocker",
+  "notes": "Silent-wrong-output class, not a crash: nothing warns, the server looks healthy, and only a quality evaluation catches it. The reporter's own header guesses 'sym quantized models should have no qzeros' - do not trust that reasoning; the exponent widening is the actual defect.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "gotcha-vllm-issue-34694-nvfp4-bf16-marlin"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "custom-kernel-launch-overhead",
+  "type": "flop",
+  "name": "Per-kernel launch and dispatch overhead at batch 1",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Not a byte/flop quantity - it is a fixed CPU-side cost per kernel launch, measured in microseconds, paid before any bytes move. At batch 1 a decode step runs on the order of a few hundred to a few thousand kernels (attention, norms, activations, GEMMs, residuals, sampling), so launch and dispatch overhead can be a visible fraction of step latency even when the GPU work itself is only tens of microseconds. This is why CUDA Graphs exist: capture the launch sequence once, replay it, and remove per-kernel launch overhead - the mechanism engines reach for precisely when B is 1 and every op is too small to amortize its own dispatch. The consequence for scheduling is that CUDAGraph requires static shapes, which is why FlashInfer's load-balanced scheduler is designed to stay compatible with CUDAGraph's static configuration.",
+  "bound_by": "launch_overhead",
+  "scales_with": [
+    "batch_size (inverse - at high batch each launch amortizes over more work and this stops mattering)",
+    "num_kernels_per_layer (model depth x ops per layer)",
+    "number_of_experts (MoE dispatch launches per layer)",
+    "host CPU speed and driver overhead (this is a CPU-bound cost)",
+    "static-vs-dynamic shapes (dynamic shapes force re-capture or eager launch)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "amd-radeon-pro-vii",
+    "intel-gaudi3",
+    "qualcomm-ai100"
+  ],
+  "workarounds": [
+    "CUDA Graphs (and equivalents): capture and replay the launch sequence to eliminate per-kernel launch overhead (NVIDIA Technical Blog, Alan Gray, 2019)",
+    "Kernel fusion - fewer, bigger kernels amortize launch overhead across more work",
+    "Persistent / megakernel designs where one launch covers a whole layer or the whole step",
+    "Static shape discipline so graphs stay valid and capturable",
+    "Batching, which raises the work per launch without touching the launch count"
+  ],
+  "notes": "Design consequence: at batch 1 the fastest kernel is often the one that is launched, not the one with the best FLOPs or bandwidth utilization, so launch overhead sets a floor on inter-token latency that no amount of FLOPS improvement can move. Two practical rules follow. For engine authors: if a decode loop is CPU-launch-bound, raising batch or capturing graphs will beat optimizing any single kernel. For hardware designers: the cost is CPU-side and driver-mediated, so fast host memory, low-latency launch paths and driver maturity matter for small-batch latency in a way they do not for throughput - and it means a part with strong FLOPS but a weak host interface can lose the batch-1 latency race outright. Note this class overlaps with norm_softmax and sampling: fusing those is simultaneously an HBM saving and a launch saving, which is why fusion is the first thing any decode path tries.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-nvidia-cuda-graphs",
+    "flop-flashinfer",
+    "flop-nvidia-inference-optimization"
+  ]
+}

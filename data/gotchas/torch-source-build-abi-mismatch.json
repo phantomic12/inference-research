@@ -1,0 +1,22 @@
+{
+  "id": "torch-source-build-abi-mismatch",
+  "type": "gotcha",
+  "name": "vLLM's compiled extension fails to import against a source-built PyTorch with a different CXX11 ABI setting",
+  "class": "toolchain",
+  "affects": [
+    "vllm",
+    "pytorch",
+    "build"
+  ],
+  "symptom": "import vllm raises ImportError: /workspace/vllm-abo/vllm/_C.abi3.so: undefined symbol: _ZN5torch3jit17parseSchemaOrNameERKSsb. The .so file exists and vllm is installed; nothing about the version pins looks wrong.",
+  "root_cause": "The environment had PyTorch and torchvision compiled from source with _GLIBCXX_USE_CXX11_ABI=1, while vLLM's _C.abi3.so was linked against a torch built with the other ABI setting. The mangled symbol encodes the std::string signature, so the two builds are binary-incompatible even at matching version numbers (torch 2.5.1, torchvision 0.20.1, vllm 0.6.5.dev398+cu124 in the report).",
+  "workaround": "Install the official PyTorch wheels rather than source builds, or rebuild vLLM against exactly the torch you have and check torch._C._GLIBCXX_USE_CXX11_ABI before building.",
+  "severity": "blocker",
+  "notes": "A dependency bump or a from-source rebuild of any torch-adjacent package can introduce this without changing any visible version number. Related to gotcha-vllm-v1-memory-footprint-growth.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "gotcha-vllm-issue-13608-torch-abi-mismatch"
+  ]
+}

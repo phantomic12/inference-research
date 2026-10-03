@@ -1,0 +1,56 @@
+{
+  "id": "amd-radeon-instinct-mi50x",
+  "type": "accelerator",
+  "name": "AMD Radeon Instinct MI50X",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "amd-mi50-datasheet",
+    "amd-mi60-product-page",
+    "amd-rocm-system-requirements"
+  ],
+  "vendor": "amd",
+  "architecture": "GCN5.1 (gfx906, Vega20)",
+  "release_year": 2018,
+  "process_nm": 7,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 32,
+  "memory_type": "hbm2",
+  "memory_bus_bit": 4096,
+  "memory_bandwidth_gbps": 1024,
+  "memory_bandwidth_basis": "AMD's MI50 datasheet spec table: 'Memory Interface 4,096-Bits, Memory Clock 1 GHz, Memory Bandwidth up to 1 TB/s'. 4096 bits x 2.0 Gbps effective / 8 = 1024 GB/s. Note the datasheet lists 'Memory Clock 1 GHz' - a base clock that doubles to the 2 Gbps effective per-pin rate; the 'up to' qualifier is AMD's.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 13.3,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi50-datasheet"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 26.5,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi50-datasheet"
+    },
+    {
+      "precision": "int8",
+      "tflops": 53.6,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "amd-mi50-datasheet"
+    }
+  ],
+  "tdp_w": 300,
+  "interconnect": [
+    "amd-infinity-fabric-link",
+    "pcie-gen4"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "MI50X is the 32 GB SKU of the Vega20-based MI50; the MI50 name covers both 16 GB and 32 GB HBM2 cards. AMD's datasheet table gives the MI50 (16GB or 32GB) specs: 60 CUs / 3,840 SPs, up to 26.5 TFLOPS FP16, 13.3 TFLOPS FP32, 6.6 TFLOPS FP64, up to 53.6 TOPS INT8.\n\nNote the naming risk: AMD's own docs sometimes write 'MI50X' when the SKU table just says 'MI50' with a 16GB-or-32GB memory option. vram_gb here is set to 32 (the X suffix denotes the 32GB part) but the underlying silicon is identical, so the compute figures are the same for both SKUs.\n\nGenuinely notable for its era: 53.6 TOPS INT8 is 2x the FP16 figure, so this GCN5 part DOES have a real 8-bit advantage - the opposite of the CDNA2 parts later in this repo, where INT8 equals FP16. GCN5's matrix/vector INT8 units were the reason MI50 was a reasonable inference card in 2018-2020.\n\nScale-up: TWO Infinity Fabric Links per card, which AMD derives as '23 GT/s x 2 (bytes) x 2 (directions) = 92 GB/s' per link, so 184 GB/s peak peer-to-peer per card, aggregated with PCIe 4.0 to 248 GB/s of card I/O. Direct-Connect GPU hives of four cards were the deployment model. This is an order of magnitude less scale-up bandwidth than the 7x128 GB/s mesh on MI300X.\n\nNOT ROCm-SUPPORTED TODAY. AMD's current ROCm system-requirements table lists 'AMD Instinct MI50 | N/A | GCN5.1 | gfx906 | Unsupported', with the same warning that prebuilt ROCm libraries are not officially supported and will cause runtime errors. The live AMD product page 404s; figures come from a Wayback capture of the MI50 datasheet dated 2021-01-12.\n\nFor inference today: 32 GB of HBM2 at 1 TB/s, GCN5 matrix cores with no BF16, no FP8, no TF32, no structured sparsity. A 32GB card that cannot officially run ROCm. Superseded on every axis by MI100 (which adds real Matrix Cores and BF16) and then by MI300X."
+}

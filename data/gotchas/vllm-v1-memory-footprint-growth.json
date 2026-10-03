@@ -1,0 +1,22 @@
+{
+  "id": "vllm-v1-memory-footprint-growth",
+  "type": "gotcha",
+  "name": "Enabling the V1 engine shrinks usable context several-fold on the same hardware and model",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "qwen2-5-coder-32b-instruct-gptq-int4",
+    "tensor-parallel"
+  ],
+  "symptom": "Qwen2.5-Coder-32B-Instruct-GPTQ-Int4 ran at 12K context on 4x RTX 3070 (32 GB) under vLLM 0.6.x. The same model with the same flags under 0.7.0 + VLLM_USE_V1=1 cannot exceed ~3K context and hits CUDA OOM.",
+  "root_cause": "The V1 engine holds more non-KV memory for the same weights and KV configuration, leaving less room for KV cache blocks at a given --max-model-len. The report pins the environment (flashinfer 0.1.6+cu124torch2.4, torch 2.5.1, transformers 4.48.1) with --gpu-memory-utilization=1, --enforce-eager, --swap-space=0.",
+  "workaround": "Compare against VLLM_USE_V1=0 explicitly when a context length regresses across a version bump, and re-tune --max-model-len and --max-num-batched-tokens for the V1 engine rather than carrying the V0 values forward. Related class: gotcha-vllm-kv-cache-block-budget (No available memory for the cache blocks).",
+  "severity": "major",
+  "notes": "Closed 2025-03-14 after maintainer discussion without a single canonical per-version memory overhead figure, so treat the 12K-to-3K ratio as one configuration on one machine, not a general ratio. What generalizes is the habit: engine-generation changes move the memory budget even when the model and flags are identical.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "gotcha-vllm-issue-12529-v1-higher-memory"
+  ]
+}

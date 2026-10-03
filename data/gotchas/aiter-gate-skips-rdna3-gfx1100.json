@@ -1,0 +1,22 @@
+{
+  "id": "aiter-gate-skips-rdna3-gfx1100",
+  "type": "gotcha",
+  "name": "vLLM's AITER integration gate silently excludes RDNA3 (gfx1100)",
+  "class": "config",
+  "affects": [
+    "vllm",
+    "amd-radeon-pro-w7900",
+    "amd-radeon-rx-7900-xtx"
+  ],
+  "symptom": "On a gfx1100 Radeon (Radeon PRO W7900 or 7900 XTX) vLLM logs 'AITER is not found or not supported on the current platform, QuarkOCP_MX will fall back to emulation' and then selects TritonInt8ScaledMMLinearKernel instead of AiterInt8ScaledMMLinearKernel. No error is raised; the INT8 model just runs on slower paths.",
+  "root_cause": "is_aiter_found_and_supported() in vllm/_aiter_ops.py returns get_cdna_version() > 2, which is CDNA3-or-newer only, and the separate RDNA path is_aiter_found_and_supported_on_rdna4() is gated on gfx1201 only. RDNA3 (gfx1100) is in neither branch. AITER upstream lists 'AMD Pro W7900 | gfx1100 (RDNA3) | Experimental', so the library can run its Triton path on gfx1100; vLLM's own gate simply never exposes it. Note the same repo shows AITER CK/ASM kernels are CDNA-only, so gfx1100 needs the Triton WMMA route regardless.",
+  "workaround": "Run on the Triton/emulation path deliberately, or apply the four-part patch in issue #51136 (widen the arch gate to gfx1100, allow gfx1100 in aiter_meta/csrc/cpp_itfs/utils.py, add aiter/ops/triton/configs/gemm/gfx1100-GEMM-A8W8.json, and route _rocm_aiter_w8a8_gemm_impl to AITER's Triton gemm_a8w8 WMMA kernel). Otherwise treat W7900/7900 XTX as unsupported for AITER-accelerated formats.",
+  "severity": "major",
+  "notes": "A vLLM maintainer (vllmellm) confirmed RDNA support is not on the vLLM roadmap and redirected to ROCm/aiter#4604. So this gate is unlikely to widen on its own; the issue remains open. Related: gotcha-vllm-rocm-fp8-cold-start-timeout.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "gotcha-vllm-issue-51136-aiter-rdna3"
+  ]
+}

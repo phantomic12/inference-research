@@ -1,0 +1,35 @@
+{
+  "id": "fp8-blockwise",
+  "type": "quantization",
+  "name": "FP8 block scaling (blockwise, E4M3 with per-block scale)",
+  "scheme": "fp8-blockwise",
+  "bits": "w8a8, block-scaled",
+  "weight_group_size": 32,
+  "activation_scheme": "per-block scale for both operands; on Blackwell sm100/103/107 TensorRT-LLM's blockwise FP8 GEMM uses the MXFP8 recipe (E4M3 act/weight with UE8M0 act/weight scale) rather than the SM90 recipe (E4M3 with FP32 scales) - the two differ in scale type, not in the fp8 element format",
+  "native_support": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-l40s",
+    "nvidia-a100-80gb-sxm4",
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "TensorRT-LLM FP8 (block scaling) plugins",
+    "cutlass blockwise-scaled GEMM",
+    "FlashInfer blockwise FP8",
+    "Transformer Engine block scaling"
+  ],
+  "quality_delta": null,
+  "notes": "Block scaling is a *separate recipe* from per-tensor FP8, and the TensorRT-LLM hardware matrix treats it as such: 'FP8(block scaling)' is Y on Blackwell sm100/103 and Rubin and is explicitly NOT Y on Ada Lovelace, while 'FP8(per tensor)' is Y on Ada (quant-trtllm-quantization). So blockwise FP8 is Blackwell-and-newer only in that stack, even though blockwise scaling as a numerical idea is not new. The doc's own footnote that Blackwell uses the MXFP8 scale recipe while SM90 uses FP32 scales is the clearest statement I found that 'blockwise' is not one format but a family. group_size 32 here is the MX block width, which is where the 32 comes from; other blockwise implementations use different widths, so this field is implementation-specific. No quality delta recorded.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-trtllm-quantization",
+    "quant-mx-paper"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "id": "mxfp8",
+  "type": "quantization",
+  "name": "MXFP8 (OCP microscaling FP8, E4M3 + E8M0)",
+  "scheme": "mxfp8",
+  "bits": "w8a8, block-scaled",
+  "weight_group_size": 32,
+  "activation_scheme": "shared E8M0 power-of-two scale per 32-value block; element format E4M3 (or E5M2). Same microscaling family as MXFP4, and the scale recipe Blackwell's blockwise FP8 GEMM actually uses.",
+  "native_support": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "TensorRT-LLM Blackwell blockwise FP8 GEMM (MXFP8 recipe)",
+    "cutlass MX block-scaled GEMM"
+  ],
+  "quality_delta": null,
+  "notes": "MXFP8 is the 8-bit member of the same OCP microscaling family as MXFP4 - which the enum treats as a separate value, correctly, because the element format (E4M3/E5M2 vs E2M1) and the supported hardware both change. It is directly evidenced as a shipping hardware recipe by the TensorRT-LLM documentation footnote that FP8 blockwise-scaling GEMM kernels on sm100/103/107 use the MXFP8 recipe (E4M3 act/weight with UE8M0 act/weight scale), slightly different from the SM90 FP8 recipe (E4M3 with FP32 act/weight scale) - quant-trtllm-quantization. So on Blackwell, 'blockwise FP8' effectively means MXFP8. The MX family supports any element E/M combination (E2M1, E3M2, E4M3, E5M2 are the common ones) under the shared-scale block scheme. No quality delta recorded.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-mx-paper",
+    "quant-ocp-mx-spec",
+    "quant-trtllm-quantization"
+  ]
+}

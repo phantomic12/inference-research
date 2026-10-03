@@ -1,0 +1,37 @@
+{
+  "id": "mxfp4",
+  "type": "quantization",
+  "name": "MXFP4 (OCP microscaling FP4, E8M0 scale)",
+  "scheme": "mxfp4",
+  "bits": "w4a4",
+  "weight_group_size": 32,
+  "activation_scheme": "shared power-of-two E8M0 scale per 32-element block; no second scaling level, no fractional scales - the power-of-two restriction is the entire accuracy difference vs NVFP4",
+  "native_support": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "TensorRT-LLM MXFP4 plugins",
+    "cutlass MX block-scaled GEMM",
+    "GGML_TYPE_MXFP4 (block size 1)"
+  ],
+  "quality_delta": "No inference fp16 delta recorded from a controlled benchmark. The closest primary evidence is a PTQ study of SmoothQuant+AWQ+GPTQ applied to MX formats, which reports 4-bit weights with 8-bit activations in MXINT with 'negligible accuracy loss compared to the uncompressed baseline' (quant-mx-ptq-paper) - that is the authors' own qualitative wording, not a number, and it concerns MXINT (8-bit) rather than MXFP4 specifically. NVIDIA's own comparison rates MXFP4 as carrying 'risk of noticeable accuracy drop compared to FP8' where NVFP4 does not (quant-nvfp4-blog), which is a vendor ranking, not a measurement.",
+  "notes": "MXFP4 is the OCP microscaling 4-bit format: E2M1 elements under a shared power-of-two E8M0 scale for every 32-value block, from the OCP MX specification / MX data formats paper (quant-mx-paper). It is a genuinely different thing from NVFP4 despite the identical 4-bit element layout - different scale granularity (32 vs 16), different scale format (power-of-two E8M0 vs fractional E4M3), and no second per-tensor level. NVIDIA's own comparison table rates MXFP4 as 'accelerated hardware scaling: yes' but 'risk of noticeable accuracy drop compared to FP8', where NVFP4 is 'lower risk of noticeable accuracy drop' (quant-nvfp4-blog) - i.e. the vendor prefers its own format on accuracy grounds. Hardware: TensorRT-LLM marks MXFP4 Y on Blackwell sm120/sm100/103 and Rubin, no on Hopper (quant-trtllm-quantization), so MXFP4 is a Blackwell-era format and not available on Hopper even though its sibling FP8 is. ggml has GGML_TYPE_MXFP4 = 39 with the comment 'MXFP4 (1 block)' (quant-ggml-header). No fp16 quality delta recorded: the one controlled study I could use is a training recipe paper, not an inference benchmark. Additionally: post-training quantization to MX formats is an active research area (quant-mx-ptq-paper), which matters because it means MX-format quality claims are less settled than the OCP spec alone suggests - the spec defines the format, not how to quantize a trained LLM to it well.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-ggml-header",
+    "quant-mx-paper",
+    "quant-mx-ptq-paper",
+    "quant-nvfp4-blog",
+    "quant-ocp-mx-spec",
+    "quant-trtllm-quantization"
+  ]
+}

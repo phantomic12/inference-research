@@ -1,0 +1,84 @@
+{
+  "id": "nvidia-h100-pcie",
+  "type": "accelerator",
+  "name": "NVIDIA H100 PCIe",
+  "vendor": "nvidia",
+  "architecture": "hopper",
+  "release_year": 2022,
+  "process_nm": 4,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 80,
+  "memory_type": "HBM2e",
+  "memory_bus_bit": 5120,
+  "memory_bandwidth_gbps": 2000,
+  "memory_bandwidth_basis": "HBM2e at 5,120-bit giving the 2,000 GB/s peak printed in the product brief (nv-h100-pcie-product-brief); memory clock 1593 MHz as stated in Table 2.",
+  "flops": [
+    {
+      "precision": "other",
+      "tflops": 26,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "nv-h100-datasheet",
+      "notes": null
+    },
+    {
+      "precision": "fp32",
+      "tflops": 51,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "nv-h100-datasheet"
+    },
+    {
+      "precision": "tf32",
+      "tflops": 378,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-h100-datasheet"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 756.5,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-h100-datasheet"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 756.5,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-h100-datasheet"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 1513,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-h100-datasheet"
+    },
+    {
+      "precision": "int8",
+      "tflops": 1513,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "nv-h100-datasheet"
+    }
+  ],
+  "tdp_w": 350,
+  "interconnect": [
+    "nvlink-4",
+    "pcie-gen5"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "nv-h100-datasheet",
+    "nv-h100-pcie-product-brief"
+  ],
+  "notes": "CRITICAL: datasheet prints 756 TFLOPS TF32 and 1,513 BF16/FP16 and 3,026 FP8/INT8, all WITH SPARITY; dense is half (378 / 756.5 / 1,513). H100 PCIe is memory-BANDWIDTH bound relative to SXM (2,000 GB/s HBM2e vs 3,350 GB/s HBM3) while Tensor compute drops only ~24% - so at batch 1 decode the PCIe card is noticeably slower than SXM despite similar paper FLOPS. tdp_w 350 is the datasheet's '300-350W configurable' default; the product brief shows a 450W/600W cable mode capped at 350W max. Two cards bridge over NVLink at 600 GB/s. The 'other' row is FP64 26 TFLOPS (dense) - this schema's precision enum has no fp64 member."
+}

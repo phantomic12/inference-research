@@ -1,0 +1,27 @@
+{
+  "id": "bitnet-b158",
+  "type": "quantization",
+  "name": "BitNet b1.58 (ternary LLM)",
+  "scheme": "bitnet-b158",
+  "bits": "1.58 avg",
+  "weight_group_size": null,
+  "activation_scheme": "activations remain 8-bit in the b1.58 recipe (weights are the ternary part); BitNet v2 explored sparsified lower-precision activations",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-l4",
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "BitBLAS / bitblas reference kernels (Microsoft)",
+    "llama.cpp and mlx community bitnet builds (unofficial)"
+  ],
+  "quality_delta": "From the paper, as a training result rather than a post-training delta: BitNet b1.58 'matches the full-precision (i.e., FP16 or BF16) Transformer LLM with the same model size and training tokens in terms of both perplexity and end-task performance', while being 'significantly more cost-effective in terms of latency, memory, throughput, and energy consumption' (quant-bitnet-paper). This is a matched-size-and-token-budget training claim, NOT an fp16-inference-baseline delta, and it is the paper's own headline rather than an independent replication.",
+  "notes": "Every parameter is ternary {-1, 0, 1}. The framing that matters: this is a TRAINING-TIME recipe, not a post-training one. There is no such thing as PTQ-ing an existing fp16 LLM to 1.58 bits and keeping its quality - you constrain the weights to the ternary set during training. Read the quality claim correctly: 'matches fp16' means 'a ternary model trained from scratch on the same token budget matches an fp16 model trained from scratch on the same token budget', which is a statement about the expressiveness of the ternary set at fixed compute, not about quantization loss on a pretrained checkpoint. The paper explicitly frames 1-bit hardware as an open design target ('opens the door for designing specific hardware optimized for 1-bit LLMs'), so no accelerator here has a native ternary path. Confidence kept moderate because the authors label the paper 'Work in progress' and the match-claim is their own headline; no third-party perplexity comparison was located.",
+  "status": "draft",
+  "confidence": 0.55,
+  "updated": "2026-10-03",
+  "sources": [
+    "quant-bitnet-paper"
+  ]
+}

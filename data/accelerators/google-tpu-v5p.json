@@ -1,0 +1,46 @@
+{
+  "id": "google-tpu-v5p",
+  "type": "accelerator",
+  "name": "Google Cloud TPU v5p",
+  "vendor": "google",
+  "architecture": "v5p",
+  "release_year": 2023,
+  "process_nm": 7,
+  "form_factors": [
+    "custom"
+  ],
+  "vram_gb": 95,
+  "memory_type": "hbm2e",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 2765,
+  "memory_bandwidth_basis": "Vendor-published per-chip HBM2e bandwidth of 2765 GBps; bus width not stated.",
+  "flops": [
+    {
+      "precision": "bf16",
+      "tflops": 459,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "asic-tpu-v5p-specs"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 459,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "asic-tpu-v5p-specs"
+    }
+  ],
+  "tdp_w": null,
+  "interconnect": [
+    "cloud-tpu-ici"
+  ],
+  "unified_memory": true,
+  "consumer": false,
+  "notes": "Per-chip figures. CONTESTED on FP8 semantics: the spec table states 'Peak compute per chip (FP8) (TFLOPs) 459', identical to BF16, which means the table is not counting the FP8 x2 rate-up that third-party spec sites (mirrorfrog, gpuadvisor, rooflinenotes) report as 918 FP8 TFLOPS. Either Google is quoting a dense/undoubled figure or the docs are wrong; both numbers are recorded in sources. Do not use 459 as a BF16-vs-FP8 ratio. Two TensorCores plus four SparseCores per chip, 95 GiB HBM2e, ICI 1200 GBps bidirectional per chip on a 3D torus, full pod 8960 chips (max single slice 6144 / 16x16x24). Twisted-torus variants raise theoretical bisection bandwidth ~70% at 4x4x8; Google reports only 1-2 points of MFU gain on FSDP MaxText, so the topology choice matters far less than headline numbers suggest. A BF16 intensity of 166 FLOP/byte still puts batch-1 decode in the memory-bound regime.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "asic-tpu-v5p-specs"
+  ]
+}
