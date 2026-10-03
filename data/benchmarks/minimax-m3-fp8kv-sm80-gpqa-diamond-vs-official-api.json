@@ -1,0 +1,25 @@
+{
+  "id": "minimax-m3-fp8kv-sm80-gpqa-diamond-vs-official-api",
+  "type": "benchmark",
+  "name": "MiniMax-M3-AWQ-INT4 with an FP8 E5M2 KV cache on 8xA800: GPQA Diamond measured against the same harness as the official API",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-vllm-50881-fp8kv-cudagraph-scatter"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "interconnect_ids": [],
+  "model": "MiniMax-M3-AWQ-INT4 (weight-only int4) with --kv-cache-dtype fp8_e5m2",
+  "format_id": "fp8-e5m2",
+  "metric": "quality",
+  "value": 0.909,
+  "unit": "accuracy (GPQA Diamond fraction correct)",
+  "methodology": "8x A800-80GB (SM80, TP=8), --kv-cache-dtype fp8_e5m2 --max-model-len 1048576 --attention-backend TRITON_ATTN --block-size 128 --enable-chunked-prefill, plus the reporter's three patches (@eager_break_during_capture on MiniMaxM3SparseAttention._insert_kv, dense KV writes routed through CUDA reshape_and_cache_flash with a software fp8 convert, SM89 guards relaxed to SM80). GPQA Diamond scored by ONE harness against BOTH this build and the official MiniMax API, so the two numbers differ only in the serving stack. Decode ~86 tok/s, about 90 percent of the bf16 baseline; a full 1,048,576-token window fits with a pool of ~1.22M tokens.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "The comparison design is the transferable part: one harness, both targets, official API as the control - which is the only way to separate 'fp8 KV costs 2.5 points' from 'the API serves something better'. The 2.5 pp delta (93.4% for the official API vs 90.9% for this fp8-KV build) is a KV-cache precision cost on SM80, where e5m2 has 2 mantissa bits and there is no native fp8 to fall back on. Note this record's value is the OFFICIAL API number (93.4% measured in the same harness); the API is not an accelerator-gated engine, so it is stored against the local build's deployment for context. Pairs with gotcha fp8-kv-cache-cudagraph-python-scatter-corruption."
+}

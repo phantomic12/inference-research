@@ -1,0 +1,73 @@
+{
+  "id": "niche-xgrammar",
+  "type": "engine",
+  "name": "XGrammar",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-xgrammar-repo",
+    "niche-xgrammar-paper"
+  ],
+  "repo": "mlc-ai/xgrammar",
+  "languages": [
+    "C++",
+    "Python",
+    "TypeScript",
+    "CUDA",
+    "Swift",
+    "C"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "design_goal": [
+    "low-latency",
+    "production",
+    "portable",
+    "structured-output"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "cpu",
+    "metal",
+    "opencl",
+    "vulkan",
+    "tpu",
+    "xnnpack"
+  ],
+  "supported_formats": [
+    "tokenizer-vocab"
+  ],
+  "notable_features": [
+    "Not an inference engine - a structured-generation library that sits on the per-token critical path inside someone else's engine. The distinction matters for how you read the record",
+    "Claims near-zero overhead in JSON generation, which is the entire design target: constraint checking that does not eat decode throughput",
+    "Integrated into vLLM (2024/12) and SGLang (2024/11) as the default structured-generation backend, per the README. That default status is why it displaced lm-format-enforcer (see [[niche-lm-format-enforcer]]) and part of what outlines competes with",
+    "Written in C++ with Python, JavaScript and Swift APIs, plus a `pip install xgrammar[metal]` variant for Apple MPS",
+    "v0.2.x line, actively released (v0.2.8 on 2026-09-24)",
+    "System paper (arXiv:2411.15100) is the primary source for the overhead argument"
+  ],
+  "hardware_caveats": [
+    "Backend-agnostic by design - it is a token-level automaton over a tokenizer vocabulary, so it has no accelerator kernels of its own and inherits whatever the host engine runs on. supported_backends here reflects host reach, not XGrammar's own code paths. Do not read this list as 'XGrammar has a CUDA path'",
+    "The overhead claim is a claim. 'Near-zero overhead in JSON generation' comes from the project itself with no benchmark table in the README",
+    "Constraint checking is still per-token work on the critical path. With free-form generation and no active constraint, the library should cost approximately nothing; with a tight schema it costs real time and the win comes from not needing to parse and retry",
+    "Hardware support is bounded by the host engine. On [[niche-vllm-ascend]] or [[niche-tt-metal]], structured output works only if that engine's logit processor can call out to XGrammar",
+    "REPO MOVE WARNING: the canonical repo is mlc-ai/xgrammar. The handle github.com/xgrammar-ai/xgrammar returns HTTP 404 as of 2026-10-03, so any blog post or config referencing it is stale. Worth knowing because the project had that org name first",
+    "The GitHub issue-search endpoint did not return an open-issue count for this repo (1944 stars), so the issue backlog is not visible from this probe - do not read the missing number as an absence of issues. Last push 2026-09-30 and v0.2.8 released 2026-09-24 indicate active maintenance"
+  ],
+  "best_for": [
+    "Any production server that must return schema-valid JSON and currently retries on parse failure - this is the cheapest fix, because it removes retries rather than making them faster",
+    "Reading how a token-level grammar engine keeps overhead near zero, and why the C++ core with a thin Python binding is the right shape for per-token code",
+    "Constrained generation on non-CUDA hosts, since it is pure logic over vocabularies rather than device code"
+  ],
+  "avoid_for": [
+    "Free-form generation with no format requirement - there is nothing to enforce",
+    "Cases where you need semantic guarantees rather than syntactic ones. Valid JSON is not correct JSON for your schema's intent, and no grammar library fixes that",
+    "Anything expecting a standalone server; there is none, and there should not be"
+  ],
+  "docs_url": "https://xgrammar.mlc.ai/docs/start/installation",
+  "notes": "One of three structured-generation records in this slice (with outlines and lm-format-enforcer) because all three are still maintained and all three are imported by production serving stacks rather than deployed standalone. Ranking: XGrammar is the production default inside vLLM and SGLang. All metadata from the GitHub API on 2026-10-03; arXiv title and date verified via the arXiv API."
+}

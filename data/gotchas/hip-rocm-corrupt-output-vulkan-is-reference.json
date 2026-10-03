@@ -1,0 +1,25 @@
+{
+  "id": "hip-rocm-corrupt-output-vulkan-is-reference",
+  "type": "gotcha",
+  "name": "On gfx1151 the llama.cpp HIP backend produces corrupt output where Vulkan is correct with byte-identical flags, so cross-backend comparison is the only clean detector",
+  "class": "kernel",
+  "affects": [
+    "llama-cpp",
+    "gguf-q4-k-m"
+  ],
+  "symptom": "On a gfx1151 Strix Halo APU (ROCm 7.2.4), same machine, same build, byte-identical server flags (verified with diff), the HIP backend is wrong and Vulkan is right. Two severities: Llama-3.1-8B-Instruct Q4_K_M (llama, dense) is broken outright at every depth tested - 0/16 at 30,516 prompt tokens and 0/6 at 1,616 - output is degenerate word salad ('for 4\\n<|contextual background\\nline keep track\\nTheater in line while mind the material and context in'). Qwen3.8-27B UD-Q8_K_XL (qwen35, dense) is correct at shallow depth and fails past ~29k tokens when the request also carries a moderately large tool array: output stays fluent and well-formed but the model confidently mis-states its own tool list ('I don't have a read_file tool available... The tools I have access to are tool_01 through tool_15'), losing entries at the HEAD of the array while reading the placeholders' descriptions correctly. Ling-3.0-flash IQ4_XS (bailingmoe3, 512-expert MoE) is 16/16 on both.",
+  "root_cause": "Not established. The reporter's own hypothesis, offered explicitly as a lead on a single data point: the two failing models are dense and the one that passes is MoE, and dense vs MoE take different matmul paths (mul_mat vs mul_mat_id). Rests on one MoE observation with no second MoE tested. Notably NOT the -funsafe-math-optimizations flag: e79e4bf66 (#26696, 'ggml-hip : remove -funsafe-math-optimizations') is present in every tested tree and does not fix it - the reproduction is still 0/16 with that flag already gone. Either a second independent problem or the same one with another cause. Reproduced on stock b21e4de74567f and on 3a653fea932e; the reporter is explicit that the two SHAs agreeing is NOT independent corroboration, since no commits in between touch ggml/src/ggml-cuda or ggml/src/ggml-hip.",
+  "workaround": "On gfx1151, treat Vulkan as the reference backend and cross-check before trusting HIP output, especially for dense architectures and for long-context tool-array requests. Read the backend from /proc/<pid>/exe on every run rather than inferring it from the launcher - the reporter found an earlier 'Vulkan' result was actually the HIP server still answering after a boot script silently failed. Run each matrix cell twice: a single 8/8 is not enough to call a backend clean.",
+  "severity": "major",
+  "notes": "Two methodological points worth stealing. First, verify which backend actually served the request from the process, not from the script you launched. Second, dense-vs-MoE is a live axis here but the reporter's evidence is one observation and is labelled as such - do not treat mul_mat vs mul_mat_id as the established cause. The two failure modes are deliberately not merged into one defect, and the head-of-array tool-list loss at long context is a much nastier shape than word salad because the output stays plausible.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-llamacpp-27579-hip-gfx1151-corrupt-output"
+  ],
+  "concepts": [
+    "rocm",
+    "vulkan"
+  ]
+}

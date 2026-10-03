@@ -1,0 +1,44 @@
+{
+  "id": "constrained-decoding-grammar-mask",
+  "type": "flop",
+  "name": "Grammar-mask evaluation per token in constrained / structured decoding",
+  "class": "sampling",
+  "arithmetic_intensity": "Grammar-mask evaluation is a per-token cost incurred AFTER the logits exist, and it scales with vocabulary size rather than with model size. A naive CFG-constrained decoder, as the XGrammar paper's abstract describes it, 'requires going through several stack states over all tokens in vocabulary during runtime, bringing non-negligible overhead for structured generation' - note that 'over all tokens in vocabulary' is the whole cost model: the work is O(stack_depth * V) per token. The bitmask formulation that efficient implementations use compresses that to V bits = V/8 bytes: for V = 128,256 that is 15.66 KiB per token, written once and read once by the sampler = 31.31 KiB of traffic. Against a Llama-3-8B decode step that reads 2*P = 16.06 GB of weights, the mask is 0.0002% of the step's HBM traffic, and even the O(stack_depth * V) naive form with depth 4 is about 0.0004%. So the answer to 'why is it usually not the bottleneck' is quantitative, not hand-waving: in a memory-bound decode step the weight read is 4 to 5 orders of magnitude larger than the mask. The regime where it IS the bottleneck is narrow and worth naming precisely: (a) SMALL models, where 2*P is small and V is not proportionally smaller - e.g. a sub-1B model with a 32k vocab reads only ~2 GB of weights, bringing the mask to ~0.002%, still small, so this is a weak case; (b) CPU-bound or launch-overhead-bound decoding, where an extra kernel launch per token costs more microseconds than the mask costs bytes - the kernel COUNT is the risk, not the mask size; (c) engines that run the mask on the CPU in Python, where per-token interpreter overhead is milliseconds rather than bytes.",
+  "bound_by": "memory",
+  "scales_with": [
+    "vocab_size V (the entire cost model is O(depth*V) naive or O(V/8) bytes as a bitmask: 15.66 KiB/token at V=128256, 3.9 KiB at V=32000)",
+    "grammar_stack_depth (the naive form's multiplier; a deeply nested JSON schema or a deeply nested tool-call grammar makes this worse)",
+    "kernel_launch_count (a mask kernel ADDED to an already launch-bound decode step is the real risk - see custom-kernel-launch-overhead)",
+    "whether the mask runs on GPU or CPU (CPU execution in Python turns a 15 KiB byte operation into a millisecond-scale host operation)",
+    "model_size (INVERSE: the mask share of a step falls as the model grows, so the risk is highest for small models and lowest for frontier ones)",
+    "output_structure (JSON with shallow nesting, versus a deeply nested grammar or many alternation branches, directly sets the number of stack states visited)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090",
+    "nvidia-l4"
+  ],
+  "workarounds": [
+    "Split the vocabulary into context-independent tokens that can be prechecked once and context-dependent tokens interpreted at runtime (XGrammar's core idea, arXiv 2411.15100) - this is what turns O(depth*V) into a much smaller runtime set",
+    "Grammar-mask BITMASK representation (1 bit per token) rather than a boolean vector, cutting the traffic 8x or 16x versus fp32/bf16 masks",
+    "Persistent grammar stack so context-dependent token checks do not re-walk the parse state from the root each token",
+    "Grammar context expansion to reduce the number of context-independent tokens further, per XGrammar",
+    "Overlap grammar computation with GPU execution by co-designing the grammar engine with the inference engine - XGrammar reports up to 100x speedup over existing solutions and 'near-zero overhead structure generation' when co-designed, which is the mechanism that actually delivers the 'not the bottleneck' property",
+    "Cache grammar masks across decoding steps for unchanged grammar states, so repeated structure (e.g. emitting many array elements of the same shape) reuses masks",
+    "Fuse the mask application into the sampling kernel so the logits are read once and masked in registers, with no intermediate mask buffer in HBM",
+    "Static-shape / CUDA Graphs capture so the mask kernel does not add per-token launch overhead in an otherwise graphed decode step"
+  ],
+  "notes": "CLASSIFICATION ARGUMENT, since the enum has no constrained-decoding class and this was filed under sampling: grammar masking is the LAST operation applied to the logits before the token is chosen, it consumes the same V-wide tensor the sampler consumes, it runs exactly once per generated token, and it is memory-bound at roughly the same AI as sampling (a few flop/byte, entirely batch-invariant). It is not decode_gemm (no weight read dominates), not custom_kernel (it is a real per-token data operation, not launch overhead), and not norm_softmax (it operates on logits, not on activations). Sampling is the correct home. The decision-relevant conclusion, and the reason this is worth a record despite being 0.0002% of a modern decode step: the per-token cost is negligible but the per-token KERNEL is not. In a decode step that is already launch-overhead-bound at batch 1 - a few hundred to a few thousand kernels for a large model - adding one more dependent kernel on the critical path, plus any host-side grammar evaluation, costs more than its byte count suggests. XGrammar's reported 'up to 100x speedup' and 'near-zero overhead' are therefore statements about the ENGINE CO-DESIGN, not about the arithmetic. That reframes the engineering question: the way to make constrained decoding free is not to shrink the mask (it is already 15 KiB) but to eliminate the synchronization point - fuse it, overlap it, or capture it in a graph. Second-order caveat, from the primitive-work framing: a mask is genuinely useful when the grammar narrows the CANDIDATE SET. If a grammar state admits only C tokens, the engine can restrict the LM head projection to those C rows (2*d*C bytes instead of 2*d*V), which at C = 256 on Llama-3-8B is 2.10 MB instead of 1.051 GB - a 500x reduction of a term worth 6.54% of the step. That is a real optimization of the decode_gemm term enabled by grammar knowledge, and it is a different mechanism from masking logits after the fact. Tool-calling workloads add one more term that is NOT this class: the assistant turn produced by a tool call is re-prefilled on the next call, so an agent loop pays prefill flops per tool invocation. That belongs to prefill, not here.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop2-xgrammar-paper",
+    "flop2-guided-generation",
+    "flop2-llama3-8b-config",
+    "flop-roofline-williams-2008",
+    "flop-nvidia-cuda-graphs",
+    "flop-nvidia-inference-optimization"
+  ]
+}

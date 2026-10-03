@@ -1,0 +1,53 @@
+{
+  "id": "long-context-rag-prefill",
+  "type": "flop",
+  "name": "Long-context RAG ingest: a 32k document prefilled into a KV cache (attention-dominated, plus the KV write)",
+  "class": "prefill_attention",
+  "arithmetic_intensity": "Long-context ingest is the most compute-dense step in the entire serving stack, and the arithmetic says so unambiguously. Take Llama-3-8B from its own config.json (d=4096, 14336 intermediate, 32 layers, 32 query / 8 KV heads, head_dim 128, vocab 128256): P_layer = d*n_q*dh + 2*d*n_kv*dh + n_q*dh*d + 3*d*dffn = 4096*4096 + 2*4096*1024 + 4096*4096 + 3*4096*14336 = 16.78M + 8.39M + 16.78M + 176.16M = 218.1M per layer; total non-embedding = 218,103,808 * 32 = 6.98B, plus untied embeddings 2*4096*128256 = 1.05B, giving 8.03B, which reproduces the released parameter count exactly. Ingesting L = 32768 tokens: GEMM flops = 2*P_total*L = 2*8.03e9*32768 = 526 TFLOP; causal attention flops = 2*n_q*dh*L^2 = 2*4096*32768^2 = 8.80 TFLOP, i.e. attention is only 8.80/(526+8.80) = 1.7% of prefill flops - the GEMMs dominate by ~60x, which is the opposite of the intuition that 'long context = attention-bound'. The attention share is set by L* = P_layer/(n_q*dh) = 218,103,808/4096 = 53,248 tokens: at 32k we are still BELOW the crossover. For the same L on a 70B-class model the share falls further (Llama-2-70B, GQA-8, d=8192, 28672 intermediate, 80 layers: P_layer = 855.6M, L* = 855,638,016/8192 = 104,448 tokens, attention = 17.6 TFLOP against 4,486 TFLOP of GEMM = 0.4%). So a 32k RAG ingest is a prefill_GEMM problem wearing an attention hat. The KV WRITE is a separate, pure-store term with AI = 0: bytes = 2 (K and V) * 32 layers * 8 KV heads * 128 head_dim * 2 bytes * 32768 tokens = 4.29 GB = 4.00 GiB. Whole-step AI including that write = (534.6 TFLOP)/(4.29 GB) = 124,600 flop/byte, 422x above H100's 295.4 ridge. The write itself costs 4.29 GB / 3.35 TB/s = 1.28 ms on H100, 5.24 ms on TPU v5e (819 GB/s) and 4.26 ms on RTX 4090 (1008 GB/s) - against 1061 ms for the GEMM+attention flops at 50% of H100's 989.5 TFLOPS. So the store is 0.1-0.5% of the step on every part and is never the bottleneck; it only becomes one when the ingest is SHARDED across devices or offloaded, which converts it into kv_transfer.",
+  "bound_by": "compute",
+  "scales_with": [
+    "context_length (quadratic in attention flops, linear in GEMM flops; the share only becomes large past L* = P_layer/(n_q*dh), which is 53k tokens for an 8B-class model and 104k for a 70B-class one)",
+    "model_width_per_layer (through L*: a wider MLP per layer pushes the attention crossover further out, so a 70B model at 32k is LESS attention-bound than a 7B model at 32k - counterintuitive but it follows from the parameter ratio)",
+    "gqa_group_ratio g (multiplies prefill attention AI by g, cutting KV bytes by g; does not change attention flops)",
+    "num_retrieved_documents (total ingest length is the sum of chunk lengths; flops are additive so ingest scales linearly in corpus size)",
+    "tensor_parallel_degree / sequence_parallelism (once one device cannot hold the cache, a ring all-gather over the sequence makes the interconnect part of this class - see tensor-parallel-allreduce and the Ring Attention record)",
+    "kv_cache_dtype (halving KV bytes halves the store term and halves resident capacity, but is irrelevant to the compute-bound part)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090",
+    "google-tpu-v5e",
+    "nvidia-b200",
+    "nvidia-l4",
+    "amd-radeon-pro-vii"
+  ],
+  "workarounds": [
+    "FlashAttention / FlashAttention-2 tiling so the L x L score matrix is never materialized (arXiv 2205.14135, 2307.08691) - the mechanism that makes long-context ingest possible at all, since materializing 32768^2 scores in bf16 would be 2.1 TB",
+    "FlashAttention-3 WGMMA/TMA warp specialization plus fp8 attention on Hopper, which targets exactly this compute-bound half (arXiv 2407.08608)",
+    "Chunked prefill (SARATHI, arXiv 2308.16369) so a 32k ingest is split into cache-sized chunks that ride on otherwise memory-bound decode iterations instead of blocking them",
+    "Radix / prefix cache so a shared document corpus or system prompt is prefilled once and reused across queries (SGLang, arXiv 2312.07104) - for RAG this is usually the single largest win, since the same corpus is re-ingested by every request",
+    "PagedAttention blocks so the KV written during ingest is addressable and shareable rather than contiguous (arXiv 2309.06180)",
+    "Retrieval that returns fewer, shorter chunks: the cost is linear in total ingested tokens, so cutting 8 chunks to 4 halves the step",
+    "Splitwise-style phase separation, putting ingest on compute-rich hardware and generation on bandwidth-rich hardware, with the KV moved over the fast backplane (arXiv 2311.18677)",
+    "Quantize the ingest GEMMs to fp8 or int8: at this AI the step is firmly compute-bound, so precision reduction buys real TFLOPS rather than bandwidth"
+  ],
+  "notes": "Classification argument: this is prefill_attention because the cost is dominated by a compute-bound GEMM over a long sequence, but the record exists because 'prefill_attention' as a class name invites the reading that long context means attention-bound, and the arithmetic says the opposite for every standard dense model at realistic RAG context lengths. Three numbers should be carried together: (1) the flop crossover L* = P_layer/(n_q*dh), 53,248 tokens for Llama-3-8B and 104,448 for Llama-2-70B; (2) the KV-write volume, 4.00 GiB at 32k for Llama-3-8B, which is a pure store at AI = 0 and costs 1.28-5.24 ms depending on part; (3) the whole-step AI of ~124,600 flop/byte, which is 422x the H100 ridge and makes this the highest-intensity step in the stack. Engineering consequence: TTFT for a RAG request is set almost entirely by total ingested token count and by dense GEMM efficiency, NOT by the attention backend - choosing a better attention kernel moves a 1.7% term. What actually moves TTFT is caching the corpus, retrieving less of it, and chunking so the work overlaps decode. Caveat on the attention-share figures: they assume causal masking and standard n_q = 32 / head_dim 128 geometry; a model using MLA-style latent attention has a very different byte picture (see flops/mla-latent-attention), and a hybrid model with most layers replaced by SSMs has no quadratic term at all (see flops/ssm-recurrent-state-update). Caveat on the KV-write timing: it assumes the store is a pure sequential DRAM write at full bandwidth, which is optimistic - real writes are interleaved with compute and share the same bus, so the practical figure is somewhat higher, but still far below the compute term.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-flashattention",
+    "flop-flashattention-2",
+    "flop2-flashattention-3",
+    "flop2-llama3-8b-config",
+    "flop2-llama2-70b-config",
+    "flop2-sarathi",
+    "flop-sglang",
+    "flop-pagedattention-vllm",
+    "flop2-ring-attention",
+    "flop2-splitwise",
+    "flop-roofline-williams-2008",
+    "flop-nvidia-h100-specs"
+  ]
+}

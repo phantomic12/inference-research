@@ -3,7 +3,7 @@
   "type": "quantization",
   "name": "GPTQ (one-shot approximate second-order PTQ)",
   "scheme": "gptq",
-  "bits": "w4a16",
+  "bits": "w4a16 headline; also reported at w3a16 (and 2-bit / ternary) in the paper's extreme regime. Weight-only - activations are NOT quantized.",
   "weight_group_size": 128,
   "activation_scheme": null,
   "native_support": [],
@@ -21,8 +21,8 @@
     "GPTQModel GEMM",
     "TensorRT-LLM GPTQ plugins"
   ],
-  "quality_delta": "From the GPTQ paper: OPT-175B and BLOOM-176B quantized to 3-4 bits in ~4 GPU hours with 'minimal increase in perplexity'; the bespoke execution kernels give ~3.25x on A100 and 4.5x on A6000 (quant-gptq-paper). The paper's Figure 1 is a ppl-vs-RTN comparison against the FP16 baseline and is a figure, not tabulated numbers, so no single delta value is recorded here.",
-  "notes": "Weight-only, 16-bit compute. GPTQ's contribution is the rounding criterion (approximate inverse Hessian from calibration), not a new number format - a GPTQ file is INT4/INT3 with per-group scales, the same layout AWQ produces, which is why the two share every serving kernel. Group size 128 is the conventional default; 32/64/1024 are legal and change both quality and kernel eligibility, which is a frequent source of 'GPTQ is slow' reports. EXL2 is a GPTQ derivative with per-tensor variable bitrate and should be read alongside this record. exllamav2's own throughput table (3090 Ti / 4090) lists GPTQ at grpsz 128 at 181 and 205 tok/s for Llama-7B (quant-exl2-readme) - a third-party number for the runtime, not a quality delta.",
+  "quality_delta": "From the GPTQ paper: OPT-175B and BLOOM-176B quantized to 3-4 bits in ~4 GPU hours with 'minimal increase in perplexity'; the bespoke execution kernels give ~3.25x on A100 and 4.5x on A6000 (quant-gptq-paper). The paper's Figure 1 is a ppl-vs-RTN comparison against the FP16 baseline and is a figure, not tabulated numbers, so no single delta value is recorded here. ADDITIONAL SOURCED FIGURES (qlab-gptq-paper, arXiv 2210.17323 read directly): the paper quantizes 175B-parameter models in approximately four GPU hours, reducing bitwidth to 3 or 4 bits per weight with negligible accuracy degradation, and 'allows us for the first time to execute a 175 billion-parameter model inside a single GPU'. It also explicitly claims reasonable accuracy in the extreme regime 'in which weights are quantized to 2-bit or even ternary quantization levels' - this is the primary source for the GPTQ 3-bit and ternary results, and the reason GPTQ belongs in the sub-4-bit family even though its headline is 4-bit. From the reference implementation (qlab-gptq-github), LLaMa-7B Wiki2 perplexity: FP16 5.68, 4bit-GPTQ 6.09, 3bit-GPTQ 8.07, 3bit group-128 GPTQ 6.61. The last pair is the load-bearing comparison: 3-bit works or does not depending on GROUP SIZE, not on the algorithm. Both are authors' own numbers, not independent replication.",
+  "notes": "Weight-only, 16-bit compute. GPTQ's contribution is the rounding criterion (approximate inverse Hessian from calibration), not a new number format - a GPTQ file is INT4/INT3 with per-group scales, the same layout AWQ produces, which is why the two share every serving kernel. Group size 128 is the conventional default; 32/64/1024 are legal and change both quality and kernel eligibility, which is a frequent source of 'GPTQ is slow' reports. EXL2 is a GPTQ derivative with per-tensor variable bitrate and should be read alongside this record. exllamav2's own throughput table (3090 Ti / 4090) lists GPTQ at grpsz 128 at 181 and 205 tok/s for Llama-7B (quant-exl2-readme) - a third-party number for the runtime, not a quality delta. UPGRADE (2026-10-03): the bits field previously said only 'w4a16', which understated the method's range - the primary paper claims 3-bit, 2-bit and even TERNARY results, so GPTQ is not merely a 4-bit method. Also added: the reference implementation quantizes columns in order of decreasing activation size (--act-order), which is an activation-AWARE weight-ordering trick and the reason GPTQ can be called 'activation-aware' without quantizing activations. Confirmed from the repo README that the shipped CUDA kernel is a 3-bit MATRIX-VECTOR product kernel, which is the same low-batch caveat as the EXL2 note already here. The parent asked to record GPTQ's 3-bit results: they are now in quality_delta with the exact perplexity figures and the explicit caveat that group-128 is what makes 3-bit usable. Compare the aqlm and squeezellm records for the other way to reach sub-4-bit - changing the representation rather than the grid.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-03",
@@ -30,6 +30,8 @@
     "quant-gptq-paper",
     "quant-trtllm-quantization",
     "quant-exl2-readme",
-    "quant-marlin-repo"
+    "quant-marlin-repo",
+    "qlab-gptq-paper",
+    "qlab-gptq-github"
   ]
 }

@@ -1,0 +1,42 @@
+{
+  "id": "diffusion-lm-denoising-steps",
+  "type": "flop",
+  "name": "Diffusion / masked-diffusion LMs: N denoising passes over the whole sequence instead of one token per forward pass",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "This inverts the decode cost model, so derive it explicitly. An AR model does 1 forward pass per generated token: flops = 2*N_active, and the per-token cost is flat because each pass sees only one new query position. A masked diffusion LM instead starts from a fully masked sequence of generation length Lg and runs S denoising steps, each a FULL forward pass over the current sequence: flops = S * 2*N_active * (attention over Lp+Lg instead of one row), where N_active is the whole model (diffusion LMs are dense). Take LLaDA 8B: config.json gives d_model 4096, mlp_hidden_size 12288, 8B params, max_sequence_length 4096. Per step flops = 2*N*(non-embedding) + attention = 2*8e9 for the weight GEMMs, plus attention over L tokens. The decisive point for serving: the number of tokens EMITTED per forward pass is Lg/S if each step unmasks one token (or the low-confidence-remask count per step, which LLaDA's semi-autoregressive block sampler controls). So effective flops per generated token = S*2*N/Lg, i.e. it scales with the step count S, not with a constant. LLaDA makes both knobs explicit: 'The total number of sampling steps is a hyperparameter, which naturally provides LLaDA with a trade-off between efficiency and sample quality' and 'the generation length is also treated as a hyperparameter, specifying the length of the fully masked sentence at the beginning of the sampling process.' Their sampling-efficiency ablation fixes generation length at 1024 for LLaDA 8B Base and tunes it from {64, 256, 512} for Instruct; Dream 7B (28 layers, hidden 3584, 4 KV heads per config.json) advertises 'tunable quality-speed trade-offs' and 'context-adaptive token-level noise rescheduling'. Arithmetic intensity is the second inversion: because every step is a full bidirectional forward pass, the query count equals the sequence length, so prefill-style arithmetic intensity applies to EVERY step and the per-token decode AI of ~1 flop/byte does not. Each step also re-reads the full weight set, so at S steps you pay S weight streams - unless the cache is reused, and LLaDA states the blocker plainly: 'We use vanilla multi-head attention instead of grouped query attention for simplicity, as LLaDA is incompatible with KV caching', and 'LLaDA does not use a causal mask, as its formulation allows it to see the entire input for predictions.' No cache means no incremental decode: every denoising step is a fresh full-attention pass over prompt+response.",
+  "bound_by": "compute",
+  "scales_with": [
+    "num_denoising_steps S (the master knob - flops per generated token scale linearly in it)",
+    "generation_length Lg (flops per step scale with the full sequence; tokens per step scale inversely with it, so flops/token ~ S/Lg)",
+    "num_layers and hidden_size (every step pays the full dense weight set - no expert sparsity to amortise)",
+    "prompt_length (full bidirectional attention over prompt+response every step, no causal exclusion)",
+    "remask strategy / block length (LLaDA's semi-autoregressive block length L' = 2/4/8/32/64 trades global coherence against wasted flops on not-yet-committed positions)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x",
+    "google-tpu-v5e",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "workarounds": [
+    "Fewer denoising steps (the exposed quality/speed dial; Dream 7B's context-adaptive token-level noise rescheduling spends steps where they matter rather than uniformly)",
+    "Semi-autoregressive block sampling to constrain the working sequence - LLaDA's block diffusion LLaDA / semi-autoregressive remasking, with block length as the knob",
+    "Low-confidence remasking so each step commits the positions it is confident about rather than a fixed count",
+    "KV caching of the PROMPT portion only - the prompt prefix is causal and stable across steps even though the response block is not, so the prompt does not need re-prefilling S times; this is the obvious and largely unexploited optimisation for serving",
+    "Parallel-batch many independent sequences so a step's flops are shared across the batch - diffusion's natural parallelism axis is the batch, not the sequence",
+    "Speculative-style multi-token acceptance from a single step (Dream 7B reports arbitrary-order generation and infilling, which the AR step loop does not offer)"
+  ],
+  "notes": "Why this is a genuinely different inference shape and not a variant: in an AR decode loop the per-token flops, the per-token bytes and the per-token latency are all constant and known in advance, so all the machinery in this repo (continuous batching, paged KV, speculative decode, FlashDecoding split-K) optimises a stable cost. In diffusion LM generation, the cost per emitted token is a function of two user-facing hyperparameters (S and Lg) that are not known until sampling starts, the attention is bidirectional so there is no causal prefix to reuse, and the model is dense so there is no MoE sparsity to amortise. Three consequences for hardware and engines. (1) Arithmetic intensity per step is prefill-like, so these models stress COMPUTE and TENSOR CORES rather than the memory roof - the opposite of AR decode, and the part choice should flip accordingly. (2) Inter-token latency is chunky and bursty: a step emits many tokens at once, so TTFT is excellent and itl is terrible unless the sampler is tuned; measuring itl the way an AR engine does will produce misleading numbers. (3) The weight stream is paid S times, so the same batch that makes an AR model memory-bound at batch 1 can make a diffusion model compute-bound at batch 1 - batch scaling behaviour differs in kind, not degree. Unverified here: I did not find a published, reproducible throughput-per-step figure for LLaDA or Dream on a named accelerator, so no tok/s or ms/step number is asserted here beyond what the papers state qualitatively; the flops-per-step arithmetic above is derived from config.json dimensions and the published algorithm, not measured.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "arch-llada",
+    "arch-hf-config-llada",
+    "arch-dream-7b",
+    "arch-hf-config-dream",
+    "arch-diffusion-lm",
+    "flop-roofline-williams-2008"
+  ]
+}

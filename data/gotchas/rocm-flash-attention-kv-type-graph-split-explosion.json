@@ -1,0 +1,20 @@
+{
+  "id": "rocm-flash-attention-kv-type-graph-split-explosion",
+  "type": "gotcha",
+  "name": "On ROCm, any KV cache type other than q8_0/q8_0 or q4_0/q4_0 explodes the graph into 34 splits",
+  "class": "kernel",
+  "affects": [
+    "llama-cpp"
+  ],
+  "symptom": "With flash attention on and a q5_0 KV cache (either K or V), the ROCm backend fragments the compute graph from 2 splits into 34 and pushes about 550 MiB of compute work onto the CPU host buffer. Measured on an RX 7900 XTX with Qwen3.8-27B Q4_K_XL: pp512 falls from 957.11 t/s to 300.10 t/s, a 68% regression, and decode from 37.53 to 27.96 t/s. The GPU compute buffer collapses from 786.53 MiB to 122.28 MiB.",
+  "root_cause": "The ROCm flash-attention path has no kernel for q5_0, so each affected op becomes its own graph split with host round-trips. The identical binary on the Vulkan backend keeps 2 splits and no regression with q5_0, which localizes the gap to the ROCm FA implementation rather than to the quant type itself.",
+  "workaround": "On ROCm use q8_0 for both K and V, or q4_0 for both. Do not mix. If you need a KV type ROCm's FA cannot take, either disable FA or run that configuration on Vulkan.",
+  "severity": "major",
+  "notes": "A backend-specific capability matrix hidden behind a quant flag: the same KV cache type is fast on Vulkan and 68% slower on ROCm on the same binary and the same card. Note the report also found a fork (build 11429) handling q5_0 correctly on ROCm, so this is a bug with a fix in flight rather than a hard architectural limit - do not encode it as a permanent ROCm limitation. Issue is open and labelled bug-unconfirmed/stale.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "noncuda-llamacpp-27761-rocm-fa-kv-graph-splits"
+  ]
+}

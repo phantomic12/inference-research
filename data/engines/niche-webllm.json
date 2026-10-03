@@ -1,0 +1,72 @@
+{
+  "id": "niche-webllm",
+  "type": "engine",
+  "name": "WebLLM",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-webllm-repo",
+    "niche-webllm-paper"
+  ],
+  "repo": "mlc-ai/web-llm",
+  "languages": [
+    "TypeScript",
+    "JavaScript",
+    "SCSS",
+    "Shell",
+    "HTML"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "edge/mobile",
+    "minimal-deps",
+    "no-server",
+    "ease-of-use",
+    "browser"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "batched-decode"
+  ],
+  "supported_backends": [
+    "webgpu",
+    "wasm",
+    "cpu"
+  ],
+  "supported_formats": [
+    "mlc-compiled"
+  ],
+  "notable_features": [
+    "Inference runs entirely inside the browser with no server component at all - the README's framing is 'Everything runs inside the browser with no server support and is accelerated with WebGPU'",
+    "OpenAI-API-compatible interface, so a WebLLM client is a drop-in for an OpenAI client in application code",
+    "Ships as the @mlc-ai/web-llm npm package with a documented web app build path; chat.webllm.ai is the live demo",
+    "Companion to MLC-LLM: the compilation toolchain that turns HF weights into the WebGPU-runnable artefact is MLC-LLM, not WebLLM. Understanding this split is the point (see [[mlc-llm]])",
+    "Version line v0.2.x after three years, which is a signal about the shape of the project: small, active, browser-scoped",
+    "Shares design DNA with the 2024 system paper, which frames browser inference as bandwidth-bound on consumer GPUs"
+  ],
+  "hardware_caveats": [
+    "The backend is WebGPU. There is no CUDA, no ROCm, no Metal path, no TPU, no Vulkan. 'Runs on your laptop' here means 'runs in your GPU-process sandbox via WebGPU', and hardware support is bounded by whatever your browser and OS expose - Safari and Firefox support has lagged Chrome's, and that is a browser limitation no one here can fix",
+    "Weights are MLC-compiled artefacts, not safetensors or GGUF. You need an MLC-LLM compile step; a HuggingFace safetensors checkpoint will not load directly",
+    "The device's browser is the sandbox: storage quotas, cross-origin isolation requirements and tab eviction all apply. This is not a server you can reason about with normal ops tooling",
+    "Model size is bounded by available VRAM/shared memory in the browser process, which on many laptops means single-digit-billion-parameter models at low bit width",
+    "v0.2.x after three years and 439 open issues; last push 2026-10-03 and v0.2.85 on 2026-09-08, so it is maintained, but the version scheme has never stabilised and there is no LTS line",
+    "No server-side scaling story whatsoever: no tensor parallelism, no multi-node, no request queue. One user, one tab"
+  ],
+  "best_for": [
+    "Client-side inference where the data must not leave the device - the actual reason this exists and the one thing nothing else does",
+    "Zero-ops prototypes and demos: no API key, no server, no cost, works offline after first load",
+    "Learning the WebGPU compute path for LLM inference, which is the cheapest available explanation of why decode is memory-bandwidth-bound",
+    "A privacy architecture reference for anyone designing on-device features into a web product"
+  ],
+  "avoid_for": [
+    "Anything multi-user - there is no server, so there is no concurrency story",
+    "Throughput or SLA work; browser inference is a UX feature, not a serving tier",
+    "Non-Chrome-first browsers, or any environment where WebGPU is unavailable or disabled",
+    "Consumers who need GGUF or HF safetensors - the artefact is MLC-compiled"
+  ],
+  "docs_url": "https://webllm.mlc.ai/docs/",
+  "notes": "Relationship to [[mlc-llm]] stated precisely: MLC-LLM is the compiler and native/server runtime in the MLC stack; WebLLM is the browser-specific runtime that consumes MLC-LLM's compiled artefacts. Recording them separately is correct because their backends, deployment models and failure modes have nothing in common. System paper: arXiv:2412.15803 (2024-12-20), title and date verified via the arXiv API. All metadata from the GitHub API on 2026-10-03."
+}

@@ -3,8 +3,8 @@
   "type": "quantization",
   "name": "HQQ (half-quadratic quantization)",
   "scheme": "hqq",
-  "bits": "2-8 (calibration-free; commonly quoted at 2, 3, 4 bpw)",
-  "weight_group_size": null,
+  "bits": "1-8: nbits supports 8, 4, 3, 2 and 1 (qlab2-hqq-readme). Commonly 2/3/4.",
+  "weight_group_size": 64,
   "activation_scheme": null,
   "native_support": [],
   "emulated_support": [
@@ -14,15 +14,19 @@
     "amd-instinct-mi300x"
   ],
   "kernels": [
-    "HQQ dequant kernels in optimum-quanto / HF HQQ integration",
-    "torch.compile dequant path"
+    "HQQBackend.PYTORCH / PYTORCH_COMPILE / ATEN (axis=0 only)",
+    "gemlite fused dequant+gemm (nbits 4/2/1, fp16, axis=1)",
+    "torchao tiny_gemm int4 (nbits 4, bf16, axis=1)",
+    "vLLM on-the-fly mxfp8_dynamic / mxfp4_dynamic / nvfp4_dynamic quantizers"
   ],
   "quality_delta": "Only a cross-model claim, not a controlled fp16 delta: HQQ-quantized Llama-2-70B at 2-bit is reported as outperforming full-precision Llama-2-13B at comparable memory (quant-hqq-blog). The comparable controlled claim is speed: HQQ quantizes Llama-2-70B in under 5 minutes, reported as >50x faster than GPTQ (quant-hqq-blog).",
-  "notes": "HQQ is calibration-free by design: it minimizes weight-reconstruction error directly with a half-quadratic (proximal) solver rather than using a calibration set to minimize layer-output error. The upstream claim is that this reaches calibration-based quality at calibration-free speed, which is a genuinely different tradeoff from AWQ/GPTQ, not a weaker version of them. Weight-only - group size is not part of the defining scheme, hence null rather than a guess. Provenance warning: HQQ has NO arXiv paper. The only primary technical source found is the Dropbox/Mobius engineering blog (the 2023 post republished 2025-10-22 with an editor's note), so every HQQ number here is vendor-claim-grade and confidence is kept low. Do not cite an 'HQQ paper'.",
-  "status": "draft",
-  "confidence": 0.55,
+  "notes": "HQQ is calibration-free by design: it minimizes weight-reconstruction error directly with a half-quadratic (proximal) solver rather than using a calibration set to minimize layer-output error. The upstream claim is that this reaches calibration-based quality at calibration-free speed, which is a genuinely different tradeoff from AWQ/GPTQ, not a weaker version of them. Weight-only - group size is not part of the defining scheme, hence null rather than a guess. Provenance warning: HQQ has NO arXiv paper. The only primary technical source found is the Dropbox/Mobius engineering blog (the 2023 post republished 2025-10-22 with an editor's note), so every HQQ number here is vendor-claim-grade and confidence is kept low. Do not cite an 'HQQ paper'. GROUP SIZE AND BACKENDS, added from the upstream repo README (qlab2-hqq-readme), which is the primary technical source since HQQ has no arXiv paper. group_size: no restriction beyond weight.numel() being divisible by it; the project's own recommended starting point is explicitly nbits=4, group_size=64, axis=1, and its accuracy report is ~158 tok/s for Llama3-8B 4-bit on an RTX 4090 (vendor claim, single number, no batch/prompt methodology given). BACKEND MATRIX - this is the part most guides omit: axis is the grouping axis and axis=0 gives better quality than axis=1 (especially at low bits), but every optimized inference backend supports axis=1 ONLY. Native backends: PYTORCH (default), PYTORCH_COMPILE (fullgraph torch.compile, works with any settings), ATEN (its own CUDA kernels, axis=0 only). Optimized external backends via prepare_for_inference: 'gemlite' (nbits 4/2/1, compute_dtype float16, axis=1) and torchao tiny_gemm 'torchao_int4' (nbits 4, compute_dtype bfloat16, axis=1, documented as fast for batch size < 4). Additional group-size restrictions apply per backend, and hqq silently falls back to the native backend when a config is unsupported - so a config mismatch is a speed cliff, not an error. For vLLM, hqq ships on-the-fly quantizers for A8W4 (mxfp8_dynamic), A4W4 (mxfp4_dynamic) and A4W4 (nvfp4_dynamic), i.e. HQQ has moved into genuine activation quantization, which the original HQQ record did not capture. It is also one of the algorithms ONNX Runtime's MatMulNBits INT4 path accepts alongside GPTQ and RTN (qlab2-ort-quant-doc), and one of the backends transformers integrates via HqqConfig.",
+  "status": "verified",
+  "confidence": 0.7,
   "updated": "2026-10-03",
   "sources": [
+    "qlab2-hqq-readme",
+    "qlab2-ort-quant-doc",
     "quant-hqq-blog"
   ]
 }

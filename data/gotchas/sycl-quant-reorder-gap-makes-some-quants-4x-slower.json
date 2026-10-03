@@ -1,0 +1,20 @@
+{
+  "id": "sycl-quant-reorder-gap-makes-some-quants-4x-slower",
+  "type": "gotcha",
+  "name": "Missing SYCL reorder optimization makes Q8_0 and IQ4_NL decode ~4x slower than Q4_0 on Battlemage",
+  "class": "kernel",
+  "affects": [
+    "llama-cpp"
+  ],
+  "symptom": "On Intel Arc Pro B70, Q8_0 and IQ4_NL decode at a fraction of the speed of Q4-family quants despite moving comparable or less data. Full sweep on Qwen3.5-27B, one GPU, 608 GB/s of theoretical bandwidth: Q4_0 23.67 t/s (57% of peak), Q4_K_S 23.05 (56%), Q4_K_M 20.56 (53%), IQ4_XS 17.52 (40%), Q6_K 13.83 (48%), Q5_K_M 13.78 (41%), IQ4_NL 5.85 (14%), Q8_0 4.88 (21%).",
+  "root_cause": "The SYCL backend's reorder optimization, which splits scale factors from weight data for coalesced memory access, was implemented for Q4_0, Q4_K and Q6_K in PR #12035 but never extended to Q8_0 or IQ4_NL. Q8_0 decode therefore runs 4-5x slower than Q4_K_M even though it is only 1.7x more data. The decisive datapoint is that IQ4_NL and Q4_0 are the same size (14.60 vs 14.63 GiB) and differ 4x in speed, which excludes data volume and points at kernel efficiency. Identical on SYCL and Vulkan, and unaffected by splitting across two GPUs, so it is not a PCIe or backend issue.",
+  "workaround": "Use Q4_0, Q4_K_S, Q4_K_M, Q4_K_L or Q6_K on Battlemage. Fix for Q8_0 landed as PR #21527 (issue closed).",
+  "severity": "major",
+  "notes": "The generalisable lesson: on a new Intel dGPU, assume some quant types have no tuned kernel until measured, and prefer Q4_K_M as the safe default. Recording the per-quant bandwidth utilization table matters more than the headline ratio, because it lets you predict which quant to pick rather than only which to avoid. This record also corrects the intuition that 'Q8_0 is the quality-safe choice' - on Battlemage it was the worst supported option at 21% of peak bandwidth. Closed as fixed.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "noncuda-llamacpp-21517-sycl-q8-reorder"
+  ]
+}

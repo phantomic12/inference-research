@@ -1,0 +1,69 @@
+{
+  "id": "niche-fastchat",
+  "type": "engine",
+  "name": "FastChat (LMSYS multi-model serving + evaluation)",
+  "status": "deprecated",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-fastchat-repo"
+  ],
+  "repo": "lm-sys/FastChat",
+  "languages": [
+    "Python",
+    "Jupyter Notebook",
+    "Shell",
+    "Dockerfile"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "research",
+    "evaluation",
+    "multi-model",
+    "ease-of-use",
+    "leaderboards"
+  ],
+  "scheduling": [
+    "continuous-batching"
+  ],
+  "supported_backends": [
+    "cuda",
+    "cpu"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "gguf"
+  ],
+  "notable_features": [
+    "The historical role is the important part, and it is large: FastChat is what made side-by-side human model comparison possible at scale. The README states Chatbot Arena has served over 10 million chat requests for 70+ LLMs and collected over 1.5M human votes for the Elo leaderboard",
+    "That produced the model ecosystem everyone uses: Vicuna (the March 2023 'impressing GPT-4 with 90% quality' release that started the open-weights chat-model wave), LongChat, and the Arena technical report (arXiv:2403.04132)",
+    "Also the home of MT-Bench (the multi-turn judge-based eval, arXiv:2306.05685) and the LMSYS-Chat-1M and Chatbot Arena Conversations datasets - the leaderboard and the eval data are as consequential as the serving code",
+    "A distributed multi-model serving system with web UI and OpenAI-compatible RESTful APIs, built around loading many different models in one process so they can be compared under identical conditions",
+    "39556 stars, Apache-2.0, last push 2026-05-01"
+  ],
+  "hardware_caveats": [
+    "RELEASES STOPPED IN FEBRUARY 2024. Latest release is v0.2.36 from 2024-02-11, while the last push was 2026-05-01. Commits continue (mainly to chat templates and model definitions) but the release train stopped over two and a half years ago. That split is the evidence for deprecated: maintained as a template registry, dead as an engine",
+    "Its own function migrated off the serving side. Chatbot Arena, which the README names as FastChat's flagship deployment, now runs at lmarena.ai and the fighting is on the arena side; the serving system is not what the project is for any more",
+    "No dedicated inference kernels. FastChat serves many models in one process for comparison, which is the opposite design pressure from a throughput engine - it optimises for 'fair comparison across models', not tokens per second per dollar",
+    "Continuous batching is present but without paged KV, prefix caching, speculative decoding or chunked prefill in the sense that matters. This is the pre-vLLM generation and it shows in the feature list",
+    "1983 open issues against a project whose releases stopped in 2024 - the backlog is effectively unmaintained",
+    "Not a production serving stack and was never positioned as one; the web UI and multi-model-in-one-process design is a research and evaluation tool",
+    "Backend support is whatever it can load: safetensors HF models and llama.cpp/GGUF, which is why GGUF appears in supported_formats here and nowhere else in this slice"
+  ],
+  "best_for": [
+    "Reproducing the leaderboard-era methodology - MT-Bench, judge-based evaluation, side-by-side battles - which is still the closest thing to a community standard for chat-model comparison",
+    "Reading the origin of the open-weights chat model ecosystem; the Vicuna release notes are the primary source",
+    "A multi-model-in-one-process comparison harness when you genuinely need identical conditions across many models",
+    "Getting the canonical conversation templates for older open chat models, which remain the main thing people use it for"
+  ],
+  "avoid_for": [
+    "Production serving - releases stopped 2024-02-11 and this was never a throughput engine",
+    "Performance work; the multi-model comparison design works against throughput optimisation",
+    "New model support beyond chat templates; actual inference work moved to vLLM/SGLang",
+    "Anything where an unmaintained 1983-issue backlog is acceptable"
+  ],
+  "docs_url": "https://github.com/lm-sys/FastChat",
+  "notes": "Included because it is the highest-leverage historical record in this slice even though it is not a competitive engine: FastChat plus Chatbot Arena determined which open models the field used, and MT-Bench plus the LMSYS-Chat-1M data are still the evaluation substrate. Deprecated status is based on the release/commit split (v0.2.36 in 2024-02 vs last push 2026-05), not on an announcement. arXiv:2306.05685 (MT-Bench) title verified via the arXiv API. All metadata from the GitHub API on 2026-10-03."
+}

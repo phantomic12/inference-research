@@ -1,0 +1,15 @@
+{
+  "id": "pd-gh-mooncake-4209-tcp-queue-full-hang",
+  "type": "source",
+  "name": "Mooncake issue #4209: TCP transport first transfer after an idle gap fails with queue-full rejections; PD decode hangs until timeout",
+  "url": "https://github.com/kvcache-ai/Mooncake/issues/4209",
+  "publisher": "kvcache-ai/Mooncake",
+  "kind": "forum",
+  "published": "2026-09-18",
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "Shows the failure mode of falling back to TCP when RDMA is unavailable. 'the first KV transfer between two engine instances succeeds, but a transfer submitted after a short idle gap (~5 s) fails': every slice of the batch is rejected by the TCP lane queue (queue-full rejection count 1 -> 2 -> 4 -> ... -> 512+ within milliseconds), batch_transfer_sync_write returns -1, and the error is relayed to the consumer. The consumer then sits in WAITING_FOR_REMOTE_KVS and the client hangs until its own timeout; a request sent ~90 s later succeeds. Net effect: 'deployments observe either 60-90 s TTFT spikes after every idle period or outright request failures'. Env: mooncake-transfer-engine 0.3.13.post1 and 0.3.14rc1, vLLM 0.29.0 built-in MooncakeConnector, 1P1D on one host, 2x H20 96GB, mooncake_protocol tcp with MC_FORCE_TCP=1, Qwen3-8B.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

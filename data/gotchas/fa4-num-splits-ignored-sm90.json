@@ -5,11 +5,8 @@
   "class": "kernel",
   "affects": [
     "vllm",
-    "vllm-flash-attn",
     "nvidia-h100-sxm",
-    "nvidia-h200-sxm",
-    "gemma-4-26b-a4b-it",
-    "hopper-sm90"
+    "nvidia-h200-sxm"
   ],
   "symptom": "Decode on H100 (SM90) is 48% slower per token than on v0.26.0 at batch 1 and 36% slower at batch 4 for google/gemma-4-26B-A4B-it at ~5.9k context, while TTFT is flat at 61 ms on both. Results stay correct, so nothing fails. Kernel sweep at Gemma-4 global-layer shapes: v0.26.0 goes 385 -> 20 us as num_splits rises 1 -> 64, v0.30.0 stays flat at ~356-363 us.",
   "root_cause": "The fork sync that v0.30.0 pins (506341a, from vllm-project/vllm#54819) moved the split count into a BlockInfo field. BlockInfo.get_n_block_min_max in vllm_flash_attn/cute/block_info.py still takes num_splits but overwrites it on the non-packed path. flash_fwd_sm100.py constructs BlockInfo(..., num_splits=num_splits) but flash_fwd_sm90.py does not, so on SM90 the default Int32(1) is used: split 0 covers the whole KV range and splits 1..N-1 get n_block_min == n_block_max. The combine kernel weights the empty splits at zero, so outputs stay correct. Gemma-4's global layers are the worst case (1 query token, 2 KV heads), leaving only 2 of an H100's 132 SMs with work.",
@@ -22,5 +19,10 @@
   "sources": [
     "gotcha-vllm-issue-59362-fa4-num-splits-sm90",
     "gotcha-flash-attention-pr-198-sm90-splitkv"
+  ],
+  "concepts": [
+    "gemma-4-26b-a4b-it",
+    "hopper-sm90",
+    "vllm-flash-attn"
   ]
 }

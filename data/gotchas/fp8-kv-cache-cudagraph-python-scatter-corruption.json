@@ -6,9 +6,6 @@
   "affects": [
     "vllm",
     "fp8-e5m2",
-    "kv-cache-quantization",
-    "cuda-graphs",
-    "minimax-m3",
     "nvidia-a100-80gb-sxm4"
   ],
   "symptom": "8x A800-80GB (SM80, no native FP8 tensor cores), TP=8, MiniMax-M3-AWQ-INT4 (weight-only int4), launched with --kv-cache-dtype fp8_e5m2 --max-model-len 1048576 --attention-backend TRITON_ATTN --block-size 128 --enable-chunked-prefill: the server boots, accepts the 1M-token window, and generates pure garbage. Adding --enforce-eager makes output perfectly coherent (but only 5.2 tok/s, unusable for an 8-TP MoE). Any CUDA-graph mode is garbage. Separately, fp8 (e4m3) is refused outright on SM80 with 'type fp8e4nv not supported in this architecture', so only e5m2 loads at all.",
@@ -21,5 +18,10 @@
   "updated": "2026-10-03",
   "sources": [
     "qgotcha-vllm-50881-fp8kv-cudagraph-scatter"
+  ],
+  "concepts": [
+    "cuda-graphs",
+    "kv-cache-quantization",
+    "minimax-m3"
   ]
 }

@@ -1,0 +1,15 @@
+{
+  "id": "pd-gh-lmcache-4463-packed-kv-silent-corruption",
+  "type": "source",
+  "name": "LMCache issue #4463: Silent KV cache corruption on vLLM 0.26 fused/packed KV layout",
+  "url": "https://github.com/LMCache/LMCache/issues/4463",
+  "publisher": "LMCache/LMCache",
+  "kind": "forum",
+  "published": "2026-08-08",
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "The mechanism behind the class of bug where an engine-side KV layout change silently invalidates every external cache. 'On vLLM 0.26, the in-process connector (LMCacheConnectorV1) silently returns wrong KV data for models whose KV cache uses vLLM's fused/packed (\"unified\") layout, where K and V share the trailing per-head dimension. A request served from the LMCache CPU tier produces different output than the same request computed from scratch. There is no exception and no warning - generations are simply wrong.' Enabling use_gpu_connector_v3 is not a workaround; it fails differently with a hard tensor-size mismatch on the first store (1024 vs 2048 at dim 3). Corroborated and generalised by ai-dynamo/dynamo#14416, which states the trigger was vLLM PR #44455 changing the layout from [num_blocks, 2, block_size, num_heads, head_size] to [num_blocks, num_heads, block_size, 2*head_size], and that the LMCacheMPConnector has the same class of bug on hybrid models where 'the packed layout bypasses the required KV-group edit'.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

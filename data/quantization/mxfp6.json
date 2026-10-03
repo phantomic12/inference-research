@@ -1,0 +1,32 @@
+{
+  "id": "mxfp6",
+  "type": "quantization",
+  "name": "MXFP6 (OCP microscaling FP6, E3M2/E2M3 + E8M0)",
+  "scheme": "mxfp8",
+  "bits": "6-bit elements in 32-value blocks with a shared power-of-two scale; used as one channel of a mixed-precision MX pipeline, typically alongside MXFP4 and MXFP8",
+  "weight_group_size": 32,
+  "activation_scheme": "Shared E8M0 (power-of-two) scale per 32-value block, the same microscaling scheme as MXFP4 and MXFP8. Element format is E3M2 or E2M3 per the OCP MX spec's element table. The practical driver is mixed precision: MXFP6 is the middle rung that lets a kernel raise precision on the channels where MXFP4's quantization error is too large.",
+  "native_support": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "nvidia-rtx-5090",
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x"
+  ],
+  "kernels": [
+    "MicroMix Blackwell kernel (qlab-micromix-paper): supports arbitrary combinations of MXFP4, MXFP6 and MXFP8 channels and produces BFloat16 outputs. Motivated explicitly by the fact that the new FP4 Tensor Cores on Blackwell offer up to 4x over FP16 while existing INT4 kernels cannot exploit them because of format mismatch."
+  ],
+  "quality_delta": "None recorded. The source paper states 'competitive or superior performance across diverse downstream tasks, including zero-shot and few-shot learning, language modeling, code generation, and mathematical reasoning' without a named numeric delta in the abstract.",
+  "notes": "Enum mismatch: 'mxfp8' is the closest value because the enum has mxfp4 and mxfp8 but no mxfp6 - and MXFP6 is the same OCP microscaling block scheme with a different element width, so mxfp8 is the right neighbour rather than fp8-e4m3. Request the parent add 'mxfp6'. IMPORTANT CAVEAT ON native_support: I have direct evidence that Blackwell FP4 Tensor Cores exist and that a co-designed kernel targets them (MicroMix), but I could NOT verify from a primary source that MXFP6 itself has a silicon path on any shipping part. The Blackwell tensor cores are documented as FP4 and FP8; MXFP6 support in that paper is a KERNEL choice. native_support therefore lists Blackwell as the plausible target rather than a verified silicon instruction - treat it as unconfirmed and re-verify against the TensorRT-LLM or CUTLASS quantization docs before relying on it. The repo's existing mxfp4/mxfp8 records cite those docs directly, which is the evidence this record lacks.",
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab-micromix-paper"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "nvlink-2",
+  "type": "interconnect",
+  "name": "NVIDIA NVLink 2.0",
+  "kind": "nvlink",
+  "version": "2.0",
+  "bandwidth_gbps": 25,
+  "bandwidth_basis": "PER LINK, UNIDIRECTIONAL. NVIDIA's Ampere architecture white paper states the link-layer structure of both generations explicitly: 'A single A100 NVLink provides 25 GB/second bandwidth in each direction similar to V100, but using only half the number of signal pairs per link compared to V100. The total number of links is increased to twelve in A100, versus 6 in V100, yielding 600 GB/sec total bandwidth versus 300 GB/sec for V100.' So the per-direction per-link rate is 25 GB/s on BOTH generations - generation 3 bought its 2x aggregate by doubling the link COUNT (6 -> 12), not by doubling the link rate - and the V100 aggregate is 300 GB/s against the A100's 600 GB/s. The V100 SXM2 datasheet independently confirms the 300 GB/s aggregate in its Interconnect Bandwidth row. Per-direction per-link rate is therefore identical across gen 2 and gen 3, which is the single most useful thing to know about NVLink 2 and is routinely misstated.",
+  "link_count": 6,
+  "topology": "Direct point-to-point links between GPU pairs, partial mesh. NVIDIA's Volta datasheet states 'Up to eight V100 accelerators can be interconnected', so 8 GPUs is the practical all-to-all ceiling and it is reached by direct links alone - there is no switch generation below NVSwitch 2. Beyond 8, scale-out requires external networking (InfiniBand or Ethernet, see infiniband-xdr and ethernet-uec).",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "None at this generation. The Tesla/Volta line had no NVSwitch part; an 8-GPU V100 node is a direct-attached mesh and the slowest path dictates all-reduce time for the whole group.",
+  "notes": "The Volta-generation scale-up link, and the generation where NVLink was still a niche HPC interconnect rather than the fabric that decided AI serving economics. PUBLISHED (NVIDIA first-party, both sources): the Ampere architecture white paper gives the comparison above - 6 links on V100 versus 12 on A100, 25 GB/s per link per direction on both, 300 GB/s versus 600 GB/s aggregate; the Volta V100 datasheet's Interconnect Bandwidth row gives 300 GB/sec for SXM2 against 32 GB/sec for the PCIe V100, a 9.4x gap that is the whole argument for the SXM form factor at this generation. INFERENCE RELEVANCE, and it is mostly retrospective: at 150 GB/s per direction (300 GB/s aggregate halved) the fabric is roughly an order of magnitude below what large-model tensor parallelism wants, so a V100-class node was a capacity play rather than a bandwidth play - 8 x 32 GB of HBM2 is what made it useful, and the binding constraint on sharding was always local HBM bandwidth against a 900 GB/s memory interface. The honest modern reading is that NVLink 2 is a record of the transition, not a deployment target: it establishes that NVIDIA's per-link rate was flat at 25 GB/s per direction across two generations and that the aggregate improvement came entirely from link count, which is the same lever NVLink 3 and 4 pulled again. Comparing a V100's 300 GB/s aggregate against an H100's 900 GB/s aggregate therefore compares 6 links against 18, not a 3x-faster link. DIRECTION CONVENTION: NVIDIA states these as bidirectional aggregates, which is the same convention as nvswitch-4 and nvswitch-5 and the reason those records halve them to per-direction values. Do not mix a per-direction figure from this record with an aggregate figure from a product page.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "nv-v100-datasheet",
+    "link2-nvidia-ampere-architecture-whitepaper"
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "id": "modern-attention-variants",
+  "type": "flop",
+  "name": "YOCO, NSA, DSA, RetNet, lightning attention, HGRN2, Kimi Linear: attention replacements that change the complexity class",
+  "class": "decode_attention",
+  "arithmetic_intensity": "Group the architectures by what they do to the flops, because the four groups behave completely differently on hardware. (1) SINGLE-CACHE DECODER-DECODER (YOCO): a self-decoder computes the global KV cache once and a cross-decoder consumes it, so the cache is stored ONCE instead of per layer - the cache-saving factor is approximately the layer count, and the paper reports 'orders of magnitude' improvement in inference memory, prefill latency and throughput with no change to the attention math. (2) NATIVE SPARSE ATTENTION (NSA): three paths per query - compressed coarse tokens, top-k selected fine tokens, sliding window - so per-query decode work falls from L to (compressed_count + selected_count + w) while the index pass still touches all L. The paper quantifies the prize: 'attention computation with softmax architectures accounts for 70-80% of total latency when decoding 64k-length contexts', and reports 11.6x decode / 9.0x forward / 6.0x backward speedups at 64k. Crucially it also names the trap: token-granular selection 'leads to the need to load a large number of individual tokens from the KV cache during attention computation. This non-contiguous memory access prevents efficient adaptation of fast attention techniques' - so sparse attention can be slower than dense attention despite doing less math, unless the selection is block-granular and group-shared, which is why their kernel reaches 'near-optimal arithmetic intensity by (1) eliminating redundant KV transfers through group-wise sharing, and (2) balancing compute workloads across GPU streaming multiprocessors'. (3) DEEPSEEK SPARSE ATTENTION (DSA, DeepSeek-V3.2): an FP8-capable ReLU indexer scores every KV token, then only the top-2048 are attended, instantiated on the MQA mode of MLA because 'each key-value entry must be shared across multiple queries for computational efficiency'. The indexer is itself an attention-shaped pass over the full context, so DSA's saving is a subtraction, not a multiplication. (4) LINEAR / RETENTION FAMILY (RetNet, lightning attention, HGRN2, KDA): constant-size recurrent state, O(1) inference, no KV cache - RetNet's measured numbers are the best available anchor: on A100-80GB with a 6.7B model at 8k input, GPU memory 3.4x lower, throughput 15.6x higher, latency 8.4x lower, and 'inference latency is insensitive to batch size'. Kimi Linear's 3:1 hybrid of KDA to full MLA reports up to 75% KV-cache reduction and up to 6x decode throughput at 1M context, with a 2.3x measured speedup at 1M and a stated ceiling of 'a maximum hybrid efficiency ratio of 3:1 compared to full attention' for I/O-bound decoding.",
+  "bound_by": "both",
+  "scales_with": [
+    "context_length (the axis every variant here attacks)",
+    "sparse selection granularity (block-granular is hardware-friendly; token-granular is not - NSA names this as the failure mode)",
+    "local:global or sparse:dense ratio (the published knobs: 3:1 Kimi Linear, 5:1 Gemma 3, 2:8 NSA compression/selection/sliding paths)",
+    "indexer cost (NSA and DSA still pay a full-context scoring pass, in fp8 for DSA)",
+    "num_layers (YOCO's saving scales with layer count)",
+    "batch_size (RetNet: latency insensitive to batch; NSA/DSA: selected-set size is fixed so AI is flat)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x",
+    "google-tpu-v5e",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi250x"
+  ],
+  "workarounds": [
+    "Block-granular, group-shared sparse selection instead of per-token selection (the NSA finding: non-contiguous KV loads defeat fast-attention kernels entirely)",
+    "FP8 indexers for the scoring pass - DSA's lightning indexer 'has a small number of heads and can be implemented in FP8' precisely for this",
+    "Grouped GEMM / flash-decoding style split-K over the selected set so a decode step has enough parallel work",
+    "Chunkwise or cumsum-free formulations for the linear-attention family; Lightning Attention's specific fix is intra-block exact attention plus inter-block kernel trick, because cumsum is what stops prior linear attention from realising its theoretical advantage in the causal setting",
+    "Keep periodic full attention at a published ratio (Kimi Linear 3:1, GPT-OSS 1:1) rather than going fully sparse or fully linear - both papers show pure variants lose on quality"
+  ],
+  "notes": "The taxonomy that matters for hardware selection: these are not all the same trick. YOCO reduces cache SIZE by sharing across layers with no math change. NSA and DSA reduce the WORK SET but add a full-context index pass and a non-contiguous gather. The linear/retention family removes the cache entirely and moves you into the SSM regime, where the sequential-scan penalty documented in ssm-sequential-scan-tensor-core-mismatch applies - Kimi Linear and Samba both mitigate it with chunkwise delta-rule / cumsum-free formulations and both keep a global-attention minority. A practical warning from NSA's own text: 'Many approaches fail to achieve speedups comparable to their theoretical gains', and the reason is memory-access and scheduling, not arithmetic. So for any of these variants, the number to trust is measured decode tok/s at the target context length on the target part, not the complexity class. Where published numbers exist they are worth carrying: NSA 11.6x decode at 64k, RetNet 8.4x decode and 70% memory saving at 8k on A100-80GB, Kimi Linear up to 75% KV reduction and 2.3x measured at 1M.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "arch-nsa",
+    "arch-yoco",
+    "arch-deepseek-v32-dsa",
+    "arch-retnet",
+    "arch-lightning-attention",
+    "arch-kimi-linear",
+    "arch-hgrn2",
+    "arch-minimax-01",
+    "flop-roofline-williams-2008",
+    "flop-flashdecoding"
+  ]
+}

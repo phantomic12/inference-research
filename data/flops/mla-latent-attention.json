@@ -1,0 +1,42 @@
+{
+  "id": "mla-latent-attention",
+  "type": "flop",
+  "name": "Multi-head Latent Attention: KV cache compressed to a single low-rank latent vector per token",
+  "class": "decode_attention",
+  "arithmetic_intensity": "MLA changes the BYTES, not the flops, and it changes them by a large published factor. DeepSeek-V2 Table 1 states KV cache per token in elements: MHA 2*n_h*d_h*l, GQA 2*n_g*d_h*l, MQA 2*d_h*l, MLA (d_c+d_rh)*l. With the DeepSeek-V2 setting d_c = 4*d_h and d_rh = d_h/2, MLA = 4.5*d_h*l, which the paper states is 'equal to GQA with only 2.25 groups' (GQA-2.25 groups = 2*(128/2.25)*d_h*l / (n_h*d_h ratio) -> 4.5*d_h*l), i.e. a ~44x reduction against MHA at n_h=128 heads and a ~16x reduction against 8-group GQA. Worked example from DeepSeek-V3's own config.json (kv_lora_rank=512, qk_rope_head_dim=64, 61 layers): MLA cache = 61*(512+64) = 35,136 elements/token = 70,272 bytes = 68.6 KiB/token at bf16, versus 61*2*128*(128+64) = 2,998,272 elements = 5,856 KiB/token for the equivalent MHA -- an 85.3x reduction, or 1.17% of the MHA cache. Because flops are unchanged (the same QK and PV products still run) while bytes fall ~85x, the decode attention arithmetic intensity rises from the structural 1 flop/byte of ordinary attention to ~114 flop/byte in the absorbed form. At 1M tokens of context that is 65.4 GiB of resident cache for MLA versus 5.7 TiB for the MHA equivalent and 698 GiB for 8-group GQA at the same width.",
+  "bound_by": "memory",
+  "scales_with": [
+    "num_kv_heads (the counterfactual this is measured against)",
+    "kv_lora_rank d_c (cache elements per token per layer scale linearly with it)",
+    "decoupled RoPE width d_rh (the only additive term to d_c)",
+    "num_layers",
+    "context_length (bytes only; AI is flat in context)",
+    "kv_cache_dtype (fp8/fp4 on the latent halves or quarters the already-small cache)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x",
+    "google-tpu-v5e",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "workarounds": [
+    "Absorb W_UK into W_Q and W_UV into W_O so keys and values are never materialised per step (DeepSeek-V2 Sec 2.1.2); this is what keeps the flops proportional to d_c rather than to n_h*d_h",
+    "Decoupled RoPE: a separate low-rank query and a single shared key carry positional information so the cache stays (d_c+d_rh)*l instead of being recomputed per prefix token",
+    "Quantize the latent cache (fp8/fp4 with inlined per-token scales) - on an already-compressed cache this is a second-order gain",
+    "Grouped KV sharing / GQA-style cross-layer cache reuse when even d_c is too large",
+    "Treat d_c as a first-class capacity knob: it is the one width that trades quality against resident KV directly"
+  ],
+  "notes": "Why this matters more than any other attention memory optimisation: GQA and MQA shrink the cache by throwing away head count, and DeepSeek-V2's own ablation says those methods 'their performance does not match MHA'. MLA reaches a smaller cache than GQA-with-2.25-groups while being rated STRONGER than MHA in the same Table 1. The mechanism is that MLA compresses keys and values JOINTLY through one shared down-projection W_DKV, so every head's K and V live in the same d_c-dimensional subspace and the per-head information content is shared rather than discarded. Verified cost: DeepSeek-V2 reports a 93.3% KV-cache reduction versus dense DeepSeek 67B and 5.76x maximum generation throughput, but that 93.3% is against a DIFFERENT model (dense 67B with MHA), not a same-model MHA ablation, so it must not be read as the MLA-vs-MHA factor; the 85x in this record is the same-width, same-layer comparison and is derived, not vendor-claimed. Engineering consequence: MLA moves the bottleneck. At 68.6 KiB/token the cache is small enough that weight streaming, not KV, sets decode throughput for DeepSeek-V3, so an engine tuned for GQA's cache pressure will find its paged-attention machinery idle and its MoE weight-bandwidth cost dominant. This is the opposite of the usual optimization direction: MLA trades memory for compute, adding a per-step projection (see mla-absorbed-upprojection) to buy cache capacity.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "arch-deepseek-v2-mla",
+    "arch-deepseek-v3",
+    "arch-hf-config-deepseek-v3",
+    "arch-hf-config-deepseek-v2",
+    "flop-flashdecoding",
+    "flop-roofline-williams-2008"
+  ]
+}

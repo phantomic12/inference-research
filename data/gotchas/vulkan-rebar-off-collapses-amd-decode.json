@@ -1,0 +1,20 @@
+{
+  "id": "vulkan-rebar-off-collapses-amd-decode",
+  "type": "gotcha",
+  "name": "Vulkan decode on an AMD dGPU collapses 2-6x when Resizable BAR is disabled in BIOS",
+  "class": "driver",
+  "affects": [
+    "llama-cpp"
+  ],
+  "symptom": "With ReBAR/SAM off in BIOS, llama.cpp's Vulkan backend runs decode at a fraction of the card's bandwidth. On an RX 7900 XTX with Qwen3.8-27B Q4_K_XL: 13.89 t/s for 128-token generation and 25.28 t/s at depth 4096, against 37.09 t/s and 812 t/s prompt processing when GGML_VK_DISABLE_HOST_VISIBLE_VIDMEM=1 is set. A second reporter on the same card measured 40 t/s dropping to about 6 t/s.",
+  "root_cause": "Without ReBAR the GPU exposes only a small (256 MiB-class) BAR window, so the Vulkan driver reports a host-visible VRAM heap smaller than the main VRAM heap. llama.cpp's Vulkan backend prefers host-visible memory for its compute buffers and keeps doing so even when that heap is tiny, so weights and KV are staged through a narrow aperture.",
+  "workaround": "Set GGML_VK_DISABLE_HOST_VISIBLE_VIDMEM=1, or better, enable Resizable BAR / SAM in BIOS. The issue thread links a patch (craig-b/llama.cpp commit 6c1281da3) that auto-detects a host-visible heap smaller than the main heap and sets the flag itself.",
+  "severity": "major",
+  "notes": "No accelerator record exists in this repo for the RX 7900 XTX, so affects lists only the engine. Affects any discrete AMD GPU behind a non-ReBAR platform, and the symptom is invisible unless you compare against a known-good baseline: nothing errors, nothing warns, generation just takes three to six times as long. Note the direct conflict with gotcha vulkan-rebar-on-causes-amd-device-lost: for some AMD boards ReBAR on is the broken setting, for others off. Establish which side you are on before assuming a backend problem. Issue is open and labelled bug-unconfirmed, so upstream has not confirmed the mechanism.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "noncuda-llamacpp-27097-rebar-vulkan-slow"
+  ]
+}

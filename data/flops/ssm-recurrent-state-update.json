@@ -1,0 +1,42 @@
+{
+  "id": "ssm-recurrent-state-update",
+  "type": "flop",
+  "name": "SSM / linear-RNN decode: the constant-size recurrent state update that replaces the KV cache entirely",
+  "class": "decode_gemm",
+  "arithmetic_intensity": "This class has no KV cache at all, which inverts the entire decode cost model. Per layer the state is S = d_inner * N elements (d_inner = expand*hidden, N = d_state) and each decode step does ONE state update: for Mamba-style, flops = 2*(d_inner*N*2 + d_inner*N) for the B_t@C_t product and the state write, plus the input projection; bytes = 2*d_inner*N*2 (read state, write state). So AI ~= 1 flop/byte on the state alone - it is a weight-class bandwidth cost, not an attention-class one - but the state is CONSTANT in context length, so unlike KV attention its byte count never grows. Worked example from NVIDIA Nemotron-H-8B's config.json (hidden 4096, expand 2 -> d_inner 8192, ssm_state_size 128): state = 8192*128 = 1,048,576 elements = 2.0 MiB per layer at bf16. With 48 Mamba-2 layers and 4 attention layers, resident recurrent state = 96.0 MiB per sequence, independent of context. Compare the 4 attention layers: 4*2*8*128*2 = 16,384 bytes/token = 16 KiB/token, which at 8k context is 128 MiB and already exceeds the entire recurrent state; at 128k it is 2.0 GiB. Nemotron-H states the design intent exactly: Mamba layers 'perform constant computation and require constant memory per generated token'. The corollary nobody quotes: the state is NOT free, it is a fixed per-sequence tax that stops amortising as batch grows, so at very large batch a pure-attention model with paged KV can hold more total tokens than a hybrid with 96 MiB/seq of undividable state.",
+  "bound_by": "memory",
+  "scales_with": [
+    "batch_size (state is per sequence, so it does NOT amortise with batch - the inverse of every other decode class)",
+    "context_length (NOT at all - this is the defining property)",
+    "ssm_state_size N",
+    "expand ratio (d_inner = expand*hidden)",
+    "num_mamba_layers (Nemotron-H-8B: 48 of 52; Granite-4.0-h-tiny: 36 of 40)",
+    "state_dtype (fp8/bf16 state is the only knob)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-a100-80gb-sxm4",
+    "google-tpu-v5e",
+    "nvidia-b200"
+  ],
+  "workarounds": [
+    "Do not page or evict the state - it is fixed-size, so allocate it contiguously and never evict; KV-style paged-attention machinery should simply skip SSM layers",
+    "Batch the state update across sequences so the state GEMM gets a real M dimension and hits tensor cores (a per-token state update alone is token-thin and launch-bound)",
+    "fp8 or bf16 state, and fp8 for the B/C projections where the published recipes allow it",
+    "Interleave a small number of attention layers rather than going pure-SSM if you need exact recall - every hybrid paper in this repo's sources reaches for a 10-20% attention fraction for exactly this reason",
+    "Cache the state across turns of a multi-turn conversation so a resumed session skips prefill entirely"
+  ],
+  "notes": "What SSM/recurrent architectures actually change: they delete a class rather than optimise it. KV-cache growth in context length - the thing that makes long-context decode expensive and that paged attention, GQA, MLA and sliding windows all attack - simply does not exist for these layers. The catch is that they do not delete the attention layers, they delete MOST of them, so the residual attention layers keep the quadratic-ish prefill cost for their share of the model and keep a (small) linear KV cache. Verified hybrid ratios from configs read 2026-10-03: Nemotron-H-8B 48 Mamba / 4 attention (paper: 'Roughly 8% of the total layers in the model are self-attention layers'); Granite-4.0-h-tiny 36 mamba / 4 attention; Jamba states an 8x smaller KV cache than a vanilla Transformer of comparable size purely by trading attention layers for Mamba layers; IBM also reports Jamba-1.5-Large at 94B active parameters. Second-order consequence for serving: the fixed state is a per-sequence cost that never amortises, so a hybrid at batch 256 pays 256*96 MiB of state on Nemotron-H-8B whether the sequences are 1k or 128k tokens. That is the opposite trade from KV cache, which grows with context, and it means the optimal batch size for a hybrid model is set by the state footprint, not by available KV memory.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "arch-nemotron-h",
+    "arch-hf-config-nemotron-h",
+    "arch-hf-config-granite4",
+    "arch-jamba",
+    "arch-mamba",
+    "flop-roofline-williams-2008"
+  ]
+}

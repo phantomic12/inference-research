@@ -1,0 +1,65 @@
+{
+  "id": "niche-outlines",
+  "type": "engine",
+  "name": "Outlines",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-outlines-repo"
+  ],
+  "repo": "dottxt-ai/outlines",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "ease-of-use",
+    "structured-output",
+    "portable",
+    "research"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "metal",
+    "cpu"
+  ],
+  "supported_formats": [
+    "tokenizer-vocab",
+    "safetensors"
+  ],
+  "notable_features": [
+    "Schema-driven structured generation whose stated thesis is that post-hoc parsing, regex munging and fragile retry code are the wrong shape - the constraint should be in the sampler, not after it",
+    "The README's portability claim is 'same code runs across OpenAI, Ollama, vLLM and more', i.e. it works as a remote client against a hosted model as well as in-process against a local one",
+    "Pure Python (Nix is the only other language in the repo), which makes it the most readable of the three structured-generation libraries",
+    "Handles regular expressions, JSON Schema and finite-state-style grammars as first-class constraint types",
+    "Widely adopted as a library rather than a server: the README lists NVIDIA, Cohere, HuggingFace and vLLM among organisations using it",
+    "v1.x line now (1.3.3 on 2026-08-06), 15897 stars, 906 open issues"
+  ],
+  "hardware_caveats": [
+    "Same category boundary as XGrammar: this is a library a serving stack imports, not an engine. scheduling is 'none' and supported_backends reflects host reach only",
+    "Pure-Python constraint machinery on the per-token critical path is materially slower than a C++ core. In vLLM/SGLang the fix is that you use XGrammar there instead (see [[niche-xgrammar]]), which is precisely why Outlines is no longer the default structured backend in those servers",
+    "The 'works with any model' claim is true for OpenAI-compatible remote endpoints and weaker for exotic local engines - you need a logits-level hook, which rules out most llama.cpp builds unless a specific integration exists",
+    "REPO MOVE WARNING: the project left the outlines-dev org. github.com/outlines-dev/outlines returns HTTP 200 after redirecting to dottxt-ai/outlines, so pre-2024 citations still resolve, but the owner path changed and dependency pins referencing 'outlines-dev' are stale",
+    "906 open issues against 15897 stars is a high open-issue ratio for a library; the issue backlog is the practical signal about support burden",
+    "Layered on top of a host model, so every host-engine caveat inherits: a bad logit-processing path on a niche backend breaks constrained output too"
+  ],
+  "best_for": [
+    "Rapid prototyping of schema-constrained generation, especially when you want to iterate on the constraint in Python without touching a C++ build",
+    "Local model work where you control the host process and can install a logits hook",
+    "Learning the design space of structured generation - the constraint types and the failure modes are all readable in one Python repo"
+  ],
+  "avoid_for": [
+    "Latency-critical per-token constraint checking in production - use the C++ path (XGrammar) via vLLM or SGLang",
+    "Remote/hosted models behind a plain HTTP API with no logits exposure",
+    "New dependency pins that name the old outlines-dev org"
+  ],
+  "docs_url": "https://github.com/dottxt-ai/outlines",
+  "notes": "Third of three structured-generation records (with [[niche-xgrammar]] and [[niche-lm-format-enforcer]]). The three differ in mechanism and in current relevance: XGrammar is the production default in vLLM/SGLang, lm-format-enforcer was vLLM's previous default, and Outlines is the most readable and the least performance-oriented. All metadata from the GitHub API on 2026-10-03."
+}

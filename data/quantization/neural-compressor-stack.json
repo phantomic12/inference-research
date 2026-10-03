@@ -1,0 +1,39 @@
+{
+  "id": "neural-compressor-stack",
+  "type": "quantization",
+  "name": "Intel Neural Compressor (multi-technique PTQ/QAT toolkit; low-bit LLM path is AutoRound)",
+  "scheme": "int8",
+  "bits": "the toolkit spans INT8 / FP8 / MXFP8 / INT4 / MXFP4 / NVFP4 plus sparsity; its own advanced low-bit LLM/VLM quantization is DELEGATED to AutoRound",
+  "weight_group_size": 128,
+  "activation_scheme": "static, dynamic, SmoothQuant-migrated outliers, or mixed precision - the technique is chosen per config, not fixed by the toolkit",
+  "native_support": [
+    "intel-gaudi2",
+    "intel-gaudi3"
+  ],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-pcie",
+    "nvidia-l40s",
+    "nvidia-l4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10",
+    "nvidia-a30",
+    "nvidia-rtx-4090",
+    "amd-instinct-mi300x",
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "FP8 static and dynamic quantization incl. Linear and FusedMoE on Gaudi",
+    "FP8 KV cache / Attention static quantization via AutoRound (experimental)",
+    "AWQ (integrated since 2023-09), SparseGPT, SmoothQuant",
+    "MXFP8/MXFP4 and NVFP4 (both experimental)"
+  ],
+  "quality_delta": "n/a - the README cites 'Faster Inference of LLMs using FP8 on the Intel Gaudi' (arXiv:2503.09975) but does not restate a delta inline. Null + note rather than paraphrasing a paper I did not read for this record.",
+  "notes": "EXISTS AND IS BROAD, but the correct way to record it is as a TOOLKIT THAT DELEGATES rather than as a format. Techniques: Static Quantization, Dynamic Quantization, SmoothQuant, Weight-Only Quantization, Quantization-Aware Training, Mixed Precision. Frameworks: PyTorch, TensorFlow and JAX (FP8 for Keras/JAX is new and experimental). Models: LLaMA, Qwen, DeepSeek, Flux and 10+ VLMs. THE KEY STRUCTURAL FACT: advanced low-bit LLM/VLM quantization (2-4 bit, MXFP4, NVFP4, FP8 KV cache) is not implemented in Neural Compressor - it is integrated FROM AutoRound, Intel's separate toolkit. So a practitioner asking 'what does Neural Compressor quantize to' should read the AutoRound scheme table instead (see the autoround record). Treating the two as one tool would misattribute the group_size and asymmetric-quantization restrictions. HARDWARE COVERAGE as stated by the project: Gaudi, Core Ultra, Xeon Scalable, Xeon CPU Max, Data Center GPU Flex and Data Center GPU Max are 'extensive'; AMD CPU, ARM CPU and NVIDIA GPU are 'limited testing'. Dated milestones from the README, useful for reading older docs: 2025-03 VLM quantization in a transformers-like API on Intel CPU/GPU; 2025-05 FP8 static quantization of DeepSeek V3/R1 on Gaudi; 2025-09 FP8 dynamic quantization including Linear and FusedMoE on Gaudi; 2025-10 MXFP8/MXFP4 (experimental); 2025-12 NVFP4 (experimental); 2026-03 FP8 for Keras/JAX and FP8 KV-cache/Attention static quantization via AutoRound (both experimental).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab2-neural-compressor-readme"
+  ]
+}

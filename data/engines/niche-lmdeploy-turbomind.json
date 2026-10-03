@@ -1,0 +1,81 @@
+{
+  "id": "niche-lmdeploy-turbomind",
+  "type": "engine",
+  "name": "LMDeploy (TurboMind)",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-lmdeploy-repo",
+    "niche-lmdeploy-turbomind-paper"
+  ],
+  "repo": "InternLM/lmdeploy",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "compression",
+    "multi-model",
+    "research"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache",
+    "automatic-prefix-caching"
+  ],
+  "supported_backends": [
+    "cuda",
+    "cpu"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "awq",
+    "w4a16",
+    "mxfp4",
+    "kv-quantized"
+  ],
+  "notable_features": [
+    "Two engines behind one toolkit: TurboMind (C++/CUDA) and a pure-Python PyTorchEngine that the README offers explicitly to lower the barrier to rapid experimentation. That pairing is unusual and useful",
+    "Developed by the MMRazor/MMDeploy team, so it inherits an OpenMMLab lineage and a compression-first identity that most serving frameworks do not have",
+    "Persistent batch (their term for continuous batching), blocked KV cache, automatic prefix caching",
+    "Compressed weights: AWQ W4A16 with a claimed 2.4x over FP16, plus online int8/int4 KV-cache quantization added April 2024",
+    "MXFP4 support on NVIDIA GPUs from V100 upward, and llm-compressor 4-bit symmetric/asymmetric support added February 2026",
+    "A request-distribution service for multi-model, multi-machine, multi-card serving - a proxy layer rather than a single-process server",
+    "Model zoo is InternLM-centric but covers Llama, Qwen (including MoE variants), InternVL2, GLM, Gemma, DeepSeek and multimodal VLMs",
+    "TurboMind got the EuroSys 2027 paper (arXiv:2508.15601), which is unusual for a serving framework and indicates real systems research",
+    "8106 stars, v0.18.0 released 2026-09-28, last push 2026-09-28, 2271 open issues"
+  ],
+  "hardware_caveats": [
+    "ALL PERFORMANCE FIGURES IN THE README ARE VENDOR CLAIMS with no methodology. Read them as positioning: 'up to 1.8x higher request throughput than vLLM'; 4-bit '2.4x higher than FP16'; MXFP4 '1.5x the performance of vLLM on H800 for openai gpt-oss models'; the April 2024 GQA upgrade taking InternLM2-20B to 16+ RPS, 'about 1.8x faster than vLLM'. Every one names a different model, so none of them compose into a general statement about the engine",
+    "The vLLM comparisons are the ones to distrust least and still not trust: vLLM tunes itself against the same popular models, so a per-model win usually means a configuration win",
+    "Effectively CUDA-first. The README's own backends list is CUDA/ROCm/CPU/Mac in the sense of an aspiration; the substantive work - MXFP4 from V100, AWQ, KV-cache quantization, CUDA graphs - is NVIDIA-specific. No NPU, no Metal-accelerated generation path, no Vulkan",
+    "Version line is still v0.x at v0.18.0 despite being five years old, which is the honest maturity signal",
+    "2271 open issues is the largest backlog in this slice. Part of that is the InternLM model zoo's own churn",
+    "Windows support is documented only at tp=1 (from the 2023/08 news item) - single-GPU only",
+    "Model coverage skews InternLM and Qwen. Outside that zoo the compatibility burden is real",
+    "Two engines means two behaviour sets: a bug or a perf difference may be TurboMind-specific or PyTorchEngine-specific"
+  ],
+  "best_for": [
+    "Deployment if you are in the InternLM/Qwen ecosystem, where this is the best-tuned option and the model support is first-class",
+    "Compression-forward serving: AWQ, MXFP4 and KV-cache quantization are supported together here in a way most engines do not coordinate",
+    "Running a proxy in front of many models across many machines, via the request-distribution service",
+    "Reading a TurboMind paper (EuroSys 2027) on mixed-precision inference - one of very few serving frameworks with a peer-reviewed systems paper",
+    "Fast experimentation with the pure-Python PyTorchEngine when you do not want a C++ build"
+  ],
+  "avoid_for": [
+    "Deciding on vendor speed claims - there is no methodology and the model changes with every claim",
+    "Non-NVIDIA hardware. This is a CUDA-first engine in practice",
+    "Multi-GPU on Windows (tp=1 only)",
+    "Production without reading the support matrix; v0.18.0 with 2271 open issues is a moving target"
+  ],
+  "docs_url": "https://github.com/InternLM/lmdeploy",
+  "notes": "The strongest niche candidate in this slice that is neither dead nor a research prototype, and a genuinely distinct third way between vLLM and llama.cpp: a compression-first C++ engine from the OpenMMLab lineage with a EuroSys paper. TurboMind paper arXiv:2508.15601 (2025-08-21) verified via the arXiv API. All metadata from the GitHub API on 2026-10-03."
+}

@@ -6,9 +6,7 @@
   "affects": [
     "vllm",
     "flashinfer",
-    "gemma-4-31b-it",
-    "nvidia-rtx-pro-6000-blackwell",
-    "blackwell-sm120"
+    "nvidia-rtx-pro-6000-blackwell"
   ],
   "symptom": "Engine init aborts with: ValueError: Selected backend AttentionBackendEnum.FLASHINFER is not valid for this configuration. Reason: ['head_size not supported']. Reproduces for the bf16 base model, an FP8 checkpoint and an NVFP4 checkpoint of google/gemma-4-31b-it on an RTX PRO 6000 (SM120), whose config reports head_dim=256 and global_head_dim=512.",
   "root_cause": "FlashInfer's template instantiations do not cover these head sizes for this configuration, and vLLM's backend selection validates head_size before choosing a kernel. The override is accepted by the CLI and only fails at engine init.",
@@ -20,5 +18,9 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-vllm-issue-40677-flashinfer-head-size"
+  ],
+  "concepts": [
+    "blackwell-sm120",
+    "gemma-4-31b-it"
   ]
 }

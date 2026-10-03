@@ -1,0 +1,72 @@
+{
+  "id": "niche-vllm-ascend",
+  "type": "engine",
+  "name": "vLLM Ascend (Huawei Ascend NPU hardware plugin)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-vllm-ascend-repo"
+  ],
+  "repo": "vllm-project/vllm-ascend",
+  "languages": [
+    "Python",
+    "C++",
+    "CMake",
+    "C"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2025,
+  "design_goal": [
+    "hardware-coverage",
+    "production",
+    "community"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache"
+  ],
+  "supported_backends": [
+    "npu",
+    "ascend-cann"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "awq",
+    "gptq",
+    "fp8"
+  ],
+  "notable_features": [
+    "The canonical example of vLLM's hardware-pluggable strategy: rather than forking vLLM for each new accelerator, the community maintains out-of-tree plugins that implement the hardware interface",
+    "Created by the vLLM community itself in February 2025, following vLLM's [RFC] Hardware pluggable (vLLM issue 11162, December 2024). That lineage is the interesting part: this is vLLM's answer to how it will support non-CUDA hardware forever",
+    "Transformer, MoE, embedding and multimodal LLMs are all supported on Ascend NPU, per the README",
+    "Release cadence tracks vLLM exactly, which is the maintenance mechanism: v0.7.3 (2025-05) through v0.23.0.post1 (2026-09-22) and an RC line ahead of it",
+    "Hosted documentation at docs.vllm.ai/projects/ascend, and user stories page documenting LLaMA-Factory, verl, TRL and GPUStack on top of it",
+    "2918 stars, last push 2026-10-02, 4415 open issues"
+  ],
+  "hardware_caveats": [
+    "THE PINNED STACK IS THE RECORD. The README's Prerequisites: Linux only; Python >= 3.10 and < 3.13; CANN == 9.1.0; PyTorch == 2.10.0; TorchNPU == 2.10.0.post4; and vLLM at the SAME version as vllm-ascend. Six versions must move in lockstep. This is the cost of out-of-tree hardware support and the reason support matrices matter",
+    "Specific hardware, not a family: Atlas 800I A2 Inference, Atlas A2 Training, Atlas 800I A3 Inference, Atlas A3 Training, plus Atlas 300I Duo marked Experimental. If your SKU is not on that list it is not supported",
+    "The dependency is Huawei's CANN toolkit and torch_npu, not CUDA. There is no Linux-ROCm or CPU path in the plugin",
+    "Linux only - no Windows, and the surrounding CANN/torch_npu tooling is Linux-centric",
+    "Feature coverage is tracked in an external support matrix at docs.vllm.ai rather than in the README, so 'vLLM works on Ascend' does not mean every vLLM feature works on Ascend. Check the matrix per quantisation, dtype and model",
+    "4415 open issues against 2918 stars is an enormous backlog - partly an artifact of a fast-moving upstream and a large user base, partly a sign that support load exceeds what a community plugin absorbs easily",
+    "Version lock means you are frequently on a plugin RC rather than a stable release; v0.26.0rc1 was current while v0.23.0 was the newest stable in the 2026-09 news items",
+    "The plugin is only as good as Huawei's kernels. A capability present in upstream vLLM that has no Ascend kernel is simply absent here"
+  ],
+  "best_for": [
+    "Running vLLM on Huawei Ascend NPUs, full stop - there is no realistic alternative at this feature level",
+    "Studying how a hardware vendor's ecosystem gets supported without forking the serving framework, and what that pattern costs",
+    "Anyone deploying into Huawei-dominated regions where the hardware is available and the software stack is pinned anyway"
+  ],
+  "avoid_for": [
+    "Flexible version management - vLLM, vLLM-Ascend, torch_npu, PyTorch, Python and CANN must all be version-matched",
+    "Hardware outside the five listed Atlas configurations",
+    "Non-Linux hosts, and for any assumption that upstream vLLM features are automatically present - consult the external support matrix",
+    "A stable release train; expect to run release candidates"
+  ],
+  "docs_url": "https://docs.vllm.ai/projects/ascend/en/latest/",
+  "notes": "The single most important record in the niche-hardware half of this slice. It documents vLLM's hardware-pluggable architecture in production, which is the mechanism by which every future non-CUDA accelerator will be supported - and the pinned-version cost that mechanism imposes. Related: [[niche-tt-metal]] does the same for Tenstorrent via a separate plugin, and [[niche-tensorrt-llm]] is the in-tree CUDA example. All metadata from the GitHub API on 2026-10-03."
+}

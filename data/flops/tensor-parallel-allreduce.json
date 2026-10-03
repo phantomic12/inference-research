@@ -1,0 +1,50 @@
+{
+  "id": "tensor-parallel-allreduce",
+  "type": "flop",
+  "name": "Multi-GPU tensor-parallel inference: the per-layer all-reduce and the batch at which it matters",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "Pure data movement, AI = 0 - like kv_transfer, this class performs no arithmetic, so every question about it is a bandwidth question. Tensor parallelism shards each layer's weight matrices across N devices and inserts two communication ops per layer; Megatron-LM's contribution is exactly this placement, described as implementable 'with the insertion of a few communication operations' (arXiv 1909.08053). The op that matters in inference is the all-reduce over the hidden dimension, because row-parallel projections leave a partial sum on every rank that must be summed. Payload: with batch B and hidden width d in bf16, each rank contributes B*d*2 bytes; a ring all-reduce moves 2*(N-1)/N * 2*s bytes per rank, which for N >= 4 rounds to 4*s, i.e. 4*B*d bytes per rank per layer. Crossover: set the all-reduce time equal to the weight-read time it competes with. 4*B*d/BW_link = 2*P_layer/BW_hbm  =>  B* = P_layer*BW_link / (2*d*BW_hbm). For Llama-2-7B geometry (d = 4096, 11008 intermediate, 32 layers; P_layer = 4096*4096 + 2*4096*4096 + 4096*4096 + 3*4096*11008 = 202,375,168) on an H100 SXM (BW_hbm = 3350 GB/s): B* = 202,375,168 * BW_link / (2 * 4096 * 3350). With NVLink 4 at the full per-GPU per-direction 450 GB/s (18 links x 25 GB/s), B* = 202,375,168*450/(2*4096*3350) = 3,318 - far above any real serving batch, so the all-reduce is irrelevant. With a single NVLink 4 link at 25 GB/s per direction, B* = 184. On PCIe 4.0 x16 at 31.5 GB/s per direction, B* = 232. On PCIe 5.0 x16 at 63 GB/s, B* = 465. On an AMD Infinity Fabric link at 64 GB/s, B* = 472; on xGMI at 50 GB/s, B* = 369. So the same model on the same HBM sees its tensor-parallel crossover batch move by a factor of 18 purely on fabric: 3,318 on a full NVLink domain versus 184 on a point-to-point link. THAT is the argument for NVSwitch, expressed as a number. Absolute cost, which is what most people actually want: 4*B*d bytes per rank per layer x 32 layers per token. At B = 1 on a full 450 GB/s per-GPU NVLink path that is 0.0012 ms/token - negligible. At B = 32 it is 0.037 ms; at B = 256, 0.298 ms. On a single 25 GB/s link it is 0.021 ms at B = 1, 0.671 ms at B = 32, and 5.37 ms at B = 256 - at which point the communication is a large fraction of the step. On PCIe 4.0 x16 the numbers are 0.017 / 0.533 / 4.26 ms at B = 1 / 32 / 256. The sensitivity is to B AND to fabric bandwidth multiplicatively, which is why TP over PCIe fails at scale while TP over NVSwitch is invisible.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "batch_size B (payload is 4*B*d bytes per rank per layer - the cost is LINEAR in B while the weight read it competes with is constant, which is exactly why TP gets harder as you batch more)",
+    "interconnect_bandwidth_per_rank (the dominant multiplier: B* ranges from 184 on a single 25 GB/s NVLink 4 link to 3,318 on a full 450 GB/s per-GPU domain - an 18x spread on identical hardware)",
+    "tensor_parallel_degree N (ring volume 2*(N-1)/N saturates near 4*s for N >= 4, so cost per rank is roughly flat in N; the win is that P is divided by N)",
+    "num_layers (2 communication ops per layer, so the total is linear in depth: 32 layers for a 7B-class model)",
+    "hidden_width d (payload is linear in d: 4096 for a 7B, 8192 for a 70B, so the same B* crossover but double the absolute bytes at 70B)",
+    "topology (NVSwitch non-blocking vs point-to-point: NVIDIA reports up to 1.5x higher throughput for Llama 3.1 70B on H200 with NVSwitch, which is the same effect as raising BW_link)",
+    "whether the layer is row-parallel or column-parallel (only row-parallel layers need the all-reduce; column-parallel needs an all-gather of t tokens instead, whose payload is t*d rather than B*d - and in PREFILL t >> B, which inverts the comparison)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x",
+    "google-tpu-v5e",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-rtx-4090"
+  ],
+  "workarounds": [
+    "NVSwitch rather than point-to-point topologies, which raises effective per-GPU bandwidth from 25 to 450 GB/s per direction and moves B* from 184 to 3,318 (NVIDIA reports up to 1.5x higher throughput for Llama 3.1 70B on H200)",
+    "Megatron-LM layer placement that minimizes the number of collectives to two per layer and overlaps them with independent compute",
+    "Replace the all-reduce with reduce-scatter + all-gather, which halves the payload (2*s per rank instead of 4*s) and therefore halves B*",
+    "Fuse the all-reduce into the preceding GEMM's epilogue so the partial sum is reduced while still in registers/shared memory, removing a round trip to HBM",
+    "Overlapping communication with compute - the all-reduce for layer i can proceed while layer i-1's GEMM runs, which is what makes the cost invisible at low B even on slow links",
+    "Prefer pipeline parallelism over tensor parallelism for deep models: PP needs point-to-point sends of activations once per stage rather than a collective per layer, so it tolerates a slow fabric far better",
+    "Use sequence parallelism for the norm/dropout regions, which converts an all-reduce into an all-gather - cheaper because the payload is not reduced",
+    "Choose TP degree to fit the model, not to fill the machine: over-sharding past what memory requires adds collectives for no benefit, since ring volume per rank saturates while the count of ops does not"
+  ],
+  "notes": "CLASSIFICATION ARGUMENT: filed under kv_transfer rather than a new interconnect class, because it is the same thing by the same arithmetic - zero flops, all bytes, bound by link bandwidth rather than by HBM. Both records answer 'where does the data go' rather than 'what does it cost to compute'; if the enum is ever extended, kv_transfer and this belong under a shared data-movement parent. The number worth carrying is B* = P_layer * BW_link / (2 * d * BW_hbm), because it says something the folklore usually gets backwards. The received wisdom is that tensor parallelism is expensive and should be minimized; the derivation shows the opposite on a fabric-rich part - at 450 GB/s per GPU the crossover is B = 3,318, far beyond any serving batch, so the all-reduce is free and TP can be used freely to fit a model. On a point-to-point link the crossover is B = 184, still above typical latency-serving batches, which is why TP over PCIe works acceptably at small batch and degrades badly under continuous batching at B in the hundreds. So the practical rule is: the crossover batch is a function of the FABRIC, not of the model, and the model only enters through the ratio P_layer/d (roughly the feed-forward expansion). That ratio is also why a 70B model does not have a worse problem than a 7B: d doubles from 4096 to 8192 and P_layer/d rises only from 49,408 to 104,448, so B* is within a factor of 2 while the absolute bytes double. Second-order point that inverts intuition in PREFILL: column-parallel layers need an all-GATHER of the sequence dimension, not an all-reduce of the batch. In prefill the gather payload is t*d with t in the thousands, versus the decode all-reduce's B*d with B in the tens - so prefill communication is dominated by the OTHER collective, and it scales with context length rather than with concurrency. A record that only says 'tensor parallelism adds an all-reduce per layer' will get prefill wrong. Related: Ring Attention (arXiv 2310.01889) is the context-length analogue - it partitions the KV sequence and rotates blocks with no reduction at all, so its cost scales with sequence length and it is the right tool when the prompt does not fit on one device, as opposed to TP which is the right tool when the WEIGHTS do not fit.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop2-megatron-lm",
+    "flop-roofline-williams-2008",
+    "link-nvlink-switch-spec",
+    "link-nvlink-nvswitch-inference-blog",
+    "link-pcisig-specifications",
+    "flop2-llama2-7b-config",
+    "flop2-ring-attention",
+    "flop-nvidia-h100-specs"
+  ]
+}

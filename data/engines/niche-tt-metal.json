@@ -1,0 +1,69 @@
+{
+  "id": "niche-tt-metal",
+  "type": "engine",
+  "name": "TT-Metal / TT-NN (Tenstorrent)",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-tt-metal-repo"
+  ],
+  "repo": "tenstorrent/tt-metal",
+  "languages": [
+    "Python",
+    "C++",
+    "C",
+    "CMake",
+    "Jupyter Notebook"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "hardware-coverage",
+    "research",
+    "kernel-development",
+    "niche-hardware"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "tenstorrent-wormhole",
+    "tenstorrent-blackhole",
+    "tenstorrent-grayskull"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "Two layers in one repo: TT-NN, the Python & C++ neural-network operator library, and TT-Metalium, the low-level kernel programming model for Tenstorrent silicon. The operator library is the closer thing this repo has to an inference engine",
+    "TT-Metalium is the genuinely novel part - a kernel programming model where you write kernels against Tenstorrent's data-movement and compute primitives rather than against CUDA or HIP, with its own programming guide and API reference",
+    "Carries Tenstorrent's own LLM throughput tables per hardware configuration, with TTFT and T/S/U at batch 32 and batch 1 across Galaxy (Wormhole), n300, QuietBox, n150 (Wormhole) and p150 (Blackhole), each tied to a specific TT-Metalium release tag and a separate vLLM-plugin commit",
+    "Pinned release identifiers in the perf tables are unusually honest: every number says which TT-Metalium release produced it",
+    "Also covers image, video, audio, embedding and CNN model demos - this is not an LLM-only stack",
+    "1700 stars, Apache-2.0, v0.79.0 released 2026-09-18 with a dev stream at v0.80.0-dev20261002, last push 2026-10-03"
+  ],
+  "hardware_caveats": [
+    "PERFORMANCE NUMBERS ARE FROM THE PROJECT'S OWN DEMOS, NOT A NEUTRAL SERVER. The README's own caveat is the important sentence: metrics were collected using the tt-metal model demos and 'Results may vary when using other runtimes such as the vLLM inference server'. Every table row also pairs a TT-Metalium release with a distinct vLLM Tenstorrent plugin commit, which tells you the two paths are versioned independently and do not produce the same numbers",
+    "The reported figures also state their measurement conditions - 'based on an input sequence length of 128 tokens for all models' - which is a prefill-friendly, short-prompt regime. Do not compare these to long-context production numbers",
+    "Hardware is closed. Wormhole and Blackhole silicon plus the older Grayskull; there is no CUDA, ROCm, Metal, Vulkan or TPU fallback. If you do not have a Tenstorrent card, this repo does nothing for you",
+    "It is a kernel and operator library, not a server: no OpenAI-compatible API, no continuous batching, no paged KV, scheduling is 'none'. Serving comes from the separate Tenstorrent vLLM plugin, which is versioned on its own schedule",
+    "25k open issues. For a vendor stack this signals a very active but high-friction developer surface, not a smooth one",
+    "1696 stars for a repo of that size is a small community relative to its scope - a real constraint on how much self-help documentation exists",
+    "The performance tables carry internal 'Target T/S/U' columns alongside measured values, which is a candid admission that targets and results diverge on this hardware"
+  ],
+  "best_for": [
+    "Deploying on Tenstorrent Wormhole or Blackhole, where this plus the vLLM plugin is the only real path",
+    "Learning a non-CUDA kernel programming model - TT-Metalium is the clearest existing example of a full alternative to writing CUDA",
+    "Studying honest vendor benchmarking: the tables name their release tags, their input length and their runtime, which is more than most vendor pages do",
+    "R&D on data-movement-aware kernel design for RISC-V-derived tensor cores"
+  ],
+  "avoid_for": [
+    "Any hardware other than Tenstorrent's",
+    "Server workloads from this repo alone - use the vLLM Tenstorrent plugin for that and treat these numbers as indicative",
+    "Comparing these throughput figures against production vLLM or SGLang numbers without accounting for the demo-runtime and short-prompt caveats"
+  ],
+  "docs_url": "https://docs.tenstorrent.com/tt-metal/latest/tt-metalium/tt_metal/apis/index.html",
+  "notes": "The niche-hardware record with the most interesting engineering content: TT-Metalium is a genuine alternative kernel programming model rather than a CUDA port. Its value is partly the hardware story (the only serious open path onto Tenstorrent silicon alongside the vendor's vLLM plugin) and partly the honesty of its benchmarking, which names release tags and measurement conditions where most vendor pages do not. All metadata from the GitHub API on 2026-10-03."
+}

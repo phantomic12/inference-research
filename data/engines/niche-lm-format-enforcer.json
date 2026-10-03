@@ -1,0 +1,66 @@
+{
+  "id": "niche-lm-format-enforcer",
+  "type": "engine",
+  "name": "lm-format-enforcer",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-lm-format-enforcer-repo"
+  ],
+  "repo": "noamgat/lm-format-enforcer",
+  "languages": [
+    "Python"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "structured-output",
+    "ease-of-use",
+    "research"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "metal",
+    "cpu"
+  ],
+  "supported_formats": [
+    "tokenizer-vocab"
+  ],
+  "notable_features": [
+    "Mechanism: a character-level incremental parser feeds a prefix-allowed-tokens function, so the model is only ever offered tokens that keep the output parseable. Different in kind from grammar-automaton approaches",
+    "Supports JSON Schema, schemaless JSON mode and regular expressions; required and optional fields, nested fields, arrays and dictionaries",
+    "Explicitly lets the LLM control whitespace and field ordering in JSON rather than forcing canonical output, which the README argues reduces hallucination of structural noise",
+    "Supports batched generation and beam search with a different token filter per input or per beam - the README's comparison table marks this as a capability guidance and jsonformer lack",
+    "Was integrated into the vLLM OpenAI server as `--guided-decoding-backend lm-format-enforcer`, documented in the README with a full request example",
+    "Does not modify the transformers high-level loop, so it drops into existing pipelines",
+    "Small and honest: the README includes a capability comparison table against guidance, jsonformer and outlines in which it loses several rows",
+    "MIT, 2042 stars, last release v0.11.2 (2025-08-09), last push 2026-04-04"
+  ],
+  "hardware_caveats": [
+    "Superseded as a default, and its own README's comparison table concedes ground. It is no longer vLLM's default structured-generation backend - XGrammar took that role (see [[niche-xgrammar]]). Current state: a small library that still works and still has a documented vLLM integration path",
+    "The guidance row in its comparison table marks Guidance as lacking batched generation and beam search, and Outlines as lacking optional JSON fields and LLM-controlled ordering. Treat the table as the maintainer's own view, not neutral",
+    "Pure Python per-token work: a character-level parser run at every decode step is more Python overhead than a C++ automaton, which is the practical reason for the demotion",
+    "Requires a logits-level hook in the host process, so it works in-process with transformers and (historically) vLLM, but not against a remote HTTP endpoint",
+    "Release cadence has slowed: v0.11.2 from 2025-08-09 while the last push was 2026-04-04. Actively receiving commits, not actively cutting versions",
+    "Legacy Python library: the README's own install line pulls transformers, torch, huggingface_hub and optimum, so it inherits the heavy dependency set that motivated xgrammar and outlines in the first place"
+  ],
+  "best_for": [
+    "Reading how prefix-allowed-tokens constraint enforcement works, in about 150 lines of Python you can fully understand",
+    "Beam search or batched generation with per-sequence different constraints, where the README's own table says the alternatives are weaker",
+    "Cases where you want the model to control JSON whitespace and field ordering rather than emitting canonical JSON",
+    "Keeping an existing vLLM deployment working with `--guided-decoding-backend lm-format-enforcer` during a migration"
+  ],
+  "avoid_for": [
+    "New projects - start with the current default structured-generation backend of your serving engine rather than choosing this library directly",
+    "Latency-sensitive per-token paths where a C++ implementation exists",
+    "Local LoRA or fine-tuned-model workflows where you want the model to own the format; the README's comparison table marks LoRA support as absent, and output-format training (e.g. Llama-3.x JSON fine-tunes) is usually the better answer"
+  ],
+  "docs_url": "https://github.com/noamgat/lm-format-enforcer",
+  "notes": "The niche's clearest example of a project kept alive by being a documented fallback rather than a default. Kept as a record because the demotion is the useful fact: XGrammar (2024/11 SGLang, 2024/12 vLLM) took the default slot out from under it. All metadata from the GitHub API on 2026-10-03."
+}

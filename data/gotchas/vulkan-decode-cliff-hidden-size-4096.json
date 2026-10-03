@@ -1,0 +1,25 @@
+{
+  "id": "vulkan-decode-cliff-hidden-size-4096",
+  "type": "gotcha",
+  "name": "On gfx1201 the Vulkan backend loses 4.7-6.7x decode throughput to HIP at hidden_size >= 4096, and effective bandwidth collapses to ~70-100 GB/s on a 640 GB/s card",
+  "class": "kernel",
+  "affects": [
+    "llama-cpp",
+    "gguf-q4-k-m"
+  ],
+  "symptom": "llama-bench on an RX 9070 XT 16 GB (gfx1201, RDNA4, Windows 11, AMD proprietary driver 25.20.42.14) at -ngl 99: Qwen3-4B Q4_K_M (hidden 2560) gives tg 183.0 t/s (~424 GB/s effective); Qwen3-8B Q4_K_M (hidden 4096) gives tg 21.0 (~98 GB/s); Qwen3-8B Q8_0 (hidden 4096) tg 9.5 (~77 GB/s); Qwen3-14B Q4_K_M (hidden 5120) tg 8.1 (~67 GB/s). The same models on the HIP build are healthy: 8B Q4_K_M 98.8 t/s (~464 GB/s), 14B Q4_K_M 54.3 t/s (~455 GB/s). Prompt processing is disproportionately hit too (4B pp128 3923 vs 8B 791 - a 5x gap for a 2x model).",
+  "root_cause": "Not confirmed - the reporter offers a hypothesis only: the Vulkan GEMV/mmvq shader path used for decode appears to hit a slow path at these shapes on gfx1201, possibly a KHR_coopmat shape constraint, given hidden 2560 is fast while 4096 and 5120 are slow. The probe line matters for diagnosis: 'ggml_vulkan: 0 = AMD Radeon RX 9070 XT | uma: 0 | fp16: 1 | bf16: 1 | fp4: 0 | warp size: 64 | shared memory: 32768 | int dot: 1 | matrix cores: KHR_coopmat'. What the reporter DID rule out is worth as much as the hypothesis: not quantization-specific (Q4_K_M and Q8_0 both slow), not flash attention (-fa on changes nothing, 21.2 vs 21.0), not the wrong device (GGML_VULKAN_DEVICE=0 explicit), not CPU fallback (no fallback/unsupported messages under GGML_VULKAN_DEBUG=1, all layers offloaded), and not a corrupt model file (the same GGUFs run at full speed on the HIP build).",
+  "workaround": "On gfx1201 use the HIP build for dense models with hidden_size >= 4096, or at minimum compute effective decode bandwidth from file size before concluding a card or a quant is slow. Cross-backend llama-bench on the same GGUF files is the decisive test here and costs one command. Related but distinct: #24483 is context-size-scaling on a MoE model under Linux/RADV, #24066 is a general Vulkan perf drop with no shape analysis, #25356 is a MoE MMV cliff at n_tokens=9 - this report is shape-dependent on dense models at tiny context.",
+  "severity": "major",
+  "notes": "A measurement-discipline record as much as a kernel one: the useful move is converting tok/s into effective bandwidth, which turns 'Vulkan is slow' into 'Vulkan achieves 98 GB/s on a 640 GB/s card, and the same file gets 464 GB/s on HIP'. That immediately localizes it to the backend and away from the quantization. Do not generalize the hidden_size >= 4096 threshold to other architectures or drivers - it is one card, one driver, Windows.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-llamacpp-26663-vulkan-hidden-size-cliff"
+  ],
+  "concepts": [
+    "rocm",
+    "vulkan"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "ort-quant-int8",
+  "type": "quantization",
+  "name": "ONNX Runtime quantization toolset (quantize_static / quantize_dynamic, QDQ vs QOperator)",
+  "scheme": "int8",
+  "bits": "8-bit weights and activations. Four sign combinations: U8U8, U8S8, S8U8, S8S8. reduce_range=True drops weights to 7 bits on non-VNNI AVX2/AVX512",
+  "weight_group_size": 128,
+  "activation_scheme": "U8U8 / U8S8 / S8S8 on CPU (S8U8 not runnable); S8S8 ONLY on GPU",
+  "native_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-pcie",
+    "nvidia-l40s",
+    "nvidia-l4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10",
+    "nvidia-a30",
+    "nvidia-rtx-4090"
+  ],
+  "emulated_support": [],
+  "kernels": [
+    "ORT CPU MLAS quantized kernels: QLinearConv, QLinearMatMul, MatMulInteger (+ ConvInteger)",
+    "ORT QDQ/QOperator fusion passes (fusions/ directory) -> QLinear* graph ops",
+    "TensorRT EP: quantizes a full-precision model itself from a calibration flatbuffer, using its own logic - NOT the ORT tool's output",
+    "NNAPI EP: QLinearConv / QLinearMatMul with all scales and zero-points constant (qlab2-ort-nnapi-ep-doc)"
+  ],
+  "quality_delta": "n/a - none published. The ORT docs deliberately describe the failure modes instead: 'it is not rare to get worse performance on old devices', and quantization is called 'not a loss-less transformation'. Null + this note.",
+  "notes": "SCHEMA MISMATCH: the enum has 'int8' but the sibling record is filed under id int8-w8a8 and the enum value 'int8-w8a8' does not exist; 'int8' is the closest existing value and the true scope is in `name`. THE CPU-vs-GPU-vs-NPU MATRIX, which the docs genuinely do make confusing, resolved. CPU (MLAS): runs U8U8, U8S8 and S8S8. S8S8 with QDQ is the documented default and the first choice; S8S8 with QOperator is explicitly documented as SLOW on x86-64 and to be avoided; U8U8 is the fallback when accuracy drops badly. GPU: S8S8 ONLY. NPU (NNAPI on Android): QLinearConv and QLinearMatMul with all quantization scales and zero points constant - so an NNAPI path needs static, constant scales, which rules out dynamic activation quantization on NPU. QDQ vs QOperator: QOperator gives each quantized op its own ONNX definition (QLinearConv, MatMulInteger); QDQ inserts DeQuantizeLinear(QuantizeLinear(x)) around the original ops and carries the parameters on those ops - in static mode in the graph, in dynamic mode via an inserted ComputeQuantizationParameters proto. QDQ has been the DEFAULT since ORT 1.11 and ORT's own CPU kernels are optimized for it; QOperator is described as 'mainly useful for specific hardware back-ends'. PER-PLATFORM PARAMETER TABLE (the part people get wrong): x86 WITHOUT VNNI -> activation QUInt8 + weight QInt8 + reduce_range=True (7-bit weights) to avoid VPMADDUBSW 16-bit saturation; x86 WITH VNNI (Skylake-SP/Cascade Lake/Ice Lake/Sapphire Rapids, AMD Zen4) -> same types but reduce_range=False, because VNNI accumulates 8-bit products without saturating; ARM (Cortex-A, Apple Silicon, Graviton) -> QInt8/QInt8, reduce_range=False, because NEON/SVE handles signed 8-bit without saturation. per_channel=False gives better CPU throughput; per_channel=True can help models with large inter-channel weight ranges but on AVX2/AVX512 you generally need reduce_range as well. The docs state plainly that choosing the wrong combination is 'a common cause of quantized models running slower than FP32'. HARDWARE PRECONDITION, quoted: 'Old hardware has none or few of the instructions needed to perform efficient inference in int8. And quantization has overhead (from quantizing and dequantizing), so it is not rare to get worse performance on old devices.' Only x86-64 with VNNI, GPU with Tensor Core int8 support, and ARM with dot-product instructions reliably win. OPERATIONAL GOTCHAS: models must be opset >= 10 (opset >= 12 for 8-bit MaxPool); model optimization cannot output a model larger than 2GB, so large models must skip it, and the docs recommend running optimization during pre-processing (quant_pre_process) rather than during quantization, precisely because in-quantization optimization rewrites the graph and destroys tensor-to-tensor matching for the debugging APIs. quantize_static supports three calibration methods - MinMax, Entropy, Percentile.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab2-ort-nnapi-ep-doc",
+    "qlab2-ort-quant-doc",
+    "qlab2-ort-quant-tool-readme"
+  ]
+}

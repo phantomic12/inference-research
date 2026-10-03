@@ -4,12 +4,7 @@
   "name": "Setting VLLM_MARLIN_INPUT_DTYPE=fp8 enables Marlin W4A8-FP8 on sm_121a where it silently produces garbage",
   "class": "kernel",
   "affects": [
-    "vllm",
-    "gptq-marlin",
-    "auto-round",
-    "w4a8-fp8",
-    "nvidia-gb10",
-    "sm-121a"
+    "vllm"
   ],
   "symptom": "On NVIDIA GB10 (DGX Spark, sm_121a) serving a WNA16 INT4 MoE (Qwen3.5-122B-A10B, AutoRound/GPTQ-style, group_size 128) with VLLM_MARLIN_INPUT_DTYPE=fp8, the server starts normally, no crash and no NaN assert, and at temperature=0 every reasoning prompt degenerates into a repeated '</think>' loop until max_tokens. The same binary with the env var unset produces coherent chain-of-thought. The corrupted path is also ~2.5% FASTER end-to-end, so throughput benchmarking selects for the bug.",
   "root_cause": "Not maintainer-confirmed; the reporter's code reading points at three things. (1) get_marlin_input_dtype in vllm/model_executor/layers/quantization/utils/marlin_utils.py gates W4A8-FP8 on is_device_capability(89) or is_device_capability_family(120); the family test is (cap.to_int() // 10) == 12, so sm_121 -> 121//10 == 12 passes and sm_121a is opted in with no sm_120-vs-sm_121 distinction. (2) The FP8 branch of csrc/libtorch_stable/quantization/marlin/marlin_mma.h emits mma.sync.aligned.m16n8k16.row.col.f32.e4m3.e4m3.f32 with a 2-reg A / 1-reg B operand layout and no __CUDA_ARCH__ guard, unlike the int8 branch which has an explicit SM75 fallback. A legal-but-wrong instruction there produces exactly 'fast and silently wrong'. (3) In fused_moe/experts/marlin_moe.py the int8 branch folds input_global_scale into a_scales1 but the fp8 branch passes a_scales raw - possibly intentional since fp8 global scale is passed separately as global_scale{1,2}, but combined with group_size-128 weight scales it is a scale-application mismatch candidate.",
@@ -21,5 +16,11 @@
   "updated": "2026-10-03",
   "sources": [
     "qgotcha-vllm-49546-marlin-w4a8-fp8-sm121a"
+  ],
+  "concepts": [
+    "auto-round",
+    "gptq-marlin",
+    "sm-121a",
+    "w4a8-fp8"
   ]
 }

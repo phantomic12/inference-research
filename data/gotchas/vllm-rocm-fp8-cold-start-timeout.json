@@ -4,10 +4,7 @@
   "name": "FP8 on RDNA3 blows the 600 s engine-ready timeout on first start even though weights load in seconds",
   "class": "config",
   "affects": [
-    "vllm",
-    "amd-radeon-pro-w7900",
-    "amd-radeon-rx-7900-xtx",
-    "rocm"
+    "vllm"
   ],
   "symptom": "vLLM serve of an FP8 checkpoint on a gfx1100 Radeon aborts during startup with an engine-ready timeout after waiting VLLM_ENGINE_READY_TIMEOUT_S (default 600 s); measured first init was 1474.26 s. The message blames 'slow weight loading' while the weights actually loaded in 16.33 s, and the GPU sits idle.",
   "root_cause": "The wheel ships zero tuned W8A8 block-FP8 configs for device_name=AMD_Radeon_Graphics (218 device-keyed configs total: 76 AMD Instinct, 142 NVIDIA). With no config hit, warmup JIT-compiles the Triton GEMM kernels shape by shape on the CPU: W8A8 tuning alone searches 5 shapes for ~23.5 min, and first inference triggers a further ~43 min of Triton JIT staging that /health does not reflect.",
@@ -19,5 +16,8 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-vllm-issue-52663-rocm-fp8-cold-start"
+  ],
+  "concepts": [
+    "rocm"
   ]
 }

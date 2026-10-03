@@ -1,0 +1,68 @@
+{
+  "id": "niche-lightllm",
+  "type": "engine",
+  "name": "LightLLM",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-lightllm-repo",
+    "niche-lightllm-pre3-paper"
+  ],
+  "repo": "ModelTC/LightLLM",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "research",
+    "sla-aware-scheduling",
+    "multi-model"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache",
+    "token-level-kv-management"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "Pure-Python framework: custom kernels are written in OpenAI Triton, not CUDA C++, so the repo's language breakdown is essentially all Python. This is the structural fact that makes it easy to read and easy to modify, and it is why kernels from here ended up inside other projects",
+    "Token-level KV cache management rather than page-level, per the README's own description of its design",
+    "Persistent batch, blocked KV cache and automatic prefix caching",
+    "Prefix KV cache transfer between DP ranks, added 2025/11",
+    "Flash Attention 1&2, flashinfer and Split-K decoding (Flash Decoding) support",
+    "Research output rather than raw benchmark output is the post-2024 identity: the Past-Future Scheduler for LLM serving under SLA guarantees (ASPLOS'25) and Pre^3 deterministic pushdown automata for structured generation (ACL 2025 outstanding paper award)"
+  ],
+  "hardware_caveats": [
+    "The repo's GitHub language breakdown is Python only - every kernel is Triton. That is portable to ROCm in principle, but there is no ROCm-specific build documentation in the README, so treat ROCm support as unverified rather than assumed",
+    "Triton kernels mean the CUDA toolchain version is the coupling, not a hand-written CUDA extension; the trade is portability and readability for peak hand-tuned performance",
+    "Vendor claims to mark as claims, not measurements: v1.0.0 (2025/02) claimed 'the fastest DeepSeek-R1 serving performance on single H200 machine'. No benchmark methodology, model, batch size or concurrency is given in the README",
+    "Its own README lists vLLM, SGLang, Aphrodite, Microsoft ParrotServe, LoongServe, S-LoRA and Ant Group OmniKV as projects using LightLLM kernels - i.e. the project's most durable output is kernels imported elsewhere",
+    "No safetensors-free formats: no GGUF, no AWQ/GPTQ/EXL2 loading path documented, so it is not a llama.cpp-adjacent runtime at all",
+    "Last push 2026-09-30, v1.2.0 released 2026-08-10, 250 open issues - actively maintained, but a 1.x version line for a project that has already had its moment as a throughput leader"
+  ],
+  "best_for": [
+    "Reading how a serving framework is built when the whole thing is Python and the kernels are Triton - the fastest way to understand paged KV, continuous batching and prefix caching as readable code",
+    "Studying SLA-aware scheduling: the Past-Future Scheduler is a genuinely different scheduling objective from raw throughput",
+    "Studying constrained decoding at the systems level - Pre^3 is the strongest research output of any engine in this niche",
+    "Borrowing kernels into your own engine - this is what vLLM, SGLang and Aphrodite already did"
+  ],
+  "avoid_for": [
+    "New deployments - if you want LightLLM's ideas you now get them from vLLM or SGLang, with far more community and hardware support",
+    "Anything outside CUDA-first NVIDIA setups without reading the Triton code yourself first",
+    "Formats other than safetensors, and any workload needing GGUF/AWQ/GPTQ/EXL2 ecosystem compatibility"
+  ],
+  "docs_url": "https://lightllm-en.readthedocs.io/en/latest/",
+  "notes": "Often described as unmaintained - that is out of date. As of 2026-10-03 the repo's last push was 2026-09-30 and v1.2.0 shipped 2026-08-10. What has changed is its role: it stopped competing on raw throughput and now publishes scheduling and constrained-decoding research. All metadata from the GitHub API on 2026-10-03."
+}

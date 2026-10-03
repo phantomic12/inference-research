@@ -1,0 +1,37 @@
+{
+  "id": "mlc-quant-q4f16",
+  "type": "quantization",
+  "name": "MLC LLM compiler quantization (q4f16 group-quant, plus q3f16, AWQ, FP8 per-tensor and FP8 block-scale)",
+  "scheme": "gguf-q4_k_m",
+  "bits": "q4f16_* = int4 weights / fp16 activations with group_size 32; q3f16_* = int3 with group_size 40; q4f16_autoawq = AWQ with group_size 128; q4f16_ft = faster-transformer int4-in-int8; e4m3_e5m2_f16 = FP8 W8A8 per-tensor; fp8_e4m3fn_bf16_block_scale = FP8 blockwise",
+  "weight_group_size": 32,
+  "activation_scheme": "fp16 or bf16 for the qXf16_*/qXbf16_* family (16-bit activations); the e4m3/e5m2 per-tensor and fp8 block-scale families are true FP8 W8A8 with optional static activation scales",
+  "native_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x",
+    "amd-radeon-pro-vii"
+  ],
+  "emulated_support": [
+    "apple-m3-max",
+    "apple-m3-ultra",
+    "nvidia-rtx-4090",
+    "amd-radeon-pro-vii",
+    "intel-arc-b580"
+  ],
+  "kernels": [
+    "MLC compilation (Apache TVM / TensorIR / metaschedule) generates a backend-specialized model library at build time - the dequant+gemm kernel is CODEGEN per target, not a hand-written kernel",
+    "group-quant kernels: int4 packed into uint32 storage, linear_weight_layout KN or NK",
+    "PerTensorQuantize (e4m3fn/e5m2) and BlockScaleQuantize (BlockScaleQuantize with use_activation_scale)"
+  ],
+  "quality_delta": "n/a - MLC publishes no controlled fp16 quality delta in the registry or the intro docs. Null + note.",
+  "notes": "MODEL-COMPILE-TO-TARGET MODEL, verified: MLC quantizes ONCE at weight-conversion time into a named artifact, then compiles a target-specific library. `mlc_llm gen_config --quantization q0f16` writes an MLC config, and the deployed model is identified by that name in its HF repo id - the canonical example is `HF://mlc-ai/Llama-3-8B-Instruct-q4f16_1-MLC`. The three-phase runtime is: pre-quantized weight download, then model compilation to the local GPU (which is what makes the quant choice cheap - the dequant is fused into generated code for YOUR backend), then the chat runtime. The same engine serves the same model across backends as long as it fits, and `--device` picks the backend. So MLC's quantization is really a COMPILER INPUT, and the quant it applies is baked into the artifact name - which is the clearest signal that it is a compile-to-target model rather than a runtime format switch. REGISTRY, verified verbatim from python/mlc_llm/quantization/quantization.py: no-quant is q0f16/q0bf16/q0f32. q3f16_0 and q3f16_1 are int3 with group_size 40 (differing only in linear_weight_layout KN vs NK). q4f16_0, q4f16_1, q4bf16_0, q4bf16_1 and q4f32_1 are int4 with group_size 32. THE _0/_1 SUFFIX IS A LAYOUT CHOICE, NOT A QUALITY CHOICE: _0 is linear_weight_layout KN, _1 is NK. q4f16_2 is group_size 32 but with quantize_embedding and quantize_final_fc set to FALSE - the only variant that leaves the embedding and the LM head at full precision. q4f16_autoawq is a genuine AWQ integration at group_size 128. q4f16_ft is faster-transformer's layout (int4 values stored in int8). FP8: e5m2_e5m2_f16 and e4m3_e4m3_f16 are PerTensorQuantize with quantize_linear=True but embeddings and final_fc NOT quantized; e4m3_e4m3_f16_max_calibrate is the same with calibration_mode=max instead of inference; fp8_e4m3fn_bf16_block_scale and its _static_activation variant are BlockScaleQuantize in bf16. CAVEAT: qlab2-mlc-quantization-py documents the registry only. The MLC user-guide quantization page (llm.mlc.ai/docs/user/quantization) returned 404 at time of access, so no per-scheme accuracy or size-per-quality table is claimed here.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "engine-mlc-llm-github",
+    "engine-mlc-llm-quickstart",
+    "qlab2-mlc-quantization-py"
+  ]
+}

@@ -4,9 +4,7 @@
   "name": "vLLM's --gpu-memory-utilization is a fraction of TOTAL VRAM, so KV cache block allocation fails even with memory visibly free",
   "class": "config",
   "affects": [
-    "vllm",
-    "gpu-memory-utilization",
-    "kv-cache"
+    "vllm"
   ],
   "symptom": "Engine init fails with: ValueError: No available memory for the cache blocks. Try increasing `gpu_memory_utilization` when initializing the engine. Reported cases include llama-2 70B 4-bit AWQ on 4x A10G (worked on an older vLLM, fails from 0.2.5) and defog/sqlcoder2 at --gpu-memory-utilization 0.4 with only 8192 max tokens on a single GPU - a small model that should fit easily. From vLLM 0.2.5 onward the same setups stopped starting.",
   "root_cause": "gpu_memory_utilization is a fraction of TOTAL device memory, not of memory left after weights. The engine profiles weights, subtracts activations and workspace, then requires the remaining budget to hold a whole number of KV cache blocks at --max-model-len and --max-num-batched-tokens. If the residual is not enough for even one block, init aborts with 'No available memory for the cache blocks' even though nvidia-smi shows plenty free - the memory is reserved for the KV pool and reported as used, so 'plenty free' and 'no blocks fit' coexist.",
@@ -18,5 +16,9 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-vllm-issue-2248"
+  ],
+  "concepts": [
+    "gpu-memory-utilization",
+    "kv-cache"
   ]
 }

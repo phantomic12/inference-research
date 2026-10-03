@@ -1,0 +1,15 @@
+{
+  "id": "pd-gh-vllm-58263-batch-invariant-not-in-kv-namespace",
+  "type": "source",
+  "name": "vLLM issue #58263: Bind batch-invariant mode into KV-offload namespaces and KV-connector compatibility checks",
+  "url": "https://github.com/vllm-project/vllm/issues/58263",
+  "publisher": "vllm-project/vllm",
+  "kind": "forum",
+  "published": "2026-09-23",
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "The closest thing found to an explicit prefill/decode numerics-divergence risk, and it is upstream's own gap analysis rather than a reproduction - the author states 'I have not reproduced a divergence' and files it as a feature request. The finding: 'VLLM_BATCH_INVARIANT=1 is not part of any KV-offload namespace or KV-connector compatibility check. An instance in batch-invariant mode can therefore load KV blocks that were produced under a different numerical configuration (non-invariant kernels, another attention backend, another GPU architecture) through a shared offload tier or a P/D transfer. Nothing signals that this happened. Its output then depends on whether a block was a hit and on which instance wrote it.' Code detail: the offload namespace (FileMapper.fields) carries model_name, tokens_per_hash, blocks_per_file, parallel sizes, dtype, kv_cache_groups and inference_engine - no batch-invariance flag, attention backend or device capability - and the P2P tier fingerprint is built from the same fields; the NIXL compatibility hash includes attn_backend_name, cache_dtype and vllm_version but not the invariance flag; Mooncake, MoRIIO and HF3FS have no model-level compatibility check at all. Read against main at v0.29.0.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

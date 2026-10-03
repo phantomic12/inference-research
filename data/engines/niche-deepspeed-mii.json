@@ -1,0 +1,68 @@
+{
+  "id": "niche-deepspeed-mii",
+  "type": "engine",
+  "name": "DeepSpeed-MII (DeepSpeed-Inference)",
+  "status": "deprecated",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-deepspeed-mii-repo"
+  ],
+  "repo": "deepspeedai/DeepSpeed-MII",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2022,
+  "design_goal": [
+    "throughput-first",
+    "low-latency",
+    "ease-of-use",
+    "automatic-optimization"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv"
+  ],
+  "supported_backends": [
+    "cuda"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "The 'apply the right inference path automatically' idea, and this is the record for it: based on model architecture, model size, batch size and available hardware, MII chooses the inference implementation itself. Most engines make you choose; this one picks",
+    "Four named throughput technologies in the README: blocked KV caching, continuous batching, Dynamic SplitFuse, and high-performance CUDA kernels",
+    "Dynamic SplitFuse is the distinctive contribution - fusing the prefill and decode phases' kernel launches so a mixed batch does not stall between the two shapes of work. This predates vLLM's chunked-prefill framing of the same problem by a couple of years",
+    "DeepSpeed-FastGen (2023/11 blog) is where the performance analysis lives, including Mixtral, Phi-2 and Falcon support (2024/01)",
+    "Non-persistent pipelines for trying it out without standing up a server",
+    "Pre-compiled python wheels covering most of the custom kernels, explicitly to avoid the long compile times the README says many projects in this space require",
+    "Legacy section retained in the README: DeepFusion for Transformers and multi-GPU inference with tensor-slicing, from the low-latency era",
+    "Was Microsoft's project before the org move; github.com/microsoft/DeepSpeed-MII still resolves via redirect",
+    "2114 stars, Apache-2.0, v0.3.3 released 2025-03-25, last push 2025-06-30"
+  ],
+  "hardware_caveats": [
+    "EFFECTIVELY WOUND DOWN. Last push 2025-06-30, last release v0.3.3 from 2025-03-25, and the newest news item in the README is dated 2024/01. Marked deprecated on that evidence - there is no deprecation notice, the repo simply stopped",
+    "The README has no 'successor' line and no archive banner, so anyone arriving cold has no signal that this is finished. The signal is only in the dates",
+    "CUDA only in practice. Four of the four named technologies are CUDA-kernel technologies, Dynamic SplitFuse is a CUDA launch-fusion technique, and the repo's language breakdown is Python only with no C++/CUDA extension source in-tree (the kernels live in DeepSpeed itself). No ROCm, Metal, Vulkan or CPU-server path is documented for the text-generation stack",
+    "The kernels live in DeepSpeed, not in MII, so the coupling is to DeepSpeed's release cadence and its compile requirements. The pre-compiled wheels trade that coupling for a stale-binary risk: a wheel that does not match your Torch/CUDA versions is a hard failure",
+    "Automatic optimisation cuts both ways. Because MII chooses the path for you, the interesting knob - which inference implementation is running - is not directly exposed, which makes it hard to reason about why performance differs from what you expect",
+    "SplitFuse is now largely subsumed. vLLM's chunked prefill and SGLang's overlap scheduling address the same prefill/decode interference, and they are the paths with community, hardware-plugin and format support",
+    "Historical importance exceeds current utility: this is the clearest pre-vLLM statement of continuous batching plus KV blocking plus phase fusion as one system, published as a blog rather than a paper"
+  ],
+  "best_for": [
+    "Reading the clearest pre-vLLM articulation of continuous batching + blocked KV + prefill/decode fusion as a single design - the DeepSpeed-FastGen blog is the primary source",
+    "Understanding Dynamic SplitFuse, which named the problem vLLM's chunked prefill and SGLang's overlap scheduling later solved and popularised",
+    "Studying automatic path selection from model and hardware characteristics, a design few engines attempt",
+    "Historical reference for the 2022-2024 generation of high-throughput LLM serving"
+  ],
+  "avoid_for": [
+    "Anything new - the project has been effectively wound down since mid-2025",
+    "Non-CUDA hardware; there is no ROCm or CPU-server story for the text-generation stack",
+    "Production deployments that need a maintained release train or an explicit choice of inference backend",
+    "New-format support: safetensors-era quantisation paths landed in vLLM/SGLang, not here"
+  ],
+  "docs_url": "https://github.com/deepspeedai/DeepSpeed-MII",
+  "notes": "The pre-vLLM high-throughput engine that the brief's 'historically-influential' category is really about. Its legacy section (DeepFusion, tensor-slicing multi-GPU) and its four named technologies make it the best single artifact for understanding where continuous batching came from. Deprecated status is based on dates (last push 2025-06-30, last release 2025-03-25, newest README news 2024/01) rather than an official notice. Org note: the repo moved from microsoft/ to deepspeedai/; the old URL still resolves by redirect. All metadata from the GitHub API on 2026-10-03."
+}

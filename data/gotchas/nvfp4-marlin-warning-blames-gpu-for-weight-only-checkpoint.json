@@ -5,10 +5,7 @@
   "class": "measurement",
   "affects": [
     "vllm",
-    "nvfp4",
-    "marlin-moe",
-    "cutlass",
-    "cutlass-fp4"
+    "nvfp4"
   ],
   "symptom": "prepare_nvfp4_moe_layer_for_marlin() emits 'Your GPU does not have native support for FP4 computation but FP4 quantization is being used. Weight-only FP4 compression will be used leveraging the Marlin kernel. This may degrade performance for compute-heavy workloads.' on a Jetson AGX Thor (SM110) that demonstrably does have native FP4. Verified on that device with vLLM 0.27.1 / CUDA 13: torch.ops._C.cutlass_scaled_mm_supports_fp4(110) = True and cutlass_group_gemm_supported(110) = True. Serving a weight-only checkpoint (NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4) selects 'MARLIN' NvFp4 MoE backend and fires the warning; a true W4A4 checkpoint (nm-testing/nvfp4_moe-e2e) on the same device selects cutlass, no warning, and generates correctly.",
   "root_cause": "The Marlin NVFP4 MoE path is selected for two independent reasons - either the GPU genuinely lacks native FP4 cutlass support, OR the checkpoint is weight-only (W4A16_NVFP4 / MIXED_PRECISION, no FP4 activation scales), in which case a W4A4 cutlass kernel is inapplicable regardless of how capable the silicon is - and the warning only describes the first. The reporter notes the message is quoted as evidence that a GPU family lacks FP4 kernels and has been circulating as exactly that claim for SM110. An identical unconditional warning exists in compressed_tensors/compressed_tensors_moe/compressed_tensors_moe_w4a4_mxfp4.py.",
@@ -20,5 +17,10 @@
   "updated": "2026-10-03",
   "sources": [
     "qgotcha-vllm-53328-fp4-warning-blames-silicon"
+  ],
+  "concepts": [
+    "cutlass",
+    "cutlass-fp4",
+    "marlin-moe"
   ]
 }

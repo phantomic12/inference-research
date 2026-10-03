@@ -1,0 +1,20 @@
+{
+  "id": "mlx-kv-bits-crashes-on-first-request-for-hybrid-attention",
+  "type": "gotcha",
+  "name": "mlx-lm --kv-bits passes its startup check, then crashes on the first request for hybrid sliding-window models",
+  "class": "config",
+  "affects": [
+    "mlx-lm"
+  ],
+  "symptom": "mlx_lm.server starts cleanly and /health returns 200, then the first chat completion raises 'NotImplementedError: RotatingKVCache Quantization NYI'. Affects models whose attention schedule is mixed - Gemma 4 uses sliding-window attention on 35 of 42 layers in the 26B-A4B configuration - because sliding-window layers use RotatingKVCache, which has no quantized implementation. Dense-attention models are unaffected. Confirmed on mlx-lm 0.31.3 and on current main.",
+  "root_cause": "The quantization guard in maybe_quantize_kv_cache tests hasattr(c, 'to_quantized'), which RotatingKVCache satisfies - the method is defined, it just raises. So the presence check passes and the NotImplementedError surfaces on the first request that crosses quantized_kv_start, deep inside serving, instead of at startup. This is a deferred-validation failure, not a missing feature alone.",
+  "workaround": "Fix landed in PR #1584 (RotatingQuantizedKVCache / BatchRotatingQuantizedKVCache); a reporter verified the hybrid Gemma 4 26B-A4B case on an M5 Max with mlx 0.32.0 using that branch. Until it is in your release, monkeypatch make_prompt_cache in both mlx_lm.models.cache and mlx_lm.server to return QuantizedKVCache for every layer - but understand that this silently drops the max_kv_size window bound on sliding-window layers, giving you an unbounded cache in exchange for quantization.",
+  "severity": "major",
+  "notes": "Two traps in one. The startup/liveness mismatch means health checks are worthless as a readiness signal for this feature. And the widely-recommended monkeypatch has a real cost that the thread spells out: returning a plain QuantizedKVCache for a rotating layer gives up the sliding-window cap, so a long-running server grows its cache without bound - which is the same failure the repo already records for mlx-lm's own prompt-cache-cap handling. There is also a warning for the future: a hybrid model where only the full-attention layers end up quantized would pass a smoke test while silently doing half the work.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "noncuda-mlxlm-1573-rotating-kv-quant-nyi"
+  ]
+}

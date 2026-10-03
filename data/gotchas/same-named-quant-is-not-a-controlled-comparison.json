@@ -1,0 +1,26 @@
+{
+  "id": "same-named-quant-is-not-a-controlled-comparison",
+  "type": "gotcha",
+  "name": "Two models quantized at 'the same Q4_K_M level' can land at 4.75 and 4.30 bpw, so named-quant comparisons across models are not controlled experiments",
+  "class": "measurement",
+  "affects": [
+    "llama-cpp",
+    "gguf-q4-k-m"
+  ],
+  "symptom": "Standard llama.cpp quantization applies hardcoded rules ('use Q4_K_M, except bump some tensors up/down, except fall back if incompatible, except keep some tensors unquantized'), so two different models quantized at the same named level end up with different effective bits-per-weight - 4.75 and 4.30 are the figures the upstream author gives as an example. Comparing their quality attributes the difference to architecture or training when it is partly compression ratio.",
+  "root_cause": "Named quant types are per-tensor recipes, not global bpw targets: mixed-precision bumping depends on each architecture's tensor sizes and on quantization compatibility fallbacks, both of which vary per model. Because model performance generally scales with size - a model quantized with more bits usually scores better at the same underlying method - any cross-model quality comparison at a matched quant name has a hidden size variable. The same argument applies within one family: comparing 'Q4_K_M vs Q5_K_M' on one model is at least ordered by size in a known direction, but comparing 'model A Q4_K_M vs model B Q4_K_M' is not.",
+  "workaround": "Normalize comparisons to a matched bpw budget rather than a matched quant name - llama.cpp's --target-bpw (PR #15550) solves a constrained optimization to minimize estimated per-tensor error subject to a global bpw target, allocating more bits where they reduce error most, and --target-size does the same for a byte target. When comparing quantization formats rather than models, hold the model and the calibration data fixed and vary only the format. When reporting a quality delta, state the actual bpw, not just the format name.",
+  "severity": "minor",
+  "notes": "Measurement class, sourced from the upstream PR that motivates the feature rather than from a bug report - the author is arguing for it precisely because the confound is invisible in normal practice. Two caveats the author states against their own method: it minimizes a per-tensor error proxy sampled from rows rather than actual perplexity or output divergence (errors interact nonlinearly across layers, so no optimality guarantee), and it requires an imatrix containing activation and statistics data, refusing to run without it. It is also 5-10x slower than standard quantization, resumable via --state-file. The measurement gotcha stands on its own regardless of whether the feature lands.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-llamacpp-15550-target-bpw-bpw-confound"
+  ],
+  "concepts": [
+    "bpw",
+    "imatrix",
+    "quantize"
+  ]
+}

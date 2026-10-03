@@ -1,0 +1,67 @@
+{
+  "id": "niche-airllm",
+  "type": "engine",
+  "name": "AirLLM",
+  "status": "draft",
+  "confidence": 0.55,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-airllm-repo",
+    "niche-airllm-speed-issue"
+  ],
+  "repo": "lyogavin/airllm",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "minimal-vram",
+    "research",
+    "run-anything-anywhere"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "cpu",
+    "metal"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "Layer-wise inference: the model is decomposed into per-layer files on disk and streamed onto the accelerator one layer at a time, so peak VRAM is roughly one layer plus activations rather than the whole model. This is the entire idea and it is genuinely architecturally interesting",
+    "Explicitly no quantization, distillation or pruning required for the headline claim - the memory saving comes from not holding the model resident",
+    "v3.0 (2026/06) added FP8 and streamed MoE support: DeepSeek-V3 671B on ~12GB, Qwen3-235B on ~3GB; 2026/07 claims Kimi K3 (2.8T) in 3.72GB of VRAM on one RTX 6000 Ada; 2026/08 claims Qwen3.8-Flash-Next (125B) in 5.95GB on an RTX 4090",
+    "Per-expert streaming for MoE so only the experts a token routes to are loaded",
+    "Block-wise 4bit/8bit 'compression' of weights only, with the README correctly noting this is not quantization because activations are untouched",
+    "Prefetching to overlap disk load with compute, on by default (AirLLMLlama2 only per the README)",
+    "v2.10.1 added CPU inference and non-sharded models; Apple Silicon/MLX path documented with a notebook",
+    "2026/09 added streaming training: frozen weights streamed a layer at a time with adapters kept on GPU"
+  ],
+  "hardware_caveats": [
+    "This is a memory-capacity tool, not a throughput tool. The README gives you VRAM footprints and not one decode tok/s figure; the open issues are where speed is discussed and they are dire: '28.6 s/token on a 3B model' on Windows+NVIDIA, 'taking about 40 minutes to generate one sentence', 'VERY SLOW' on an AMD 9070 XT with ROCm 7.12, and an explicit '3x speedup compression claim is false/outdated'",
+    "Requires roughly 2x the model size in HuggingFace cache disk. The README warns about this in the quickstart: 'the original model will first be decomposed and saved layer-wise. Please ensure there is sufficient disk space'",
+    "Every generated token re-streams the whole model from disk. Disk I/O is the bottleneck by construction, so performance tracks your storage bandwidth, not your GPU",
+    "ROCm support is effectively unproven - the 9070 XT report is the only direct evidence and it is negative",
+    "Windows is a rough path (the 28.6 s/token report)",
+    "No batching, no continuous batching, no paged KV: scheduling is 'none'. Each request pays the full layer-streaming cost",
+    "Only safetensors/HF-format models; no GGUF, no AWQ/GPTQ/EXL2",
+    "Marked draft because the README's headline VRAM numbers are self-measured by the maintainer with no methodology, and the speed claims are actively contradicted by user reports. The 35332 stars and last push 2026-10-03 show it is very widely used as a 'can I run this at all' demo"
+  ],
+  "best_for": [
+    "Answering 'can this model run on this GPU' when the answer is technically yes but practically miserable - a 70B on a 4GB card is a real capability that no other engine in this repo offers",
+    "Demonstrating the layer-streaming idea, which is the correct mental model for why MoE experts can be streamed and why KTransformers-style CPU offload works",
+    "Streaming fine-tuning of a model that does not fit, keeping only adapters resident"
+  ],
+  "avoid_for": [
+    "Anything with a latency or throughput SLO - you will be serving minutes per sentence",
+    "Concurrent or production serving; there is no scheduler",
+    "Any claim you have to defend with numbers - use GGUF quantization via [[llama-cpp]] instead and pay 4 bits instead of disk bandwidth"
+  ],
+  "docs_url": "https://github.com/lyogavin/airllm",
+  "notes": "The 35k stars are almost entirely from people confirming it starts. The value of the record is architectural, not operational: it is the clearest public demonstration that inference memory footprint and inference speed are separate problems. Confidence deliberately low; the VRAM claims are vendor self-measurements and the speed claims have public contradiction. Predecessor name: the repo lyogavin/Anima now redirects to this one. All metadata from the GitHub API on 2026-10-03."
+}

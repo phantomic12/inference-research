@@ -1,0 +1,21 @@
+{
+  "id": "sycl-device-memory-query-abort-blocks-model-load",
+  "type": "gotcha",
+  "name": "The SYCL backend aborts at model load when the GPU memory query fails, with no fallback",
+  "class": "toolchain",
+  "affects": [
+    "llama-cpp"
+  ],
+  "symptom": "llama-server and llama-cli abort at model load with GGML_ABORT in ggml_backend_sycl_device_get_memory: 'failed to get device memory size'. Confirmed on two very different parts - a Sparkle Arc Pro B60 24GB (Battlemage G21, 8086:e211) on a fresh Ubuntu 26.04 with the xe driver, GuC/HuC firmware loaded, libze-intel-gpu1 26.31.39395.13, oneAPI 2026.1 - and a Lunar Lake Arc 140V iGPU on the same OS. In both cases sycl-ls enumerates the device correctly over Level Zero and OpenCL immediately before the abort.",
+  "root_cause": "The device-memory query fails through both the Level Zero and SYCL-extension paths, and ggml_backend_sycl_device_get_memory treats that as unrecoverable, calling GGML_ABORT with no system-RAM fallback. Neither GGML_SYCL_GET_MEM_API=0 nor =1 nor ZES_ENABLE_SYSMAN=1 avoids it. The maintainer notes GGML_SYCL_GET_MEM_API=1 selects a legacy path that uses sysconf(_SC_PAGE_SIZE) and is therefore Linux-only. On the B50 case a reporter bisected it to a llama.cpp regression between b10698 (working) and b10729 (broken), so at least one instance is llama.cpp-side rather than driver-side.",
+  "workaround": "Patch ggml_backend_sycl_device_get_memory to fall back to system RAM instead of aborting, which the Lunar Lake reporter verified works and which restores normal performance (Qwen3.5-9B Q4_K_M: pp512 502 t/s, tg64 18.2 t/s). Failing that, use the Vulkan backend or a build before b10729.",
+  "severity": "blocker",
+  "notes": "Two things make this expensive to diagnose. First, it is an abort at load, not a slow path, so there is no output to inspect. Second, `sycl-ls` succeeding immediately before the abort is actively misleading - it proves the runtime sees the card, so people chase oneAPI installation and driver packages instead of the memory-query path. The same signature has now been reported on Battlemage dGPU and Lunar Lake iGPU, which means 'it works on my Arc' is not a usable support answer. Note the repo already records the adjacent oneAPI install trap in sycl-build-unrecognized-fsycl.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "noncuda-llamacpp-28515-sycl-b60-memquery",
+    "noncuda-llamacpp-28134-sycl-lunar-lake-memquery"
+  ]
+}

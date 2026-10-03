@@ -1,0 +1,76 @@
+{
+  "id": "niche-exo",
+  "type": "engine",
+  "name": "exo",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-exo-repo"
+  ],
+  "repo": "exo-explore/exo",
+  "languages": [
+    "Python",
+    "Svelte",
+    "Swift",
+    "TypeScript",
+    "Rust",
+    "Nix"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "design_goal": [
+    "edge/mobile",
+    "ease-of-use",
+    "consumer-hardware",
+    "clustering",
+    "privacy"
+  ],
+  "scheduling": [
+    "batched-decode"
+  ],
+  "supported_backends": [
+    "metal",
+    "cpu"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "mlx-quantized"
+  ],
+  "notable_features": [
+    "The distinctive idea is not an inference technique, it is an interconnect: aggregating a pile of consumer devices into one AI cluster. Automatic device discovery with no manual configuration, then topology-aware automatic model parallelisation that places each layer based on a realtime view of device resources",
+    "RDMA over Thunderbolt 5 shipped day-0, with a claimed 99% latency reduction between devices. This is the technically interesting part: Thunderbolt 5 exposes a coherent-ish fabric that consumer Macs can actually use as a memory network",
+    "Vendor speedups to treat as claims: up to 1.8x on 2 devices and 3.2x on 4 devices for tensor parallelism. Note these are well below linear, which is what a fabric slower than NVLink would give",
+    "Demonstrated at real scale on consumer hardware: the README embeds third-party benchmarks of Qwen3-235B (8-bit), DeepSeek v3.1 671B (8-bit) and Kimi K2 Thinking (native 4-bit) on 4x M3 Ultra Mac Studio with tensor-parallel RDMA, credited to Jeff Geerling's '15 TB VRAM on Mac Studio - RDMA over Thunderbolt 5'",
+    "Built-in dashboard for cluster management and chat, each device exposing an API and dashboard at localhost",
+    "Apple Silicon / macOS oriented: MLX-based, needs Xcode for the Metal ToolChain, macmon for monitoring. The README even notes a specific friction: 'Homebrew macmon 0.6.1 still crashes on Apple M5'",
+    "47731 stars in about two years - the highest star count of any engine in this repo, which is a fact about the consumer-local-AI moment rather than about the engineering",
+    "v1.0.71 released 2026-04-23, last push 2026-10-03, 949 open issues"
+  ],
+  "hardware_caveats": [
+    "MAC-ONLY IN PRACTICE. Apple Silicon and macOS are the demonstrated path - MLX, the Xcode Metal ToolChain, macmon. There is no CUDA, no ROCm, no Linux-GPU story in the README, so the cluster mechanism is currently a Mac-cluster mechanism. The README says 'Run from Source (macOS)'",
+    "Thunderbolt 5 is a hard requirement for the headline feature. Without RDMA over TB5 the aggregation degrades to something much closer to ordinary network or USB-speed transport, and the 99% latency-reduction figure does not apply",
+    "The linear-scaling expectation should be abandoned. 1.8x on 2 devices and 3.2x on 4 is the vendor's own number, and it is what a fabric far slower than NVLink looks like. Model sharding across devices also means each device pays full interconnect latency per layer",
+    "Unified memory is the actual resource being aggregated, and it is not equivalent to VRAM. The 15 TB figure in the third-party link is a sum of system RAM across machines, and it is cache/coherent-memory constrained in ways HBM is not",
+    "Requires per-device setup: Xcode, the Metal ToolChain, a Nix or Homebrew dependency chain, and macmon for monitoring, with known version-specific breakage (macmon on M5)",
+    "Consumer-device thermals and power are not addressed in the README. Sustained cluster inference on Macs is a thermal problem before it is a bandwidth problem, and there are no numbers",
+    "Model formats are MLX-side rather than the GGUF ecosystem people usually have. There is no Triton path",
+    "Vendored dependencies: the README points at a Cachix binary cache and Nix, which is a deliberate choice but adds an install-model assumption",
+    "949 open issues on a consumer-facing project with a two-year life. Expect sharp edges"
+  ],
+  "best_for": [
+    "Running a model too large for one Mac, across several Mac Studios you already own, at zero marginal cost",
+    "Private local inference on hardware you already have, where 'local' is the point rather than the fallback",
+    "Studying Thunderbolt 5 RDMA as a consumer-memory interconnect - the most interesting networking idea in this slice",
+    "Third-party-independent validation of cluster inference: the README cites external benchmark posts rather than only its own numbers"
+  ],
+  "avoid_for": [
+    "Production or SLA work of any kind; this is a research-and-demo-grade system",
+    "Any non-Apple hardware, and any Linux deployment path",
+    "Expecting near-linear scaling across devices - the vendor's own figures say otherwise",
+    "Systems where thermal throttling under sustained load would be a problem; not addressed in the README"
+  ],
+  "docs_url": "https://github.com/exo-explore/exo",
+  "notes": "Recorded because it is the clearest current instance of a distinct niche: consumer-device clustering, which no engine in the main list covers. Its value is the interconnect idea (RDMA over Thunderbolt 5 as a model-parallel fabric) and its unusual citation practice of embedding third-party benchmarks. The 47731 stars are documented as a signal about interest in local AI, not about engineering quality. All metadata from the GitHub API on 2026-10-03."
+}

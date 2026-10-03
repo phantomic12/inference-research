@@ -1,0 +1,80 @@
+{
+  "id": "niche-aphrodite-sonar",
+  "type": "engine",
+  "name": "Sonar (formerly Aphrodite Engine)",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-aphrodite-sonar-repo",
+    "niche-aphrodite-rename-redirect"
+  ],
+  "repo": "dphnAI/sonar",
+  "languages": [
+    "Python",
+    "C++",
+    "Rust",
+    "CUDA",
+    "C",
+    "Metal"
+  ],
+  "license": "AGPL-3.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "throughput-first",
+    "aggressive-batching",
+    "multi-model",
+    "hobbyist-serve",
+    "production"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "cpu",
+    "metal",
+    "tpu",
+    "xpu"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "awq",
+    "gptq",
+    "fp8"
+  ],
+  "notable_features": [
+    "vLLM fork, not a clean-room engine: the README states 'Sonar is based on vLLM' and adds model/quantization formats, sampling methods, kernels and deployment features",
+    "Continuous batching plus paged KV-cache management, with prefix caching enabled by default rather than behind a flag",
+    "Tensor, pipeline, data and expert parallelism; multi-node multiprocessing without needing a Ray cluster, which is the practical difference from stock vLLM",
+    "Speculative decoding via MTP, EAGLE, DSpark, DFlash and n-gram methods",
+    "Quantized weights plus FP8 KV cache",
+    "Prefill/decode disaggregation through NIXL and other KV connectors",
+    "Serves OpenAI, Anthropic, pooling, scoring, reranking, transcription and Kobold APIs, not just OpenAI chat",
+    "Still installed and invoked as `aphrodite serve` with default port 2242, so docs and Docker images written for Aphrodite keep working"
+  ],
+  "hardware_caveats": [
+    "The project was RENAMED. github.com/aphrodite-engine/aphrodite-engine HTTP 301-redirects to dphnAI/sonar; the aphrodite-engine GitHub org now contains only .github, aphrodite-loadbalancer and aphrodite-jax. Anything citing 'aphrodite-engine/aphrodite-engine' as a live repo is citing a redirect",
+    "AGPL-3.0. This is the licensing fact that matters most for a vLLM fork - vLLM upstream is Apache-2.0, so embedding Sonar in a closed product is a different legal question from embedding vLLM",
+    "The repo still builds a Torch CUDA 13.0 wheel by default (APHRODITE_USE_PRECOMPILED=1, uv pip install --torch-backend=cu130), so CUDA version is coupled to the release, not to your cluster",
+    "Automatic installer covers Linux x86-64 (CUDA/ROCm/CPU), Linux arm64 CPU and Apple-silicon macOS on Metal; ROCm, Intel XPU, TPU, Docker, WSL2 and source builds are documented as a separate installation guide, i.e. second-class",
+    "Last push 2026-09-11, latest release v0.24.1 (2026-09-11), 252 open issues - active, but a 0.x version line on top of a fast-moving upstream",
+    "Being a vLLM fork means every upstream refactor lands as merge work here; vLLM's own hardware plugins (see [[niche-vllm-ascend]]) reduce the reason to exist on non-CUDA hardware"
+  ],
+  "best_for": [
+    "A self-hosted single-model or small-mixture server for a hobbyist or small team that wants vLLM-class features with a one-line installer and more model/quantization coverage than upstream ships",
+    "Multi-model serving without standing up Ray",
+    "Reading what a well-run vLLM fork looks like - the README documents exactly which deployment features were added on top, which is a useful diff against upstream"
+  ],
+  "avoid_for": [
+    "Anything proprietary without a licence review - AGPL-3.0 with network use is exactly the case that clause was written for",
+    "Production at scale, where vLLM upstream plus [[niche-vllm-production-stack]] is the supported path and 0.x churn is a liability",
+    "Pinning to a specific vLLM behaviour - you inherit upstream's breakages through the fork"
+  ],
+  "docs_url": "https://sonar.dphn.ai/",
+  "notes": "CORRECTION TO THE COMMON STORY: the widely repeated claim that Aphrodite Engine was 'absorbed into SGLang' could not be verified. A GitHub commit search for 'aphrodite' in sgl-project/sglang returns 0 commits (4 issues mention it). What is verifiable is the 2023-06-23 creation date, the rename to Sonar, the surviving `aphrodite` CLI name, and the Apache-2.0 -> AGPL-3.0 licence change. Treat 'absorbed into SGLang' as folklore. All metadata figures from the GitHub API on 2026-10-03."
+}

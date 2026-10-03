@@ -1,0 +1,70 @@
+{
+  "id": "niche-infinity",
+  "type": "engine",
+  "name": "Infinity",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-infinity-repo"
+  ],
+  "repo": "michaelfeil/infinity",
+  "languages": [
+    "Python"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "throughput-first",
+    "multi-backend",
+    "research",
+    "ease-of-use"
+  ],
+  "scheduling": [
+    "continuous-batching"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "cpu",
+    "tensorrt"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "onnx",
+    "gguf"
+  ],
+  "notable_features": [
+    "Embedding, reranking and multimodal (text+image) retrieval serving in one engine, layered on three interchangeable backends: PyTorch, optimum (ONNX / TensorRT), and CTranslate2. The multi-backend design is the reason to pick it over TEI when you need breadth",
+    "CTranslate2 in the stack is unusual for this class and fast on CPU - the practical way to get good embedding throughput with no accelerator",
+    "Documented docker images for CUDA, CPU, ROCm (MI200 and MI300 series) and a separate ONNX-Cuda / CTranslate2 / TensorRT image",
+    "Experimental int8 on cpu/cuda and experimental fp8 on H100/MI300 - the fp8 line is explicitly scoped to those two data-centre parts",
+    "Handles ColBERT and ColPALI-family multimodal embedding models, e.g. vidore/colpali-v1.2-merged",
+    "MIT-licensed, which is a genuine differentiator in the embedding-serving class",
+    "2949 stars, last push 2026-03-24, 281 open issues"
+  ],
+  "hardware_caveats": [
+    "RELEASE CADENCE HAS SLOWED MARKEDLY. Last push 2026-03-24 and the last release is 0.0.77 from 2025-08-22 - a gap of over a year between the newest release and today, and the project is still on a 0.0.x version line. Commits continue but nothing is cut. Compare [[niche-text-embeddings-inference]] at v1.9.4 / 2026-09-15",
+    "int8 is experimental on cpu/cuda and fp8 is experimental on H100/MI300 only - read the README's own qualifiers rather than assuming general quantisation support",
+    "ROCm coverage is MI200 and MI300 series only, via a dedicated image",
+    "No lora adapters: for the ColBERT/ColPali-family paths the README states 'No lora adapters supported, only merged models'. If you fine-tune with adapters you are outside this engine",
+    "Multi-backend means multi-problem: a bug can be in PyTorch, in optimum's ONNX/TensorRT path, or in CTranslate2, and support has to cover all three",
+    "UNVERIFIED MARKETING-ADJACENT CLAIM: the story that Infinity was acquired by or merged into Milvus could not be confirmed. What could be checked: only 15 code references to 'infinity' inside milvus-io/milvus and 2 issue mentions in the Infinity tracker. That is consistent with a maintained-but-autonomous project that interoperates with Milvus, not with an acquisition. Confidence held at 0.78 partly because of this",
+    "A researcher's tool rather than an infrastructure project: 281 open issues and no release train means you are running something close to main"
+  ],
+  "best_for": [
+    "One server that has to do embeddings, reranking AND multimodal/ColBERT retrieval, without running three engines",
+    "CPU-only or non-GPU embedding throughput via the CTranslate2 backend, which is Infinity's clearest advantage over TEI",
+    "MIT-licensed embedding infrastructure",
+    "Fast experimentation: it is Python-only, so the backend switch is a config change"
+  ],
+  "avoid_for": [
+    "Anything needing release-to-release reproducibility - a 0.0.x version with no release since 2025-08-22 is running close to main",
+    "Adapter-based fine-tuned embedding models; merged models only",
+    "Consumer AMD GPUs; ROCm is MI-series only",
+    "Production where you want a support commitment rather than an active hobby project"
+  ],
+  "docs_url": "https://github.com/michaelfeil/infinity",
+  "notes": "Recorded as the multi-backend counterpart to TEI in the embedding/reranking niche: TEI for the tightest hardware story and serverless, Infinity for backend breadth and MIT licensing. Cadence is the honest concern and is recorded as such. The Milvus claim is explicitly flagged unverified in both the source and the engine notes. All metadata from the GitHub API on 2026-10-03."
+}

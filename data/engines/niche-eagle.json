@@ -1,0 +1,63 @@
+{
+  "id": "niche-eagle",
+  "type": "engine",
+  "name": "EAGLE (EAGLE-1/2/3 speculative decoding)",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-eagle-repo",
+    "niche-eagle-paper"
+  ],
+  "repo": "SafeAILab/EAGLE",
+  "languages": [
+    "Python"
+  ],
+  "license": null,
+  "first_release_year": 2023,
+  "design_goal": [
+    "low-latency",
+    "research",
+    "production"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "Feature-level speculative decoding: instead of a separate draft LM, EAGLE trains a lightweight autoregressive head over the target model's own top-layer features. EAGLE-1 reframed speculative sampling as a feature-uncertainty problem (arXiv:2401.15077); EAGLE-2 uses dynamic draft trees (arXiv:2406.16858); EAGLE-3 removes the feature-prediction constraint and uses training-time test (arXiv:2503.01840, NeurIPS'25)",
+    "EAGLE-3 is lossless in the paper's terms - it does not change the target model's output distribution",
+    "Composable with other acceleration work: the README lists vLLM, DeepSpeed, Mamba, FlashAttention, quantization and hardware optimisation as combinable",
+    "The README reports a 2x speedup on gpt-fast as the headline",
+    "Support spans vLLM (PR 16937), SGLang speculative decoding, vllm-project/speculators and Intel LLM Library for PyTorch - i.e. the paper's implementation is now consumed by other projects",
+    "The README recommends SGLang's SpecForge for out-of-the-box EAGLE-3 training as of 2025-07-23, which is the clearest signal that the mainstream path moved elsewhere",
+    "2546 stars, last push 2026-02-20, 283 open issues"
+  ],
+  "hardware_caveats": [
+    "LICENSE IS NOT A STANDARD OSI LICENSE. The GitHub API reports spdx_id NOASSERTION and license name 'Other' for this repo. Do not assume permissive terms for commercial use - read LICENSE directly. license is left null here rather than guessed",
+    "Requires a trained EAGLE head per model and per draft length, so it is not a drop-in for stock checkpoints. EAGLE-3 heads for specific models are published separately and version-lock to the base model",
+    "CUDA in practice: a pure-Python repo (874126 bytes of Python and nothing else per the language breakdown) that depends on the host framework and its kernels. No ROCm, Metal or Vulkan path documented",
+    "No GitHub releases at all, so there is no versioned artefact to pin - you install from a commit",
+    "The project itself now points elsewhere for the mainstream workflow (SpecForge with SGLang, vllm-project/speculators with vLLM). This repo is the paper implementation and reference training code, not the recommended deployment path",
+    "Acceptance rate is the whole game: a 2x claim is a vendor claim on the author's own models and hardware with no methodology table in the README. Speedups shrink on small models and on high-temperature sampling",
+    "NOT deprecated, unlike [[niche-medusa]] - last push 2026-02-20 and it is the live reference for a technique the field adopted. But it is a reference implementation now, not a product"
+  ],
+  "best_for": [
+    "Reading the reference implementation of the speculative-decoding technique that the field actually standardised on",
+    "Understanding why feature-level drafting beats token-level drafting, and what training-time test changes about the loss surface",
+    "Training EAGLE-3 heads with SpecForge + SGLang, or serving them through vLLM's speculators plugin"
+  ],
+  "avoid_for": [
+    "Production deployment without reading the LICENSE - NOASSERTION is a real risk, not a formality",
+    "Drop-in speedups on stock checkpoints, which need per-model trained heads",
+    "Non-CUDA hosts, and any workflow that needs a supported release rather than a commit"
+  ],
+  "docs_url": "https://github.com/SafeAILab/EAGLE",
+  "notes": "The speculative-decoding record that survived. Contrast with [[niche-medusa]]: EAGLE kept being implemented on (last push 2026-02-20 vs Medusa's 2024-06-25), produced the three-paper lineage that the serving stacks cite, and got absorbed into vLLM, SGLang, vllm-project/speculators and Intel's ip-llm. arXiv titles/dates for 2401.15077, 2406.16858, 2503.01840 and the NeurIPS'25 acceptance all verified via the arXiv API; all repo metadata from the GitHub API on 2026-10-03."
+}

@@ -4,10 +4,7 @@
   "name": "On RDNA, models with head_dim != 128 silently fall back to Triton paged attention and decode collapses at long context",
   "class": "kernel",
   "affects": [
-    "vllm",
-    "amd-rx-7900-xtx",
-    "amd-radeon-pro-w7900",
-    "gfx1100"
+    "vllm"
   ],
   "symptom": "Qwen3.6-27B on gfx1100 decodes at 12.1 tok/s at 518 tokens of context but 4.2 tok/s at 32K. Linear-attention layers keep constant cost; only the 16 full-attention layers degrade. Profiling puts essentially all the growth in kernel_paged_attention_2d, which grows 28.3x from 356.664 us at ctx 1024 to 10095.188 us at ctx 32768.",
   "root_cause": "use_rocm_custom_paged_attention in vllm/platforms/rocm.py gates the custom paged-attention kernel on the RDNA branch with head_size == 128 and block_size == 16. This model reports head_dim=256 with a measured KV block size of 784, so the custom kernel is never eligible and the Triton 2D fallback runs instead.",
@@ -19,5 +16,8 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-vllm-issue-50264-rdna-triton-paged-attn"
+  ],
+  "concepts": [
+    "gfx1100"
   ]
 }

@@ -1,0 +1,43 @@
+{
+  "id": "low-entropy-greedy-decode",
+  "type": "flop",
+  "name": "Low-entropy / near-greedy decode: when the distribution collapses, which flops can be skipped",
+  "class": "sampling",
+  "arithmetic_intensity": "Sampling's cost is fixed by vocabulary size, not by how peaked the distribution is - and that is the central fact about low-entropy decode. Per token the sampler must read the logits out of HBM (2*V bytes at bf16, 4*V at fp32) before it can discover that the answer was obvious the whole time. For Llama-3-8B with V = 128,256 and d = 4096: logits = 2*128256 = 256.5 KiB/token in bf16, against a step that reads 2*P = 2*8.03e9 = 16.06 GB of weights, so the logits are 0.0016% of the step's HBM traffic. The arithmetic is blunt: the expensive part (reading the weights to produce the logits) is 100% of the work, and the part that collapses (choosing among the logits) is 0.0016%. This means the obvious optimization - detect a peaked distribution and skip sampling - cannot buy more than about one part in 60,000, because the expensive work has already happened by the time you know the distribution is peaked. The one exception worth naming is the LM HEAD itself, which is a real weight matrix of 2*d*V = 2*4096*128256 = 1.051 GB, i.e. 6.54% of a Llama-3-8B decode step's bytes and 6.54% of its flops (2*d*V = 1.051 GFLOP against 2*P = 16.1 GFLOP). For a large-vocab model the LM head is the one place where a peaked distribution could enable real work reduction, and even there the reduction requires skipping the projection, not skipping the softmax.",
+  "bound_by": "memory",
+  "scales_with": [
+    "vocab_size V (logit bytes scale linearly: 2*V at bf16, 4*V at fp32 - 250.5 KiB and 501.0 KiB per token for V=128256)",
+    "entropy_of_the_distribution (NOT a cost driver: bytes must be read before the entropy is known, so a greedy token costs the same as a uniform one)",
+    "candidate_set_size after top-k/top-p (the one knob that reduces actual work: a top-256 candidate set reads 2*d*256 = 2.10 MB instead of 1.051 GB of head, a 500x reduction of that term)",
+    "whether_the_model_uses_a_large_vocab (Llama-3-8B's 128256 vocab makes the LM head 6.54% of the step; Llama-2's 32000 vocab with d=4096 makes it 2*4096*32000 = 262 MB against 13.48 GB = 1.94%)",
+    "logits_dtype (fp32 logits double the read for no benefit in a greedy path)",
+    "batch_size (each sequence pays its own 2*V bytes even though the sampler is one kernel, so sampling is as batch-invariant as decode_attention)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090",
+    "nvidia-l4",
+    "amd-radeon-pro-vii"
+  ],
+  "workarounds": [
+    "Fused sampling kernels that read the logits once from HBM and do temperature / top-k / top-p / Gumbel selection in registers, so the V-wide distribution is never materialized",
+    "Argmax / greedy decode paths that take the max directly from the logits without a softmax normalization pass, which removes the exp and reduce over V",
+    "Top-k BEFORE the softmax: restrict to a candidate set of k, then compute probabilities only over those k, so the expensive full-V pass never happens",
+    "Early-exit LM-head projection via coarse cluster assignment: project onto K clusters (2*d*K flops) then score only the C members of the winning cluster, so 2*d*(K+C) replaces 2*d*V - at K=1024, C=128 that is 9.44 MFLOP against 1050.7 MFLOP, a 111x reduction of the one term that actually matters",
+    "Quantize or keep the LM head in a lower precision, since it is 6.54% of a large-vocab decode step and behaves like any other weight GEMM",
+    "Constrained / guided decoding to make the token stream deterministic in low-entropy regions, so the sampler can skip work it knows the answer to (see constrained-decoding-grammar-mask)",
+    "Speculative decoding, which is the correct tool for low-entropy text: many consecutive tokens are predictable, so k tokens are verified per weight pass and the per-token sampling cost is amortized across them"
+  ],
+  "notes": "The honest answer to the question this record exists to answer is: kernels can exploit low-entropy decode much less than intuition suggests, and the reason is ordering. The expensive work is the projection from hidden state to logits (a GEMM over a 2*d*V weight matrix) and the expensive read is the weight bytes; both happen before the distribution's peakedness is observable. Everything downstream of the logits - softmax, top-k, renormalize, multinomial draw - touches 2*V to 4*V bytes, which for any modern model is four to five orders of magnitude smaller than the weight read. Quantitatively: for Llama-3-8B, sampling traffic is 0.0016% of a decode step, so even a perfect sampler that did nothing would improve the step by 0.0016%. Where the idea does pay is upstream of the logits, not at them: (a) skip or shrink the LM-head projection via candidate-set or cluster-based computation, which is worth up to 6.54% of the step on a large-vocab model; (b) use the low-entropy structure to predict tokens, which is exactly what speculative decoding does, and it converts per-token memory-bound steps into one memory-bound step plus k cheap ones - a 2-3.6x reported speedup in Medusa's case (arXiv 2401.10774). The framing that makes this actionable: low-entropy decode is not a SAMPLING optimization, it is a PREDICTION optimization. Also worth recording that greedy decode removes the RNG but not the read - and for a system where determinism is the goal rather than speed, that distinction settles the argument. Caveat: the 0.0016% figure assumes a modern model with d of a few thousand and V in the tens or hundreds of thousands. For a small model with a large vocabulary the ratio improves slightly, but the ordering of the argument never changes: the peakedness of a distribution cannot reduce the cost of having computed it.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop2-llama3-8b-config",
+    "flop-roofline-williams-2008",
+    "flop-nvidia-inference-optimization",
+    "flop-speculative-decoding",
+    "niche-medusa-paper"
+  ]
+}

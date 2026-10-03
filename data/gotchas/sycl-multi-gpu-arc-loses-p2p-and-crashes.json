@@ -1,0 +1,21 @@
+{
+  "id": "sycl-multi-gpu-arc-loses-p2p-and-crashes",
+  "type": "gotcha",
+  "name": "Multi-GPU Intel Arc under SYCL loses P2P, then crashes or hangs in device-to-device copies",
+  "class": "hardware",
+  "affects": [
+    "llama-cpp"
+  ],
+  "symptom": "Multi-card Intel Arc dGPU configurations fail in the peer-copy path in three distinct ways. (1) The OpenCL runtime has no P2P at all: ur_die with 'Experimental P2P feature is not implemented for OpenCL adapter'. (2) Under --split-mode tensor on a dual Arc Pro B70 with P2P working, llama.cpp crashes in dev2dev_memcpy with DEVICE_LOST. (3) A DFlash2 speculative draft model triggers a GPU driver TDR reset (VIDEO_TDR_TIMEOUT_DETECTED) on the same dual-card setup. Tensor-split on SYCL has separately produced severe token corruption and a drop to 4 t/s.",
+  "root_cause": "Two independent causes. The OpenCL failure is a genuine platform gap - the OpenCL adapter does not implement the experimental P2P feature, so the code path is unreachable rather than buggy. The DEVICE_LOST and TDR cases sit in the Level Zero ze_ipc peer-copy path, which on Arc is also where the UCX ze_ipc support is still unmerged upstream.",
+  "workaround": "Use Level Zero rather than the OpenCL adapter for multi-card Arc. Avoid speculative decoding on multi-card Arc until the TDR is resolved. Test multi-card Arc on Linux before deploying: several reports show the same hardware working on Linux and failing on Windows.",
+  "severity": "major",
+  "notes": "Applies to Arc Pro B60/B70 multi-GPU server work, where the pitch is two 24-32 GB cards in one box. Single-card Arc is unaffected. The same P2P gap is reported independently in vLLM (see vllm-arc-b60-no-pcie-p2p-kv-transfer), which makes it a platform property of Arc rather than two unrelated bugs in two projects - that cross-project agreement is the most load-bearing evidence in this record. No accelerator record exists in this repo for the Arc Pro B70, so affects lists only engines.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "noncuda-llamacpp-27198-sycl-dual-b70-device-lost",
+    "noncuda-vllm-53796-b60-p2p-kv"
+  ]
+}

@@ -4,10 +4,7 @@
   "name": "Enabling MTP speculative decoding together with prefix caching silently costs ~20% accuracy",
   "class": "config",
   "affects": [
-    "vllm",
-    "qwen3-6-35b-a3b",
-    "speculative-decoding",
-    "prefix-caching"
+    "vllm"
   ],
   "symptom": "On a finetuned Qwen3.6 35B-A3B (MoE) served with MTP (num_speculative_tokens=2) plus --enable-prefix-caching, internal classification accuracy drops ~20% versus the identical setup without prefix caching. Nothing errors; the server is simply faster and wrong.",
   "root_cause": "An interaction bug between the prefix-cache reuse path and the MTP speculative decoding path - likely how draft/MTP hidden states or KV blocks are reused across cached prefixes. The four-configuration ablation isolates it: plain decoding (baseline), + prefix caching (unchanged), + MTP (unchanged), + both (~20% drop). Neither feature alone is at fault.",
@@ -19,5 +16,10 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-vllm-issue-43559-mtp-prefix-caching-accuracy"
+  ],
+  "concepts": [
+    "prefix-caching",
+    "qwen3-6-35b-a3b",
+    "speculative-decoding"
   ]
 }

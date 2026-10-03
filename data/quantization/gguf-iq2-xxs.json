@@ -1,0 +1,29 @@
+{
+  "id": "gguf-iq2-xxs",
+  "type": "quantization",
+  "name": "GGUF IQ2_XXS (2.0625 bpw, almost-true 2-bit with a 16-bit scale per 256)",
+  "scheme": "gguf-q2_k",
+  "bits": "2.3824 measured avg (llama.cpp quantize README, Llama-3.1-8B); official tool string '2.06 bpw quantization'. block_iq2_xxs = { ggml_half d; uint16_t qs[QK_K/8]; } = 2 + 64 = 66 bytes / 256 = 2.0625 bpw",
+  "weight_group_size": 256,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-rtx-4090",
+    "intel-arc-b580",
+    "intel-arc-pro-b60"
+  ],
+  "kernels": [
+    "ggml dequantize_row_iq2_xxs + get_rows",
+    "ggml-cuda dequantize_mul_mat_vec / convert_mul_mat"
+  ],
+  "quality_delta": "Official tool string '2.06 bpw quantization' (qlab2-quantize-options-table); no controlled fp16 delta published. Null + note.",
+  "notes": "SCHEMA MISMATCH: there is no ggml/iq* value in the quantization scheme enum, so this record uses the closest existing value 'gguf-q4_k_m' (or 'gguf-q2_k') and puts the true type in `name` and `bits`. Requested enum additions are listed in the task report. Weight-only by construction: activations are promoted to q8_K (an intermediate dot-product format, not a storage format) and the matmul runs at fp16/bf16, so native_support is deliberately EMPTY and the whole accelerator ecosystem is emulated_support. No accelerator has an i-quant or k-quant path in silicon. COMMON TO ALL IQ-QUANTS, verified from ggml/src/ggml-common.h: they use the QK_K = 256 super-block like the K-quants, but instead of a UNIFORM integer grid they quantize to indices into a per-block CODEBOOK of 256 learned non-uniform 4-bit values (the 'i' in i-quant is for the codebook grid / i-quant from the ik_llama.cpp lineage). The index lookup is table-driven at dequant time, which is why they compress better than K-quants at the same nominal bits and why they dequantize more slowly - the dot product needs a gather from the codebook. This is a real throughput trade, not a free win. BACKEND SITUATION, verified: the CUDA library shipped in llamafile releases is size-optimized and OMITS the IQ-quant kernels (IQ1_*, IQ2_*, IQ3_*, IQ4_*); offloading an IQ-quantized model to an NVIDIA GPU therefore leaves those layers on the CPU with correct output but no GPU acceleration (qlab2-llamafile-support-docs). The Metal and ROCm builds are NOT size-optimized and include full IQ-quant GPU support - so an RX 7900 XTX on ROCm/HIP is in a materially better IQ position than an RTX 4090 on a stock llamafile build. Vulkan has no dedicated IQ-quant path. Upstream llama.cpp has per-type dequant kernels; ik_llama.cpp additionally ships the Trellis family (IQ1_KT/IQ2_KT/IQ3_KT/IQ4_KT, integer-base trellis, CUDA PR 113 / Metal PR 475 / NEON PR 471 / CPU PR 441) and _R4/_R16 row-interleaved variants. IQ2_XXS is the simplest i-quant and the header comment explains its cost precisely: '(Almost) \"true\" 2-bit quantization. Due to the need to use blocks as per ggml design, it ends up using 2.0625 bpw because of the 16-bit scale for each block of 256.' Structurally it is qs[QK_K/8] = 32 uint16 values = 64 bytes of 2-bit codebook indices plus a single fp16 d - there is no sub-block scale plane at all, unlike iq2_xs/iq2_s. That absence is exactly why it is the fastest 2-bit i-quant to dequantize and also why it is the weakest (one scale for 256 values). The 'XXS' naming convention across i-quants is 'extra extra small' = smallest size in the family. llama-quant.cpp maps LLAMA_FTYPE_MOSTLY_IQ2_XXS directly to GGML_TYPE_IQ2_XXS, and IQ2_XXS is also the promotion target for 8-expert (Mixtral) models when IQ1_S/IQ1_M is requested - 'if (n_expert == 8) { if IQ1_S or IQ1_M -> IQ2_XXS }', an explicit statement that Mixtral's experts do not tolerate 1-bit.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "qlab2-ggml-common-header",
+    "qlab2-quantize-options-table",
+    "qlab2-llamafile-support-docs"
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "id": "niche-guidance",
+  "type": "engine",
+  "name": "Guidance",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-guidance-repo"
+  ],
+  "repo": "guidance-ai/guidance",
+  "languages": [
+    "Python",
+    "Notebook",
+    "HTML",
+    "TypeScript"
+  ],
+  "license": "MIT",
+  "first_release_year": 2022,
+  "design_goal": [
+    "structured-output",
+    "ease-of-use",
+    "research",
+    "prompt-and-constraints-together"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "transformers",
+    "llama.cpp",
+    "openai",
+    "cuda",
+    "cpu"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "gguf"
+  ],
+  "notable_features": [
+    "A different mechanism from every other structured-generation library here. Guidance constrains generation AND allows backtracking over already-generated tokens by re-masking, rather than only restricting the next-token logits. That is why it can do prompt-plus-constraint interleaving in one pass",
+    "Constraint system covers any context-free grammar, so long as the backend model has full Guidance support (the README's own qualifier)",
+    "Programming-model API: `lm += gen(regex=...)` writes the constraint as part of the program, so constraints are interleaved with generation and with each other",
+    "Backend-agnostic by design - README names Transformers, llama.cpp and OpenAI, and the guiding principle is 'if you already have the backend required for your model, you can simply run pip install guidance'",
+    "Mock backend for testing: the README highlights local validation of candidate strings and testing full runs with the Mock model, which is the cheapest way to develop a constrained program without a GPU",
+    "MIT-licensed, 21787 stars - the largest community of the three structured-generation libraries",
+    "Last push 2026-05-21, release 0.3.2 on 2026-03-18, 633 open issues"
+  ],
+  "hardware_caveats": [
+    "The backtracking mechanism has a real cost the README does not quantify: re-masking and re-running already-generated tokens means recomputation. On a long constrained generation this can be a large multiple of a single forward pass, and the README gives no overhead table - unlike XGrammar, which at least claims near-zero",
+    "It is a library, not an engine. scheduling is 'none' and the backend list reflects which host backends Guidance can drive, not backends it implements",
+    "Full grammar support requires the backend to have 'full support for Guidance'. Against a plain OpenAI-compatible HTTP endpoint you get remote generation without the re-masking machinery, so the interesting features degrade",
+    "It is NOT the default structured backend in any major serving engine. vLLM's default is XGrammar (see [[niche-xgrammar]]). If you want Guidance's semantics in production you are either in-process or writing your own integration",
+    "Its own README comparison, as rendered in [[niche-lm-format-enforcer]]'s table, marks Guidance as lacking batched generation and beam search and not integrating into existing pipelines - both are real limits on using it in a server",
+    "Release cadence has slowed: 0.3.2 shipped 2026-03-18 and the last push was 2026-05-21, roughly five months before this record. Still maintained, not urgent",
+    "The repo's language breakdown is dominated by Jupyter Notebooks (29MB) over Python (884KB) - it is a research-and-teaching project that happens to be usable in production, and the docs reflect that"
+  ],
+  "best_for": [
+    "Writing programs that interleave constraints with generation, which no other library in this slice does - regex fields appearing mid-output, conditions on later fields constraining earlier ones",
+    "Iterating on a constrained prompt cheaply using the Mock backend, with no GPU",
+    "Structured extraction with a grammar you control fully rather than a JSON schema subset",
+    "Reading the clearest statement of why re-masking-based steering and logit-restriction-based constraint enforcement are different problems"
+  ],
+  "avoid_for": [
+    "Production per-token paths in a serving engine - use the engine's default structured backend",
+    "Batched generation or beam search, which its peers' comparison tables mark as unsupported",
+    "Remote HTTP backends where you need the re-masking features",
+    "Latency-critical generation, given the unquantified recomputation cost of backtracking"
+  ],
+  "docs_url": "https://github.com/guidance-ai/guidance",
+  "notes": "Fourth of the structured-generation records (with [[niche-xgrammar]], [[niche-outlines]], [[niche-lm-format-enforcer]]) because it is the one with a genuinely different mechanism: it constrains and backtracks rather than only restricting logits. That mechanism is why it survives alongside the logit-restriction libraries rather than being displaced by them. All metadata from the GitHub API on 2026-10-03."
+}

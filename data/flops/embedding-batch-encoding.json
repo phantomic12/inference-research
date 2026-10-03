@@ -1,0 +1,45 @@
+{
+  "id": "embedding-batch-encoding",
+  "type": "flop",
+  "name": "Embedding / batch encoding: BERT-style bi-encoder over documents, compute-bound at batch 1",
+  "class": "prefill_attention",
+  "arithmetic_intensity": "Batch encoding a corpus for retrieval is a bi-encoder forward per document with no KV cache, and like cross-encoder reranking it is compute-bound well before batch 1 - but unlike reranking its corpus cost is LINEAR, because each document is encoded once and its vector cached. The AI has two distinct regimes separated by an exactly computable batch threshold. With P parameters and t tokens per document: flops = B*2*P*t; bytes = 2*P (weights, read once for ALL B documents) + activation traffic. Ignoring activations, AI = B*t flop/byte. On H100 SXM with ridge 295.4 flop/byte (989.5 TFLOPS / 3.35 TB/s), the threshold is B*t = 295.4. Worked with BERT-base geometry (P = 113.2M, derived from d=768, 3072 intermediate, 12 layers, 12 heads x 64 head_dim) and the standard 128-token chunking used by sentence-embedding models: at B = 1, t = 128, AI = 128 flop/byte - just below the ridge, so a single-document encode is memory-bound; at B = 3, AI = 384 > 295.4 and it is compute-bound. At B = 8, AI = 1,024 (3.5x the ridge); at B = 64, AI = 8,192 (28x); at B = 256, AI = 32,768 (111x). Adding activation traffic lowers these: counting roughly 4 read/write passes over a B*t*d activation at bf16, at B = 1, t = 128 the activation term is ~4*128*768*2 = 786 KB against 226 MB of weights, so it is negligible - weights really do dominate - and the B*t figure stands. The practical statement: embedding a corpus is compute-bound for essentially every batch size a real encoder runs at, because a corpus is thousands of documents and the threshold B*t = 295 is crossed within the first few. Attention contributes almost nothing at these lengths: bidirectional attention flops = 2*2*n_q*dh*t^2 = 4*12*64*128^2 = 50.3 MFLOP against 2*113.2e6*128 = 29.0 GFLOP of GEMM = 0.17%. The crossover is L* = P_layer/(n_q*dh) = 9.44M/768 = 12,288 tokens, again far past realistic chunk sizes.",
+  "bound_by": "compute",
+  "scales_with": [
+    "batch_size B (AI = B*t - the threshold is B*t = 295.4 on H100, so B >= 3 at t = 128, and corpus work pushes B far above that)",
+    "chunk_length t (multiplies AI directly and linearly; long-document embedding without chunking raises AI and flops together)",
+    "corpus_size (flops scale LINEARLY, unlike reranking's quadratic - each document is encoded exactly once and the vector is cached)",
+    "model_size P (linear in flops; a 110M encoder is ~3x cheaper per document than a 300M one)",
+    "pooling_and_output_projection (a mean-pool or CLS head is negligible; a large projection head is a GEMM like any other)",
+    "precision (fp8/int8 encoder inference: at AI of thousands of flop/byte this converts directly to throughput)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090",
+    "google-tpu-v5e",
+    "nvidia-l4",
+    "amd-radeon-pro-vii"
+  ],
+  "workarounds": [
+    "Sort documents by length and batch equal-length buckets, so short documents do not pad a batch out to the longest one - padding is the dominant waste in naive batch encoding and it is pure loss because padding tokens contribute flops and no information",
+    "Large batch sizes: AI = B*t makes this the workload where batching pays most directly and immediately, with no scheduling subtlety",
+    "fp8 / int8 encoder inference, which is a straight FLOPS multiplier on an already compute-bound step",
+    "FlashAttention plus fused bias-GELU epilogues for the encoder stack",
+    "ONNX/TensorRT-style graph fusion so the 12 layers of small GEMMs plus norms plus activations compile to a few large kernels instead of hundreds of tiny memory-bound ones",
+    "Offline / batch scheduling of the whole corpus rather than per-request, which frees the scheduler to fill batches to the compute-bound threshold",
+    "Distillation or a smaller encoder, since the corpus cost is linear in P and the corpus is fixed - the one workload where changing the model is easier than changing the hardware",
+    "Deduplicate documents before embedding; at a linear-in-corpus bill this is a direct cost reduction"
+  ],
+  "notes": "CLASSIFICATION ARGUMENT, since the enum has no embedding-encoding class and this was filed under prefill_attention: batch encoding is structurally identical to a prefill pass - one forward over a sequence, weights read once for all rows, no incremental state, no cache. The distinguishing feature versus generative prefill is only that there is no subsequent decode phase, so the entire request is a single compute-bound forward. It is filed here rather than under 'embedding' because that existing record is about the token-embedding TABLE (a gather and the LM-head GEMM), which is a different cost with a different regime - that one is memory-bound at AI ~ 0 to 1, this one is compute-bound at AI of hundreds to tens of thousands. Conflating them would be a real error: the term 'embedding' in an inference stack means both the table lookup and the encoder that produces the vector, and they have opposite roofline behaviour. The decision-relevant number is the threshold B*t = 295.4 on H100 (246.7 on MI300X: 1307.4/5300; 163.9 on RTX 4090: 165.2/1008; 240.5 on TPU v5e: 197/819), which is the product, not either factor alone. A service encoding one 128-token document at a time is memory-bound; the same service encoding a 10,000-document corpus in batches of 256 is 111x compute-bound. Both are the 'same workload' and they need different hardware. Procurement consequence: embedding a corpus is the clearest case in this repo where the right accelerator is chosen by FLOPS per dollar rather than bandwidth per dollar, since the AI is high and rising with batch. Contrast with cross-encoder-reranking, which shares the AI profile but has a quadratic corpus bill; the two together are the standard two-stage retrieval stack and their cost asymmetry is the reason bi-encoders are researched first and cross-encoders are used only on a top-k.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop2-bert",
+    "flop2-sbert",
+    "flop-roofline-williams-2008",
+    "flop-nvidia-h100-specs",
+    "flop-flashattention"
+  ]
+}

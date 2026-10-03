@@ -1,0 +1,24 @@
+{
+  "id": "hip-wrong-logits-when-prompt-exceeds-ubatch",
+  "type": "gotcha",
+  "name": "llama.cpp HIP on gfx1151 returns wrong-but-plausible logits for any prompt longer than n_ubatch, and the default n_ubatch makes it almost universal",
+  "class": "kernel",
+  "affects": [
+    "llama-cpp",
+    "gguf-q4-k-m"
+  ],
+  "symptom": "Any prompt longer than n_ubatch produces badly wrong logits on HIP/ROCm on gfx1151 - no error, no warning, no crash, and the numbers look plausible. Default n_ubatch is 512, so in practice almost every real prompt is affected. WikiText-2 perplexity, same 2-item set, HIP vs Vulkan on the same machine: BF16 84.7476 vs 13.8167; Q8_0 110.2795 vs 14.4350; Q4_K_M 92.7499 vs 12.9609; Q4_0 112.7851 vs 12.1284. The 31B case is how it was first noticed - ppl 93.86 on HIP vs 7.40 on Vulkan, which reads as a weak model rather than a broken backend.",
+  "root_cause": "Not root-caused. The reporter's diagnostic discipline is the contribution: BF16 involves no dequantisation and is affected too, which rules out the quantized-matmul kernel and makes this a scheduling/batching bug on the HIP path rather than a quantization bug. The attached minimal reproducer decodes one prompt twice using two contexts differing in exactly one parameter (n_ubatch), with identical token ids - a correct backend must return the same distribution both times - and reports how often the two runs disagree on the argmax, mean and worst KL divergence per position, and largest absolute logit difference.",
+  "workaround": "Check perplexity across the two backends on the same file before interpreting any HIP/gfx1151 quality number, and prefer a larger n_ubatch than the default if you must use HIP. Because the output stays plausible, do not use eyeballed generation quality as evidence that a backend is correct - use the cross-backend perplexity delta, which here is a 6-8x difference and impossible to miss. Reproduce with the issue's public-llama.h reproducer before filing, since it isolates n_ubatch as the single variable.",
+  "severity": "major",
+  "notes": "The BF16-also-affected fact is what makes this worth separating from every quantized-kernel gotcha in the repo: do not reach for a quantization explanation here. The n_ubatch-only reproducer is a good general technique for this whole class - change exactly one batching parameter and diff the logits. Affects gemma-4-E2B-it in BF16, Q8_0, Q4_K_M and Q4_0, plus Qwen3.5-0.8B Q4_K_M, on ROCm 7.2.1 / HIP 7.2.53211-e1a6bc5663 with -O3 -DNDEBUG --offload-arch=gfx1151.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-llamacpp-28211-hip-ubatch-wrong-logits"
+  ],
+  "concepts": [
+    "rocm"
+  ]
+}

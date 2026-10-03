@@ -1,0 +1,67 @@
+{
+  "id": "niche-llm-c",
+  "type": "engine",
+  "name": "llm.c",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-llmc-repo"
+  ],
+  "repo": "karpathy/llm.c",
+  "languages": [
+    "C",
+    "CUDA",
+    "C++",
+    "Python"
+  ],
+  "license": "MIT",
+  "first_release_year": 2024,
+  "design_goal": [
+    "teaching",
+    "minimal-deps",
+    "research",
+    "readability"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "cpu-avx2"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "pytorch-bin"
+  ],
+  "notable_features": [
+    "GPT-2 and GPT-3 pretraining in plain C/CUDA with the stated goal of no 245MB of PyTorch and no 107MB of cPython. The build is a plain makefile",
+    "A ~1,000-line fp32 CPU reference implementation in a single file (train_gpt2.c) that is explicitly described as frozen in time and portable",
+    "A parallel PyTorch reference (train_gpt2.py) described as a slightly tweaked nanoGPT, so every CUDA change has a readable PyTorch counterpart to diff against",
+    "An early fp32 CUDA path frozen in time for people who want to step through CUDA in an IDE (the README's own debugging tip: swap -O3 for -g)",
+    "The README keeps the repo to C and CUDA only and asks that ports to other languages live in separate repos, with a 'notable forks' section",
+    "Documentation-through-discussion: Discussion #481 is the recommended GPT-2 124M walkthrough"
+  ],
+  "hardware_caveats": [
+    "The README says it plainly: 'Current focus is on pretraining'. There is no documented inference or serving path, no OpenAI-compatible server, no continuous batching, no KV cache management, no quantization. Recorded here as an engine because it is routinely cited as one, but it is a training codebase",
+    "CUDA only for the GPU path, plus a CPU fp32 reference that the README admits is 'an even earlier checkpoint in the history of llm.c'. No ROCm, no Metal, no Vulkan, no Windows GPU path documented",
+    "fp32 is the CPU default; there is no mixed-precision story short of the CUDA build",
+    "Maintenance has slowed: created 2024-04-08, last push 2025-06-26, and ZERO GitHub releases ever published. 164 open issues",
+    "Absolute peak performance is explicitly not the goal - the comparison in the README is to PyTorch Nightly, where llm.c is 'a bit faster (by about 7%)'. Anyone quoting llm.c for speed is misreading the project",
+    "Reproducing models is limited to the GPT-2 and GPT-3 miniseries"
+  ],
+  "best_for": [
+    "Understanding exactly what a transformer forward and backward pass costs, line by line, with nothing hidden behind a framework",
+    "Learning CUDA GEMM and attention kernel structure by reading a complete, small, correct implementation",
+    "Establishing the memory-bandwidth argument for decode: llm.c and its sibling nanoGPT are where the arithmetic-intensity arithmetic that governs batch-1 decode gets made explicit",
+    "The best free curriculum in the field, and the reason 31093 people have starred a repo that has not shipped in over a year"
+  ],
+  "avoid_for": [
+    "Serving anything - it does not do inference",
+    "Inference research, despite being cited for it - read llama.cpp or vLLM instead",
+    "Production, obviously; also anything needing mixed precision, multiple GPUs or a modern model architecture"
+  ],
+  "docs_url": "https://github.com/karpathy/llm.c",
+  "notes": "Included because the task list and much of the blogosphere present llm.c as an inference runtime. It is not, and saying so is the useful part of the record. The genuinely relevant inference content lives in the sibling nanoGPT (created 2022-12-28, last push 2025-11-12, MIT) which llm.c's train_gpt2.py is derived from; nanoGPT has not been given its own record here. All metadata from the GitHub API on 2026-10-03."
+}

@@ -1,0 +1,49 @@
+{
+  "id": "prefix-cache-hit-miss",
+  "type": "flop",
+  "name": "Multi-turn chat with prefix caching: two flop profiles from one workload (cache hit vs miss)",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "A single workload with two genuinely different arithmetic-intensity profiles, and conflating them is the single most common error in prefix-cache benchmarks. MISS path = full prefill: AI = g*L/2 flop/byte for the attention term (Llama-3-8B GQA-4 at L = 2,048 gives 4*2048/2 = 4,096 flop/byte) and the whole step runs at ~124,600 flop/byte for a 32k ingest - firmly compute-bound. HIT path = the cached prefix is already in the KV cache, so the only remaining work is the GEMM for the NEW tokens plus one attention pass of t_new query rows against the whole cached sequence. For the GEMM part of the hit path, weights are still read once and now serve t_new rows instead of B rows, so AI = t_new exactly (the same identity as decode_gemm with B replaced by t_new): on Llama-2-70B, t_new = 8 gives AI = 8 flop/byte, t_new = 64 gives AI = 64. That is still memory-bound, because the model has 68.98B parameters = 136.9 GB of bf16 weights and that read is unavoidable. The decisive difference is on the ATTENTION side. On the miss path, attention flops = 2*n_q*dh*L^2 grow quadratically in the FULL prompt. On the hit path, attention flops = 2*n_q*dh*t_new*L, which is linear in L, and KV bytes read drop from O(L^2) of compute to O(L) of bytes. Concretely for Llama-2-70B at a 4,096-token cached prefix with t_new = 64: miss-path attention = 2*8192*4096^2 = 275 GFLOP; hit-path attention = 2*8192*64*4096 = 4.3 GFLOP, a 64x reduction. And the KV READS, which dominate a long-context decode step: the hit path reads the same 4096 KV positions it must, but only once per new token rather than recomputing over all 4096 rows. So the two paths sit in different regimes at the same moment: the hit path's GEMM is memory-bound at AI = t_new while its attention is far more compute-dense than a normal decode step's because it has L columns to chew on. The result is that a cache hit makes a request dramatically faster without making it compute-bound, and a cache miss makes it slower without changing its regime.",
+  "bound_by": "both",
+  "scales_with": [
+    "prefix_cache_hit_rate (the dominant variable: a hit replaces a full prefill with a t_new-token forward)",
+    "t_new (new tokens after the shared prefix - sets the hit path's GEMM AI directly)",
+    "cached_prefix_length L (sets the hit path's attention work, linearly in L and in t_new)",
+    "turn_number (a k-turn conversation accumulates a prefix, so later turns hit more and ask for less)",
+    "cross_request_sharing (system prompts and few-shot blocks are shared across ALL requests, so a deployed multi-tenant service can have a high steady-state hit rate that a single-user benchmark will never show)",
+    "cache_eviction_and_compression (evicting a block converts a hit into a miss; that is the cost of memory pressure)",
+    "prefill_chunk_size (on the miss path, chunking changes the shape but not the total flops)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-b200",
+    "google-tpu-v5e",
+    "amd-radeon-pro-vii",
+    "nvidia-rtx-4090"
+  ],
+  "workarounds": [
+    "Radix / prefix cache keyed on token blocks, which is what makes hit-rate high enough to matter for shared prefixes (SGLang RadixAttention, arXiv 2312.07104)",
+    "Automatic prefix caching so hits require no application cooperation (vLLM: 'a new query can directly reuse the KV cache if it shares the same prefix with one of the existing queries, allowing the new query to skip the computation of the shared part')",
+    "PagedAttention so cached blocks are shareable by reference and never copied on a hit - a hit must be O(1) in bytes, and contiguous reallocation would break that (arXiv 2309.06180)",
+    "Chunked prefill for the MISS path so an uncached long prefix does not stall decode ITLs (SARATHI, arXiv 2308.16369)",
+    "Continuous batching so both hit-path and miss-path requests share a step and the hit path's low-AI GEMM is amortized against other work",
+    "Keep the shared prefix in a lower-precision KV cache, since a cached prefix is read every step and its dtype is a pure bytes multiplier",
+    "Measure hit rate and miss cost SEPARATELY - a benchmark that reports only aggregate TTFT on a warm cache is measuring something different from a cold-start service",
+    "CUDA Graphs on the hit path: its shapes are small and static, which is exactly the regime graphs were built for"
+  ],
+  "notes": "The most useful thing this record captures is that vLLM's own documentation states the asymmetry that practitioners most often get wrong: prefix caching 'only reduces the time of processing the queries (the prefilling phase) and does not reduce the time of generating new tokens (the decoding phase)', so it 'does not bring performance gain when vLLM spends most of the time generating answers to the queries (e.g. when the length of the answer is long)' or when queries share no prefix. So a prefix cache improves TTFT and does nothing for ITL or TPOT, and its value is bounded by the prompt-to-generation length ratio in the workload. Classified as custom_kernel rather than prefill_attention because neither path is a pure prefill: the workload is a MIXTURE, and the mixture ratio is a scheduling property. The hit path is genuinely its own profile - weights read once for t_new rows (AI = t_new), attention over the full cached sequence at 2*n_q*dh*t_new*L flops - and it is memory-bound on its GEMMs while being unusually compute-dense on its attention. Engineering consequences: (1) report hit rate with any prefix-cache speedup, and a speedup without a hit rate is not interpretable; (2) the steady-state hit rate in a multi-tenant service is dominated by shared system prompts, so single-connection benchmarks systematically understate the benefit; (3) the miss path is the one to optimize for cold-start latency and it is an ordinary prefill. Caveat: this record counts the arithmetic, not the implementation overhead. In practice a hit is only free if the lookup and block mapping are cheap; a linear scan of the radix tree on the critical path, or a hash recomputation over the whole prefix, can eat the benefit on short hits. That cost lives in custom-kernel-launch-overhead, not here.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop2-vllm-apc",
+    "flop-sglang",
+    "flop-pagedattention-vllm",
+    "flop2-sarathi",
+    "flop-orca-osdi22",
+    "flop2-llama2-70b-config",
+    "flop2-llama3-8b-config",
+    "flop-nvidia-cuda-graphs"
+  ]
+}

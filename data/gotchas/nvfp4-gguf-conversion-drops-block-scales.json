@@ -1,0 +1,25 @@
+{
+  "id": "nvfp4-gguf-conversion-drops-block-scales",
+  "type": "gotcha",
+  "name": "Converting an NVFP4 checkpoint to GGUF silently drops most per-tensor scales, and the model then emits one repeated token for every prompt",
+  "class": "toolchain",
+  "affects": [
+    "llama-cpp",
+    "nvfp4"
+  ],
+  "symptom": "RedHatAI/Muse-Glimmer-30B-NVFP4 converted with convert_hf_to_gguf.py --outtype q8_0 produces a GGUF that does not load: 'check_tensor_dims: tensor blk.0.attn_q_norm.weight not found' / 'llama_model_load_from_file_impl: failed to load model'. The reporter fixed items 1 and 2 locally so the file loads on an unpatched build - and then every prompt returns a single repeated token: CUDA 'The capital of France is' -> '22222222222222222222' and '1, 2, 3, 4, 5, 6,' -> '22222222222222222222'; CPU -> '33333333333333333333'. K-quant conversions of the same model work; only the NVFP4 path is affected.",
+  "root_cause": "Three separate defects in the NVFP4 conversion path. (1) _generate_nvfp4_tensors in conversion/base.py removes quantized tensors from model_tensors, so modify_tensors never sees them; Muse Glimmer has no QK-norm weights of its own, so conversion/muse_glimmer.py synthesizes attn_q_norm and attn_k_norm there, but it keys on self_attn.q_proj.weight which is quantized and already removed - the tensors are never written and the load fails. (2) The same bypass skips _unpermute_for_rope on q_proj and k_proj, so Q and K keep the transformers layout. (3) build_lora_mm in src/llama-graph.cpp applies the per-tensor scale only when the caller passes it. The muse-glimmer graph passes it for wo and output only; attn_gate and the three FFN projections pass NULL, so those weights run unscaled. The scales are around 4e-5 - which is why the output collapses to a single repeated token rather than degrading gracefully. qwen3.cpp passes all three FFN scales.",
+  "workaround": "Treat an NVFP4-to-GGUF conversion as unverified until you check it: confirm every quantized projection actually receives its scale in the graph, and sanity-test with a factual prompt whose answer is a single known token - a repeated-token collapse is the tell. Do not assume a conversion that loads is a conversion that is correct; on this checkpoint loading and being right are separate properties.",
+  "severity": "major",
+  "notes": "The most useful structural lesson is that the failure is silent-and-wrong on one half of the checkpoint and a hard load error on the other, so fixing the load error (items 1 and 2) does NOT make the conversion correct - item 3 is a separate defect found only after the model started running. Reproduced on build 10438 / b94041a, Linux CUDA on RTX PRO 4000 Blackwell SFF (SM120) and macOS arm64 on M3 Max. Note the quantization type requested at conversion time (--outtype q8_0) is unrelated to the NVFP4 weight scales being dropped - the conversion still has to carry them.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-llamacpp-27178-nvfp4-gguf-scales-dropped"
+  ],
+  "concepts": [
+    "convert-hf-to-gguf",
+    "gguf"
+  ]
+}

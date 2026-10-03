@@ -6,11 +6,8 @@
   "affects": [
     "vllm",
     "mxfp4",
-    "compressed-tensors",
     "nvfp4",
-    "marlin-moe",
-    "nvidia-b200",
-    "sm100"
+    "nvidia-b200"
   ],
   "symptom": "A compressed-tensors MXFP4 checkpoint with input_activations: null (i.e. MXFP4 weights, group_size=32, no activation quantization) served on B200 with --dtype bfloat16 logs 'Using FlashInferMxfp4LinearKernel for MXFP4 GEMM' and then scores far below a weight-only quant should: Qwen3-8B on AIME-24 51.25%, AIME-25 42.08%, GSM8K 93.86%, MATH-500 95.13%, avg 70.58%, against a BF16 baseline of 75.00 / 62.71 / 95.15 / 96.60 / 82.36. Nothing errors. Manually switching to MarlinMxfp4Kernel recovers AIME-24 66.67%, AIME-25 55.83%, GSM8K 94.62%, MATH-500 95.53%, avg 78.16%.",
   "root_cause": "Dispatch keys on the GPU having native FP4 rather than on what the checkpoint declares. When the compressed-tensors MXFP4 scheme has input_quant is None / input_activations: null, vLLM still routes to the FlashInfer MXFP4 linear kernel, which is the W4A4 path, quantizing activations to FP4 that the checkpoint never asked to be quantized. The intended contract is MXFP4 weights + no activation quantization -> MXFP4 W4A16 method -> BF16/FP16 activations -> Marlin MXFP4 W4A16 kernel. Only a checkpoint that explicitly declares compatible MXFP4 activation quantization should reach the native FP4 kernel.",
@@ -22,5 +19,10 @@
   "updated": "2026-10-03",
   "sources": [
     "qgotcha-vllm-56770-mxfp4-w4a16-as-w4a4"
+  ],
+  "concepts": [
+    "compressed-tensors",
+    "marlin-moe",
+    "sm100"
   ]
 }

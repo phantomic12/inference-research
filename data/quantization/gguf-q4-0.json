@@ -21,14 +21,15 @@
     "ggml-cpu AVX2/AVX-512 dequant+dot kernels"
   ],
   "quality_delta": "Llama-3.1-8B-Instruct (quant-gguf-kquant-study): WikiText-2 ppl 7.74 vs 7.32 F16; GSM8K 71.03 vs 77.63 (-6.60); IFEval 71.88 vs 78.93; mean 67.98 vs 69.47; size 4438 MiB (-71.03%).",
-  "notes": "Legacy format: symmetric block-wise 4-bit over blocks of K=32, one FP16 scale per block, no zero-point, codes in [-8,7] packed as nibbles (quant-gguf-kquant-study). It predates k-quants and has no super-block hierarchy. Q4_0 is *worse* on perplexity than both Q4_K_S (7.62) and Q4_K_M (7.56) at comparable size - the direct evidence that format design beats the nominal bit-width label. Weight-only: activations stay in FP16/BF16 at runtime, so there is no '4-bit activations with hardware support' claim to make here. ggml has bespoke dequantize+gemm kernels per type, but no accelerator has a GGUF/k-quant path in silicon; everything is dequantized on the fly. vLLM explicitly labels its GGUF support experimental and under-optimized and positions it as a memory-footprint tool (quant-vllm-gguf-doc). Q4_0 does have good prompt-processing throughput (97.35 pp512 vs 79.57 F16 in that study) but poor decode (4.36 vs 2.83).",
+  "notes": "Legacy format: symmetric block-wise 4-bit over blocks of K=32, one FP16 scale per block, no zero-point, codes in [-8,7] packed as nibbles (quant-gguf-kquant-study). It predates k-quants and has no super-block hierarchy. Q4_0 is *worse* on perplexity than both Q4_K_S (7.62) and Q4_K_M (7.56) at comparable size - the direct evidence that format design beats the nominal bit-width label. Weight-only: activations stay in FP16/BF16 at runtime, so there is no '4-bit activations with hardware support' claim to make here. ggml has bespoke dequantize+gemm kernels per type, but no accelerator has a GGUF/k-quant path in silicon; everything is dequantized on the fly. vLLM explicitly labels its GGUF support experimental and under-optimized and positions it as a memory-footprint tool (quant-vllm-gguf-doc). Q4_0 does have good prompt-processing throughput (97.35 pp512 vs 79.57 F16 in that study) but poor decode (4.36 vs 2.83). LEGACY BLOCK LAYOUT, verified from ggml/src/ggml-common.h: QK4_0 = 32 values per block, block_q4_0 = { ggml_half d; uint8_t qs[QK4_0/2]; } = 2 + 16 = 18 bytes / 32 values = 4.5 bpw, symmetric (delta only, no zero point). QK8_0 = 32, block_q8_0 = { ggml_half d; int8_t qs[QK8_0]; } = 2 + 32 = 34 bytes / 32 = 8.5 bpw. Both are 32-value blocks with a single fp16 scale - that is the entire difference from the K-quants, which use 256-value super-blocks with quantized sub-block scales.",
   "status": "verified",
   "confidence": 0.78,
   "updated": "2026-10-03",
   "sources": [
+    "qlab2-ggml-common-header",
+    "quant-ggml-header",
     "quant-gguf-kquant-study",
     "quant-llamacpp-quantize-readme",
-    "quant-ggml-header",
     "quant-vllm-gguf-doc"
   ]
 }

@@ -1,0 +1,15 @@
+{
+  "id": "pd-gh-vllm-52617-lmcache-pd-hit-diverges",
+  "type": "source",
+  "name": "vLLM issue #52617: LMCache P/D receiver reports a full KV-cache hit but decoding diverges from the monolithic baseline at token 0",
+  "url": "https://github.com/vllm-project/vllm/issues/52617",
+  "publisher": "vllm-project/vllm",
+  "kind": "forum",
+  "published": "2026-08-17",
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "Silent correctness failure, open as of 2026-10-03. LMCache P/D disaggregation 'returns incorrect generation results after an apparently successful remote KV-cache transfer': both servers start, return HTTP 200, stay healthy, report P/D mode enabled, report the NIXL/UCX channel active, and 'Report complete prompt KV-cache hits on the decode receiver' - and yet generation 'diverges from an equivalent monolithic vLLM server starting at generated token 0'. Wrong output characteristically reproduces tokens from the middle of the prompt body. Quantified: '6/6 comparisons failed across two independent vLLM 0.26.0 runs. 3/3 comparisons failed in a separate vLLM 0.27.1 run. Total: 9/9 LMCache P/D versus monolithic comparisons failed. Native NIXL and Mooncake passed the identical monolithic-equivalence oracle.' Env: Qwen3-0.6B, bfloat16 model and KV, TP=1, eager, L40S prefill + independent L40S decode, NIXL 1.3.2 / UCX, LMCache 0.5.3-g140819c9, vLLM 0.26.0 and 0.27.1. This is the cache-hit-path-differs-from-cold-run case, with a control that isolates the connector.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

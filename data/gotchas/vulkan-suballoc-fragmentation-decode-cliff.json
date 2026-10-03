@@ -1,0 +1,20 @@
+{
+  "id": "vulkan-suballoc-fragmentation-decode-cliff",
+  "type": "gotcha",
+  "name": "Vulkan decode collapses ~78% at long context from suballocation fragmentation; llama-bench does not see it",
+  "class": "measurement",
+  "affects": [
+    "llama-cpp"
+  ],
+  "symptom": "Vulkan decode on an RX 7900 XTX falls off a cliff between 98K and 131K context: Qwen3.8-27B Q4_K_XL with q8_0 KV and FA on measures 40.4 t/s at ctx 65536, 40.8 t/s at 98304, and 8.9 t/s at 131072. Raising GGML_VK_SUBALLOCATION_BLOCK_SIZE to 4294967296 returns 131072 to 40.3 t/s. A second reporter saw prompt processing improve 236 -> 593 t/s on an RTX 9060 XT with the same setting.",
+  "root_cause": "The Vulkan backend's default ~1 GiB suballocation block size fragments a large KV and compute pool into 30+ independent VkBuffers (GGML_VK_MEMORY_LOGGER=1 shows ~1018 MiB allocations, 21.55 GiB total, all resident in VRAM with only 152 MiB on the host). Batch-1 decode touches the whole pool every step and pays per-buffer binding and submission overhead on each of 30+ buffers, multiplying per-token cost about 4.5x. The cliff appears where the pool first crosses the critical block count, not where it crosses a memory limit.",
+  "workaround": "Export GGML_VK_SUBALLOCATION_BLOCK_SIZE=4294967296 (or higher) before launching llama-server or llama-bench. Beware the trade-off the thread surfaces: larger blocks raise host-memory usage when the pool does not fit in VRAM.",
+  "severity": "major",
+  "notes": "The measurement trap is the point of this record: `llama-bench -p 512 -n 128` stays at 40.4 t/s even at the broken setting, because small actual KV usage never triggers the fragmentation. A short synthetic benchmark will certify a configuration that collapses by 78% in serving. Benchmark at the context length you will actually run. CAVEAT: a llama.cpp contributor (tczank) reproduced the fragmentation almost exactly on Linux/RADV but reports decode does not move in either direction, so 'fragmentation causes the cliff' is the reporter's hypothesis and remains contested. Status kept verified for the symptom and the workaround, both of which are independently reproduced by three different reporters; the mechanism is the contested part.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "noncuda-llamacpp-27734-vulkan-suballoc-cliff"
+  ]
+}

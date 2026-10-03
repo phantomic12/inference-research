@@ -5,9 +5,7 @@
   "class": "framework",
   "affects": [
     "vllm",
-    "nvidia-h100-nvl",
-    "confidential-computing",
-    "tdx"
+    "nvidia-h100-nvl"
   ],
   "symptom": "On an H100 NVL in CC mode inside a TDX guest, vLLM 0.29.0 with the default V2 GPU model runner starts and serves, but every response is garbage - '!!!!!!!!' (token id 0 repeated) or '[][][][]'. No error or warning anywhere. The same model is correct under plain transformers on the same GPU, so it is easy to blame the GPU or the CC setup.",
   "root_cause": "The V2 runner feeds input_ids, positions and block tables to the GPU through UVA views of pinned host memory (vllm/v1/worker/gpu/buffer_utils.py -> UvaBuffer -> get_accelerator_view_from_cpu_tensor -> torch.ops._C.get_cuda_view_from_cpu_tensor). Under GPU CC the device cannot access guest memory directly; all host/device traffic goes through the driver's encrypted bounce buffer, so those views are stale.",
@@ -19,5 +17,9 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-vllm-issue-57224-cc-mode-garbage-output"
+  ],
+  "concepts": [
+    "confidential-computing",
+    "tdx"
   ]
 }

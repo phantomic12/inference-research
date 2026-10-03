@@ -1,0 +1,62 @@
+{
+  "id": "niche-medusa",
+  "type": "engine",
+  "name": "Medusa",
+  "status": "deprecated",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-medusa-repo",
+    "niche-medusa-paper"
+  ],
+  "repo": "FasterDecoding/Medusa",
+  "languages": [
+    "Python",
+    "Jupyter Notebook"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "low-latency",
+    "research",
+    "teaching"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "Speculative decoding by multiple decoding heads on a single frozen base model, so there is no separate draft model and no draft-model training run",
+    "Medusa-1 fine-tunes only the new heads, leaving the original model untouched; Medusa-2 adds full-model training via a special recipe; self-distillation lets Medusa be added to any already-fine-tuned LLM without the original training data",
+    "Training pipeline delegated to an axolotl fork, per the README",
+    "Install as `pip install medusa-llm` or editable from source; the README warns the pip version may not be the latest",
+    "Technical report arXiv:2401.10774 (2024-01-19) is the primary source for the mechanism",
+    "2770 stars - still the most-cited open implementation of the multi-head drafting idea"
+  ],
+  "hardware_caveats": [
+    "MAINTENANCE HAS STOPPED. Last push 2024-06-25; the only release ever tagged is v0.1 from 2023-09-11. That is a >2-year gap against today. 100 open issues, no fix traffic. Recorded as deprecated on that evidence, not on a deprecation notice - the project never posted one",
+    "The README's hard limit, quoted: 'We currently support single-GPU inference with a batch size of 1, which is the most common setup for local model hosting.' Batch size 1 is not a serving configuration. scheduling is 'none'",
+    "CUDA only in practice. Python plus notebook; the implementation rides on the host framework's kernels, and there is no ROCm, Metal or Vulkan story anywhere in the README",
+    "Requires per-model Medusa heads. You cannot point it at a stock HuggingFace checkpoint - each model needs its own heads trained, which is the deployment cost the paper's numbers hide",
+    "EAGLE (see [[niche-eagle]]) superseded the idea: EAGLE-1/2/3 reached higher acceptance rates and is now integrated into vLLM, SGLang and vllm-project/speculators. vLLM also ships n-gram and MTP speculative paths that need no extra training at all",
+    "The honest current use is reading the paper and the ~400-line implementation to understand draft acceptance rates; running it is a research exercise on a single GPU"
+  ],
+  "best_for": [
+    "Understanding draft acceptance rates and why multi-head drafting was a dead end relative to feature-level drafting (EAGLE) - the clearest possible teaching artefact",
+    "Single-GPU, batch-1 latency experiments on a model you have heads for",
+    "Studying head-only fine-tuning (Medusa-1) versus full-model training (Medusa-2) and self-distillation as a technique"
+  ],
+  "avoid_for": [
+    "Anything new - EAGLE and the built-in vLLM/SGLang speculative paths supersede it",
+    "Serving, concurrent or batched workloads - batch size 1 is the documented ceiling",
+    "Multi-GPU, ROCm, Metal, or any production deployment"
+  ],
+  "docs_url": "https://github.com/FasterDecoding/Medusa",
+  "notes": "Included specifically as the counter-example to 'a popular research prototype with lasting influence'. Medusa's idea was good and its star count is high, but the repo has been untouched since June 2024 and its own README caps it at batch size 1. Successor: EAGLE-2/EAGLE-3 (arXiv:2406.16858 2024-06-24, arXiv:2503.01840 2025-03-03), plus training-free n-gram drafting in vLLM/SGLang. arXiv titles and dates verified via the arXiv API; all repo metadata from the GitHub API on 2026-10-03."
+}

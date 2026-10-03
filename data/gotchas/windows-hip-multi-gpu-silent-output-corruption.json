@@ -1,0 +1,20 @@
+{
+  "id": "windows-hip-multi-gpu-silent-output-corruption",
+  "type": "gotcha",
+  "name": "Multi-GPU HIP on Windows 11 produces fluent gibberish at full speed, and benchmarks do not detect it",
+  "class": "driver",
+  "affects": [
+    "llama-cpp"
+  ],
+  "symptom": "On Windows 11 with a gfx1100 + gfx1201 pair, the HIP backend splits a model across both cards and returns fluent-but-nonsensical word salad instead of an answer, with no error, no warning and healthy-looking throughput (llama-bench: pp ~197, tg ~26). Corrupted samples begin plausibly and then degrade into nonsense. Controls are all clean: single-GPU HIP on the same machine, dual-GPU HIP on Linux with the same ROCm userland, and Windows Vulkan on the same two cards.",
+  "root_cause": "Attributed in the thread to the ROCm/AMD Windows driver peer-copy path rather than to llama.cpp. The confirming evidence is that building with -DGGML_CUDA_NO_PEER_COPY=ON makes the corruption disappear entirely.",
+  "workaround": "Build llama.cpp with -DGGML_CUDA_NO_PEER_COPY=ON for Windows multi-GPU HIP (a source build, so the official Windows ROCm release zip does not help). Or use Windows Vulkan for the multi-card configuration, which the reporter runs daily in production at about 37 t/s.",
+  "severity": "blocker",
+  "notes": "The reason this is a blocker despite being platform- and config-specific: the failure is silent and the standard instrument lies. Anyone benchmarking a Windows AMD multi-GPU box sees good numbers and wrong text. Text sanity-check your output, not just your tokens-per-second, and treat a single-GPU-on-Windows / multi-GPU-on-Linux split as the default until fixed upstream. Confirmed by a second user on RX 9070 and R9700 AI Pro with ROCm 10. Related open issue: lemonade-sdk/llamacpp-rocm#75.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "noncuda-llamacpp-28676-windows-hip-multigpu-corruption"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "id": "cross-encoder-reranking",
+  "type": "flop",
+  "name": "Cross-encoder reranking: N independent bidirectional forwards, compute-bound at batch 1",
+  "class": "prefill_attention",
+  "arithmetic_intensity": "Reranking N passages is N INDEPENDENT forward passes with no KV-cache reuse, so it is prefill-shaped and compute-bound even at batch 1 - the exact opposite of the generative decode regime. Arithmetic: for a bidirectional encoder of P parameters run over one sequence of t tokens, flops = 2*P*t while bytes = 2*P (weights read ONCE for all t rows) plus activation traffic. The per-forward AI from weights alone is therefore ~t flop/byte, i.e. t times HIGHER than the ~1 flop/byte of a decode GEMM, because the weight read is amortized across t rows instead of 1. Worked example with BERT-base geometry (d=768, 3072 intermediate, 12 layers, 12 heads x 64 head_dim), which derives to P = 12*(768*768 + 2*768*768 + 768*768 + 3*768*3072) = 12*(0.59M + 1.18M + 0.59M + 7.08M) = 12*9.44M = 113.2M against a released 110M: at the standard reranking length t = 544 tokens, flops = 2*113.2e6*544 = 123.2 GFLOP against a weight read of 2*113.2e6 = 226 MB, so AI = 544 flop/byte, which is 1.84x ABOVE H100 SXM's 295.4 ridge. Reranking is compute-bound at batch 1 - there is no memory roof to climb and no batching is required to get there. Batching N passages into one forward multiplies the amortization again: AI = N*t, so at N=64, t=544 the AI is 34,816 flop/byte, 118x the ridge, and the reranker is deep in GEMM territory. Attention is a rounding error at reranking lengths even though the mask is FULL (bidirectional, 2x the causal flops): full-mask attention flops = 2 * 2*n_q*dh*t^2 = 4*12*64*544^2 = 0.91 GFLOP against 123.2 GFLOP of GEMM = 0.7%. The attention crossover is L* = P_layer/(n_q*dh) = 9.44M/768 = 12,288 tokens, far beyond any realistic pair length - a cross-encoder is a pure GEMM machine. Corpus cost, and why this shape is worth its own record: Sentence-BERT quantifies the alternative, noting that with BERT 'finding the most similar pair in a collection of 10,000 sentences requires about 50 million inference computations (~65 hours)' - 10,000 x 10,000 = 100M pairs, each a full forward. That is N scaling linearly with corpus size, which no amount of batching can fix: batching improves AI, not total flops.",
+  "bound_by": "compute",
+  "scales_with": [
+    "num_passages_reranked N (flops scale LINEARLY - N independent forwards, and batching raises AI without reducing flops)",
+    "corpus_size (N is typically top-k of a first-stage retrieval, so cost is top_k times the pair length; over a full corpus it is quadratic)",
+    "pair_length t (AI = t from the weight amortization alone; this is why a reranker is compute-bound where a generator is not)",
+    "model_size (reranker flops scale with P linearly - a 300M cross-encoder costs 3x a 110M one per passage)",
+    "bidirectional_vs_causal_mask (full attention doubles attention flops vs causal, which is negligible at realistic pair lengths but doubles them at L*)",
+    "num_candidates_from_first_stage (the whole cost knob: rerank top-20 vs top-100 is a 5x difference in a bill that nothing else can reduce)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090",
+    "google-tpu-v5e",
+    "nvidia-l4",
+    "amd-radeon-pro-vii"
+  ],
+  "workarounds": [
+    "Batch the N passages into one forward: the only way to raise AI (to N*t) and it is free in flops, since the passes are independent anyway",
+    "Bi-encoder / late-interaction retrieval instead of cross-encoding: encode each passage once and score by dot product, turning an N*corpus problem into a corpus problem plus N lookups - ColBERT's late interaction is the middle point, trading exactness for a precomputed index (arXiv 2004.12832)",
+    "Truncate passages before reranking: AI = t, so halving the pair length halves both flops and time",
+    "fp8/int8 encoder inference: the step is firmly compute-bound (AI 544 at batch 1), so precision reduction converts directly into throughput - the opposite of its marginal value in memory-bound decode",
+    "FlashAttention for the bidirectional mask, and cuDNN fused MHA, so the 0.7% attention term and the norm/activation traffic do not leak into the runtime",
+    "Fused bias-GELU / bias-dropout-add epilogues so the encoder's elementwise work stays out of HBM",
+    "Early exit / layer skipping on easy pairs, trading accuracy for flops on a subset",
+    "Run reranking on the same GPU as retrieval with fused scheduling, so the KV-less encoder's compute-bound steps overlap the memory-bound vector-search step"
+  ],
+  "notes": "CLASSIFICATION ARGUMENT, since the enum has no reranking class and this was filed under prefill_attention: reranking is prefill-shaped in every respect that matters for a flop budget - it is a full forward pass over a sequence, there is no KV cache, no incremental state, and nothing is reused between passages except the weights themselves, which are read once per forward. The single quantitative fact that distinguishes it from every other record in this type is that AI ~ t at batch 1, because the weight read amortizes over t rows. Every generative-decode record in this repo has AI <= B with B typically 1-64; this one has AI ~ 544 at B = 1 and ~34,816 at B = 64. It is therefore compute-bound with no roofline crossing to perform, which makes it the one common serving workload where buying FLOPS - rather than bandwidth - is the correct procurement decision. It also inverts the usual quantization advice: for decode, quantization helps because it cuts bytes; here AI is already above the ridge, so quantization helps only because it doubles peak FLOPS, and the binding question is tensor-core throughput, not memory. Second-order point worth recording: reranking is the clearest case in the repo of a workload whose cost is set by an upstream choice rather than by the serving stack. The bill is N x pair_length x P, and the only lever that changes it materially is reducing N (better first-stage retrieval) or switching to a bi-encoder. Every kernel-level optimization is a constant factor on a number that is already fixed by the retrieval configuration. Contrast with embedding/batch-encoding: that workload processes each document ONCE and caches the vector, so its corpus cost is linear; reranking processes each (query, passage) PAIR, so its corpus cost is quadratic. Sentence-BERT's 50-million-inference figure is the primary-source statement of that quadratic blowup.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop2-bert",
+    "flop2-sbert",
+    "embed-colbert-paper",
+    "flop-roofline-williams-2008",
+    "flop-nvidia-h100-specs",
+    "flop-flashattention"
+  ]
+}

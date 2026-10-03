@@ -3,31 +3,37 @@
   "type": "flop",
   "name": "Attention over the prompt (prefill / training-style causal attention)",
   "class": "prefill_attention",
-  "arithmetic_intensity": "Prefill attention AI grows linearly with sequence length, not with model size. First-order derivation for causal attention over d-dimensional heads, reading K and V once from HBM with perfect tiling: flops = 2*L^2*d (QK^T) + 2*L^2*d (PV) = 4*L^2*d; bytes = 2 tensors * L*d elements * 2 bytes (bf16) = 4*L*d. AI = L flop/byte, i.e. Theta(seqlen) - the L query rows are what amortize each KV byte. On H100 SXM the dense-bf16 roofline balance point is ~295 flop/byte (989 TFLOPS dense / 3.35 TB/s), so prefill attention crosses from memory-bound to compute-bound at roughly L ~ 300 tokens and is firmly compute-bound beyond a few hundred. At L=8k, AI ~8,000 flop/byte, about 27x the ridge point: long-context prefill is a tensor-core problem, not a bandwidth problem. In fp8 (1979 dense TFLOPS) the ridge is ~590 and the crossover moves to roughly L ~ 600.",
+  "arithmetic_intensity": "Prefill attention AI grows linearly with sequence length, and with the GQA group ratio on top of that. Derivation for causal attention with n_q query heads, n_kv KV heads, head_dim d_h, sequence length L, bf16 KV: flops = 2*L^2*d_h*n_q (QK^T, halved by the causal mask) + 2*L^2*d_h*n_q (P*V, also halved) = 2*n_q*d_h*L^2; bytes = 2 tensors (K and V) * L*d_h*n_kv elements * 2 bytes = 4*L*d_h*n_kv. So AI = 2*n_q*d_h*L^2 / (4*L*d_h*n_kv) = (n_q/n_kv)*L/2, i.e. AI = g*L/2 flop/byte with g the GQA group ratio. The L query rows are what amortize each KV byte, and GQA multiplies the amortization because fewer K/V columns must be read per query column. Ridge crossings against the dense-bf16 balance points computed from the accelerator records (ridge = 1000*TFLOPs/GB_per_s): H100 SXM 989.5/3350 = 295.4, so L_ridge = 2*295.4/g; MI300X 1307.4/5300 = 246.7, so L_ridge = 2*246.7/g; RTX 4090 165.2/1008 = 163.9, so L_ridge = 2*163.9/g; TPU v5e 197/819 = 240.5, so L_ridge = 2*240.5/g. Numerically on H100: MHA (g=1) crosses at L = 591 tokens, GQA-4 at L = 148, GQA-8 at L = 74; on the 4090 MHA crosses at L = 328; on TPU v5e MHA at L = 481. In fp8 the ridge doubles (H100 1979/3350 = 590.7) so every L_ridge doubles as well. So prefill attention becomes compute-bound within the first few hundred tokens of essentially every model - and GQA makes it happen sooner, not later, which surprises people who read GQA as a memory optimization only. At L = 8k on H100 with GQA-4, AI = 4*8192/2 = 16,384 flop/byte, 55x the ridge: long-context prefill is a tensor-core problem, not a bandwidth problem. SEPARATE AND MORE DECISIVE NUMBER - the flop crossover, not the ridge crossing: attention flops grow as L^2 while GEMM flops grow as L, so the two trade at L* = P_layer/(n_q*d_h), which for every standard model where n_q*d_h equals hidden_size reduces to L* = P_layer/d, i.e. roughly the feed-forward expansion ratio. With geometry taken from the models' own config.json (arithmetic shown in notes): Llama-2-7B (MHA, d=4096, 11008 intermediate, 32 layers) P_layer = 202.4M and n_q*d_h = 4096, so L* = 202,375,168/4096 = 49,408 tokens; Llama-2-70B (GQA-8, d=8192, 28672 intermediate, 80 layers) P_layer = 855.6M, n_q*d_h = 8192, L* = 855,638,016/8192 = 104,448 tokens; Llama-3-8B (GQA-4, d=4096, 14336 intermediate, 32 layers) P_layer = 218.1M, L* = 218,103,808/4096 = 53,248 tokens. So attention is 1.0% of prefill flops at L=512, 4.0% at 2k, 14.2% at 8k, 39.9% at 32k and 72.6% at 128k for Llama-2-7B; for Llama-2-70B (much wider MLP per layer) the same shares are 0.5%, 1.9%, 7.3%, 23.9%, 55.7%. Note the direction of that comparison: a WIDER model defers the attention crossover further out, so a short-prompt benchmark and a 32k-prompt benchmark on different models disagree about which part is fast for reasons that are entirely in the config.",
   "bound_by": "compute",
   "scales_with": [
-    "context_length (linearly in AI, quadratically in total flops)",
+    "context_length (linearly in AI, quadratically in total flops - the reason the crossover is a single computable number)",
     "batch_size (attention for a whole batch is one big GEMM pair - AI unchanged)",
     "num_heads and head_dim",
+    "gqa_group_ratio g = n_q/n_kv (multiplies AI directly; does NOT change attention FLOPs, only bytes)",
+    "feed_forward_width vs hidden_width (through L* = P_layer/(n_q*d_h): a model with a wide MLP per layer keeps GEMM flops dominant to a much longer context)",
     "causal_mask (halves the flops vs a dense mask, does not change bytes)"
   ],
   "affected_by_hardware": [
     "nvidia-h100-sxm",
     "amd-instinct-mi300x",
+    "nvidia-rtx-4090",
+    "google-tpu-v5e",
     "amd-radeon-pro-vii",
-    "nvidia-b200"
+    "nvidia-b200",
+    "nvidia-l4"
   ],
   "workarounds": [
     "FlashAttention tiling: load Q/K/V tiles to SRAM once, keep the running softmax accumulator in registers, never materialize the S x S score matrix in HBM (arXiv 2205.14135)",
-    "FlashAttention-2 work partitioning: FA-1 reached only 25-40% of peak FLOPS/s from poor thread-block/warp partitioning and redundant shared-memory traffic (arXiv 2307.08691)",
-    "Block-sparse / causal-masked kernels that skip fully-masked tiles",
-    "Chunked prefill so a long prompt is split into cache-friendly pieces instead of one huge attention call",
-    "FP8 or BF16 tensor cores - attention is the most compute-dense part of prefill, so precision reduction buys real TFLOPS here",
-    "MQA/GQA to shrink K and V, which cuts bytes but not flops - it lowers the ridge crossing point, making attention memory-bound sooner"
+    "FlashAttention-2 work partitioning: FA-1 reached only 25-40% of peak FLOPS/s from poor thread-block/warp partitioning and redundant shared-memory traffic; FA-2 reached 50-73% on A100 (arXiv 2307.08691)",
+    "WGMMA / TMA warp specialization on Hopper so the GEMM and softmax phases overlap asynchronously (FlashAttention-3, arXiv 2407.08608)",
+    "Block-sparse / causal-masked kernels that skip fully-masked tiles, which on causal attention removes roughly half the tiles for free",
+    "Chunked prefill (SARATHI, arXiv 2308.16369) so a long prompt is split into cache-friendly pieces instead of one huge attention call, and rides on decode iterations",
+    "FP8 attention (FlashAttention-3, arXiv 2407.08608) - attention is the most compute-dense part of prefill, so precision reduction buys real TFLOPS and also doubles the ridge, moving L_ridge out",
+    "MQA/GQA to shrink K and V, which cuts bytes but not flops - it RAISES AI by the group ratio and therefore moves the ridge crossing to a SHORTER context, the opposite of what a memory-optimization reading predicts"
   ],
-  "notes": "Design consequence: prefill is where the tensor cores should be busy, and a part whose peak FLOPS is weak relative to its bandwidth will look fine on short prompts and fall over on long ones. Hardware that is bandwidth-rich and FLOPS-poor (consumer GDDR parts with narrow buses, parts marketed on TOPS but short on sustained bf16) will pass a short-prompt benchmark and fail a 32k-context one. Engine authors should pick the attention backend and the prefill chunk size as a function of prompt length, and should benchmark with realistic long prompts - a short-prompt prefill number says almost nothing about this class. Caveat: the AI = L/2 derivation assumes perfect tiling and that each KV element is read from HBM exactly once; FlashAttention's whole point is that real kernels get close to this in the ideal case, and fall short when occupancy is low or when the KV cache exceeds what the tiling can amortize.",
+  "notes": "Design consequence: prefill is where the tensor cores should be busy, and a part whose peak FLOPS is weak relative to its bandwidth will look fine on short prompts and fall over on long ones. This is quantifiable, not rhetorical: L_ridge for MHA is 591 tokens on H100 but 328 on an RTX 4090 and 807 on an L4 (121 TFLOPS / 300 GB/s = 403.3, so 2*403.3 = 807), so the 4090 reaches compute-bound attention over 1.8x sooner and then has 6x less compute to do it with. Hardware that is bandwidth-rich and FLOPS-poor will pass a short-prompt benchmark and fail a 32k-context one. Second design consequence, from the flop crossover: the fraction of prefill spent in attention is set by the config's feed-forward-to-attention parameter ratio, not by context alone, which is why 'what is the bottleneck at 32k' has no single answer - it is 40% for a 7B-class narrow model and 24% for a 70B-class wide one at the same L. Engine authors should pick the attention backend and prefill chunk size as a function of prompt length, and benchmark with realistic long prompts: a short-prompt prefill number says almost nothing about this class. Caveat on the AI derivation: AI = g*L/2 assumes perfect tiling and that each KV element is read from HBM exactly once. FlashAttention's whole point is that real kernels get close to this in the ideal case and fall short when occupancy is low or when the KV cache exceeds what the tiling can amortize - which is precisely the regime L_ridge is small. Caveat on the geometry: the L* = P_layer/(n_q*d_h) figures use KV head counts from each model's config.json, NOT from model-card prose. For Llama-2-70B the prose describes 64 KV heads; the config says 8, and the 8-head count is the one that reproduces the released 68.98B parameter count exactly (P_layer*80 + 2*8192*32000 = 68.98B with n_kv=8, versus 78.37B, +13.6%, with n_kv=64). Since attention FLOPs do not depend on n_kv, that error would not have shown up in L* but would have badly mispriced the KV bytes and the memory-bound half of the equation.",
   "status": "verified",
-  "confidence": 0.85,
+  "confidence": 0.9,
   "updated": "2026-10-03",
   "sources": [
     "flop-roofline-williams-2008",
@@ -35,6 +41,11 @@
     "flop-flashattention-2",
     "flop-nvidia-h100-specs",
     "flop-llm-inference-roofline-survey",
-    "flop-nvidia-inference-optimization"
+    "flop-nvidia-inference-optimization",
+    "flop2-flashattention-3",
+    "flop2-sarathi",
+    "flop2-llama2-7b-config",
+    "flop2-llama2-70b-config",
+    "flop2-llama3-8b-config"
   ]
 }

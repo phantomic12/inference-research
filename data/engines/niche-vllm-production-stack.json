@@ -1,0 +1,72 @@
+{
+  "id": "niche-vllm-production-stack",
+  "type": "engine",
+  "name": "vLLM Production Stack",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-vllm-production-stack-repo"
+  ],
+  "repo": "vllm-project/production-stack",
+  "languages": [
+    "Python",
+    "Shell",
+    "Go",
+    "HCL",
+    "Jinja"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2025,
+  "design_goal": [
+    "production",
+    "multi-model",
+    "ease-of-use",
+    "reference-deployment"
+  ],
+  "scheduling": [
+    "prefix-cache",
+    "kv-cache-offload",
+    "request-routing"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "The reference answer to 'I have vLLM on Kubernetes and now what'. First released 2025-01-21; it is explicitly a reference implementation rather than a product",
+    "Its own three goals, quoted from the README: scale from a single vLLM instance to a distributed deployment without changing application code; monitor through a web dashboard; and get the performance benefit of request routing plus KV-cache offloading",
+    "Request routing and KV-cache offloading via LMCache are the substantive parts - this is the layer that turns N vLLM pods into one service, and prefix-cache reuse across pods is the reason it exists",
+    "Helm-based install with a documented tutorial sequence from zero: install Kubernetes tooling, deploy on AWS/GCP/Lambda Labs/Azure, minimal Helm installation, customising vLLM configs, loading weights from a PersistentVolume, launching multiple different LLMs, then enabling KV cache offloading with LMCache",
+    "Community-driven with an official docs site (docs.vllm.ai/projects/production-stack), its own Slack channel and a published 2026 roadmap",
+    "Official documentation released alongside the project; cloud deployment tutorials for three providers",
+    "2654 stars, release vllm-stack-0.1.13 on 2026-09-29, last push 2026-10-02, 322 open issues"
+  ],
+  "hardware_caveats": [
+    "STILL ON A 0.1.x VERSION LINE. Latest release is vllm-stack-0.1.13 (2026-09-29) roughly twenty months after the initial 2025-01-21 release. That is the maturity signal and it matters: reference deployments get adopted by copying, and a 0.1.x line implies breaking changes between minors",
+    "Kubernetes is not optional. The tutorial sequence starts at 'install Kubernetes (kubectl, helm, minikube)' and the whole thing is Helm charts plus HCL. This is not a path for a single box or a small team without a cluster",
+    "vLLM-only by construction. It is a deployment stack for vLLM specifically, so adopting it is adopting vLLM's hardware support and its release cadence as well - including whatever backend plugins that version supports (see [[niche-vllm-ascend]] for the pattern)",
+    "Routing and KV-offload behaviour is not free: prefix-cache reuse across pods depends on LMCache and a shared store, and a misconfigured cache store shows up as latency, not as an error",
+    "The performance benefit the README advertises is measured with the project's own configuration. Copying the Helm defaults is not the same as tuning routing for your traffic",
+    "Cloud tutorials cover AWS, GCP and Lambda Labs specifically; other providers are untested paths",
+    "HCL and Go alongside Python means the config surface is wider than a single-language project, which is the usual cost of a Helm-first deployment tool"
+  ],
+  "best_for": [
+    "Deploying vLLM to Kubernetes in a way that survives contact with a real traffic pattern - this is the maintained reference and it beats hand-rolled manifests",
+    "Multi-model serving where requests should route to the model that already has the prompt cached",
+    "Getting LMCache-based KV offloading working before designing your own cross-pod cache",
+    "Following the tutorial sequence end to end when you have never run vLLM in a cluster"
+  ],
+  "avoid_for": [
+    "Anything without Kubernetes - the toolchain is Helm-first and not optional",
+    "Non-vLLM engines; there is no abstraction over serving engines here",
+    "Production deployments that need a stable semver line, given 0.1.x after twenty months",
+    "Cloud providers other than AWS/GCP/Lambda Labs without expecting to debug the tutorial yourself"
+  ],
+  "docs_url": "https://docs.vllm.ai/projects/production-stack",
+  "notes": "One of four infrastructure-layer records here (with [[niche-triton-inference-server]], [[niche-deepspeed-mii]] and, indirectly, [[niche-kserve]]). Included because the gap it fills is real and named: the difference between 'vLLM works' and 'vLLM works as a service', which is request routing plus cross-pod prefix-cache reuse. vllm-stack-0.1.13 recorded as the maturity caveat. All metadata from the GitHub API on 2026-10-03."
+}

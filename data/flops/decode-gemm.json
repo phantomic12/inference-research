@@ -3,33 +3,39 @@
   "type": "flop",
   "name": "Dense weight GEMMs in the decode step (the per-token matmul tax)",
   "class": "decode_gemm",
-  "arithmetic_intensity": "At batch B, decode GEMM reads every weight exactly once and does 2*B flops per weight. bf16 weights: bytes = 2*N_params, flops = 2*B*N_params, so AI = B flop/byte - exactly B, i.e. ~1 flop/byte at batch 1. This is the single most important number in LLM inference: on H100 SXM the dense-bf16 balance point is ~295 flop/byte (989 dense TFLOPS / 3.35 TB/s; the 1,979 TFLOPS figure on NVIDIA's spec page is the sparsity-marked number and is 2x dense), so a batch-1 decode GEMM sits ~295x below the ridge and runs at a small fraction of peak FLOPS purely because it is waiting on HBM. The roofline says: to be compute-bound in bf16 you need batch on the order of 150-300; in fp8 (1979 dense TFLOPS) roughly half that. Real kernels hit their crossover earlier than the ideal roofline because the memory-bound path reaches a higher fraction of peak bandwidth than the compute-bound path reaches of peak FLOPS, so measured crossovers for bf16 GEMV-style decode land well below the 295 batch figure.",
+  "arithmetic_intensity": "AI = B flop/byte, exactly, at batch B in bf16 - this is the definitional result and it explains most decode benchmarks. Derivation: every weight in the model is read from HBM exactly once per step and reused across all B rows, so bytes = 2*N_params (2 bytes per weight) while flops = 2*B*N_params (a multiply-add is 2 flops), giving AI = B. At batch 1 that is 1 flop/byte, i.e. a batch-1 decode GEMM sits ~295x below H100 SXM's dense-bf16 ridge point of 295.4 flop/byte and runs at a small fraction of peak purely because it is waiting on HBM. Ridge-crossing batch per part, computed as ridge = 1000*TFLOPs / GB_per_s from the accelerator records' own DENSE figures (1000*TFLOPs / GB/s = flop per byte): H100 SXM bf16 989.5/3350 = 295.4, so B_ridge = 295; H100 SXM fp8 1979/3350 = 590.7, so B_ridge = 591; MI300X bf16 1307.4/5300 = 246.7, so B_ridge = 247; MI300X fp8 2614.9/5300 = 493.4, so B_ridge = 493; RTX 4090 bf16 165.2/1008 = 163.9, so B_ridge = 164, and fp8 330.3/1008 = 327.7, so B_ridge = 328; TPU v5e bf16 197/819 = 240.5, so B_ridge = 241; A100 SXM 312/2039 = 153.0, so B_ridge = 153; B200 bf16 2500/8000 = 312.5, so B_ridge = 313. Because AI rises exactly linearly in B and the ridge is a fixed property of the part, the crossover batch is a fully determined number rather than a range to be tuned: it IS the part's ridge. Practical reading of the table: every data-center part here crosses at B of roughly 150-600 in bf16, so no single-stream serving configuration is ever compute-bound on the weight GEMMs, and the parts differ in HOW FAR below the ridge they sit at B=1 (a 4090 is 164x below, an H100 295x below) but not in whether they are. CORRECTION to an earlier version of this field: NVIDIA's H100 datasheet marks headline figures with an asterisk for sparsity, and 989.5 x 2 = 1979 shows 1979 is both the bf16 SPARSE figure and the dense fp8 figure - the two coincide, which is exactly why a dense fp8 count must be read from a field that states dense/sparse explicitly rather than inferred from the asterisk.",
   "bound_by": "memory",
   "scales_with": [
-    "batch_size (AI = B, this is the only lever that moves decode off the memory roof)",
+    "batch_size (AI = B, the only lever that moves decode off the memory roof; the crossover batch equals the part's ridge)",
     "num_params",
     "hidden_width / intermediate_size (bytes and flops both scale with it, so AI is unchanged)",
-    "dtype (fp8 or int4 weights cut bytes directly and raise AI proportionally)"
+    "dtype (fp8 or int4 weights cut bytes directly and raise AI proportionally, doubling the tolerable batch per halving of weight bytes)",
+    "tensor_parallel_degree (sharding weights N ways divides bytes and flops by N each, leaving per-device AI at B unchanged while adding a per-layer all-reduce whose payload scales with B)"
   ],
   "affected_by_hardware": [
     "nvidia-h100-sxm",
     "amd-instinct-mi300x",
+    "nvidia-rtx-4090",
+    "google-tpu-v5e",
+    "nvidia-a100-80gb-sxm4",
     "amd-radeon-pro-vii",
     "nvidia-b200",
     "intel-gaudi3",
-    "google-tpu-v5e"
+    "google-tpu-v6e"
   ],
   "workarounds": [
-    "Continuous batching / iteration-level scheduling (Orca, OSDI 2022) - admit new sequences the instant one finishes so B never sits at 1",
-    "Weight quantization to fp8/int8/int4 - the only intervention that reduces bytes without reducing work",
-    "GEMV-specific kernels for B=1 and small B instead of tiling a GEMM the shape of which wastes the tensor cores",
-    "CUDA Graphs / kernel fusion to remove per-op launch overhead, which is a real fraction of step time at B=1",
-    "Speculative decoding - verify k tokens in one weight pass, amortizing the same bytes over k positions",
-    "MARLIN-style mixed-precision GEMM that keeps 4-bit weights bandwidth-bound up to batch 16-32 (arXiv 2408.11743)"
+    "Continuous batching / iteration-level scheduling (Orca, OSDI 2022) - admit new sequences the instant one finishes so B never sits at 1; worth exactly the linear B factor the AI equation predicts, no more",
+    "Chunked prefill (SARATHI, arXiv 2308.16369) so compute-rich prefill rows ride along on memory-bound decode iterations, raising the effective row count for the weight GEMMs without adding new sequences",
+    "Weight quantization to fp8/int8/int4 - the only intervention that reduces bytes without reducing work; it multiplies AI by the compression factor and therefore multiplies the tolerable batch by the same factor",
+    "GEMV-specific kernels for B=1 and small B instead of tiling a GEMM whose shape wastes the tensor cores",
+    "CUDA Graphs / kernel fusion to remove per-op launch overhead, a real fraction of step time at B=1 and the specific problem CUDA Graphs were built for",
+    "Speculative decoding - verify k tokens in one weight pass, amortizing the same bytes over k positions, which substitutes for a batch increase that arrival patterns cannot supply",
+    "MARLIN-style mixed-precision GEMM that keeps 4-bit weights bandwidth-bound up to batch 16-32 (arXiv 2408.11743)",
+    "Large-L2 parts so a whole layer's weights are served from cache rather than HBM - the one hardware-side way to raise effective AI without raising B"
   ],
-  "notes": "The design consequence runs in both directions. For hardware: memory bandwidth, not peak TOPS, sets single-stream decode throughput, so a part with high FLOPS and modest bandwidth is a throughput part, not a latency part. For engine authors: the only real cure for a latency-bound decode is to raise B (continuous batching) or to shrink the bytes read per token (quantization, sparsity, small models) - adding FLOPS does nothing. Note also that AI = B assumes weights are read once per step and reused across the batch, which is exactly why batching is such a large win and why weight-cache-friendly parts with large L2 win at small batch. A useful sanity check for any decode benchmark: if B was not reported, the tok/s number is not interpretable.",
+  "notes": "The design consequence runs in both directions. For hardware: memory bandwidth, not peak TOPS, sets single-stream decode throughput. Note that an RTX 4090 has a LOWER bf16 ridge than an H100 (163.9 vs 295.4) and is still dramatically worse at decode: the ridge tells you WHERE the memory wall ends, not HOW WIDE it is. Wall width is what matters at batch 1, and there the ranking is set by absolute bandwidth (MI300X 5.3 TB/s > H100 3.35 TB/s > RTX 4090 1.008 TB/s) with no reference to FLOPS at all. For engine authors: the only real cure for a latency-bound decode is to raise B (continuous batching) or shrink the bytes read per token (quantization, sparsity, smaller models) - adding FLOPS does nothing. AI = B assumes weights are read once per step and reused across the batch, which is exactly why batching is such a large win and why large-L2 parts win at small batch. Tensor parallelism works against this class rather than for it: sharding weights N ways divides bytes and flops by N each, so per-device AI stays at B while a per-layer all-reduce appears whose payload scales with B - see the tensor-parallel-allreduce record for the batch at which that all-reduce overtakes the weight read (B* = P_layer*BW_link/(2*d*BW_hbm) = 3318 on NVLink 4 at 450 GB/s per-GPU per-direction, 184 on a single NVLink 4 link at 25 GB/s per-direction, 232 on PCIe 4.0 x16 at 31.5 GB/s per-direction; the wide spread is the whole argument for NVSwitch over point-to-point). A useful sanity check for any decode benchmark: if B was not reported, the tok/s number is not interpretable.",
   "status": "verified",
-  "confidence": 0.9,
+  "confidence": 0.92,
   "updated": "2026-10-03",
   "sources": [
     "flop-roofline-williams-2008",
@@ -37,6 +43,8 @@
     "flop-orca-osdi22",
     "flop-marlin",
     "flop-llm-inference-roofline-survey",
-    "flop-nvidia-inference-optimization"
+    "flop-nvidia-inference-optimization",
+    "flop2-sarathi",
+    "flop2-megatron-lm"
   ]
 }

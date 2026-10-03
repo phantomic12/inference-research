@@ -1,0 +1,81 @@
+{
+  "id": "niche-text-embeddings-inference",
+  "type": "engine",
+  "name": "Text Embeddings Inference (TEI)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-tei-repo"
+  ],
+  "repo": "huggingface/text-embeddings-inference",
+  "languages": [
+    "Rust",
+    "Python",
+    "JavaScript",
+    "Makefile",
+    "Nix"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "throughput-first",
+    "edge/mobile",
+    "multi-model",
+    "serverless",
+    "production"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "token-based-dynamic-batching",
+    "prefix-cache"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "cpu",
+    "metal"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "onnx"
+  ],
+  "notable_features": [
+    "A whole engine class of its own: embedding, reranking and sequence-classification serving. Nobody confuses this with a generative engine, which is exactly why HuggingFace built it",
+    "Rust core with a Python router; the README claims no model graph compilation step, small docker images and fast boot times, and sells 'true serverless' on the back of that - a real operational advantage over the PyTorch engines because cold-start is short",
+    "Token-based dynamic batching rather than request-count batching, which is the correct unit when inputs have wildly different token lengths",
+    "Two weight-loading paths: safetensors AND onnx, plus ONNX Runtime for CPU. This is unusual and it is why TEI runs where a torch-based server will not",
+    "Optimized transformer path using Flash Attention, Candle and cuBLASLt; local builds go through `cargo install --path router -F candle-cuda` (or -F candle-cuda-turing for Turing)",
+    "Metal support for local execution on Macs",
+    "Production signals baked in: distributed tracing with OpenTelemetry, Prometheus metrics, gRPC alongside REST, and Swagger/OpenAPI docs at /docs",
+    "Covers FlagEmbedding, Jina, GTE, E5, BGE-class models plus SPLADE sparse pooling and sequence classifiers for reranking",
+    "v1.9 line: v1.9.4 released 2026-09-15, last push 2026-09-29, 5069 stars, 457 open issues"
+  ],
+  "hardware_caveats": [
+    "THE HARDWARE MATRIX IS THE RECORD. Published docker image table, v1.9 line: CPU x86_64 and aarch64; Volta x86_64 explicitly NOT SUPPORTED; Turing (T4, RTX 2000) image exists but is labelled experimental; Ampere 8.0 and 8.6, Ada Lovelace, Hopper images are the supported CUDA targets; Blackwell 100 (B200/GB200), 120 (RTX 50-series) and 121 (DGX Spark GB10) images are all labelled experimental",
+    "The README states plainly that GPUs with CUDA compute capability < 7.5 are not supported, naming V100, Titan V and the GTX 1000 series. If you have a V100 - still extremely common in inference fleets - TEI does not run and that is deliberate, not a bug",
+    "NVIDIA drivers must be compatible with CUDA 12.2 or higher",
+    "Flash Attention is turned OFF by default on the Turing image because of precision issues; you must set USE_FLASH_ATTENTION=True to get FA v1 back, and it is v1 not v2",
+    "CUDA feature flags are per-architecture, so the source build requires you to know your compute capability before `cargo install` - you cannot build one binary for a mixed fleet",
+    "ROCm is a documented but narrower path: separate images for AMD Instinct MI200 and MI300 series only, with its own guide. No ROCm support is claimed for consumer AMD parts",
+    "Apple Silicon local use runs on CPU/Metal via the CPU build; the README's own wording is 'for ARM64 hosts without NVIDIA GPUs ... Inference runs on CPU cores'. Do not read 'Metal support' as Metal-accelerated GPU embedding serving",
+    "Architectures ahead of the supported list (Blackwell) run experimental images - i.e. unsupported",
+    "TEI serves embeddings and rerankers only. Point it at a generative model and it is the wrong tool; that is not a limitation so much as the boundary of the class"
+  ],
+  "best_for": [
+    "Serving embeddings and rerankers in production, especially where the vector DB is the bottleneck and embedding throughput is the real constraint",
+    "Serverless or autoscaling deployments, because no graph compilation and small images are first-class design goals rather than accidents",
+    "CPU-only or ARM64 embedding serving via the ONNX path, which is the cheapest credible way to embed at scale without a GPU",
+    "Heterogeneous fleets where embedding models are small and the per-image CUDA specialisation is annoying - pick the right tag per SKU",
+    "Teams already on HuggingFace infrastructure, since the model and pooling conventions match"
+  ],
+  "avoid_for": [
+    "V100 or older, and Blackwell-class parts on anything but experimental images",
+    "Generative serving of any kind",
+    "AMD consumer GPUs (RX cards) - ROCm coverage is data-centre MI-series only",
+    "Expecting the Mac path to be GPU-accelerated; it is a CPU build"
+  ],
+  "docs_url": "https://huggingface.co/docs/text-embeddings-inference",
+  "notes": "The embedding/reranking niche's reference runtime, and the answer to 'which engine do I use for retrieval infrastructure'. Rust core + ONNX/Candle/CUDA paths + token-based dynamic batching + explicit per-architecture image matrix makes it the best-documented hardware story in this slice. Related but distinct: [[niche-infinity]] (multi-backend, more model coverage, slower cadence) and [[niche-colbert]] (late interaction, a different compute shape entirely). All metadata from the GitHub API on 2026-10-03."
+}

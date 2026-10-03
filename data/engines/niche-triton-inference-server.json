@@ -1,0 +1,92 @@
+{
+  "id": "niche-triton-inference-server",
+  "type": "engine",
+  "name": "Triton Inference Server",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-triton-repo"
+  ],
+  "repo": "triton-inference-server/server",
+  "languages": [
+    "Python",
+    "Shell",
+    "C++",
+    "CMake",
+    "Java",
+    "Go"
+  ],
+  "license": "BSD-3-Clause",
+  "first_release_year": 2018,
+  "design_goal": [
+    "production",
+    "multi-model",
+    "multi-framework",
+    "throughput-first",
+    "ecosystem-lock-in"
+  ],
+  "scheduling": [
+    "dynamic-batching",
+    "sequence-batching",
+    "implicit-state-management",
+    "model-ensembles",
+    "concurrent-model-execution"
+  ],
+  "supported_backends": [
+    "cuda",
+    "tensorrt",
+    "onnx",
+    "openvino",
+    "python",
+    "cpu",
+    "inferentia"
+  ],
+  "supported_formats": [
+    "onnx",
+    "tensorflow",
+    "pytorch",
+    "plan",
+    "dali",
+    "fil"
+  ],
+  "notable_features": [
+    "The general-purpose inference server, from before the LLM serving era, and still the default answer for 'I have many different models on many different frameworks'. vLLM and friends are LLM engines; Triton is the substrate they could sit on",
+    "Dynamic batching AND sequence batching with implicit state management for stateful models - the sequence batcher is the thing that made Triton relevant to LLM serving before paged attention existed",
+    "Concurrent model execution: many models on one GPU with automatic concurrency",
+    "Backend API for custom backends, plus Python-based backends as the in-process extension point. This is how you get a new framework onto Triton without C++",
+    "Model ensembles and Business Logic Scripting for multi-stage pipelines (preprocess, ensemble, postprocess) declared in the model repository rather than coded",
+    "Multi-framework: PyTorch, TensorRT, ONNX Runtime, OpenVINO, Python, RAPIDS FIL and more per the README",
+    "Runs on NVIDIA GPUs, x86 and ARM CPU, or AWS Inferentia, across cloud, data center, edge and embedded",
+    "HTTP/REST and gRPC protocols; filesystem model repository with explicit model-control mode",
+    "Part of NVIDIA AI Enterprise, which is the commercial context for support",
+    "BSD-3-Clause, which is a genuine contrast with the AGPL/NOASSERTION licences elsewhere in this slice",
+    "11042 stars, v2.73.0 released 2026-09-30 (the 26.09 container on NGC), last push 2026-10-03, 4163 open issues"
+  ],
+  "hardware_caveats": [
+    "NOT AN LLM ENGINE. Triton has no paged KV, no prefix caching, no speculative decoding and no token-level scheduling. If you are serving LLMs at scale you want vLLM or SGLang; Triton is what you deploy when the answer is 'a directory of heterogeneous models'",
+    "Vendor lock-in is the central design fact: the model repository format, the backends, the container releases and the support path are all NVIDIA's, and the README explicitly places Triton inside NVIDIA AI Enterprise",
+    "The 26.09 container release and the r26.09 git branch are the versioning coupling to watch - README instructions clone branch r26.09, so Triton version lines track NVIDIA's calendar not semver cadence",
+    "Python backends run in-process and are the pragmatic way to add a framework, but they are also the fastest way to hit GIL-bound throughput on a token loop. Fine for ensembles, bad for hot per-token paths",
+    "Backend maturity is uneven and version-specific. TensorRT plan files are locked to a specific TensorRT version; ONNX Runtime and OpenVINO backends track their own upstream. The 'supports many frameworks' claim is a list of independently-versioned dependencies",
+    "Inferentia support is AWS-specific and inherently narrow",
+    "4163 open issues; as a 2018-vintage project the accumulated surface is large",
+    "README feature claims are NVIDIA's own - the 'optimized performance' framing is vendor language and no per-model numbers are given"
+  ],
+  "best_for": [
+    "Serving a portfolio of many different models from many different frameworks behind one HTTP/gRPC contract - Triton's actual design target",
+    "Non-LLM workloads at scale: vision, speech, recommendation, classical ML alongside a couple of LLMs",
+    "Multi-stage inference pipelines where preprocessing, the model and postprocessing belong in one declared ensemble",
+    "Deploying to AWS Inferentia, or to edge/embedded NVIDIA hardware",
+    "Teams already licensed to NVIDIA AI Enterprise who want a supported substrate under their generative workloads"
+  ],
+  "avoid_for": [
+    "LLM serving at scale - no paged KV, no prefix caching, no speculative decoding. Use vLLM or SGLang",
+    "Token-level throughput work where a Python backend's GIL is the bottleneck",
+    "Portability beyond NVIDIA's ecosystem, unless you value the framework breadth enough to accept the model-repository format",
+    "TensorRT plan-file portability - plans are version-locked"
+  ],
+  "docs_url": "https://github.com/triton-inference-server/server/blob/main/docs/user_guide/architecture.md",
+  "notes": "Included as the pre-LLM general-purpose server that the whole serving ecosystem grew around, and as the honest answer to 'why not just use Triton'. Its sequence batcher and implicit state management predate paged attention and are the historically interesting part. BSD-3-Clause, 2018 vintage, r26.09 branch/container coupling, and the AI Enterprise context are all recorded because they bear on adoption. All metadata from the GitHub API on 2026-10-03."
+}

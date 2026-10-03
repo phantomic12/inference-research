@@ -5,10 +5,7 @@
   "class": "format",
   "affects": [
     "vllm",
-    "gptq",
-    "rocm",
-    "triton",
-    "qwen3-6-27b-gptq-int4"
+    "gptq"
   ],
   "symptom": "Serving GPTQ-Int4 quantized Qwen3.6-27B fails at triton_w4a16.py line 201 with an assertion on qzeros.shape == (K // group_size, N // 8). Unquantized models run fine, and two independent GPTQ-Int4 repos fail the same way (raydelossantos/Qwen3.6-27B-GPTQ-Int4, btbtyler09/Qwen3.6-27B-GPTQ-4bit) with --attention-backend TRITON_ATTN on ROCm.",
   "root_cause": "The Triton W4A16 GEMM kernel assumes a specific GPTQ qzeros layout that these checkpoints do not have. The kernel's group-size and zero-point packing assumption does not match the checkpoints' actual tensor shape.",
@@ -20,5 +17,10 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-vllm-issue-47159-triton-w4a16-qzeros"
+  ],
+  "concepts": [
+    "qwen3-6-27b-gptq-int4",
+    "rocm",
+    "triton"
   ]
 }

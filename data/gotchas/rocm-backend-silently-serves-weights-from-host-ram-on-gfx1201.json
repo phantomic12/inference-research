@@ -1,0 +1,20 @@
+{
+  "id": "rocm-backend-silently-serves-weights-from-host-ram-on-gfx1201",
+  "type": "gotcha",
+  "name": "On some gfx1201 systems the ROCm backend allocates no VRAM and streams a 30 GB model from system RAM",
+  "class": "driver",
+  "affects": [
+    "llama-cpp"
+  ],
+  "symptom": "On an 8x RADEON AI Pro 9700 XT (gfx1201) host, llama.cpp's ROCm backend reports the full VRAM size in --list-devices, shows both GPUs at normal compute activity, and then allocates nothing on the GPU: nvtop shows zero VRAM in use and a 30 GB model at 256k context consumes over 256 GB of system RAM. The same host on the Vulkan backend allocates VRAM as expected.",
+  "root_cause": "Unknown. It reproduces with ROCm 7.11, 7.12, 7.14 and 10.1.0, with the official ROCm tarball, with official llama.cpp build artifacts, and inside the official ROCm 7.2.1 container, and none of GGML_HIP_GRAPHS, GGML_HIP_MMQ_MFMA, GGML_HIP_VMM=off, GGML_HIP_RCCL=off or GGML_HIP_ROCWMMA_FATTN changes it. Rolling the ROCm version back did not fix it; another user with 2x R9700 on Manjaro reports normal behaviour on the same code.",
+  "workaround": "None found. Use the Vulkan backend on gfx1201 if you hit this - it allocates correctly on the same host.",
+  "severity": "major",
+  "notes": "The distinguishing feature is that every availability signal lies at once: device count is right, free VRAM is right, GPU utilization is right, and the model still runs on host memory over PCIe. Wasting host RAM on a host with 256 GB of ECC is survivable; doing it on a 64 GB workstation is not, and you will OOM before you notice. Monitor actual VRAM allocation (nvtop, rocm-smi), not what the backend reports. Closed as not-reproducible-by-others, so this remains an unexplained failure mode rather than a diagnosed one.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "noncuda-llamacpp-26208-rocm-gfx1201-vram"
+  ]
+}

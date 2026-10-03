@@ -3,7 +3,7 @@
   "type": "quantization",
   "name": "GGUF Q3_K_M (3-bit K-quant, medium)",
   "scheme": "gguf-q3_k_m",
-  "bits": "3.9960 avg (llama.cpp measured, Llama-3.1-8B)",
+  "bits": "3.9960 measured avg (llama.cpp quantize README, Llama-3.1-8B). The pure block_q3_K is 3.4375 bpw (source comment); the measured 3.9960 is Q3_K_M, a MIXTURE of q3_K and wider types.",
   "weight_group_size": 256,
   "activation_scheme": null,
   "native_support": [],
@@ -16,18 +16,20 @@
     "nvidia-a10"
   ],
   "kernels": [
-    "ggml dequantize_block_q3_K + get_rows",
-    "ggml-cuda mul_mat_vec / mul_mat_q"
+    "ggml dequantize_row_q3_K + get_rows",
+    "ggml-cuda mul_mat_vec_q / dequantize_mul_mat_vec + convert_mul_mat_q (CPU has a dedicated q3_K dot product; block_q8_K is the intermediate format)"
   ],
   "quality_delta": "Llama-3.1-8B-Instruct, one checkpoint, official llama.cpp toolchain, vs its own F16 baseline (quant-gguf-kquant-study): WikiText-2 ppl 7.96 vs 7.32 (+0.64); GSM8K 75.03 vs 77.63 (-2.60); HellaSwag 73.16 vs 72.51; IFEval 73.41 vs 78.93; MMLU 77.19 vs 63.50; TruthfulQA 54.56 vs 54.79; unweighted mean 68.07 vs 69.47. Size 3825 MiB vs 15317 MiB F16 (-75.03%).",
-  "notes": "Bits is not 3.0: at 3.9960 bpw Q3_K_M is measurably wider than a nominal 4-bit format, which is why llama.cpp's own bit table lists it alongside 4-bit-class sizes. Q3_K_M is the study's recommended 'safer 3-bit' choice and sits on the size/quality Pareto frontier (75.03% reduction, AvgLoss -2.02%). Weight-only: activations stay in FP16/BF16 at runtime, so there is no '4-bit activations with hardware support' claim to make here. ggml has bespoke dequantize+gemm kernels per type, but no accelerator has a GGUF/k-quant path in silicon; everything is dequantized on the fly. vLLM explicitly labels its GGUF support experimental and under-optimized and positions it as a memory-footprint tool (quant-vllm-gguf-doc). Contested caveat: the same study reports Q3_K_L at 4.2979 bpw in its own prose (quant-gguf-kquant-study), so quoted '3-bit' bpw figures for the family are inconsistent across sources - trust the per-type table in quant-llamacpp-quantize-readme over round numbers.",
+  "notes": "Every K-quant shares the same super-block shape: QK_K = 256 values per block (ggml/src/ggml-common.h, `#define QK_K 256`), with K_SCALE_SIZE = 12 bytes of packed sub-block scales. Verify layouts in that file, not in blog posts - the per-type 'effectively N bits per weight' figures are comments in the struct definitions themselves. block_q3_K = { uint8_t hmask[QK_K/8];  // 32 bytes: the HIGH (3rd) bit of each 3-bit quant, 8 quants per byte uint8_t qs[QK_K/4];     // 64 bytes: the LOW 2 bits of each quant, 4 quants per byte uint8_t scales[12];     // 16 scales quantized to 6 bits each (12 bytes), i.e. K_SCALE_SIZE ggml_half d; }.  32+64+12+2 = 110 bytes / 256 values = 3.4375 bpw, matching the header comment 'Effectively 3.4375 bits per weight'. So the common shorthand is right and worth stating precisely: q3_K IS 3-bit with a 6-bit scale - the scale is 6-bit and quantized, not fp16, which is the whole point (a 6-bit scale over 16 elements costs 12/256 = 0.375 bpw instead of the 2.0 bpw fp16-per-16 would cost). Note q3_K has NO per-block minimum (x = a*q, no b), unlike q2_K/q4_K/q5_K. Q3_K_M IS NOT A BLOCK TYPE - it is a quantization RECIPE. Verified mixture from src/llama-quant.cpp: every tensor starts at q3_K and specific tensors are promoted. use_more_bits(i,n) is true when i < n/8 || i >= 7n/8 || (i - n/8)%3 == 2. attn_v -> Q5_K for the first 2 layers (i_attention_wv < 2) else Q4_K. ffn_down -> Q5_K for i < n/16, else Q4_K (Q3_K only for Falcon when not use_more_bits). attn_output -> Q4_K. So Q3_K_M is mostly q3_K with promoted attention-V/FFN-down tensors, which is exactly why it measures 3.9960 bpw rather than 3.4375. The 70B special case also promotes attn_v from Q3_K/Q4_K to Q5_K because 8 heads share one attn_v weight, so that tensor is 8x smaller and more bits are nearly free. The same use_more_bits() predicate appears in Q4_K_M and Q5_K_M ffn_down, so the _M recipes are the only place layer position enters the type choice. llama-quant.cpp also has an explicit guard: for Q4_0/Q5_0 with an imatrix it bumps the first n/8 ffn_down layers to Q4_1/Q5_1, with the comment that Q4_1/Q5_1 'go crazy on ffn_down without an imatrix'. Weight-only: activations stay FP16/BF16 at runtime. vLLM labels GGUF experimental/under-optimized. Contested caveat retained: the same study reports Q3_K_L at 4.2979 bpw in prose while the per-type table in the llama.cpp quantize README agrees at 4.2979 - trust the table.",
   "status": "contested",
-  "confidence": 0.75,
+  "confidence": 0.82,
   "updated": "2026-10-03",
   "sources": [
+    "qlab2-ggml-common-header",
+    "qlab2-llama-quant-cpp",
+    "quant-ggml-header",
     "quant-gguf-kquant-study",
     "quant-llamacpp-quantize-readme",
-    "quant-ggml-header",
     "quant-vllm-gguf-doc"
   ]
 }

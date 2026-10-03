@@ -4,10 +4,7 @@
   "name": "EAGLE/MTP speculative decoding costs 6-10 points of prefix-cache hit rate, and hybrid layouts make the recompute 100x larger",
   "class": "config",
   "affects": [
-    "vllm",
-    "speculative-decoding",
-    "prefix-caching",
-    "hybrid-gdn-mamba"
+    "vllm"
   ],
   "symptom": "Multi-round and repeated-prompt workloads lose ~6-10 points of prefix-cache hit rate versus an identical no-spec boot (97.5% -> 86.9-91.7%). On one hybrid Qwen3.8 GDN layout each hit recomputes a 1,648-token scheduler-aligned unit, costing ~30-40% batch throughput on prefix-reusing workloads.",
   "root_cause": "The EAGLE last-block drop (drop_eagle_block) in the prefix-cache hit path. kv_cache_coordinator.py flags ALL KV groups as eagle when the model has no is_eagle_group annotation (a conservative fallback). The EAGLE-marked dense/full-attention group then drops one alignment unit from its hit - protecting against draft-layer KV for the last block depending on the writer's continuation, and against prefill-lookahead pollution at chunk boundaries. Hybrid reconciliation limits the combined hit to that shorter boundary. On dense-attention models the alignment unit is a 16-token block; on this hybrid GDN/Mamba layout it is 1,648 tokens, so the same protection costs ~100x more cache hit.",
@@ -19,5 +16,10 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-vllm-issue-53670-eagle-last-block-drop"
+  ],
+  "concepts": [
+    "hybrid-gdn-mamba",
+    "prefix-caching",
+    "speculative-decoding"
   ]
 }

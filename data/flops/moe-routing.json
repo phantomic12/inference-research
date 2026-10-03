@@ -3,14 +3,16 @@
   "type": "flop",
   "name": "MoE gating: router GEMM, softmax/top-k, and the token scatter-gather around it",
   "class": "moe_routing",
-  "arithmetic_intensity": "The router projection itself is tiny and bandwidth-bound: for t tokens, flops = 2*t*d_router*E while bytes = 2*d_router*E (weights, read once) + 2*t*d (activations), so AI is a small constant that grows only weakly with token count and is dominated by reading the router weights. The softmax and top-k over E experts touch a t x E tensor (2*t*E bytes) for O(t*E) flops - again ~1 flop/byte. The expensive part of routing is not arithmetic at all: it is the permutation that moves each token to its k selected experts' devices, which is a network transfer whose cost is k*t*(hidden bytes)/link bandwidth. DeepSpeed-MoE (arXiv 2201.05596) reports up to 7.3x better latency/cost than prior MoE inference systems, and the gains come from exactly these system-level mechanisms rather than from the router math.",
+  "arithmetic_intensity": "The router projection itself is tiny and bandwidth-bound: for t tokens, flops = 2*t*d_router*E while bytes = 2*d_router*E (weights, read once) + 2*t*d (activations), so AI is a small constant that grows only weakly with token count and is dominated by reading the router weights. DeepSeek-V3's d_router is hidden_size 7168 with E=256, so the router weight matrix is 1.83M elements - negligible against 671B. The softmax and top-k over E experts touch a t x E tensor (2*t*E bytes) for O(t*E) flops, again ~1 flop/byte. The expensive part of routing is not arithmetic at all: it is the permutation that moves each token to its k selected experts' devices, a network transfer whose cost is k*t*(hidden bytes)/link bandwidth. On DeepSeek-V3 that is k=8 x 7168 dims per token per layer. Three published mechanisms keep it bounded and each has a direct serving consequence. (1) DEVICE-LIMITED ROUTING (DeepSeek-V2 Sec 2.2.2): fine-grained expert segmentation means many experts are activated, so unrestricted top-K would scatter each token across many nodes; DeepSeek-V2 first picks the M devices holding the highest-affinity experts and does top-K only among those, 'we find that when M>=3, the device-limited routing can achieve a good performance roughly aligned with the unrestricted top-K routing'. DeepSeek-V3 states the shipped value: each token 'will be ensured to be sent to at most 4 nodes'. So the per-token all-to-all fan-out is capped at 4 hops regardless of k=8 - routing cost is bounded by M, not by k. (2) GROUPED ROUTING: DeepSeek-V2/V3 configs carry n_group 8 and topk_group 4 (DeepSeek-V3) / 3 (DeepSeek-V2), i.e. experts are partitioned into 8 groups and only 4 groups are eligible per token before top-k - this reduces the router's effective selection width and is the mechanism behind the device-limited behaviour. (3) BALANCE LOSSES: three auxiliary losses (expert-level L_ExpBal = alpha_1 * sum_i f_i*P_i, device-level L_DevBal over D expert groups, and communication-balance L_CommBal) that shape the router during training so that inference-time load is even. DeepSpeed-MoE (arXiv 2201.05596) reports up to 7.3x better latency/cost than prior MoE inference systems, and the gains come from exactly these system-level mechanisms rather than from the router math.",
   "bound_by": "interconnect",
   "scales_with": [
-    "num_experts (router GEMM width, top-k selection width, and softmax length all grow with E)",
-    "top_k (per-token scatter volume and all-to-all volume scale with k)",
-    "expert_parallel_degree (the all-to-all appears only when experts are sharded across devices)",
-    "hidden_width (bytes per token moved)",
-    "batch_size (all-to-all message size)"
+    "num_experts (router GEMM width, top-k selection width, softmax length, and the device-limited grouping all grow with E: DeepSeek-V3 E=256, DeepSeek-V2 E=160, Qwen3-Next E=512)",
+    "top_k (per-token scatter volume scales with k: DeepSeek-V3 k=8, DeepSeek-V2 k=6, Qwen3-Next k=10)",
+    "expert_parallel_degree and the device-limited cap M (the all-to-all appears only when experts are sharded, and its fan-out per token is bounded by M=4 for DeepSeek-V3, not by k)",
+    "n_group / topk_group (eligible expert groups before top-k; 8/4 for DeepSeek-V3, 8/3 for DeepSeek-V2)",
+    "hidden_width (bytes per token moved: 7168 for DeepSeek-V3)",
+    "batch_size (all-to-all message size)",
+    "routing imbalance (a hot expert inflates both compute and the receive buffer on one rank - see the aux-loss and token-dropping notes)"
   ],
   "affected_by_hardware": [
     "nvidia-h100-sxm",
@@ -23,13 +25,21 @@
     "Expert capacity factor / token dropping to make expert GEMMs static-shape (costs quality; MegaBlocks, arXiv 2211.15841, shows the block-sparse alternative that avoids dropping)",
     "DeepSpeed-MoE style expert pruning and merging to cut total MoE model size (reported up to 3.7x)",
     "All-to-all overlap with compute and expert-parallel communication/computation fusion",
-    "Locality-aware / top-k-of-k routing variants that keep a token on fewer devices"
+    "Device-limited routing (DeepSeek-V2 Sec 2.2.2): restrict each token's target experts to at most M devices before top-K; M>=3 was measured to match unrestricted top-K quality",
+    "Grouped expert routing (n_group/topk_group) to cut the router's eligible selection width and the achievable device fan-out",
+    "Auxiliary-loss-free load balancing (DeepSeek-V3): a per-expert bias term added to the affinity scores for top-K selection only, decreased by gamma when an expert is overloaded and increased when underloaded - this balances load WITHOUT an auxiliary loss in the objective, avoiding the quality cost DeepSeek-V2's L_ExpBal incurs",
+    "Device-level token dropping with capacity factor 1.0, keeping ~10% of sequences never-droppable, so training and inference stay consistent (DeepSeek-V2 Sec 2.2.4)"
   ],
-  "notes": "Design consequence: routing is a network problem wearing an arithmetic costume. Hardware and interconnect choices for MoE should be judged on all-to-all latency and whether expert parallelism can be laid out to keep most experts resident on one device, not on router FLOPS. Engine authors should expect router cost to show up as bubbles and jitter rather than as steady compute time, and should measure MoE decode with expert-parallel communication visible. Small E (few experts) or high top_k both push this class toward being the bottleneck rather than the expert GEMMs.",
+  "notes": "Design consequence: routing is a network problem wearing an arithmetic costume. Hardware and interconnect choices for MoE should be judged on all-to-all latency and whether expert parallelism can be laid out to keep most experts resident on one device, not on router FLOPS. Engine authors should expect router cost to show up as bubbles and jitter rather than as steady compute time, and should measure MoE decode with expert-parallel communication visible. The auxiliary-loss question has a concrete answer now: the load-balancing auxiliary loss DOES change real-world token counts, because balancing f_i against P_i forces the router to spread assignments, which changes how many distinct experts a batch touches - and distinct-expert count is exactly what determines how many expert weight shards must be streamed, so it feeds straight back into moe-experts' AI = B*k/E. DeepSeek-V3 abandoned the auxiliary loss for this reason and states the motivation directly: 'too large an auxiliary loss will impair the model performance', and their bias-term scheme 'achieves better performance than models that encourage load balance through pure auxiliary losses'. The serving reading of that: the aux loss is a training-time intervention whose cost lands at inference as expert-access locality. A router that is free to specialise (no aux loss) produces more skewed, more predictable expert loads - which DeepSeek-V3 reports shows 'greater expert specialization patterns than the auxiliary-loss-based one' - and predictable load is what lets you shard experts so that a token's k targets are usually on few devices. A caveat worth carrying: DeepSeek-V2 pairs its three balance losses with device-level token dropping at capacity factor 1.0, dropping lowest-affinity tokens per device, so the load balance it trains for is partly enforced by dropping - at inference it is optional ('we can flexibly decide whether to drop tokens during inference according to the efficiency requirements'), which means published MoE throughput numbers are not comparable unless you know whether token dropping was enabled.",
   "status": "verified",
-  "confidence": 0.75,
+  "confidence": 0.85,
   "updated": "2026-10-03",
   "sources": [
+    "arch-deepseek-v2-mla",
+    "arch-deepseek-v3",
+    "arch-deepseekmoe",
+    "arch-hf-config-deepseek-v2",
+    "arch-hf-config-deepseek-v3",
     "flop-deepspeed-moe",
     "flop-megablocks",
     "flop-roofline-williams-2008"

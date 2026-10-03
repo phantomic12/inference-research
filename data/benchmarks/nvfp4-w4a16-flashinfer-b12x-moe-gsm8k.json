@@ -1,0 +1,25 @@
+{
+  "id": "nvfp4-w4a16-flashinfer-b12x-moe-gsm8k",
+  "type": "benchmark",
+  "name": "Qwen3.6-35B-A3B NVFP4 W4A16 MoE on the FlashInfer b12x backend: GSM8K accuracy (W4A16 checkpoint executed as W4A4)",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-vllm-56535-flashinfer-b12x-w4a16-as-w4a4"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "interconnect_ids": [],
+  "model": "Qwen3.6-35B-A3B-NVFP4 (quant_algo W4A16_NVFP4 for mlp.experts)",
+  "format_id": "nvfp4",
+  "metric": "quality",
+  "value": 0.9037,
+  "unit": "accuracy (GSM8K fraction correct, 5-shot as configured by the reporter's shared eval settings)",
+  "methodology": "Qwen3.6-35B-A3B-NVFP4 served with --moe-backend flashinfer_b12x, same checkpoint and same eval settings as the Marlin reference row. The trace shows blackwell_sm12x.moe_micro_kernel.MoEMicroKernel (BF16 activations quantized to FP4 in-kernel, FP4 x FP4 MMA) rather than moe_w4a16_kernel.py (FP4 weights dequantized to BF16), because B12xMoEWrapper defaults activation_precision='fp4' and _normalize_quant_mode then resolves quant_mode='nvfp4'. 1192 correct. Latency 1080 s for the eval.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "The broken-path number; the Marlin reference on the same checkpoint scores 0.9136 (1205 correct, 833 s), so the cost of running a W4A16 checkpoint at W4A4 precision is 0.99 pp GSM8K (99 correct answers) here - small enough to pass any informal eyeball check, and large enough to matter on a MoE where the expert GEMMs dominate. Also note the path is SLOWER here (1080 s vs 833 s), so unlike the sm_121a Marlin W4A8-FP8 case this mis-dispatch does not even look like a win. Sibling reference: nvfp4-w4a16-marlin-moe-gsm8k. See gotcha flashinfer-b12x-moe-runs-w4a16-as-w4a4."
+}

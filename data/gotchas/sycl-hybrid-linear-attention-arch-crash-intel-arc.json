@@ -1,0 +1,21 @@
+{
+  "id": "sycl-hybrid-linear-attention-arch-crash-intel-arc",
+  "type": "gotcha",
+  "name": "SYCL crashes or emits gibberish on hybrid linear-attention architectures (qwen3next, qwen35) on Intel Arc Pro B60",
+  "class": "kernel",
+  "affects": [
+    "llama-cpp",
+    "intel-arc-pro-b60"
+  ],
+  "symptom": "On 2x Intel Arc Pro B60 (24 GB each, no XeLink, Level Zero 1.15.38308+1, Ryzen 7 7700), models with a qwen3next or qwen35 architecture - specifically Qwen3-Coder-Next at Q3_K_XL (33.79 GiB) and Q4_K_M (48.18 GiB) - either crash inside ggml_sycl_op_mul_mat or return empty/gibberish output. Build 8477 (2026-03-23) works on both; builds around b9479 (2026-06-03) fail on both. Dense-attention models on the same cards are unaffected.",
+  "root_cause": "A regression in llama.cpp's SYCL mul_mat path specific to the hybrid linear-attention (gated deltanet style) graph, introduced in the window between builds b9128 and b9159 and still present at b9479. The reporter pinpointed the window by bisect rather than identifying a single bad commit, so the offending op is not isolated. It is not a memory-capacity issue: the Q3_K_XL model at 33.79 GiB fits in 46 GB of combined VRAM.",
+  "workaround": "Pin to a build at or before b8477 (2026-03-23) for qwen3next/qwen35 architectures on Arc. Alternatively use the Vulkan backend, or a different architecture - the same repo records that hybrid-architecture problems recur across unrelated backends and models, so check whether the model is the variable rather than the stack.",
+  "severity": "major",
+  "notes": "Scope is precise and comes from a real bisection, which makes this unusually reliable for a regression report: two named builds bracket it, and only hybrid linear-attention architectures are affected. The practical consequence for anyone assembling an Arc Pro B60 box in 2026 is that 'Battlemage works' does not generalise across model families - test your actual target architecture, because the current SYCL path is not safe for hybrid models. No accelerator record exists in this repo for the Arc Pro B70, so B60 is referenced here and the B70 hardware is described in free text only.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "noncuda-llamacpp-24168-sycl-b60-hybrid-crash"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "mxfp4-w4a16-on-w4a4-kernel-aime-math-gsm8k-avg",
+  "type": "benchmark",
+  "name": "Qwen3-8B MXFP4 W4A16 served on the FlashInfer W4A4 kernel: AIME-24/25 + GSM8K + MATH-500 average accuracy",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-vllm-56770-mxfp4-w4a16-as-w4a4"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-b200"
+  ],
+  "interconnect_ids": [],
+  "model": "Qwen3-8B MXFP4 W4A16 (compressed-tensors, MXFP4 weights group_size=32, input_activations: null)",
+  "format_id": "mxfp4",
+  "metric": "quality",
+  "value": 70.58,
+  "unit": "accuracy_percent (unweighted average of AIME-24, AIME-25, GSM8K, MATH-500)",
+  "methodology": "Qwen3-8B MXFP4 W4A16 checkpoint, vLLM --dtype bfloat16 --tensor-parallel-size 1 on 8x B200 (SM100). The checkpoint declares input_activations: null, i.e. no activation quantization, but vLLM routed it to FlashInferMxfp4LinearKernel (the W4A4 path) - visible directly in the startup log line 'Using FlashInferMxfp4LinearKernel for MXFP4 GEMM'. Evaluated on AIME-24, AIME-25, GSM8K and MATH-500 with the same system prompts, sampling configuration and evaluation harness for all three rows of the comparison (BF16 baseline 82.36 avg, MarlinMxfp4Kernel 78.16 avg).",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "THIS IS THE BROKEN NUMBER, not the quantized model's true quality. The same weights on MarlinMxfp4Kernel score 78.16 avg, and BF16 scores 82.36. The 7.58 pp gap to Marlin is attributable to executing a W4A16 checkpoint on a W4A4 kernel; the remaining 4.20 pp is normal MXFP4 quantization loss. Component scores here: AIME-24 51.25, AIME-25 42.08, GSM8K 93.86, MATH-500 95.13. Reads as a plausible 'MXFP4 costs ~12 points' result and invites exactly the wrong conclusion. The tell is the startup log naming the FlashInfer MXFP4 kernel on a checkpoint whose config has input_activations null. See gotcha mxfp4-w4a16-misrouted-to-w4a4-kernel; vLLM PR #56803 fixes the dispatch. Sibling records cover the same checkpoint under mxfp4-w4a16-on-w4a16-marlin and the bf16 reference."
+}

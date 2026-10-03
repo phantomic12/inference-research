@@ -4,9 +4,7 @@
   "name": "Enabling the V1 engine shrinks usable context several-fold on the same hardware and model",
   "class": "framework",
   "affects": [
-    "vllm",
-    "qwen2-5-coder-32b-instruct-gptq-int4",
-    "tensor-parallel"
+    "vllm"
   ],
   "symptom": "Qwen2.5-Coder-32B-Instruct-GPTQ-Int4 ran at 12K context on 4x RTX 3070 (32 GB) under vLLM 0.6.x. The same model with the same flags under 0.7.0 + VLLM_USE_V1=1 cannot exceed ~3K context and hits CUDA OOM.",
   "root_cause": "The V1 engine holds more non-KV memory for the same weights and KV configuration, leaving less room for KV cache blocks at a given --max-model-len. The report pins the environment (flashinfer 0.1.6+cu124torch2.4, torch 2.5.1, transformers 4.48.1) with --gpu-memory-utilization=1, --enforce-eager, --swap-space=0.",
@@ -18,5 +16,9 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-vllm-issue-12529-v1-higher-memory"
+  ],
+  "concepts": [
+    "qwen2-5-coder-32b-instruct-gptq-int4",
+    "tensor-parallel"
   ]
 }

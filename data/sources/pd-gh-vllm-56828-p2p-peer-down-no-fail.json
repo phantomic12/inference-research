@@ -1,0 +1,15 @@
+{
+  "id": "pd-gh-vllm-56828-p2p-peer-down-no-fail",
+  "type": "source",
+  "name": "vLLM issue #56828: KV Offload P2P peer-down on one rank does not fail loads or block new loads to sibling ranks",
+  "url": "https://github.com/vllm-project/vllm/issues/56828",
+  "publisher": "vllm-project/vllm",
+  "kind": "forum",
+  "published": "2026-09-14",
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "Disaggregated P/D deployment (llm-d), multi-rank prefill pods with 8 P2P control ports. When a source pod died mid-transfer, the consumer marked only that rank's peer down and then submitted a NEW load to a sibling rank of the same dead pod, which ran the full 30s load timeout; requests bound to that source fell back to local prefill only after 36-43s. Confirmed by maintainer he-yufeng against main: peer_id is per control port so an 8-rank pod registers as 8 independent peers; _reap_dead_sessions only reaps the session whose own ZMQ connection died; there is no progress field anywhere in the load path, so 'the 30s walk is the only terminator'. Also: a rank that was still answering control messages while its pod failed health checks meant the ZMQ heartbeat never fired - the data path stalled on a control-alive peer.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

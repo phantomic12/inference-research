@@ -1,0 +1,24 @@
+{
+  "id": "llamacpp-rocm-ppl-explosion-silent-corrupt",
+  "type": "gotcha",
+  "name": "A llama.cpp ROCm commit raised WikiText-2 perplexity from 7.72 to 3024 on a Q4_0 model with no error, and only llama-per perplexity caught it",
+  "class": "measurement",
+  "affects": [
+    "llama-cpp",
+    "gguf-q4-0"
+  ],
+  "symptom": "On Ryzen AI Max+ 395 (iGPU Radeon 8060S, gfx1151), ROCm 7.2.4, Llama-3.2-3B-Instruct Q4_0, wikitext-2-raw/wiki.test.raw, -c 32768 -ngl 999 --chunks 1: llama-perplexity returns PPL = 7.7241 at b10038 and 5839ba35, then PPL = 3024.3587 at b10040, and 2177.3497 on latest master bb4caa75 (v0.2.0). In use the same build degrades context comprehension and tool calling frequently fails. The Vulkan build of the identical model with identical arguments is unaffected - tool calls complete perfectly.",
+  "root_cause": "Introduced at or after commit b10040 in the HIP/ROCm path; the specific code change was not identified. Bisect was done with a script that gates on the PPL value (awk 'exit (p < 100) ? 0 : 1'), so each step is a real measured pass/fail rather than a build success. Worth stating what this is NOT evidence of: nothing here implicates the Q4_0 quantization, and the Vulkan build on the same model and machine is clean.",
+  "workaround": "Run llama-perplexity as a smoke test on the same model, context and file across the backends you intend to ship, and treat a PPL jump of two orders of magnitude as a hard stop. When bisecting a backend, automate the metric rather than eyeballing chat output - the reporter's own path to the bug was noticing tool calls failing on newer models, then bisecting down to a 3B model for speed. Cross-backend comparison on identical GGUF files is the cheapest way to separate 'the backend is broken' from 'the model is weak'.",
+  "severity": "major",
+  "notes": "The canonical demonstration of why quantized-model quality claims need an eval harness: an output-quality regression of this magnitude produces no error, no warning and no NaN - the server answers every request - and the regression is 390x in perplexity. It also shows the right triage order: a PPL this bad is a backend bug, so check another backend on the same file before touching the quantization settings.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-llamacpp-27506-rocm-ppl-explosion"
+  ],
+  "concepts": [
+    "rocm"
+  ]
+}

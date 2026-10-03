@@ -1,0 +1,47 @@
+{
+  "id": "ssm-sequential-scan-tensor-core-mismatch",
+  "type": "flop",
+  "name": "Why SSM and linear-RNN FLOPs do not convert into GPU FLOPs: the sequential scan bypasses the tensor cores",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The arithmetic is small and easy; the hardware is what fails. A selective-SSM step is h_t = a_t*h_{t-1} + b_t*x_t with a per-channel, input-dependent decay a_t - a rank-1-scaled recurrence whose dependence between time steps is a MULTIPLICATIVE chain. Tensor cores compute sums of independent products C = A@B within one step; they cannot express 'step t depends on the completed result of step t-1'. So the recurrence must be executed as a sequential scan over the sequence dimension, and the elements are dependent, so the parallel width over t collapses. The consequence is stated by the authors who built the fix: Transformers-are-SSMs says SSD 'thanks to its reformulation to use matrix multiplication as a subroutine, can exploit specialized matrix multiplication (matmul) units on GPUs, also known as tensor cores. As a result, it is 2-8x faster than Mamba's fused associative scan, which does not leverage matmul units.' A 2-8x gap between the fused associative scan and the matmul-reformulated version of THE SAME MATHEMATICS is the cleanest available measurement of the penalty, because nothing but the schedule changed. Corroborating measurements in the same papers: Mamba-2 SSD crosses FlashAttention-2 at sequence length 2K and is 6x faster at 16K (linear vs quadratic); Samba reports 'Mamba has significantly worse training throughput because Mamba layers have slower training speed than MLP layers' at matched scale; HGRN2's authors make the same point from the other direction, noting that in GLA/HGRN2 'each head dimension has its own decay rate, whereas in Mamba2/xLSTM/Gated Retention, all dimensions share the decay under a single head. This improves efficiency over GLA because intra-chunk computations are more amenable to tensor core-based matrix multiplication acceleration, at the cost of sacrificing the fine-grainedness of decays.' Practical AI statement: an SSM layer's theoretical flop count is a poor predictor of its wall-clock; expect realised efficiency in the range of ordinary memory-bound elementwise work, not of a GEMM, and expect the gap to be worst exactly where the model is most attractive (long sequences, where prefill dominates).",
+  "bound_by": "both",
+  "scales_with": [
+    "sequence_length during prefill (the scan is O(L) but serial; the penalty is a scheduling loss, not an asymptotic one)",
+    "ssm_chunk_size (chunkwise/SSD reformulation is what buys tensor cores: 128 for Nemotron-H, 256 for Granite-4.0-h-tiny)",
+    "per-channel vs per-head decay granularity (finer decay = less tensor-core-friendly)",
+    "num_heads (the dimension that survives chunking and gets multiplied)",
+    "seq_chunk decomposition vs pure recurrence"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x",
+    "amd-instinct-mi250x",
+    "google-tpu-v5e",
+    "nvidia-b200",
+    "tenstorrent-wormhole-n150"
+  ],
+  "workarounds": [
+    "Chunkwise / state-space-duality formulation: block the sequence into chunks (SSD), compute intra-chunk terms with matmul and inter-chunk state passing with a small scan. This is the mechanism behind the published 2-8x, and it also permits 8x larger recurrent state at near-constant slowdown",
+    "Chunked linear-attention / delta-rule kernels (Gated DeltaNet, KDA) for the linear-attention branch of hybrids - same trick, same reason",
+    "Intra-block conventional attention + inter-block kernel trick to eliminate the cumsum that defeats naive causal linear attention (Lightning Attention, arXiv 2405.17381, which names cumsum as the exact obstacle: prior linear-attention implementations 'cannot achieve their theoretical advantage in a causal setting' because of it)",
+    "Share the decay across a head rather than per channel (Mamba2/xLSTM/Gated Retention over GLA/HGRN2) when tensor-core throughput matters more than decay fine-grainedness",
+    "Use FlashAttention 2 for the retained attention layers and pick the window size so the two halves match: Samba chose w=2048 precisely because 'FlashAttention 2 has the same training speed as Mamba's selective parallel scan at the sequence length of 2048'"
+  ],
+  "notes": "This is the practically important fact about hybrid Mamba models and it cuts against their marketing. The linear-time, constant-state claims are real and verified; the implication that they are therefore FASTER is not, because the arithmetic that replaces attention is exactly the shape tensor cores are worst at. Reported end-to-end numbers are consistent with this: Nemotron-H claims 'up to 3x faster at inference' (3x, not 10x, despite removing 92% of attention layers); Samba reports 3.73x throughput at 128k prompt and 3.64x at 64k generation; Jamba reports an 8x KV-cache reduction rather than a throughput multiple. Engineering consequence: judge an SSM model's serving speed by measured tok/s on the target part, never by its flop count or its 'linear complexity' label, and expect the deficit to be worst on prefill-heavy and long-prompt workloads - which is precisely the workload long context is bought for. Second-order: the reformulations that fix this (chunkwise SSD, delta rules, cumsum-free linear attention) all trade away the property that made the architecture interesting - SSD shares decay across a head and reduces state precision, Lightning Attention approximates intra-block with exact attention, KDA specialises the DPLR transition - so the fastest SSM variants are not the same models as the cleanest theoretical ones. Architecture-selection corollary: on hardware with strong matmul units and weak sequential-scan support, a hybrid that keeps a meaningful attention fraction (Nemotron-H's 8%, Kimi Linear's 3:1) will often beat a pure-SSM model, because the attention layers are the ones that convert flops into time.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "arch-mamba2-ssd",
+    "arch-mamba",
+    "arch-samba",
+    "arch-hgrn2",
+    "arch-nemotron-h",
+    "arch-jamba",
+    "arch-lightning-attention",
+    "arch-kimi-linear",
+    "arch-hf-config-nemotron-h",
+    "arch-hf-config-granite4"
+  ]
+}

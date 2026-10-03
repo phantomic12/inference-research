@@ -5,10 +5,7 @@
   "class": "config",
   "affects": [
     "vllm",
-    "flashinfer",
-    "nvidia-gb10",
-    "dgx-spark",
-    "qwen3-5-122b-a10b-int4"
+    "flashinfer"
   ],
   "symptom": "A single logger.warning announces that cudagraph_mode was downgraded; decode throughput is 47.5 tok/s on FLASHINFER vs 55.2 tok/s on FLASH_ATTN (+16%), changing only --attention-backend. The warning names neither the cost nor the alternative, so it reads as an informational line.",
   "root_cause": "With speculative decoding enabled (MTP/EAGLE, num_speculative_tokens >= 1) and the FlashInfer backend on its native non-trtllm-gen decode path, vLLM silently downgrades cudagraph_mode from FULL_AND_PIECEWISE to PIECEWISE. The decode step then pays per-step kernel-launch overhead that a full decode graph would elide. Measured on GB10 / DGX Spark (sm_121a, unified LPDDR5X, ~273 GB/s) - bandwidth-bound, so launch overhead is unusually visible; trtllm-gen is not usable on sm_121.",
@@ -20,5 +17,8 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-vllm-issue-49547-spec-decode-cudagraph-downgrade"
+  ],
+  "concepts": [
+    "qwen3-5-122b-a10b-int4"
   ]
 }

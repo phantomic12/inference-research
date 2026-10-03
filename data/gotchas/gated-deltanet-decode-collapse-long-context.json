@@ -4,11 +4,7 @@
   "name": "Hybrid Gated DeltaNet models keep fast prompt processing but collapse ~25x in decode past ~80K context",
   "class": "kernel",
   "affects": [
-    "llama-cpp",
-    "qwen3-8-27b",
-    "nvidia-rtx-4080-super",
-    "cuda",
-    "gguf-k-quant"
+    "llama-cpp"
   ],
   "symptom": "With the model fully resident on GPU (zero 'assigned to device CPU' lines in the log), decode falls from ~33 t/s at 68K KV position to 1.4 t/s (714 ms/token) at 91K position, or times out, while prompt processing stays ~1300 t/s at the same positions. Zero-context decode is normal (~38-39 t/s). Reproduced on native Windows 11 (CUDA 13.3) and WSL2 Ubuntu 22.04, on master 8144f31 and release b10488.",
   "root_cause": "Not fully root-caused in the issue; the reproduction matrix localizes it to the KV-cache path at high positions rather than to GPU residency or quantization. The cliff survives with the model fully offloaded (-ngl 999), so it is not CPU offload. It persists across KV quant types (q4_0 and q5_0 both stall or time out) and with FA on or off; only -c 73728 with q8_0 KV and no FA stayed at 33.1 t/s @ 68K. Affected files: unsloth/Qwen3.8-27B-GGUF UD-Q3_K_XL, UD-IQ4_XS, IQ4_XS on RTX 4080 SUPER (sm_89, driver 591.86).",
@@ -20,5 +16,10 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-llamacpp-issue-27623-gated-deltanet-decode-collapse"
+  ],
+  "concepts": [
+    "cuda",
+    "gguf-k-quant",
+    "qwen3-8-27b"
   ]
 }

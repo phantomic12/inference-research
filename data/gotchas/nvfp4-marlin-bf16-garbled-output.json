@@ -7,8 +7,7 @@
     "vllm",
     "nvfp4",
     "nvidia-rtx-4090",
-    "nvidia-v100-sxm2-32gb",
-    "nvidia-blackwell-sm100"
+    "nvidia-v100-sxm2-32gb"
   ],
   "symptom": "vllm serve of any NVFP4 model with --dtype bfloat16 on SM < 100 (e.g. RTX 4090 SM89, V100 SM70) loads, starts and serves, but every response is garbled. Measured on GLM-4.7-Flash-NVFP4: 54.7% of output values are zero and cos_sim is 0.22 against an FP32 reference; GSM8K 5-shot is garbled.",
   "root_cause": "These GPUs take the Marlin FP4 dequantization path. dequant_fp8_scales<nv_bfloat162, kFE4M3fn> in csrc/quantization/marlin/dequant.h widens the S0E5M3 scale exponent (5-bit, bias 15) to BF16 (8-bit, bias 127) by copying only the low 4 exponent bits into position, producing BF16 exponent E4 0 0 0 E3 E2 E1 E0 instead of E4 !E4 !E4 !E4 E3 E2 E1 E0. For real model scales (E4=0) the scale is read as about 2^-112 instead of about 2^0, so weight x scale underflows to zero.",
@@ -20,5 +19,8 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-vllm-issue-34694-nvfp4-bf16-marlin"
+  ],
+  "concepts": [
+    "nvidia-blackwell-sm100"
   ]
 }

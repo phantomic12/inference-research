@@ -1,0 +1,21 @@
+{
+  "id": "vllm-arc-b60-no-pcie-p2p-kv-transfer",
+  "type": "gotcha",
+  "name": "vLLM cannot transfer KV over PCIe P2P on Arc Pro B60 because the UCX ze_ipc backend is unmerged",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "intel-arc-pro-b60"
+  ],
+  "symptom": "Prefill/decode disaggregation on Arc Pro B60 falls back off PCIe peer-to-peer for KV transfer. The blocker is upstream of vLLM: Intel's own engineer on the issue states that the ze_ipc support in UCX (openucx/ucx PR #11218) is not merged, so there is no supported P2P path for KV transfer on B60 today.",
+  "root_cause": "Intel GPU peer access on Arc is exposed through Level Zero's ze_ipc extension, and UCX has no merged transport for it. Without it, KV transfer has to go through host memory, which costs a full copy of the KV cache across PCIe per hop.",
+  "workaround": "None in vLLM. If you need PD-disaggregation on Arc, either build vLLM against the unmerged UCX ze_ipc commit referenced in the issue (zhenwei-intel/vllm b12e60c3), or run Arc cards as single-card workers rather than as a disaggregated pair.",
+  "severity": "major",
+  "notes": "This is the sharpest available evidence that Arc's 456 GB/s of bandwidth does not buy you multi-card scaling: on B60 the inter-card path is a host round-trip, not P2P. Read together with the multi-GPU Arc record above, two independent projects report the same missing transport, which is much stronger evidence than either alone. Note also that the paired record covers llama.cpp's multi-card Arc crashes, so the practical advice for Arc multi-GPU is single-card workers on Linux, full stop, until ze_ipc lands in UCX. PR #57558 (tuned int4_w4a16 MoE config for Arc Pro B60) shows active kernel work on this part, so the single-card story is where the investment is.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "noncuda-vllm-53796-b60-p2p-kv"
+  ]
+}

@@ -6,9 +6,7 @@
   "affects": [
     "vllm",
     "flashinfer",
-    "deepseek-v4-1-flash",
-    "nvidia-rtx-pro-6000-blackwell",
-    "blackwell-sm120"
+    "nvidia-rtx-pro-6000-blackwell"
   ],
   "symptom": "On 8x RTX PRO 6000 Blackwell (SM120) with TP8, deepseek-ai/DeepSeek-V4.1-Flash fails to start with: ValueError: SM120 sparse-MLA has no decode kernel for this shape: num_tokens=8, num_heads=8, topk=128, d_qk=512, page_block_size=32, model_type=dsv4, extra_topk=0.",
   "root_cause": "V4.1's two-tier sparse attention gives each layer a compress_ratio (this checkpoint: [0,0,2,2,...,2,1,1,1,1,1]). vLLM computes compressed-layer KV page block size as block_size // compress_ratio, so ratio-2 layers get pbs = 64//2 = 32. FlashInfer's SM120 dispatch planner hard-codes _PAGE_BLOCK_SIZE = 64 and instantiates the dsv4 decode kernels only at pbs=64. There is no global block size that works: 64 produces pbs=32 and crashes, while 128 gives 'No common block size for 64 (FLASHINFER_MLA_SPARSE_DSV41: [128])' because no pbs=128 instantiation exists either.",
@@ -20,5 +18,9 @@
   "updated": "2026-10-03",
   "sources": [
     "gotcha-vllm-issue-59203-sm120-sparse-mla-block-size"
+  ],
+  "concepts": [
+    "blackwell-sm120",
+    "deepseek-v4-1-flash"
   ]
 }

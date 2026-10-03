@@ -1,0 +1,25 @@
+{
+  "id": "mxfp4-w4a16-on-w4a16-marlin-aime-math-gsm8k-avg",
+  "type": "benchmark",
+  "name": "Qwen3-8B MXFP4 W4A16 served on MarlinMxfp4Kernel (correct W4A16 path): AIME-24/25 + GSM8K + MATH-500 average accuracy",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-vllm-56770-mxfp4-w4a16-as-w4a4"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-b200"
+  ],
+  "interconnect_ids": [],
+  "model": "Qwen3-8B MXFP4 W4A16 (compressed-tensors, MXFP4 weights group_size=32, input_activations: null)",
+  "format_id": "mxfp4",
+  "metric": "quality",
+  "value": 78.16,
+  "unit": "accuracy_percent (unweighted average of AIME-24, AIME-25, GSM8K, MATH-500)",
+  "methodology": "Same checkpoint, same harness, same prompts and sampling as mxfp4-w4a16-on-w4a4-kernel-aime-math-gsm8k-avg, with the only change being a manual switch to MarlinMxfp4Kernel - the W4A16 path the checkpoint's contract calls for. Qwen3-8B MXFP4 W4A16 on 8x B200 (SM100) with vLLM --dtype bfloat16 --tensor-parallel-size 1. Compared against the BF16 baseline (82.36 avg) and the mis-dispatched W4A4 kernel (70.58 avg).",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "The corrected number for the checkpoint, and the one to compare any MXFP4 claim against. 78.16 vs BF16 82.36 = 4.20 pp for MXFP4 weight-only quantization on these four sets, which is the plausible cost; the further 7.58 pp in the sibling record is kernel mis-dispatch, not format cost. Component scores: AIME-24 66.67, AIME-25 55.83, GSM8K 94.62, MATH-500 95.53. Reporter notes the recovered result is 'basically consistent with the results reported in the public paper' - which is the check that confirms the diagnosis, since the paper measured W4A16. See gotcha mxfp4-w4a16-misrouted-to-w4a4-kernel."
+}

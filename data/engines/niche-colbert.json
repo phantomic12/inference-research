@@ -1,0 +1,71 @@
+{
+  "id": "niche-colbert",
+  "type": "engine",
+  "name": "ColBERT / PLAID late-interaction retrieval",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-colbert-repo",
+    "niche-colbert-plaid-paper"
+  ],
+  "repo": "stanford-futuredata/ColBERT",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA"
+  ],
+  "license": "MIT",
+  "first_release_year": 2020,
+  "design_goal": [
+    "research",
+    "throughput-first",
+    "retrieval"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "cpu"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "pytorch-checkpoint"
+  ],
+  "notable_features": [
+    "A different inference shape, not a different engine: passages are encoded into matrices of token-level embeddings rather than single vectors, and query-document scoring is a MaxSim over those matrices. The retrieval-quality gain comes from that fine-grained late interaction (SIGIR'20)",
+    "PLAID (CIKM'22, arXiv:2205.09707) is the systems contribution: it is what makes late interaction tractable by using approximate candidate generation so only a fraction of token-level scores are ever computed",
+    "ColBERTv2 (NAACL'22, arXiv:2112.01488) added lightweight late interaction and doclength-aware scoring, and the released ColBERTv2.0 checkpoint is trained on MS MARCO Passage Ranking",
+    "Ships the LoTTE benchmark alongside the checkpoint, so the quality claim is checkable rather than asserted",
+    "Indexer/Searcher API: index your corpus once into matrices, then serve MaxSim queries",
+    "IndexUpdater and additional HuggingFace model support merged in January 2023, still flagged beta by the README",
+    "3944 stars, MIT, v0.2.22 released 2025-08-11, last push 2025-10-14, 290 open issues"
+  ],
+  "hardware_caveats": [
+    "STORAGE, NOT MEMORY, IS THE BINDING CONSTRAINT. An index is one embedding matrix row per token of every passage, so index size scales with corpus token count. This is the practical reason late interaction is expensive and the reason PLAID exists",
+    "FAISS IS A HARD DEPENDENCY and the README's warning is the operational fact: 'pip install colbert-ai[torch,faiss-gpu]' usually works but 'if you face issues conda is always more reliable for faiss and torch'. This is the single most common ColBERT install failure",
+    "A separate conda_env_cpu.yml exists for CPU-only environments, and the README warns that testing CPU execution on a machine that has GPUs may need extra care - i.e. the CPU path is genuinely secondary",
+    "Python 3.7+ and PyTorch 1.9+ floor per the README",
+    "Requires a downloaded checkpoint, not a safetensors file from the Hub: the ColBERTv2.0 checkpoint is a tar.gz from Stanford's own downloads server (downloads.cs.stanford.edu). Offline or air-gapped installs need manual staging",
+    "Not a serving engine: no HTTP API, no batching story, no continuous batching, no KV cache, scheduling is 'none'. It is a library plus an index format",
+    "Not a drop-in for a vector database. ColBERT indexes are not comparable to single-vector indexes and cannot be queried with pgvector or a stock ANN service",
+    "CUDA and CPU only in the README; no ROCm, Metal or Vulkan path",
+    "Last push 2025-10-14, so the code is maintained but at a much lower cadence than the engines here. Research software cadence, not production cadence"
+  ],
+  "best_for": [
+    "Retrieval quality above what single-vector embeddings deliver, when recall on hard queries matters more than index size or query latency",
+    "Building or reading a late-interaction index, and understanding why MaxSim scoring costs what it costs",
+    "Studying PLAID as the template for making an expensive scoring function affordable - approximate candidate generation as a systems lever",
+    "Using LoTTE + the released ColBERTv2 checkpoint as a checkable baseline for any new retrieval method"
+  ],
+  "avoid_for": [
+    "Memory-constrained or cost-sensitive index storage, which is the fundamental trade late interaction makes",
+    "Operational simplicity - the FAISS/torch dependency conflict and the manual checkpoint download are real friction",
+    "Dropping into an existing vector database workflow; it is a different index format with a different lifecycle",
+    "Production serving of retrieval itself without adding a service layer around it"
+  ],
+  "docs_url": "https://github.com/stanford-futuredata/ColBERT",
+  "notes": "Included because late-interaction retrieval is a distinct inference workload with distinct hardware needs - the scoring is a per-token matrix reduction, not a generation loop - and it is routinely confused with the generation engines. PLAID arXiv:2205.09707 (2022-05-19), ColBERT arXiv:2004.12832 (2020-04-27) and ColBERTv2 arXiv:2112.01488 (2021-12-02) all verified via the arXiv API. Related: [[niche-text-embeddings-inference]] and [[niche-infinity]] serve the single-vector embedding case that ColBERT is an alternative to; Infinity can serve ColBERT-family models but ColBERT here is the reference implementation of the late-interaction idea."
+}

@@ -1,0 +1,75 @@
+{
+  "id": "niche-mnn",
+  "type": "engine",
+  "name": "MNN (Alibaba mobile inference engine)",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-github-rest-api-repo-metadata",
+    "niche-mnn-repo"
+  ],
+  "repo": "alibaba/MNN",
+  "languages": [
+    "C++",
+    "C",
+    "Python",
+    "Kotlin",
+    "CUDA",
+    "Objective-C++",
+    "Swift"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2019,
+  "design_goal": [
+    "edge/mobile",
+    "minimal-deps",
+    "low-latency",
+    "embedded"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cpu",
+    "vulkan",
+    "opencl",
+    "cuda",
+    "metal",
+    "hexagon-dsp"
+  ],
+  "supported_formats": [
+    "mnn"
+  ],
+  "notable_features": [
+    "A pre-LLM mobile inference engine that grew a real LLM story rather than being replaced by one: the README tracks Qwen2.5-Omni 3B/7B, Qwen3, DeepSeek-R1 1.5B, Qwen3-VL and the Qwen3.5 series (announced 2026-03-05), with shipping MNN Chat apps for Android and iOS and multimodal (text/image/audio) support",
+    "THE DIFFERENTIATING BACKEND IS THE HEXAGON DSP. Release 3.6.1 (2026-07-22) added a Qualcomm Hexagon backend for accelerated inference on Hexagon DSPs - a path no GPU-oriented engine in this repo takes, and the reason to know about MNN at all",
+    "MNN TaoAvatar (2025-06-11) is a striking demonstration: LLM, ASR, TTS, A2BS and NNR models all running locally on-device with no server component",
+    "Designed for the actual constraints of phones: small binary footprint, low memory ceiling, no Python runtime, and shipping as Android/iOS native apps",
+    "Battle-tested by Alibaba in consumer products per the project description, which is the real credential",
+    "Apache-2.0, 16171 stars, 3.6.1 released 2026-07-23, last push 2026-09-30, 3596 open issues"
+  ],
+  "hardware_caveats": [
+    "CLOSED MODEL FORMAT. MNN uses its own .mnn representation, converted from ONNX via MNN tools. There is no GGUF, no safetensors, no AWQ/GPTQ path. Converting and validating a quantised model for MNN is your job, and the results will not match your GGUF numbers",
+    "The hardware surface is mobile-first. The Hexagon DSP backend is the notable one; Vulkan and OpenCL cover Android GPU; there is a CUDA path but for conversion/validation rather than for phone deployment. No ROCm, no TPU, no npu-in-the-datacentre sense",
+    "The LLM models it ships support are small: DeepSeek-R1 1.5B, Qwen2.5-Omni 3B and 7B, Qwen3. This is on-device scale. There is no 70B path and no tensor parallelism",
+    "scheduling is 'none' - no continuous batching, no paged KV, no prefix caching. It is a single-stream on-device runtime. The exception is in the models themselves, where MNN implements specific architectures rather than scheduling them",
+    "Larger models in the family need mmap and memory pressure management on a phone; memory ceilings on real devices, not on your desktop, are the constraint",
+    "3596 open issues on 16171 stars, plus a multi-language codebase (C++, Kotlin, Objective-C++, Swift) that widens the support surface",
+    "Quality and model coverage depend on what Alibaba's own product teams have needed - the roadmap visibly follows their phone products, which is fine until your model is not on it"
+  ],
+  "best_for": [
+    "Shipping an LLM or multimodal model inside an Android or iOS app with no server dependency, which nothing else in this repo does",
+    "Mobile CPU, Vulkan or OpenCL inference where the .mnn format and a small footprint are the point",
+    "Anyon working with Qualcomm Hexagon DSPs - the 3.6.1 Hexagon backend is a unique capability in this whole slice",
+    "An offline fully-local assistant app, as TaoAvatar demonstrates"
+  ],
+  "avoid_for": [
+    "Server or datacenter inference of any kind - there is no scheduler and the model formats are not the ones you have",
+    "Using existing GGUF or safetensors quantisations directly; the conversion step is on you and the numbers will not transfer",
+    "Large models; the shipped LLM support tops out at the 7B/8B class",
+    "Non-Apple, non-Android, non-Hexagon hardware"
+  ],
+  "docs_url": "https://github.com/alibaba/MNN",
+  "notes": "The mobile/embedded half of the niche, and the only project here with a DSP backend. Useful precisely because the LLM-serving field is GPU-CUDA-shaped and phones are not: MNN is what on-device actually looks like, with its own format, its own backends and its own small-model ceiling. The Hexagon DSP backend (3.6.1, 2026-07-22) is the single most unusual hardware capability recorded in this slice. All metadata from the GitHub API on 2026-10-03."
+}

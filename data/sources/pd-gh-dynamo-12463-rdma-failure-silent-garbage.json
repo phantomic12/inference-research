@@ -1,0 +1,15 @@
+{
+  "id": "pd-gh-dynamo-12463-rdma-failure-silent-garbage",
+  "type": "source",
+  "name": "Dynamo issue #12463: vLLM disaggregated serving over InfiniBand returns garbage tokens; GPUDirect RDMA failure on PIX-adjacent passthrough NICs",
+  "url": "https://github.com/ai-dynamo/dynamo/issues/12463",
+  "publisher": "ai-dynamo/dynamo",
+  "kind": "forum",
+  "published": "2026-07-30",
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "The strongest available example of a KV-transfer failure surfacing as silent numerics divergence rather than an error. Original symptom: 'the served model to return garbage tokens. The request returns HTTP 200 with a well-formed OpenAI response envelope, populated usage, and a finish_reason. No error is returned to the client.' Root cause established by maintainer avinash-rafay on 2026-08-01: 'UCX_NET_DEVICES was a proxy for the real variable' - 'GPUDirect RDMA fails when the GPU and the selected NIC are PIX-adjacent - i.e. they talk over a direct PCIe peer-to-peer path that never traverses the PCIe host bridge - on hosts where the GPUs and NICs are PCIe passthrough devices in a VM (KVM/QEMU). Two passthrough devices doing direct P2P get no IOMMU translation in the guest, so the HCA's read of GPU BAR memory is rejected. The transfer dies, and the request still returns HTTP 200 with garbage.' The unset case picked each pod's GPU-affine NIC, i.e. precisely the PIX partner, so both sides landed on a broken path (100% garbage); setting UCX_NET_DEVICES=mlx5_0:1 'fixed it by accident' by moving 7 of 8 GPUs off the PIX pairing, with the one PIX-adjacent GPU still failing 100% of the time. Env: 8x H200 + 8x ConnectX-7 per node, KVM PCIe passthrough, vLLM 0.23.0, nixl 1.2.0, TP=1, Dynamo 1.3.0, Gemma-4-31B-IT-NVFP4. Triage marked it urgent 'because failed KV transfer currently becomes silent token corruption'.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

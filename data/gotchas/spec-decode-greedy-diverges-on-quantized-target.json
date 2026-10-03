@@ -1,0 +1,26 @@
+{
+  "id": "spec-decode-greedy-diverges-on-quantized-target",
+  "type": "gotcha",
+  "name": "Draft-model speculative decoding is not lossless at temperature 0 when the target model is quantized",
+  "class": "kernel",
+  "affects": [
+    "llama-cpp",
+    "gguf-q4-k-m"
+  ],
+  "symptom": "Under greedy sampling (temperature=0, top_k=1), llama-server with --spec-type draft-dspark or draft-mtp produces different text than the same server without -md, when the target is quantized. Example divergence on Qwen3-8B Q4_K_M: vanilla ends '...checks if it has a cached copy of the website's SSL/TLS certificate...' while dspark ends '...checks if the system has a valid certificate for example.com'. Gemma-4-12B Q4 with draft-mtp n_max=4 diverges too (169 of 340 tokens accepted).",
+  "root_cause": "Not isolated in the issue - the reporter is careful about this. The reproducer matrix is what localizes it: Q4_K_M vanilla is deterministic (two runs match); Q4_K_M with ngram-simple and ngram-mod stays lossless including with accepts; Q4_K_M with draft-dspark n_max=7 diverges; and it still diverges with -fa off, so FA is not involved. Crucially, a bf16 target with draft-dspark matches vanilla 4/4 on four prompts. So it is not 'all speculative decoding' and not permanent weight corruption (ngram uses the same greedy accept/verify sampler path in common_sampler_sample_and_accept_n and stays lossless). The lead is draft-model speculative paths (MTP/DSpark: draft ctx, KV, embd/injection, multi-token target batching) interacting badly with quantized target compute - path-dependent Q4 numerics. Also not DSpark-specific (Gemma MTP fails) and not Qwen-specific (Gemma fails).",
+  "workaround": "Do not assume spec decode is lossless on a quantized target. If greedy reproducibility against a non-speculative run matters, either use a bf16 target, or use ngram speculation (verified lossless on the same Q4 target in this report), or validate greedy output against vanilla yourself before shipping. Run the comparison at temperature 0 on your own checkpoint - the failure is model- and method-specific.",
+  "severity": "major",
+  "notes": "This contradicts the property the design rests on (draft proposes, target verifies, so greedy output must be identical), so it is worth treating as a real defect rather than a numerics footnote. Reproduced on AMD Strix Halo iGPU / Vulkan against llama.cpp PR #25173, with similar mismatches reported by others on CUDA (not re-run there). Related to llama.cpp #27579 on the same hardware: the upstream commit e79e4bf66's message names exactly this symptom ('can flip greedy argmax on RDNA3.5 (e.g. MTP speculative decode diverging from the non-speculative baseline)') as the motivation for removing -funsafe-math-optimizations, yet #27579 reproduces with that flag already removed. Treat FP-associativity as a hypothesis, not an explanation.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "qgotcha-llamacpp-25618-spec-quant-greedy-divergence"
+  ],
+  "concepts": [
+    "rocm",
+    "speculative-decoding",
+    "vulkan"
+  ]
+}

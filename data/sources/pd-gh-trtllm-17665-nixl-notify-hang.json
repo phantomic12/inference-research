@@ -1,0 +1,15 @@
+{
+  "id": "pd-gh-trtllm-17665-nixl-notify-hang",
+  "type": "source",
+  "name": "TensorRT-LLM issue #17665: NIXL cache-transceiver hangs forever if a single completion notification is dropped",
+  "url": "https://github.com/NVIDIA/TensorRT-LLM/issues/17665",
+  "publisher": "NVIDIA/TensorRT-LLM",
+  "kind": "forum",
+  "published": "2026-08-13",
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "The canonical NIC-path hang-instead-of-error report. TRT-LLM v1.3.0rc0, unchanged through v1.3.0rc24 and main; GB200/GB300; cache_transceiver_config.backend NIXL, disaggregated CTX/GEN. Mechanism: AgentConnection::send() does the RDMA transfer and then signals completion as a SEPARATE NIXL notification message; the receive side waits for it in a loop with no timeout and no retry, and terminateFlag only flips on executor shutdown. 'If the notification packet is dropped, this spins forever at 100% CPU while the GPU sits idle.' The Mooncake backend shares the same AgentConnectionManager. Observed 100% reproducible on one rack, worked around by switching that rack to the UCX backend, then the identical hang appeared on a different rack weeks later - timing-dependent, not rack-specific. Maintainer chienchunhung confirms it is 'a valid liveness issue, but enabling in-flight cancellation by default only mitigates the hang; it does not fix the missing completion notification itself'. Also notes the current tag keeps only 12 request-ID bits, so duplicate retry needs a generation-safe identifier.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}
