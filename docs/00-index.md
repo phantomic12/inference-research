@@ -567,7 +567,7 @@
 
 _empty — see `python tools/query.py gaps`_
 
-## Sources (700)
+## Sources (699)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **Best practices for competitive inference optimization on AMD Instinct MI300X GPUs (ROCm Blogs)** (`sources/bench-amd-rocm-llm-inference-best-practices`) — benchmark · AMD
@@ -1184,7 +1184,6 @@ _empty — see `python tools/query.py gaps`_
 - **Cloud TPU v6e (Trillium) system architecture** (`sources/asic-tpu-v6e-specs`) — spec-sheet · Google Cloud
 - **Compute Express Link: About CXL** (`sources/link-cxl-about`) — spec-sheet · CXL Consortium
 - **DeepSeek-V3 config.json (huggingface.co/deepseek-ai/DeepSeek-V3)** (`sources/model-cn-deepseek-v3-config`) — spec-sheet · DeepSeek
-- **EquipNet auctions index** (`sources/sup-buy-equipnet-auctions`) — spec-sheet · EquipNet
 - **GPT-4.1 model page** (`sources/model-fr-openai-gpt-4-1-docs`) — spec-sheet · OpenAI
 - **Gemma 3n model overview** (`sources/model-fr-google-gemma-3n-doc`) — spec-sheet · Google
 - **Gemma 4 model overview** (`sources/model-fr-google-gemma-4-doc`) — spec-sheet · Google
@@ -1272,7 +1271,7 @@ _empty — see `python tools/query.py gaps`_
 
 ## Coverage
 
-Total records: **1234**
+Total records: **1233**
 
 | group | records |
 |---|---|
