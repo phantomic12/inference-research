@@ -1,0 +1,32 @@
+{
+  "id": "ops-cpu-hpa-blind-to-llm-load",
+  "type": "gotcha",
+  "name": "CPU- and GPU-utilisation-based autoscaling cannot see LLM serving load: an HPA on CPU never fires, and an HPA on GPU utilisation fires on a lightly loaded server",
+  "class": "config",
+  "affects": [
+    "vllm",
+    "llm-d"
+  ],
+  "concepts": [
+    "autoscaling",
+    "continuous-batching",
+    "kv-cache",
+    "tpot",
+    "ttft",
+    "queueing"
+  ],
+  "symptom": "A CPU-based HPA on a GPU inference Deployment sits pinned at its minimum replica count while requests queue and latency climbs, because the serving process is not CPU-bound — the frontend is idle waiting on the accelerator. Switching to DCGM GPU-utilisation as the HPA metric looks like a fix and is not: the replicas stay at minimum while the pool is saturated AND they also stay pinned high while the pool is nearly empty, because continuous batching holds the SMs busy in both cases. The autoscaler is simultaneously too insensitive when saturated and over-sensitive when idle, so it can be wrong in both directions with the same configuration.",
+  "root_cause": "GPU load is simply not visible in request count or in the standard resource metrics an HPA reads. The authoritative statement is llm-d's: 'During active token generation, GPU utilization can remain high whether a model server is lightly loaded or saturated. A utilization-based autoscaler cannot reliably distinguish spare serving capacity from an overloaded batch.' The mechanism is that continuous batching keeps the device busy by construction — a single running request will saturate the SMs just as effectively as fifty will, because decode is memory-bandwidth-bound work rather than throughput work. The same reasoning applies to CPU: the frontend is an event loop plus an HTTP server, and it does no model compute, so its utilisation tracks request-arrival bookkeeping, not serving work. Nothing in the HPA's metric set (cpu, memory, or accelerator utilisation) correlates with the actual constraint, which is KV cache occupancy and queue depth.",
+  "workaround": "Scale on a demand signal the accelerator cannot hide: queue depth (llm_d_epp_flow_control_queue_size plus llm_d_epp_request_running, threshold an absolute per-replica target), pool saturation (a normalised 0.0-1.0+ ratio, which llm-d calls 'more portable across hardware'), token backlog, or estimated latency against an SLO. llm-d's design is the reference: KEDA's Prometheus scaler evaluates an EPP metric and creates an owning autoscaling/v2 HPA against it, so no custom controller and no Prometheus Adapter are needed. KServe's LLMInferenceService reaches the same place via the Workload Variant Autoscaler, which likewise 'makes scaling decisions based on inference-specific metrics such as KV cache utilization, queue depth, and request saturation'. Critically, this only works if the excess demand is measurable somewhere — which is why the queue has to be moved to the gateway first (ops-queue-belongs-at-the-gateway); without a central queue you are scaling on an engine-local gauge that only measures what already got admitted.",
+  "severity": "blocker",
+  "notes": "Signal hierarchy in increasing order of care: (1) request count — wrong unit, see ops-ratelimit-token-vs-request-count; (2) running-request count — a concurrency proxy, better, blind to per-request size; (3) KV cache occupancy (vllm:kv_cache_usage_perc, '1 means 100 percent usage') — the tightest physical constraint on decode, but it has no rate analogue for prefill; (4) queue depth / saturation — measures unmet demand directly and is the only signal that exists before degradation reaches users; (5) predicted latency against SLO — measures the objective rather than a proxy, and is what llm-d's SLO-aware path scales on.",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-llmd-autoscaling-keda-epp",
+    "ops-kserve-llmisvc-autoscaling",
+    "ops-llmd-autoscaling-wva-deprecated",
+    "ops-vllm-metrics-loggers"
+  ]
+}

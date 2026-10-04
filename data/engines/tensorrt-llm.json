@@ -3,13 +3,20 @@
   "type": "engine",
   "name": "TensorRT-LLM",
   "status": "verified",
-  "confidence": 0.85,
+  "confidence": 0.87,
   "updated": "2026-10-03",
   "sources": [
     "engine-trtllm-github",
     "engine-trtllm-architecture",
     "engine-trtllm-install",
-    "engine-trtllm-parallel"
+    "engine-trtllm-parallel",
+    "ev-gh-api-repo-metadata-2026-10-04",
+    "ev-trtllm-build-from-source-doc",
+    "ev-trtllm-pr-7633-cu12-build-over-5h",
+    "ev-trtllm-issue-8286-ds-r1-build-2h",
+    "ev-trtllm-pr-11250-engine-build-time",
+    "ev-trtllm-pr-18542-fmha-jit-warmup",
+    "ev-trtllm-quantization-doc"
   ],
   "repo": "NVIDIA/TensorRT-LLM",
   "languages": [
@@ -48,7 +55,9 @@
     "CUDA Graph capture with padding up to the nearest captured batch size, documented as worth up to 22% end-to-end throughput on some models",
     "Full parallelism menu: TP, PP, DP, EP, CP and Wide-EP with an expert-parallel load balancer for MoE",
     "Disaggregated prefill/decode serving and day-0 support cadence for new open-weight models",
-    "Also hosts a diffusion VisualGen pipeline for image/video generation"
+    "Also hosts a diffusion VisualGen pipeline for image/video generation",
+    "Engine build time is a tracked internal KPI: an open NVIDIA issue (2026-02-17) asks to display per-model engine build time, regressions and the slowest build in an internal dashboard - so the vendor treats this cost as something to optimise, not absorb",
+    "FMHA generation kernels are NVRTC-compiled at engine startup and the project is actively working to overlap that with autotuning and CUDA-graph capture (opt-in TRTLLM_GEN_FMHA_ASYNC_WARMUP=1, PR open as of 2026-10-04)"
   ],
   "hardware_caveats": [
     "CUDA only - there is no ROCm, Metal, Vulkan or CPU path. This is the defining constraint of the engine",
@@ -56,7 +65,9 @@
     "The wheel is not interchangeable with the NGC container's torch; inside an NGC PyTorch container you must use the prebuilt wheel shipped at /app/tensorrt_llm instead of the PyPI one",
     "Slurm clusters need MPI rebuilt with Slurm support or the launcher aborts; this is called out as a general MPI+Slurm issue but it bites in practice",
     "DeepGEMM expert-parallel kernels hard-abort after a 60s barrier budget (DG_JIT_BARRIER_TIMEOUT_SECONDS) and the resulting device-side assert poisons the CUDA context, so the first Python traceback points at an unrelated kernel",
-    "MoE scaling features (Wide-EP, EPLB, one-sided all-to-all over NVLink, DWDP) are written against NVLink topologies such as NVL72, so their published wins do not transfer to PCIe-only boxes"
+    "MoE scaling features (Wide-EP, EPLB, one-sided all-to-all over NVLink, DWDP) are written against NVLink topologies such as NVL72, so their published wins do not transfer to PCIe-only boxes",
+    "TWO SEPARATE BUILD COSTS, and the second one is on the startup path. (1) The C++ compile: NVIDIA's own CUDA-12 CI leg cost MORE THAN 5 HOURS on SBSA/Grace Blackwell and was DELETED to save the time rather than optimised (PR #7633, 2025-09-09) - a vendor self-report of NVIDIA's own build cost and the most direct published figure for this engine. (2) The runtime engine build for one checkpoint: 2+ hours observed for a DeepSeek-R1 build stage on a B200 following the official quick-start recipe (issue #8286, TensorRT-LLM 1.0.0.rc6, CUDA 12.8, driver 570.133.20), and a measured 290 s -> 260 s for Nemotron Super V3 fp8 at TP=8 (PR #11250). Separately, FMHA kernel NVRTC codegen costs '~5-11s per kernel variant depending on host CPU, 80-160s total on MLA fp8-KV configs (DeepSeek-family), ~2min for sparse gen kernels' on EVERY engine cold start (PR #18542). See [[ev-build-cost-is-three-separate-builds]]",
+    "The build guide's own dependency list is the real constraint: git-lfs checkout of large model assets, a purpose-built NGC devel container rather than a generic PyTorch image, mandatory Docker flags with stated failure modes ('--ipc=host is required to avoid Bus error (core dumped)'), a build-script-created virtualenv, and Conan for C++ dependencies. Network filesystems (Lustre/NFS/GPFS) are documented as much slower than local disk because a full build creates a very large number of small files"
   ],
   "best_for": [
     "Maximum throughput on a fixed NVIDIA fleet, especially MoE models where expert parallelism and load balancing are the bottleneck",
@@ -69,5 +80,5 @@
     "Teams that need to support many model architectures without NVIDIA adding support for each"
   ],
   "docs_url": "https://nvidia.github.io/TensorRT-LLM/",
-  "notes": "'paged-kv' and 'in-flight batching' both apply: the KVCacheManager allocates blocks and requests are added to a running batch rather than waiting for it to drain. Format support is recorded conservatively - the engine's own quantization path plus Model Optimizer checkpoints (FP8/FP4) are the well-trodden ones. Whether Marlin kernels are selectable inside TRT-LLM was not confirmed from the pages read, so treat that entry as uncertain."
+  "notes": "'paged-kv' and 'in-flight batching' both apply: the KVCacheManager allocates blocks and requests are added to a running batch rather than waiting for it to drain. Format support is recorded conservatively - the engine's own quantization path plus Model Optimizer checkpoints (FP8/FP4) are the well-trodden ones. Whether Marlin kernels are selectable inside TRT-LLM was not confirmed from the pages read, so treat that entry as uncertain. ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-10-04 (0 months), latest release v1.2.1 published 2026-04-20, 493 contributors, open_issues_count 1571 (issues PLUS pull requests), NOT archived, 14762 stars. Actively developed, with a ~6-month gap between the latest release and the last commit - worth knowing if you are pinning to a release rather than tracking main. The docs site is currently serving 1.3.0rc29, i.e. AHEAD of the shipped v1.2.1 tag, so any capability read from the live docs is release-candidate behaviour rather than released behaviour. DEPLOYMENT: NO graded evidence of production deployment found - see [[ev-production-evidence-is-scarce-and-nearly-always-single-site]]. NVIDIA ships TensorRT-LLM inside NIM microservices, which is real commercial distribution, but NVIDIA publishes no request volume, QPS or fleet size for it and no independent third-party benchmark of the engine as deployed was found. The existing vendor-reported performance records for this engine remain the only throughput figures in the repo, and they are marked as such. PERFORMANCE CHARACTERISTICS: this engine has the repo's second-deepest set of vendor benchmarks (23 records) and they are unusually well-conditioned - engine version, model, quantization, TP degree and batch all stated - so this is one of the two engines in the repo where a reader can actually compare numbers. STRUCTURED OUTPUT and CHUNKED PREFILL: neither is recorded for this engine and neither was confirmed from the pages read on 2026-10-04 - recorded as UNSTATED rather than absent. MARLIN RESOLUTION: the record's own note flagged its marlin entry as uncertain; the 2026-10-04 read of the quantization docs did NOT resolve it. The versioned page's quick-links point instead at KV Cache Compression and at NVIDIA Model Optimizer's external support matrix, i.e. the vendor's own pointer for which quantizations work is ModelOpt's matrix, not this engine's docs - so the conservative supported_formats list stands unchanged and the marlin entry remains unconfirmed rather than being upgraded on the strength of a page that does not address it."
 }

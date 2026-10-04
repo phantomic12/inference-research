@@ -1,0 +1,15 @@
+{
+  "id": "ops-tgi-router",
+  "type": "source",
+  "name": "TGI router design note (continuous batching, prefill/decode asymmetry, latency-throughput tradeoff)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://github.com/huggingface/text-generation-inference/blob/main/router/README.md",
+  "publisher": "Hugging Face",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "The design note that explains why queue time is invisible in a continuously-batched engine. Continuous batching is 'the act of regularly running queries in the same forward step of the LLM (a batch) and also removing them when they are finished', and the router 'is handling most of the logic to handle the batches - tell when to pass new prefill requests and pausing decode requests'. The latency-versus-throughput statement that matters for operators: 'With no continuous batching at all, latency is going to be super good, but throughput (meaning the total number of requests allowed in a given timeframe) is going to be super bad (since it is essentially 1). With static batching, you can probably reach the maximum throughput ... but the latency is super bad since in order to have maximum throughput you need to wait for requests to come in before processing. With continuous batching you can find a sweet spot. In general latency is the most critical parameter users care about. But a 2x latency slowdown for 10x more users on the same hardware is an acceptable tradeoff.' It also states the prefill/decode asymmetry directly: 'Since prefill is much more expensive than decode we do not want to do it all the time, but a currently running query is probably doing decode. If we want to do the continuous batching as explained previously we need to run prefill at some point in order to create the attention matrix required to be able to join the decode group.' And the memory precondition for continuous batching to be worthwhile: 'you need to have more compute available with respect to the memory requirements of your model ... since you have to pool multiple GPUs to load the model, you effectively have a lot of compute power at your hands.' Also documents token streaming as the latency mitigation: 'With token streaming, the server can start answering after the first prefill pass directly, without waiting for all the generation to be done.'"
+}

@@ -1,0 +1,34 @@
+{
+  "id": "dep-gateway-silently-drops-params-with-http-200",
+  "type": "gotcha",
+  "name": "A translating gateway drops output-affecting request fields and returns 200: a pinned JSON-schema const arrives as type:object, stop sequences never arrive at all, and nothing in any log says so",
+  "class": "framework",
+  "affects": [
+    "litellm"
+  ],
+  "concepts": [
+    "gateway",
+    "openai-compatible",
+    "schema-translation",
+    "json-schema",
+    "tool-calling",
+    "stop-sequences",
+    "silent-failure",
+    "compatibility-ceiling"
+  ],
+  "symptom": "The request succeeds, the response looks right, and the constraint you set is not in force. Six concrete cases reported against LiteLLM v1.101.0 against real provider APIs: a JSON-schema const is forwarded to Gemini as {'type':'object'}, so any object satisfies it and a pinned value becomes unconstrained; strict is dropped on the way to Gemini; strict is dropped on the way to Anthropic, neither on the tool nor inside input_schema; parallel_tool_calls:false is dropped, so the named tool_choice survives as mode: ANY plus allowed_function_names while nothing carries the single-call restriction; allowed_callers is dropped; and the developer role is rewritten to system on an OpenAI-to-OpenAI route that accepts role: developer directly (sending it by hand returns 200). Every case returns HTTP 200 - 'nothing signals to the caller that the constraint they set is not in force.' A second, narrower report on the same tracker: the Responses API path silently drops stop entirely, because ResponsesAPIOptionalRequestParams has no stop field so it is filtered out before any provider mapping or validation runs - no UnsupportedParamsError, no warning, no log. The visible symptom is a model that does not stop where you told it to, or a structured-output contract that has quietly loosened.",
+  "root_cause": "The gateway is the only component in the topology that rewrites requests, and its translation is schema-to-schema rather than string-to-string. When the source schema has a field the target schema cannot express, the field is dropped rather than rejected. In the stop case the drop happens even earlier than provider mapping - a typed request model without the field filters it out before validation ever runs, so nothing downstream can notice. Two things make this class dangerous rather than merely annoying. First, the failure is invisible by construction: the optimization and the danger are the same code path, and the status code is a success. Second, it is the compatibility ceiling of the pattern, made concrete - the ceiling is set by the least expressive API in the chain, and every hop below the gateway (vLLM, SGLang) accepts more of the request than the gateway will pass on. Note the reporter's own discrimination, which is important and easy to get backwards: dropping role: developer when the target is a NON-OpenAI provider such as vLLM that rejects the role is a correct fix, whereas doing it on an OpenAI-compatible target that accepts the role as sent is a bug. The systemic scale is visible in the tracker's open PRs: warn instead of silently dropping unsupported tool constraints, reject unsupported reasoning_effort, surface unsupported stop and json_object response_format instead of silently dropping, stop declaring silently-dropped params as supported, and one report of reasoning_effort=xhigh being silently downgraded to baseline rather than refused when the model map lacks the capability.",
+  "workaround": "Treat the gateway as a trust boundary that must be verified, not a transparent pipe. Three things are worth doing and none require patching the gateway. (1) Run --detailed_debug and read the exact upstream payload under 'POST Request Sent from LiteLLM' - the reporter notes this is what made the problem reportable at all, because it converts an inference about behaviour into a quoted payload. (2) For every field whose semantics you depend on, assert end-to-end that the constraint took effect: a pinned enum via schema validation, a stop sequence via a two-sentinel prompt, single-tool-call via tool_choice behaviour. (3) Where the target genuinely cannot express a field, reject it client-side with a clear error - which is what this reporter did after hitting the stop drop - rather than passing it in to be silently discarded. When choosing between gateways, treat 'parameters accepted and forwarded' as a per-target capability matrix to be tested, because that is the dimension on which they differ; the schema-translation layer is where provider diversity is paid for.",
+  "severity": "major",
+  "notes": "Recorded as a gotcha because it fails silently and because it is the concrete form of the gateway layer's compatibility ceiling - the cost side of the value side recorded in dep-gateway-hop-cost-and-value. Two independent reporters, one issue closed same-day in 2026-08 (the stop drop) and one open as of 2026-10-04 (the six translation losses), and roughly half a dozen open PRs against the same behaviour, which is the signature of a systemic design posture rather than one bug. The open items make this a moving target: a release that starts raising UnsupportedParamsError will change the observable behaviour from silent-drop to error, and any runbook written against silent-drop needs updating when that lands. Also note the two reported cases sit on opposite ends of the trade - dropping a field the target cannot express may be the only option, which is why 'reject loudly' is a policy choice the gateway has to make explicitly rather than by omission.",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "sources": [
+    "dep-litellm-41913-fields-dropped-in-translation",
+    "dep-litellm-35582-responses-drops-stop",
+    "dep-litellm-proxy-quickstart-docs",
+    "cpuedge-litellm-github",
+    "cpuedge-litellm-license"
+  ]
+}

@@ -7,7 +7,10 @@
   "updated": "2026-10-03",
   "sources": [
     "niche-github-rest-api-repo-metadata",
-    "niche-vllm-production-stack-repo"
+    "niche-vllm-production-stack-repo",
+    "ev-gh-api-repo-metadata-2026-10-04",
+    "dep-vllm-prodstack-router-readme",
+    "dep-vllm-prodstack-prefix-aware-tutorial"
   ],
   "repo": "vllm-project/production-stack",
   "languages": [
@@ -68,5 +71,5 @@
     "Cloud providers other than AWS/GCP/Lambda Labs without expecting to debug the tutorial yourself"
   ],
   "docs_url": "https://docs.vllm.ai/projects/production-stack",
-  "notes": "One of four infrastructure-layer records here (with [[niche-triton-inference-server]], [[niche-deepspeed-mii]] and, indirectly, [[niche-kserve]]). Included because the gap it fills is real and named: the difference between 'vLLM works' and 'vLLM works as a service', which is request routing plus cross-pod prefix-cache reuse. vllm-stack-0.1.13 recorded as the maturity caveat. All metadata from the GitHub API on 2026-10-03."
+  "notes": "One of four infrastructure-layer records here (with [[niche-triton-inference-server]], [[niche-deepspeed-mii]] and, indirectly, [[niche-kserve]]). Included because the gap it fills is real and named: the difference between 'vLLM works' and 'vLLM works as a service', which is request routing plus cross-pod prefix-cache reuse. vllm-stack-0.1.13 recorded as the maturity caveat. All metadata from the GitHub API on 2026-10-03. ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-10-02 (0.1 months before this record), latest release vllm-stack-0.1.13 published 2026-09-29, 163 contributors (distinct committers including anonymous), open_issues_count 233 (issues PLUS pull requests - see [[ev-github-open-issues-count-includes-pull-requests]]), not archived, 2657 stars. See [[ev-maintenance-status-is-four-dated-facts]] for how to read this fact set. ROUTER DETAIL ADDED 2026-10-04 from the in-tree vllm_router README (dep-vllm-prodstack-router-readme), which was not previously captured in this record. The router is a separate FastAPI/uvicorn process with a service-discovery and health-check surface of its own: --service-discovery {static|k8s}, --static-backends, --static-models, --static-aliases, --static-backend-health-checks (sends periodic dummy requests to verify models work), --k8s-port (default 8000), --k8s-namespace, --k8s-label-selector, --routing-logic {roundrobin|session}, --session-key, --engine-stats-interval (default 30 s scrape of per-engine metrics: QPS, TTFT, pending/running/finished requests, uptime), --request-stats-window (default 60 s sliding window), and hot-reloadable --dynamic-config-yaml/json. Two maturity signals worth carrying: the router README still lists prefix-aware routing as '(WIP)' while the docs site ships a prefix-aware tutorial and the code has a PrefixAwareRouter class, so the README lags the implementation; and prefix-aware routing is documented as routing by shared PROMPT PREFIX to maximise KV cache reuse - the tutorial's own demonstration is two requests with a common prefix where the second returns an LMCache hit on the first's blocks. Prefix-cache placement is where this layer's real failure modes live, and three are recorded as gotchas in this repo: dep-router-metric-name-parse-miss-looks-healthy, dep-prefixaware-subthreshold-latches-a-bad-first-pick and dep-router-prefix-tree-ram-is-the-router-oom."
 }

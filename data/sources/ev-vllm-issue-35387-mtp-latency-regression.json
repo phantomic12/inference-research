@@ -1,0 +1,15 @@
+{
+  "id": "ev-vllm-issue-35387-mtp-latency-regression",
+  "type": "source",
+  "name": "vLLM issue #35387: MTP causes a 76.5% latency regression on Qwen3-Next-80B-A3B-Instruct-FP8 (TP=4, 4x H100)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "url": "https://github.com/vllm-project/vllm/issues/35387",
+  "publisher": "vLLM",
+  "kind": "forum",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Filed 2026-02-26, OPEN as of 2026-10-04. Useful as a counterweight to every engine's 'speculative decoding supported' feature flag: support is not a guarantee of benefit. Fully pinned conditions, which is why it is citable rather than anecdote - vLLM commit ee59a7c61574485cf4ddbc6037ba557941be5c56 on main, model Qwen/Qwen3-Next-80B-A3B-Instruct-FP8, TP=4, max-model-len 262144, num_speculative_tokens 2, 4x NVIDIA H100 80GB HBM3, driver 580.105.08, PyTorch 2.10.0+cu129, CUDA 12.9.86, Python 3.12.11, Intel Xeon Sapphire Rapids. Measured with vLLM's own bench latency harness: baseline (no MTP, no prefix caching) avg 0.894 s / P50 0.895 / P90 0.901 / P99 0.907; with --speculative-config '{\"method\":\"qwen3_next_mtp\",\"num_speculative_tokens\":2}' avg 1.578 s (+76.5%), P50 1.573, P90 1.621, P99 1.670; with MTP PLUS --enable-prefix-caching avg 1.629 s (+82.2%), P50 1.628, P90 1.673, P99 1.691. So on this model/config speculation made latency worse, and combining it with prefix caching made it worse still - the two features usually pitched as complementary. The author's hypothesis (not confirmed): the regression is related to copying num_accepted_tokens back to CPU before mamba_postprocess. Recorded with measured_by third_party and status draft."
+}

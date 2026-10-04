@@ -1,0 +1,15 @@
+{
+  "id": "ev-llamacpp-issue-26100-spec-benchmark-inflates-10x",
+  "type": "source",
+  "name": "llama.cpp issue #26100: speculative draft-cache replay bypasses p_min, inflating repeated-prompt benchmarks ~10x and degrading mixed-traffic serving ~3x",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://github.com/ggml-org/llama.cpp/issues/26100",
+  "publisher": "llama.cpp",
+  "kind": "forum",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Filed 2026-07-24, CLOSED. A documented case of an inference throughput number being wrong because of how it was measured, which is the repo's absolute rule made concrete. Fully pinned: release b8400 (cf23ee2) and b8407 (312cf03), llama-server Windows official release binaries and HIP package, common/speculative.cpp byte-identical between those tags, code path introduced by #12635 (commit 94933c8c2) and 'the same structure is present on current master' at the time of writing. Conditions of the inflated measurement: llama-server -m Qwen3-8B-Q4_K_M.gguf -md Qwen3-0.6B-Q8_0.gguf -ngl 99 -ngld 99 -fa on --draft-max 48 -c 16384 -ub 2048 -b 2048 --parallel 1 --metrics; a REPEATED-prompt protocol reads 9.5x-16.9x higher tok/s than varied-prompt traffic at identical settings, because the persistent drafter context (prompt_dft) is reused and the replay path 'never runs the draft model and never applies params.p_min'. Mechanism: 'Any benchmark that warms up and times with the same prompt (a very common pattern) measures the replay path, not speculative decoding.' True acceptance rate for that model pair is ~0.6 with varied prompts. The production face is worse than the benchmark face: with three chat requests sharing a long common prefix then a speculative request (b8407, HIP verify + Vulkan draft, Qwen3-4B Q4_K_M + Qwen3-0.6B Q8_0), acceptance drops 0.60 -> 0.12, drafted tokens per 512-token reply explode ~440 -> ~1470, and end-to-end latency goes ~3x (3.5 s -> 6.7 s), reproduced 2/2; the same request on a fresh slot drafts normally. 'Plain or streaming traffic mixes that do NOT share long prefixes never trigger it, which makes the degradation intermittent and hard to attribute in production.' ALSO A PERFECT SPECULATIVE-DECODING FEATURE-DATA POINT: --draft-max, --draft-p-min and --draft-p-split map to the llama-server flags --spec-draft-n-max / --spec-draft-p-min / --spec-draft-p-split, and the p_min threshold is documented as existing only in the model-sampling loop."
+}

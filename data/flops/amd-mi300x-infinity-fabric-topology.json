@@ -10,8 +10,8 @@
     "num_gpus"
   ],
   "affected_by_hardware": [
-    "mi300x",
-    "mi325x",
+    "amd-instinct-mi300x",
+    "amd-instinct-mi325x",
     "gfx942"
   ],
   "workarounds": [
@@ -19,7 +19,7 @@
     "For large models, TP=8 on a single 8-GPU node keeps all communication on Infinity Fabric",
     "Pipeline parallelism should be used to scale beyond 8 GPUs, as it requires less communication than TP"
   ],
-  "notes": "MI300X uses 7 Infinity Fabric links at 128 GB/s per direction (153.6 GB/s bidirectional per link) to form a fully connected 8-GPU node. Total aggregate P2P bandwidth: 896 GB/s. The 7-link (not 8-link) topology means each GPU connects to 7 others in a fully connected mesh - no switch. This is the scale-up network. For tensor parallelism: TP=8 on a single node keeps all AllReduce traffic on Infinity Fabric at 896 GB/s aggregate. The AllReduce bandwidth per GPU is 7 x 128 = 896 GB/s (one link per peer). For pipeline parallelism: P2P communication is only between adjacent pipeline stages, requiring 1 link per stage boundary. The 7-link full mesh means TP=8 has no communication bottleneck from the network topology itself - the bottleneck is the AllReduce algorithm efficiency. AMD's guidance: for models <=30B, use TP=1 (8 separate instances) to avoid communication overhead. For models >70B, TP=8 on a single node is optimal. The 896 GB/s aggregate is 1.7x the PCIe Gen5 x16 bandwidth (128 GB/s), so intra-node TP is always preferred over cross-node TP.",
+  "notes": "MI300X uses 7 Infinity Fabric links at 128 GB/s per direction (153.6 GB/s bidirectional per link) to form a fully connected 8-GPU node. Total aggregate P2P bandwidth: 896 GB/s. The 7-link (not 8-link) topology means each GPU connects to 7 others in a fully connected mesh - no switch. This is the scale-up network. For tensor parallelism: TP=8 on a single node keeps all AllReduce traffic on Infinity Fabric at 896 GB/s aggregate. The AllReduce bandwidth per GPU is 7 x 128 = 896 GB/s (one link per peer). For pipeline parallelism: P2P communication is only between adjacent pipeline stages, requiring 1 link per stage boundary. The 7-link full mesh means TP=8 has no communication bottleneck from the network topology itself - the bottleneck is the AllReduce algorithm efficiency. AMD's guidance: for models <=30B, use TP=1 (8 separate instances) to avoid communication overhead. For models >70B, TP=8 on a single node is optimal. The 896 GB/s aggregate is 1.7x the PCIe Gen5 x16 bandwidth (128 GB/s), so intra-node TP is always preferred over cross-node TP. RESOLVED (2026-10-04 cross-reference repair): the bare part names in affected_by_hardware were expanded to their record ids - mi300x -> amd-instinct-mi300x, mi325x -> amd-instinct-mi325x, mi350x -> amd-instinct-mi350x, mi355x -> amd-instinct-mi355x. Each name matched exactly one accelerator record in data/accelerators/, so no variant was chosen between siblings (MI300X and MI325X are both CDNA3, MI350X/MI355X/MI350P all CDNA4) - the id is forced by the part name. This field is still a mixed bucket: it also carries the architecture codename values gfx942/gfx950, which are not ids and were left alone. DANGLING REF, LEFT UNRESOLVED (2026-10-04 cross-reference repair): affected_by_hardware also carries 'gfx942', an AMD GPU ARCHITECTURE CODE, not a record id, and it spans more than one accelerator record: amd-instinct-mi300x and amd-instinct-mi325x are both CDNA3 (gfx942). Because one value in this field resolves to several accelerator records, it cannot be rewritten to a single id, and the field is typed as accelerator ids so this is a mixed-bucket value that belongs in a sibling field for architecture codenames. Left unchanged deliberately.",
   "status": "verified",
   "confidence": 0.9,
   "updated": "2026-10-04",

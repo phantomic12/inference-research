@@ -1,0 +1,15 @@
+{
+  "id": "dep-sgl-model-gateway-readme",
+  "type": "source",
+  "name": "SGLang Model Gateway (sgl-model-gateway / sgl-router) README - control plane and data plane",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-04",
+  "url": "https://github.com/sgl-project/sglang/blob/main/sgl-model-gateway/README.md",
+  "publisher": "SGLang project",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Fetched 2026-10-04 from main. Self-described as 'High-performance model routing control and data plane for large-scale LLM deployments'. CONTROL PLANE, verbatim: 'Worker Manager validates workers, discovers capabilities, and keeps the registry in sync'; 'Job Queue serializes background operations (add/remove) and exposes status via /workers/{worker_id}'; 'Background health checker and load monitor keep circuit breakers and policies informed'; 'Optional Kubernetes service discovery keeps the registry aligned with pods.' DATA PLANE, verbatim: HTTP routers for regular and PD traffic with policy-aware selection; a gRPC router with fully Rust tokenizer/reasoning/tool parser; an OpenAI router proxying to remote vendors; 'Router Manager coordinates multiple router implementations when IGW is enabled'; 'Resilience layer delivers token-bucket rate limiting, request queuing, retry executor, and per-worker circuit breakers'; 'Advanced load balancing with cache-aware request reuse, load-aware (power-of-two) selection, and per-model policy overrides.' Load-balancing policies enumerated verbatim: random, round_robin, cache_aware ('maintains a prefix tree of prompts to route repeat traffic and evens load with configurable thresholds --cache-threshold, --balance-abs-threshold, --balance-rel-threshold, --eviction-interval, --max-tree-size'), power_of_two ('chooses the lighter worker among two random candidates'). Reliability defaults verbatim: 'Default max retries = 5 with exponential backoff'; 'Retries trigger on 408/429/500/502/503/504'; per-worker circuit breakers with --cb-failure-threshold; token bucket driven by --max-concurrent-requests; health checks with --health-check-interval-secs and --disable-health-check. HTTP client defaults: pool idle timeout 50 s, connect timeout 10 s, max idle connections per host 500, TCP keepalive 30 s. IGW mode (--enable-igw) registers workers dynamically by POST /workers with url, model_id, priority and labels, so routing is a mutable runtime API rather than static config. '--backend openai' mode 'acts as a proxy to a single remote endpoint; load balancing is not applied.' 40+ Prometheus metrics and OpenTelemetry. Rust binary; cargo build --release; Python wheel via maturin; abi3 for Python 3.8+."
+}

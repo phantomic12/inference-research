@@ -1,0 +1,15 @@
+{
+  "id": "ev-sglang-issue-40877-production-deepseek-v41-flash",
+  "type": "source",
+  "name": "SGLang issue #40877: '[SM120] Field report: DeepSeek-V4.1-Flash in production on 8x RTX PRO 6000 (PCIe, no NVLink) - working config, measured throughput, rejected topologies'",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "url": "https://github.com/sgl-project/sglang/issues/40877",
+  "publisher": "SGLang",
+  "kind": "forum",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Filed 2026-09-23, OPEN as of 2026-10-04. ONE OF THE TWO REAL PRODUCTION DEPLOYMENT EVIDENCE RECORDS THIS RESEARCH PRODUCED. Self-described as 'Field data from running DeepSeek-V4.1-Flash as a production SGLang backend on 8x RTX PRO 6000 Blackwell Max-Q (SM120, 96 GB, PCIe-only - no NVLink)', with the report stating numbers 'come from a working day of production use'. Deployment shape and hardware stated: 8x RTX PRO 6000 Blackwell Max-Q 96 GB, TP=8/EP=8/DP=1, docker run --shm-size=64g --restart unless-stopped, context_length 1,048,576, kv_cache_dtype fp8_e4m3, mem_fraction_static 0.72, max_running_requests 16, attention_backend dsv4, moe_runner_backend flashinfer_mxfp4, CUDA graph decode on (max_bs 16) and PREFILL DISABLED. Measured, with conditions: 128K cold prefill 6,853 tok/s at chunked_prefill_size=2048 (re-run 6,765, -1.3%), 6,845 with flashmla prefill backend, 6,301 at chunk 4096, 6,012 at chunk 1024; 32K prompt ~7,196 tok/s; 'GPU util ~87% at 220 W of 600 W -> communication-bound on PCIe, not compute-bound'; decode single-stream prose 93.9 tok/s, structured/JSON 134.1 tok/s, TTFT 143-169 ms over an SSH tunnel. Prefix cache A/B: 'cache-hit prefill 0.34 s for a 112K-token prefix ~= 325K tok/s (~39x)'. Speculative A/B, DSPARK block_size=2: prose 76.5-78.9 tok/s ON vs 36.4-36.5 OFF, structured 120.3-120.5 vs 36.5, accept length 3.0 vs 1.0; production ships block_size=6 at ~237-252 tok/s structured. The author is explicitly careful about method: 'tokens from usage, not SSE chunk counts', 'Verify intended config from the server (/get_server_info) before timing anything; discard legs that fail the gate'. SELF-DECLARED LIMITS, which is why this is citable: 'Not established - No 24 h soak (numbers come from a working day of production use), block sizes 4/8/12 not re-measured with the fixed sweep tool, and >32K prefill/long-context degradation not characterised.' NOTE this is a field report posted by a user, i.e. third_party, not a vendor benchmark, and it is one site's one working day."
+}

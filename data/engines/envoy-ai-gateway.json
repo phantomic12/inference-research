@@ -1,0 +1,73 @@
+{
+  "id": "envoy-ai-gateway",
+  "name": "Envoy AI Gateway (now Agent Router)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "dep-gateway-api-inference-extension-intro",
+    "dep-envoy-ai-gateway-inferencepool-guide",
+    "dep-llmd-envoy-ai-gateway-guide",
+    "dep-tetrate-envoy-ai-gateway-benchmarks"
+  ],
+  "repo": "envoyproxy/ai-gateway",
+  "languages": [
+    "Go"
+  ],
+  "license": "Apache-2.0 (open-source data plane; a commercial Tetrate product sits on top)",
+  "first_release_year": 2025,
+  "design_goal": [
+    "model-aware-routing",
+    "ai-gateway",
+    "token-rate-limiting",
+    "observability",
+    "openai-compatible",
+    "k8s-native"
+  ],
+  "scheduling": [
+    "request-routing",
+    "load-balancing",
+    "endpoint-selection",
+    "model-aware-routing",
+    "serving-priority",
+    "traffic-splitting"
+  ],
+  "supported_backends": [
+    "none (gateway layer - L7 proxy plus an external-processing extension; does not load weights)"
+  ],
+  "supported_formats": [
+    "passthrough (OpenAI-compatible and other GenAI API shapes; format-agnostic because it never loads weights)"
+  ],
+  "notable_features": [
+    "REBRANDED: 'Formerly Envoy AI Gateway - now an Agentic AI Foundation project. Same code, same maintainers. CRD, API, and CLI names are unchanged.' Docs 0.5 are published under the former name and latest is 1.1, so search results and code comments mix both names.",
+    "Two-hop request path: an Envoy-managed Gateway does L7 policy and routing, and a separate Endpoint Picker picks the serving pod. llm-d states it exactly: 'inference requests will flow from an Envoy-managed Gateway to your model servers via the llm-d EPP.'",
+    "Mechanism is Envoy's External Processing Protocol (ext_proc), so any gateway supporting ext-proc plus Gateway API becomes an inference gateway - Envoy Gateway, kgateway and GKE Gateway are all named.",
+    "Model-aware routing by model NAME rather than path, extending to LoRA fine-tuned models; serving priority so latency-sensitive chat outranks latency-tolerant summarization; model rollouts via traffic splitting on model names; per-TOKEN rate limiting rather than per-request; enhanced observability.",
+    "AIServiceBackend allows one route to mix self-hosted and vendor backends, so a mixed fleet is one route rather than two.",
+    "Measured data-plane overhead roughly 2 ms (~0.01% of end-to-end) under sustained enterprise LLM load, flat at peak saturation, from an independent Broadcom/VMware Cloud Foundation validation; control plane tested to 2,000 AIGatewayRoutes with zero routing failures.",
+    "Install is multi-component: Gateway API CRDs, then Envoy Gateway from an OCI helm chart with AI Gateway plus token-rate-limit and InferencePool add-ons, then the AI Gateway CRD and controller, then a GatewayClass, then ClusterRole/Binding granting get/list/watch on inferencepools."
+  ],
+  "hardware_caveats": [
+    "No local compute: it never loads weights and never touches an accelerator. supported_backends is an explicit 'none'.",
+    "xDS payload ceiling: at 2,000 routes the control-plane-to-extension payload exceeded the default 4 MB gRPC message size and had to be raised to 25 MB. The practical route ceiling also depends on per-route config complexity and the ~1 MB Kubernetes object size limit.",
+    "CPU limits interact badly with worker concurrency. Documented operator note: 'Early runs showed multi-second apparent latency from a Linux CFS throttling trap when Envoy worker threads exceeded the container CPU quota. Pinning Envoy --concurrency to allocated CPU limits eliminated that overhead.' This presents as a network or model problem, not a throttling problem.",
+    "Benchmark ceilings were measured WITHOUT headerMutation (per-backend config), so headline route counts do not transfer to a heavily configured route set.",
+    "The reference Endpoint Picker shipped in the Gateway API Inference Extension repo is 'a lightweight EPP for conformance testing purposes' - production endpoint picking means running your own.",
+    "Gang scheduling for the multi-node LLM replica it fronts is still Alpha upstream (LeaderWorkerSet), so multi-node topologies inherit an immature placement API."
+  ],
+  "best_for": [
+    "Kubernetes-native serving wanting model-aware routing, per-token quota and observability in one hop",
+    "Clusters already running Gateway API, Envoy Gateway, kgateway or GKE Gateway - the ext-proc integration is designed for exactly these",
+    "Serving llm-d / KServe LLMInferenceService topologies, where the Gateway-plus-EPP split is the intended shape",
+    "Enterprises needing governance and audit on the data path and wanting a compiled proxy rather than a Python process in the request path"
+  ],
+  "avoid_for": [
+    "Non-Kubernetes deployments - the whole value is Gateway API CRDs, InferencePool and per-backend configuration",
+    "Single-replica or single-model serving, where the control plane is cost without benefit",
+    "Fleet-wide cross-provider abstraction across many vendors - that is the job of a higher-level AI gateway such as LiteLLM, Gloo or Apigee, which the Inference Extension docs explicitly position above this layer",
+    "Latency budgets where the extra hop matters more than the governance it buys (though at ~2 ms measured, that is rarely the case for LLM traffic)"
+  ],
+  "docs_url": "https://aigateway.envoyproxy.io/docs/",
+  "notes": "Recorded as an engine because litellm already sets the precedent that a gateway or proxy is an engine record, and because this layer has no other home in data/ - not a model, not a quantization, and nothing else describes a routing data plane. The most load-bearing fact for the topology layer is the LAYERING, stated directly by the Gateway API Inference Extension: this project 'extend[s] popular gateways like Envoy Gateway, kgateway, and GKE Gateway to become Inference Gateway', and is meant to 'integrate your self-hosted models alongside model-as-a-service providers in a higher level AI Gateways like LiteLLM, Gloo AI Gateway, or Apigee'. A production topology therefore commonly has BOTH: a k8s-native inference gateway that picks pods by cache and load, and a higher-level AI gateway doing auth, quotas and cost attribution. Two hops, two different jobs - and installing both without deciding which owns which decision is how a deployment ends up with two competing answers to 'which replica serves this request'. Accuracy caveat: the latency and control-plane figures come from Tetrate, which co-creates and commercially supports this project; the ~2 ms data-plane number is third-party (Broadcom/VMware), and the competitor characterizations on that page are vendor-attributed rather than independently measured.",
+  "type": "engine"
+}

@@ -1,0 +1,28 @@
+{
+  "id": "ops-router-circuit-breaker-blind-to-h2c-downgrade",
+  "type": "gotcha",
+  "name": "The router reads a worker's protocol once at registration and never re-reads it, so a worker that stops serving its registered protocol is not detected — the circuit breaker opens on live traffic instead",
+  "class": "config",
+  "affects": [
+    "sglang-router"
+  ],
+  "concepts": [
+    "failover",
+    "circuit-breaker",
+    "http2",
+    "worker-discovery",
+    "routing"
+  ],
+  "symptom": "After a rolling update or a network change, one router replica's throughput drops while its peers are fine, and its circuit breaker for that worker is open. The worker's health is red on the side that actually serves traffic but the registry entry was written at startup; nothing re-probes. Under a static worker list nothing re-registers at all, so the stale entry persists for the process lifetime.",
+  "root_cause": "The router determines each worker's forwarding protocol from its /server_info record at registration: 'A worker protocol is fixed for as long as that worker stays registered: it is read once, at registration, and never re-read.' The documented consequence: 'So a worker registered over h2c that later stops serving it (a proxy interposed on its port, say) is not detected until it is re-registered; its circuit breaker will open in the meantime.' The recovery path differs by discovery backend — under the Kubernetes backend a restarting engine flips its EndpointSlice to ready=false, which is a Removed-then-Added cycle and therefore produces a fresh reading, whereas under a static --worker-urls list 'the fan-out happens once at startup and nothing re-registers'. Related detection gaps in the same area: a worker whose /server_info does not answer 'has no readable protocol and forwards over HTTP/1.1 for as long as it stays registered - a throughput cost, never a correctness one', and h2c is 'prior-knowledge only - there is no negotiation and no fallback'.",
+  "workaround": "Prefer Kubernetes EndpointSlice discovery over a static worker list so that any lifecycle event produces a re-registration and a fresh protocol reading; if you must use a static list, treat a protocol change as requiring a router restart. Watch sgl_router_worker_cb_state (0 closed, 1 open, 2 half_open) and sgl_router_worker_health (1 admits, 0 open) to see the breaker's view, and watch the intake-versus-response identity 'requests_total - responses_total = received-but-not-answered' to catch requests the router is holding rather than answering. Note the observability asymmetry that makes this hard to diagnose: sgl_router_worker_requests_total is 'recorded after dispatch; blind to pre-dispatch drops', so a drop that never reached a worker is invisible in dispatch counters and only shows in the edge counters.",
+  "severity": "minor",
+  "notes": "Recorded at minor severity because the impact is degraded throughput on a subset of routers rather than data loss or incorrect output, and because the fix is a deployment choice rather than a code change. The honest residual: there is no periodic re-probe, so the window between a worker's protocol changing and a re-registration registering it is unbounded under a static worker list.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-sglang-router-readme",
+    "ops-sglang-router-monitoring"
+  ]
+}

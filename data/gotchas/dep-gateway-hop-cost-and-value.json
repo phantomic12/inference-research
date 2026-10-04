@@ -1,0 +1,42 @@
+{
+  "id": "dep-gateway-hop-cost-and-value",
+  "type": "gotcha",
+  "name": "A gateway hop costs one to two orders of magnitude less latency than the model call it fronts, but it adds a failure domain, a compatibility ceiling and a throughput ceiling - the overhead number is the least of the three",
+  "class": "config",
+  "affects": [
+    "litellm",
+    "niche-vllm-production-stack",
+    "sglang-router",
+    "niche-kserve"
+  ],
+  "concepts": [
+    "gateway",
+    "openai-compatible",
+    "control-plane",
+    "data-plane",
+    "latency",
+    "cost-attribution",
+    "quotas",
+    "retries",
+    "fallback",
+    "compatibility-ceiling"
+  ],
+  "symptom": "The question 'how much latency does the gateway add' is asked with the expectation of a bad number, and the measured answers are small: roughly 2 ms of data-plane overhead under sustained enterprise LLM load (independent Broadcom/VMware validation, ~0.01% of end-to-end latency, flat at peak saturation), and about +42 ms median for a Python gateway on the same machine versus direct (95% CI +17 to +81 ms) on a ~750 ms request - about 5% of time already being spent waiting. So the latency argument against a gateway is generally weak. The costs that are real are the other three: a new hop that can fail or be a bottleneck, a ceiling on which request features survive the translation layer, and a hard throughput limit that has bitten specific gateways. A gateway also becomes a database client, a cache client and a policy store at once - LiteLLM's virtual keys require an external Postgres plus a master key, and sticky sessions need a two-tier in-memory plus Redis cache.",
+  "root_cause": "The value is real and specific, and the five projects state it consistently. Gateway API Inference Extension defines the split cleanly: an Inference Gateway 'is a proxy/load-balancer that has been coupled with the EndPointer Picker extension', while an Inference Router 'makes decisions about which endpoint is optimal (best cost / best performance) for an inference request based on Metrics and Capabilities from Model Serving' - prefix cache status, LoRA adapter availability. Its listed features are model-aware routing by model name rather than path (extending to LoRA fine-tunes), serving priority so latency-sensitive chat outranks latency-tolerant summarization, model rollouts by traffic splitting on model names, and per-token rate limiting. Portkey shows the routing expression most directly: a weighted distribution over targets that may be different vendors or different models (normalized so weights 5, 3, 1 become 55/33/11%), with the five documented patterns being between-providers, between-models, multiple API keys for per-account rate limits, cost optimization, and gradual migration - plus sticky routing hashed on chosen fields with a TTL, cached in memory plus Redis so the assignment survives across gateway instances. LiteLLM's three claims are unified interface across 100+ providers, cost tracking with authentication/spend/budgets via virtual keys, and load balancing across deployments of the same model. Against that, three costs. (1) Latency, measured small as above - though note the honest caveat that a gateway's overhead with auth, attribution, guardrails and rate limiting enabled at load 'is rarely the number in a headline'. (2) A compatibility ceiling, quantified as dropped request fields returning 200 (see dep-gateway-silently-drops-params-with-http-200). (3) A throughput ceiling that is implementation-specific and can be severe: documented LiteLLM behaviour is that it 'begins to bottleneck beyond approximately 300 RPS, with latency degrading from around 200ms to over 12 seconds under load - and adding instances did not resolve it', with containers growing to 12 GB and crashing; LiteLLM's own docs claim 1.5k+ RPS under load test, so these are two different conditions rather than a resolved contradiction, and both are vendor numbers. The architectural difference cited for the Rust/Envoy path is that 'Logging stays off the critical request path (written asynchronously), and policies and pricing are cached in memory so requests do not block on database calls' - which is precisely the failure mode of a gateway that does synchronous logging and synchronous DB reads per request.",
+  "workaround": "Place the gateway where its decisions are cheap and its state is available, and pick one layer per job rather than stacking several. Three structural points from the primary sources. (1) The Kubernetes-native answer is two hops, not one: llm-d's topology is 'inference requests will flow from an Envoy-managed Gateway to your model servers via the llm-d EPP', where the Gateway does L7 policy and the Endpoint Picker picks the pod - so Envoy-family gateways give you model-aware routing, token rate limiting and observability (all three documented), while LiteLLM, Gloo and Apigee sit ABOVE that as higher-level AI gateways. Choose your layer by which job it is doing. (2) Size the gateway's CPU limit against its worker concurrency: an independent validation found 'multi-second apparent latency from a Linux CFS throttling trap when Envoy worker threads exceeded the container CPU quota', fixed by pinning concurrency to the allocated CPU limit. That is a k8s-specific gateway failure that looks like a network problem. (3) Budget the control plane separately: at 2,000 AIGatewayRoutes the xDS payload exceeded the default 4 MB gRPC message size and needed raising to 25 MB, and route count has a practical ceiling set by per-route configuration complexity and the ~1 MB Kubernetes object size limit. If you need audit, guardrails or per-token quota in the request path, measure that specific configuration at your own load - not the headline.",
+  "severity": "minor",
+  "notes": "Severity minor because the common conclusion is 'the overhead is not your problem' - this record exists to prevent the wrong conclusion in both directions: dismissing a gateway on latency grounds when the real limits are throughput and correctness, or adopting one on the strength of a microsecond benchmark taken against a mock backend. The measurement discipline in the AcruxCore post is the reusable part regardless of which gateway you run: hold the upstream, account, key, prompt and parameters constant; interleave the paths with rotating order; discard a warm-up; subtract per round so shared network blips cancel; report medians with confidence intervals plus p95/p99. Applied to self-hosted serving the same shape works with a fixed local engine instead of a vendor API. Two numbers to keep separate: the ~2 ms data-plane figure and the 160-390 ms MCP tool-call figure are different mechanisms (streaming proxying versus an ext-proc round trip including cryptographic setup), and the latter was measured against an echo tool with 100 key-derivation iterations - so do not carry one into the other's slot.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "dep-tetrate-envoy-ai-gateway-benchmarks",
+    "dep-acruxcore-gateway-overhead-measurement",
+    "dep-litellm-proxy-quickstart-docs",
+    "dep-litellm-virtual-keys-docs",
+    "dep-portkey-load-balancing-docs",
+    "dep-gateway-api-inference-extension-intro",
+    "dep-envoy-ai-gateway-inferencepool-guide",
+    "dep-llmd-envoy-ai-gateway-guide"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "dep-router-metric-name-parse-miss-looks-healthy",
+  "type": "gotcha",
+  "name": "A router scrape that recognizes zero metric names returns an all-zero stats object that is truthy, so load-aware routing silently degrades to a random pick with no warning anywhere",
+  "class": "framework",
+  "affects": [
+    "niche-vllm-production-stack",
+    "vllm"
+  ],
+  "concepts": [
+    "control-plane",
+    "data-plane",
+    "routing",
+    "load-aware-routing",
+    "prefix-cache",
+    "observability",
+    "prometheus"
+  ],
+  "symptom": "The deployment looks correct from every signal it exposes. Every backend reports healthy, get_health() stays true, the router logs a normal scrape, dashboard gauges render, and traffic keeps flowing. But load-aware placement is not working: the router is picking roughly at random, because for at least one backend its view of that backend is a fully-populated EngineStats object in which every field is exactly zero - num_running_requests and num_queuing_requests both 0, on every scrape, forever. Any load computation across the fleet is therefore identically zero, so there is no signal to minimize. The tell is a gpu_cache_usage_perc gauge reading 0% on an engine you know is at capacity, and the impossibility of distinguishing 'all backends idle' from 'the parser understood nothing'.",
+  "root_cause": "EngineStats.from_vllm_scrape() in src/vllm_router/stats/engine_stats.py recognises exactly six metric names, all vllm:-prefixed. Every sample that does not match one of the six is silently discarded, and the function then unconditionally constructs and returns an EngineStats from its zero-initialised locals - the return statement is always reached. EngineStats is a plain dataclass with no __bool__ and no __len__, so an all-zero instance is truthy. The caller stores any truthy result, so the endpoint is recorded as successfully scraped. The reporter's framing of the root cause is the part worth keeping: the bug is not the absence of SGLang support, it is that 'a total parse miss is indistinguishable from an idle engine'. Their two backends were SGLang, whose exporter publishes sglang:num_running_reqs, sglang:num_queue_reqs, sglang:token_usage and sglang:cache_hit_rate - all six comparisons miss on every sample. The same silent degradation fires for a vLLM version that renames a metric, for a /metrics endpoint fronted by a proxy that strips or re-prefixes names, or for any engine the router is pointed at. The consumer that surfaced it was their own least-loaded fallback, which was inert for a whole model lane.",
+  "workaround": "Do not treat a successful scrape as evidence that the parse understood the payload. Until fixed, verify the routing signal end to end once per backend at deploy time: assert that engine stats for a deliberately loaded replica are non-zero, and alert on a healthy backend reporting long-lived all-zero load. If you run mixed engines behind one router, scrape each backend's /metrics yourself and confirm the name prefixes your router expects are present. Two acceptable upstream fixes are on the table and both are cheap: log once per endpoint when zero names matched but the payload parsed into at least one metric family (naming the URL and a few names actually seen), or return None so the caller treats it as a failed scrape - the callers already handle an absent endpoint. Prefer the warning if you also want the backend to keep serving.",
+  "severity": "major",
+  "notes": "Recorded as a gotcha rather than an engine note because the failure is invisible by construction: the property that makes load-aware routing useful (it consumes Prometheus text from engines it does not own) is the same property that makes it fail silently here. Related and open in the same repo: #1073, where the below-threshold branch of PrefixAwareRouter falls back to a stale QPS signal and latches the bad choice for a whole session. The two compose badly - #1074 is how a backend looks idle forever, #1073 is what the router does with a backend that looks idle. Both are silent, and together they are a fleet that is balanced on paper and starves half its sessions in practice. Reporter found it because their own least-inflight fallback was inert and they could not tell from the outside.",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "sources": [
+    "dep-vllm-prodstack-1074-metric-prefix-parse-miss",
+    "dep-vllm-prodstack-router-readme",
+    "niche-github-rest-api-repo-metadata"
+  ]
+}

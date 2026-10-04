@@ -1,0 +1,28 @@
+{
+  "id": "sec-watermark-stealable-from-black-box-generations",
+  "type": "gotcha",
+  "name": "Watermark schemes are reverse-engineerable from a few black-box generations, so a watermark key is not a secret once the endpoint is live",
+  "class": "framework",
+  "affects": [],
+  "concepts": [
+    "watermark",
+    "reverse-engineering",
+    "security",
+    "paraphrase",
+    "model-extraction",
+    "api-surface"
+  ],
+  "symptom": "An operator treats the watermark key as a durable secret. A user with ordinary API access and some patience recovers the scheme - which green-list rule applies where - and then knows exactly which substitutions remove the signal.",
+  "root_cause": "Rastogi and Pruthi show a limited number of generations from a black-box watermarked model is enough to reverse-engineer the scheme. Wu and Chandrasekaran's Self Color Testing-based Substitution goes further: it obtains colour information by strategically prompting the watermarked LLM and comparing output token frequencies, uses that to determine which tokens are green, and substitutes green tokens with non-green ones - with fewer edits than related work, and a claim of removing the watermark for ARBITRARILY LONG watermarked text. Zhang et al. generalise this into an impossibility result: under a quality oracle and a mixing perturbation oracle - both satisfiable by an attacker with weaker compute than the watermarked model, who has only black-box access - strong watermarking is impossible, and this holds even in the private-detection-key setting where insert and detect share a secret key.",
+  "workaround": "Do not rely on the watermark key being secret after deployment. If watermark integrity matters, treat the endpoint as public and pair the watermark with provenance you control out-of-band (signed metadata, an append-only issuance log) rather than relying on statistical signal in the text surviving a motivated adversary.",
+  "severity": "major",
+  "notes": "SCHEME RECLASSIFIED (2026-10-04): filed under class 'framework' because schemas/gotcha.schema.json has no 'security' value. True class is 'security' - see the enum addition requested in this slice's report. This is the single most important negative result in the watermark slice, because it removes the obvious objection ('but the key is secret') to every attack above. Note that the impossibility result rests on two assumptions - availability of a quality oracle and of a mixing perturbation oracle - which the authors argue are satisfiable in practice and get EASIER to satisfy as models improve. That trend argument is the authors', not independently verified here.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "sec-arxiv-2411-05277",
+    "sec-arxiv-2403-14719",
+    "sec-arxiv-2311-04378"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "obs-tgi-has-no-ttft-metric",
+  "type": "gotcha",
+  "name": "TGI exposes queue time, inference time and time-per-token but no TTFT and no KV cache utilization - a TTFT SLO on TGI cannot be served by its metrics",
+  "class": "measurement",
+  "affects": [
+    "text-generation-inference",
+    "obs-tgi-observability"
+  ],
+  "concepts": [
+    "ttft",
+    "tpot",
+    "kv-cache",
+    "slo",
+    "missing-metric",
+    "prometheus"
+  ],
+  "symptom": "You stand up TGI, wire up /metrics, and find that the two latency numbers you need are missing. Queue time and inference time are there but the split you want is not; time-per-token is there but includes prefill so it is not comparable to anyone else's TPOT. There is no cache-occupancy number at all, so 'are we running out of KV cache' has to be answered by guessing from batch-shape gauges.",
+  "root_cause": "Measured by grepping router/src/server.rs: no occurrence of time_to_first anywhere in the file, and no kv_cache or cache_usage metric in the repository at all. The per-request decomposition TGI does compute is total_time, validation_time, queue_time and inference_time, then time_per_token = inference_time / generated_tokens - note the denominator is generated_tokens with no TTFT subtraction, and the numerator is the whole inference phase including prefill. The closest thing to a cache signal is `tgi_batch_current_max_tokens` and `tgi_batch_max_total_tokens`, which are batch-shape numbers, not occupancy. The same numbers are also returned as response headers (x-total-time, x-validation-time, x-queue-time, x-inference-time, x-time-per-token, x-prompt-tokens, x-generated-tokens), which is the practical escape hatch.",
+  "workaround": "If you must run TGI, compute TTFT client-side, or approximate it from the headers: x-queue-time plus the prefill share of x-inference-time, with the explicit caveat that this is an estimate and will misattribute prefill that overlaps other requests' decode. Do not put a TTFT SLO on `tgi_request_mean_time_per_token_duration` - it is not TTFT and not vLLM-comparable TPOT. For KV pressure use `tgi_batch_current_max_tokens` and `tgi_request_failure{err=\"dropped\"}` plus `tgi_batch_concat{reason=\"backpressure\"}` as leading indicators. If TTFT is a hard requirement for your SLO, choose an engine that exports it.",
+  "severity": "major",
+  "notes": "Two adjacent gaps make TGI's surface smaller than its 21-metric doc table suggests in one direction and larger in another. Smaller: the published table in docs/source/reference/metrics.md omits `tgi_batch_concat_duration`, `tgi_batch_inference_failure`, `tgi_request_failure`, `tgi_batch_max_total_tokens` and `tgi_batch_total_tokens`, all of which exist in the source - so the failure indicators you most want during overload are undocumented. Larger in ambition but not in substance: OTel is present (`--otlp-endpoint`) but emits generic gRPC spans named after the method with rpc.* attributes via a Unix-domain-socket interceptor - no gen_ai attributes, no prefill/decode spans. Compare vLLM's single `llm_request` span carrying gen_ai.latency.time_to_first_token: the information is available in TGI's request headers, so the honest statement is that TGI chose not to put it on the metrics path.",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-tgi-router-server-rs",
+    "obs-tgi-metrics-doc",
+    "obs-tgi-tracing-py"
+  ]
+}

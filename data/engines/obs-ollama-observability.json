@@ -1,0 +1,66 @@
+{
+  "id": "obs-ollama-observability",
+  "type": "engine",
+  "name": "Ollama (observability surface: none - no /metrics endpoint, no tracing, per-response timing only)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-ollama-routes-go",
+    "obs-ollama-api-docs",
+    "obs-ollama-readme-observability"
+  ],
+  "repo": "ollama/ollama",
+  "languages": [
+    "Go",
+    "C++",
+    "C"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "ease-of-use",
+    "local-inference",
+    "cross-platform"
+  ],
+  "scheduling": [
+    "parallel-request-model-loading",
+    "vram-aware-model-scheduling"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "metal",
+    "vulkan",
+    "cpu-avx512",
+    "cpu-avx2"
+  ],
+  "supported_formats": [
+    "gguf",
+    "safetensors"
+  ],
+  "notable_features": [
+    "The route table in server/routes.go registers no /metrics handler at all - there is nothing to scrape",
+    "The only state endpoint is `GET /api/ps`, whose ProcessModelResponse carries name, model, size, size_vram, context_length and expires_at: you can see what is resident and how much VRAM it holds, but no timing, no queue depth, no KV occupancy",
+    "Per-request timing is returned in the generate/chat response body only: total_duration, load_duration, prompt_eval_count, prompt_eval_duration, eval_count, eval_duration - and the docs tell you to derive tok/s yourself as eval_count / eval_duration * 1e9",
+    "The README's Observability & Monitoring section lists five third-party integrations (Opik, OpenLIT, Lunary, Langfuse, HoneyHive) and describes OpenLIT as 'OpenTelemetry-native monitoring for Ollama and GPUs' - the OTel in the story is the third party's, not Ollama's"
+  ],
+  "hardware_caveats": [
+    "An in-repo code search for 'prometheus' in ollama/ollama returns 0 hits. There is no Prometheus exporter, no histogram, no counter, no gauge",
+    "An in-repo search for 'opentelemetry' returns one hit, in README.md, and it describes a third-party tool. Ollama ships no OTel instrumentation",
+    "No TTFT, no TPOT, no ITL, no queue time, no running/waiting split, no KV cache utilization, no preemption - and no way to derive any of them from the server side. Because Ollama's scheduler is about which models stay resident in VRAM rather than about batching sequences, even a 'running requests' count would not mean what it means in vLLM",
+    "Per-response timing is opt-in per request in spirit and, for streaming, arrives only at the end of the response, so it cannot be aggregated across requests without the client logging every response",
+    "load_duration in the response conflates model loading with anything else; it is the only visibility into cold-start cost and it arrives too late to act on"
+  ],
+  "best_for": [
+    "Local and laptop use, where 'ollama ps' answering 'what is loaded and how much VRAM' is the entire operational question",
+    "A deployment where an external sidecar does the instrumentation - the third-party integrations in the README are the intended path"
+  ],
+  "avoid_for": [
+    "Anything requiring a latency SLO, a capacity signal, or an on-call dashboard",
+    "Comparing Ollama's reported tok/s against an engine's histogram - the numbers have different denominators (client-side eval_count/eval_duration versus server-side per-request TPOT)",
+    "Assuming the presence of OpenLIT in the README implies Ollama emits OTel spans. It does not"
+  ],
+  "docs_url": "https://docs.ollama.com/api/introduction",
+  "notes": "Verified negatively and deliberately: an in-repo code search for prometheus in ollama/ollama returns total_count 0; a search for opentelemetry returns total_count 1 and the only path is README.md. This is the honest negative a reader choosing an engine needs. The engine record ollama in this repo makes no quantitative throughput claim for the same reason - there is nothing published to cite."
+}

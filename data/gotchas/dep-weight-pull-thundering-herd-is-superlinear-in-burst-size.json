@@ -1,0 +1,33 @@
+{
+  "id": "dep-weight-pull-thundering-herd-is-superlinear-in-burst-size",
+  "type": "gotcha",
+  "name": "Weight loading is the one cold-start phase that gets worse the more replicas you add: N pods booting at once race each other for the same object store, and load times go from minutes to potentially hours",
+  "class": "config",
+  "affects": [],
+  "concepts": [
+    "cold-start",
+    "weights",
+    "object-storage",
+    "thundering-herd",
+    "autoscaling",
+    "bandwidth",
+    "s3",
+    "gcs",
+    "multi-tenancy",
+    "burst-scaling"
+  ],
+  "symptom": "Cold start is fine at low replica counts and collapses at high ones. One replica pulling weights from S3 is unremarkable; fifty or a hundred replicas pulling the same model at the same instant is a traffic jam, and the symptom is load times spiking 'from minutes to potentially hours' rather than a linear slowdown. The failure is easy to misattribute: it presents as slow object storage, a bad region, or a quota problem, and it self-heals when traffic quiets down, so it looks intermittent and unrelated to replica count. It also lands exactly when you are least able to absorb it - during a burst, or at the start of a rollout, or after an outage when every replica restarts together. A related and quieter variant: on the first pull of a model no node in the cluster has seen, every node misses the cache simultaneously, so the herd is not just within a node but across the fleet.",
+  "root_cause": "Naive weight loading means each pod fetches from upstream storage - Hugging Face, S3, GCS - independently, and three things break. Slow pulls: 'A 70B parameter model can carry over 100GB of weights; many frontier models are easily 100s of GB', so a replica spends most of its cold start waiting on a network transfer. Upstream fragility: 'When your weight download depends on a third-party service, their uptime becomes your uptime' - a model hub outage, a rate limit, an expired credential or a throttled bucket makes weights undownloadable and pods unable to start. And the herd, which is the one that scales badly: 'When your autoscaler spins up 50 or 100 replicas simultaneously (which is exactly what happens during a traffic burst or a new model rollout), every one of those pods races to the same upstream source for the same hundreds of gigabytes of data at the same time. Object storage has bandwidth limits and rate limits. This becomes a traffic jam.' The crucial observation is that a caching layer alone does not fix it, for two separate reasons. Contention persists if '100 pods on 20 nodes all request the same model simultaneously, and your cache processes them independently'. And the first pull still has no cache to hit, so you still depend on upstream availability, bandwidth and rate limits. That is what makes the first deployment of a new model the worst case rather than the steady state, which is the opposite of what a cache is supposed to do.",
+  "workaround": "Make weight delivery single-flight and colocated. The structure that works has three properties, and the vendor implementation is a reasonable description of the target design. (1) Own the source: mirror weights to your own infrastructure at push time so deployments have no runtime dependency on an upstream model hub - the operational win is that 'third-party outages and rate limits are decoupled from your scale-up path'. (2) Tier the cache by distance: local node NVMe first (any subsequent pod on that node reads local disk, no network), then a peer node over the in-cluster network, then a mirrored origin fetched with parallel byte-range downloads. (3) Single-flight the downloads: at node level, pods waiting on the same model share one download; at cluster level, consistent hashing assigns each model file to one cache node so exactly one node fetches it from origin, no matter how many nodes are cold-starting at once. The claimed result is 2-3x faster cold starts with the largest gains in the burst-scale scenarios - treat that as a vendor claim, but the mechanism is the mechanism. If you are self-hosting without such a layer, the practical substitutes are a pre-populated node-local weight directory per node, pre-pulled images, and a staged rollout that raises replicas in batches small enough that the aggregate pull stays inside the store's bandwidth. And measure the phase, not the total: 61 s of download in a 294 s startup is a fifth of the problem, while 54 s of graph capture is a different fix entirely.",
+  "severity": "major",
+  "notes": "The one cold-start failure whose cost is superlinear in replica count, which makes it qualitatively different from every other entry in this slice: a 5-minute cold start replicated 50 times in parallel is much worse than 50 times sequentially, and the platform's own scale-to-zero promise creates precisely the burst shape that triggers it. This also composes with the autoscaling record in this repo - reactive HPA reacts to current load, and the new pods it asks for then contend for the same bandwidth - so the two mechanisms that are supposed to help under load make each other worse. One evidence caveat: the framing, the phase decomposition and the failure modes come from a vendor engineering blog with an obvious interest in the problem, so treat the 2-3x as marketing and the mechanism as engineering. The corroboration is that the same phase weighting appears independently in the two practitioner measurements and in the platform cold-start documentation.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "dep-baseten-bdn-cold-start-blog",
+    "dep-baseten-cold-starts-docs",
+    "dep-tensorfuse-vllm-cold-start-case-study",
+    "dep-dudeperf3ct-vllm-cold-start-gke"
+  ]
+}

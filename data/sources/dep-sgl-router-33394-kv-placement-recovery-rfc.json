@@ -1,0 +1,15 @@
+{
+  "id": "dep-sgl-router-33394-kv-placement-recovery-rfc",
+  "type": "source",
+  "name": "SGLang RFC #33394 - Recoverable KV Placement State with Snapshots and Event Replay (sgl-router)",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-04",
+  "url": "https://github.com/sgl-project/sglang/issues/33394",
+  "publisher": "SGLang project",
+  "kind": "forum",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Opened 2026-08-03, RFC, open as of 2026-10-04. This is the single clearest statement of what a cache-aware router must know and what happens when its view is stale. Verbatim: 'KV-aware routing relies on an accurate view of which KV blocks are available on each KV cache replica. Today, the Router builds this view incrementally from live BlockStored and BlockRemoved events. This works when the Router starts before the Workers and receives every event, but it cannot reliably recover when: the Router or KV Indexer starts after caches have already been populated; the placement-state consumer ... restarts, loses its in-memory placement view ...; events are lost because of backpressure, network interruption, or subscriber restart; a KV cache replica restarts and its previous placement state becomes invalid; an event gap is older than the replay buffer.' Consequence, verbatim and important: 'These cases do not affect inference correctness, but they may leave the placement view incomplete or stale, resulting in suboptimal routing and lower KV cache hit rates.' Proposed contract: each routable KV cache replica exposes a live event stream, a replay journal and a snapshot endpoint, with an epoch that changes on restart and a monotonically increasing seq; only READY replica views are used for cache-aware routing; recovery failure falls back to normal load-aware routing. TP mapping quoted: TP=4,DP=1 -> 1 KV cache replica; TP=4,DP=2 -> 2 replicas. Metadata leader is pp_rank==0, attn_tp_rank==0, attn_cp_rank==0. Snapshots carry placement metadata only, not KV tensors. Companion PRs #32729 (KV event gap replay), #34407 (worker snapshot support), #36224 (versioned KV hint envelope), #42449 (kv-indexer Valkey event log, worker replay, liveness, indexer failover)."
+}

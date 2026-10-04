@@ -1,0 +1,68 @@
+{
+  "id": "portkey-ai-gateway",
+  "name": "Portkey AI Gateway",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "dep-portkey-load-balancing-docs",
+    "dep-tetrate-envoy-ai-gateway-benchmarks"
+  ],
+  "repo": "Portkey-AI/gateway",
+  "languages": [
+    "TypeScript"
+  ],
+  "license": "MIT (open-source gateway core; the hosted control plane is commercial)",
+  "first_release_year": 2023,
+  "design_goal": [
+    "multi-provider-routing",
+    "cost-optimization",
+    "reliability",
+    "guardrails",
+    "openai-compatible"
+  ],
+  "scheduling": [
+    "load-balancing",
+    "request-routing",
+    "weighted-split",
+    "sticky-routing",
+    "fallback"
+  ],
+  "supported_backends": [
+    "none (gateway layer - forwards to any OpenAI-compatible or native provider endpoint)"
+  ],
+  "supported_formats": [
+    "passthrough (OpenAI-compatible plus native provider shapes; format-agnostic because it never loads weights)"
+  ],
+  "notable_features": [
+    "The purest statement of what a gateway layer decides: a weighted distribution over targets that may be different VENDORS or different MODELS, configured as {\"strategy\":{\"mode\":\"loadbalance\"},\"targets\":[{\"provider\":\"@openai-prod\",\"weight\":0.7},...]}. Weights are normalized to sum to 100%, so 5, 3, 1 become 55/33/11%. Default weight 1, minimum 0 - and weight 0 is notable because it 'stops traffic without removing from config', making a provider a config-only kill switch.",
+    "Five documented routing patterns covering most fleet topologies: between providers (model comes from the request), between models, multiple API keys for the same provider to spread across per-account rate limits, cost optimization (mostly to a cheap model, a slice to a premium one), and gradual migration (a small percentage to a new model before full rollout).",
+    "Sticky load balancing: {\"sticky\":{\"enabled\":true,\"hash_fields\":[\"metadata.user_id\"],\"ttl\":3600}} with default TTL 3600 s. Mechanism is hash the listed fields, look up the previous target from cache, and reuse it - the gateway-level analogue of a router's session affinity, carrying the same hazard: a bad first assignment persists for the whole TTL.",
+    "Sticky sessions use a two-tier cache (in-memory plus Redis) specifically so assignments survive across gateway instances in distributed deployments - an explicit acknowledgement that gateway routing state is shared, not local.",
+    "'@provider-slug/model-name' routes automatically, and configs can be created and used from within requests.",
+    "The vendor's own cautions are worth keeping: 'Each LLM has different latency and pricing', and weight distribution directly affects spend, so a routing change is a cost change."
+  ],
+  "hardware_caveats": [
+    "No local compute: never loads weights, never touches an accelerator. supported_backends is an explicit 'none'.",
+    "Weighted routing is not latency-aware. The docs say so - weights are relative shares of traffic and nothing more - so a weight split tuned for cost will send traffic to a slow target at the same rate.",
+    "Sticky routing depends on a reachable cache; a cache outage degrades to weighted-random behaviour unless misses are handled, and a two-tier cache means the tiers can disagree about a session's target.",
+    "The documented sticky TTL is 3600 s, long relative to a provider's rate limits and longer than most autoscaler reactions - a session pinned to a target that is later drained stays pinned for up to an hour.",
+    "Vendor-published gateway latency comparisons are contested in this repo's sources: a competitor's benchmark shows 'large latency advantages over Portkey and LiteLLM' using mock backends under default gateway configurations, which is not the production configuration.",
+    "No published throughput ceiling in the sources gathered here, so unlike LiteLLM's documented ~300 RPS bottleneck there is no measured headroom figure to plan against - treat capacity as unmeasured."
+  ],
+  "best_for": [
+    "Multi-provider fleets where the routing decision is commercial rather than technical - cost split, canary rollout, or spreading across per-account provider rate limits",
+    "Teams wanting one endpoint and one config surface across many vendors, including their own self-hosted OpenAI-compatible servers",
+    "Gradual model migration, where a weighted percentage with stickiness is the whole feature",
+    "Portkey-specific integrations (guardrails, hosted Model Catalog, config-in-request workflow) where ecosystem matters more than the routing core"
+  ],
+  "avoid_for": [
+    "Single-vendor or single-model deployments, where weighted routing is overhead",
+    "Kubernetes-native cache-aware or load-aware pod selection - use an inference gateway with an Endpoint Picker for that, and Portkey above it for policy",
+    "Deployments needing per-token quota or GPU-level awareness",
+    "Cases where routing state must be authoritative - the sticky cache is a convenience layer, not a source of truth"
+  ],
+  "docs_url": "https://portkey.ai/docs/product/ai-gateway",
+  "notes": "Recorded as an engine on the same precedent as litellm: a gateway is an engine record because it occupies a layer with no other home in data/. Its distinguishing contribution to the topology layer is that it expresses routing as an explicit WEIGHTED COMMERCIAL POLICY across heterogeneous targets, where the Kubernetes-native gateways express it as a load- or cache-aware pick among replicas of one model. Those are genuinely different jobs and they compose - but stacking both without deciding which owns the placement decision is the failure mode. Note the sticky-routing TTL hazard is structurally the same as the router latching bug recorded separately in this repo (dep-prefixaware-subthreshold-latches-a-bad-first-pick): a routing decision made once and cached for a long lifetime is not re-evaluated when the fleet changes underneath it. Accuracy caveat: routing semantics are quoted from Portkey's own documentation, which is authoritative for its behaviour; the performance characterizations come from a competitor's benchmark page and are recorded only as a caution about methodology, not as measurements.",
+  "type": "engine"
+}

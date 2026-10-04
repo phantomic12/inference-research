@@ -1,0 +1,15 @@
+{
+  "id": "ops-sglang-router-monitoring",
+  "type": "source",
+  "name": "sgl-router monitoring reference (router metric names, circuit breaker state, in-flight gauges)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://github.com/sgl-project/sglang/blob/main/experimental/sgl-router/monitoring/README.md",
+  "publisher": "SGLang project",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Router-side metrics to alert on: sgl_router_requests_total (edge intake, counted before worker dispatch), sgl_router_responses_total by status_code 'incl. early-exit 400/413/503', with the documented identity 'requests_total - responses_total = received-but-not-answered'; sgl_router_worker_requests_total 'recorded after dispatch; blind to pre-dispatch drops'; sgl_router_active_load (per-worker prefill-token / decode-block load); sgl_router_worker_health 'Per-worker health (1=breaker admits, 0=open)'; sgl_router_worker_cb_state 'Per-worker circuit breaker state (0=closed, 1=open, 2=half_open)'; sgl_router_worker_inflight_requests (per-worker in-flight requests); sgl_router_workers (registered worker count by mode); sgl_router_stream_outcome_total with outcomes ok, stream_error_event, upstream_error, client_disconnect, expired, aborted, counting committed 2xx streams only; sgl_router_stale_requests_total; sgl_router_decode_affinity_total and sgl_router_sticky_total; sgl_router_kv_event_batches_lost_total and sgl_router_kv_event_replays_total; sgl_router_kv_tree_accounting_errors_total which 'is Always 0 on a correct tree'. Also documents that sgl_router_workers and the sgl_router_worker_* gauges are sampled from the live registry on every scrape 'so a removed worker stops emitting series immediately', and that sgl_router_overlap_blocks was REMOVED with the cache_aware_zmq policy and 'has no direct replacement - Remove queries, alerts, and dashboard panels that depend on this metric before upgrading'."
+}

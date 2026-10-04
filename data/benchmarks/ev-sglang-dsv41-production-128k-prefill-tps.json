@@ -1,0 +1,31 @@
+{
+  "id": "ev-sglang-dsv41-production-128k-prefill-tps",
+  "type": "benchmark",
+  "name": "SGLang serving DeepSeek-V4.1-Flash in production on 8x RTX PRO 6000: 128K cold prefill throughput at chunked_prefill_size=2048",
+  "engine_id": "sglang",
+  "status": "draft",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "ev-sglang-issue-40877-production-deepseek-v41-flash"
+  ],
+  "accelerator_ids": [
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "interconnect_ids": [],
+  "model": "DeepSeek-V4.1-Flash (V4.1 vision path, MXFP4 experts)",
+  "format_id": null,
+  "metric": "prefill_tok_s",
+  "value": 6853.0,
+  "unit": "tok/s prefill (single stream, tokens counted from the response `usage` field, not SSE chunk counts)",
+  "methodology": "AGGREGATE-IS-NOT-APPLICABLE: this is SINGLE-STREAM prefill throughput for one 128K-token prompt, measured cold, on a production configuration. Hardware: 8x NVIDIA RTX PRO 6000 Blackwell Max-Q (SM120, 96 GB each), PCIe only, NO NVLink. SGLang config as reported by the operator's own /get_server_info: tp_size 8, ep_size 8, dp_size 1, context_length 1,048,576, kv_cache_dtype fp8_e4m3, mem_fraction_static 0.72, max_running_requests 16, attention_backend dsv4, moe_runner_backend flashinfer_mxfp4, CUDA graph decode ON (max_bs 16) and PREFILL CUDA GRAPH DISABLED, chunked_prefill_size 2048, speculative_algorithm DSPARK with dspark_block_size 6. Container: docker run --gpus all --shm-size=64g --ipc=host --network host --restart unless-stopped. OMITTED BY SOURCE: SGLang version/commit, driver version, and whether the 128K prompt was cache-cold in the strict sense beyond the author's 'cold' label. REPRODUCIBILITY: the author published a full write-up with reproduction artifacts and an A/B sweep tool.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Third-party field report from a production deployment, not a vendor benchmark and not a lab result - which is why it is in the repo at all, since it is one of only two engines in this dataset for which a named production site published its own numbers. The A/B the same report gives is worth more than the headline: re-running the identical config reads 6,765 tok/s (-1.3%), so run-to-run variance is ~1%. chunked_prefill_size sweep on the same hardware: 2048 -> 6,853; 4096 -> 6,301; 1024 -> 6,012 tok/s. Backend swap: flashmla prefill backend 6,845; fused-MoE all-reduce 6,828. A 32K prompt reads ~7,196 tok/s, i.e. longer prompts cost throughput. The DIAGNOSIS is the most transferable fact in the record: 'GPU util ~87% at 220 W of 600 W -> communication-bound on PCIe, not compute-bound', and '~7K tok/s looks like the ceiling for this board without NVLink'. 87% GPU utilization at 220 W of a 600 W cap is the signature of a link-bound rather than compute-bound run. ACCELERATOR CAVEAT: nvidia-rtx-pro-6000-blackwell is the closest accelerator id in this repo; the operator wrote 'RTX PRO 6000 Blackwell Max-Q, 96 GB' which is the workstation Max-Q SKU.",
+  "energy_basis": null,
+  "power_w": null,
+  "power_scope": null,
+  "power_cap": null,
+  "clock_lock_mhz": null,
+  "thermal_state": null
+}

@@ -3,11 +3,13 @@
   "type": "engine",
   "name": "SGLang",
   "status": "verified",
-  "confidence": 0.85,
+  "confidence": 0.93,
   "updated": "2026-10-03",
   "sources": [
     "engine-sglang-github",
-    "engine-sglang-install"
+    "engine-sglang-install",
+    "ev-gh-api-repo-metadata-2026-10-04",
+    "ev-sglang-issue-40877-production-deepseek-v41-flash"
   ],
   "repo": "sgl-project/sglang",
   "languages": [
@@ -52,7 +54,9 @@
     "SGLang language primitives (radix cache, jump-forward decoding, LPM cache-aware admission) are exposed as first-class knobs",
     "Strong RL-rollout story: the same engine is used to generate training rollouts, and SGLang Diffusion adds image/video generation in the same package",
     "OpenAI-compatible server, a Rust component in the tree, and sgl-router for multi-model routing",
-    "Separate backends for TPU (SGL-JAX and SGL-torchtpu) alongside the main PyTorch path"
+    "Separate backends for TPU (SGL-JAX and SGL-torchtpu) alongside the main PyTorch path",
+    "Speculative decoding across six method families - EAGLE-2/EAGLE-3, MTP, UNO, DFLASH, standalone small draft models and NGRAM - with the docs naming EAGLE-3 as the recommended speed/quality choice",
+    "The strongest measured speculative-decoding result in this repo, and the only one that is a controlled within-engine A/B: DSPARK on 8x RTX PRO 6000 takes prose decode from 36.4-36.5 tok/s to 76.5-78.9 tok/s and structured decode from 36.5 to 120.3-120.5 tok/s at block_size=2, with acceptance 3.0 vs 1.0 tokens/step"
   ],
   "hardware_caveats": [
     "CUDA 13 is required: the CUDA 12.9 wheel/image lane is retired because PyTorch 2.14 publishes no CUDA 12.9 builds, and SGLang 0.5.19 is the last release with a CUDA 12 lane",
@@ -60,7 +64,10 @@
     "Many dependencies publish pre-release wheels only, so uv installs silently land on an old version (0.5.9) unless --prerelease=allow is passed",
     "The documented supported-hardware list is narrower than vLLM's: NVIDIA A100/H100/H200/H800/H20/B200/B300/GB200/GB300 plus select RTX 30/40/50, and AMD MI300X/MI325X/MI350X/MI355X. No consumer AMD Radeon entry",
     "TPU support is split across sibling projects (SGL-JAX, SGL-torchtpu), so TPU parity with the main CUDA path is not automatic",
-    "Apple Silicon and Intel support exist but are documented on separate hardware-platform pages with far less detail than the NVIDIA path"
+    "Apple Silicon and Intel support exist but are documented on separate hardware-platform pages with far less detail than the NVIDIA path",
+    "SGLang's MoE rank computation divides by zero if ep_size exceeds tp_size (moe_ep_rank = tp_rank % (tp_size // moe_dp_size) // (tp_size // moe_dp_size // ep_size)), so a plausible-looking parallel configuration can fail at launch rather than degrade",
+    "--enable-expert-parallel is a vLLM flag and is REJECTED OUTRIGHT by SGLang, which takes ep_size instead; and a container that does not receive TP_SIZE/DP_SIZE/EP_SIZE explicitly silently serves TP8 defaults, so a 'new' configuration can never have happened while the logs look healthy - verify via /get_server_info before timing anything",
+    "On 8x RTX PRO 6000 with DeepSeek-V4.1-Flash the run is COMMUNICATION-BOUND, not compute-bound: ~87% GPU utilization at 220 W of a 600 W cap, with ~7K tok/s prefill described as the ceiling for a board without NVLink. This is the number to check before blaming the scheduler"
   ],
   "best_for": [
     "Agentic and RL workloads where many requests share long, branching context - the radix cache reuses partial prefixes, not just exact ones",
@@ -73,5 +80,5 @@
     "Consumer AMD Radeon cards, which are not in the documented support list"
   ],
   "docs_url": "https://docs.sglang.io/",
-  "notes": "Scheduling terms: 'radix-cache' is the distinguishing mechanism (radix tree over KV blocks); 'prefix-cache' is used here in the looser sense that the radix cache provides prefix reuse generally. AMD entry is Instinct-class only per the README's supported-hardware table. TPU and NPU paths are separate projects, so 'tpu' here means supported but not first-class in this repo."
+  "notes": "Scheduling terms: 'radix-cache' is the distinguishing mechanism (radix tree over KV blocks); 'prefix-cache' is used here in the looser sense that the radix cache provides prefix reuse generally. AMD entry is Instinct-class only per the README's supported-hardware table. TPU and NPU paths are separate projects, so 'tpu' here means supported but not first-class in this repo. ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-10-04 (0 months), latest release v0.5.21 published 2026-10-02 - a release two days before this record's date, which is a strong liveness signal - 1996 contributors, open_issues_count 5553 (issues PLUS pull requests), NOT archived, 36777 stars. DEPLOYMENT: the STRONGEST production evidence in the entire engine dataset, graded YES with numbers attached - see [[ev-production-evidence-is-scarce-and-nearly-always-single-site]]. SGLang issue #40877 (2026-09-23, open) self-describes as 'Field data from running DeepSeek-V4.1-Flash as a production SGLang backend on 8x RTX PRO 6000 Blackwell Max-Q (SM120, 96 GB, PCIe-only - no NVLink)' with the operator stating the numbers 'come from a working day of production use'. Published benchmarks with full conditions are in [[ev-sglang-dsv41-production-128k-prefill-tps]], [[ev-sglang-dsv41-production-decode-tok-s-per-user]], [[ev-sglang-dspark-spec-decoding-2x-decode-ab]] and [[ev-sglang-dsv41-prefix-cache-hit-prefill-speedup]]. The method quality is worth noting because it is the standard this repo holds numbers to: configuration verified server-side via /get_server_info rather than assumed, timing taken from the response `usage` field rather than SSE chunk counts, and a repeat leg (6,765 vs 6,853 tok/s, -1.3%) establishing run-to-run variance. The operator also documents the trap that corrupted their own earlier measurements - trusting container env vars produced 'a full sweep of false data' before they added a config gate. SELF-DECLARED LIMITS, which are why the numbers are citable as production evidence: 'No 24 h soak', block sizes 4/8/12 not re-measured, and >32K prefill/long-context degradation not characterised. Configuration traps documented on this model: DP2 x TP4, prefill context-parallel and --enable-dp-attention alone are all rejected or silently no-op, with the error 'V4.1 vision currently supports TP/EP without DP, CP, PP or MoE A2A'. BUILD COST: no published figure found for SGLang's source compile. Its issue #6830 ('On deepseek, it often takes tens of minutes') refers to torch.compile and CUDA-graph CAPTURE at server startup, which is a JIT/startup cost rather than a source build, and it is too thin to record as a number - see [[ev-build-cost-is-three-separate-builds]]. FEATURE AXES: chunked prefill and prefix caching were already recorded; disaggregated routing exists via the model gateway ('Add EPD (Encode-Prefill-Decode) Disaggregated Routing Support'); structured output is UNSTATED and was not confirmed from the pages read."
 }

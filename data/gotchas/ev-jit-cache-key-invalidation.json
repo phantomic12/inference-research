@@ -1,0 +1,31 @@
+{
+  "id": "ev-jit-cache-key-invalidation",
+  "type": "gotcha",
+  "name": "A JIT cache keyed on more than the kernel shape recompiles inside a single process: FlashInfer's micro-kernel cache key includes batch size AND workspace size, so cache growth invalidates entries it already paid for",
+  "class": "config",
+  "symptom": "Within one running server process, a kernel that compiled successfully at startup recompiles later, several times, as real traffic arrives. FlashInfer issue #4317 documents the mechanism in a single sentence: the micro-kernel 'cache_key includes both m and workspace.max_rows (0.6.15.post1 moe_dispatch.py:770-791, fields at :774/:778), so workspace growth invalidates already-compiled small-batch entries even within a process lifetime. With no disk layer underneath, each invalidation is a full 15 s+ recompile, not a reload.' Separately, issue #4110 generalises the shape of the problem across kernels: 'For some kernels, B/tile_v/T/cache flags/pool-strides each key a new compile', with ~800 test cases collapsing to ~200 cute.compile calls on a B200 under the current keying logic.",
+  "root_cause": "The cache key is not 'which kernel' but 'every parameter that changes the generated code', and the set of keyed parameters is larger than the set a reader would guess. In this case the keyed set includes the batch dimension m, the tile_v tuning parameter, the dtype/T parameter, cache flags, pool strides, and - separately - the workspace row capacity. Workspace capacity is the nasty one because it grows WITH LOAD rather than being fixed at launch: a server that is quiet at startup and busy after is a server that generates new cache keys after startup. Note the two failure modes compound: issue #4317's process-only dicts mean there is no disk layer to fall back on, so every invalidation is a compile rather than a reload.",
+  "workaround": "Treat the cache key as part of your capacity planning rather than as an implementation detail: a workload whose batch size, dtype or workspace footprint VARIES will generate new specialisations continuously, so a fixed-shape workload is materially cheaper to start than a mixed-shape one on the same engine. Pin the parameters that you can - if you control the batch size and dtype mix, hold them fixed. Where the engine offers an ahead-of-time path, use it: FlashInfer ships flashinfer-jit-cache (prebuilt JIT shared libraries for covered specializations) and flashinfer-cubin (pre-downloaded cubin/header artifacts) precisely so that the specialisations a workload needs are compiled before it runs, and its RFC #4035 sets the goal as a representative workload suite running 'with zero runtime JIT and zero runtime artifact downloads' when both are installed, verified by FLASHINFER_DISABLE_JIT=1 and FLASHINFER_NO_DOWNLOAD=1. Note that RFC also documents the cost of that path - GitHub Releases caps each release asset at 2 GiB and FlashInfer wheels ship as release assets - so AOT coverage is a packaging tradeoff, not free.",
+  "severity": "major",
+  "notes": "This is the mechanism record that explains WHY the stalls in [[ev-jit-compile-freezes-the-engine-mid-request]] recur mid-session rather than only at startup; a reader who only has the first gotcha will think warming up the server fixes it, and for a mixed-shape workload it does not. Confidence is held at 0.85 because #4110 is a short issue with no measurement table - the 30-50 min figure there is for a TEST RUN (tests/gdn/test_decode_delta_rule.py, 'runs very long (30-50 mins on every arch)'), not for serving, so it bounds compile cost in CI rather than in production and is not recorded here as a production figure. NOT VERIFIED: I did not measure any of these compile costs myself, and I did not confirm whether the #3836 workspace-key interaction has been changed on any release after 0.6.15.post1.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "ev-flashinfer-issue-4317-cute-dsl-no-cache",
+    "ev-flashinfer-issue-4110-gdn-cold-compile",
+    "ev-flashinfer-issue-4035-jit-aot-kpi"
+  ],
+  "affects": [
+    "flashinfer",
+    "vllm"
+  ],
+  "concepts": [
+    "jit",
+    "moe",
+    "cache-key",
+    "batch-size",
+    "kv-cache",
+    "aot"
+  ]
+}

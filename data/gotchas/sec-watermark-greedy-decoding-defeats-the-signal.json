@@ -1,0 +1,29 @@
+{
+  "id": "sec-watermark-greedy-decoding-defeats-the-signal",
+  "type": "gotcha",
+  "name": "A KGW-style watermark is designed for stochastic sampling - under temperature 0 the signal it relies on is not produced",
+  "class": "config",
+  "affects": [
+    "vllm"
+  ],
+  "concepts": [
+    "watermark",
+    "greedy-decoding",
+    "temperature",
+    "sampling",
+    "decode-loop"
+  ],
+  "symptom": "The same watermarked model returns detectable text at temperature 1.0 and undetectable text at temperature 0. Any batch that goes all-greedy contributes no watermark signal at all, which also corrupts the detection statistic for a mixed batch.",
+  "root_cause": "KGW's detection test rests on a probabilistic premise: under the null (unwatermarked text) a natural writer violates the green-list rule about half the time, giving a one-proportion z-test whose null is well-calibrated. That calibration requires the text actually be sampled rather than argmax-selected. vLLM's sampler makes the split explicit and mechanical: if the batch is not all_random it computes greedy_sample(logits), and if it IS all_greedy it returns immediately; otherwise it applies temperature and the argmax-invariant processors and only then samples randomly, merging the two paths with torch.where. A watermarking processor implemented as an argmax-invariant processor is therefore never even called under all_greedy - the same trap documented for any in-decode transform.",
+  "workaround": "A watermark cannot be made to work by configuration on a deterministic decode path. Either (a) require temperature > 0 on any endpoint where watermark provenance is a contractual claim, and state that as a serving constraint, or (b) if determinism is required, use a distortion-free / unbiased formulation whose detection statistic does not assume stochastic sampling - at the cost of the low-entropy and quality problems recorded separately. Do not ship a watermark claim on a temperature-0 endpoint.",
+  "severity": "major",
+  "notes": "CONTESTED IN PART, deliberately. The sampler behaviour and the argmax-invariant skip are read directly from vLLM source and are certain. What is NOT established: no located source directly measures KGW detection rate as a function of decoding temperature, so 'the signal is not produced at temperature 0' is an inference from the detection test's construction, not a measurement. The inference is strong - KGW's own paper frames the null as a statement about a SAMPLING process - but it is flagged rather than recorded as verified.",
+  "status": "contested",
+  "confidence": 0.75,
+  "updated": "2026-10-04",
+  "sources": [
+    "sec-arxiv-2301-10226",
+    "sec-vllm-sampler-pipeline-source",
+    "sec-arxiv-2307-15593"
+  ]
+}

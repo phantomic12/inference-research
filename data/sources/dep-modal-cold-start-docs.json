@@ -1,0 +1,15 @@
+{
+  "id": "dep-modal-cold-start-docs",
+  "type": "source",
+  "name": "Modal documentation - Cold start performance (scaledown_window, min_containers, buffer_containers)",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-04",
+  "url": "https://modal.com/docs/guide/cold-start",
+  "publisher": "Modal",
+  "kind": "whitepaper",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Fetched 2026-10-04. Defines the two distinct latency sources precisely: '1. inputs may spend more time waiting in a queue for a container to become ready or \"warm\". 2. when an input is handled by the container that just started, there may be extra work that only needs to be done on the first invocation (\"initialization\").' And the diagnostic rule that follows from it: fix queueing time if inputs sit in pending; fix initialization if some invocations are slower than others. Container warm-up: 'The time taken for a container to become warm and ready for inputs can range from seconds to minutes'; 'Modal's custom container stack has been heavily optimized ... Containers boot in about one second'; BUT 'before a container is considered warm and ready to handle inputs, we need to execute any logic in your code's global scope (such as imports) or in any modal.enter methods' - so the 1 s boot is not the cold start of a model server, and 'For models in the tens of gigabytes, this can reduce boot times from minutes to seconds' only if you download the model ahead of time. THE ECONOMICS, verbatim: 'It is not always possible to speed up boots sufficiently. For example, seconds of added latency to load a model may not be acceptable in an interactive setting. In this case, the only option is to have more warm containers running.' Knobs: scaledown_window (max idle before shutdown, DEFAULT 60 SECONDS, settable 2 s to 20 min), min_containers ('The minimum number of containers that should be kept warm, even when the Function is inactive'), buffer_containers ('The size of the buffer to maintain while the Function is active, so that additional inputs will not need to queue for a new container'). Cost trade-off stated: 'All of these strategies can increase the resources consumed by your Function and so introduce a trade-off between cold start latencies and cost.' Note containers 'may not wait for the entire scaledown window before shutting down if the App is substantially overprovisioned.'"
+}

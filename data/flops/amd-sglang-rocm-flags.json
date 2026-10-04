@@ -10,17 +10,17 @@
     "tensor_parallel_size"
   ],
   "affected_by_hardware": [
-    "mi300x",
-    "mi325x",
-    "mi350x",
-    "mi355x"
+    "amd-instinct-mi300x",
+    "amd-instinct-mi325x",
+    "amd-instinct-mi350x",
+    "amd-instinct-mi355x"
   ],
   "workarounds": [
     "SGLang uses AITER as the default kernel backend on ROCm Docker images",
     "AITER integration replaces MoE, GEMM, attention, and all-reduce with optimized kernels",
     "For DeepSeek-R1: SGLang + AITER achieves 14,635.98 token/s total throughput on MI300X"
   ],
-  "notes": "SGLang on ROCm uses AITER as the default kernel backend in its Docker images. The AITER integration for DeepSeek-R1 replaces: (1) Complete MoE implementation (Top-K routing, MoE sorting, blockscale FP8 MoE computation), (2) FP8 blockscale GEMM for linear layers, (3) MLA decode attention and MHA prefill attention, (4) Custom all-reduce. Measured on MI300X with SGLang v0.4.4 + AITER: DeepSeek-R1 total throughput 14,635.98 token/s (median 2,255.85 token/s per decode step). The integration is based on a private repository (BruceXcluding/sglang tree aiter_customer_v0.4.4). SGLang's ROCm support is production-ready and listed in ROCm's supported frameworks. The key advantage over vLLM is SGLang's native RadixAttention for prefix caching, which complements AITER's kernel optimizations.",
+  "notes": "SGLang on ROCm uses AITER as the default kernel backend in its Docker images. The AITER integration for DeepSeek-R1 replaces: (1) Complete MoE implementation (Top-K routing, MoE sorting, blockscale FP8 MoE computation), (2) FP8 blockscale GEMM for linear layers, (3) MLA decode attention and MHA prefill attention, (4) Custom all-reduce. Measured on MI300X with SGLang v0.4.4 + AITER: DeepSeek-R1 total throughput 14,635.98 token/s (median 2,255.85 token/s per decode step). The integration is based on a private repository (BruceXcluding/sglang tree aiter_customer_v0.4.4). SGLang's ROCm support is production-ready and listed in ROCm's supported frameworks. The key advantage over vLLM is SGLang's native RadixAttention for prefix caching, which complements AITER's kernel optimizations. RESOLVED (2026-10-04 cross-reference repair): the bare part names in affected_by_hardware were expanded to their record ids - mi300x -> amd-instinct-mi300x, mi325x -> amd-instinct-mi325x, mi350x -> amd-instinct-mi350x, mi355x -> amd-instinct-mi355x. Each name matched exactly one accelerator record in data/accelerators/, so no variant was chosen between siblings (MI300X and MI325X are both CDNA3, MI350X/MI355X/MI350P all CDNA4) - the id is forced by the part name. This field is still a mixed bucket: it also carries the architecture codename values gfx942/gfx950, which are not ids and were left alone.",
   "status": "verified",
   "confidence": 0.8,
   "updated": "2026-10-04",

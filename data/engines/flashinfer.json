@@ -7,7 +7,8 @@
   "updated": "2026-10-03",
   "sources": [
     "engine-flashinfer-github",
-    "engine-sglang-install"
+    "engine-sglang-install",
+    "ev-gh-api-repo-metadata-2026-10-04"
   ],
   "repo": "flashinfer-ai/flashinfer",
   "languages": [
@@ -36,7 +37,9 @@
     "JIT compilation with a cubin cache and a pluggable JIT cache provider, plus prebuilt flashinfer-cubin artifacts",
     "Default attention backend for SGLang and selectable in vLLM, so it changes those engines' performance more than it provides a runtime of its own",
     "Customizable attention plans and prefill/decode splits; paper at arXiv:2501.01005",
-    "Profiler tooling for kernel-level inspection"
+    "Profiler tooling for kernel-level inspection",
+    "Ships three runtime artifact paths as a deliberate packaging tradeoff: flashinfer-python (runtime JIT), flashinfer-jit-cache (prebuilt JIT shared libraries for covered specializations) and flashinfer-cubin (pre-downloaded cubin/header artifacts) - the vendor's stated goal is that a representative workload runs with 'zero runtime JIT and zero runtime artifact downloads' when all three are installed, verified via FLASHINFER_DISABLE_JIT=1 and FLASHINFER_NO_DOWNLOAD=1",
+    "That packaging choice has a published constraint worth knowing before planning on it: GitHub Releases caps each release asset at 2 GiB, FlashInfer wheels ship as release assets, and AOT coverage is therefore a tradeoff rather than free - stated in the project's own RFC"
   ],
   "hardware_caveats": [
     "CUDA-only and sm75+ only - it is explicitly unsupported below compute capability 7.5, which excludes Volta and older",
@@ -56,5 +59,5 @@
     "Serving on its own - pair it with an engine"
   ],
   "docs_url": "https://docs.flashinfer.ai/",
-  "notes": "supported_formats is essentially empty by design: it consumes tensors from a host engine rather than loading checkpoints. Included here because it is a genuine, widely deployed GPU inference component that changes engine performance characteristics, and because its sm75 floor is the kind of hardware boundary this knowledge base exists to record."
+  "notes": "supported_formats is essentially empty by design: it consumes tensors from a host engine rather than loading checkpoints. Included here because it is a genuine, widely deployed GPU inference component that changes engine performance characteristics, and because its sm75 floor is the kind of hardware boundary this knowledge base exists to record. ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-10-04 (0 months), latest release v0.7.0.post1 published 2026-09-29, 424 contributors, open_issues_count 1103 (issues PLUS pull requests), NOT archived, 6544 stars. Unusually for a young project, a large contributor base - this is not a single-maintainer dependency. DEPLOYMENT: NO EVIDENCE OF PRODUCTION DEPLOYMENT FOUND as of 2026-10-04 - see [[ev-production-evidence-is-scarce-and-nearly-always-single-site]] for the grading scheme and for why absence of evidence is not evidence of absence. PERFORMANCE: the repo's one and only substantive finding about THIS engine is a cost, not a rate, and it is a cost paid inside requests - see [[ev-jit-compile-freezes-the-engine-mid-request]] and [[ev-jit-cache-key-invalidation]]. FlashInfer's own open RFC #4035 proposes making cold compile time a reported KPI and its measurement table is still unfilled, which is itself the honest state of this engine's performance reporting: there is no published throughput table with load conditions, and this record does not invent one. BUILD COST: measured per-kernel - ~40 s first hit for the dynamic kernel and ~15-18 s per small-m micro-kernel specialization on RTX PRO 6000, REPAID EVERY ENGINE START because the file cache is bypassed; and a general statement of when it repeats, since 'B/tile_v/T/cache flags/pool-strides each key a new compile'."
 }

@@ -1,0 +1,15 @@
+{
+  "id": "dep-llmd-envoy-ai-gateway-guide",
+  "type": "source",
+  "name": "llm-d documentation - Deploying with Envoy AI Gateway (gateway + EPP topology)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://llm-d.ai/docs/dev/infrastructure/gateway/envoy-ai-gateway",
+  "publisher": "llm-d (CNCF sandbox)",
+  "kind": "whitepaper",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Fetched 2026-10-04 (dev docs; site banner notes llm-d 0.9 adds 'router HA, enhanced autoscaling, end-to-end observability'). Describes the request path verbatim: 'inference requests will flow from an Envoy-managed Gateway to your model servers via the llm-d EPP.' So there are two distinct routing hops: the Envoy Gateway does L7 policy (auth, rate limit, routing) and the Endpoint Picker is the component that actually picks the vLLM pod. Prerequisites include a cluster running one of the three most recent Kubernetes releases (minimum 1.32) and Helm and jq. THE INSTALL IS ITSELF A MULTI-COMPONENT DEPLOYMENT: Gateway API CRDs, then Envoy Gateway from an OCI helm chart with 'the AI Gateway integration values, token rate limiting add-on, and InferencePool add-on', with a documented Helm limitation requiring `helm template | kubectl apply --server-side` instead of `helm install` and filtering of offending lines until two Helm PRs (kubernetes-sigs#12277, #32217) land, then the AI Gateway CRD and controller, then a GatewayClass, then ClusterRole/ClusterRoleBinding granting envoy-gateway get/list/watch on inferencepools, then `kubectl wait` for both the envoy-gateway and ai-gateway-controller deployments, then the llm-d recipe. Also shows grpc:// health ports (31001, 31002) alongside http:// 20000 for a gRPC worker - a second listener per worker."
+}

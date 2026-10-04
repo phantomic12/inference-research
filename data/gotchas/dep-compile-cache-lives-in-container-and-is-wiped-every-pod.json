@@ -1,0 +1,31 @@
+{
+  "id": "dep-compile-cache-lives-in-container-and-is-wiped-every-pod",
+  "type": "gotcha",
+  "name": "vLLM's torch.compile cache defaults to a path inside the container, so on Kubernetes it is discarded on every pod recreation and you pay the full JIT compile on every cold start without ever seeing the benefit of caching",
+  "class": "config",
+  "affects": [
+    "vllm"
+  ],
+  "concepts": [
+    "cold-start",
+    "torch-compile",
+    "kv-cache",
+    "caching",
+    "kubernetes",
+    "persistent-volume",
+    "nvme"
+  ],
+  "symptom": "Cold start does not improve no matter how many times you restart, even though the same model on the same hardware compiles much faster in a REPL. The intuition that 'the second start should be warm' is simply false on Kubernetes by default: the compile cache lives at /root/.cache/vllm inside the container, that filesystem is recreated with the pod, and the cache is gone. The symptom is a cold-start time that is stable at its worst value rather than decreasing with uptime. It is easy to misdiagnose as slow storage, because weight loading really is the biggest single phase and gets attention first, while the compile phase is smaller and looks irreducible. On a 35B NVFP4 model the fix was worth 150 s of a 317 s cold start, and it was one environment variable.",
+  "root_cause": "PyTorch's Inductor compiler caches generated kernels on disk, keyed by a hash over everything the compiled code depends on - model architecture and layer shapes, dtype and quantization scheme, compile flags, GPU compute capability, and the vLLM and PyTorch versions. On every later start vLLM still loads the weights, but when it reaches the compile phase it finds a matching hash and deserializes precompiled kernels instead of re-running the compiler. The mechanism is sound and the invalidation is correct: change any key input and the hash changes, so you get a fresh compile rather than a stale one, and 'a stale cache can never cause a failure, only a one-time slow start'. The failure is purely about WHERE the cache lands. The reporter's finding, quoted: 'By default, vLLM writes the cache to a path inside the container (/root/.cache/vllm), which is wiped every time the pod is recreated. So out of the box, you recompile on every single cold start and never see the benefit.' One env var fixes it: VLLM_CACHE_ROOT pointed at storage that survives restarts. Measured effect on nvidia/Qwen3.6-35B-A3B-NVFP4 on a single DGX Spark (EKS Hybrid Node), local NVMe, vLLM v0.22.1, MTP speculative decoding, average of 3 runs, process start to server ready: weight load 142 s, torch.compile 39 s, profiling/warmup 136 s, total 317 s. With Run:ai Model Streamer AND the persisted compile cache: weight load 59 s, compile 10 s, profiling 98 s, total 167 s - 1.90x, saving 150 s (47%). Compile specifically went 39 s to 10 s. A second vendor case study gives the same shape for an 8B on L40S: dynamo 10 s plus graph compilation 42 s reducible by persisting the cache, out of a 294 s total that included 61 s model download, 33 s weight loading, 54 s graph capture and 94 s init engine and imports. Both sources also note that persisting the cache shaves a little off the warmup phase too, because the warmup passes trigger additional compilation and autotuning of their own.",
+  "workaround": "Set VLLM_CACHE_ROOT to a path on a persistent volume or host-local disk that survives pod recreation, and treat that volume as part of the deployment rather than an optimization - the same volume is also where model weights and the flashinfer engine cache belong, and both vendors' guidance is to always cache vLLM artifacts since they are small. Two properties that make this safe to do first. Invalidation is automatic and correct (hash over architecture, dtype, quantization, flags, compute capability and versions), so a model or engine change is a miss and a one-time slow start, never a wrong result. And the residual is honest: profiling and warmup 'is largely fixed engine overhead that the two optimizations don't directly target - effectively the floor for this approach', at 98-136 s in the measured case. If you are near that floor, the next targets are graph capture (54 s to 7 s by narrowing --cuda-graph-sizes, with the caveat that requests outside the captured sizes lose throughput) and weight-load parallelism, not more cache tuning. Pair this with the bandwidth point from the same measurement - the default loader got about 1.2 GB/s from NVMe where 64-way parallel reads sustained nearly 10 GB/s, so the streamer was worth 142 s to 59 s on its own.",
+  "severity": "major",
+  "notes": "The highest-leverage low-risk fix in this whole slice of the repo: one environment variable, no change to the model, no change to output, measured at 47% of total cold start. It is recorded as a gotcha rather than a tip because the default is wrong for the deployment target - it is right for a dev loop on a laptop and wrong for a pod that will be recreated - and because 'cold start is dominated by weight download' is the intuition that sends people to storage work while a third of the time is in JIT compilation of code they already had. Note the two independent measurements agree on which phases dominate and on the shape of the fix despite different hardware (DGX Spark unified memory, local NVMe versus L40S on Kubernetes with an EFS mount), which makes the phase breakdown a reusable baseline rather than a single-site anecdote. Both sources are vendor-adjacent blogs and their absolute numbers are environment-specific; the mechanism and the invalidation contract are upstream facts.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "dep-route179-vllm-cold-start-phases",
+    "dep-tensorfuse-vllm-cold-start-case-study",
+    "dep-vllm-engine-args-load-config"
+  ]
+}

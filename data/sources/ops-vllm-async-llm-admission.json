@@ -1,0 +1,15 @@
+{
+  "id": "ops-vllm-async-llm-admission",
+  "type": "source",
+  "name": "vLLM AsyncLLM.check_admission() source (max_num_queued_reqs / max_num_queued_tokens admission path)",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "url": "https://github.com/vllm-project/vllm/blob/main/vllm/v1/engine/async_llm.py",
+  "publisher": "vLLM project",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Docstring quoted verbatim: 'Reject the request if it would exceed queue limits. Both limits return HTTP 503 (Service Unavailable) so that load balancers and client SDKs retry on a different instance.' Two limits exist. max_num_queued_reqs is an 'approximate global cap on the number of unfinished requests (waiting + running). A request with n > 1 counts as n slots.' max_num_queued_tokens is a 'TTFT QoS - cap on the total prompt tokens of requests still in prefill.' The docstring also states that get_num_queued_tokens 'uses prompt_len for all prefilling requests. Chunked prefill progress and prefix-cache hits are not subtracted because the scheduler num_computed_tokens and num_cached_tokens are only propagated to the API server after prefill completes. The overestimation is conservative - earlier rejection, preserving TTFT targets.' Rejection log lines are 'Request queue full - rejecting request %s (current=%d, n=%d, max=%d)' and 'Max queued tokens reached - rejecting request %s (current_tokens=%d, max=%d)', both at logger.info level, not warning."
+}

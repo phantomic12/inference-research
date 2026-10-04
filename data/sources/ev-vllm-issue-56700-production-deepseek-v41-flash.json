@@ -1,0 +1,15 @@
+{
+  "id": "ev-vllm-issue-56700-production-deepseek-v41-flash",
+  "type": "source",
+  "name": "vLLM issue #56700: 3-day bring-up of DeepSeek-V4.1-Flash (769B, MXFP4 experts) on 8x RTX PRO 6000 SM120",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "url": "https://github.com/vllm-project/vllm/issues/56700",
+  "publisher": "vLLM",
+  "kind": "forum",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Filed 2026-09-13, OPEN as of 2026-10-04. The vLLM counterpart to [[ev-sglang-issue-40877-production-deepseek-v41-flash]] - same model, same unusual 8x-consumer-Blackwell-without-NVLink hardware, which makes the pair unusually valuable because the hardware is held constant. Self-described as 'Cross-posting field data from a 3-day bring-up of DeepSeek-V4.1-Flash (769B total, MXFP4 experts, Engram memory) on 8x RTX PRO 6000 (SM120, consumer Blackwell)'. Conditions: vLLM deepseekv41-flash-0909 image, TP=8, --kv-cache-dtype fp8 --block-size 128, --gpu-memory-utilization 0.85, 1M context enabled; env pinned as 'vLLM 0.1.dev20904 (deepseekv41-flash-0909), torch 2.13.0+cu130, CUDA 13.0, 8x RTX PRO 6000 96GB'. THE ONE PUBLISHED NUMBER: '950K-token double-needle retrieval correct, 4584 tok/s prefill throughput (pure-torch logits path, eager mode)'. So 4,584 tok/s prefill for vLLM against SGLang's 6,853 tok/s on the same model family and the same 8x RTX PRO 6000 - but they are NOT directly comparable because vLLM's figure is explicitly the pure-torch fallback path in EAGER MODE with no CUDA graphs, while SGLang's is its production configuration. Recorded as a draft-level comparison for that reason. Also documents the correctness trap that matters more than the number: FP8 KV-cache block layout is '[64tok x 128B fp8 | 64tok x 4B fp32 scale]' (block-appended), and reading it as per-token interleaved 'passes short-prompt smoke tests and only fails at >=100K needle retrieval - silent numerical corruption'. Method stated: a synthetic ~1M-token document with two facts inserted at 50% and 80% depth. Scale note: '~91GB/96GB per GPU' with Engram tables dominating (2 x ~100GB shards = 189 GiB across the TP group)."
+}

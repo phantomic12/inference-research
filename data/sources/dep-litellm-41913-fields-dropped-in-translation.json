@@ -1,0 +1,15 @@
+{
+  "id": "dep-litellm-41913-fields-dropped-in-translation",
+  "type": "source",
+  "name": "LiteLLM issue #41913 - tool and instruction fields dropped in translation, HTTP 200, no signal to caller",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "url": "https://github.com/BerriAI/litellm/issues/41913",
+  "publisher": "LiteLLM (reporter: gateway user)",
+  "kind": "forum",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Opened open as of 2026-10-04 against v1.101.0, real provider APIs, using --detailed_debug which 'prints the exact request LiteLLM sends upstream, under \"POST Request Sent from LiteLLM\"'. Six caller-set fields that never reach the provider: (1) JSON-schema const forwarded to Gemini as {'type':'object'} - 'any object satisfies it, so a pinned value becomes unconstrained'; (2) strict dropped (Gemini); (3) strict dropped (Anthropic), neither on the tool nor inside input_schema; (4) parallel_tool_calls:false dropped (Gemini) - 'the named tool_choice survives as mode: ANY + allowed_function_names, but nothing carries the single-call restriction'; (5) allowed_callers dropped (Anthropic in, Gemini out); (6) developer role rewritten to system (OpenAI in, OpenAI out) - 'The upstream accepts role: developer directly - sending it there by hand returns 200 - so there is nothing to translate away on this route.' Every case returns 200: 'In each case the call succeeds with 200, so nothing signals to the caller that the constraint they set is not in force.' Expected behaviour quoted: 'A field the target API can express is forwarded as sent. A field it cannot express is reported to the caller rather than dropped while the request is dispatched anyway.' Note the reporter distinguishes the opposite-direction case (#24664: a non-OpenAI provider such as vLLM rejecting developer, where translating to system IS the fix). This is the compatibility ceiling of a translating gateway, measured in HTTP status codes."
+}

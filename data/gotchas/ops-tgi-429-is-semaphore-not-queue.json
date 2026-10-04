@@ -1,0 +1,29 @@
+{
+  "id": "ops-tgi-429-is-semaphore-not-queue",
+  "type": "gotcha",
+  "name": "TGI's 429 'Model is overloaded' is a concurrency semaphore, not a queue-depth signal — so tgi_queue_size can grow while 429s are firing",
+  "class": "config",
+  "affects": [
+    "text-generation-inference"
+  ],
+  "concepts": [
+    "queueing",
+    "admission-control",
+    "ratelimit",
+    "continuous-batching"
+  ],
+  "symptom": "Under load, TGI returns 429 {\"error\":\"Model is overloaded\",\"error_type\":\"overloaded\"} to some clients while the Prometheus gauge tgi_queue_size stays at or near zero, and tgi_batch_current_size shows the backend working normally. The two observations look contradictory: the server is simultaneously 'full' (rejecting) and 'empty' (queue drained instantly). An operator who sizes the deployment from tgi_queue_size concludes there is spare capacity.",
+  "root_cause": "InferError::Overloaded wraps a tokio TryAcquireError: the Infer struct holds limit_concurrent_requests: Arc<Semaphore> and admission is a non-blocking try_acquire on that semaphore. It is a pure concurrency cap (default 128) with no relationship to queue occupancy. The queue behind it is a different mechanism: backends/*/src/queue.rs builds mpsc::unbounded_channel() and appends with .unwrap(), so the waiting-queue length is bounded by nothing in that file. The batch-forming task is asked for a batch under (min_size, max_size, prefill_token_budget, token_budget) and enforces the token budget at batch formation, not at admission. So 'overloaded' and 'queue is long' are two independent facts, and only the first one is reported to the client.",
+  "workaround": "Read tgi_queue_size and tgi_request_queue_duration (Histogram, time spent in the queue per request) as the real backpressure signal, not the 429 rate; the 429 rate tells you the semaphore is saturated, the queue tells you whether latency is accruing. If you want bounded queueing rather than refusal, lower --max-concurrent-requests deliberately and treat the queue as unbounded with the client timeout as your only bound. Also note the launcher doc calls --max-concurrent-requests 'the maximum amount of concurrent requests for this particular deployment ... usually good to handle backpressure correctly' — refusal is the intended mechanism, not an accident. TGI's docs state it cannot infer --max-batch-total-tokens automatically ('should be the largest possible amount that fits the remaining memory'), which means the token-side capacity of a TGI deployment is operator-guessed and the resulting queue behaviour inherits that guess.",
+  "severity": "major",
+  "notes": "The genuinely unsolved part: nothing in TGI bounds the waiting queue. If clients retry a 429 with backoff, the retry storm lands in an unbounded mpsc channel whose response senders are mpsc::UnboundedSender, so the memory cost of a backlog is held by the server. That is the gap a gateway-side queue (llm-d EPP Flow Control, see ops-queue-belongs-at-the-gateway) exists to close.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-tgi-infer-overloaded-429",
+    "ops-tgi-queue-unbounded",
+    "ops-tgi-launcher-arguments",
+    "ops-tgi-metrics"
+  ]
+}

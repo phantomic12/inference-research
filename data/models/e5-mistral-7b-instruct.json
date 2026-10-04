@@ -27,10 +27,10 @@
   "context_scaling": null,
   "activation": "silu",
   "attention_variant": "causal decoder (Mistral) used as a bi-encoder via last-token pooling",
-  "kv_cache_bytes_per_token": 8192.0,
+  "kv_cache_bytes_per_token": 131072.0,
   "flops_per_token_active": 14000000000.0,
   "open_weights": true,
   "license": "MIT",
-  "notes": "THE OUTLIER in the embedding slice: a 7B causal decoder used as an embedder. Unlike every BERT-based model here, this has a KV cache by construction (kv_cache_bytes_per_token = 32 layers * 8 kv_heads * 128 head_dim * 2 * 2 = 8192 bytes/token at bf16). But for embedding use the cache is never grown — it is a single forward pass with last-token pooling, so resident memory is dominated by the 7B weights. The KV formula applies but is irrelevant for serving. 32x the compute of a BERT-base embedder. Exists because it scores materially better on retrieval benchmarks (MTEB). Sliding window 4096. Vocab 32000. MIT license. GGUF and ONNX ports exist.",
+  "notes": "THE OUTLIER in the embedding slice: a 7B causal decoder used as an embedder. Unlike every BERT-based model here, this has a KV cache by construction (kv_cache_bytes_per_token = 32 layers * 8 kv_heads * 128 head_dim * 2 * 2 = 8192 bytes/token at bf16). But for embedding use the cache is never grown — it is a single forward pass with last-token pooling, so resident memory is dominated by the 7B weights. The KV formula applies but is irrelevant for serving. 32x the compute of a BERT-base embedder. Exists because it scores materially better on retrieval benchmarks (MTEB). Sliding window 4096. Vocab 32000. MIT license. GGUF and ONNX ports exist.\n\nKV BYTES CORRECTED (2026-10-04): stored 8192 but the record's own derivation gives 32*8*128*2*2 = 131072 bytes/token - a 16x error, and this is the field that decides whether the model fits. The stored value appears to have dropped a factor of 16. Arithmetic re-done from num_layers=32, num_kv_heads=8, head_dim=128 at bf16. Anyone who sized a batch on the old figure was wrong by 16x.",
   "embedding_dims": 4096
 }

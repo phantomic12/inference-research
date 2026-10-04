@@ -1,0 +1,39 @@
+{
+  "id": "obs-kv-cache-usage-percentage-is-not-a-headroom-signal",
+  "type": "gotcha",
+  "name": "A high KV cache usage percentage does not mean you are close to the wall, and a low one does not mean you have room - the same number means different things on different engines",
+  "class": "measurement",
+  "affects": [
+    "vllm",
+    "sglang",
+    "niche-lmdeploy-turbomind",
+    "tensorrt-llm",
+    "obs-vllm-observability",
+    "obs-sglang-observability",
+    "obs-lmdeploy-observability",
+    "obs-tensorrt-llm-observability"
+  ],
+  "concepts": [
+    "kv-cache",
+    "metrics",
+    "monitoring",
+    "autoscaling",
+    "fragmentation",
+    "prefix-cache"
+  ],
+  "symptom": "The classic 80% KV-usage alert fires constantly on a healthy server, or a server sits at 60% 'utilization' while rejecting requests. Two replicas of the same deployment on different backends need different thresholds for the same alert. A dashboard shows usage near 100% with plenty of requests still being served well.",
+  "root_cause": "Three distinct problems are stacked under one metric name. (1) It is a block-occupancy ratio, not a bytes or a contiguity measure. vLLM's block_pool.get_usage() is literally `1.0 - (self.get_num_free_blocks() / (self.num_gpu_blocks - 1))` - free blocks over total blocks, with the null block subtracted. Blocks held only by the prefix cache still count as used. (2) The denominator and the numerator's definition change per engine and per configuration. LMDeploy's docs state that on the PyTorch backend `lmdeploy:gpu_cache_usage_perc` is 'logical GPU blocks referenced by live requests' with blocks held only by the prefix cache or by stopped sessions EXCLUDED, and that setting LMDEPLOY_ENABLE_REQUEST_CACHE_USAGE_METRIC=0 changes it to total logical occupancy including prefix-retained blocks; on Turbomind the same metric name is bytes of live prefix-cache and checkpoint objects over the configured cache-region size. TensorRT-LLM's `trtllm_kv_cache_utilization` is usedNumBlocks / maxNumBlocks. SGLang sidesteps the ambiguity by publishing the decomposition instead of one number: `sglang:token_usage` is documented as max(full, swa, mamba) and carries its own in-source FIXME ('misleadingly named token_usage; rename requires API deprecation'), alongside `sglang:full_token_usage`, `sglang:swa_token_usage`, `sglang:mamba_usage`, and the absolute split kv_available_tokens + kv_evictable_tokens + kv_used_tokens <= max_total_num_tokens. (3) Occupancy says nothing about whether the free blocks are usable by the next request. A long prompt needs a contiguous run; a pool that is 95% occupied by many short cached prefixes may have plenty of free blocks and still refuse the request.",
+  "workaround": "Alert on the count, not the percentage, where the engine publishes one: vLLM's `vllm:num_requests_waiting{reason=\"capacity\"}` separates 'no capacity' from other deferrals and is the signal that actually means saturation. Where you only have a ratio, treat it as a trend rather than a threshold and calibrate per engine, per backend and per prefix-cache setting - the LMDeploy docs themselves say the PyTorch default 'is useful for comparing request load when routing across replicas', i.e. it is a comparative signal, not an absolute one. SGLang's available/evictable/used triple is the best available substitute for a real headroom measure because it separates free from merely-evictable. Also watch `sglang:utilization` with care: it is dead on current main (see obs-sglang-utilization-metric-is-dead).",
+  "severity": "major",
+  "notes": "Related but distinct: vLLM renamed `vllm:gpu_cache_usage_perc` to `vllm:kv_cache_usage_perc`, and the rename was not clean - a commit titled '[Metrics] Fix KV cache usage percent metric multiproc' shows the new gauge was missing multiprocess_mode=\"mostrecent\" and exported one zero-valued series per worker pid while only the engine-core pid carried the real value. If a dashboard shows a flat 0 or a suspicious cluster of near-zero series, check the version before concluding the cache is empty. Also note the fragmentation point is a real limitation of block-paged allocation that no engine here exposes a metric for: none of them publishes a longest-free-run or largest-contiguous-free-block gauge, so 'usage high but unusable' is currently a thing you infer from waiting-request counts plus latency, not something you can read off a gauge.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-vllm-block-pool-usage",
+    "obs-sglang-metrics-collector",
+    "obs-lmdeploy-metrics-doc",
+    "obs-trtllm-metrics-collector",
+    "obs-vllm-v1-metrics-loggers"
+  ]
+}

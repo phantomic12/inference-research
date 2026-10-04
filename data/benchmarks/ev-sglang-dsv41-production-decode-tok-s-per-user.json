@@ -1,0 +1,31 @@
+{
+  "id": "ev-sglang-dsv41-production-decode-tok-s-per-user",
+  "type": "benchmark",
+  "name": "SGLang serving DeepSeek-V4.1-Flash in production on 8x RTX PRO 6000: single-stream decode throughput, prose vs structured output",
+  "engine_id": "sglang",
+  "status": "draft",
+  "confidence": 0.75,
+  "updated": "2026-10-04",
+  "sources": [
+    "ev-sglang-issue-40877-production-deepseek-v41-flash"
+  ],
+  "accelerator_ids": [
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "interconnect_ids": [],
+  "model": "DeepSeek-V4.1-Flash",
+  "format_id": null,
+  "metric": "tok_s_per_user",
+  "value": 93.9,
+  "unit": "tok/s decode, single stream (one user at a time)",
+  "methodology": "PER-REQUEST, NOT AGGREGATE: one concurrent user, production configuration, TP=8/EP=8 across 8x RTX PRO 6000 Blackwell Max-Q 96 GB (SM120, PCIe, no NVLink), kv_cache_dtype fp8_e4m3, mem_fraction_static 0.72, max_running_requests 16, attention_backend dsv4, moe_runner_backend flashinfer_mxfp4, speculative_algorithm DSPARK dspark_block_size 6, CUDA graph decode on. Measured through a client path over an SSH tunnel. TTFT 143-169 ms on the same runs. TWO PROMPT CLASSES, because the split is the finding: prose 93.9 tok/s, structured/JSON output 134.1 tok/s - structured generation is 43% FASTER, which is the opposite of what a naive expectation would predict and is a direct consequence of speculative decoding accepting more tokens when the continuation is schema-constrained.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "This is the number a reader should compare against for 'what does production decode feel like on consumer Blackwell with no NVLink', and the accompanying caveat is that the hardware is the constraint: the same report measures 87% GPU utilization at 220 W of 600 W and calls it communication-bound on PCIe. SGLang version/commit, driver version and the SSH-tunnel bandwidth are OMITTED BY SOURCE, and the author explicitly says the numbers 'come from a working day of production use' with 'No 24 h soak'. So this is a single-day production sample, not a characterised steady state.",
+  "energy_basis": null,
+  "power_w": null,
+  "power_scope": null,
+  "power_cap": null,
+  "clock_lock_mhz": null,
+  "thermal_state": null
+}

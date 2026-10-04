@@ -1,0 +1,30 @@
+{
+  "id": "sec-architectural-injection-defense-is-capability-scoping",
+  "type": "gotcha",
+  "name": "The injection defences with provable guarantees work by removing the LLM's control over control flow - and cost measured task completion",
+  "class": "framework",
+  "affects": [],
+  "concepts": [
+    "prompt-injection",
+    "agent",
+    "capability",
+    "control-flow",
+    "data-flow",
+    "tool-use",
+    "security"
+  ],
+  "symptom": "Every input filter and output filter fails to some published attack, and the literature's own conclusion is that filtering is not where the guarantee comes from. The designs that do provide a guarantee get it by changing the architecture, and they pay a measurable amount of utility for it.",
+  "root_cause": "Three independent lines converge on this. (1) CaMeL extracts control flow and data flow from the TRUSTED query so that untrusted retrieved data can never influence program flow, and enforces policy at tool calls via capabilities: 77% of AgentDojo tasks solved with provable security, versus 84% undefended - the guarantee is real and the 7-point utility drop is measured on the same benchmark. (2) The design-patterns survey reaches the same place from the agent side, treating patterns with provable injection resistance and stating their utility/security trade-offs rather than claiming a free win. (3) SecAlign's result is the counterpoint: it reports driving injection success below 10% against attacks more sophisticated than those seen in training, but by preference-optimising the MODEL - which only exists if you retrain, and which is therefore not available to a serving engineer who was handed weights.",
+  "workaround": "If your threat model includes an attacker who can write into anything you retrieve, the durable answer is to reduce what a successful injection can DO: separate control flow from data flow, make tool calls capability-scoped, and require that retrieved data never reaches a position where it can be interpreted as an instruction. Budget the task-completion loss - on AgentDojo it is about 7 points, which is the number to quote when someone asks what provable safety costs. Do not rely on detection layers as the primary control.",
+  "severity": "blocker",
+  "notes": "The measured utility cost (77% vs 84% on AgentDojo) is the number worth carrying into a design review, because it is the only one in this slice that puts a price on a guarantee rather than a detection rate. CaMeL also assumes a trusted user prompt, which is the assumption the retrieved-turn record shows is exactly what fails in the indirect case.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "sec-arxiv-2503-18813",
+    "sec-arxiv-2506-08837",
+    "sec-arxiv-2406-13352",
+    "sec-arxiv-2410-05451"
+  ]
+}

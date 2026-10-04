@@ -1,0 +1,34 @@
+{
+  "id": "sec-kv-cache-timing-side-channel-reconstructs-private-prefixes",
+  "type": "gotcha",
+  "name": "Automatic prefix caching turns KV-cache reuse into an API-visible timing oracle, and prefix hit/miss alone can reconstruct another user's prompt",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "lmcache"
+  ],
+  "concepts": [
+    "prefix-caching",
+    "kv-cache",
+    "side-channel",
+    "timing",
+    "multi-tenant",
+    "continuous-batching",
+    "radix-tree",
+    "cache-reuse"
+  ],
+  "symptom": "A cache hit is measurably faster than a cache miss. On a shared multi-tenant endpoint that latency difference is client-visible, and an attacker who controls their own queries can walk a victim's private prefix one token at a time by watching which of their own guesses hits. Confidentiality is lost even though every request is authenticated and every KV entry is correctly scoped to its own request.",
+  "root_cause": "Prefix caching reuses computed states when a new request begins with the same text, so the presence of another user's prompt is reflected directly in TTFT. The Early Bird Catches the Leak established this class against shared caches and GPU memory allocations, showing confidential SYSTEM PROMPTS and other users' requests can be inferred. SpliceLeak shows the linear-prefix assumption is not a real defence in RAG settings: real queries have unique private prefixes, but the deterministic micro-architecture used to align and fuse disjoint memory chunks still leaks a continuous 'Step-Wave' timing signature, letting an attacker first fingerprint the LENGTH of a hidden prompt and then extract its content token by token - up to 100% extraction success in bounded-entropy scenarios, with as few as 63 requests per token, riding a deterministic +104 ms latency void, evaluated on vLLM integrated with LMCache.",
+  "workaround": "Do not share KV-cache blocks across trust boundaries on an endpoint where prompt contents are sensitive, unless you have measured and accepted the channel. Where sharing is required, prefer token-level sensitivity-aware sharing (mask the privacy-relevant segments, reuse the rest) over all-or-nothing: CachePrune reports eliminating the direct reuse side channel while cutting TTFT 4.5x and raising cache hit rate 44% against the coarse-grained state of the art. If you need hard isolation, use separate processes or instances per tenant and set a cache salt per tenant so cross-instance prefix reuse cannot occur by default.",
+  "severity": "blocker",
+  "notes": "SCHEME RECLASSIFIED (2026-10-04): filed under class 'framework' because schemas/gotcha.schema.json has no 'security' value. True class is 'security' - see the enum addition requested in this slice's report. The important framing: no request ever reads another request's KV entries. The leak is entirely in the TIMING of reuse, which means request-level access control and correct block ownership are both satisfied and confidentiality is still lost. That is why this survives a threat model that only asks 'can tenant A read tenant B's memory'.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "sec-arxiv-2409-20002",
+    "sec-arxiv-2606-21842",
+    "sec-arxiv-2603-10726",
+    "sec-arxiv-2605-23640"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "ops-vllm-engine-core-shutdown",
+  "type": "source",
+  "name": "vLLM EngineCore source (_handle_shutdown, SIGTERM handling, abort vs drain)",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "url": "https://github.com/vllm-project/vllm/blob/main/vllm/v1/engine/core.py",
+  "publisher": "vLLM project",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "The SIGTERM and SIGINT handler only sets shutdown_state = EngineShutdownState.REQUESTED and triggers a SignalCallback that wakes the engine via the input queue (the code notes it is 'Not safe in a signal handler'). _handle_shutdown then reads vllm_config.shutdown_timeout and sets mode = 'abort' if shutdown_timeout == 0 else 'drain', logged as '[shutdown] EngineCore: start mode=%s timeout=%ds'. With timeout 0 it logs '[shutdown] EngineCore: aborting in-flight requests count=%d' and calls scheduler.finish_requests(None, RequestStatus.FINISHED_ABORTED) followed by _send_abort_outputs. With a non-zero timeout it only logs '[shutdown] EngineCore: draining in-flight requests count=%d timeout=%ds' and lets the busy loop finish the work. New requests arriving after shutdown was requested are refused by _reject_add_in_shutdown, which immediately sends abort outputs to the client. The loop exits only when has_work() is false. On a fatal exception the process calls _send_engine_dead(), which puts ENGINE_CORE_DEAD on the output queue and joins the output thread with a 5.0s timeout, logging logger.fatal if that fails. Note the shutdown_timeout default is 0 (see ops-vllm-engine-arg-defaults)."
+}

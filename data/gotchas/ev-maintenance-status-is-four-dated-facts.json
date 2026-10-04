@@ -1,0 +1,53 @@
+{
+  "id": "ev-maintenance-status-is-four-dated-facts",
+  "type": "gotcha",
+  "name": "Maintenance status is four dated facts, and the one that predicts everything else is the last commit date - measured across all 100 engine repos with resolvable GitHub metadata",
+  "class": "measurement",
+  "symptom": "A reader picks between engines on the axis 'is this alive' and gets impression, star count or an undated adjective. The four facts that answer it are: last commit date, last release date, contributor count, archived flag - all four pullable from the GitHub API on a stated date, all four already gathered here for every engine record with a repo. What the 2026-10-04 pull found, stated as a distribution rather than as a list. ACTIVE, committing within the last month (31 engines): [[vllm]] (0.0 months since last commit, v0.30.0 released 2026-09-22, 3632 contributors), [[sglang]] (0.0 months, v0.5.21 on 2026-10-02, 1996 contributors), [[llama-cpp]] (0.0 months, v0.5.0 on 2026-09-23, 2077 contributors), [[ollama]] (0.1 months, v0.35.1 on 2026-09-29, 615 contributors), [[tensorrt-llm]] (0.0 months, v1.2.1 on 2026-04-20, 493 contributors), [[flashinfer]] (0.0 months, v0.7.0.post1 on 2026-09-29, 424 contributors), [[nvidia-dynamo]] (0.0 months, v1.5.0 on 2026-09-21, 420 contributors). DORMANT-BUT-NOT-ARCHIVED, no commit in 12-24 months (8 engines): [[niche-medusa]] (2024-04-18, 29.5 months, 11 contributors), [[smoothquant-reference]] (2024-07-12, 26.7 months, 4 contributors), [[niche-routellm]] (2024-08-10, 25.8 months, 7 contributors), [[niche-loongserve]] (2024-11-11, 22.7 months, 2 contributors), [[niche-sequoia]] (2025-01-28, 20.2 months, 3 contributors), [[spinquant-research-harness]] (2025-02-14, 19.6 months, 2 contributors), [[distserve]] (2025-04-06, 17.9 months, 6 contributors), [[niche-llm-c]] (2025-05-10, 16.8 months, 70 contributors). DEAD, no commit in 24+ months or archived (5 archived): [[fastertransformer]] (2023-10-19, 35.5 months, 288 open issues - NOT archived, which is the surprising one, since NVIDIA still has this repo live and it has 40 contributors and 6457 stars), [[clip-as-service]] (2023-12-20, 33.5 months, not archived), [[niche-torchserve]] (ARCHIVED, last commit 2025-03-17, final release v0.12.0 on 2024-09-30, 222 contributors), [[xpu-synapseai]] (ARCHIVED, 2025-02-03, final release v1.1.0 on 2022-11-27, 3 contributors), [[alt-groq-groqflow]] (ARCHIVED, 2025-07-31, no releases, 11 contributors). SMALL-TEAM, 10 contributors or fewer regardless of activity (11 engines): [[niche-airllm]] (10, but committing today - the one small project that is alive), [[niche-routellm]] (7, dormant), [[distserve]] (6, dormant), [[xpu-gaudi-pytorch-bridge]] (5, last commit 2026-07-13, 2.7 months), [[smoothquant-reference]] (4, dormant), [[semi-pd]] (4, last commit 2025-12-25, 9.3 months, no releases), [[xpu-synapseai]] (3, archived), [[niche-sequoia]] (3, dormant), [[niche-loongserve]] (2, dormant), [[spinquant-research-harness]] (2, dormant), [[alt-cerebras-csl-sdk]] (4, last commit 2026-04-27).",
+  "root_cause": "The reason this exists as a gotcha rather than as 100 updated engine records is that the facts are perishable and the DISTRIBUTION is the finding. Contributor count is the best single proxy for bus factor and it is the one most often missing from an engine comparison; a project with 2 contributors and no commit in 23 months ([[niche-loongserve]]) is a fundamentally different proposition from one with 3632 contributors committing today ([[vllm]]), and no star count communicates that. Stars measure attention, contributors measure capacity. The three smallest-projects-that-are-also-dormant ([[niche-loongserve]], [[spinquant-research-harness]], [[niche-sequoia]] at 2, 2 and 3 contributors) are all paper-code releases, which is not a coincidence: research artifacts are written by a few people for a paper deadline and then stop, and the small contributor count is a symptom of the same fact as the dormancy rather than an independent signal.",
+  "workaround": "When comparing or recording maintenance status, use the four facts and the date. Say 'last commit 2024-11-11, 2 contributors, no releases, not archived, as of 2026-10-04' rather than 'unmaintained' or 'dormant' - the first is checkable and decays honestly, the second is an assertion that ages badly. Two specific cautions. (1) DO NOT USE open_issues_count AS A DORMANCY SIGNAL without reading [[ev-github-open-issues-count-includes-pull-requests]]: it counts pull requests too. (2) DO NOT INFER DEPLOYMENT FOOTPRINT FROM CONTRIBUTOR COUNT OR STARS in either direction - see [[ev-production-evidence-is-scarce-and-nearly-always-single-site]]. And do not treat 'not archived' as 'maintained': [[niche-routellm]] and [[niche-loongserve]] are both live-and-unarchived with no commits for 22-26 months, while [[text-generation-inference]] is ARCHIVED and still powering Hugging Chat in production - the archived flag and the deployment footprint are independent, which is the same distinction the existing [[text-generation-inference]] record already draws.",
+  "severity": "minor",
+  "notes": "The two facts that would change a reader's decision most, and that are absent from most engine records: NVIDIA's FasterTransformer ([[fastertransformer]]) has had NO COMMIT SINCE 2023-10-19 - 35.5 months - while remaining unarchived with 40 contributors, 6457 stars and 288 open issues. It is one of the most-starred engines in this dataset and it has been frozen for nearly three years, and nothing in a reader's impression of 'NVIDIA's Fast Transformer' would tell them that. Second: [[fastertransformer]] and [[clip-as-service]] are the two records with no commit for over 30 months, and [[niche-torchserve]] is archived while carrying 443 open issues - the residue of an abandoned-but-popular project. METHOD AND LIMITS, stated plainly: contributor counts come from the Link-header last page of contributors?per_page=1&anon=1, which counts distinct committers INCLUDING anonymous ones, so for projects with meaningful anonymous contribution the count is an over-estimate of distinct humans - this affects [[ggml-org/llama.cpp]] (2077), [[whisper-cpp]] (1043) and [[ik-llama-cpp]] (856) most, and those three counts should be read as 'distinct committers including anon', not as team sizes. Last-release data uses releases/latest where a release object exists and falls back to the newest TAG NAME with a null publish date where none does, so a tag-only project has an unverified release date. pushed_at can move on a force-push or a branch deletion, so it is a floor, not a ceiling, on activity. 2 of 102 engine repos returned 404 and were EXCLUDED rather than estimated: [[local-webgpu]] (points at w3c/webgpu, private or renamed) and [[mxptq-research-harness]] (points at microsoft/NeuralCompression, 404).",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "ev-gh-api-repo-metadata-2026-10-04"
+  ],
+  "affects": [
+    "vllm",
+    "sglang",
+    "llama-cpp",
+    "ollama",
+    "tensorrt-llm",
+    "flashinfer",
+    "nvidia-dynamo",
+    "fastertransformer",
+    "niche-medusa",
+    "smoothquant-reference",
+    "niche-routellm",
+    "niche-loongserve",
+    "niche-sequoia",
+    "spinquant-research-harness",
+    "distserve",
+    "niche-llm-c",
+    "clip-as-service",
+    "niche-torchserve",
+    "xpu-synapseai",
+    "alt-groq-groqflow",
+    "niche-airllm",
+    "xpu-gaudi-pytorch-bridge",
+    "semi-pd",
+    "alt-cerebras-csl-sdk",
+    "text-generation-inference",
+    "local-webgpu",
+    "mxptq-research-harness"
+  ],
+  "concepts": [
+    "github-api",
+    "project-health",
+    "contributor-count",
+    "bus-factor",
+    "dormancy"
+  ]
+}

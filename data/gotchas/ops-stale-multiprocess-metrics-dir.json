@@ -1,0 +1,28 @@
+{
+  "id": "ops-stale-multiprocess-metrics-dir",
+  "type": "gotcha",
+  "name": "A pre-set PROMETHEUS_MULTIPROC_DIR makes vLLM's metrics wrong across restarts — and autoscaling reads them",
+  "class": "config",
+  "affects": [
+    "vllm"
+  ],
+  "concepts": [
+    "autoscaling",
+    "metrics",
+    "kubernetes",
+    "prometheus",
+    "model-loading"
+  ],
+  "symptom": "After a pod restart the vLLM gauges that should reset to zero instead carry the previous process's values: vllm:num_requests_running, vllm:num_requests_waiting and vllm:kv_cache_usage_perc all read high on a pod that has served nothing. Any autoscaler or alert reading them acts on the ghost values. The symptom appears only on deployments that set the variable, so it looks like a fleet-specific anomaly rather than a configuration consequence, and it survives every subsequent restart because nothing re-derives the value from live state.",
+  "root_cause": "setup_multiprocess_prometheus() creates its own TemporaryDirectory only when PROMETHEUS_MULTIPROC_DIR is absent. When an operator, a base image or a Helm chart has already set the variable, vLLM logs a WARNING and uses the supplied directory instead: 'Found PROMETHEUS_MULTIPROC_DIR was set by user. This directory must be wiped between vLLM runs or you will find inaccurate metrics. Unset the variable and vLLM will properly handle cleanup.' The counters are per-process files in that shared directory and are retired only by mark_process_dead during a clean shutdown, so a killed process (OOM kill, SIGKILL mid-drain, node loss) leaves its files behind and the next process's totals include the dead one's. The contamination is permanent for the life of the directory.",
+  "workaround": "Do not set PROMETHEUS_MULTIPROC_DIR and let vLLM manage it — it creates and cleans its own directory. If your platform genuinely requires the variable, wipe the directory between runs yourself and treat that as a deployment step, because vLLM only cleans up a directory it created. Note the interaction with the drain path specifically: a pod SIGKILLed mid-drain (see ops-termination-grace-period-kills-the-drain) never runs shutdown_prometheus(), so its metric files survive. Verify rather than assume: after a restart, check that vllm:num_requests_running is near zero on an idle pod before letting an autoscaler read it.",
+  "severity": "major",
+  "notes": "This is the most dangerous class of gotcha in this set because it corrupts the signal rather than the service: every symptom is indirect, and an autoscaler built on the corrupted gauge holds replicas up or scales up based on a number that no longer corresponds to any running request. It compounds with the KV-occupancy signal specifically — kv_cache_usage_perc is the tightest physical constraint on decode (see ops-cpu-hpa-blind-to-llm-load), so a stale 0.9 on a freshly-started pod reads as a saturated pool. A related but distinct property: the admission counter is a per-process slot in shared memory aggregated on read (SharedAdmissionStats, 'Lock-free admission stats shared by API server processes'), correct within one running process but never durable; see ops-queue-fill-modes-are-engine-specific.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-vllm-prometheus-multiproc",
+    "ops-vllm-metrics-loggers"
+  ]
+}

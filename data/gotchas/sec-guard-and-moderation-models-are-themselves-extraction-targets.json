@@ -1,0 +1,29 @@
+{
+  "id": "sec-guard-and-moderation-models-are-themselves-extraction-targets",
+  "type": "gotcha",
+  "name": "The guard model is a second extraction target: an LLM-as-judge can be replicated from black-box queries, so moderation capability is intellectual property you have to defend",
+  "class": "framework",
+  "affects": [],
+  "concepts": [
+    "model-extraction",
+    "guard-model",
+    "moderation",
+    "llm-as-judge",
+    "llm-judge",
+    "intellectual-property",
+    "query-efficiency"
+  ],
+  "symptom": "The moderation model is treated as plumbing - a small safety component in front of the real product. It is a trained model with measured capability, queried over an API, and it can be replicated.",
+  "root_cause": "JudgeStealer targets exactly this asset: it is the first query-efficient extraction framework for replicating LLM JUDGE capabilities across pointwise scoring, pairwise comparison and listwise ranking protocols. It exploits strong cross-protocol agreement to acquire pointwise scores and transform them into pairwise and listwise supervision without additional victim queries, dynamically selecting inputs by semantic diversity, predictive uncertainty and potential judge biases, and applying score smoothing and multi-protocol review to preserve ordinal structure. It reaches up to 73.3%, 87.0% and 71.6% accuracy for pointwise, pairwise and listwise evaluation respectively, and works across different surrogate models. The general lesson is that cross-protocol consistency is a property you want from a judge for evaluation quality and it is simultaneously the property that makes a judge cheap to extract.",
+  "workaround": "If moderation capability is part of your product's defensible value, treat the guard endpoint as an extraction surface with the same controls as the main one: no gratuitous score outputs, query budget per principal, and traffic-level anomaly detection. Do not assume a small guard is low-value - it is the model making the safety decision, and a surrogate that reproduces 87% of pairwise judging accuracy is a working moderation model for most purposes.",
+  "severity": "major",
+  "notes": "SCHEME RECLASSIFIED (2026-10-04): filed under class 'framework' because schemas/gotcha.schema.json has no 'security' value. True class is 'security' - see the enum addition requested in this slice's report. The residual risk is worse than it looks for a shared guard model: many deployments use the SAME off-the-shelf guard, so an extractor who has already cloned it from one provider can apply the surrogate everywhere. Per-deployment uniqueness of the moderation model is therefore a real mitigation, and it is not the default.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "sec-arxiv-2608-26982",
+    "sec-arxiv-2312-06674",
+    "sec-arxiv-2407-21772"
+  ]
+}

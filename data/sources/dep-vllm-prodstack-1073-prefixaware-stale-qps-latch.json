@@ -1,0 +1,15 @@
+{
+  "id": "dep-vllm-prodstack-1073-prefixaware-stale-qps-latch",
+  "type": "source",
+  "name": "vLLM Production Stack issue #1073 - PrefixAwareRouter below-threshold fallback uses stale QPS and starves one backend",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "url": "https://github.com/vllm-project/production-stack/issues/1073",
+  "publisher": "vLLM project (reporter: production operator)",
+  "kind": "forum",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Opened 2026-09-02, still open as of 2026-10-04. Quotes routing_logic.py:841 on main (fc00f98): when match_length < self.prefix_min_match_length the router falls back to self._qps_routing(endpoints, request_stats), which 'picks the endpoint with the lowest request_stats[url].qps, which is a rate averaged over the request-stats window - a historical quantity, not a measure of what the engine is doing right now.' Failure mechanism quoted: a backend mid-session holding long requests has LOW QPS because long requests complete rarely, so QPS routing picks the BUSIEST backend; the prompt is then inserted into the trie against it, so 'the sub-threshold decision is not re-evaluated per request, it is latched for the lifetime of the session. A bad first pick becomes a permanent one.' MEASURED: 'Two vLLM backends, equal capacity, prefixaware routing, eight concurrent agent sessions opened in a burst. Result: 4 running + 4 queued on one backend while the other sat idle - half the fleet's capacity unused and half the sessions queueing, with no error, no unhealthy backend, and nothing in the router logs to indicate it.' Environment: two API-key-protected vLLM backends, static service discovery, prefixaware routing logic, --engine-stats-interval 10. Reporter has run a shadow patch since 2026-08-18 using least-in-flight from engine stats with random choice within +1 of the minimum, falling back to _qps_routing when engine stats are absent. Notes #990 (merged) fixed the trie never being seeded and #1035 (merged) addressed the same tension for the kvaware family via loadaware scoring - PrefixAwareRouter has no equivalent."
+}

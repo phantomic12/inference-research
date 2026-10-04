@@ -1,0 +1,39 @@
+{
+  "id": "obs-preemption-hides-latitude-from-throughput",
+  "type": "gotcha",
+  "name": "Preemption costs no visible throughput and only shows up in latency, so a throughput dashboard stays green through a KV-cache collapse",
+  "class": "measurement",
+  "affects": [
+    "vllm",
+    "sglang",
+    "obs-vllm-observability",
+    "obs-sglang-observability"
+  ],
+  "concepts": [
+    "preemption",
+    "retraction",
+    "kv-cache",
+    "tpot",
+    "itl",
+    "ttft",
+    "throughput",
+    "continuous-batching"
+  ],
+  "symptom": "Aggregate output tok/s and request-success rate look normal or even improve while users report stalling. Inter-token latency and time-to-first-token p99 climb. Nothing in the throughput panel moves, and on an engine without a preemption metric there is no signal at all. The giveaway is that generation_tokens keeps ticking at a steady rate while the same requests get slower.",
+  "root_cause": "Preemption (vLLM's word) / retraction (SGLang's word) is what the scheduler does when it cannot admit a new sequence without evicting a running one: vLLM's _preempt_request() sets request.num_computed_tokens = 0, clears spec_token_ids, marks the in-flight output stale, increments num_preemptions and prepends the request back onto the waiting queue. The victim's KV blocks are freed, which frees memory and lets the step proceed, so the forward pass still runs and still emits tokens. The recompute happens later, on the reschedule, and is charged to that request's latency rather than to the step. Throughput therefore measures only the step that succeeded; the wasted work shows up as time, not as lost tokens. SGLang does the same thing via release_kv_cache(is_insert=False) followed by evict_from_tree_cache and req.reset_for_retract(), which increments retraction_count and zeroes num_matched_prefix_tokens - so the freed KV is deliberately NOT returned to the radix tree, and the prompt must be prefilled again.",
+  "workaround": "Alert on the preemption metric, not on throughput. vLLM gives you `vllm:num_preemptions` (cumulative counter) and `vllm:request_num_preemptions` (per-request histogram - the histogram is the better signal because a burst shows up as a distribution shift rather than a slow counter rate). SGLang gives you `sglang:num_retracted_reqs`, `sglang:num_retracted_requests_total`, and - most useful - the token split `sglang:num_retracted_input_tokens_total` vs `sglang:num_retracted_output_tokens_total`, which tells you whether the recompute cost is prompt-side or decode-side. TensorRT-LLM and LMDeploy expose no preemption metric at all, so on those engines the only indirect signal is rising TPOT/ITL at constant throughput. Relieving the pressure is an engineering decision, not an alerting one: raise --max-num-seqs down / lower concurrency, shorten max_model_len, or move to disaggregated serving.",
+  "severity": "major",
+  "notes": "The honest framing is that throughput and latency measure different failures here. Throughput answers 'did the GPU do work this step'; latency answers 'did this user wait'. Preemption is invisible to the first question by construction, which is exactly why an SLO on average tokens/sec is worthless - see obs-serving-slos-ttft-tpot-not-tok-s. A second trap sits inside the same mechanism: with an engine that keeps per-request TPOT but not per-step ITL, a preempted request's stall is amortised across its remaining tokens and the TPOT p99 moves much less than the ITL p99 does. SGLang's ITL observer makes this explicit by dividing each wall-clock interval by num_new_tokens and incrementing the bucket num_new_tokens times, so a multi-token step spreads one long stall across many small observations. TensorRT-LLM has no preemption metric, so on that engine this failure mode is genuinely invisible in metrics and can only be caught in the log or a trace.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-vllm-scheduler-preemption",
+    "obs-vllm-v1-metrics-loggers",
+    "obs-sglang-scheduler-retraction",
+    "obs-sglang-schedule-batch-retract",
+    "obs-sglang-metrics-collector",
+    "obs-trtllm-metrics-collector",
+    "obs-lmdeploy-metrics-loggers"
+  ]
+}

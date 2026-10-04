@@ -1,0 +1,15 @@
+{
+  "id": "ops-kserve-llmisvc-autoscaling",
+  "type": "source",
+  "name": "KServe LLMInferenceService autoscaling with the Workload Variant Autoscaler (WVA)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://kserve.github.io/website/docs/model-serving/generative-inference/llmisvc/autoscaling/llmisvc-autoscaling",
+  "publisher": "KServe",
+  "kind": "repo",
+  "published": "Version 0.20",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "States the thesis directly: 'Unlike traditional CPU/memory-based autoscaling, WVA makes scaling decisions based on inference-specific metrics such as KV cache utilization, queue depth, and request saturation - signals that better reflect real LLM serving pressure.' WVA is 'the sole source of scaling decisions - the actuator (HPA or KEDA) acts as a pass-through that directly applies the replica count computed by WVA', configured with target=1. Documented backend asymmetries an operator must plan for: with HPA, idle scale-down is 'Not supported (min 1 replica)' and on metric outage 'HPA enters Unknown state', whereas KEDA supports idleReplicaCount and offers a 'Configurable fallback replica count'; initialCooldownPeriod 'for model load time' exists only on KEDA. spec.scaling and spec.replicas are mutually exclusive. HPA and KEDA are mutually exclusive actuators. For prefill-decode deployments, 'Both workloads (decode and prefill) must use the same actuator backend - you cannot mix HPA for decode and KEDA for prefill, or vice versa.' The default WVA ConfigMap entries are wva_desired_replicas into an HPA via Prometheus Adapter or into KEDA via direct PromQL. Also documents variantCost, and that WVA autoscaling is exclusive to LLMInferenceService."
+}

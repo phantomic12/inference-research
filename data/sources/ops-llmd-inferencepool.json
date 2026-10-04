@@ -1,0 +1,15 @@
+{
+  "id": "ops-llmd-inferencepool",
+  "type": "source",
+  "name": "llm-d InferencePool architecture reference (endpoint discovery, failOpen/failClose, namespace scoping)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "url": "https://github.com/llm-d/llm-d/blob/main/docs/architecture/core/inferencepool.md",
+  "publisher": "llm-d",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "The failureMode field (FailOpen or FailClose) 'tells the Gateway controller how to configure the proxy behavior if the EPP becomes unresponsive' - that single field is what decides whether an EPP failure degrades to direct-to-model-server or to hard errors. Endpoint discovery is readiness-driven: 'As model server Pods are scaled up or down, or as their readiness state changes, the EPP automatically updates its internal list of healthy candidates', which means endpoint removal depends entirely on a model-aware readiness probe being wired correctly. The gateway parks the request and waits for the EPP decision: 'The proxy is configured to park the request and wait for the EPP decision. The EPP then instructs the proxy - via the ext_proc protocol - on which specific Pod IP from the discovered pool should receive the request.' Isolation boundary: 'All discovery and references (Pods, EPP Service, and the InferencePool itself) are strictly contained within the same Kubernetes namespace to maintain security and isolation boundaries.' One-to-one mapping: typically one InferencePool per logical model deployment served by one EPP deployment, with model servers scaling independently of the EPP."
+}

@@ -1,0 +1,15 @@
+{
+  "id": "ops-llmd-readiness-probes",
+  "type": "source",
+  "name": "llm-d vLLM Model-Aware Readiness Probes guide",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://github.com/llm-d/llm-d/blob/main/docs/operations/readiness-probes.md",
+  "publisher": "llm-d",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Three lifecycle stages are distinguished: Container Running (Kubernetes), API Server Ready (the OpenAI-compatible server accepting connections), and Model Loaded. The core statement: 'The vLLM /health endpoint only indicates that the server process is running, not that models are loaded and ready to serve.' /health returns 200 immediately at server start and does not wait for model loading; /v1/models returns 503 or connection-refused during loading and 200 with model metadata once ready, so it is the model-aware probe. Recommended probe shape uses /health only for liveness and /v1/models for both startupProbe and readinessProbe, with a startupProbe failureThreshold of 60 at a 30s period, which the doc computes as a 30 minute maximum startup time. Ports differ by role: prefill 8000, decode 8200 (proxied through a sidecar), standalone 8000, and 'Always configure probes to match the pod serving port.' Consequences listed for using only basic health checks: premature traffic routing to pods that are not ready, failed requests during model loading, 'Need for arbitrary sleep times in deployment pipelines', and unreliable E2E testing. Common causes of a stuck NotReady pod: 'Model download taking longer than the failureThreshold allows', insufficient CPU/memory/GPU, wrong probe port, network issues preventing model download; solutions include pre-downloading models with init containers or persistent volumes. Cites vLLM #6073 as the reason no dedicated /ready endpoint exists."
+}

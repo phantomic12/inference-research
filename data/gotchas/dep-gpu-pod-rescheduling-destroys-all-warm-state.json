@@ -1,0 +1,41 @@
+{
+  "id": "dep-gpu-pod-rescheduling-destroys-all-warm-state",
+  "type": "gotcha",
+  "name": "A GPU pod is bound to its device, so any reschedule onto another node loses the weights, the KV cache, the compiled graphs and the page cache together - and re-warming costs the full measured cold start on a node that has never run the image",
+  "class": "hardware",
+  "affects": [
+    "vllm",
+    "sglang",
+    "niche-vllm-production-stack"
+  ],
+  "concepts": [
+    "kubernetes",
+    "gpu",
+    "node-affinity",
+    "taints",
+    "tolerations",
+    "cold-start",
+    "kv-cache",
+    "prefix-cache",
+    "image-pull",
+    "taints-tolerations",
+    "node-scheduling"
+  ],
+  "symptom": "An LLM serving replica is not a stateless app, so the ordinary Kubernetes failure response - delete the pod, let the scheduler place a new one - is a multi-minute cold start, and there is no scheduling trick that avoids it. Three properties compound. The pod is bound to a specific GPU (GPUs are extended resources allocated by the device plugin, and requests and limits must be equal), so it cannot drift onto a different card. Node affinity and taints decide which nodes are even eligible, and toleration is necessary but not sufficient - Kubernetes' own definition is that tolerations 'allow scheduling but don't guarantee scheduling: the scheduler also evaluates other parameters'. And whatever was warm on that node is gone with the pod: weights, KV cache, compiled graphs, the torch.compile cache, the OS page cache for the safetensors files, and the container image itself. A node that has never run your image has to pull it first - on one measured GKE setup the vllm-openai:v0.18.0 image is 28 GB and took roughly 236 seconds to pull, versus 'practically zero' on a node that already had it. So a single node drain can convert a warm replica into a 4-to-5-minute cold start plus a large image pull, and a fleet-wide rollout does it in lockstep.",
+  "root_cause": "This is a consequence of how the pieces are specified rather than of any engine. GPU scheduling: Kubernetes' docs state GPUs 'are only supposed to be specified in the limits section', requests and limits must be equal, and requests without limits is invalid - so a GPU request is a hard device allocation. Heterogeneous fleets are handled with node labels and node selectors (accelerator=<type>) or requiredDuringSchedulingIgnoredDuringExecution node affinity on labels like installed-memory with operator Gt, and Node Feature Discovery can also add taints so 'only pods that request those features can be scheduled on those nodes'. Taints repel and tolerations permit, with NoExecute being the effect that evicts pods which do not tolerate - the mechanism by which a GPU node fault turns into a serving outage. Multi-node inference makes it worse and is not yet solved upstream: LeaderWorkerSet provides gang scheduling so a replica is placed 'in an all-or-nothing manner', but that is explicitly ALPHA, which means partial placement is an observable state; a super-pod of n pods spread over m nodes has n x m opportunities to be placed badly, and the DisaggregatedSet API that adds autoscaling, rollouts and failure handling on top of it is still being co-designed. The warm-state loss follows from there: nothing in the scheduling contract carries the pod's accumulated state, so a reschedule is by definition a cold start. And GPU sharing makes the memory assumption unsafe even without a reschedule: NVIDIA's GPU Operator states that with time-slicing 'there is no memory or fault-isolation between replicas', that requesting more than one time-sliced GPU 'does not guarantee that the pod receives access to a proportional amount of GPU compute power', and that 'each pod can run as many processes on the underlying GPU without a limit' - so a co-tenant can take the memory your KV cache was sized against, without your pod moving at all. MIG, added to Kubernetes in 2020, is the isolation-preserving alternative.",
+  "workaround": "Design for the reschedule instead of trying to prevent it. (1) Make the node-local artifacts node-local and durable: cache model weights, the torch.compile cache (VLLM_CACHE_ROOT) and the engine/flashinfer cache on a host-local or persistent volume, so a reschedule within the same node is a local read rather than a network pull - this is the single biggest lever and it is the difference between a 28 GB image pull plus a network weight fetch and a disk read. (2) Pre-pull images on nodes and use image streaming where available: the measured pull cost is seconds when the node has the image and minutes when it does not, so node provisioning policy is a serving-latency parameter. (3) Set readiness and liveness probes with long enough startup allowances that a cold replica is not killed mid-warmup and restarted - a restart during the 167-317 s startup window is a livelock, and note the router's own dashboard advice that the cold-start card counts only a replica's first startup while crashes show up in a separate Restarts chart, so this failure is easy to miss. (4) Use required node affinity with a topology-spread constraint so a replica's pods are co-located rather than scattered, and treat a multi-node replica as a unit: gang-schedule it (LWS) so you get an all-or-nothing placement rather than a partially-placed super-pod. (5) For memory-sensitive co-tenancy, prefer MIG to time-slicing - MIG gives hardware-level memory and fault isolation, time-slicing gives neither. (6) Budget the rollout: a rolling update of a fleet with a 5-minute cold start spends 5 minutes per replica batch with every replica cold simultaneously, so the rollout's cost is dominated by N x cold-start, not by N.",
+  "severity": "major",
+  "notes": "This is the topology-layer record that explains why the other cold-start records matter operationally: reactive autoscaling is structurally late (serve-cold-start-model-loading-blocks-autoscaling) and a rollout or drain multiplies that cost by the replica count. Two details worth keeping because they are counter-intuitive. First, toleration is not sufficient for placement - that one sentence from Kubernetes' own docs is why a pod with the right toleration can still sit Pending, and it is a common false fix for GPU scheduling. Second, the 28 GB / 236 s image pull figure is for the DEFAULT vLLM image and the 'warm node skips this phase' effect is per-node, so a fleet where pods are spread thin has a higher steady-state image-pull cost than one where they concentrate. Both sources also note the maturity signal worth carrying: multi-node gang scheduling for LLM inference is Alpha in upstream Kubernetes, so any topology that depends on atomic multi-node placement is depending on a young API.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "dep-k8s-schedule-gpus-docs",
+    "dep-k8s-taints-tolerations-docs",
+    "dep-nvidia-gpu-operator-time-slicing",
+    "dep-k8s-lws-readme",
+    "dep-dudeperf3ct-vllm-cold-start-gke",
+    "dep-baseten-cold-starts-docs",
+    "serve-k8s-hpa-docs"
+  ]
+}

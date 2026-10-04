@@ -1,0 +1,33 @@
+{
+  "id": "ops-queue-belongs-at-the-gateway",
+  "type": "gotcha",
+  "name": "The queue in front of an LLM engine is the wrong place to queue — engine-local queues are invisible, ungovernable and lost on restart",
+  "class": "config",
+  "affects": [
+    "vllm",
+    "sglang-router",
+    "llm-d"
+  ],
+  "concepts": [
+    "kv-cache",
+    "prefix-caching",
+    "continuous-batching",
+    "queueing",
+    "admission-control",
+    "tpot",
+    "ttft"
+  ],
+  "symptom": "Requests sit in a model server's local queue where the operator cannot see them, cannot prioritise them, and cannot move them. Priority inversion is invisible: a latency-critical interactive request waits behind large offline batches because, as the reference puts it, 'Model servers batch based on arrival or sequence length, not business priority.' Latency degrades with no corresponding change in any request-rate metric, and on a rolling restart every queued request is lost with no client-visible error because the queue was purely in-process.",
+  "root_cause": "Four separate mechanisms cause it. (1) Scheduling regret: once a request is dispatched into an engine-local queue the router cannot move it — 'Once a request is dispatched to a model server local queue, the EPP cannot move it. Premature routing locks requests into suboptimal candidates, preventing them from utilizing a better endpoint that may free up soon.' (2) No governance inside the engine: model servers batch on arrival or sequence length, not business priority. (3) Loss on restart: queues are 'stored purely in-memory. If the EPP process restarts or fails, queued requests are lost.' (4) Boundlessness where no bound is configured: TGI's backend queue is an unbounded mpsc channel, and vLLM's max_num_queued_reqs / max_num_queued_tokens default to None.",
+  "workaround": "Move the queue to the gateway (llm-d EPP Flow Control, behind the flowControl feature gate) so requests are held centrally where priority and fairness can be enforced, and keep only a small 'healthy buffer' inside the engines: llm-d's stated principle is a buffer 'just large enough to ensure continuous batching engines never starve for work, but small enough that the vast majority of queuing happens centrally in the EPP where priority and fairness can be enforced' — tuned via the utilization-detector's queueDepthThreshold or the concurrency-detector's maxConcurrency. Be explicit about what you are buying: llm-d says Flow Control 'cannot remove wait time when the system is over capacity. By enabling it, you make the explicit choice to protect TPOT at the expense of queue time.' It shifts TTFT, it does not eliminate it.",
+  "severity": "blocker",
+  "notes": "Two honest limits to record. (1) The engines themselves are wrong to fix this: TPOT protection inside a model server via max_num_seq 'lacks global awareness', so an engine-level knob cannot see other replicas' load. (2) Centralised queuing does not survive the gateway: with flow control disabled (the default) saturation means only negative-priority sheddable requests are rejected with 429 while 'All other requests pass directly to the model servers' — i.e. by default there is no central queue at all. And an EPP restart loses whatever it held.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-llmd-flow-control",
+    "ops-tgi-queue-unbounded",
+    "ops-vllm-engine-arg-defaults"
+  ]
+}

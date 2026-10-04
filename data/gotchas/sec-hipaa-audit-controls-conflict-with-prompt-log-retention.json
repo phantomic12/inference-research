@@ -1,0 +1,29 @@
+{
+  "id": "sec-hipaa-audit-controls-conflict-with-prompt-log-retention",
+  "type": "gotcha",
+  "name": "HIPAA requires auditability AND minimisation, and inference logging collides with both - 164.312(b) wants the records, 164.316 keeps them 6 years",
+  "class": "config",
+  "affects": [],
+  "concepts": [
+    "hipaa",
+    "compliance",
+    "audit-trail",
+    "retention",
+    "logging",
+    "phi",
+    "encryption",
+    "data-minimisation"
+  ],
+  "symptom": "A team tries to satisfy the HIPAA Security Rule on an inference deployment and gets stuck in a contradiction: turn on detailed request logging to satisfy the audit-control standard, and you have just built a six-year PII repository; turn it off, and you cannot evidence who accessed what.",
+  "root_cause": "45 CFR 164.312 requires: (a) access control, with UNIQUE USER IDENTIFICATION required while automatic logoff and encryption/decryption are only ADDRESSABLE - note that an addressable specification is explicitly weaker than a required one; (b) audit controls, defined as mechanisms that 'record and examine activity in information systems that contain or use electronic protected health information' - note it says record activity, not retain content; (c) integrity; (d) person or entity authentication; (e) transmission security. 45 CFR 164.316 then requires documentation retained for 6 YEARS from creation or last effective date. The trap is that people read (b) as 'log the prompts'. It says record and examine ACTIVITY. A request ID, principal, timestamp, model, token counts and outcome satisfy (b); the prompt text is not required by it, and retaining it for six years is what creates the exposure.",
+  "workaround": "Separate the audit trail from the content log, and keep them separable by design. Emit an audit event carrying request ID, authenticated principal, model id, timestamp, token counts, finish reason and any guard-model verdict - enough to satisfy 164.312(b) and 164.316's six-year clock without retaining PHI. Keep prompt content out of the audit record, or bound it with a documented TTL well inside the six-year documentation window. Implement unique user identification properly (per-principal credentials, not a shared API key), because unlike encryption it is REQUIRED rather than addressable.",
+  "severity": "major",
+  "notes": "The Required-versus-Addressable distinction in 164.312(a) is worth carrying into a compliance review: encryption of ePHI at rest is ADDRESSABLE in the Security Rule, which is a materially weaker obligation than it is usually described as. Not legal advice; the regulation text is the source and the interpretation of how to satisfy it is yours.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "sec-ecfr-164-312",
+    "sec-ecfr-164-316"
+  ]
+}

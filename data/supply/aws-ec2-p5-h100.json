@@ -4,12 +4,16 @@
   "name": "AWS EC2 P5 (NVIDIA H100 SXM, on-demand + Capacity Blocks)",
   "status": "verified",
   "confidence": 0.97,
-  "updated": "2026-10-03",
+  "updated": "2026-10-04",
   "sources": [
     "sup-cloud-aws-ec2-price-list-use1",
     "sup-cloud-aws-ec2-p5-instance-page",
     "sup-cloud-aws-ec2-capacityblocks-pricing",
-    "sup-cloud-aws-ec2-capacityblocks-overview"
+    "sup-cloud-aws-ec2-capacityblocks-overview",
+    "spl-eccn-3a090-ccl",
+    "spl-bis-2026-01-advanced-computing-case-by-case",
+    "spl-bis-2026-05-d5-guidance",
+    "spl-negative-no-oem-publishes-lead-time"
   ],
   "kind": "cloud",
   "vendor": "nvidia",
@@ -26,6 +30,6 @@
   "price_basis": "per H100 SXM GPU-hour; 8x H100 per p5.48xlarge instance. On-demand us-east-1 $55.04/instance-hr / 8 = $6.88. Capacity Block $41.528/8 = $5.191 per H100 in us-east, $37.76/8 = $4.720 in ap/eu/sa. Fetched 2026-10-03 from an offer file published 2026-09-25; AWS publishes no regional on-demand variation for this SKU (verified identical in us-east-1 and us-west-2).",
   "availability": "allocation-only",
   "lead_time_weeks": null,
-  "export_controlled": null,
-  "notes": "THE SCARCITY RECORD FOR THIS SLICE. On-demand p5 capacity is not reliably purchasable: AWS's own price list carries p5.48xlarge with an explicit $0.00/hour rate alongside the real $55.04 (the same sentinel appears for p5.4xlarge, p5en.48xlarge and p4d.24xlarge), which is how that feed encodes 'no capacity'. The workable route is EC2 Capacity Blocks - reservable up to 8 weeks in advance for up to 6 months, 1-64 instances per block (512 GPUs), shareable across accounts. Every figure here is a RESERVATION rate paid up front, not a rate you can walk into. Price basis warning: Capacity Block rates are explicitly dynamic, re-set on supply/demand, and AWS has published a forward schedule effective 2026-10-07 that RAISES P5 from $5.191 to $5.970 per GPU-hour - so that figure is weeks from stale. Linux OS fee is $0.000/h on a p5.48xlarge; RHEL adds $1.8432/instance-hr (~$0.23 per GPU-hour) if you need it. p5.4xlarge gives a single H100 at the same $6.88/GPU-hr but the product page states GPUDirect RDMA is NOT supported on it - unusable for distributed training, fine for single-GPU inference. Egress is billed separately. No contract or sales call is required; a credit card and an AWS account suffice, though enterprise volume needs one."
+  "export_controlled": true,
+  "notes": "THE SCARCITY RECORD FOR THIS SLICE. On-demand p5 capacity is not reliably purchasable: AWS's own price list carries p5.48xlarge with an explicit $0.00/hour rate alongside the real $55.04 (the same sentinel appears for p5.4xlarge, p5en.48xlarge and p4d.24xlarge), which is how that feed encodes 'no capacity'. The workable route is EC2 Capacity Blocks - reservable up to 8 weeks in advance for up to 6 months, 1-64 instances per block (512 GPUs), shareable across accounts. Every figure here is a RESERVATION rate paid up front, not a rate you can walk into. Price basis warning: Capacity Block rates are explicitly dynamic, re-set on supply/demand, and AWS has published a forward schedule effective 2026-10-07 that RAISES P5 from $5.191 to $5.970 per GPU-hour - so that figure is weeks from stale. Linux OS fee is $0.000/h on a p5.48xlarge; RHEL adds $1.8432/instance-hr (~$0.23 per GPU-hour) if you need it. p5.4xlarge gives a single H100 at the same $6.88/GPU-hr but the product page states GPUDirect RDMA is NOT supported on it - unusable for distributed training, fine for single-GPU inference. Egress is billed separately. No contract or sales call is required; a credit card and an AWS account suffice, though enterprise volume needs one.\n\n EXPORT CONTROL (2026-10-04, mechanism-level; sources spl-bis-2026-05-d5-guidance, spl-bis-2026-01-advanced-computing-case-by-case): renting capacity does NOT remove the export-control question, it relocates it. Providing remote access to controlled computing capability can constitute a transfer under the EAR, so the provider must screen the end user; and separately, under the 91 FR 1684 licence regime the consignee must run KYC procedures to prevent unauthorized remote access and must manage and limit IaaS access to the hardware - obligations pushed onto the customer, who must be told to implement them. For a customer headquartered or parented in Country Group D:5 or Macau the 742.6(a)(6)(iii)(A) end-user/parent test can bite even when the capacity is consumed in a permitted region. Recorded true because the underlying hardware is controlled and the provider carries the screening duty, not because access to a US region is itself restricted.\n\n LEAD TIME: null, and correct as null. For a listed on-demand instance type the provisioning delay is effectively zero - capacity is allocated per request - so a week count would be meaningless; the real gate for scarce shapes is either a quota increase or a capacity reservation, not a lead time. Where a published commitment horizon exists it IS recorded: AWS documents that a Capacity Block may be reserved with a start time up to EIGHT WEEKS in the future (source spl-aws-capacity-block-booking-horizon), which is a floor on how far ahead scarce capacity must be committed, not a wait. On-demand and Spot tiers publish no lead time at all; their constraint is availability, and the repo records that as availability=in-stock or a spot/reality note rather than as a fabricated week figure. Probe log in source spl-negative-no-oem-publishes-lead-time."
 }

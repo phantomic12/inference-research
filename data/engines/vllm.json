@@ -3,7 +3,7 @@
   "type": "engine",
   "name": "vLLM",
   "status": "verified",
-  "confidence": 0.92,
+  "confidence": 0.93,
   "updated": "2026-10-03",
   "sources": [
     "engine-vllm-github",
@@ -11,7 +11,15 @@
     "engine-vllm-feature-matrix",
     "engine-vllm-quant-matrix",
     "engine-vllm-prefix-caching",
-    "engine-vllm-metal-github"
+    "engine-vllm-metal-github",
+    "ev-gh-api-repo-metadata-2026-10-04",
+    "ev-vllm-docs-feature-matrix-axes",
+    "ev-vllm-issue-56700-production-deepseek-v41-flash",
+    "ev-vllm-issue-13281-source-build-3h",
+    "ev-vllm-rfc-17419-build-time",
+    "ev-vllm-docs-gpu-install-build-cost",
+    "ev-vllm-issue-48031-flashinfer-jit-cold-start",
+    "ev-vllm-mtp-regression-qwen3-next-80b-a3b"
   ],
   "repo": "vllm-project/vllm",
   "languages": [
@@ -59,7 +67,11 @@
     "Chunked prefill interleaves prefill and decode steps to bound TTFT under long prompts",
     "Speculative decoding (n-gram, EAGLE, MTP) and LoRA adapters at runtime",
     "Wide quantization menu with a hardware x format compatibility matrix published in the docs",
-    "OpenAI-compatible server plus a separate disaggregated prefill/decode path"
+    "OpenAI-compatible server plus a separate disaggregated prefill/decode path",
+    "Speculative decoding with thirteen published methods, and a graded selection table the docs are careful to qualify rather than to sell (2026-10-04)",
+    "Structured outputs on by default in the OpenAI-compatible server via xgrammar/guidance; the pre-v0.12.0 guided_* request fields were REMOVED, so upgrading clients is not optional",
+    "Disaggregated prefilling is documented as experimental and explicitly does not improve throughput - it buys TTFT/ITL independence and tail-ITL control",
+    "JSON-schema, regex and grammar constrained generation; per-architecture multimodal including video, with documented SSRF hardening for containerised deployments"
   ],
   "hardware_caveats": [
     "Linux only: the project states it does not support Windows natively; WSL or a community fork is required",
@@ -69,7 +81,10 @@
     "On ROCm the encoder-decoder (enc-dec) feature is unsupported; multi-step is also unsupported on AMD in the feature x hardware matrix, and async output is unsupported on AMD and on CPU",
     "CUDA graphs are unavailable on the CPU backend and on the Intel GPU platform (tracking issue linked from the feature matrix)",
     "Quantization is not portable across accelerators: Marlin (GPTQ/AWQ/FP8/FP4) has no AMD, Intel or CPU path; AWQ and GPTQ have no AMD GPU path; bitsandbytes and DeepSpeedFP have no AMD/Intel/CPU path; FP8 needs Ada or newer",
-    "Apple Silicon is not an in-tree backend: it requires the separately maintained vLLM-Metal plugin (see [[vllm-metal]])"
+    "Apple Silicon is not an in-tree backend: it requires the separately maintained vLLM-Metal plugin (see [[vllm-metal]])",
+    "The engine compile is a multi-hour cost, not a convenience: >=3 h on an A100 host for one SM 9.0 target per issue #13281, >5 h uncached in the project's own CI per the still-open RFC #17419. Budget it as infrastructure (cache with ccache/sccache, or skip it with VLLM_USE_PRECOMPILED=1) - see [[ev-build-cost-is-three-separate-builds]]",
+    "On a new GPU architecture with a cold FlashInfer JIT cache, startup can exceed the default VLLM_ENGINE_READY_TIMEOUT_S of 600 s and the failure message is an empty 'Failed core proc(s): {}' that misdirects toward OOM and driver hypotheses (issue #48031)",
+    "Speculative decoding can be a large latency REGRESSION, not a win: +76.5% average latency on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 with MTP, and +82.2% with MTP plus prefix caching - so measure on your own model rather than trusting the feature flag"
   ],
   "best_for": [
     "Multi-user servers with high request concurrency, where continuous batching plus paged KV is what actually buys throughput",
@@ -84,5 +99,5 @@
     "AMD GPUs when you need enc-dec models, multi-step scheduling, async output, or Marlin-kernel quantizations"
   ],
   "docs_url": "https://docs.vllm.ai/en/latest/",
-  "notes": "Backend terms used here: 'cuda' = NVIDIA; 'rocm' = AMD ROCm/HIP builds; 'xpu' = Intel GPU (SYCL-based, vllm-xpu-kernels, Python 3.12 only, tensor parallel supported, pipeline parallel beta on a single node via mp); 'metal' only via the out-of-tree vLLM-Metal plugin, not upstream. Quantization support per hardware is transcribed from the docs' Implementation x Hardware table; the same page warns the chart changes as vLLM evolves, so treat per-cell support as of 2026-10-03. Supported AMD gfx targets listed by the docs: MI200s (gfx90a), MI300 (gfx942), MI350 (gfx950), Radeon RX 7900 (gfx1100/1101), Radeon RX 9000 (gfx1200/1201), Ryzen AI MAX / AI 300 (gfx1151/1150)."
+  "notes": "Backend terms used here: 'cuda' = NVIDIA; 'rocm' = AMD ROCm/HIP builds; 'xpu' = Intel GPU (SYCL-based, vllm-xpu-kernels, Python 3.12 only, tensor parallel supported, pipeline parallel beta on a single node via mp); 'metal' only via the out-of-tree vLLM-Metal plugin, not upstream. Quantization support per hardware is transcribed from the docs' Implementation x Hardware table; the same page warns the chart changes as vLLM evolves, so treat per-cell support as of 2026-10-03. Supported AMD gfx targets listed by the docs: MI200s (gfx90a), MI300 (gfx942), MI350 (gfx950), Radeon RX 7900 (gfx1100/1101), Radeon RX 9000 (gfx1200/1201), Ryzen AI MAX / AI 300 (gfx1151/1150). ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-10-04 (0 months ago), latest release v0.30.0 published 2026-09-22, 3632 contributors (distinct committers incl. anonymous), open_issues_count 8443, NOT archived, 93173 stars, 8443 open issues+PRs. Among the most actively developed engines in this repo. CAVEAT on the issue count: it is GitHub's open_issues_count, which INCLUDES open pull requests - see [[ev-github-open-issues-count-includes-pull-requests]]. DEPLOYMENT (graded claim): the only graded-YES deployment evidence found for any engine besides [[sglang]] - see [[ev-production-evidence-is-scarce-and-nearly-always-single-site]]. vLLM issue #56700 (2026-09-13, open) is a 3-day bring-up of DeepSeek-V4.1-Flash (769B total, MXFP4 experts, Engram memory) on 8x RTX PRO 6000 96 GB consumer Blackwell, self-described field data, with configuration and version pinned (vLLM 0.1.dev20904 deepseekv41-flash-0909, torch 2.13.0+cu130, CUDA 13.0, TP=8, --kv-cache-dtype fp8, --block-size 128, --gpu-memory-utilization 0.85, 1M context). It publishes one throughput figure - 4584 tok/s prefill on the pure-torch eager fallback path - and that figure is deliberately recorded as a FALLBACK-path number, not the optimized production path, because flashinfer sparse-MLA SM120 instantiations were missing. It also contains the single most operationally important correctness finding found for this engine: the FP8 KV-cache block layout is '[64tok x 128B fp8 | 64tok x 4B fp32 scale]' (block-appended, not per-token interleaved) and misreading it 'passes short-prompt smoke tests and only fails at >=100K needle retrieval - silent numerical corruption'. BUILD COST: three distinct costs, see [[ev-build-cost-is-three-separate-builds]] for the taxonomy and the numbers. Engine compile: issue #13281 (2025-02-14) measures 'at least 3 hours on A100' for a Docker build at torch_cuda_arch_list=9.0+PTX, max_jobs=32, single SM 9.0 target, vLLM 0.7.2; RFC #17419 (2025-04-29, STILL OPEN) says the uncached CI wall clock 'exceeds 5 hours' and notes 95% of the last year's commits did not touch csrc. The vendor's own install docs say only 'can take several minutes', which is a warm figure - the reconciliation is in the gotcha. Documented mitigations: ccache/sccache (with CCACHE_NOHASHDIR=true required under pip install -e), VLLM_USE_PRECOMPILED=1, MAX_JOBS, and a dated reproducible datapoint for the arm64 GH200 image at ~15GB RAM and ~1475s / ~25 min with max_jobs=66, nvcc_threads=2. Runtime JIT: default VLLM_ENGINE_READY_TIMEOUT_S of 600 s is INSUFFICIENT on a cold FlashInfer cache for a large MoE on a new architecture - ~85 sm_121a CUTLASS kernels dominate startup, first attempt fails at ~599 s with a misleading empty error, second attempt succeeds in ~7 min (issue #48031); workaround is VLLM_ENGINE_READY_TIMEOUT_S=1800 plus a persistent cache dir. FEATURE AXES (filled from vendor docs 2026-10-04): speculative decoding has THIRTEEN published methods (EAGLE, LiLiCorr, MTP, Draft Model, PARD/Parallel Draft Model, MLP speculator, N-gram, Suffix decoding, Hidden State Extraction, Custom Proposer Backend, Dynamic Speculative Decoding, Adaptive Verification, Per-Request Acceptance Metrics) with the docs' own graded table (EAGLE and MTP High/Medium-high; Draft model High/Medium; PARD High/Medium-high; MLP Medium/Medium-high; N-gram and Suffix Low-medium/Medium) and the caution 'Real gains depend on your model family, traffic pattern, hardware, and sampling settings'; pipeline parallelism is not composable with spec decode as of vllm<=0.15.0. Structured output uses xgrammar and guidance backends, on by default in the OpenAI-compatible server, selectable per request via choice/regex/json/grammar/structural_tag, with --structured-outputs-config.backend default 'auto' - and an UPGRADE HAZARD the record should carry: guided_json, guided_regex, guided_choice, guided_grammar, guided_whitespace_pattern, structural_tag and guided_decoding_backend were all removed in v0.12.0. Disaggregated prefilling is explicitly EXPERIMENTAL per its own docs page, supports 9 named connector types, and the docs carry the caveat 'Disaggregated prefill DOES NOT improve throughput' plus the concession that production-level disagg relies on third-party connectors. Multimodal covers image and video (image_pil, video_url) and the record should now carry the SSRF guidance: --allowed-media-domains plus VLLM_MEDIA_URL_ALLOW_REDIRECTS=0, 'especially important if you run vLLM in a containerized environment'. Quantization implementation list is now recorded in full. CAUTION: speculative decoding being SUPPORTED is not a benefit - [[ev-vllm-mtp-regression-qwen3-next-80b-a3b]] measures MTP making latency 76.5% worse on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 on 4x H100, and 82.2% worse when combined with prefix caching. "
 }

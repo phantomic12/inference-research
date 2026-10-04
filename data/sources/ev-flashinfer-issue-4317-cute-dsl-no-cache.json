@@ -1,0 +1,15 @@
+{
+  "id": "ev-flashinfer-issue-4317-cute-dsl-no-cache",
+  "type": "source",
+  "name": "FlashInfer issue #4317: sm12x MoE CuTe-DSL kernels never disk-cached, 15-40 s MLIR recompile per kernel shape per engine start",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://github.com/flashinfer-ai/flashinfer/issues/4317",
+  "publisher": "FlashInfer",
+  "kind": "forum",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Filed 2026-08-02, OPEN as of 2026-10-04. The best-documented per-kernel compile cost found for any engine in this repo, and unusually it carries a measurement table. Exact: 'measured at ~40 s for the dynamic kernel's first hit and ~15-18 s per small-m micro-kernel specialization'; 'every engine start re-pays the full MLIR JIT cost for every kernel specialization it touches'. Environment is fully pinned - flashinfer 0.6.12, 0.6.13 and 0.6.15.post1; nvidia-cutlass-dsl 4.5.0 and 4.6.0; SM120 on RTX 5070 Ti x2 (TP/PP), RTX 5090 and RTX PRO 6000 Blackwell; model nvidia/Qwen3.6-35B-A3B-NVFP4 served via vLLM --moe-backend=flashinfer_b12x. Mechanism is source-verified against installed packages, not inferred: cute.compile() hardcodes no_cache=True, and both the load and the dump of the file cache are gated behind 'if not no_cache', so CUTE_DSL_CACHE_DIR and CUTE_DSL_DISABLE_FILE_CACHING have no effect on this path. Consequence in a serving context: the compiles land mid-request, ~17.5 s stop-the-world stalls with all in-flight requests frozen including mid-decode."
+}

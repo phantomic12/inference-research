@@ -1,0 +1,39 @@
+{
+  "id": "obs-itl-vs-request-tpot-are-different-metrics",
+  "type": "gotcha",
+  "name": "Inter-token latency and per-request time-per-output-token have different denominators and different weights; swapping them silently changes your SLO",
+  "class": "measurement",
+  "affects": [
+    "vllm",
+    "sglang",
+    "niche-lmdeploy-turbomind",
+    "text-generation-inference",
+    "obs-vllm-observability",
+    "obs-sglang-observability",
+    "obs-tgi-observability"
+  ],
+  "concepts": [
+    "itl",
+    "tpot",
+    "inter-token-latency",
+    "speculative-decoding",
+    "histogram-aggregation",
+    "slo"
+  ],
+  "symptom": "An alert tuned on one metric does not fire when the other degrades, or fires constantly with no user complaint. A dashboard shows p99 decode latency of 80 ms while individual users report multi-second stalls, or the reverse: a comfortable-looking p99 with visible stutter. Two engineers comparing the same deployment report different TPOT numbers from different tools and neither can say why.",
+  "root_cause": "They are not the same statistic and the projects say so explicitly. vLLM: `vllm:inter_token_latency_seconds` 'records one sample per streamed output event (the wall-clock gap between successive outputs)', whereas `vllm:request_time_per_output_token_seconds` 'is recorded once per finished request as (end-to-end latency - TTFT) / (number of output tokens - 1)'. vLLM's own docs state these 'differ when an output bundles multiple tokens (e.g. speculative decoding) or when mean ITL and mean per-request TPOT are aggregated over differing weights', and instruct: 'Use vllm:request_time_per_output_token_seconds for request-level TPOT and vllm:inter_token_latency_seconds when you specifically want the inter-output latency distribution.' Three separate distortions stack: (a) with speculative decoding one output event can carry several tokens, so the ITL sample count and the token count diverge; (b) a per-request sample weights a 10-token response the same as a 2000-token response, whereas an ITL sample weights every gap equally, so mean-of-means over different denominators are not comparable; (c) vLLM records TPOT as zero for requests generating no more than one token while `vllm bench serve` excludes them from its TPOT statistics - so the Prometheus histogram and the benchmark number legitimately disagree. LMDeploy's `lmdeploy:time_per_output_token_seconds` and `lmdeploy:iter_token_latency` have the same split. SGLang's `sglang:request_time_per_output_token_seconds` is documented as (finished_time - first_token_time) / (completion_tokens - 1). TensorRT-LLM's `trtllm_time_per_output_token_seconds` follows the vLLM fork. TGI's `tgi_request_mean_time_per_token_duration` is neither: it is inference_time / generated_tokens, which includes prefill.",
+  "workaround": "Pick one and write down which. Per-request TPOT is the right basis for a 'how fast does this response stream' SLO and is comparable across engines that use the (e2e - TTFT)/(n-1) definition. ITL is the right basis for spotting stalls, especially under speculative decoding or preemption, because it does not amortise a stall over a long response. If you need both, alert on ITL for stall detection and report TPOT to users. Never compare a TGI number against a vLLM number without checking the denominator, and never compare a Prometheus histogram quantile against a `vllm bench serve` printed TPOT as if they were the same measurement.",
+  "severity": "major",
+  "notes": "The benchmark-vs-histogram disagreement is a genuine documented trap rather than a rounding difference: vLLM's design doc states requests generating no more than one token 'are recorded with a TPOT of zero, while `vllm bench serve` excludes them from its TPOT statistics. Therefore, the Prometheus histogram and benchmark TPOT statistics can differ.' A zero-valued sample is also a bucket-polluting one: it pulls histogram means down and puts mass in the lowest bucket, so a run with many single-token responses will show a better-than-real mean TPOT. Note also that a percentile over ITL and a percentile over per-request TPOT answer different user questions - 'how long did any individual token wait' versus 'how slow was the slowest response' - and neither is derivable from the other's aggregate.",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-vllm-metrics-design-doc",
+    "obs-vllm-v1-metrics-loggers",
+    "obs-sglang-metrics-collector",
+    "obs-lmdeploy-metrics-loggers",
+    "obs-tgi-router-server-rs",
+    "obs-trtllm-metrics-collector"
+  ]
+}

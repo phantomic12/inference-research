@@ -1,0 +1,23 @@
+{
+  "id": "ev-github-open-issues-count-includes-pull-requests",
+  "type": "gotcha",
+  "name": "GitHub's repos/{owner}/{repo} open_issues_count INCLUDES open pull requests, so quoting it as an issue count overstates unresolved bug reports - and the repos API is undocumented on this point",
+  "class": "measurement",
+  "symptom": "An engine record says 'N open issues' and a reader concludes there are N unresolved problems. The GitHub REST API's repository object returns a field named open_issues_count whose value includes OPEN PULL REQUESTS, and the endpoint's own documentation does not say so. The effect on this repo is large and specific: vLLM's open_issues_count of 8443 and SGLang's of 5553 on 2026-10-04 are NOT 8443 and 5553 open bug reports. Both projects have hundreds of open PRs as a matter of routine operation, so the vast majority of those counts are pending changes, not complaints. At the other end the distortion runs the same way for the tidy projects: litellm reads 5179 and llama.cpp 2537, and those numbers are only interpretable alongside the fact that both have thousands of open PRs.",
+  "root_cause": "The repository endpoint exposes one combined counter because it is derived from the same underlying issue index that mixes issues and pull requests - GitHub has no separate PR entity, only an issue with an is_pull_request flag. The counts also drift continuously and there is no way to get the split from the repository endpoint at all: the split requires either the search API (`q=repo:owner/name is:issue is:open` versus `is:pr is:open`) or paginating the issues list and filtering.",
+  "workaround": "When recording an open-issue count, record WHICH NUMBER IT IS and say how it was obtained. Three options, in increasing cost: (1) quote open_issues_count and label it explicitly as 'issues + pull requests, GitHub repository endpoint, 2026-10-04', which is honest and cheap but tells a reader little about problem volume; (2) run the two search queries for the true issue and PR counts, which is two extra API calls per repo and is what should be done before making any claim that a project is or is not drowning in bug reports; (3) say nothing about issue volume and use the maintenance facts that are unambiguous - last commit date, last release date, contributor count, archived flag. This repository's evidence standard argues for (3) as the default: those four facts cannot be misread, whereas an issue count invites exactly the misreading recorded here. See [[ev-maintenance-status-is-four-dated-facts]] for the fact set this repo adopted instead.",
+  "severity": "minor",
+  "notes": "Written after pulling open_issues_count for all 102 engine repos on 2026-10-04 and noticing that the most-cited figures in this kind of record are the least interpretable ones. The pattern in this repo is healthy - several existing records already say 'X open issues' as a dormancy signal, which is a defensible use since a large count with a stale last-commit date is still informative - but the label is doing work it was never given. NOT VERIFIED: I did not run the is:issue / is:pr split for any repo, so this record states the semantics of the field rather than producing corrected per-engine counts, and the true open-issue counts for the engines named above are UNKNOWN. Two engine records in this repo would change under a corrected reading: [[niche-fastchat]] reads 1045 and [[niche-torchserve]] 443, both large enough that a PR-contaminated number could be read as evidence of neglect that the last-commit date independently supports but the issue count does not.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "ev-gh-api-repo-metadata-2026-10-04"
+  ],
+  "affects": [],
+  "concepts": [
+    "github-api",
+    "measurement-methodology",
+    "issue-tracking"
+  ]
+}

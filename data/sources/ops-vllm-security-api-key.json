@@ -1,0 +1,15 @@
+{
+  "id": "ops-vllm-security-api-key",
+  "type": "source",
+  "name": "vLLM Security documentation (API Key Authentication Limitations, cache salting, media UUIDs, gRPC, media limits)",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "url": "https://github.com/vllm-project/vllm/blob/main/docs/usage/security.md",
+  "publisher": "vLLM project",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "--api-key / VLLM_API_KEY covers ONLY the /v1, /v2, /inference and /cohere path prefixes. Explicitly listed as NOT requiring authentication even with --api-key configured: /invocations ('SageMaker-compatible endpoint (routes to the same inference functions as /v1 endpoints)'), /generative_scoring, /pooling, /classify, /score, /rerank, then operational controls /pause, /resume, /is_paused, /abort_requests, /scale_elastic_ep, /is_scaling_elastic_ep, /init_weight_transfer_engine, /update_weights, /get_world_size, then utility endpoints /tokenize, /detokenize, /health, /ping, /version, /load, plus /server_info, /reset_prefix_cache, /reset_mm_cache, /reset_encoder_cache, /sleep, /wake_up, /is_sleeping and /collective_rpc under VLLM_SERVER_DEV_MODE=1, and /start_profile, /stop_profile under --profiler-config. The doc says 'Do not rely exclusively on --api-key for securing access to vLLM' and recommends an allowlisting reverse proxy. gRPC (--grpc-port) 'is insecure by default - it does not implement authentication, authorization, or encryption.' KV-cache transfer, torch.distributed and data-parallel channels are unencrypted by default. Resource guards with documented defaults: VLLM_MAX_N_SEQUENCES=16384 (upper bound on the n parameter), VLLM_MAX_MEDIA_DOWNLOAD_SIZE_MB=256, VLLM_MAX_IMAGE_PIXELS=178956970, VLLM_MAX_AUDIO_CLIP_FILESIZE_MB=25, VLLM_MAX_AUDIO_DECODE_DURATION_S=600, VLLM_MAX_AUDIO_DECODE_BYTES=268435456, VLLM_MAX_EMBED_DECODE_BYTES=2147483648; setting any to 0 disables the limit and 'is not recommended for deployments exposed to untrusted users'. Documents CVE-2025-46570: cross-tenant prefix-cache reuse is a timing side channel, distinguishable at ROC AUC of 0.99 at prefix lengths of only 8 tokens, mitigated by the opt-in cache_salt mixed into the first KV block hash. Also documents that a client-supplied multimodal uuid is the cache identity, so two callers presenting the same uuid for different media share one cache entry, meaning 'The media from whichever request arrives first is served to both' and 'A later caller media is silently discarded'. Dynamic LoRA loading is called 'not a secure operation'. Endpoint plugins 'can shadow a core route and silently replace its behavior' with no route-conflict enforcement."
+}

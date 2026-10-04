@@ -1,0 +1,15 @@
+{
+  "id": "ops-tgi-infer-overloaded-429",
+  "type": "source",
+  "name": "TGI router InferError::Overloaded to HTTP 429 mapping and the max_concurrent_requests semaphore",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "url": "https://github.com/huggingface/text-generation-inference/blob/main/router/src/infer/mod.rs",
+  "publisher": "Hugging Face",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "InferError::Overloaded(#[from] TryAcquireError) carries the display string 'Model is overloaded'. The Infer struct holds limit_concurrent_requests: Arc<Semaphore>, so Overloaded is a tokio Semaphore try_acquire failure rather than a queue-full condition. router/src/server.rs implements From<InferError> for (StatusCode, Json<ErrorResponse>) mapping Overloaded => StatusCode::TOO_MANY_REQUESTS (429), ValidationError => 422 UNPROCESSABLE_ENTITY, GenerationError => 424 FAILED_DEPENDENCY, and IncompleteGeneration / IncompleteGenerationStream / StreamSerializationError => 500. The OpenAPI annotation on /generate documents 429 with the example body {\"error\": \"Model is overloaded\", \"error_type\": \"overloaded\"}. /health returns 503 {\"error\":\"unhealthy\",\"error_type\":\"healthcheck\"} when the backend health flag is false. The health trait has a start_health() default of false with the comment 'Typically false, or true if the backend includes a warmup phase'."
+}

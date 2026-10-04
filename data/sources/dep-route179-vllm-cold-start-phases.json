@@ -1,0 +1,15 @@
+{
+  "id": "dep-route179-vllm-cold-start-phases",
+  "type": "source",
+  "name": "Route179 blog - Optimizing vLLM cold start with model streaming and compile caching (measured phase breakdown)",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "url": "https://route179.dev/2026/06/30/optimizing-vllm-cold-start-with-model-streaming-and-compile-caching/",
+  "publisher": "Route179 (independent practitioner, project SafetyLens)",
+  "kind": "blog",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Published 2026-06-30. Environment verbatim: 'a single NVIDIA DGX Spark (GB10, unified memory), running as an EKS Hybrid Node', weights on local NVMe, vLLM v0.22.1 served via `vllm serve` in a Kubernetes Deployment, model nvidia/Qwen3.6-35B-A3B-NVFP4 (35B MoE, 3B active, NVFP4), with MTP speculative decoding (num_speculative_tokens 3), Marlin MoE backend, FlashInfer attention, FP8 KV cache. Cold-start phases named as load weights / torch.compile / profiling-and-warmup. MEASURED BASELINE, average of 3 runs, wall clock from process start to server ready: weight load ~142 s, torch.compile ~39 s, profiling/warmup/other ~136 s, total ~317 s (5:17). After adding Run:ai Model Streamer: weight load 59 s, compile 38 s, profiling 124 s, total 221 s (3:41) = 1.43x. After ALSO persisting the torch.compile cache: weight load 59 s, compile 10 s, profiling 98 s, total 167 s (2:47) = 1.90x, i.e. -150 s / -47%. NVMe measurement motivating the streamer: 'read with a single thread, it delivered about 1.2 GB/s; read with many parallel threads, it sustained nearly 10 GB/s. The default loader was leaving roughly 8x of available bandwidth on the table.' THE GOTCHA, quoted: 'By default, vLLM writes the cache to a path inside the container (/root/.cache/vllm), which is wiped every time the pod is recreated. So out of the box, you recompile on every single cold start and never see the benefit.' Fix is VLLM_CACHE_ROOT pointed at persistent storage. Cache safety stated: the Inductor cache keys on model architecture, layer shapes, dtype/quantization, compile flags, GPU compute capability and vLLM/PyTorch versions, so any change is a miss, not a stale hit - 'A stale cache can never cause a failure, only a one-time slow start.' Honest limit quoted: profiling/warmup 'isn't fully separable from compilation: the warmup passes trigger some additional compilation and autotuning of their own' and is 'largely fixed engine overhead that the two optimizations don't directly target - effectively the floor for this approach.'"
+}

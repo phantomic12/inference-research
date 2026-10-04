@@ -1,0 +1,34 @@
+{
+  "id": "ops-queue-fill-modes-are-engine-specific",
+  "type": "gotcha",
+  "name": "What happens when a queue fills is not one behaviour but three, and which one you get is a deployment choice: shed with a status code, block until the client times out, or OOM the box",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "text-generation-inference",
+    "sglang"
+  ],
+  "concepts": [
+    "queueing",
+    "admission-control",
+    "ratelimit",
+    "kv-cache",
+    "oom"
+  ],
+  "symptom": "Three different failure signatures for the same underlying condition of excess demand. (a) Explicit shed: immediate 429 or 503, visible in the client's error rate. (b) Silent unbounded growth: no error, latency grows without limit, connections pile up, and the client eventually gives up with its own timeout — the server never rejects anything. (c) Host-level OOM: the process is killed by the OOM killer and the pod restarts, taking every in-flight request with it. An operator who tuned for (a) on one engine and moves to another silently loses their protection.",
+  "root_cause": "The bound is engine-specific and each default differs. vLLM exposes two explicit bounds (max_num_queued_reqs and max_num_queued_tokens) but BOTH default to None, so a stock vLLM has no admission bound at all and behaves as case (b) — the request enters the waiting queue and the client's timeout is the only bound. SGLang exposes --max-running-requests and --max-queued-requests, both default None, and documents that --max-queued-requests 'is ignored when using disaggregation-mode' — so enabling it silently does nothing on a disaggregated deployment, which is a config-vs-behaviour trap. TGI bounds concurrency instead (case (a)) via a tokio Semaphore, but its waiting queue is an unbounded mpsc::unbounded_channel() whose append path calls .unwrap() — so TGI is case (a) at admission and case (b) behind it. Case (c) has its own documented guards: vLLM bounds the n parameter with VLLM_MAX_N_SEQUENCES (default 16384) and media downloads with VLLM_MAX_MEDIA_DOWNLOAD_SIZE_MB (256), VLLM_MAX_IMAGE_PIXELS (178956970), VLLM_MAX_EMBED_DECODE_BYTES (2 GiB) — every one of which is disabled by setting it to 0.",
+  "workaround": "Decide the fill mode explicitly per engine and verify it. Set both vLLM queue bounds to real numbers (they are the only thing standing between a traffic spike and an OOM), and remember the token bound over-counts by design — it charges full prompt_len to requests already partway through chunked prefill or hitting in the prefix cache. Set SGLang's bounds and, if disaggregated, verify they are actually being read. For TGI, accept that the queue is unbounded and put the bound in front of it. For host-level OOM protection, do NOT zero the media and n-parameter limits: the docs say disabling them 'removes the protection against resource-exhaustion attacks' and is 'not recommended for deployments exposed to untrusted users'.",
+  "severity": "blocker",
+  "notes": "Genuinely unsolved and worth stating plainly: there is no cross-engine convention for what a full queue does, so a fleet running mixed engines has no uniform overload contract, and the load balancer upstream of a (b)-behaving replica sees a healthy endpoint because the replica accepts connections and returns 200 on /health. The mitigation is entirely deployment-level: bound admission in your own layer. A related multi-process hazard: vLLM's admission counter lives in shared memory as one cache-line-sized slot per API-server process (SharedAdmissionStats, 'Lock-free admission stats shared by API server processes'), so max_num_queued_reqs is enforced against a process-count-dependent aggregate that is correct while the processes run and meaningless after a crash, and it is never a fleet-wide quantity. Adding API-server processes therefore widens the effective limit.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-vllm-engine-arg-defaults",
+    "ops-vllm-shared-admission-stats",
+    "ops-vllm-async-llm-admission",
+    "ops-sglang-server-arguments",
+    "ops-tgi-queue-unbounded",
+    "ops-vllm-security-api-key"
+  ]
+}

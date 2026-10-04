@@ -1,0 +1,15 @@
+{
+  "id": "ops-vllm-scheduler-preemption",
+  "type": "source",
+  "name": "vLLM V1 scheduler source (_preempt_request and the running-queue eviction loop)",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "url": "https://github.com/vllm-project/vllm/blob/main/vllm/v1/core/sched/scheduler.py",
+  "publisher": "vLLM project",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "_preempt_request docstring: 'Preempt a request and put it back to the waiting queue. NOTE: The request should be popped from the running queue outside of this method.' It asserts the request status is RUNNING, calls _free_request_blocks, sets request.status = RequestStatus.PREEMPTED, resets request.num_computed_tokens = 0, clears spec_token_ids, sets num_stale_output_tokens = num_in_flight_tokens, increments request.num_preemptions, records EngineCoreEventType.PREEMPTED, then calls self.waiting.prepend_request(request) and adds the id to reset_preempted_req_ids. Consequence: a preempted request loses every computed token and must be re-prefilled from scratch. The call site in the scheduling loop passes drop_stale_output=self.requires_kv_delivery, and victims are popped from the end of self.running (LIFO) unless self.policy == SchedulingPolicy.PRIORITY, in which case the victim is chosen by index and the token, input and encoder budgets are restored. reset_prefix_cache(reset_running_requests=True) drains the entire running queue through the same path in reverse order."
+}

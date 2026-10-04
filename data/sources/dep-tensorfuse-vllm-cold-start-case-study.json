@@ -1,0 +1,15 @@
+{
+  "id": "dep-tensorfuse-vllm-cold-start-case-study",
+  "type": "source",
+  "name": "Tensorfuse docs blog - Reduce vLLM GPU cold start time on Kubernetes (Sept 2025 case study)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "url": "https://tensorfuse.io/docs/blogs/reducing_gpu_cold_start",
+  "publisher": "Tensorfuse",
+  "kind": "blog",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Published 2025-09-01. Vendor flags its own numbers: 'The measurements below are a September 2025 case study using the documented image, not performance guarantees for current releases.' Model meta-llama/Llama-3.1-8B-Instruct on L40S. Cold-start sequence enumerated as: instance created -> model download to local storage -> weight load into GPU -> torch.compile (Dynamo bytecode transformation, then graph compilation) -> graph capture -> init engine. MEASURED BASELINE, everything from scratch: model download 61 s, weight loading 33 s, Dynamo bytecode 10 s, graph compilation 42 s, graph capture 54 s, init engine and imports 94 s; TOTAL 294 s (4 min 54 s). torch.compile stated as 'about 52 seconds for our example model' in prose (10+42). Graph capture fix, measured: '--cuda-graph-sizes 1,2,4,8,16,24,32,64 ... drops the capture time from 54 seconds to just 7 seconds', with the warning 'improper fine-tuning of graph sizes may lead to a reduction in throughput if requests fall outside the captured range.' Model-source trade-off with NUMBERS quoted: 'The storage cost is $0.30/GB-month and the data transfer cost is $0.03/GB. For example, caching a 16GB model that cold starts 40 times a month would cost approximately $24.' Rule of thumb quoted: 'download the model directly if your instance has an assured bandwidth of 10 Gbps or more ... machines with 15-25 Gbps or more of guaranteed bandwidth can often download models faster than they can read from a network-attached volume'; cache 'if your instance has limited network bandwidth. For GPUs without guaranteed high-speed networking (e.g., \"up to 20 Gbps\"), a cached volume will almost always be faster'; and 'You should always cache vLLM artifacts like compiled graphs and the engine cache.' Loader options named: fastsafetensors and run-ai, plus 'We currently do not support fastsafetensors'. Reproducible Dockerfiles for both cache-the-model and download-on-start variants, with HF_XET_HIGH_PERFORMANCE=true and HF_XET_NUM_CONCURRENT_RANGE_GETS=1024, HF_XET_CHUNK_CACHE_SIZE_BYTES=0, RUNAI_STREAMER_CONCURRENCY=64, RUNAI_STREAMER_CHUNK_BYTESIZE=134217728, and TORCH_CUDA_ARCH_LIST per GPU (V100 7.0, A10G 8.6, T4 7.5, L4 8.9, L40S 8.9, A100 8.0, H100 9.0). Notes efs mounted at /root/.cache in both variants."
+}

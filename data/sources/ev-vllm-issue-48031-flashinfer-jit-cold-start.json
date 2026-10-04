@@ -1,0 +1,15 @@
+{
+  "id": "ev-vllm-issue-48031-flashinfer-jit-cold-start",
+  "type": "source",
+  "name": "vLLM issue #48031: VLLM_ENGINE_READY_TIMEOUT_S default 600 s insufficient for large MoE with a cold FlashInfer JIT cache",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://github.com/vllm-project/vllm/issues/48031",
+  "publisher": "vLLM",
+  "kind": "forum",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Filed 2026-07-08, OPEN as of 2026-10-04. The clearest published statement of HOW OFTEN a JIT build step must be repeated and what it costs end-to-end. Fully pinned: NVIDIA DGX Spark (GB10 Grace Blackwell, sm_121a, ARM64, 121 GiB unified memory), vLLM 0.24.0, torch pinned via LocalAI's nvidia-l4t-arm64-cuda-13 backend, model saricles/Qwen3-Coder-Next-NVFP4-GB10 (80B MoE, NVFP4), kv_cache_dtype=fp8, gpu_memory_utilization 0.50, max_model_len 262144, FlashInfer 0.6.12 with JIT cache at /root/.cache/flashinfer/0.6.12/121a/cached_ops/. Behaviour: the first cold start with an empty cache 'reproducibly fails' at ~599 s (exactly the 600 s default) with a misleading empty 'Failed core proc(s): {}' message; the SECOND attempt reuses the partial JIT artifacts and finishes in ~7 min. Root cause as stated: 'cold FlashInfer JIT compile of the ~85 sm_121a CUTLASS kernels dominates startup and exceeds 600 s'. Trigger for repetition: 'Fresh boot or rm -rf /root/.cache/flashinfer'. So the answer to 'when must it be repeated' is: every fresh container or rebooted host, per GPU architecture, per FlashInfer version, per model config."
+}

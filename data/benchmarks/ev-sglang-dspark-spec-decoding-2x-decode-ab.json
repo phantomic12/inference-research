@@ -1,0 +1,31 @@
+{
+  "id": "ev-sglang-dspark-spec-decoding-2x-decode-ab",
+  "type": "benchmark",
+  "name": "SGLang DSPARK speculative decoding A/B on DeepSeek-V4.1-Flash, 8x RTX PRO 6000: 76.5-78.9 vs 36.4-36.5 tok/s on prose at block_size=2",
+  "engine_id": "sglang",
+  "status": "draft",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "ev-sglang-issue-40877-production-deepseek-v41-flash"
+  ],
+  "accelerator_ids": [
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "interconnect_ids": [],
+  "model": "DeepSeek-V4.1-Flash",
+  "format_id": null,
+  "metric": "tok_s_per_user",
+  "value": 77.7,
+  "unit": "tok/s decode, single stream, DSPARK block_size=2, prose prompts, mid-point of the 76.5-78.9 range the source reports",
+  "methodology": "PER-REQUEST single-stream decode, and this is an A/B rather than a single number: same server, same 8x RTX PRO 6000 Blackwell Max-Q 96 GB (SM120, PCIe, no NVLink), same TP=8/EP=8/DP=1 production configuration, only the speculative path toggled, and 'clean legs, each verified via server_info + acceptance length'. DSPARK ON, block_size 2: prose 76.5-78.9 tok/s, structured 120.3-120.5 tok/s. DSPARK OFF: 36.4-36.5 tok/s prose, 36.5 tok/s structured. Acceptance length 3.0 tokens/step with speculation vs 1.0 without. The decisive observation is that WITH SPECULATION OFF the model flattens to ~36.5 tok/s 'regardless of prompt class', i.e. the 2.1x on prose and 3.3x on structured are not prompt-dependent luck - speculation is the whole difference. The reporter's own summary: 'speculation is the difference between usable and unusable latency on this hardware'.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "This is the best-controlled causal measurement in this whole addition because it is a within-engine A/B with the configuration verified server-side rather than assumed - the author notes they 'recorded a full sweep of false data' earlier by trusting container env vars, which is precisely the mistake this repo's methodology rule exists to prevent. TWO CAVEATS BOTH STATED BY THE AUTHOR. (1) The headline uses block_size=2 but PRODUCTION SHIPS block_size=6, at which the reporter measures ~237-252 tok/s structured (vs 120 at block 2) - so the production number is roughly double the number recorded here, and the reason block_size=2 is the one recorded is that it gives the cleanest ON/OFF legs. (2) 'Not established - No 24 h soak ... block sizes 4/8/12 not re-measured with the fixed sweep tool, and >32K prefill/long-context degradation not characterised.' Config traps the same report documents, because they change what any of these numbers mean: --enable-expert-parallel is a vLLM flag and is rejected by SGLang, which takes ep_size; docker run must pass TP_SIZE/DP_SIZE/EP_SIZE explicitly or it 'silently serves TP8 defaults'; ep_size must be <= tp_size or the MoE rank computation divides by zero; DP attention is unreachable on this model ('V4.1 vision currently supports TP/EP without DP, CP, PP or MoE A2A').",
+  "energy_basis": null,
+  "power_w": null,
+  "power_scope": null,
+  "power_cap": null,
+  "clock_lock_mhz": null,
+  "thermal_state": null
+}

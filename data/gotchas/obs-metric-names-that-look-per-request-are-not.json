@@ -1,0 +1,41 @@
+{
+  "id": "obs-metric-names-that-look-per-request-are-not",
+  "type": "gotcha",
+  "name": "Most engine histograms are per-request observations but Triton reports per-model aggregates, and prefix-cache counters are token counts not request counts - the same metric name shape hides different denominators",
+  "class": "measurement",
+  "affects": [
+    "vllm",
+    "sglang",
+    "tensorrt-llm",
+    "niche-lmdeploy-turbomind",
+    "text-generation-inference",
+    "triton-inference-server",
+    "obs-triton-observability",
+    "obs-tgi-observability",
+    "obs-vllm-observability"
+  ],
+  "concepts": [
+    "histogram-aggregation",
+    "per-request",
+    "per-model",
+    "prefix-cache",
+    "denominator",
+    "prometheus"
+  ],
+  "symptom": "A p99 computed from an engine histogram looks nothing like the p99 a client measured, and nobody can say which is right. A prefix-cache 'hit rate' of 0.7 turns out to mean 70% of tokens, not 70% of requests, so a workload with one huge cached prompt and many tiny misses reads as a success. A request-count metric on Triton is compared against a per-request histogram elsewhere and comes out an order of magnitude apart.",
+  "root_cause": "The projects are not consistent and mostly do not warn you. vLLM and SGLang histograms are genuine per-request observations: vLLM's design doc says the frontend collects 'the inter-token intervals, for all requests included in this iteration' and TTFT 'for any requests that completed prefill in this iteration'. Triton is the opposite: its metrics table states Granularity 'Per model' for nv_inference_request_duration_us, nv_inference_queue_duration_us, the compute_* families and nv_inference_request_success, and only nv_inference_first_response_histogram_ms is marked 'Per request'. Comparing them directly is meaningless. Prefix caching: vLLM's documentation for `vllm:prefix_cache_queries` says 'in terms of number of queried tokens' and `vllm:prefix_cache_hits` 'in terms of number of cached tokens' - the project's own rationale is that recording counters instead of a rate gauge lets the user pick their window (rate(cache_query_hit[5m]) / rate(cache_query_total[5m])), but that formula only yields a sensible hit rate if both series are on the same token basis, which they are, and a reader who assumes request basis will be wrong by orders of magnitude. SGLang publishes `sglang:cache_hit_rate` as a precomputed Gauge instead of counters - a different design choice from vLLM's, so a dashboard query written for one does not port to the other. And LMDeploy publishes a per-request `lmdeploy:request_cache_hit_ratio` Histogram alongside `lmdeploy:prefix_cache_hit_rate`, giving two different denominators in one engine.",
+  "workaround": "Before comparing or alerting on any metric across engines, write down its unit of observation: per request, per iteration, per model, or per token. For prefix caching, report the token basis explicitly (vLLM: `rate(vllm:prefix_cache_hits[5m]) / rate(vllm:prefix_cache_queries[5m])`) and never call it a request hit rate. For cross-engine latency comparison, use only metrics that are per-request on both sides - which in practice means vLLM, SGLang, LMDeploy and TensorRT-LLM, and excludes Triton's counters. SGLang's `sglang:uncached_prompt_tokens_histogram` is the cleanest way to see actual prompt-cache misses per request if you need a request-level view.",
+  "severity": "minor",
+  "notes": "A second denominator trap in the same family: vLLM's `vllm:iteration_tokens_total` is documented as 'Histogram of number of tokens per engine_step' and its source carries a standing TODO that it 'might be incorrect in case of using multiple api_server counts which uses prometheus mp'. It is a per-step histogram, not a per-request one, and it is one of the two metrics whose bucket family (`iteration_tokens`) you can override with --custom-histogram-buckets. Separately, `vllm:prompt_tokens` and `vllm:generation_tokens` are counters whose Prometheus exposition appends _total to counter families - the design doc notes that a name ending in _total is stripped and re-added for OpenMetrics compatibility - so a naive grep for 'vllm:generation_tokens_total' in vLLM source finds nothing, because the source says `vllm:generation_tokens` and the exposition says `vllm:generation_tokens_total`. That trips up anyone writing a scrape-config regex.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-vllm-v1-metrics-loggers",
+    "obs-vllm-metrics-design-doc",
+    "obs-triton-metrics-doc",
+    "obs-sglang-metrics-collector",
+    "obs-lmdeploy-metrics-loggers",
+    "obs-tgi-metrics-doc"
+  ]
+}

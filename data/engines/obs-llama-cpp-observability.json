@@ -1,0 +1,65 @@
+{
+  "id": "obs-llama-cpp-observability",
+  "type": "engine",
+  "name": "llama.cpp server (observability surface: 14 hand-built Prometheus metrics, off by default, no OTel)",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-llamacpp-metrics-source",
+    "obs-llamacpp-server-readme-metrics"
+  ],
+  "repo": "ggml-org/llama.cpp",
+  "languages": [
+    "C++"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "local-inference",
+    "low-dependency",
+    "cpu-and-metal"
+  ],
+  "scheduling": [
+    "slot-based-parallel",
+    "continuous-batching"
+  ],
+  "supported_backends": [
+    "cpu-avx2",
+    "cpu-avx512",
+    "cuda",
+    "metal",
+    "vulkan",
+    "hip",
+    "rpc"
+  ],
+  "supported_formats": [
+    "gguf"
+  ],
+  "notable_features": [
+    "The whole /metrics body is built by hand in server_task_result_metrics::to_metrics() with string concatenation - there is no Prometheus client library and no multiprocess mode, so there is no label cardinality and no pid label",
+    "10 counters: `llamacpp:prompt_tokens_total`, `llamacpp:prompt_tokens_cached_total`, `llamacpp:prompt_seconds_total`, `llamacpp:tokens_predicted_total`, `llamacpp:tokens_predicted_seconds_total`, `llamacpp:n_decode_total`, `llamacpp:n_tokens_max`, `llamacpp:spec_decode_num_draft_tokens_total`, `llamacpp:spec_decode_num_accepted_tokens_total`, `llamacpp:spec_decode_num_drafts_total`",
+    "4 gauges: `llamacpp:prompt_tokens_seconds` (average prompt throughput tok/s), `llamacpp:predicted_tokens_seconds` (average generation throughput tok/s), `llamacpp:requests_processing`, `llamacpp:requests_deferred`, plus `llamacpp:n_busy_slots_per_decode`",
+    "Slot-level state is exposed as JSON on `GET /slots` (enabled by default, unlike /metrics) with per-slot id, n_ctx, is_processing, sampling params, next_token and a timings object",
+    "In router mode, /metrics requires ?model={model_id} and returns HTTP 400 'model name is missing from the request' without it - so a multi-model deployment needs one scrape target per model"
+  ],
+  "hardware_caveats": [
+    "Prometheus is OFF by default: `--metrics` 'enable prometheus compatible metrics endpoint (default: disabled)' (env LLAMA_ARG_ENDPOINT_METRICS). A reader arriving at a stock llama.cpp server finds no metrics endpoint at all",
+    "NO TTFT, NO TPOT, NO ITL, NO queue time, NO KV cache utilization, NO preemption. The metric set is throughput and slot occupancy only. The per-request timings object on the chat/completions response (prompt_ms, prompt_per_second, predicted_ms, predicted_per_token_ms, predicted_per_second, cache_n) is response data, not an exported series, so time-to-first-token has to be measured by the client",
+    "`llamacpp:requests_deferred` counts tasks deferred rather than waiting, and there is no explicit waiting-queue gauge; in-flight work is `llamacpp:requests_processing` only",
+    "In router mode every /metrics request must name a model, and the README notes the router uses the model query parameter (URL-encoded) for GET endpoints including /metrics",
+    "`llamacpp:prompt_tokens_seconds` and `llamacpp:predicted_tokens_seconds` are lifetime averages from a token bucket, not instantaneous rate - a rolling-average gauge that will lag a traffic change"
+  ],
+  "best_for": [
+    "A local or edge deployment where you want to know it is doing work at all: tokens processed, decode calls made, slots busy",
+    "Single-process monitoring without a Prometheus dependency - the output is plain text with HELP and TYPE lines that anything can scrape",
+    "Confirming that speculative decoding is helping: draft/accepted/step counters, plus a per-position counter `llamacpp:spec_decode_num_accepted_tokens_per_pos_total{position=\"N\"}` that is absent when spec-decode is off"
+  ],
+  "avoid_for": [
+    "Any latency SLO - there is no latency metric of any kind on /metrics",
+    "Multi-tenant capacity planning - no KV cache occupancy, so you cannot tell how close to the context limit you are",
+    "Distributed tracing: an in-repo code search for opentelemetry in ggml-org/llama.cpp returns 0 hits. There is no tracing support at all"
+  ],
+  "docs_url": "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
+  "notes": "Transcribed from server_task_result_metrics::to_metrics() in tools/server/server-task.cpp on master and cross-checked against the 'Available metrics' table in tools/server/README.md; the two agree except that the README table omits `llamacpp:prompt_tokens_cached_total` while the code emits it. Two related counters exist: `llamacpp:prompt_tokens_cached_total` ('Number of prompt tokens reused from the cache') and `llamacpp:spec_decode_num_accepted_tokens_per_pos_total{position=\"N\"}`. Note the naming oddity that `llamacpp:n_tokens_max` is emitted as a Counter although it is documented as a high-watermark of observed context size - a monotonic max is legitimately counter-shaped, but the name reads like a gauge. `llamacpp:n_busy_slots_per_decode` is 'Average number of busy slots per llama_decode() call', computed as n_busy_slots / max(n_decode, 1), which is a batching-efficiency signal rather than a latency signal."
+}

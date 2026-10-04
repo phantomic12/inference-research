@@ -1,0 +1,28 @@
+{
+  "id": "sec-decode-loop-filter-row-is-not-request",
+  "type": "gotcha",
+  "name": "In-decode filters must handle batch-granularity rows, not requests: rows reorder every step and one request can own several rows under speculative decoding",
+  "class": "framework",
+  "affects": [
+    "vllm"
+  ],
+  "concepts": [
+    "logit-masking",
+    "speculative-decoding",
+    "decode-loop",
+    "continuous-batching",
+    "safety-decoding"
+  ],
+  "symptom": "A logits processor written against per-request semantics produces output attributed to the wrong request, or applies the wrong transform, once speculative decoding is enabled or once continuous batching reorders the batch. The failure is silent and looks like occasional mis-filtering under load rather than a bug.",
+  "root_cause": "vLLM's own documentation states the contract: logits processors operate at batch granularity over a (num_logits_rows) x vocab_size tensor, a logits ROW IS NOT A REQUEST, rows are reordered every step, and under speculative decoding a single request owns one row per draft token. ctx carries row-to-slot mappings precisely because the processor cannot infer them. Interface state is lifecycle-managed too: per-slot state must be fully reinitialised in add_request because slots are recycled through a free list and there is no removal hook.",
+  "workaround": "Write in-decode transforms against ctx's row-to-slot mapping and reinitialise per-slot state on every add_request. Do not assume one row equals one request. If your filter needs a per-request notion of 'have I already refused', that state must survive slot recycling explicitly or it will be applied to the wrong request.",
+  "severity": "major",
+  "notes": "This is the single most load-bearing implementation constraint for anyone writing an in-decode safety transform on vLLM, and it is stated by the framework itself rather than inferred. It also means a decode-time filter's per-request behaviour is not testable in isolation - the test has to exercise a batch.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "sec-vllm-logits-processor-interface",
+    "sec-vllm-sampler-pipeline-source"
+  ]
+}

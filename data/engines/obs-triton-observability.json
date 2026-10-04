@@ -1,0 +1,69 @@
+{
+  "id": "obs-triton-observability",
+  "type": "engine",
+  "name": "Triton Inference Server (observability surface: request-shaped core metrics, LLM metrics only if a backend registers them)",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-triton-metrics-doc",
+    "obs-triton-trace-doc",
+    "obs-triton-trtllm-backend-metrics"
+  ],
+  "repo": "triton-inference-server/server",
+  "languages": [
+    "C++",
+    "Python"
+  ],
+  "license": "BSD-3-Clause",
+  "first_release_year": 2019,
+  "design_goal": [
+    "observability",
+    "multi-framework-serving",
+    "generic-model-serving"
+  ],
+  "scheduling": [
+    "dynamic-batching",
+    "sequence-batching",
+    "ensemble",
+    "rate-limiting"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "cpu",
+    "inferentia"
+  ],
+  "supported_formats": [
+    "onnx",
+    "safetensors",
+    "plan"
+  ],
+  "notable_features": [
+    "Rich, well-documented request-level metrics with type selection via `--metrics-config` (counter, summary or histogram per family since 23.04)",
+    "`nv_inference_pending_request_count` is the honest queue-depth metric and the docs go out of their way to define it: requests received by Triton core but not yet started by any model instance, incremented on enqueue and decremented when a backend is about to execute. The docs also list the several places a request can be pending (default scheduler backlog, dynamic batcher queue, sequence batcher queues, rate limiter queues) and the places it will not be (ensemble scheduler, frontends)",
+    "Latency decomposed as `nv_inference_request_duration_us`, `nv_inference_queue_duration_us`, `nv_inference_compute_input_duration_us`, `nv_inference_compute_infer_duration_us`, `nv_inference_compute_output_duration_us`",
+    "Counts distinguish request from inference from execution - `nv_inference_request_success`, `nv_inference_request_failure{reason=REJECTED|CANCELED|BACKEND|OTHER}`, `nv_inference_count` (a batch of n counts as n), `nv_inference_exec_count` (batches) - and the docs walk through worked examples of batch-1+batch-1 giving Request 2 / Inference 2 / Execution 1",
+    "OpenTelemetry as an alternative trace backend via `--trace-config mode=opentelemetry --trace-config opentelemetry,url=<endpoint>`, with context propagation supported"
+  ],
+  "hardware_caveats": [
+    "Triton itself has NO TTFT, TPOT, KV cache usage, preemption or token-throughput metric. `nv_inference_first_response_histogram_ms` measures time to the first RESPONSE, which for a streaming LLM backend is the first chunk delivered, not necessarily the first decoded token, and for a non-streaming backend is essentially the whole request",
+    "Everything LLM-specific has to be supplied by the backend through the custom metrics API (TRITONSERVER_MetricFamily*). The metrics doc points at the TensorRT-LLM and vLLM backends for this. If you write your own backend, the core metrics are all you get",
+    "The TRT-LLM backend's LLM metrics are a handful of label-switched gauges rather than named metrics: `nv_trt_llm_request_metrics{request_type=\"waiting|context|scheduled|max|active\"}`, `nv_trt_llm_kv_cache_block_metrics{kv_cache_block_type=\"fraction|tokens_per|used|free|max\"}`, `nv_trt_llm_inflight_batcher_metrics{inflight_batcher_specific_metric=...}`, `nv_trt_llm_general_metrics{general_type=...}`, `nv_trt_llm_disaggregated_serving_metrics{disaggregated_serving_type=\"kv_cache_transfer_ms\"|\"request_count\"}`, `nv_trt_llm_runtime_memory_metrics{memory_type=...}`. Querying these means filtering on the label, not naming the metric",
+    "Those TRT-LLM backend metrics need Triton 23.11 or later; before 23.12 the base `nv_inference_*` metrics report 0 for this backend",
+    "Triton OTel timestamps come from the system clock while Triton's own trace API uses a steady (monotonic) clock, so a trace captured in one mode cannot be compared numerically against a trace captured in the other",
+    "Ensemble failure accounting double-counts and loses the reason: a failing component model reports reason=REJECTED while the ensemble reports reason=OTHER with count=2 for the same failure"
+  ],
+  "best_for": [
+    "Serving many different model types behind one endpoint where a uniform request-level metric set matters more than LLM-specific insight",
+    "Tracing an ensemble or BLS request end to end, since each composing model contributes its own model and compute spans",
+    "Choosing your own latency metrics via `--metrics-config` (counters for cheap cumulative tracking, summaries for quantiles, histograms for SLO buckets)"
+  ],
+  "avoid_for": [
+    "Getting LLM observability from the core server - it will not give you TTFT or KV cache occupancy",
+    "Assuming `nv_inference_first_response_histogram_ms` is TTFT",
+    "Mixing OTel-mode and Triton-mode traces in one time series analysis"
+  ],
+  "docs_url": "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/user_guide/metrics.html",
+  "notes": "Metric names transcribed from docs/user_guide/metrics.md in the main branch. Full core set: counters `nv_inference_count`, `nv_inference_exec_count`, `nv_inference_request_success`, `nv_inference_request_failure`, gauge `nv_inference_pending_request_count`; latency counters `nv_inference_request_duration_us`, `nv_inference_queue_duration_us`, `nv_inference_compute_input_duration_us`, `nv_inference_compute_infer_duration_us`, `nv_inference_compute_output_duration_us`; latency histogram `nv_inference_first_response_histogram_ms`; latency summaries `nv_inference_request_summary_us`, `nv_inference_queue_summary_us`, `nv_inference_compute_input_summary_us`, `nv_inference_compute_infer_summary_us`, `nv_inference_compute_output_summary_us`; GPU `nv_gpu_utilization`, `nv_gpu_power_usage`, `nv_gpu_memory_total_bytes`, `nv_gpu_memory_used_bytes`; CPU `nv_cpu_memory_total_bytes`, `nv_cpu_memory_used_bytes`; pinned memory `nv_pinned_memory_pool_total_bytes`, `nv_pinned_memory_pool_used_bytes`. Granularity is per model (labels model, version), not per request, for most families - an important difference from vLLM/SGLang/TGI, where the histograms are genuinely per-request observations. Trace model: a minimal Triton trace is 3 spans - top level (request received to response sent), model (start, queued, end), compute - with ensembles adding spans per composing model and BLS adding spans for every model in the request. OTel spans carry model_name, model_version, request_id and parent_id as attributes."
+}

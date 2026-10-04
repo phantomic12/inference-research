@@ -5,7 +5,9 @@
   "status": "draft",
   "confidence": 0.6,
   "updated": "2026-10-04",
-  "sources": [],
+  "sources": [
+    "mbl-cfg-zamba-7b"
+  ],
   "family": "zamba",
   "vendor": "Zyphra",
   "release_year": 2024,
@@ -15,18 +17,18 @@
   "num_experts": null,
   "experts_per_token": null,
   "shared_expert": null,
-  "hidden_size": null,
-  "num_layers": null,
-  "num_kv_heads": null,
-  "head_dim": null,
-  "gqa_ratio": null,
-  "max_position_embeddings": null,
+  "hidden_size": 3712,
+  "num_layers": 76,
+  "num_kv_heads": 16,
+  "head_dim": 232,
+  "gqa_ratio": 1.0,
+  "max_position_embeddings": 4096,
   "context_scaling": null,
   "activation": null,
-  "attention_variant": "hybrid: Mamba backbone with single shared attention module",
-  "kv_cache_bytes_per_token": null,
+  "attention_variant": "hybrid: Mamba-2 backbone with a SINGLE SHARED attention block, invoked at 13 of 76 layers; MHA not GQA (16 query heads, 16 KV heads)",
+  "kv_cache_bytes_per_token": 193024,
   "flops_per_token_active": 14000000000,
   "open_weights": true,
   "license": null,
-  "notes": "7B SSM-transformer hybrid per the Zamba paper (arXiv:2405.16712). Pioneers a unique architecture combining a Mamba backbone with a SINGLE SHARED attention module whose outputs are fed into several transformer blocks, obtaining attention benefits at minimal parameter cost. 'Significantly faster at inference than comparable transformer models and requires substantially less memory for generation of long sequences' (qualitative, no numeric ratio). Trained on 1T tokens. No mainstream inference engine ships a Zamba mode (no llama.cpp LLM_ARCH entry, no vLLM supported-models row as of 2026-10-03). [DANGLING SOURCE FIXED: removed non-existent source 'zamba'. No replacement source found - this record needs a real source for arXiv:2405.16712 before it can be verified.]"
+  "notes": "GEOMETRY FILLED from config.json, and the serving point is the shared block. num_hidden_layers 76, hidden_size 3712, num_attention_heads 16, num_key_value_heads 16, sliding_window null, rope_theta 10000, max_position_embeddings 4096. head_dim is NOT in config; it is hidden_size / num_attention_heads = 3712/16 = 232, an unusually wide head. gqa_ratio = 16/16 = 1.0, so this is plain MHA - there is no GQA saving anywhere in it. layers_block_type enumerates all 76 blocks: 63 mamba + 13 hybrid, the hybrid blocks at 0-based indices 2,7,13,19,25,31,37,43,49,55,61,67,73 (attn_layer_offset 4, attn_layer_period 6 - note the config's own periodicity formula does NOT reproduce the shipped layers_block_type array, so the array is authoritative). kv_cache_bytes_per_token = 13 hybrid invocations x 16 kv_heads x head_dim 232 x 2 (K+V) x 2 bytes (bf16) = 193,024 B/token (188.5 KiB). IMPORTANT CAVEAT ON THAT FIGURE, and the reason this is the shared block rather than 13 independent attention layers: transformers' ZambaAttentionDecoderLayer docstring states layer_idx is 'Used to distinguish Zamba's tied transformer layers', and modeling_zamba.py binds the shared attention weights across all hybrid blocks via the key-rewrite regex r\"layers.(?!{layer_id}\\.)\\d+.shared_transf\". Tied WEIGHTS do not necessarily mean a shared CACHE - the cache is indexed by the forward-pass layer_idx, so 13 separate cache entries is the expected behaviour and 193,024 is the defensible number. A reader sizing memory should still treat it as an upper bound: if an engine instead shares one cache entry across the tied blocks the figure drops to 14,848 B/token. I could not confirm which a given engine does from config alone. The other 63 layers carry a constant Mamba-2 state instead: mamba_n_heads 2, mamba_d_state 16, mamba_d_conv 4, mamba_expand 2, mamba_dt_rank 232. [SOURCE FIX: this record had an empty sources array and status draft. It now cites config.json directly. It still needs arXiv:2405.16712 as a source before it can leave draft - that is a paper-source gap, not a config gap, so status stays draft and confidence stays 0.6.]"
 }

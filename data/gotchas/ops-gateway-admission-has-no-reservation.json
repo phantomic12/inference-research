@@ -1,0 +1,31 @@
+{
+  "id": "ops-gateway-admission-has-no-reservation",
+  "type": "gotcha",
+  "name": "Router-side admission control observes load without reserving capacity, and fails open on stale telemetry — so N routers each admit a request that all N replicas then must hold",
+  "class": "config",
+  "affects": [
+    "sglang-router",
+    "llm-d"
+  ],
+  "concepts": [
+    "admission-control",
+    "ratelimit",
+    "multi-tenant",
+    "queueing",
+    "kv-cache",
+    "kubernetes",
+    "replica-count"
+  ],
+  "symptom": "Adding a second router replica makes overload worse rather than better. Each replica independently decides a worker is healthy and admits a request, and the N simultaneously-admitted requests are dispatched to replicas that are all near capacity — so the effective admission limit is N times what was configured, and the burst arrives at the worker all at once. The failure is also asymmetric: when telemetry goes stale, the router admits rather than rejects, so the overload lands precisely when the control plane is least able to observe it.",
+  "root_cause": "sgl-router's admission design makes the gap explicit rather than accidental: 'Admission evaluates acceptance. It does not rank engines, choose replacements, change buckets, or mutate affinity.' An admission policy is a set of optional per-engine caps mapped to reported engine metrics (max_running_requests, max_waiting_requests, max_kv_tokens, max_pending_prefill_tokens) plus one router-local cap (max_inflight_requests). Two consequences are documented. First, no reservation: 'Request size is not part of admission: buckets already select by input length and context capacity, and admission only observes load without reserving it.' The check reads a load snapshot and evaluates, with no hold between check and dispatch, so the same capacity can be admitted by every replica in the fleet. Second, fail-open on missing telemetry: 'Reported metrics are None without a fresh, complete report, never zero, and such limits fail open; the in-flight count is always known' — so only the router-local counter is reliably enforced. Note also that 'Limits are absolute caps; they do not default to capacities reported by the engine', so an unconfigured limit is not a derived one, and 'Unknown fields are rejected during deserialization'.",
+  "workaround": "Treat router admission as a load-shedding knife-edge, not a quota. Use it to refuse the clearly-unservable (a replica whose own in-flight count is at the cap) and do not rely on it to enforce a fleet-wide limit — enforce that in shared state upstream (see ops-wasm-ratelimit-state-is-per-worker-and-lost-on-restart). Alert on stale telemetry specifically: llm_d_epp_flow_control_stale_endpoints counts 'candidate endpoints whose metrics are missing or older than staleness threshold', which is the observable that admission is currently failing open on. Prefer the utilization-detector for its accuracy in homogeneous pools, but remember it 'treats all endpoints equally (unweighted average), meaning a small saturated endpoint can trigger global backpressure' — a per-pool unweighted average is itself a form of non-reservation. Note that this whole record is drawn from a document the project marks as a target design ('the interface and configuration examples are sketches, not a specification of the current API or CLI'), so treat the specifics as intended behaviour to verify against your build rather than as shipped guarantees.",
+  "severity": "major",
+  "notes": "Honest status: the missing reservation is a known, documented gap in a design under construction, and multi-replica routers are exactly the deployment that needs it. The compensating property is that the system is work-conserving — Flow Control 'never artificially throttles traffic if GPUs have spare capacity' — so the failure mode is a burst overshoot rather than persistent refusal. But overshoot on a KV-cache-bound system is the expensive direction, because recovery runs through preemption and re-prefill (ops-kv-cache-full-preempts-and-recomputes).",
+  "status": "contested",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-sglang-router-policy-design",
+    "ops-llmd-flow-control"
+  ]
+}

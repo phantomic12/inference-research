@@ -1,0 +1,15 @@
+{
+  "id": "ops-llmd-graceful-shutdown",
+  "type": "source",
+  "name": "llm-d Graceful Shutdown and Request Draining guide",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://github.com/llm-d/llm-d/blob/main/docs/operations/graceful-shutdown.md",
+  "publisher": "llm-d",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Verbatim on the default: 'Default - vLLM immediately aborts in-flight requests and exits. Those requests fail with an error status code.' And 'With --shutdown-timeout N - vLLM catches SIGTERM and continues serving the currently running requests for up to N seconds. After the timeout, any requests still in flight are aborted and returned an error.' The operator trap, flagged IMPORTANT: 'terminationGracePeriodSeconds must be greater than --shutdown-timeout (plus a small buffer for the preStop hook and process cleanup). Otherwise Kubernetes sends SIGKILL before the drain completes, and the graceful window is never fully used.' Recommended config is terminationGracePeriodSeconds 120 with --shutdown-timeout 90 plus a readiness probe on /v1/models, and the sizing rule 'Set --shutdown-timeout to roughly the p99 request duration you want to allow to complete on drain.' The pod termination sequence is enumerated as: Terminating, InferencePool endpoint removal (so the router stops sending new traffic), preStop hook, SIGTERM, then terminationGracePeriodSeconds (default 30s) before SIGKILL. Also documents request cancellation on client disconnect, where 'vLLM triggers its abort codepath, releasing the KV cache and compute resources held by that request', and that during EPP graceful shutdown the flow controller 'evicts queued requests with a retryable 503 Service Unavailable (outcome rejected-shutting-down), signaling transient unavailability so that clients and upstream gateways retry rather than treating the drain as a hard fault', with the caveat that 'These retryable semantics only apply while the EPP is still reachable over its ext_proc stream.'"
+}

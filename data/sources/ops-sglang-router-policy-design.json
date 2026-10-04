@@ -1,0 +1,15 @@
+{
+  "id": "ops-sglang-router-policy-design",
+  "type": "source",
+  "name": "sgl-router POLICY_DESIGN.md target design (per-engine admission limits, bucket fallback, error mapping)",
+  "status": "contested",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "url": "https://github.com/sgl-project/sglang/blob/main/experimental/sgl-router/POLICY_DESIGN.md",
+  "publisher": "SGLang project",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Explicitly a TARGET design, not a specification of the current API or CLI: 'It defines responsibilities and behavior; the interface and configuration examples are sketches, not a specification of the current API or CLI. Implementation status is listed at the end.' Recorded as contested for exactly that reason. Substantive content: AdmissionLimits caps map to engine metrics - max_running_requests (reported running requests), max_waiting_requests (reported waiting requests), max_kv_tokens (reported total KV tokens), max_pending_prefill_tokens (reported waiting uncached tokens), max_inflight_requests (router-local in-flight requests). 'Limits are absolute caps; they do not default to capacities reported by the engine. Unknown fields are rejected during deserialization.' Critically: 'Request size is not part of admission: buckets already select by input length and context capacity, and admission only observes load without reserving it' - a documented admission race. 'Reported metrics are None without a fresh, complete report, never zero, and such limits fail open; the in-flight count is always known.' Error mapping: an empty bucket list becomes a 400 NoMatchingBucket response; exhausting the list with accumulated admission rejections produces a 503 selection failure; with no admission rejections the last unavailable stage produces a stage-specific 503; InvalidSignal, InvalidConfiguration and OutsideCandidates stop the pass with an internal error; successful selection ends the pass and forwarding errors do not restart bucket iteration."
+}

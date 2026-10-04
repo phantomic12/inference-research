@@ -1,0 +1,30 @@
+{
+  "id": "sec-gdpr-art30-record-of-processing-is-a-per-deployment-obligation",
+  "type": "gotcha",
+  "name": "GDPR Article 30 obliges a PROCESSOR to keep a record of processing including third-country transfers and safeguards - and an inference deployment is a processor with both",
+  "class": "config",
+  "affects": [],
+  "concepts": [
+    "gdpr",
+    "compliance",
+    "record-of-processing",
+    "processor",
+    "transfers",
+    "data-minimisation",
+    "storage-limitation",
+    "erasure"
+  ],
+  "symptom": "An organisation treats GDPR compliance as a web-form exercise done once by legal. The engineering reality is that every place a prompt can land - logs, traces, object storage, caches, the inference vendor - is a processing activity that has to appear in a record, and a new inference endpoint creates several.",
+  "root_cause": "Article 30(2) requires each processor to maintain a record of all categories of processing carried out on behalf of each controller: the names and contact details of the processor and of each controller; the categories of processing per controller; transfers to a third country including identification of that country and, where relevant, the documentation of suitable safeguards; and a general description of the Article 32 security measures. Article 30(4) requires it be produced on request to the supervisory authority, and 30(5)'s small-organisation exemption is unavailable where processing is occasional-but-risky or touches Article 9 special-category or Article 10 data - which a chatbot handling health or employment data is. The operational consequence is that pointing at your inference vendor's compliance page does not discharge your Article 30(2) record: you still owe a record covering your processing and your transfers.",
+  "workaround": "Maintain the processing record as an engineering artefact that names the actual systems, not a legal summary. Enumerate where prompts and completions can be stored: application logs, trace and span attributes, object storage for request bodies, the inference provider, and any derived artefact in a cache. For each, record the retention period, the security measures, and - if any processing leaves the EEA or UK - the country and the safeguard relied on. Article 5's data-minimisation and storage-limitation principles then constrain each row.",
+  "severity": "major",
+  "notes": "Article 30(2) is more operationally specific than HIPAA's audit-controls standard and is the item most often missed, because people look for an equivalent of 164.312(b) and conclude GDPR says nothing comparable. It does - and it additionally requires naming third countries and safeguards, which a self-hosted inference stack often does not have an answer for until someone asks.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "sec-gdpr-art-30",
+    "sec-gdpr-art-5",
+    "sec-gdpr-art-32"
+  ]
+}

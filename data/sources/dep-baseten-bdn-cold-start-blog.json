@@ -1,0 +1,15 @@
+{
+  "id": "dep-baseten-bdn-cold-start-blog",
+  "type": "source",
+  "name": "Baseten blog - Introducing the Baseten Delivery Network: fast cold starts for big models",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://www.baseten.co/blog/baseten-delivery-network-fast-cold-starts-big-models/",
+  "publisher": "Baseten",
+  "kind": "blog",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Published 2026-03-19, authors Stephen Day, Kazuyoshi Kato, Gregory Kofman, Rachel Rapp. VENDOR CLAIM: '2-3x faster cold starts compared to alternative solutions for customers scaling models with 10s to 100s of billions of parameters', largest gains in burst-scale scenarios. Decomposes a cold start into 6 steps with the drivers: (1) hardware provisioning, (2) scheduling ('For most deployments this is fast, a few seconds at most'), (3) image pull ('Inference images are large (typically multiple GB), but this problem is largely solved with proper image caching and loading techniques'), (4) weight download - 'Your model weights have to be transferred from wherever they're stored to the node's local disk. For frontier-scale models, this can easily be 100s of GB of weights', (5) container startup ('typically fast, on the order of seconds, and largely fixed by your runtime choices'), (6) model load ('largely determined by model size and engine configuration'). Names hardware provisioning and weight download as the two most variable phases. Three failure modes for naive pulls, quoted: slow pulls ('A 70B parameter model can carry over 100GB of weights'); upstream fragility ('When your weight download depends on a third-party service, their uptime becomes your uptime'); and THE THUNDERING HERD - 'When your autoscaler spins up 50 or 100 replicas simultaneously (which is exactly what happens during a traffic burst or a new model rollout), every one of those pods races to the same upstream source for the same hundreds of gigabytes of data at the same time ... replicas fight each other for download bandwidth, and load times spike from minutes to potentially hours.' Notes that a caching layer alone does not fix it: 'If 100 pods on 20 nodes all request the same model simultaneously, and your cache processes them independently, this can still cause contention', and the first pull still depends on upstream availability. Their fix is three-tier (local node NVMe -> peer node in-cluster -> mirrored origin with parallel byte-range downloads) plus single-flight downloads (one fetch per file, ownership assigned by consistent hashing)."
+}

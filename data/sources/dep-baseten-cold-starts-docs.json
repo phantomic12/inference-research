@@ -1,0 +1,15 @@
+{
+  "id": "dep-baseten-cold-starts-docs",
+  "type": "source",
+  "name": "Baseten documentation - Cold starts (startup phases, startup time card)",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "url": "https://docs.baseten.co/deployment/autoscaling/cold-starts",
+  "publisher": "Baseten",
+  "kind": "whitepaper",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Fetched 2026-10-04. Defines the quantity precisely: 'Startup time is the time a new replica takes from creation until it passes its readiness check and can accept traffic. Every new replica goes through startup ... A synchronous request that arrives while a deployment has no ready replicas waits for startup to finish, so startup time becomes part of that request's latency.' Four phases in order, with what drives each: Acquiring resources (availability of the requested instance type), Pulling image ('A replica on a node that already has your image skips this phase'), Pulling weights (BDN weights volume; 'Weight size and which BDN cache tier serves them'), Loading model (setup code; 'For inference engines like vLLM and SGLang, this includes loading weights into GPU memory, capturing CUDA graphs, compiling kernels with torch.compile, and profiling the KV cache'). Weight download only appears when BDN delivers the weights; weights your code downloads in load() count toward Loading model instead. Outcomes: Succeeded, Failed ('from an exception in load(), running out of memory, or an image pull error'), Stalled (not ready within 30 minutes). Diagnostic mapping is directly reusable: long Acquiring resources = waiting for capacity; long Pulling image = large image or replicas landing on nodes without the image; long Pulling weights = large weights or cache misses. Also documents image streaming for Truss-built images where the container starts once the files needed at startup arrive. Note the card 'counts only a replica's first startup'; restarts appear in a separate Restarts chart - a cold-start dashboard that shows good numbers can still be hiding a crash loop."
+}

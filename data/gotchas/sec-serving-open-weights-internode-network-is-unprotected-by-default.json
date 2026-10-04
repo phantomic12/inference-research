@@ -1,0 +1,32 @@
+{
+  "id": "sec-serving-open-weights-internode-network-is-unprotected-by-default",
+  "type": "gotcha",
+  "name": "vLLM's own security doc: all inter-node traffic is insecure by default - PyTorch Distributed has no authorization, sends unencrypted, and accepts connections from anywhere",
+  "class": "config",
+  "affects": [
+    "vllm",
+    "lmcache"
+  ],
+  "concepts": [
+    "security",
+    "internode",
+    "pytorch-distributed",
+    "kv-transfer",
+    "tensor-parallel",
+    "pipeline-parallel",
+    "network-isolation",
+    "ssrf",
+    "encryption"
+  ],
+  "symptom": "A multi-node tensor-parallel or KV-transfer deployment is network-reachable in ways the operator did not intend, and the traffic carrying prompts, KV cache contents and logits between nodes is neither authenticated nor encrypted.",
+  "root_cause": "The documentation is unambiguous: 'All communications between nodes in a multi-node vLLM deployment are insecure by default and must be protected by placing the nodes on an isolated network', and the list is PyTorch Distributed communications, KV cache transfer communications, and tensor, pipeline and data parallel communications. On PyTorch Distributed it relays that these features are intended for internal communication only, are not built for use in untrusted environments, include NO authorization protocol for performance reasons, send messages UNENCRYPTED, and accept connections from anywhere without checks. The relevant defaults are all local: --kv-ip defaults to 127.0.0.1, data_parallel_master_ip to 127.0.0.1, so the exposure appears when someone sets them to routable addresses - which is exactly what a multi-node deployment requires.",
+  "workaround": "Isolate the node network. Do not treat any internode port as safe because the traffic is 'internal'. Explicitly firewall the KV transfer, data-parallel master and PyTorch Distributed ports between nodes. Separately, set --allowed-media-domains on multimodal endpoints: upstream applies that allowlist to the batch runner as well as online serving, and without it a request can supply URLs targeting internal services and cloud metadata endpoints (SSRF).",
+  "severity": "blocker",
+  "notes": "Two distinct exposures in one record, both from the same document: unauthenticated inter-node transport, and SSRF via user-supplied media URLs. The SSRF one is especially easy to miss because the media-URL path is a feature, not part of the inference API, and upstream's own guidance is that the allowlist covers both the online serving API and the batch runner.",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "sources": [
+    "sec-vllm-security-doc"
+  ]
+}

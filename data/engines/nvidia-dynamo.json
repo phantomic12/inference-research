@@ -3,7 +3,7 @@
   "type": "engine",
   "name": "NVIDIA Dynamo",
   "status": "verified",
-  "confidence": 0.85,
+  "confidence": 0.86,
   "updated": "2026-10-03",
   "sources": [
     "pd-dynamo-repo",
@@ -11,7 +11,8 @@
     "pd-nixl-repo",
     "pd-vllm-nixl-connector-docs",
     "pd-gh-dynamo-12463-rdma-failure-silent-garbage",
-    "pd-gh-trtllm-17665-nixl-notify-hang"
+    "pd-gh-trtllm-17665-nixl-notify-hang",
+    "ev-gh-api-repo-metadata-2026-10-04"
   ],
   "repo": "ai-dynamo/dynamo",
   "languages": [
@@ -70,5 +71,5 @@
     "Workloads that need bit-reproducible output across prefill and decode pools without extra configuration; the KV compatibility hash omits batch-invariance mode and some connectors have no model-level check at all"
   ],
   "docs_url": "https://docs.nvidia.com/dynamo/latest",
-  "notes": "KV transfer path: NIXL as the primary connector (NixlConnector), with UCX as the default transport and RDMA/GPUDirect for inter-node, plus Mooncake and LMCache as alternative connectors and KVBM for GPU/host tiering. UCX-specific env vars are required - the vLLM connector guide notes NCCL variables such as NCCL_IB_HCA do not apply to the NIXL path. Does Dynamo supersede or complement the Triton/TRT-LLM paths? Complement, and by design it does not try to replace them: it is an orchestration layer that drives them. The TRT-LLM maintainer response on issue #17665 is the clearest statement of the relationship - 'TensorRT-LLM disaggregated serving is now planned to fully adopt the Python transceiver', i.e. Dynamo supplies the runtime and TRT-LLM supplies the transceiver implementation. Handoff contract as implemented (components/src/dynamo/common/backend/disagg.py): prefill workers have max_tokens clamped to 1 because 'producing more than one token is wasted compute and breaks the prefill->decode handoff contract', and a decode-mode worker raises if the request arrives without a prefill_result, so a missing handoff is a hard error rather than a silent recompute. Its tracker also shows the operational surface is still young: open multi-node hang reports (#11914), a UCX_NET_DEVICES silent-garbage root cause (#12463, triaged urgent), an LMCache-on-vLLM silent cache corruption report (#14416), and an RFC to bind batch-invariance into KV namespaces (#58263 in vLLM)."
+  "notes": "KV transfer path: NIXL as the primary connector (NixlConnector), with UCX as the default transport and RDMA/GPUDirect for inter-node, plus Mooncake and LMCache as alternative connectors and KVBM for GPU/host tiering. UCX-specific env vars are required - the vLLM connector guide notes NCCL variables such as NCCL_IB_HCA do not apply to the NIXL path. Does Dynamo supersede or complement the Triton/TRT-LLM paths? Complement, and by design it does not try to replace them: it is an orchestration layer that drives them. The TRT-LLM maintainer response on issue #17665 is the clearest statement of the relationship - 'TensorRT-LLM disaggregated serving is now planned to fully adopt the Python transceiver', i.e. Dynamo supplies the runtime and TRT-LLM supplies the transceiver implementation. Handoff contract as implemented (components/src/dynamo/common/backend/disagg.py): prefill workers have max_tokens clamped to 1 because 'producing more than one token is wasted compute and breaks the prefill->decode handoff contract', and a decode-mode worker raises if the request arrives without a prefill_result, so a missing handoff is a hard error rather than a silent recompute. Its tracker also shows the operational surface is still young: open multi-node hang reports (#11914), a UCX_NET_DEVICES silent-garbage root cause (#12463, triaged urgent), an LMCache-on-vLLM silent cache corruption report (#14416), and an RFC to bind batch-invariance into KV namespaces (#58263 in vLLM). ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-10-04 (0 months), latest release v1.5.0 published 2026-09-21, 420 contributors, open_issues_count 1658 (issues PLUS pull requests), NOT archived, 8219 stars. Actively developed with a large team. DEPLOYMENT: NO EVIDENCE OF PRODUCTION DEPLOYMENT FOUND as of 2026-10-04 - see [[ev-production-evidence-is-scarce-and-nearly-always-single-site]]. Note that this is a weaker negative than for a small library: the README publishes an offline batch-inference throughput TUNING GUIDE with a worked example (a log line showing 'Decode batch. #running-req: 233, #token: 370959, token usage: 0.82, cuda graph: True, gen throughput (token/s): 4594.01, #queue-req: 317'), which is evidence that operators tune this engine seriously but is explicitly a configuration guide, not a report of anyone's deployment. FEATURE AXES: all seven UNSTATED as of 2026-10-04; nothing was confirmed from its public materials in this pass. Given that this engine exists to compose vLLM and SGLang with disaggregated serving, disaggregated P/D is the axis most likely to be YES and most worth checking first - but it is recorded as unstated, not assumed."
 }

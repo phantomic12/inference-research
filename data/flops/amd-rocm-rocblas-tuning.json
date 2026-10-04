@@ -10,17 +10,17 @@
     "batch_size"
   ],
   "affected_by_hardware": [
-    "mi300x",
-    "mi325x",
-    "mi350x",
-    "mi355x"
+    "amd-instinct-mi300x",
+    "amd-instinct-mi325x",
+    "amd-instinct-mi350x",
+    "amd-instinct-mi355x"
   ],
   "workarounds": [
     "hipBLASLt provides tuned GEMM kernels for AMD GPUs with architecture-specific optimizations",
     "PYTORCH_TUNABLEOP_ENABLED=1 enables PyTorch's tunable GEMM operations on ROCm",
     "AITER provides alternative GEMM kernels that may outperform rocBLAS for specific shapes"
   ],
-  "notes": "rocBLAS is AMD's BLAS library for ROCm, and hipBLASLt is its lightweight tuning API. For LLM inference, GEMM performance is critical for both prefill (large matrix multiplications) and decode (matrix-vector multiplications). The vLLM blog shows that enabling GEMM tuning (PYTORCH_TUNABLEOP_ENABLED=1) reduces latency by approximately 26% compared to the FP16 baseline (from 4.13s to 3.40s on Llama3-8B with FP8). AITER provides alternative GEMM kernels including block-scaled FP8 GEMM that can outperform rocBLAS for specific model architectures. The rocBLAS library is tuned for gfx942 (CDNA3) and gfx950 (CDNA4) with architecture-specific kernel selections. For MI300X, the key GEMM optimization is using the matrix cores via MFMA instructions for FP8/BF16/FP16 workloads.",
+  "notes": "rocBLAS is AMD's BLAS library for ROCm, and hipBLASLt is its lightweight tuning API. For LLM inference, GEMM performance is critical for both prefill (large matrix multiplications) and decode (matrix-vector multiplications). The vLLM blog shows that enabling GEMM tuning (PYTORCH_TUNABLEOP_ENABLED=1) reduces latency by approximately 26% compared to the FP16 baseline (from 4.13s to 3.40s on Llama3-8B with FP8). AITER provides alternative GEMM kernels including block-scaled FP8 GEMM that can outperform rocBLAS for specific model architectures. The rocBLAS library is tuned for gfx942 (CDNA3) and gfx950 (CDNA4) with architecture-specific kernel selections. For MI300X, the key GEMM optimization is using the matrix cores via MFMA instructions for FP8/BF16/FP16 workloads. RESOLVED (2026-10-04 cross-reference repair): the bare part names in affected_by_hardware were expanded to their record ids - mi300x -> amd-instinct-mi300x, mi325x -> amd-instinct-mi325x, mi350x -> amd-instinct-mi350x, mi355x -> amd-instinct-mi355x. Each name matched exactly one accelerator record in data/accelerators/, so no variant was chosen between siblings (MI300X and MI325X are both CDNA3, MI350X/MI355X/MI350P all CDNA4) - the id is forced by the part name. This field is still a mixed bucket: it also carries the architecture codename values gfx942/gfx950, which are not ids and were left alone.",
   "status": "verified",
   "confidence": 0.8,
   "updated": "2026-10-04",

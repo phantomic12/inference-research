@@ -6,7 +6,9 @@
   "confidence": 0.75,
   "updated": "2026-10-03",
   "sources": [
-    "engine-ktransformers-github"
+    "engine-ktransformers-github",
+    "ev-gh-api-repo-metadata-2026-10-04",
+    "ev-ktransformers-readme-feature-axes"
   ],
   "repo": "kvcache-ai/ktransformers",
   "languages": [
@@ -45,7 +47,8 @@
     "Also an SFT path: MoE LoRA and full-parameter fine-tuning including block-FP8 LoRA and BF16 full fine-tuning, wired through LlamaFactory",
     "AVX512 x86 including AMD servers, and an AVX2-only CPU backend for lower-end hosts",
     "Ascend NPU support with CPU expert offload (DeepSeek-V4-Flash on a single NPU)",
-    "1M-token context and multimodal input on consumer GPUs via the GLM-5.3-flash path"
+    "1M-token context and multimodal input on consumer GPUs via the GLM-5.3-flash path",
+    "Three-tier GPU-CPU-Disk prefix cache reuse, the only engine in this repo whose prefix cache has a disk tier - a consequence of its weights not fitting in VRAM rather than a design flourish"
   ],
   "hardware_caveats": [
     "It is a research project first: the CPU-GPU split is tuned per model, and an unsupported architecture falls back to something much slower",
@@ -66,5 +69,5 @@
     "Production use without reading the per-model tutorial, because behaviour varies sharply per architecture"
   ],
   "docs_url": "https://kvcache-ai.github.io/ktransformers/",
-  "notes": "Scheduling terms are approximate here: KTransformers is not a paged-KV serving engine in the vLLM sense. It does its own cache management plus CPU-GPU expert scheduling, so only 'prefix-cache' and 'expert-offload-scheduling' are recorded as literal mechanisms. Published as SOSP 2025 (doi 10.1145/3731569.3764843)."
+  "notes": "Scheduling terms are approximate here: KTransformers is not a paged-KV serving engine in the vLLM sense. It does its own cache management plus CPU-GPU expert scheduling, so only 'prefix-cache' and 'expert-offload-scheduling' are recorded as literal mechanisms. Published as SOSP 2025 (doi 10.1145/3731569.3764843). ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-09-30 (0.1 months), latest release v0.7.1 published 2026-09-15, 129 contributors, open_issues_count 513 (issues PLUS pull requests), NOT archived, 19561 stars. Actively developed with a real team behind it. DEPLOYMENT: NO EVIDENCE OF PRODUCTION DEPLOYMENT FOUND as of 2026-10-04 - see [[ev-production-evidence-is-scarce-and-nearly-always-single-site]]. FEATURE AXES - PREFIX CACHING is the distinguishing one and it is why this engine exists: a THREE-TIER GPU-CPU-DISK prefix cache, 'Support 3-layer (GPU-CPU-Disk) prefix cache reuse' (2025-06-30). Every other engine in this repo keeps its prefix cache in memory; this one spills to disk, which is the necessary rather than the elegant answer for an engine whose weights do not fit in VRAM at all. MULTIMODAL: 'Added native support for GLM-5.3-flash, bringing 1M-token context and multimodal input to consumer GPUs' (2026-08-26). Speculative decoding, chunked prefill, disaggregated P/D and structured output: UNSTATED, and a keyword scan of the README returns nothing for any of the four, so they are recorded as unstated rather than absent."
 }

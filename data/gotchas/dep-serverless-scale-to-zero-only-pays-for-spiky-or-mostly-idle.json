@@ -1,0 +1,39 @@
+{
+  "id": "dep-serverless-scale-to-zero-only-pays-for-spiky-or-mostly-idle",
+  "type": "gotcha",
+  "name": "Scale-to-zero on an LLM is a bill-shaped decision, not a latency-shaped one: keeping a model warm is the only way to be interactive, so the economics only work when utilization is very low or traffic is genuinely spiky",
+  "class": "config",
+  "affects": [],
+  "concepts": [
+    "serverless-gpu",
+    "scale-to-zero",
+    "cold-start",
+    "autoscaling",
+    "idle-capacity",
+    "economics",
+    "cost-model",
+    "kubernetes",
+    "kserve",
+    "keda"
+  ],
+  "symptom": "Serverless GPU looks cheap until you notice what the cold-start penalty forces you to do about idle capacity, and the fix for that penalty is to keep the container warm - which is the thing you were trying to avoid. The platforms state the trade-off themselves: 'It is not always possible to speed up boots sufficiently. For example, seconds of added latency to load a model may not be acceptable in an interactive setting. In this case, the only option is to have more warm containers running.' So for an interactive endpoint the knobs become min_containers, buffer_containers and scaledown_window - all of which are spending money to avoid the cold start, which is spending money to avoid the reason you chose serverless. The result is a curve with two regimes and a crossover, not a single answer: below roughly 40-50% utilization scale-to-zero usually wins, above it a dedicated hourly box is often cheaper. Models at the tens-of-gigabytes end are where this bites hardest, because that is exactly the regime where weight loading cannot be made fast and the container-boot time dominates - Modal's own guidance is that downloading a model ahead of time 'can reduce boot times from minutes to seconds', which means without it you are in the minutes column on every single replica start.",
+  "root_cause": "The economics follow from two independent facts. First, cold start is dominated by weight transfer, not container boot: the measured breakdown for a 7B on one L4 node was 61 s model download, 33 s weight loading, 52 s torch.compile, 54 s graph capture and 94 s init - 294 s total, with a 28 GB container image taking roughly 236 s to pull on a node that did not have it. The 'serverless cold start is fast' numbers in circulation are image-restore or container-boot times: Modal states containers boot in about one second but that this excludes global-scope imports and modal.enter, and the widely-cited sub-2-second serverless figures measure image snapshots with no weight load at all. Second, keeping capacity warm is per-second billed: Modal's default is to scale to zero with a scaledown_window whose DEFAULT MAXIMUM IDLE TIME IS 60 SECONDS, settable from 2 seconds to 20 minutes, and the knobs are described as a straight trade - 'Maintaining a larger warm pool or idle buffer will increase costs but reduce the chance that inputs will need to wait for a new container.' So min_containers > 0 is a recurring GPU bill with no traffic behind it, and the practical break-even sits near 40-50% utilization: below that, idle dominates and scale-to-zero wins; above it, you pay a serverless premium for a benefit you are not using. There is a vendor-documented figure for the premium in the corpus - RunPod Serverless runs roughly 2-3x a comparable Pod - but treat it as a moving vendor number rather than a constant. The structural trap that makes this worse than a simple linear trade is the thundering herd: when an autoscaler spins up 50 or 100 replicas at once, 'every one of those pods races to the same upstream source for the same hundreds of gigabytes of data at the same time ... replicas fight each other for download bandwidth, and load times spike from minutes to potentially hours' - so the cold-start penalty is not just per-replica, it is superlinear in burst size, which means the platform looks worst exactly when its scale-to-zero promise is most attractive.",
+  "workaround": "Decide the shape before the platform. (1) Answer one question first: is the traffic spiky enough that you can absorb minutes of cold start on the burst edges, or is it interactive enough that every request must land on warm capacity? If interactive, scale-to-zero is not the cost lever - warm floor plus predictable scheduling is, and you are buying dedicated capacity with a better cold-start profile. (2) If you do want scale-to-zero, buy it deliberately and measure it: use the phase breakdown rather than a single startup number. Baseten's diagnostic mapping is directly reusable - long Acquiring resources means waiting for capacity, long Pulling image means a large image or replicas landing on nodes without it, long Pulling weights means large weights or cache misses - and their outcome taxonomy (Succeeded / Failed / Stalled at 30 minutes) is a good readiness contract. (3) Never let a burst be the first time N replicas pull the same weights: single-flight or a multi-tier weight cache (local NVMe, then peer node, then mirrored origin with parallel byte-range downloads) is the fix, and a caching layer alone is not enough if 100 pods on 20 nodes still contend. (4) Warm on a schedule rather than constantly: the documented pattern is a cron-scheduled function that raises min_containers before a known peak and drops it after (example: 4 containers from 06:00 to 22:00 America/New_York), and for a versioned class, update_autoscaler() is per-instance so you can warm one model version without paying for the others. (5) Keep a floor. Zero replicas plus an interactive SLO is a request that waits for a cold start, which is 'part of that request's latency' by definition. (6) Store weights ahead of time, in a Volume or bucket mount rather than downloaded per boot - performance is similar between Volume and image, so choose on change frequency and cost, not latency.",
+  "severity": "major",
+  "notes": "The question 'does the economics work' has a defensible answer rather than a vibe: yes below roughly 40-50% utilization or for traffic that is genuinely spiky enough to absorb the penalty on burst edges, no for a warm interactive endpoint, because the only remedy for the cold-start penalty is warm capacity, which is the cost you were trying to avoid. Two evidence-quality caveats stated plainly. The 40-50% break-even is from a September 2026 comparison article carrying affiliate links, not from a primary source, so treat the threshold as a rule of thumb to be measured against your own utilization and your own provider rates. And the sub-2-second serverless cold-start numbers in circulation are image-restore times with no model weight load included - dep-serverless-gpu-coldstart-comparison is recorded as contested in this repo for exactly this reason, and its Replicate figure of 6.5 s for an A100 does not survive contact with Replicate's own per-second billing. The durable part of this record is the mechanism and the measured phase breakdowns, not the vendor rates.",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-04",
+  "sources": [
+    "dep-modal-cold-start-docs",
+    "dep-modal-scale-docs",
+    "dep-modal-model-weights-docs",
+    "dep-baseten-cold-starts-docs",
+    "dep-baseten-bdn-cold-start-blog",
+    "dep-serverless-gpu-coldstart-comparison",
+    "ppl-cloud-replicate-pricing",
+    "sup-cloud-modal-pricing",
+    "sup-cloud-baseten-pricing",
+    "serve-kserve-keda-autoscaling"
+  ]
+}

@@ -3,12 +3,13 @@
   "type": "engine",
   "name": "llm-d",
   "status": "verified",
-  "confidence": 0.8,
+  "confidence": 0.86,
   "updated": "2026-10-03",
   "sources": [
     "pd-llmd-repo",
     "pd-vllm-disagg-prefill-docs",
-    "pd-gh-vllm-56828-p2p-peer-down-no-fail"
+    "pd-gh-vllm-56828-p2p-peer-down-no-fail",
+    "ev-gh-api-repo-metadata-2026-10-04"
   ],
   "repo": "llm-d/llm-d",
   "languages": [
@@ -66,5 +67,5 @@
     "Workloads with no prefix locality, where prefix-cache-aware routing adds a hop for no reuse"
   ],
   "docs_url": "https://www.llm-d.ai",
-  "notes": "KV transfer path: llm-d does not define its own transport - it composes the engines' connectors (NIXL/UCX, Mooncake) for the PD handoff and implements its own GPU->CPU/disk tiering with a global KV index. Partner-reported performance claims in the README, attributed as such: 'Up to 70% higher tokens/sec with prefill/decode disaggregation vs standard vLLM - GPT-OSS on NVIDIA B200 (p6-b200), AWS'; '10-30% throughput improvement with disaggregated serving on identical infrastructure - GPT-OSS-120B and Llama 3.3 70B on AMD MI300X, Oracle'; '3x higher output throughput and 2x faster TTFT with prefix-cache-aware routing vs round-robin - Llama 3.1 70B on 4x AMD MI300X, Tesla / Red Hat'; '40% reduction in TTFT and ITL with predicted-latency scheduling vs heuristics on NVIDIA GPUs, Google'. These are vendor blog figures, not independent measurements, and the PD number is a throughput comparison that vLLM's own docs would call into question ('Disaggregated prefill DOES NOT improve throughput' - a claim about a fixed-SLO single-node setup, so the two are not measuring the same thing). Recorded as a production system, not a paper, but with the caveat that most of its published numbers come from partners."
+  "notes": "KV transfer path: llm-d does not define its own transport - it composes the engines' connectors (NIXL/UCX, Mooncake) for the PD handoff and implements its own GPU->CPU/disk tiering with a global KV index. Partner-reported performance claims in the README, attributed as such: 'Up to 70% higher tokens/sec with prefill/decode disaggregation vs standard vLLM - GPT-OSS on NVIDIA B200 (p6-b200), AWS'; '10-30% throughput improvement with disaggregated serving on identical infrastructure - GPT-OSS-120B and Llama 3.3 70B on AMD MI300X, Oracle'; '3x higher output throughput and 2x faster TTFT with prefix-cache-aware routing vs round-robin - Llama 3.1 70B on 4x AMD MI300X, Tesla / Red Hat'; '40% reduction in TTFT and ITL with predicted-latency scheduling vs heuristics on NVIDIA GPUs, Google'. These are vendor blog figures, not independent measurements, and the PD number is a throughput comparison that vLLM's own docs would call into question ('Disaggregated prefill DOES NOT improve throughput' - a claim about a fixed-SLO single-node setup, so the two are not measuring the same thing). Recorded as a production system, not a paper, but with the caveat that most of its published numbers come from partners. ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-10-02 (0.1 months), latest release v0.10.0 published 2026-09-29, 224 contributors, open_issues_count 187 (issues PLUS pull requests - low relative to a large contributor base), NOT archived, 4722 stars. DEPLOYMENT: NO EVIDENCE OF PRODUCTION DEPLOYMENT FOUND as of 2026-10-04 - see [[ev-production-evidence-is-scarce-and-nearly-always-single-site]]. Note that this is a weaker negative than for a small library: the README publishes an offline batch-inference throughput TUNING GUIDE with a worked example (a log line showing 'Decode batch. #running-req: 233, #token: 370959, token usage: 0.82, cuda graph: True, gen throughput (token/s): 4594.01, #queue-req: 317'), which is evidence that operators tune this engine seriously but is explicitly a configuration guide, not a report of anyone's deployment. FEATURE AXES: all seven UNSTATED as of 2026-10-04. Its open issue #2665 (2026-10-03, same day as this record) proposes reorganizing its 'Well-Lit Paths' into Foundations, Models and Operations, which is itself a signal that the project's shape is still settling and that axis answers derived from any current doc may move."
 }

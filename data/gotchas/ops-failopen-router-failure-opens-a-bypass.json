@@ -1,0 +1,32 @@
+{
+  "id": "ops-failopen-router-failure-opens-a-bypass",
+  "type": "gotcha",
+  "name": "When the endpoint picker dies, failOpen routes requests straight to the model servers — and those servers have no queue, no priority and no fairness, so losing the control plane silently downgrades the serving policy",
+  "class": "config",
+  "affects": [
+    "llm-d",
+    "vllm"
+  ],
+  "concepts": [
+    "failover",
+    "failOpen",
+    "routing",
+    "queueing",
+    "multi-tenant",
+    "preemption",
+    "security"
+  ],
+  "symptom": "During an endpoint-picker election or restart, latency degrades and the fairness guarantees vanish for the duration: per-tenant limits stop applying, priority inversion returns, and requests that would have been queued centrally arrive directly at the model servers. Nothing errors. The control plane was the thing enforcing policy, and its failure mode is to stop enforcing — which looks like a brief capacity blip rather than a policy breach. Repeated EPP elections also produce a small residue of outright errors even with failOpen on.",
+  "root_cause": "InferencePool's failureMode field decides this: FailOpen or FailClose 'tells the Gateway controller how to fail the proxy behavior if the EPP becomes unresponsive', and llm-d defaults failOpen true so 'client requests are not dropped and continue to be processed by the model server if EPP is unresponsive or unavailable.' The consequence for policy is the structural one from ops-queue-belongs-at-the-gateway: once a request reaches the model server directly, there is no central queue, no priority and no fairness — 'Once a request is dispatched to a model server local queue, the EPP cannot move it', and model servers 'batch based on arrival or sequence length, not business priority'. So the same request, in the same second, gets materially different treatment depending on whether the control plane is up. Measured residual errors: with failOpen=true across four leader-teardown scenarios the success rate ranged 98.1% to 100%, and the docs attribute the gap to a specific cause — 'Residual errors occur during socket teardown at the exact moment of pod termination.'",
+  "workaround": "Choose the failure mode explicitly per deployment rather than inheriting the default, with the trade named: failOpen preserves availability and discards the serving policy, failClose preserves the policy and returns errors. Whichever you pick, make the loss of policy visible — alert on EPP leader changes and on the stale-endpoint gauge, because a failOpen window is silent. Keep the EPP highly available so the window is short, and remember the topology constraint: in the default active-passive EPP, 'Scaling replica count does not increase total request throughput capacity, as only the single active leader replica handles external processing requests', so replicas buy failover latency, not throughput. If you must run EPP active-active, only use plugins that query backends dynamically for real-time state, because 'replicas do not share local memory state, prefix routing partitions across replicas and degrades cache hit rates significantly.' Also treat the bypass as a security boundary decision: everything the EPP enforces (authz, rate limits) is absent during the window, which is an argument for keeping the model servers' own controls sufficient on their own (see ops-api-key-covers-only-v1-prefixes for what those do and do not cover).",
+  "severity": "major",
+  "notes": "Two honest limits. (1) Availability and policy are in direct tension and there is no setting that preserves both, so this is a decision rather than a fix. (2) The measured error residue even under failOpen is non-zero and is attributed to socket teardown timing, which is not configurable at this layer — so 'zero-downtime router failover' is not something the current evidence supports.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-llmd-inferencepool",
+    "ops-llmd-router-operations",
+    "ops-llmd-flow-control"
+  ]
+}

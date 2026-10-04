@@ -1,0 +1,15 @@
+{
+  "id": "ops-tgi-queue-unbounded",
+  "type": "source",
+  "name": "TGI backend queue implementation (unbounded mpsc channel into the batching task)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://github.com/huggingface/text-generation-inference/blob/main/backends/v2/src/queue.rs",
+  "publisher": "Hugging Face",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Queue::new() creates mpsc::unbounded_channel() and spawns queue_task; append() sends QueueCommand::Append(Box::new(entry), ...) and unwraps the result. The queue state is a VecDeque::with_capacity(128) of (u64, Entry), each Entry carrying an mpsc::UnboundedSender<Result<InferStreamResponse, InferError>> plus queue_time and batch_time instants. next_batch() is asked for a batch under (min_size, max_size, prefill_token_budget, token_budget) - the token budget is enforced at BATCH FORMATION time by the batching task, not at admission. metrics::gauge!(\"tgi_queue_size\").set(state.entries.len()) is emitted on each NextBatch. Operationally: nothing in this file bounds the number of accepted waiting entries, so the only admission bound on the TGI path is the router's concurrency semaphore."
+}

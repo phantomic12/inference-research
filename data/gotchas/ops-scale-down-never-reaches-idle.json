@@ -1,0 +1,32 @@
+{
+  "id": "ops-scale-down-never-reaches-idle",
+  "type": "gotcha",
+  "name": "Scale-down is bounded by pod warmup, not by demand: a loaded model takes minutes to become ready, so the load signal stays high after traffic is gone and the fleet cannot shrink",
+  "class": "config",
+  "affects": [
+    "vllm",
+    "llm-d"
+  ],
+  "concepts": [
+    "autoscaling",
+    "kv-cache",
+    "model-loading",
+    "torch-compile",
+    "scale-to-zero",
+    "kubernetes"
+  ],
+  "symptom": "Traffic drops to near zero, the demand signal falls, and the replica count does not come down — or comes down and immediately goes back up, and the newly added replicas are not serving for minutes. The autoscaler's own view says the load is gone while the fleet is stuck at its high-water mark paying for idle GPUs. This is a cost problem and a latency problem simultaneously: the pod that finally becomes ready has a cold KV cache, so the first requests routed to it are the slowest ones.",
+  "root_cause": "Two compounding mechanisms. (1) Warmup asymmetry: 'Additions take a warmup time T_w to become ready (model load + torch-compile); removals are immediate.' llm-d quantifies it as 'pod warmup is roughly half the scale-up transient, so cutting it directly shrinks the violations paid at every scale-up', and reports a concrete fix taking pod-ready time 'from ~2m15s to ~100s' via a torch-compile cache volume plus a fast startupProbe. Their readiness guidance sets the floor: a startupProbe of failureThreshold 60 at 30s period is a 30-minute ceiling, because a model's load time has no upper bound you can rely on. (2) Measurement on ready pods only: 'the latency signal is measured on ready pods only. While a scale-up is in flight the ready pods over-report the post-warmup load', so a naive scaler sees high demand from pods that are already serving and adds more, compounding the warmup debt. Also, the scale-to-zero path has the same shape: 'Model cold-start time becomes request latency, and clients must allow enough time for the model to load.'",
+  "workaround": "Attack warmup directly rather than tuning the scaler: mount a torch-compile cache volume, use a model-aware startupProbe on /v1/models (llm-d: /health 'only indicates that the server process is running, not that models are loaded'), and preload weights onto a local volume or via an init container so weight loading is not competing with a cold object-storage read. On the scaler side apply an in-flight credit (r/n, ready over provisioned) on the scale-up branch so the ask covers only the deficit beyond pods already warming, and deliberately use the UNcredited signal for scale-down so a pool cannot shed replicas mid-scale-up — a pool 'may only shed when the measured signal itself has headroom'. Give scale-down a real window: llm-d's HPA shape is scale-up bursts of max(100%, 4 pods) per 60s and scale-down of 1 pod per 120s with a 180s stabilization window, 'Fast up, deliberate down.' Finally, note that KEDA's cooldownPeriod 'controls scale-down to zero; it does not control ordinary HPA scale-down while the minimum replica count is one or greater' — so configuring cooldownPeriod to fix a scale-down problem achieves nothing unless minReplicas is 0.",
+  "severity": "blocker",
+  "notes": "Two unsolved edges worth recording. (1) Node-level provisioning is outside the autoscaling loop: llm-d pushes contended accelerator budgets below the autoscaler to Kueue, where 'over-budget replicas simply stay Pending until quota frees' — so replica count can exceed schedulable capacity and the scaler cannot see it. (2) Stale metrics can invert the problem entirely: the token-aware guide documents that llm_d_epp_inflight_tokens was a GaugeVec 'whose series were historically not pruned when an endpoint was removed, so a scaled-down pod left a series frozen at its last non-zero value and sum() could never fall back - the fleet would scale up but not down'. The fix (llm-d-router#2577) had merged after v0.10.0 and was 'not in a tagged release yet' at time of writing; the guide supplies an 'and on (target_pod)' PromQL set-intersection workaround. Note also that the token-aware guide requires the EPP at a single replica because 'The inflight-load-producer token accounting is local to each EPP process, so multiple replicas would each see - and publish - only a fraction of the per-endpoint load' — which directly conflicts with running a multi-replica EPP for availability.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-llmd-autoscaling-slo-control-law",
+    "ops-llmd-autoscaling-keda-epp",
+    "ops-llmd-readiness-probes",
+    "ops-llmd-autoscaling-token-aware"
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "id": "obs-vllm-observability",
+  "type": "engine",
+  "name": "vLLM (observability surface: Prometheus metrics + OpenTelemetry)",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-vllm-v1-metrics-loggers",
+    "obs-vllm-observability-config",
+    "obs-vllm-metrics-design-doc",
+    "obs-vllm-production-metrics-doc",
+    "obs-vllm-otel-poc-readme",
+    "obs-vllm-block-pool-usage",
+    "obs-vllm-per-request-metrics-doc",
+    "obs-vllm-scheduler-preemption"
+  ],
+  "repo": "vllm-project/vllm",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "observability",
+    "comprehensive-metrics",
+    "distributed-tracing",
+    "autoscaling-signals"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache",
+    "chunked-prefill"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "xpu",
+    "metal",
+    "cpu-avx512"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "The most complete metrics surface of any engine in this list: 39 metric names in vllm/v1/metrics/loggers.py plus 7 in vllm/v1/spec_decode/metrics.py, all with the literal prefix `vllm:`",
+    "Every metric that defines LLM serving exists: `vllm:time_to_first_token_seconds`, `vllm:inter_token_latency_seconds`, `vllm:request_time_per_output_token_seconds`, `vllm:request_queue_time_seconds`, `vllm:num_requests_running`, `vllm:num_requests_waiting`, `vllm:kv_cache_usage_perc`, `vllm:num_preemptions` (Counter) and `vllm:request_num_preemptions` (Histogram of preemption count per request)",
+    "Uniquely, waiting requests are split by cause: `vllm:num_requests_waiting_by_reason{reason=\"capacity\"|\"deferred\"}` whose documentation states 'Sum of all reasons equals vllm:num_requests_waiting' - so you can tell 'no capacity' from 'deferred by transient constraints (LoRA budget, KV transfer, blocked status)'",
+    "OpenTelemetry tracing is built in and the OTel packages are bundled with the wheel, so no extra install; configured with `--otlp-traces-endpoint`",
+    "Per-request metrics can be returned in the API response body with `--enable-per-request-metrics`, giving time_to_first_token_ms, generation_time_ms, queue_time_ms, mean_itl_ms and tokens_per_second for billing-grade per-request accounting",
+    "Sampled KV-cache residency histograms behind `--kv-cache-metrics` (default off): `vllm:kv_block_lifetime_seconds`, `vllm:kv_block_idle_before_evict_seconds`, `vllm:kv_block_reuse_gap_seconds` at a default 1% sample rate",
+    "Bucket boundaries are tunable by family via `--custom-histogram-buckets`, which matters because the default `request_latency` family starts at 0.3 s and cannot resolve a sub-300ms SLO",
+    "A deliberate deprecation policy: a deprecated metric is hidden one minor version later, can be restored with `--show-hidden-metrics-for-version=X.Y`, and is removed the version after that"
+  ],
+  "hardware_caveats": [
+    "Metrics are collected in the API-server process, not the engine-core process, and multiprocess mode is only used when `--api-server-count > 1`. The consequence is that prometheus_client's default `python_gc_*`, `python_info`, `process_*` metrics are silently absent in that mode",
+    "All vllm metrics carry `model_name` and `engine` labels, so under data-parallel every series multiplies",
+    "`vllm:kv_cache_usage_perc` was renamed from `vllm:gpu_cache_usage_perc`; the project itself documents that the colon-in-metric-name convention is contrary to the Prometheus spec ('colons are reserved for user defined recording rules') and that most names do not carry unit suffixes",
+    "`--enable-per-request-metrics` is rejected together with `--disable-log-stats`, and is suppressed (metrics object is null) for any request with n>1 because the timing data covers only one of the n sequences"
+  ],
+  "best_for": [
+    "Anyone who needs to build an SLO on TTFT or TPOT and defend it, because the histogram buckets, the definitions and the deprecation story are all documented",
+    "Capacity planning and autoscaling: running/waiting/deferred-by-reason plus KV usage and preemption count is the full saturation picture",
+    "Debugging a single request: the OTel `llm_request` span carries gen_ai.latency.time_in_queue, time_to_first_token, time_in_model_prefill, time_in_model_decode, time_in_model_inference and time_in_model_forward all on one span"
+  ],
+  "avoid_for": [
+    "Reading a metric name from memory - `vllm:gpu_cache_usage_perc`, `vllm:num_requests_swapped` and `vllm:cpu_cache_usage_perc` are all gone or renamed, and `vllm:time_in_queue_requests` was a duplicate of `vllm:request_queue_time_seconds`",
+    "Assuming per-step and per-request latency are interchangeable - they are explicitly different metrics with different denominators",
+    "Anyone who wants a stable metric name across engine versions: the project renames and removes on a 2-release cycle by design"
+  ],
+  "docs_url": "https://docs.vllm.ai/en/latest/usage/metrics.html",
+  "notes": "Verbatim metric inventory transcribed from PrometheusStatLogger in vllm/v1/metrics/loggers.py on main, not from the docs (though the docs are ast-generated from the same file so they agree). Core latency and state metrics: `vllm:num_requests_running` (Gauge), `vllm:num_requests_waiting` (Gauge), `vllm:num_requests_waiting_by_reason` (Gauge, reason label), `vllm:kv_cache_usage_perc` (Gauge, 'KV-cache usage. 1 means 100 percent usage.'), `vllm:num_preemptions` (Counter, 'Cumulative number of preemption from the engine'), `vllm:request_num_preemptions` (Histogram), `vllm:time_to_first_token_seconds`, `vllm:inter_token_latency_seconds`, `vllm:request_time_per_output_token_seconds`, `vllm:e2e_request_latency_seconds`, `vllm:request_queue_time_seconds`, `vllm:request_inference_time_seconds`, `vllm:request_prefill_time_seconds`, `vllm:request_decode_time_seconds`, `vllm:iteration_tokens_total` (Histogram of tokens per engine step), `vllm:prompt_tokens`, `vllm:generation_tokens`, `vllm:prompt_tokens_cached`, `vllm:prefix_cache_queries`, `vllm:prefix_cache_hits`, `vllm:external_prefix_cache_queries`/`_hits`, `vllm:mm_cache_queries`/`_hits`, `vllm:request_success` (Counter labelled finished_reason), `vllm:request_prompt_tokens`, `vllm:request_generation_tokens`, `vllm:request_prefill_kv_computed_tokens`, `vllm:request_params_n`, `vllm:request_params_max_tokens`, `vllm:request_max_num_generation_tokens`, `vllm:engine_sleep_state`, `vllm:cache_config_info`, `vllm:lora_requests_info`, plus conditional `vllm:corrupted_requests` (only when VLLM_COMPUTE_NANS_IN_LOGITS), `vllm:num_requests_kv_fetch_by_stage` (only when running as KV consumer), and the three residency histograms. Speculative: `vllm:spec_decode_num_drafts`, `vllm:spec_decode_num_draft_tokens`, `vllm:spec_decode_num_accepted_tokens`, `vllm:spec_decode_num_accepted_tokens_per_pos`. Interval semantics come from the engine-core event list (QUEUED, SCHEDULED, PREEMPTED, NEW_TOKENS) computed from monotonic timestamps within one process; TTFT is measured relative to frontend arrival_time (which starts when tokenization begins), so it includes input processing. Trace shape: one span named `llm_request` of SpanKind.SERVER per request, started at arrival_time_ns with the extracted parent trace context, carrying gen_ai.latency.* attributes plus gen_ai.usage.prompt_tokens / completion_tokens and optional top_p/max_tokens/temperature/n; loading and init spans are named `Overall Loading`, `EngineCoreProc init`, `SyncMPClient init`, `AsyncMPClient init`, `Prepare model`. `--collect-detailed-traces` takes model|worker|all and additionally produces `vllm:model_forward_time_milliseconds` and `vllm:model_execute_time_milliseconds`, which exist only when tracing is on - the project's own doc questions whether the overhead is worth it. Every extra histogram bucket adds one time series per metric per label set, which is why the docs warn against long custom bucket lists."
+}

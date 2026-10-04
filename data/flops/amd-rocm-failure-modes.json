@@ -11,10 +11,10 @@
     "batch_size"
   ],
   "affected_by_hardware": [
-    "mi300x",
-    "mi325x",
-    "mi350x",
-    "mi355x",
+    "amd-instinct-mi300x",
+    "amd-instinct-mi325x",
+    "amd-instinct-mi350x",
+    "amd-instinct-mi355x",
     "gfx1151",
     "gfx942",
     "gfx950"
@@ -25,7 +25,7 @@
     "llama.cpp issue #28211: HIP/ROCm gfx1151 produces wrong logits for prompts longer than n_ubatch - keep n_ubatch >= prompt length",
     "Always validate ROCm output against a known-good baseline (e.g., Vulkan or CPU) when upgrading ROCm versions"
   ],
-  "notes": "Three documented ROCm failure modes in llama.cpp: (1) ISSUE #27506 - PPL EXPLOSION: ROCm backend severe perplexity explosion starting from build b10040. Bisect with concrete PPL values: b10038 = 7.7241, b10040 = 3024.3587, latest master = 2177.3497. Vulkan build unaffected. This demonstrates llama-perplexity as a corruption detector. (2) ISSUE #27579 - gfx1151 CORRUPT OUTPUT: HIP/ROCm backend produces corrupted output on gfx1151 (Radeon 8060S / Ryzen AI Max) while Vulkan is correct with byte-identical flags. Three-model matrix with two failure severities. The issue explicitly rules out the -f unsafe-math-optimizations removal as the cause. (3) ISSUE #28211 - HIP UBATCH WRONG LOGITS: HIP/ROCm on gfx1151 produces wrong logits (not a crash) for prompts longer than n_ubatch. Minimal public-API reproducer that decodes the same prompt twice differing only in n_ubatch. BF16 also affected (84.7476 vs 13.8167 on Vulkan), which rules out the quantized-matmul kernel as the cause. These failure modes are specific to gfx1151 (RDNA4 consumer silicon), not CDNA3/CDNA4 datacenter GPUs, but they illustrate the importance of validating ROCm output against known-good baselines.",
+  "notes": "Three documented ROCm failure modes in llama.cpp: (1) ISSUE #27506 - PPL EXPLOSION: ROCm backend severe perplexity explosion starting from build b10040. Bisect with concrete PPL values: b10038 = 7.7241, b10040 = 3024.3587, latest master = 2177.3497. Vulkan build unaffected. This demonstrates llama-perplexity as a corruption detector. (2) ISSUE #27579 - gfx1151 CORRUPT OUTPUT: HIP/ROCm backend produces corrupted output on gfx1151 (Radeon 8060S / Ryzen AI Max) while Vulkan is correct with byte-identical flags. Three-model matrix with two failure severities. The issue explicitly rules out the -f unsafe-math-optimizations removal as the cause. (3) ISSUE #28211 - HIP UBATCH WRONG LOGITS: HIP/ROCm on gfx1151 produces wrong logits (not a crash) for prompts longer than n_ubatch. Minimal public-API reproducer that decodes the same prompt twice differing only in n_ubatch. BF16 also affected (84.7476 vs 13.8167 on Vulkan), which rules out the quantized-matmul kernel as the cause. These failure modes are specific to gfx1151 (RDNA4 consumer silicon), not CDNA3/CDNA4 datacenter GPUs, but they illustrate the importance of validating ROCm output against known-good baselines. RESOLVED (2026-10-04 cross-reference repair): the bare part names in affected_by_hardware were expanded to their record ids - mi300x -> amd-instinct-mi300x, mi325x -> amd-instinct-mi325x, mi350x -> amd-instinct-mi350x, mi355x -> amd-instinct-mi355x. Each name matched exactly one accelerator record in data/accelerators/, so no variant was chosen between siblings (MI300X and MI325X are both CDNA3, MI350X/MI355X/MI350P all CDNA4) - the id is forced by the part name. This field is still a mixed bucket: it also carries the architecture codename values gfx942/gfx950, which are not ids and were left alone. DANGLING REF, LEFT UNRESOLVED (2026-10-04 cross-reference repair): affected_by_hardware also carries 'gfx1151', an AMD GPU ARCHITECTURE CODE, not a record id. It corresponds to amd-radeon-8060s-ryzen-ai-max (RDNA3.5, Strix Halo iGPU) and to the consumer-RDNA4 failure modes this record describes, but it names an architecture rather than one product. Because one value in this field resolves to several accelerator records, it cannot be rewritten to a single id, and the field is typed as accelerator ids so this is a mixed-bucket value that belongs in a sibling field for architecture codenames. Left unchanged deliberately.",
   "status": "verified",
   "confidence": 0.9,
   "updated": "2026-10-04",

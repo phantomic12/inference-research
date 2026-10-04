@@ -1,0 +1,33 @@
+{
+  "id": "sec-kv-cache-timing-attack-collapses-under-load",
+  "type": "gotcha",
+  "name": "The KV-cache timing side channel largely collapses under realistic contention - do not extrapolate benchmark numbers to production",
+  "class": "measurement",
+  "affects": [
+    "vllm",
+    "sglang"
+  ],
+  "concepts": [
+    "side-channel",
+    "timing",
+    "multi-tenant",
+    "continuous-batching",
+    "measurement",
+    "cohens-d",
+    "auroc",
+    "kv-cache"
+  ],
+  "symptom": "A security review quotes a KV-cache timing side channel with a large effect size, and the fix - disable prefix caching - is expensive. Then the channel turns out to be nearly unusable on a busy production server, and the fix bought almost nothing.",
+  "root_cause": "Seven experiments on live shared serving systems, on vLLM serving DeepSeek-R1-Distill-Llama-8B: mean Cohen's d falls from 0.7789 with no synthetic workers to 0.2109 with two workers, and higher worker counts cause no statistically detectable FURTHER loss. AUROC falls from 0.650 in the ambient regime to 0.531 near 61% overlap, partially recovering to 0.574 at saturation. A 120-run sparse-overlap experiment places the best breakpoint at the boundary of the measured range (tau=0, 95% CI [0.000, 0.113]), supporting an ambient-versus-loaded regime change rather than any internal physical threshold. Concurrency-depth variance is the strongest measured correlate of effect size (r=-0.416) and of hit consistency (r=-0.637). The same collapse reproduces on a real two-node, two-GPU tensor-parallel vLLM deployment (mean d from 3.418 to 0.511, p<0.01). Two SGLang pilots were statistically inconclusive.",
+  "workaround": "Measure the side channel on YOUR deployment at YOUR load before paying to remove it. If you need a defensible answer, run the ambient-versus-loaded experiment yourself: effect size at zero concurrency is the wrong number, and a security review quoting it will overstate the risk. Where budget allows only one mitigation, weigh it against measured isolation cost - selective isolation reports up to 40.58% lower TTFT and up to 2.66x throughput versus full isolation, while PrefixWall characterises the blunt alternative (disable automatic prefix caching and all cross-user sharing) as a sledgehammer that sacrifices efficiency for regular users.",
+  "severity": "major",
+  "notes": "Kept as verified BECAUSE the finding IS the collapse; it contradicts the headline numbers in the attack papers, which is the useful part. The honest reading is not 'the side channel is weak' but 'its strength depends on the load regime and the serving stack, so it must be measured per deployment'. Two SGLang pilots being inconclusive means the stack-dependence claim rests on two data points, not a survey - a real limit on the generality of this record.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "sec-arxiv-2609-06853",
+    "sec-arxiv-2508-08438",
+    "sec-arxiv-2603-10726"
+  ]
+}

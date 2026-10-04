@@ -1,0 +1,33 @@
+{
+  "id": "dep-router-prefix-tree-ram-is-the-router-oom",
+  "type": "gotcha",
+  "name": "The router is a stateful memory consumer, not a stateless proxy: its prefix tree grows without bound and takes the whole data plane down with it while every engine stays healthy",
+  "class": "framework",
+  "affects": [
+    "niche-vllm-production-stack",
+    "vllm"
+  ],
+  "concepts": [
+    "control-plane",
+    "routing",
+    "prefix-cache",
+    "prefix-aware-routing",
+    "memory",
+    "oom",
+    "hash-trie",
+    "availability"
+  ],
+  "symptom": "The router pod restarts periodically - every few minutes or hours, with no obvious trigger - and each restart drops in-flight requests, resets all prefix affinity, and forces a fresh scrape window before load-aware routing has data again. The vLLM engines behind it never restart and never fail, so nothing in the engine dashboards explains it. Operators typically discover this as 'the router is flaky' rather than 'the router is out of memory', because the engine-side view is clean and the router's own OOMKill shows up only as a restart count. The signature is that memory usage ramps monotonically with traffic volume and time rather than with load: give it a bigger limit and it simply grows into the bigger limit.",
+  "root_cause": "The prefix-cache HashTrie that makes prefix-aware routing possible has unbounded memory usage. The reporter's finding, from a stability test: the router pod kept restarting, they configured a 2 GB limit, raised it to 16 GB, and 'observed that the memory usage of router is unbounded and keeps ramping up' - it was not a spike that a larger limit would have absorbed. Repro: router connected to multiple vLLM model server pods, 2 GB limit, a continuous long-document QA benchmark for over 2 hours, router periodically OOM-restarted by Kubernetes. Their requested fix is the obvious one and is still the open question: cap the HashTrie and garbage-collect stale nodes by TTL or LRU. The deeper point is architectural. A router that tracks cache placement must remember something, and long prompts on a busy fleet generate a lot of entries; unlike a stateless L7 proxy, this control plane accumulates state proportional to traffic history, which means its memory limit is a capacity-planning parameter and its restart is a fleet-wide event rather than a component event. The same repo shows the statefulness explicitly: the router README advertises --request-stats-window (default 60 s) and --engine-stats-interval (default 30 s) as sliding windows, and dynamic config as hot-reloadable YAML - all of which imply retained state.",
+  "workaround": "Size the router's memory limit for steady-state traffic volume, not for concurrent requests - a workload dominated by long documents will hold far more prefix entries per request than one dominated by short turns, and the entry count grows with uptime rather than with load, so a limit tuned on a load test will be exceeded by a long-running production process. If the upstream cap lands, set the eviction and TTL knobs before you need them. Until then, watch router RSS as a first-class alert with a forecast rather than a threshold: 'unbounded and keeps ramping up' is the failure mode, so an alert on a flat high value will fire late. Treat a router restart as a fleet event in your runbook - drain gracefully rather than letting the OOMKill sever live streams, and expect one scrape interval of degraded load-awareness afterwards.",
+  "severity": "major",
+  "notes": "Open since 2025-09-08 as of 2026-10-04 and one of the longest-standing open router issues in the project, which is itself a maturity signal: prefix-aware routing is the flagship feature of the reference stack and its central data structure has no bound. Note this is a different failure from the other two router records in this class - it is loud (a restart is visible) rather than silent, but it is invisible from the engine side, which is where most operators look. The 2 GB default-scale limit versus a 16 GB still-growing observation also means 'raise the limit' is not a fix, only a delay; the reporter says so explicitly.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "dep-vllm-prodstack-687-router-hashtrie-oom",
+    "dep-vllm-prodstack-router-readme",
+    "niche-github-rest-api-repo-metadata"
+  ]
+}

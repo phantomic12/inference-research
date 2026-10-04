@@ -1,0 +1,29 @@
+{
+  "id": "ops-pd-stranded-kv-and-silent-recompute",
+  "type": "gotcha",
+  "name": "In disaggregated serving a dead prefill worker is not detected: the decode side attempts the KV pull anyway, and with the default failure policy the client gets a 500 while the stranded KV is only reclaimed by a lease timer",
+  "class": "config",
+  "affects": [
+    "vllm"
+  ],
+  "concepts": [
+    "nixl",
+    "kv-cache",
+    "failover",
+    "rdma",
+    "disaggregated-serving",
+    "prefill-decode",
+    "kv-lease"
+  ],
+  "symptom": "A prefill pod crashes. Every request whose KV pull was in flight against it fails, and there is no liveness check to notice the pod is gone first. Separately, the prefill instance keeps the dead requests' KV blocks reserved — the decode side has not pulled them, so they are stranded — and they are only freed when a lease timer expires, at least kv_lease_duration*2/3 (default 20s) after the last heartbeat. During that window a healthy prefill replica is running below its true capacity, and under steady failure this produces a slow capacity erosion rather than a visible incident.",
+  "root_cause": "llm-d states the core hazard: 'D instances will attempt to pull KVs from no longer running P instances without performing any liveness checks.' The READ fails with an error such as NIXL_ERR_BACKEND and kv_load_failure_policy decides what the client sees: 'fail (default, recommended): Immediately fail the request with an error when KV load fails', or 'recompute: Recompute failed blocks locally on the decode instance. This may cause performance jitter on decode instances as the scheduled prefill will delay and interfere with other decodes', which is worse on decode instances configured with low-latency optimisations. Neither branch retries the request elsewhere — a failed request is a failed request, and the retry is the caller's. Stranded blocks are reclaimed by lease: 'When a prefill completes, P holds the KV blocks with an initial lease of kv_lease_duration (default 30s) ... If D crashes (or becomes unresponsive), heartbeats stop, and P automatically frees the KV blocks when the last lease extension expires - at most lease_extension seconds after the last heartbeat.' Lease-based TTL requires vLLM v0.22.0 or later; before that a fixed VLLM_NIXL_ABORT_REQUEST_TIMEOUT of 480s applied 'regardless of whether the D instance was still alive', so worst-case hold was very long and shortening it risked premature eviction under load.",
+  "workaround": "Set kv_load_failure_policy explicitly and know which one you have: keep fail (the default) so the caller learns the request failed, and be aware 'recompute' converts a hard failure into a silent latency regression. Keep kv_lease_duration sized to your decode tail — it is tunable via kv_connector_extra_config, and it is a direct capacity-vs-safety tradeoff: too long wastes prefill capacity after a decode crash, too short risks reclaiming blocks a heavily loaded decode instance still needs. Wire liveness into routing so the EPP stops selecting a dead prefill pod (this is what endpoint readiness is for), and note that a failed prefill pod returning to status: Running after restart is enough for traffic to resume — Kubernetes API-based discovery handles the routing side. Verify the lease path actually exists in your version before relying on it; on pre-0.22 the 480s fixed timeout is the behaviour.",
+  "severity": "major",
+  "notes": "The genuinely unsolved case is recorded in the source as an open bug and it is worse than a plain 500: after a prefill pod restart, a decode replica holding a cached NIXL agent handle 'can segfault, or leave it silently serving against a dead engine for up to an hour. Until the fixes below ship in an official image, proactively restart any decode replica that was connected to a restarted prefill pod, rather than relying on TTL expiry.' Because decode 'does not detect the prefill engine is gone until engine_ttl expires (default up to one hour)', every request landing on that replica repeats the failed-read cycle meanwhile. Under recompute the client 'never sees a failed request, so this shows up purely as a throughput/latency regression on that decode replica, not as an error - harder to notice than an outright failure.' Both fixes (nixl#1986 and vllm#50047) were, at time of writing, 'in no published vLLM image yet, including nightly', because vLLM pins an exact NIXL version and the NIXL fix landed after the last published NIXL release. The current mitigation is operational: proactively restart affected decode replicas after a prefill restart.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-llmd-disaggregation-operations"
+  ]
+}

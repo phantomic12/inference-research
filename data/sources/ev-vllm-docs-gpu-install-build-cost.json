@@ -1,0 +1,15 @@
+{
+  "id": "ev-vllm-docs-gpu-install-build-cost",
+  "type": "source",
+  "name": "vLLM GPU installation docs: build-from-source cost, caching, and parallel-job controls",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://docs.vllm.ai/en/latest/getting_started/installation/gpu.html",
+  "publisher": "vLLM",
+  "kind": "blog",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Vendor's own documentation, the most authoritative statement of build cost available because the vendor is also the one paying it in CI. Verified against docs/getting_started/installation/gpu.cuda.inc.md in the repo on 2026-10-04. Exact claims: 'In order to be performant, vLLM has to compile many cuda kernels. The compilation unfortunately introduces binary incompatibility with other CUDA versions and PyTorch versions'; a source build 'can take several minutes' (note the understatement against the 3-5h user measurements above - the docs figure is a warm/practical figure, the issue figures are cold full-arch builds); 'Building from source requires a lot of compilation'; 'Building from a checkout on a network filesystem' is much slower than local disk because a full build creates a very large number of small files. Documented mitigations, all of which are also evidence that the cost is real: ccache / sccache remote caching, `VLLM_USE_PRECOMPILED=1` Python-only editable install, `MAX_JOBS` to cap parallel jobs (explicitly recommended for WSL, which by default 'only assigns 50% of the total memory'), `nvcc_threads`, and an Incremental Compilation Workflow for kernel developers. One dated, reproducible datapoint printed in the docs: the arm64 GH200 Docker image build, 'Memory usage: ~15GB, Build time: ~1475s / ~25 min, Image size: 6.93GB' at max_jobs=66, nvcc_threads=2, torch_cuda_arch_list='9.0 10.0+PTX'."
+}

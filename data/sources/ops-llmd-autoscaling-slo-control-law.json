@@ -1,0 +1,15 @@
+{
+  "id": "ops-llmd-autoscaling-slo-control-law",
+  "type": "source",
+  "name": "llm-d SLO-Aware Autoscaling with KEDA - the control law (saturation signal, hysteresis, in-flight credit, warmup)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "url": "https://github.com/llm-d/llm-d/blob/main/docs/architecture/advanced/autoscaling/slo-aware-keda.md",
+  "publisher": "llm-d",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Signal: s_raw = max(P90 TTFT / S_ttft, P90 TPOT / S_tpot), with NaN or no traffic mapping to 0, then clamped at C = 2.0 and smoothed with avg_over_time over 45s. Why the clamp matters, verbatim: 'at the queueing knee, predicted latency can spike to 10-90x SLO in one sample. Anything above the cap already means add capacity at the maximum rate - letting the raw magnitude through only poisons the moving average so it stays inflated long after the pool recovers.' Thresholds theta_up = 0.55 and theta_dn = 0.40 give a hysteresis band. Why they sit low: 'under healthy load the P90-of-predicted-latency signal sits around 0.2-0.45 of the SLO and then goes vertical at the queueing knee. A threshold near 1.0 fires only after the SLO budget is nearly burned; 0.55 fires on the pre-knee rise. If your SLO is close to your base latency, raise the band.' The in-flight credit c = r/n is applied on the scale-up branch only, because 'the signal is measured on ready pods only. While a scale-up is in flight the ready pods over-report the post-warmup load'; and 'Scale-down uses the uncredited signal: the credit discounts demand, so during warmup it could push an over-threshold signal below the scale-down boundary and shed replicas mid-scale-up. A pool may only shed when the measured signal itself has headroom.' HPA layer numbers: scale-up bursts at max(100%, 4 pods) per 60s with a 30s stabilization window (min over window), scale-down walks 1 pod per 120s with a 180s window (max over window) - 'Fast up, deliberate down.' Warmup: 'Additions take a warmup time T_w to become ready (model load + torch-compile); removals are immediate', and 'pod warmup is roughly half the scale-up transient, so cutting it directly shrinks the violations paid at every scale-up. A torch-compile cache volume + a fast startupProbe took our pod-ready time from ~2m15s to ~100s.' Empirically the pool 'settles wherever s lands inside the band - empirically ~1.4-1.5 rps per H100 TP=2 replica for a 4000-token-prefill workload at these SLOs.'"
+}

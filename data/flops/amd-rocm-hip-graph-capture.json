@@ -10,17 +10,17 @@
     "sequence_length"
   ],
   "affected_by_hardware": [
-    "mi300x",
-    "mi325x",
-    "mi350x",
-    "mi355x"
+    "amd-instinct-mi300x",
+    "amd-instinct-mi325x",
+    "amd-instinct-mi350x",
+    "amd-instinct-mi355x"
   ],
   "workarounds": [
     "HIP graph capture reduces kernel launch overhead by recording and replaying kernel sequences",
     "Particularly effective for decode workloads with many small kernels",
     "vLLM uses CUDA graph capture (HIP graph equivalent) on ROCm to reduce launch overhead"
   ],
-  "notes": "HIP graph capture is the ROCm equivalent of CUDA graph capture. It records a sequence of kernel launches into a graph that can be replayed with a single launch, eliminating per-kernel launch overhead. This is particularly important for LLM inference decode, where each token generation involves many small kernel launches (RMSNorm, RoPE, GEMM, attention, sampling). The ROCm memory management documentation covers stream-ordered memory allocation and graph capture. vLLM's ROCm backend uses graph capture (compilation-config with cudagraph_mode) to reduce launch overhead. The vLLM blog shows '--compilation-config {\"custom_ops\": [\"-rms_norm\", \"-quant_fp8\"], \"cudagraph_mode\": \"FULL_AND_PIECEWISE\"}' as a recommended configuration. HIP graphs are most beneficial when kernel launch overhead is a significant fraction of total execution time - typically at small batch sizes and short sequences.",
+  "notes": "HIP graph capture is the ROCm equivalent of CUDA graph capture. It records a sequence of kernel launches into a graph that can be replayed with a single launch, eliminating per-kernel launch overhead. This is particularly important for LLM inference decode, where each token generation involves many small kernel launches (RMSNorm, RoPE, GEMM, attention, sampling). The ROCm memory management documentation covers stream-ordered memory allocation and graph capture. vLLM's ROCm backend uses graph capture (compilation-config with cudagraph_mode) to reduce launch overhead. The vLLM blog shows '--compilation-config {\"custom_ops\": [\"-rms_norm\", \"-quant_fp8\"], \"cudagraph_mode\": \"FULL_AND_PIECEWISE\"}' as a recommended configuration. HIP graphs are most beneficial when kernel launch overhead is a significant fraction of total execution time - typically at small batch sizes and short sequences. RESOLVED (2026-10-04 cross-reference repair): the bare part names in affected_by_hardware were expanded to their record ids - mi300x -> amd-instinct-mi300x, mi325x -> amd-instinct-mi325x, mi350x -> amd-instinct-mi350x, mi355x -> amd-instinct-mi355x. Each name matched exactly one accelerator record in data/accelerators/, so no variant was chosen between siblings (MI300X and MI325X are both CDNA3, MI350X/MI355X/MI350P all CDNA4) - the id is forced by the part name. This field is still a mixed bucket: it also carries the architecture codename values gfx942/gfx950, which are not ids and were left alone.",
   "status": "verified",
   "confidence": 0.8,
   "updated": "2026-10-04",

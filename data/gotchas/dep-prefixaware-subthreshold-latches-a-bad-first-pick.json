@@ -1,0 +1,34 @@
+{
+  "id": "dep-prefixaware-subthreshold-latches-a-bad-first-pick",
+  "type": "gotcha",
+  "name": "Prefix-aware routing scores the first request of a session on a stale QPS average, then latches that decision for the life of the session - so the busiest backend gets picked first and keeps every subsequent turn",
+  "class": "framework",
+  "affects": [
+    "niche-vllm-production-stack",
+    "vllm"
+  ],
+  "concepts": [
+    "control-plane",
+    "data-plane",
+    "routing",
+    "prefix-cache",
+    "prefix-aware-routing",
+    "load-balancing",
+    "session-affinity",
+    "sticky-routing",
+    "agentic"
+  ],
+  "symptom": "Half the fleet goes idle while half the sessions queue, and nothing in the system says so. Two vLLM backends of equal capacity, prefixaware routing, eight concurrent agent sessions opened in a burst: the measured result was 4 running plus 4 queued on one backend while the other sat idle. No error, no unhealthy backend, nothing in the router logs. It looks like a capacity problem, not a routing problem, so the instinct is to add replicas - which makes it worse, because the new replica joins a fleet whose placement decisions are being latched. The pattern repeats on every burst of new sessions, and it is stable rather than noisy, which is what makes it survive.",
+  "root_cause": "When a request's matched prefix is shorter than prefix_min_match_length, PrefixAwareRouter falls back to _qps_routing, which picks the endpoint with the lowest request_stats qps - a rate averaged over the request-stats window, i.e. a historical quantity rather than a measure of what the engine is doing now. Under session-shaped traffic that inverts the signal: a backend holding several long-running requests has a LOW QPS because long requests complete rarely, so QPS routing selects the busiest backend. The decisive part is the next step - the prompt is then inserted into the trie against the chosen endpoint, so every subsequent turn of that session has prefix affinity to it and never re-enters this branch. 'The sub-threshold decision is not re-evaluated per request, it is latched for the lifetime of the session. A bad first pick becomes a permanent one.' The reporter also notes the asymmetry with the rest of the router: #1035 (merged) addressed the same cache-affinity-versus-load tension for the kvaware family via loadaware scoring, but PrefixAwareRouter has no equivalent and still hands the sub-threshold case to QPS.",
+  "workaround": "Prefer least-in-flight computed from engine stats over a windowed completion rate, which is what the reporter has shadow-run in production since 2026-08-18 with the imbalance gone. Two properties of their patch matter and are worth copying rather than the code: (a) num_running_requests + num_queuing_requests is the instantaneous saturation the branch actually wants, and engine_stats is already passed into route_request so no new collection path is needed; (b) choose randomly among backends within +1 of the minimum rather than strict argmin - engine stats refresh on the scrape interval, so a burst arriving inside one window would otherwise see identical loads and dogpile whichever URL sorts first, which is exactly what produced the 4+4 split. Keep a fallback to QPS routing when engine stats are absent so behaviour on a cold router is unchanged. If you cannot patch, size for the worst case: the failure concentrates on the first request of each session, so the damage scales with session arrival rate, not with steady-state QPS.",
+  "severity": "major",
+  "notes": "Reported against main (fc00f98) by a production operator with a two-replica static-discovery deployment, prefixaware routing logic and --engine-stats-interval 10, both backends API-key-protected. Open as of 2026-10-04; the reporter explicitly asks whether upstream wants this as the new default or behind a --prefixaware-fallback={qps,leastinflight} flag, so a future release may change the behaviour and invalidate the workaround. Note the mechanism is a general one for the whole topology layer, not a vLLM quirk: any layer that scores placement on completed-work rates rather than live load, and then writes that score into a sticky structure, converts a transient misjudgement into a persistent one. Related: dep-router-metric-name-parse-miss-looks-healthy, where the engine-stats signal this branch depends on is itself all-zero for a mis-prefixed backend - if both are present the fallback has nothing to fall back to.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "dep-vllm-prodstack-1073-prefixaware-stale-qps-latch",
+    "dep-vllm-prodstack-prefix-aware-tutorial",
+    "dep-vllm-prodstack-router-readme"
+  ]
+}

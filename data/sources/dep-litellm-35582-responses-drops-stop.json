@@ -1,0 +1,15 @@
+{
+  "id": "dep-litellm-35582-responses-drops-stop",
+  "type": "source",
+  "name": "LiteLLM issue #35582 - aresponses silently drops the stop param (no UnsupportedParamsError, no warning)",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "url": "https://github.com/BerriAI/litellm/issues/35582",
+  "publisher": "LiteLLM (reporter: gateway user)",
+  "kind": "forum",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Opened and CLOSED 2026-08-02 (same day, ~3 h) against litellm 1.82.4. Root cause quoted: 'ResponsesAPIOptionalRequestParams has no stop field, so ResponsesAPIRequestUtils.get_requested_response_api_optional_param filters it out before any provider mapping or validation runs. No UnsupportedParamsError, no warning, no log - the request just goes out without it.' Four-line repro printed {'temperature': 0.5} for an input containing {'stop': ['END']}. Reporter's judgement, verbatim: 'Silently discarding a caller-supplied sampling parameter is the worst option - output-affecting behavior (stop sequences) just doesn't happen, with no signal.' Workaround adopted by the reporter: 'we now reject stop client-side with a clear error instead of passing it into the silent drop.' Relevant to topology because a gateway whose API surface is wider than its param mapping is a place where output-affecting behaviour changes with a 200 and no log line. Corroborating open PRs in the same tracker show this is systemic rather than one endpoint: #42087 'warn instead of silently dropping unsupported tool constraints', #38897 'reject unsupported reasoning effort', #43607 'surface unsupported stop and json_object response_format instead of silently dropping them', #43615 'stop declaring silently-dropped params as supported', #40471 (reasoning_effort=xhigh silently downgraded to baseline), #43910."
+}

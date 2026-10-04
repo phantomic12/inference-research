@@ -1,0 +1,27 @@
+{
+  "id": "sec-model-extraction-detectable-at-traffic-level-not-per-query",
+  "type": "gotcha",
+  "name": "Per-query anomaly scoring does not catch extraction; distribution testing over a traffic window does, with published numbers",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "model-extraction",
+    "detection",
+    "mmd",
+    "traffic-analysis",
+    "false-positive-rate",
+    "monitoring"
+  ],
+  "symptom": "A fraud/extraction monitor scores each query against a benign distribution and raises almost nothing, while an attacker steadily distilling the model walks away with a clone. The single queries really do look benign - that is the premise of the attack, not a bug in the monitor.",
+  "root_cause": "Individual extraction queries resemble benign requests, which is why the paper reformulates the problem as benign-calibrated traffic-WINDOW distribution testing: embed incoming queries into a semantic space and test whether their AGGREGATE distribution deviates from historical benign traffic, using MMD with the threshold set from benign-versus-benign comparisons only - so no labelled attacker data is needed to calibrate. Measured across fourteen attacker-normal query pairs from four extraction scenarios, three random seeds, and comparisons against adapted PRADA, SEAT, CAP, DATE, marginal Mahalanobis and pseudo-class energy baselines: 0.3% benign false-positive rate, 100% TPR on pure-attacker traffic, 90.5% average TPR over attacker fractions, 95.1% balanced accuracy. Calibrating on benign-versus-benign is the operationally important part - it means the monitor can be deployed before you have any attack examples.",
+  "workaround": "Monitor extraction at the traffic-window level over a semantic embedding, calibrated only against benign traffic, not per query. Budget for the attacker-fraction operating point: 100% TPR when the attacker is the only traffic, but 90.5% average when the attacker is mixed in with real users, so decide what false-negative rate your IP risk tolerates. And note the corollary - fingerprinting and watermarking aimed at tracing an extractor exist precisely because detection is probabilistic.",
+  "severity": "minor",
+  "notes": "Attribution is also getting easier from the other direction, which cuts both ways here: ZeroPrint argues black-box fingerprinting from outputs is weak because non-linear output functions destroy parameter information, and instead estimates the input Jacobian by zeroth-order estimation over semantic-preserving word substitutions, using Fisher Information Theory to motivate the choice. So a defender's ability to PROVE a copy is improving at the same time as an attacker's ability to detect the monitoring.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "sec-arxiv-2606-05725",
+    "sec-arxiv-2510-06605"
+  ]
+}

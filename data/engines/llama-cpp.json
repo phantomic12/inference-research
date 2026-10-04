@@ -3,12 +3,15 @@
   "type": "engine",
   "name": "llama.cpp",
   "status": "verified",
-  "confidence": 0.9,
+  "confidence": 0.93,
   "updated": "2026-10-03",
   "sources": [
     "engine-llamacpp-github",
     "engine-llamacpp-build",
-    "engine-llamacpp-server"
+    "engine-llamacpp-server",
+    "ev-gh-api-repo-metadata-2026-10-04",
+    "ev-llamacpp-server-readme-feature-axes",
+    "ev-llamacpp-issue-26100-spec-benchmark-inflates-10x"
   ],
   "repo": "ggml-org/llama.cpp",
   "languages": [
@@ -60,7 +63,11 @@
     "CPU+GPU hybrid offload via --n-gpu-layers, including splitting MoE expert weights or dense FFN weights to CPU (--cpu-moe, --n-cpu-moe, --n-cpu-ffn)",
     "llama-server does continuous batching with slot-based parallel decoding and an OpenAI-compatible API",
     "Multiple GPU backends can be compiled into one binary and selected at runtime with --device; backends can also be loaded as shared libraries via GGML_BACKEND_DL",
-    "Unified-memory mode (GGML_CUDA_ENABLE_UNIFIED_MEMORY=1) swaps to system RAM instead of crashing when VRAM is exhausted"
+    "Unified-memory mode (GGML_CUDA_ENABLE_UNIFIED_MEMORY=1) swaps to system RAM instead of crashing when VRAM is exhausted",
+    "Speculative decoding with ELEVEN distinct algorithms across three families - draft-simple, draft-eagle3, draft-mtp, draft-dflash, draft-dspark, and five n-gram cache-keying variants (ngram-simple, ngram-map-k, ngram-map-k4v, ngram-mod, ngram-cache) - the widest method menu of any engine in this repo",
+    "Constrained generation via both --grammar (BNF-like, with samples in the grammars/ directory) and --json-schema / --json-schema-file",
+    "Prefix-cache reuse without a named feature, through four separate mechanisms: a shared unified KV buffer, slot-prompt-similarity matching, idle-slot prompt-cache persistence, and up to 32 per-slot context checkpoints",
+    "Multimodal with the most complete flag set in the repo: --mmproj, --mmproj-url, --mmproj-auto, --mmproj-offload, --mmproj-device, plus --image-min-tokens/--image-max-tokens for dynamic-resolution vision models; mmproj is downloaded automatically with --hf-repo unless --no-mmproj"
   ],
   "hardware_caveats": [
     "Vulkan is the universal escape hatch but is not the fast path: it is the only route to a GPU with no vendor SDK, and on Windows it needs the LunarG Vulkan SDK plus w64devkit/MSYS2 plumbing",
@@ -71,7 +78,9 @@
     "On Windows on ARM, MSVC compiles the ARM NEON intrinsics incompletely, so a CUDA build made entirely with MSVC has a slower CPU backend; the release workflow splits the build between clang (CPU) and MSVC (CUDA)",
     "OpenVINO backend is explicitly marked In Progress for Intel CPUs, GPUs and NPUs; SYCL is the maintained Intel GPU path",
     "The SYCL note also warns that the Intel oneMKL/oneAPI CPU build config does not support Intel GPU - use the SYCL path for that",
-    "Unified memory hurts performance on non-integrated GPUs while being what makes integrated GPUs usable at all"
+    "Unified memory hurts performance on non-integrated GPUs while being what makes integrated GPUs usable at all",
+    "NO DISAGGREGATED PREFILL/DECODE MODE and NO CHUNKED-PREFILL KNOB in the llama-server surface - these two axes are an affirmative NO for this engine as of 2026-10-04, read from tools/server/README.md, not merely unstated. This is the price of a single-process single-slot-oriented design and is worth stating plainly rather than leaving blank",
+    "A DOCUMENTED CASE OF ITS OWN THROUGHPUT BEING MISMEASURED BY 10x: a persistent drafter context is reused across requests on a slot and the replay path 'never runs the draft model and never applies params.p_min', so a repeated-prompt benchmark protocol reads 9.5x-16.9x higher tok/s than varied-prompt traffic at identical settings (issue #26100, releases b8400/b8407, Qwen3-8B Q4_K_M + Qwen3-0.6B Q8_0). The maintainer-facing one-liner is the rule this whole repo rests on: 'Any benchmark that warms up and times with the same prompt (a very common pattern) measures the replay path, not speculative decoding.' The production face of the same bug is worse - acceptance 0.60 -> 0.12 and latency ~3x under long-shared-prefix chat traffic - and it is intermittent, since 'plain or streaming traffic mixes that do NOT share long prefixes never trigger it'"
   ],
   "best_for": [
     "Running a quantized GGUF on whatever GPU you happen to own, including GPUs with no vendor compute SDK",
@@ -85,5 +94,5 @@
     "Maximum prompt-processing throughput on very old or low-end NVIDIA parts without tuning GGML_CUDA_FORCE_MMQ / GGML_CUDA_FORCE_CUBLAS"
   ],
   "docs_url": "https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md",
-  "notes": "Scheduling: llama-server does implement continuous batching with slot-based parallel decoding, and the server exposes prompt-cache reuse for shared prefixes, but there is no paged-KV block manager in the vLLM sense - KV is allocated per slot from a preallocated pool. 'exl2'/'exl3' are recorded from the project's published support for those quant families; the GGUF variants (Q4_K_M, IQ2_XS, IQ4_XS, UD-Q2_K_XL, TQ1_0/TQ2_0 ternary) are the primary path. safetensors support exists via converters rather than as a native load path."
+  "notes": "Scheduling: llama-server does implement continuous batching with slot-based parallel decoding, and the server exposes prompt-cache reuse for shared prefixes, but there is no paged-KV block manager in the vLLM sense - KV is allocated per slot from a preallocated pool. 'exl2'/'exl3' are recorded from the project's published support for those quant families; the GGUF variants (Q4_K_M, IQ2_XS, IQ4_XS, UD-Q2_K_XL, TQ1_0/TQ2_0 ternary) are the primary path. safetensors support exists via converters rather than as a native load path. ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-10-04 (0 months), latest release v0.5.0 published 2026-09-23, 2077 contributors (distinct committers INCLUDING ANONYMOUS - this project's count is inflated by anonymous contributors and should not be read as a team size), open_issues_count 2537 (issues PLUS pull requests), NOT archived, 130298 stars - the highest star count of any engine in this repo. Caveat worth carrying: issue #26100's reporter notes llama.cpp's releases are named by BUILD (b8400, b8407), not semver, so 'v0.5.0' from the API is a version-5.0 series release rather than a build number, and build-level pinning means reproducing a specific report requires its b-number."
 }

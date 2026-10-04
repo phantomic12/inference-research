@@ -1,0 +1,31 @@
+{
+  "id": "ev-sglang-dsv41-prefix-cache-hit-prefill-speedup",
+  "type": "benchmark",
+  "name": "SGLang on 8x RTX PRO 6000: prefix-cache hit on a 112K-token shared prefix serves in 0.34 s, ~39x the cold prefill rate",
+  "engine_id": "sglang",
+  "status": "draft",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "ev-sglang-issue-40877-production-deepseek-v41-flash"
+  ],
+  "accelerator_ids": [
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "interconnect_ids": [],
+  "model": "DeepSeek-V4.1-Flash",
+  "format_id": null,
+  "metric": "prefill_tok_s",
+  "value": 325000.0,
+  "unit": "tok/s prefill equivalent on a cache HIT (112,000-token prefix served from cache in 0.34 s)",
+  "methodology": "AGGREGATE-IS-NOT-APPLICABLE: this is a SINGLE REQUEST whose prompt was 112,000 tokens of already-cached prefix, served in 0.34 s wall clock. The tok/s figure is arithmetic on that (112,000 / 0.34 = ~329K; the source states ~325K), NOT a separately instrumented throughput counter - recorded as such so a reader does not mistake it for a measured rate. Same production configuration as the sibling records: 8x RTX PRO 6000 Blackwell Max-Q 96 GB (SM120, PCIe, no NVLink), TP=8/EP=8, kv_cache_dtype fp8_e4m3, max_running_requests 16, chunked_prefill_size 2048. The comparison figure in the same report is 6,853 tok/s for a 128K cold prefill, giving the ~39x.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Recorded primarily as the QUANTUM of the prefix-cache effect on a workload with heavy shared prefixes, which is the exact condition SGLang's RadixAttention exists for and the condition under which the engine's architecture pays for itself. Two honest limits. (1) The 39x is not a like-for-like engine comparison - it compares a cache hit against a cache miss ON THE SAME ENGINE, so it measures the cache, not the engine; any inference that SGLang is 39x faster than another engine from this number is wrong. (2) A 39x figure on a 112K-token prefix describes an unusually favourable workload shape (an agentic or multi-turn client that resends the same context), and it is sensitive to whether the prefix is byte-identical. The same report's llama.cpp counterpart - not the same project - is worth reading alongside: [[ev-llamacpp-spec-bench-replay-inflates]] documents how a similar cache-reuse path can make a BENCHMARK read 10x high rather than making a server 10x fast.",
+  "energy_basis": null,
+  "power_w": null,
+  "power_scope": null,
+  "power_cap": null,
+  "clock_lock_mhz": null,
+  "thermal_state": null
+}

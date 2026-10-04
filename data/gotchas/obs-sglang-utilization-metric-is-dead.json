@@ -1,0 +1,29 @@
+{
+  "id": "obs-sglang-utilization-metric-is-dead",
+  "type": "gotcha",
+  "name": "sglang:utilization and sglang:max_running_requests_under_SLO are documented but permanently zero on current main - do not build an autoscaling rule on them",
+  "class": "measurement",
+  "affects": [
+    "sglang",
+    "obs-sglang-observability"
+  ],
+  "concepts": [
+    "utilization",
+    "autoscaling",
+    "metrics",
+    "slo",
+    "regression"
+  ],
+  "symptom": "You configure SGLang with an SLO target, expect sglang:max_running_requests_under_SLO to report the headroom the engine computed, and find it permanently 0. Or sglang:utilization is flat at 0 on a decode worker that is plainly saturated. On a prefill-role worker the same metric reads -1. An autoscaling rule keyed on it never fires, or fires on garbage.",
+  "root_cause": "The producer is gone but the metric definition was never removed. SGLangMetricsCollector still defines both - `sglang:max_running_requests_under_SLO` ('The maximum number of running requests under SLO.') and `sglang:utilization` - and emit_constants still accepts a max_running_requests_under_SLO argument, but nothing ever supplies a real value. The metrics reporter's _calculate_utilization() contains the inline comment 'TODO: max_running_requests_under_SLO has no setter - sglang:utilization stuck at 0 (regressed #22713)' and falls back to `getattr(self.scheduler, 'max_running_requests_under_SLO', None)`, returning without setting anything when it is None. The scheduler closes the loop with `max_running_requests_under_SLO=None` and the comment 'TODO: max_running_requests_under_SLO has no setter - dead chain.' Separately, on a prefill-role disaggregation worker the reporter sets utilization = -1 by design.",
+  "workaround": "Do not use either metric until the setter is restored. Autoscaling on SGLang should key on `sglang:num_queue_reqs` plus `sglang:token_usage` (or the per-pool variants) and on TTFT/TPOT percentiles, not on utilization. If you have written a rule against sglang:utilization, delete it: a rule that never fires is worse than no rule, because it looks like coverage. Verify by scraping /metrics and confirming the series is present but constant - presence in the output is not evidence the value is live.",
+  "severity": "minor",
+  "notes": "Worth recording as a category of trap rather than only as a bug: a metric family can be fully present in the collector, documented in the source docstring, and exposed on /metrics with a plausible HELP string while having no producer at all. Prometheus cannot distinguish 'no data' from 'always zero' here because the series exists. The same shape of failure appears in vLLM's `sglang`-style dead chains and in docs that list metrics the code no longer emits - the TGI published metric table is behind its own source in the opposite direction. The general rule for this repo's readers: confirm a metric MOVES under load before trusting it.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-sglang-utilization-regression",
+    "obs-sglang-metrics-collector"
+  ]
+}

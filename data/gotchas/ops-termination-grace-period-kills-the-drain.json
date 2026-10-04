@@ -1,0 +1,30 @@
+{
+  "id": "ops-termination-grace-period-kills-the-drain",
+  "type": "gotcha",
+  "name": "terminationGracePeriodSeconds defaults to 30s while an LLM drain window needs minutes — SIGKILL lands mid-drain, so the graceful path is configured but never used",
+  "class": "config",
+  "affects": [
+    "vllm",
+    "llm-d"
+  ],
+  "concepts": [
+    "graceful-shutdown",
+    "kubernetes",
+    "rolling-update",
+    "model-loading"
+  ],
+  "symptom": "A deployment has --shutdown-timeout set and still fails in-flight requests on rollout, with logs showing the drain starting and then stopping abruptly rather than completing. The pod sits Terminating for exactly the grace period and is then SIGKILLed. Because the abort is forced by the kernel rather than by vLLM, the log line is absent too — there is no record of the drain being cut short, so the cause is hard to attribute from the server side.",
+  "root_cause": "The two timeouts are independent and their defaults are mismatched for LLM serving. Kubernetes terminationGracePeriodSeconds defaults to 30s. vLLM's own default shutdown_timeout is 0 (abort immediately). And even when shutdown_timeout is set to a sensible value, the process tree shutdown path has its own separate window: shutdown(procs, timeout=None) defaults to a 5.0s grace 'for best-effort cleanup paths that do not have a user-configured shutdown timeout', sends SIGTERM, joins against one deadline, then force-kills survivors via kill_process_tree. On ROCm that window is raised to 15s and only in the both-zero case, with the comment 'force-killing during teardown can leave VRAM resident' — which means a force-killed pod can also leak device memory into the node. llm-d flags the mismatch as IMPORTANT: 'terminationGracePeriodSeconds must be greater than --shutdown-timeout (plus a small buffer for the preStop hook and process cleanup).'",
+  "workaround": "Make the inequality explicit and check it per replica: terminationGracePeriodSeconds > --shutdown-timeout + preStop buffer. Budget the drain against your actual p99 request duration, not against the default. Note the asymmetry that makes this a recurring failure: removals are immediate but a pod that is SIGKILLed does not release its GPU cleanly, so on ROCm (and to a lesser extent CUDA) repeated mid-drain kills degrade the node over time — that is why the ROCm-specific extension to the process-shutdown window exists at all. Watch for the silent variant too: because the kill is external, there is no server-side log of it, so confirm the drain completed by observing the pod exit before the grace period rather than by reading vLLM logs.",
+  "severity": "major",
+  "notes": "The generalisation worth recording: this is not an LLM-specific bug but it is LLM-specific in magnitude, because the request duration that must be drained is seconds-to-minutes rather than the milliseconds a typical web service assumes. The vLLM RFC acknowledges the class of problem — 'Each request is relatively expensive (100ms+)' — and its own design is 'bounded by a configurable max wait time', so a bound exists but nothing sets it for you.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-vllm-process-shutdown-timeout",
+    "ops-vllm-engine-core-shutdown",
+    "ops-llmd-graceful-shutdown",
+    "ops-vllm-shutdown-rfc-24885"
+  ]
+}

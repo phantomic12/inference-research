@@ -1,0 +1,28 @@
+{
+  "id": "ops-prefix-cache-is-a-cross-tenant-side-channel",
+  "type": "gotcha",
+  "name": "Prefix caching leaks other tenants' prompts: prefix reuse across tenants is a timing side channel distinguishable at AUC 0.99 from only 8 tokens of guessed prefix",
+  "class": "config",
+  "affects": [
+    "vllm"
+  ],
+  "concepts": [
+    "prefix-caching",
+    "kv-cache",
+    "multi-tenant",
+    "cache-salt",
+    "security",
+    "side-channel"
+  ],
+  "symptom": "An attacker sharing a backend can determine whether another tenant's prompt prefix is resident in the KV cache purely by measuring time-to-first-token. The signal is strong enough to be usable as an oracle — the security advisory reports ROC AUC of 0.99 at prefix lengths of just 8 tokens — so an attacker can reconstruct a shared system prompt or a document one tenant uploaded to the shared deployment. No error, no log entry, no metric moves; the only observable is a latency difference.",
+  "root_cause": "Prefix caching reuses KV cache blocks across requests sharing a prompt prefix, which means the cache hit rate is a function of other tenants' traffic. The advisory's mechanism is that a cache hit skips prefill, so TTFT drops measurably. This is CVE-2025-46570 (GHSA-4qjh-9fv9-r85r), confirmed by the project. A second, blunter cross-tenant channel exists in the multimodal path and needs no timing analysis: a client-supplied media uuid is the cache identity, so 'two callers who present the same uuid for different media will share a single cache entry. The media from whichever request arrives first is served to both' — that is both a confidentiality leak and an integrity failure ('A later caller's media is silently discarded and replaced by the earlier caller's cached output'), and unlike the timing channel it is a deterministic cross-tenant read.",
+  "workaround": "Use the opt-in cache_salt, mixed into the hash of the first KV cache block so only requests carrying the same salt can share cached prefix blocks. Choose the salt by isolation boundary as the docs direct: per-user random salt to prevent any cross-user inference, a shared per-group salt for users entitled to benefit from each other's cached prefixes, or none at all for single-tenant. Treat the salt as a secret — the docs warn that a guessable salt is useless, recommending ~43 base64 characters / 256 bits 'rather than predictable identifiers such as a user name or account ID'. Generate cryptographically random media uuids per item (UUIDv4, not counters or filenames) and additionally set cache_salt for defence in depth. Accept the cost explicitly: 'Salting reduces cache efficiency, since cached blocks are only reusable by requests with the same salt.' So per-tenant salting trades hit rate for isolation and the operator must pick a granularity.",
+  "severity": "blocker",
+  "notes": "Two things make this an unsolved-ish area rather than a solved one. (1) cache_salt is opt-in and not passed by default, so a deployment is cross-tenant-leaky unless the client SDK sends it — this is client work, not server config, and silently absent in most quickstarts. (2) The salt mitigates the timing channel but not the uuid identity channel by itself in all paths; the docs recommend both. Note the salt also changes the hit-rate baseline, so a salt rollout looks like a performance regression on every cached workload and will be misdiagnosed as such unless expected before the change.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-vllm-security-api-key"
+  ]
+}

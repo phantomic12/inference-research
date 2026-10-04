@@ -1,0 +1,15 @@
+{
+  "id": "ops-llmd-autoscaling-token-aware",
+  "type": "source",
+  "name": "llm-d Experimental Token-Aware Autoscaling guide (prefill token velocity, decode KV occupancy, stale-series bug)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "url": "https://github.com/llm-d/llm-d/blob/main/guides/workload-autoscaling/keda-epp-token-aware/README.md",
+  "publisher": "llm-d",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Marked experimental: 'This guide is experimental and subject to change. The metrics, configurations, and APIs may evolve as the feature matures. Use in development and test environments only.' The two phases get different units: prefill is a rate problem, replicas = ceil(queued_tokens / peakPrefillThroughput / threshold); 'Decode is an occupancy problem. It has no equivalent measured rate. vllm:kv_cache_usage_perc is already a fraction of capacity, so the threshold is compared against it directly ... When a pod KV cache fills, vLLM stops admitting requests outright, so you act before that - 0.8 means act at 80% full.' Reference calibrations shipped but explicitly not to be reused: peakPrefillThroughput 15928 for Qwen3-32B / H100-80GB / TP=2 and 33821 for gpt-oss-120b / H200 fleet; 'Do not borrow a published figure: the same GPU and model measured through a P/D path with a slow KV fabric can be several times slower than on the aggregated path.' calibrate.sh computes V_P = CHUNK_SIZE / median(TTFT) on an idle stack and 'only prints' the value; 'CHUNK_SIZE must match vLLM effective --max-num-batched-tokens or the result is silently wrong.' Scaling rule for P+D co-located is max(ceil(backlog_s / 1.5), ceil(kv / 0.8)). Two operational traps: (1) llm_d_epp_inflight_tokens is a GaugeVec 'whose series were historically not pruned when an endpoint was removed, so a scaled-down pod left a series frozen at its last non-zero value and sum() could never fall back - the fleet would scale up but not down' (llm-d-router#2529, fixed by #2577), and 'The fix is on main, the Router Helm chart default EPP image tag, but it merged after v0.10.0, so it is not in a tagged release yet'; the guide supplies an 'and on (target_pod)' PromQL set-intersection workaround that filters the stale series by intersecting against a metric rebuilt from live endpoints. (2) the EPP must stay at a single replica because 'The inflight-load-producer token accounting is local to each EPP process, so multiple replicas would each see - and publish - only a fraction of the per-endpoint load', which pins replicas: 1 in the P/D guide for this reason."
+}

@@ -1,0 +1,31 @@
+{
+  "id": "ev-jit-compile-freezes-the-engine-mid-request",
+  "type": "gotcha",
+  "name": "A kernel JIT compile that runs on a request path stops the world: FlashInfer's own issue documents ~17.5 s stop-the-world stalls with every in-flight request frozen, including mid-decode",
+  "class": "kernel",
+  "symptom": "A serving engine that has been warm for days suddenly freezes for 15-40 seconds in the middle of traffic. FlashInfer issue #4317 measured the mechanism rather than inferring it: the Blackwell sm12x fused-MoE path compiles all of its CuTe-DSL kernels through explicit cute.compile(...), 'which unconditionally disables the DSL's file cache', and the only caching layer left is three in-process Python dicts. The consequence: 'every engine start re-pays the full MLIR JIT cost for every kernel specialization it touches - measured at ~40 s for the dynamic kernel's first hit and ~15-18 s per small-m micro-kernel specialization'. In a serving context (vLLM --moe-backend=flashinfer_b12x) 'these compiles land mid-request and freeze the whole engine (~17.5 s stop-the-world stalls, all in-flight requests frozen including mid-decode)'.",
+  "root_cause": "The cache is gated behind a condition that the explicit-compile path short-circuits before it is reached, so the environment variables that would fix it do nothing. Issue #4317 verifies this by source inspection against installed packages rather than by guesswork: nvidia-cutlass-dsl 4.5.0 base_dsl/compiler.py:604-605 and 4.6.0 base_dsl/compiler.py:1319 set kwargs[\"no_cache\"] = True unconditionally; the file cache's load and dump are both behind `if not no_cache` (4.5.0 dsl.py:1645 and :1736; 4.6.0 dsl.py:2004 and :2105, with in-memory jit_cache lookups skipped at :2012 and :2293); and the sm12x MoE dispatch only ever compiles through cute.compile, with plain in-process dicts (_STATIC/_MICRO/_DYNAMIC_KERNEL_CACHE) on top at moe_dispatch.py:676/912/1675 on 0.6.12-0.6.13 and :697/:942/:1723 on 0.6.15.post1. So CUTE_DSL_CACHE_DIR and CUTE_DSL_DISABLE_FILE_CACHING 'have no effect on this path - the gate that would consult them is short-circuited before they are read'. The verification is behavioural too: a direct jit call writes cute_dsl_<hash>.mlir and a fresh process then logs 'JIT cache hit IN-FILE', but the same compile through cute.compile leaves CUTE_DSL_CACHE_DIR empty.",
+  "workaround": "There is no configuration workaround, because the caching layer does not exist on that code path - this is a bug to report or a version to avoid, not a flag to set. What a reader CAN do: reproduce the trigger before trusting a warm-looking deployment. It reproduced on all three of RTX 5070 Ti x2 (TP/PP), RTX 5090 and RTX PRO 6000 Blackwell in the companion vLLM thread, on flashinfer 0.6.12, 0.6.13 and 0.6.15.post1 with nvidia-cutlass-dsl 4.5.0 and 4.6.0, with nvidia/Qwen3.6-35B-A3B-NVFP4 via vLLM --moe-backend=flashinfer_b12x. A compounding factor tracked separately in FlashInfer #3836 makes it worse inside a single process: the micro-kernel cache_key includes both m and workspace.max_rows, so workspace growth invalidates already-compiled small-batch entries and each invalidation is a full 15 s+ RECOMPILE rather than a reload. Note the same vendor has an open RFC (#4035) proposing that cold compile time be a measured, reported KPI - i.e. this cost was real enough for the project to want visibility into it and not yet visible.",
+  "severity": "major",
+  "notes": "The transferable lesson is not about FlashInfer but about JIT: a kernel cache that lives only in process memory is a startup cost at best and a mid-request stall at worst, and an engine can look warm while still re-paying it. The 17.5 s figure is vLLM #47458's stall measurement as cited in the FlashInfer issue - I did not read that vLLM thread directly, so it is recorded at second hand and flagged as such. Reproducibility is high because the issue verifies line numbers against specific installed package versions rather than describing behaviour. Read alongside [[ev-build-cost-is-three-separate-builds]] for where this cost sits in the taxonomy, and alongside [[ev-jit-cache-key-invalidation]] for the mechanism that makes it recur within one process.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "ev-flashinfer-issue-4317-cute-dsl-no-cache",
+    "ev-flashinfer-issue-4035-jit-aot-kpi"
+  ],
+  "affects": [
+    "flashinfer",
+    "vllm",
+    "tensorrt-llm"
+  ],
+  "concepts": [
+    "jit",
+    "moe",
+    "blackwell-sm120",
+    "cuda-graph",
+    "startup-cost",
+    "kv-cache"
+  ]
+}

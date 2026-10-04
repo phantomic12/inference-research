@@ -1,0 +1,15 @@
+{
+  "id": "dep-vllm-prodstack-1074-metric-prefix-parse-miss",
+  "type": "source",
+  "name": "vLLM Production Stack issue #1074 - unrecognized metric names yield an all-zero EngineStats that looks healthy",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "url": "https://github.com/vllm-project/production-stack/issues/1074",
+  "publisher": "vLLM project (reporter: production operator)",
+  "kind": "forum",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Opened 2026-09-02, still open as of 2026-10-04. Reporter quotes src/vllm_router/stats/engine_stats.py:63-86 on main (fc00f98): EngineStats.from_vllm_scrape() recognises exactly six metric names, all vllm:-prefixed; every non-matching sample is silently discarded and the function then 'unconditionally constructs and returns an EngineStats' from zero-initialised locals. 'EngineStats is a plain dataclass with no __bool__ or __len__, so an all-zero instance is truthy. The backend is stored, get_health() stays true, and the router reports a normal scrape.' Consequence quoted: 'load-aware placement degrades to an arbitrary or random pick with no signal - while looking, from every metric and log line the router emits, like it is working.' Trigger was two SGLang backends behind a vLLM router: SGLang's exporter uses sglang:num_running_reqs, sglang:num_queue_reqs, sglang:token_usage, sglang:cache_hit_rate, so all six comparisons miss. Reporter states the bug is not the missing SGLang support but that 'a total parse miss is indistinguishable from an idle engine'. Also notes dashboard gauge gpu_cache_usage_perc reads 0% on an engine at capacity. Two suggested fixes offered: warn when zero names matched, or return None."
+}

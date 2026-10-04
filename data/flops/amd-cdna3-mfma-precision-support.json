@@ -10,8 +10,8 @@
     "matrix_dimensions"
   ],
   "affected_by_hardware": [
-    "mi300x",
-    "mi325x",
+    "amd-instinct-mi300x",
+    "amd-instinct-mi325x",
     "gfx942"
   ],
   "workarounds": [
@@ -20,7 +20,7 @@
     "BF16 and FP16 share the same matrix core path at 1307.4 TFLOPS dense on CDNA3",
     "INT8 shares the FP8 matrix core path at 2614.9 TFLOPS dense on CDNA3"
   ],
-  "notes": "CDNA3 (gfx942) Matrix Cores natively execute: FP64 (256 FLOPS/clock/CU), FP32 (256), TF32 (1024 vector, no native matrix TF32 - the 653.7 TFLOPS figure is vector), FP16 (2048), BF16 (2048), FP8 (4096), INT8 (4096). The MFMA (Matrix Fused Multiply-Add) instruction is the hardware primitive. FP8 is 2x the FP16 rate. INT8 shares the FP8 path. CDNA3 does NOT support FP4 or FP6 natively - those are CDNA4 additions. TF32 on CDNA3 is listed as 'Vector TF32' at 1024 FLOPS/clock/CU, not a matrix path - the 653.7 TFLOPS peak is achieved through the vector units, not matrix cores. This is a key distinction: TF32 GEMMs on CDNA3 run on vector ALUs, not matrix cores.",
+  "notes": "CDNA3 (gfx942) Matrix Cores natively execute: FP64 (256 FLOPS/clock/CU), FP32 (256), TF32 (1024 vector, no native matrix TF32 - the 653.7 TFLOPS figure is vector), FP16 (2048), BF16 (2048), FP8 (4096), INT8 (4096). The MFMA (Matrix Fused Multiply-Add) instruction is the hardware primitive. FP8 is 2x the FP16 rate. INT8 shares the FP8 path. CDNA3 does NOT support FP4 or FP6 natively - those are CDNA4 additions. TF32 on CDNA3 is listed as 'Vector TF32' at 1024 FLOPS/clock/CU, not a matrix path - the 653.7 TFLOPS peak is achieved through the vector units, not matrix cores. This is a key distinction: TF32 GEMMs on CDNA3 run on vector ALUs, not matrix cores. RESOLVED (2026-10-04 cross-reference repair): the bare part names in affected_by_hardware were expanded to their record ids - mi300x -> amd-instinct-mi300x, mi325x -> amd-instinct-mi325x, mi350x -> amd-instinct-mi350x, mi355x -> amd-instinct-mi355x. Each name matched exactly one accelerator record in data/accelerators/, so no variant was chosen between siblings (MI300X and MI325X are both CDNA3, MI350X/MI355X/MI350P all CDNA4) - the id is forced by the part name. This field is still a mixed bucket: it also carries the architecture codename values gfx942/gfx950, which are not ids and were left alone. DANGLING REF, LEFT UNRESOLVED (2026-10-04 cross-reference repair): affected_by_hardware also carries 'gfx942', an AMD GPU ARCHITECTURE CODE, not a record id, and it spans more than one accelerator record: amd-instinct-mi300x and amd-instinct-mi325x are both CDNA3 (gfx942). Because one value in this field resolves to several accelerator records, it cannot be rewritten to a single id, and the field is typed as accelerator ids so this is a mixed-bucket value that belongs in a sibling field for architecture codenames. Left unchanged deliberately.",
   "status": "verified",
   "confidence": 0.9,
   "updated": "2026-10-04",

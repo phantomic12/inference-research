@@ -1,0 +1,31 @@
+{
+  "id": "ops-inflight-requests-are-lost-not-retried",
+  "type": "gotcha",
+  "name": "An engine-core worker death loses every in-flight request — there is no retry, no replication and no request log; the client gets a bare error with no indication the work was partially done",
+  "class": "config",
+  "affects": [
+    "vllm"
+  ],
+  "concepts": [
+    "failover",
+    "engine-core",
+    "fault-tolerance",
+    "graceful-shutdown",
+    "kubernetes",
+    "partial-state"
+  ],
+  "symptom": "A worker dies and every request it was serving fails at once, with no retry and no failover: the client receives a connection or 5xx error even though other healthy replicas exist, and the work already done (prefill, partial decode) is gone. Error-rate alerts show a sharp spike correlated with pod restarts or OOM kills, but there is no per-request record of what was lost — no request id in the error, no log line naming the affected requests. A client retrying on its own may produce a duplicate result if the original request actually completed server-side.",
+  "root_cause": "The engine core holds per-request execution state (KV blocks, sampling state, the request's position in the generation) in GPU memory inside a single process. When that process dies, that state is unrecoverable by construction — there is no shared store and no second copy. On the death path, _send_engine_dead() puts ENGINE_CORE_DEAD on the output queue so the frontend learns the core is gone, and the MPClient monitor then marks the engine dead and starts cleanup, which shuts down the client rather than re-admitting anything. The frontend/API server therefore loses the in-flight request set by construction. Note the contrast with the graceful path: the RFC states vLLM 'does not support any partial restart scenario, for example a \"reload model\" or \"restart workers\" capability', so there is no mechanism that could resume. Requests are also not retried transparently at the engine level — retry is a client-and-gateway responsibility, and the sgl-router's stream outcome taxonomy confirms the observable set is terminal (ok, stream_error_event, upstream_error, client_disconnect, expired, aborted), with no 'retried' outcome.",
+  "workaround": "Treat in-flight requests as lost and design for it at the client and gateway: retry on 5xx and connection errors with idempotency keys or request-level dedup, so a retry cannot produce two final results (llm-d makes the same requirement explicit about its eviction path: 'its retry path needs idempotency or request-level dedup so a retried request cannot produce two final results'). Distinguish a crash from a drain — a crash is unrecoverable and should be retried elsewhere; the drain path returns an abort which is also retryable. Reduce the blast radius by bounding the concurrency per replica so a death costs fewer requests, and by making the pod's own health meaningful so the load balancer stops sending work to a replica whose core has died rather than discovering it through client errors. Note the deployment-level constraint: if the gateway itself is a single point of failure, its failure loses not just in-flight work but everything queued — see ops-queue-belongs-at-the-gateway.",
+  "severity": "blocker",
+  "notes": "The partially-written-KV question, answered honestly: there is no recovery path, so a partially-written KV cache is not a corruption hazard to be repaired — it dies with the process. The real hazard is the *opposite* case, where the client does not learn the request failed. A request can have been fully processed server-side while the client observed a connection error, which is exactly the duplicate-result window, and it is why idempotency is the load-bearing mitigation rather than retry alone. Two adjacent unsolved items: the RFC leaves open whether shutdown state should be 'observable, e.g. via the /health API' (no such signal exists today), and there is no request-level persistence to replay from.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "ops-vllm-engine-core-shutdown",
+    "ops-vllm-shutdown-rfc-24885",
+    "ops-sglang-router-monitoring",
+    "ops-llmd-flow-control"
+  ]
+}

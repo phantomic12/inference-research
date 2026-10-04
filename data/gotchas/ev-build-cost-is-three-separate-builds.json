@@ -1,0 +1,43 @@
+{
+  "id": "ev-build-cost-is-three-separate-builds",
+  "type": "gotcha",
+  "name": "Every serious engine has THREE different build steps with three different durations, and conflating them is the reason 'how long does it take to build' has no single answer",
+  "class": "build",
+  "symptom": "A reader asks how long it takes to build TensorRT-LLM, or vLLM, or FlashInfer, and gets an answer that is wrong for their situation because three distinct costs share the name 'the build'. COST 1, the C++/CUDA compile of the engine itself: vLLM >=3 hours on an A100 host for a single SM 9.0 target with max_jobs=32 (issue #13281), and >5 hours uncached on the project's own CI (RFC #17419); TensorRT-LLM's CUDA-12 CI leg cost MORE THAN 5 HOURS on SBSA and was DELETED to save the time rather than optimised (PR #7633). COST 2, the per-model runtime ENGINE build - converting a checkpoint into an executable engine - which is a separate step with a separate number: 2+ hours for one DeepSeek-R1 stage on a B200 following the official quick-start recipe (issue #8286), and a single measured before/after of 290 s -> 260 s for Nemotron Super V3 fp8 at TP=8 (PR #11250). COST 3, the runtime JIT/NVRTC compile of kernels for the specific shapes and configs being served, paid on every COLD START of an engine: FlashInfer's sm12x CuTe-DSL MoE kernels cost ~40 s for the dynamic kernel's first hit and ~15-18 s per small-m micro-kernel specialization, REPAID ON EVERY ENGINE START because the file cache is bypassed (issue #4317); TRT-LLM's FMHA generation kernels are '~5-11s per kernel variant depending on host CPU, 80-160s total on MLA fp8-KV configs (DeepSeek-family), ~2min for sparse gen kernels' (PR #18542); and vLLM's own default VLLM_ENGINE_READY_TIMEOUT_S of 600 s is INSUFFICIENT for a cold FlashInfer cache on a large MoE on new hardware, where ~85 sm_121a CUTLASS kernels dominate startup - first attempt fails at ~599 s, second attempt succeeds in ~7 min (issue #48031).",
+  "root_cause": "The three costs have different triggers and different cache lifetimes, which is why one number cannot cover them. (a) The engine compile depends on the CUDA architecture list, the compiler and whether ccache/sccache is warm; vLLM's own RFC notes 95% of commits in the preceding year did not touch csrc at all, so the cost is paid far more often than it is changed. (b) The engine build depends on the MODEL, the quantization and the parallel configuration - a different checkpoint or TP degree is a different build. (c) The JIT cost depends on the KERNEL SPECIALIZATION KEY, and FlashInfer issue #4110 states the key components directly: 'For some kernels, B/tile_v/T/cache flags/pool-strides each key a new compile.' So changing batch size, tile_v, dtype, a cache flag or a pool stride produces a new compile. JIT cache paths are also per (FlashInfer version, GPU architecture), which is why vLLM #48031 places its cache at /root/.cache/flashinfer/0.6.12/121a/cached_ops/ - the 0.6.12 and 121a in the path are the invalidation keys.",
+  "workaround": "Read the cost you are about to pay as one of three specific questions. (1) For the engine compile, take the worst case and cache it: install ccache or sccache - vLLM's build system picks up `which ccache` automatically, and with `pip install -e .` you must add CCACHE_NOHASHDIR=true because pip's random build folder otherwise defeats the cache - or avoid the compile entirely with VLLM_USE_PRECOMPILED=1 / TRTLLM_USE_PRECOMPILED=1, which download a prebuilt wheel matching your commit. Restrict the architecture list: vLLM normalizes CUDA arch per source and ignores global +PTX requests for general extension targets; TensorRT-LLM's `-a \"90-real\"` is documented as 'Reduces compile time significantly' and `--fast_build` skips kernels 'for development only'. Cap parallelism with MAX_JOBS if RAM-bound - vLLM's docs single out WSL, which by default 'only assigns 50% of the total memory', and give a concrete memory figure: their GH200 arm64 image build is 'Memory usage: ~15GB, Build time: ~1475s / ~25 min' at max_jobs=66, nvcc_threads=2. Put build state on local disk: both projects document that a full build creates a very large number of small files, so a checkout on Lustre/NFS/GPFS is much slower than local disk. (2) For the engine build, budget per model and per parallel degree and do it ahead of a deploy; TensorRT-LLM tracks it as a KPI (issue #11542 asks for engine build time per model, regressions, and the slowest build, in an internal dashboard). (3) For the JIT cost, treat it as part of STARTUP, not build: persist the cache directory across containers and reboots, raise VLLM_ENGINE_READY_TIMEOUT_S to ~1800 on new GPU architectures as vLLM #48031's own workaround does, and prefer the prebuilt AOT paths (FlashInfer's flashinfer-jit-cache and flashinfer-cubin) over runtime JIT where coverage allows.",
+  "severity": "major",
+  "notes": "Written because no single existing record in this repo carried a build duration, and because the most dangerous version of the question is the one that gets a plausible number back. Two of these five figures are NVIDIA's own leaks about NVIDIA's own CI (PR #7633's '>5 hours on SBSA' and PR #11250's 290->260 s) and both are marked as vendor self-reports; PR #18542's '163 seconds to approximately 26-30 seconds' is an internal B200 measurement reported in an open PR, so it is a vendor figure for an unreleased optimisation. Also worth recording that the vendor's own documentation and its own community disagree on magnitude: vLLM's install docs say a source build 'can take several minutes' while two community reports put a cold single-arch build at 3+ hours and uncached CI at 5+ hours. The reconciliation is that the docs figure is a warm, practical, precompiled-adjacent figure and the issue figures are cold full builds - which is itself the point of the record. NOT VERIFIED BY ME: I found no published build duration for TensorRT-LLM's C++ compile from an outside user (the >5 h figure is NVIDIA's own CI leg, not a user measurement), none for SGLang's C++ compile, none for llama.cpp, none for LMDeploy, none for ktransformers, and none for MLC LLM's model compilation. SGLang's issue #6830 ('On deepseek, it often takes tens of minutes') refers to torch.compile and CUDA-graph CAPTURE at server startup, which is cost 3 in this taxonomy rather than a source build, and it is too thin to record as a number.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "ev-vllm-issue-13281-source-build-3h",
+    "ev-vllm-rfc-17419-build-time",
+    "ev-vllm-docs-gpu-install-build-cost",
+    "ev-trtllm-pr-7633-cu12-build-over-5h",
+    "ev-trtllm-issue-8286-ds-r1-build-2h",
+    "ev-trtllm-pr-11250-engine-build-time",
+    "ev-trtllm-pr-18542-fmha-jit-warmup",
+    "ev-trtllm-build-from-source-doc",
+    "ev-flashinfer-issue-4317-cute-dsl-no-cache",
+    "ev-flashinfer-issue-4110-gdn-cold-compile",
+    "ev-vllm-issue-48031-flashinfer-jit-cold-start",
+    "ev-flashinfer-issue-4035-jit-aot-kpi"
+  ],
+  "affects": [
+    "vllm",
+    "tensorrt-llm",
+    "flashinfer",
+    "sglang"
+  ],
+  "concepts": [
+    "build-step",
+    "startup-cost",
+    "cuda",
+    "jit",
+    "nvrtc",
+    "ccache",
+    "bucketing"
+  ]
+}

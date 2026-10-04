@@ -1,0 +1,69 @@
+{
+  "id": "obs-tgi-observability",
+  "type": "engine",
+  "name": "Text Generation Inference (observability surface: no TTFT, no KV cache usage, no tracing spans of its own)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-tgi-metrics-doc",
+    "obs-tgi-router-server-rs",
+    "obs-tgi-tracing-py",
+    "obs-tgi-cli-tracing-flags"
+  ],
+  "repo": "huggingface/text-generation-inference",
+  "languages": [
+    "Rust",
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "observability",
+    "ease-of-deployment",
+    "batching",
+    "throughput-first"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "static-batching"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "neuron"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "awq",
+    "gptq",
+    "exl2"
+  ],
+  "notable_features": [
+    "21 metrics published in the docs table, emitted from the Rust router via the `metrics` crate with a Prometheus recorder",
+    "Queue depth and batch shape are visible: `tgi_queue_size` (Gauge), `tgi_batch_current_size`, `tgi_batch_current_max_tokens`, `tgi_batch_next_size`, `tgi_batch_max_total_tokens`",
+    "Per-phase batch timings labelled by method: `tgi_batch_inference_duration`, `tgi_batch_forward_duration`, `tgi_batch_decode_duration`, `tgi_batch_filter_duration`, all carrying a `method` label of prefill or decode",
+    "Per-request latency is decomposed into `tgi_request_duration` (e2e), `tgi_request_validation_duration`, `tgi_request_queue_duration`, `tgi_request_inference_duration`, plus `tgi_request_mean_time_per_token_duration`",
+    "Every request also carries the same timings as response headers (x-total-time, x-validation-time, x-queue-time, x-inference-time, x-time-per-token, x-prompt-tokens, x-generated-tokens) and as OTel span fields"
+  ],
+  "hardware_caveats": [
+    "NO TTFT metric. A grep of router/src/server.rs for time_to_first returns zero hits. This is the single most consequential gap in TGI's surface: you can measure queue time, inference time and time per token, but not the latency a user actually perceives before the first token. A TTFT SLO on TGI has to be computed client-side or by joining the x-queue-time and x-inference-time headers",
+    "NO KV cache utilization metric. Searching the whole repository for cache_usage or first_token returns nothing; the backends/v3/src/block_allocator.rs contains no metric calls. `tgi_batch_current_max_tokens` and `tgi_batch_max_total_tokens` are the closest indirect signal, and they are batch-shape numbers rather than cache occupancy",
+    "NO preemption or eviction metric. The v3 backend can drop requests when its queue overflows (`tgi_request_failure{err=\"dropped\"}`) and can shrink batches under backpressure (`tgi_batch_concat{reason=\"backpressure\"|\"chunking\"|\"wait_exceeded\"}`), which is the observable trace of a system that cannot admit work - but the recompute cost itself is invisible",
+    "`tgi_request_mean_time_per_token_duration` is computed as inference_time / generated_tokens, not (inference_time - ttft) / (generated_tokens - 1). It therefore includes prefill, so it is NOT comparable to vLLM's `vllm:request_time_per_output_token_seconds`",
+    "The published metric table is behind the source: `tgi_batch_concat_duration`, `tgi_batch_inference_failure`, `tgi_request_failure`, `tgi_batch_max_total_tokens` and `tgi_batch_total_tokens` all appear in the code but not in docs/source/reference/metrics.md",
+    "OTel is opt-in via --otlp-endpoint / --otlp-service-name and, when enabled, produces generic gRPC SERVER spans named after the RPC method with rpc.* attributes - not gen_ai.* attributes and not per-token spans. There is no prefill/decode split in a TGI trace"
+  ],
+  "best_for": [
+    "Comparing prefill and decode batch cost directly, because the batch histograms carry a method label no other engine provides at that granularity",
+    "Existing TGI deployments where you accept queue time + inference time + time-per-token as the latency proxy set"
+  ],
+  "avoid_for": [
+    "An SLO on TTFT - the metric does not exist",
+    "Capacity planning from KV cache occupancy - it is not exported",
+    "Per-request distributed tracing of prefill/decode; enable OTel only for coarse request spans"
+  ],
+  "docs_url": "https://huggingface.co/docs/text-generation-inference/en/reference/metrics",
+  "notes": "Verbatim inventory obtained by grepping every metrics::{counter,histogram,gauge,describe}_!(\" name across the full repository tarball (main branch, 2026-10-04): tgi_batch_concat, tgi_batch_concat_duration, tgi_batch_current_max_tokens, tgi_batch_current_size, tgi_batch_decode_duration, tgi_batch_filter_duration, tgi_batch_forward_duration, tgi_batch_inference_count, tgi_batch_inference_duration, tgi_batch_inference_failure, tgi_batch_inference_success, tgi_batch_max_total_tokens, tgi_batch_next_size, tgi_batch_total_tokens, tgi_queue_size, tgi_request_count, tgi_request_duration, tgi_request_failure, tgi_request_generated_tokens, tgi_request_inference_duration, tgi_request_input_length, tgi_request_max_new_tokens, tgi_request_mean_time_per_token_duration, tgi_request_queue_duration, tgi_request_skipped_tokens, tgi_request_success, tgi_request_validation_duration. Definitions live in router/src/server.rs (describe_* macros around line 1990) and the emission sites are router/src/server.rs for request-level and backends/v3/src/{backend.rs,queue.rs,lib.rs} for batch-level. Response headers are set in the same block that records the metrics. Tracing is 63 lines in server/text_generation_server/tracing.py: setup_tracing installs an OTLPSpanExporter with a BatchSpanProcessor, and UDSOpenTelemetryAioServerInterceptor overrides _start_span so that gRPC-over-Unix-socket calls work (adding net.transport=unix and rpc.user_agent from invocation metadata). The equivalent CLI flags exist in the neuron and gaudi backends too."
+}

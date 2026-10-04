@@ -1,0 +1,15 @@
+{
+  "id": "ops-llmd-router-operations",
+  "type": "source",
+  "name": "llm-d Router Operations guide (EPP HA modes, fail-open, proxy and EPP sizing reference data)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "url": "https://github.com/llm-d/llm-d/blob/main/docs/operations/router.md",
+  "publisher": "llm-d",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Active-passive EPP, the multi-replica default which automatically enables --ha-enable-leader-election: 'Scaling replica count does not increase total request throughput capacity, as only the single active leader replica handles external processing requests.' failOpen defaults true so client requests 'are not dropped and continue to be processed by the model server if EPP is unresponsive or unavailable.' Active-active requires disabling leader election and is warned against with approximate prefix-cache plugins because 'replicas do not share local memory state, prefix routing partitions across replicas and degrades cache hit rates significantly'; the measured throughput scaling is 1.0x, 2.0x, 2.7x, 3.5x for 1, 2, 3, 4 replicas. Measured leader-teardown table (Qwen/Qwen2.5-1.5B-Instruct, 2 model server replicas) shows failOpen=true holds 98.1 to 100 percent success but never exactly 100 percent at every Envoy replica count, and 'Residual errors occur during socket teardown at the exact moment of pod termination.' EPP sizing: 'Allocate 0.5 to 1.0 CPU cores per request/second of expected throughput for large agentic workloads (~100k input / 1k output tokens)'; 'Increasing maxPrefixTokensToMatch increases CPU consumption. At lower throughputs, a large prefix limit (such as 100,000 tokens / 6,250 blocks with blockSizeTokens: 16) can increase CPU consumption by over 100% compared to a small limit (4,096 tokens / 256 blocks)'; 'Idle CPU consumption scales with total model-serving pods due to background Prometheus scraping. In a cluster with 100 pods, EPP idle consumption reaches approximately 7.5 cores.' Memory: 4 to 6 GiB at 50 to 100 req/s with 1k output tokens, and 'For long-output generation (e.g., 5k+ output tokens), memory footprint can exceed 20 GiB due to concurrent request state accumulation.' Envoy proxy: 1.2 to 2.0 cores below 10 req/s, at least 8 cores for 100 req/s at 100k context (peak observed 7.27), at least 10 cores for 892 req/s at 10k context; memory stable 1.3 to 1.4 GiB, allocate 2 GiB baseline."
+}

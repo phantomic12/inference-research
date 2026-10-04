@@ -1,0 +1,34 @@
+{
+  "id": "dep-kv-aware-router-view-cannot-be-rebuilt-after-restart",
+  "type": "gotcha",
+  "name": "Cache-aware routing has no way to rebuild its map of which KV blocks live where: the placement view is built from a live event stream, so any router or replica restart leaves it permanently wrong, and the result is silently worse routing rather than an error",
+  "class": "framework",
+  "affects": [
+    "sglang-router",
+    "vllm"
+  ],
+  "concepts": [
+    "control-plane",
+    "data-plane",
+    "routing",
+    "kv-cache",
+    "prefix-cache",
+    "radix-cache",
+    "cache-aware-routing",
+    "staleness"
+  ],
+  "symptom": "Prefix-cache hit rates drop after a restart and never fully recover, with no error and no unhealthy worker. This is the expected behaviour of the current design, not a bug report: SGLang's own RFC enumerates the cases where the router's placement view cannot be recovered. The router or KV Indexer starts after caches are already populated. The placement-state consumer restarts and loses its in-memory view. Events are lost to backpressure, network interruption or subscriber restart. A KV cache replica restarts and its previous placement state becomes invalid. An event gap is older than the replay buffer. In every one of these cases the router keeps serving, keeps returning correct tokens, and simply routes some requests to a worker that does not hold the prefix it claims to - so the cache miss is paid on every request and TTFT quietly regresses. Nobody is paged because nothing is broken.",
+  "root_cause": "KV-aware routing 'relies on an accurate view of which KV blocks are available on each KV cache replica. Today, the Router builds this view incrementally from live BlockStored and BlockRemoved events.' That construction is valid only if the router starts before the workers and receives every event - an assumption no production topology can keep across rolling restarts, autoscaler scale-up, and node maintenance. The RFC is careful about the blast radius, and that scoping is the important part: 'These cases do not affect inference correctness, but they may leave the placement view incomplete or stale, resulting in suboptimal routing and lower KV cache hit rates.' The proposed fix defines the contract a cache-aware router needs: each independently routable KV cache replica exposes a live event stream for steady state, a replay journal for short gaps, and a snapshot endpoint for initialization and full recovery; the replica carries an epoch that changes whenever it restarts or is rebuilt and a monotonically increasing seq within an epoch; a snapshot with resume_seq = N must reflect all events below N; and only READY replica views are used for cache-aware routing, with recovery failure falling back to normal load-aware routing. Epoch semantics are what make a replica restart detectable at all - 'If any required TP rank is restarted or replaced, the replica must use a new epoch, even if the metadata leader itself did not restart.' The replica is the unit, not the rank: TP=4,DP=1 is 1 KV cache replica, TP=4,DP=2 is 2, and one logical snapshot is exposed per replica rather than per TP rank.",
+  "workaround": "Until the snapshot and replay mechanism lands, treat a cache-aware router as having two modes - converged and starting - and make the starting mode observable yourself. Concretely: gate cache-aware routing on a router-side readiness flag you control rather than on process liveness; force at least one full re-sync (or flush_cache) after any router restart, any worker restart, and any rolling deploy of the engines, and count that as a deliberate step rather than hoping the event stream catches up; and watch prefix-cache hit rate as a first-class SLO signal, because it is the only external observable of placement-view quality. Note the RFC's own recovery rule - 'Recovery failure: temporarily fall back to normal load-aware routing' - is the right behaviour to implement even if you never adopt snapshots, and /flush_cache is exposed by the gateway for exactly this purpose on PD redeploys. Companion work in flight: #32729 (KV event gap replay), #34407 (worker snapshots), #36224 (versioned KV hint envelope), #42449 (kv-indexer event log, worker replay, liveness and indexer failover).",
+  "severity": "minor",
+  "notes": "Severity is minor rather than major for a deliberate reason: this degrades efficiency, never correctness, and the upstream project has documented it as an efficiency loss rather than a fault. It earns a record because the operational consequence is real and counter-intuitive - restarting the router to 'fix' routing can make routing worse, and a steady-state hit-rate dip after a deploy is the signature rather than the exception. The cost falls hardest on exactly the workloads that chose cache-aware routing for a reason: agentic and multi-turn traffic with a large shared prefix, where the entire value of the routing decision is the cache hit. Also note the topology lesson generalises past SGLang - any cache-affinity router that reconstructs state from an event stream has this property, and the snapshot-plus-epoch contract is the shape of the fix.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "dep-sgl-router-33394-kv-placement-recovery-rfc",
+    "dep-sgl-model-gateway-readme",
+    "serve-sglang-github",
+    "serve-sglang-dp-controller"
+  ]
+}

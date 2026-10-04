@@ -1,0 +1,70 @@
+{
+  "id": "obs-lmdeploy-observability",
+  "type": "engine",
+  "name": "LMDeploy (observability surface: near-copy of vLLM's metric set, no preemption metric, no OTel)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-lmdeploy-metrics-loggers",
+    "obs-lmdeploy-metrics-doc",
+    "obs-lmdeploy-monitoring-dir"
+  ],
+  "repo": "InternLM/lmdeploy",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2021,
+  "design_goal": [
+    "observability",
+    "compression-friendly-serving",
+    "turbo-mind-throughput"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "camb",
+    "maca",
+    "ascend"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "awq",
+    "w4a16"
+  ],
+  "notable_features": [
+    "The metric set is a close copy of vLLM's with the prefix swapped: `lmdeploy:time_to_first_token_seconds`, `lmdeploy:time_per_output_token_seconds`, `lmdeploy:iter_token_latency`, `lmdeploy:e2e_request_latency_seconds`, `lmdeploy:request_queue_time_seconds`, `lmdeploy:request_inference_time_seconds`, `lmdeploy:request_prefill_time_seconds`, `lmdeploy:request_decode_time_seconds`",
+    "Scheduler state as gauges: `lmdeploy:num_requests_running`, `lmdeploy:num_requests_waiting`, `lmdeploy:num_requests_succeeded`, `lmdeploy:num_requests_failed`, `lmdeploy:num_api_requests_routed`, `lmdeploy:num_api_requests_waiting`",
+    "KV cache plus prefix reuse: `lmdeploy:gpu_cache_usage_perc`, `lmdeploy:prefix_cache_hit_rate`, `lmdeploy:request_cached_tokens` (Histogram), `lmdeploy:request_cache_hit_ratio` (Histogram), `lmdeploy:cached_tokens_total`",
+    "Speculative decoding acceptance both as raw counters and as derived ratios: `lmdeploy:spec_decode_mean_accept_rate` and `lmdeploy:spec_decode_mean_accept_length` (the latter computed as 1 + accepted/drafts)",
+    "A shipped monitoring stack in-tree: lmdeploy/monitoring has docker-compose (Prometheus 9090, Grafana 3000), prometheus.yaml, and a Grafana dashboard JSON",
+    "Metrics require no flag on the API server - the endpoint is simply available at the server port (23333 by default)"
+  ],
+  "hardware_caveats": [
+    "`lmdeploy:gpu_cache_usage_perc` means different things on the two backends, and the docs are explicit about it. On PyTorch it is 'logical GPU blocks referenced by live requests' - blocks shared by multiple requests counted once, blocks held only by the prefix cache or by stopped sessions EXCLUDED - and set LMDEPLOY_ENABLE_REQUEST_CACHE_USAGE_METRIC=0 before start to report total logical occupancy including prefix-retained blocks instead. On Turbomind it is bytes held by live prefix-cache and checkpoint objects divided by the configured cache-region size. A dashboard threshold written for one backend is wrong on the other",
+    "Turbomind reports scheduler metrics for DP 1 only: 'per-rank Turbomind metrics with DP greater than 1 are not yet supported'. With DP > 1 you launch one API server per DP rank and must edit prometheus.yaml per replica, using the host IP rather than 127.0.0.1 because LMDeploy starts API servers on the real host IP when DP > 1",
+    "NO preemption metric. grep for 'preempt' in lmdeploy/metrics/loggers.py returns nothing. Turbomind does preempt under KV pressure and you cannot see it",
+    "`lmdeploy:iter_token_latency` has no unit suffix, unlike everything else in the set - a naming inconsistency inherited from the vLLM fork it tracks",
+    "NO OpenTelemetry. An in-repo search for opentelemetry in InternLM/lmdeploy returns 0 hits. Prometheus only"
+  ],
+  "best_for": [
+    "A Turbomind or PyTorch deployment where you want vLLM-shaped metrics without running vLLM, including the shipped Grafana dashboard",
+    "Prefix-cache analysis: the per-request cached-token histogram and cache-hit-ratio histogram are finer-grained than vLLM's counters alone",
+    "Speculative decoding tuning, via the accept-rate and accept-length gauges rather than raw counters"
+  ],
+  "avoid_for": [
+    "Cross-backend threshold sharing - the KV cache gauge's meaning changes between PyTorch and Turbomind",
+    "DP > 1 on Turbomind with per-rank metrics expectations",
+    "Observing preemption or distributed traces; neither exists"
+  ],
+  "docs_url": "https://lmdeploy.readthedocs.io/en/latest/advance/metrics.html",
+  "notes": "Metric names transcribed from lmdeploy/metrics/loggers.py on main. Full inventory: lmdeploy:backend_config (Info), lmdeploy:num_requests_succeeded, lmdeploy:num_requests_failed, lmdeploy:num_api_requests_routed, lmdeploy:num_api_requests_waiting, lmdeploy:num_requests_running, lmdeploy:num_requests_waiting, lmdeploy:gpu_cache_usage_perc, lmdeploy:prefix_cache_hit_rate, lmdeploy:prompt_tokens_total, lmdeploy:generation_tokens_total, lmdeploy:iteration_tokens_total (Histogram of prompt+generation tokens per iteration), lmdeploy:request_success_total (label finish_reason), lmdeploy:request_prompt_tokens, lmdeploy:request_generation_tokens, lmdeploy:request_cached_tokens, lmdeploy:request_cache_hit_ratio, lmdeploy:cached_tokens_total, lmdeploy:time_to_first_token_seconds, lmdeploy:time_per_output_token_seconds, lmdeploy:iter_token_latency, lmdeploy:e2e_request_latency_seconds, lmdeploy:request_queue_time_seconds, lmdeploy:request_inference_time_seconds, lmdeploy:request_prefill_time_seconds, lmdeploy:request_decode_time_seconds, lmdeploy:spec_decode_num_drafts_total, lmdeploy:spec_decode_num_draft_tokens_total, lmdeploy:spec_decode_num_accepted_tokens_total, lmdeploy:spec_decode_num_accepted_tokens_per_pos_total, lmdeploy:spec_decode_mean_accept_rate, lmdeploy:spec_decode_mean_accept_length, lmdeploy:spec_decode_per_position_accept_rate. Bucket construction reuses vLLM's idiom (build_buckets / build_1_2_5_buckets). record_iteration() observes TTFT, TPOT and ITL per iteration; record_finish() observes the full per-request set. The shipped dashboard queries e2e_request_latency_seconds, prompt_tokens_total, generation_tokens_total, time_per_output_token_seconds, iter_token_latency, num_requests_running, num_requests_waiting, time_to_first_token_seconds, gpu_cache_usage_perc, request_success_total and request_queue_time_seconds."
+}

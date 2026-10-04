@@ -1,0 +1,15 @@
+{
+  "id": "ops-sglang-router-readme",
+  "type": "source",
+  "name": "sgl-router README (worker discovery, PD version grouping, KV bootstrap, API-key handling)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://github.com/sgl-project/sglang/blob/main/experimental/sgl-router/README.md",
+  "publisher": "SGLang project",
+  "kind": "repo",
+  "published": "main branch as of 2026-10-04",
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "Operational details. --pd-version-group-label pairs a prefill worker only with decode workers sharing that EndpointSlice label 'so KV never crosses versions' (one Service per role and version), the documented mechanism for running two engine versions side by side during a rollout; unlabeled workers form their own group. Engines launched with --api-key reject the router's /server_info and /model_info probes without the key, so the same key must be passed as --worker-api-key; chat requests and /flush_cache forward the CALLER's Authorization header instead, so callers still need the engine key. Peer bootstrap: 'A replica that starts mid-fleet subscribes to each worker KV topic mid-stream, so everything already resident in the engines caches is invisible to it and it routes cache-blind until traffic re-stores those blocks - degrading the engines locality for the whole fleet, once per replica on every rolling update.' --kv-bootstrap-timeout-ms defaults to 600000 (10 minutes) and /readyz stays 503 until bootstrap settles, so 'startup/readiness probes must tolerate a replica staying unready this long'. --kv-peer-selector is matched against EndpointSlice labels (router Service labels plus kubernetes.io/service-name), so 'A pod-template label matches nothing and every replica boots cold.' 'A rolling update should surge (maxUnavailable: 0) so new replicas always have warm siblings to copy from.' Pending prefixes: until KV events arrive, requests sharing a cold prefix see no cached owner and spread across workers, each prefilling the same prefix; --cache-pending-prefix-ttl-ms is off by default. HTTP/2: 'A worker protocol is fixed for as long as that worker stays registered: it is read once, at registration, and never re-read', so under --worker-urls a worker that stops serving its registered protocol 'is not detected until it is re-registered; its circuit breaker will open in the meantime.' h2c is prior-knowledge only with no negotiation or fallback."
+}
