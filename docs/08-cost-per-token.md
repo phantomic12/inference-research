@@ -378,7 +378,7 @@ badly wrong. **No record in the repo carries an output-only rate for these.**
 
 **7. No utilisation figure exists anywhere.** The $/Mtok above assumes a GPU-hour
 is fully used. Real serving is bounded by KV-cache capacity and by
-[[data/gotchas/dvfs-power-cap-moves-tail-latency-under-sustained-load.json]]-class
+[[gotchas/dvfs-power-cap-moves-tail-latency-under-sustained-load]]-class
 effects. There is no `utilisation` field in the supply schema and no
 achieved-throughput-below-peak record, so **cost per token actually delivered to
 a user cannot be computed** — only cost per token at vendor peak.

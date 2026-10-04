@@ -252,6 +252,32 @@ quarter.
     severity             enum      blocker | major | minor
     notes
 
+## compiler
+
+A compiler, DSL, or code-generation stack for inference — the layer between a model definition and the GPU kernel.
+
+    repo                  owner/name
+    language              string    primary implementation language
+    license               string
+    first_release_year    int
+    category              dsl | compiler-framework | template-library | graph-optimizer |
+                          kernel-dsl | runtime
+    target_backends       [string]  cuda | rocm | hip | metal | vulkan | cpu-avx512 |
+                          cpu-avx2 | opencl | tpu | xnnpack | spirv | webgpu
+    input_languages       [string]  python | jax | pytorch | tensorflow | onnx |
+                          tflite | cutlass-cpp | triton | mlir | xla-hlo
+    output_artifacts      [string]  ptx | amdgcn | spirv | air | metal | c | llvm-ir |
+                          triton-ir | cubin | plan
+    compilation_strategy  jit | aot | template-instantiation | graph-rewrite | mixed
+    autotuning            bool
+    production_ready      bool
+    production_evidence   [string]  engine names or projects that use this in production
+    strengths            [string]
+    weaknesses            [string]
+    learning_curve        low | moderate | high | very-high
+    compile_time_seconds  number|null  typical compile time for a single kernel
+    notes
+
 ## source
 
     url                  string
