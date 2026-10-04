@@ -565,7 +565,7 @@
 - **vLLM auto-selects an FP8 linear kernel on RDNA4 that is slower than the one it picked before v0.28** (`gotchas/vllm-rdna4-rowwise-fp8-kernel-auto-selected`) — [minor] framework · On RDNA4 (Radeon AI PRO R9700, gfx1201), serving FP8 compressed-tensors checkpoints with --kv-cache-dtype fp8 and TRITON_ATTN, decode throughput depends on a kernel selector rather than on the hardwar
 - **vLLM's 'Your GPU does not have native support for FP4' warning fires on weight-only NVFP4 checkpoints, and gets quoted as evidence the silicon lacks FP4 kernels** (`gotchas/nvfp4-marlin-warning-blames-gpu-for-weight-only-checkpoint`) — [minor] measurement · prepare_nvfp4_moe_layer_for_marlin() emits 'Your GPU does not have native support for FP4 computation but FP4 quantization is being used. Weight-only FP4 compression will be used leveraging the Marlin
 
-## Where to buy / source hardware (81)
+## Where to buy / source hardware (101)
 
 - **AMD Instinct GPU server solutions via AMD's OEM and system-builder partners** (`supply/amd-instinct-oem-systems`) — AMD (via named OEM partners) · Worldwide; AMD publishes a qualified-server catalog PDF and a partner logo list · unknown
 - **Best Buy (US big-box) RDNA4 consumer discrete GPU channel** (`supply/bestbuy-rdna4-consumer-discrete`) — AMD board partners (Gigabyte, XFX) · United States · $869.99 · in-stock · Gigabyte Radeon RX 9070 XT Gaming OC 16GB GDDR6 PCIe 5.0 bare card, SKU 6617866,
@@ -617,34 +617,54 @@
 - **AWS EC2 P5 (NVIDIA H100 SXM, on-demand + Capacity Blocks)** (`supply/aws-ec2-p5-h100`) — nvidia · us-east-1, us-west-2 and 8+ further regions (see notes) · $6.88 · allocation-only · per H100 SXM GPU-hour; 8x H100 per p5.48xlarge instance. On-demand us-east-1 $55
 - **AWS EC2 P5en (NVIDIA H200 SXM, on-demand + Capacity Blocks)** (`supply/aws-ec2-p5en-h200`) — nvidia · us-east-1, us-west-2 and 8+ further regions · $7.912 · allocation-only · per H200 SXM GPU-hour; 8x H200 per p5en.48xlarge. On-demand us-east-1 $63.296/in
 - **Air-cooled vs liquid-cooled is a per-SKU form-factor fact, not an architecture fact: H100 PCIe is dual-slot air-cooled, H100 SXM is a bare module** (`supply/h100-pcie-air-cooled-vs-sxm-liquid`) — nvidia · Global · in-stock
+- **Anyscale Hosted - A100** (`supply/ppl-sup-anyscale-a100`) — nvidia · US (Anyscale infrastructure) · $4.9591 · in-stock · per ACU-hour (Anyscale Compute Unit), on-demand, Hosted tier. Fetched 2026-10-04
+- **Beam Cloud On-demand - A100 80GB SXM4** (`supply/ppl-sup-beam-a100-ondemand`) — nvidia · US (Beam infrastructure) · $1.36 · in-stock · per A100 80GB SXM4 machine-hour, on-demand, including 16 vCPU + 128 GB RAM + 1 T
+- **Beam Cloud On-demand - H100 PCIe** (`supply/ppl-sup-beam-h100-ondemand`) — nvidia · US (Beam infrastructure) · $1.83 · in-stock · per H100 PCIe machine-hour, on-demand, including 26 vCPU + 200 GB RAM + 1 TB NVM
+- **Beam Cloud On-demand - L40S PCIe** (`supply/ppl-sup-beam-l40s-ondemand`) — nvidia · US (Beam infrastructure) · $0.76 · in-stock · per L40S PCIe machine-hour, on-demand, including 12 vCPU + 96 GB RAM + 1 TB NVMe
 - **CoreWeave Cloud (HGX H100 / H200 / B200 / A100 nodes)** (`supply/coreweave-h100-h200`) — nvidia · North America and Europe (both priced separately on the page) · $6.155 · in-stock · per GPU-hour (NOT per node). UNIT LABEL CORRECTED 2026-10-04 (parent agent): thi
 - **Fireworks AI On-Demand deployments (per GPU-second)** (`supply/fireworks-on-demand-h100-h200`) — nvidia · primary regions plus region-restricted deployments at a 1.5x premium · $8.0 · in-stock · per GPU-hour, 'Pay per GPU second, with no extra charges for start-up times'. H1
+- **GCP A3 Edge GPU - H100 (8x H100 instance)** (`supply/ppl-sup-gcp-a3-h100`) — nvidia · GCP us-central1 (and other regions) · $1.18 · in-stock · per H100 SXM GPU-hour, on-demand. Fetched 2026-10-04. a3-edgegpu-8g instance: 8x
+- **GPU.ai - B200 (Secure tier)** (`supply/ppl-sup-gpu-ai-b200`) — nvidia · 12+ clouds aggregated by GPU.ai · $6.79 · in-stock · per B200 GPU-hour, secure tier (vetted datacenter capacity), on-demand. Fetched 
+- **GPU.ai - B300 (Secure tier)** (`supply/ppl-sup-gpu-ai-b300`) — nvidia · 12+ clouds aggregated by GPU.ai · $7.89 · in-stock · per B300 GPU-hour, secure tier (vetted datacenter capacity), on-demand. Fetched 
+- **GPU.ai - H100 SXM (Secure tier)** (`supply/ppl-sup-gpu-ai-h100-sxm`) — nvidia · 12+ clouds aggregated by GPU.ai · $3.49 · in-stock · per H100 SXM GPU-hour, secure tier (vetted datacenter capacity), on-demand. Fetc
 - **Google Compute Engine A2 (NVIDIA A100 40GB / 80GB)** (`supply/gcp-a2-a100`) — nvidia · us-central1 and most GCP regions · $5.0688 · in-stock · per A100 GPU-hour. a2-ultragpu-8g = 8x A100 80GB at $40.550383123/instance-hr / 
 - **Google Compute Engine A3 / A3 Ultra (NVIDIA H100 and H200)** (`supply/gcp-a3-h100-h200`) — nvidia · us-central1 (prices as published); a3 and a3-ultragpu offered across us-east1/4/5, us-west, europe-west, asia-northeast · $11.0613 · allocation-only · per GPU-hour. a3-highgpu-8g = 8x H100 at $88.490000119/instance-hr / 8 = $11.061
 - **Google Compute Engine G2 (NVIDIA L4)** (`supply/gcp-g2-l4`) — nvidia · us-central1 and most GCP regions · $0.8536 · in-stock · per L4 GPU-hour. g2-standard-8 = 1x L4 at $0.853624312/instance-hr. g2-standard-
+- **Hugging Face Inference Endpoints - H100 (GCP)** (`supply/ppl-sup-huggingface-h100-gcp`) — nvidia · GCP (us-central1 and other regions) · $10.0 · in-stock · per H100 GPU-hour, on-demand, GCP infrastructure. Fetched 2026-10-04. Billed by 
+- **Hugging Face Inference Endpoints - H200** (`supply/ppl-sup-huggingface-h200`) — nvidia · AWS (us-east-1 and other regions) · $5.0 · in-stock · per H200 GPU-hour, on-demand, AWS infrastructure. Fetched 2026-10-04. Billed by 
 - **Lambda AI cloud GPU instances (NVIDIA H100 SXM, self-serve)** (`supply/lambda-gpu-cloud-h100`) — nvidia · US-based (Lambda does not itemise regions on the pricing page) · $3.99 · in-stock · per GPU-hour, 8-GPU instance (208 vCPU / 1800 GiB / 22 TiB SSD): H100 SXM $3.99;
 - **NVIDIA DGX H100 / H200 system: 10.2 kW max air-cooled 8-GPU node (6x 3.3 kW PSU, 4+2 redundant)** (`supply/dgx-h100-h200-10kw-air-cooled-node`) — nvidia · Global · in-stock
 - **NVIDIA GB200 NVL72 rack (72 Blackwell GPUs): ~120 kW per rack, liquid-cooled, requires facility liquid loop** (`supply/gb200-nvl72-rack-120kw-liquid-required`) — nvidia · Global; sold through NVIDIA-Certified Systems and DGX GB rack deployments · allocation-only
 - **NVIDIA GB300 NVL72 rack (72 Blackwell Ultra GPUs): fully liquid-cooled, Max TDP up to 1,400 W per GPU** (`supply/gb300-nvl72-rack-1400w-per-gpu`) — nvidia · Global; NVIDIA-Certified Systems · allocation-only
 - **New retail / secondary asking market: RTX 4090 and RTX 3090 24GB (bare card bands)** (`supply/new-retail-rtx-4090-3090-consumer`) — nvidia · US / global (eBay marketplace, USD listings) · $3,299.0 · in-stock · SECONDARY-MARKET ASKING prices, bare consumer 24GB GeForce cards, USD, observed 
 - **New retail: RTX 5090 32GB and current-generation consumer cards (Amazon.com list)** (`supply/new-retail-rtx-5090-amazon`) — nvidia · US (amazon.com) · $6,549.99 · in-stock · NEW-RETAIL list prices, sealed retail cards, USD, observed 2026-10-03, single ch
+- **Paperspace Core - A100-80G** (`supply/ppl-sup-paperspace-a100-80g`) — nvidia · US (Paperspace infrastructure) · $1.15 · in-stock · per A100-80G instance-hour, on-demand, including 12 vCPU + 90 GB RAM. Fetched 20
+- **Paperspace Core - H100** (`supply/ppl-sup-paperspace-h100`) — nvidia · US (Paperspace infrastructure) · $3.09 · in-stock · per H100 instance-hour, on-demand, including 12 vCPU + 90 GB RAM. Fetched 2026-1
 - **Peer-to-peer rental index: NVIDIA B200 (per-GPU-hour, verified hosts)** (`supply/rental-b200-vast-index`) — nvidia · global · $7.97 · in-stock · USD per GPU-HOUR for the GPU component, verified peer-to-peer hosts, 8-GPU bundl
 - **Peer-to-peer rental index: NVIDIA H100 SXM5 (per-GPU-hour, verified hosts)** (`supply/rental-h100-sxm-vast-index`) — nvidia · global (NL, TH, SI, CZ, FR, CA, US hosts observed) · $2.47 · in-stock · USD per GPU-HOUR for the GPU component, verified peer-to-peer hosts, 1-GPU bundl
 - **Peer-to-peer rental index: NVIDIA H200 SXM (per-GPU-hour, verified hosts)** (`supply/rental-h200-sxm-vast-index`) — nvidia · global (FR and 8 other countries observed) · $5.0 · in-stock · USD per GPU-HOUR for the GPU component, verified peer-to-peer hosts, 8-GPU bundl
 - **Peer-to-peer rental index: consumer GeForce (4090 / 3090 / 5090 per-GPU-hour)** (`supply/rental-consumer-4090-3090-5090-vast-index`) — nvidia · global (16-17 host countries observed per SKU) · $0.4289 · in-stock · USD per GPU-HOUR for the GPU component, verified peer-to-peer hosts, 1-GPU bundl
 - **Peer-to-peer rental index: datacenter PCIe L40S and RTX 6000 Ada (per-GPU-hour)** (`supply/rental-datacenter-l40s-6000ada-vast-index`) — nvidia · global · $0.7085 · in-stock · USD per GPU-HOUR for the GPU component, verified peer-to-peer hosts, 1-GPU bundl
+- **Replicate - H100 GPU instance** (`supply/ppl-sup-replicate-h100`) — nvidia · US (Replicate infrastructure) · $5.49 · in-stock · per H100 GPU-hour, on-demand, including 13 vCPU + 144 GB RAM. Fetched 2026-10-04
+- **Replicate - H200 GPU instance** (`supply/ppl-sup-replicate-h200`) — nvidia · US (Replicate infrastructure) · $5.49 · allocation-only · per H200 GPU-hour, on-demand, including 13 vCPU + 144 GB RAM. Fetched 2026-10-04
 - **Runpod Pods (dedicated H100 / H200 / A100 GPU instances)** (`supply/runpod-pods-h100-h200`) — nvidia · 30+ regions · $3.49 · in-stock · per GPU-hour, Community Cloud Pods (a dedicated instance, per-second billing ava
 - **Runpod Serverless (per-worker inference endpoints)** (`supply/runpod-serverless-h100-h200`) — nvidia · 30+ regions · $4.79 · in-stock · per WORKER-hour, not per GPU-hour - a worker is one GPU on Runpod's inference pl
 - **Secondary / integrator: refurbished 8x H100 SXM5 server node (whole-system band)** (`supply/used-8x-h100-sxm-node-system`) — nvidia · US · $180,000.0 · discontinued · REFURBISHED full 8-GPU SERVER (Dell PowerEdge XE9680, Xeon Platinum 8462Y+, 8x H
 - **Secondary export-restricted market: NVIDIA H800 80GB PCIe (bare card, ASKING band)** (`supply/used-h800-80gb-market`) — nvidia · global grey market (China-origin listings) · $41,221.0 · unknown · USED/secondary-market ASKING prices, bare H800 80GB PCIe cards, USD, observed 20
 - **Together AI GPU Clusters (HGX H100, on-demand)** (`supply/together-gpu-clusters-h100`) — nvidia · not stated on the pricing page · $5.49 · unknown · per GPU-hour - the page states 'All prices per gpu per hour'. On-demand pay-as-y
+- **Together AI GPU Clusters - HGX B200 on-demand** (`supply/ppl-sup-together-b200-ondemand`) — nvidia · US (Together AI infrastructure) · $8.19 · in-stock · per B200 GPU-hour, on-demand pay-as-you-go, GPU Clusters product. Fetched 2026-1
+- **Together AI GPU Clusters - HGX H100 on-demand** (`supply/ppl-sup-together-h100-ondemand`) — nvidia · US (Together AI infrastructure) · $3.99 · in-stock · per H100 SXM GPU-hour, on-demand pay-as-you-go, GPU Clusters product. Fetched 20
+- **Together AI GPU Clusters - HGX H100 preemptible** (`supply/ppl-sup-together-h100-preemptible`) — nvidia · US (Together AI infrastructure) · $1.99 · in-stock · per H100 SXM GPU-hour, preemptible (pay-as-you-go), GPU Clusters product. Fetche
+- **Together AI GPU Clusters - HGX H200 on-demand** (`supply/ppl-sup-together-h200-ondemand`) — nvidia · US (Together AI infrastructure) · $5.99 · in-stock · per H200 SXM GPU-hour, on-demand pay-as-you-go, GPU Clusters product. Fetched 20
 - **Used / secondary market: NVIDIA A100 80GB (bare card, ASKING band)** (`supply/used-a100-80gb-pcie-market`) — nvidia · US / global (eBay marketplace, USD listings) · $21,995.0 · unknown · USED-market ASKING prices, bare A100 80GB (SXM4-module and SXM4-to-PCIe-converte
 - **Used / secondary market: NVIDIA H100 80GB PCIe (bare card, ASKING band)** (`supply/used-h100-80gb-pcie-market`) — nvidia · US / global (eBay marketplace, USD listings) · $43,000.0 · unknown · USED-market ASKING prices, bare H100 80GB PCIe card only (part 900-21010-000-000
 - **Used / secondary market: NVIDIA H100 80GB SXM5 (bare module, ASKING band)** (`supply/used-h100-80gb-sxm-market`) — nvidia · US / global (eBay marketplace, USD listings) · $26,880.0 · unknown · USED-market ASKING prices, bare H100 80GB SXM5 module only, USD, observed 2026-1
 - **Oracle Cloud Infrastructure BM.GPU.H100.8 / BM.GPU.H200.8** (`supply/oracle-bm-gpu-h100-h200`) — oracle · OCI commercial regions (Oracle does not itemise the regions on the price-list page) · $10.0 · unknown · per GPU per hour - Oracle's price list quotes GPU shapes PER GPU PER HOUR, not p
 - **Oracle Cloud Infrastructure BM.GPU4.8 / BM.GPU.A100-v2.8 / L40S** (`supply/oracle-bm-gpu-a100`) — oracle · OCI commercial regions · $4.0 · unknown · per GPU per hour, as quoted by Oracle: BM.GPU.A100-v2.8 (8x A100 80GB) = $4.00; 
+- **AWS Data Transfer Out - NEGATIVE: egress rates not accessible via static fetch** (`supply/ppl-sup-aws-egress-negative`) — All AWS regions · unknown · No price recorded. AWS egress pricing is JS-rendered and was not accessible via 
 - **Cost to RUN, not to buy: US average industrial electricity price, 8.13 cents/kWh in 2024 (derived from EIA volume and revenue tables)** (`supply/us-electricity-industrial-tariff-2024`) — United States (national average across all 50 states and DC) · $0.0813 · in-stock · USD per kWh, INDUSTRIAL sector average retail price, calendar year 2024, all US 
 - **MARKET SUMMARY: GPU price bands by segment, observed 2026-10-03 (new / used / rental)** (`supply/market-gpu-price-bands-2026-10`) — global (US-weighted; hosts in NL, TH, SI, CZ, FR, CA, US) · unknown
+- **Uptime Institute PUE data - NEGATIVE: 2026 survey behind download wall** (`supply/ppl-sup-uptime-pue-negative`) — Global · unknown · No price recorded. PUE is a ratio, not a price. The Uptime Institute 2026 survey
 - **eBay used Intel Arc B580 12GB consumer cards** (`supply/ebay-used-intel-arc-b580`) — various third-party sellers on eBay · United States (eBay.com) · $290.0 · in-stock · USED / Pre-Owned, bare PCIe consumer card, as-is. $290.00 = Acer Nitro Intel Arc
 - **eBay used bare A100 80GB PCIe cards (the mainstream ex-datacenter consumer path)** (`supply/ebay-used-a100-80gb-pcie`) — various third-party sellers on eBay · United States (eBay.com) · $12,099.0 · in-stock · USED / Pre-Owned, bare A100 80GB **PCIe** card. $12,099.00 = the lowest listing 
 - **eBay used graphics-card market (GeForce RTX 4090 as reference used accelerator)** (`supply/ebay-used-consumer-gpu-market`) — various third-party sellers on eBay · United States (eBay.com, ship-to ZIP 11429) · $2,000.0 · in-stock · USED / Pre-Owned, bare PCIe graphics card, no server, as-is, no warranty stated.
@@ -1041,7 +1061,7 @@
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (1121)
+## Sources (1233)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **Best practices for competitive inference optimization on AMD Instinct MI300X GPUs (ROCm Blogs)** (`sources/bench-amd-rocm-llm-inference-best-practices`) — benchmark · AMD
@@ -1063,6 +1083,7 @@
 - **MLPerf Inference v6.0 closed results: AMD 8xMI355X Llama2-70B Offline summary log** (`sources/bench-amd-mlperf-v6-0-raw-log-amd-mi355x`) — benchmark · MLCommons
 - **MLPerf Inference v6.0 closed results: AMD 8xMI355X gpt-oss-120b Offline summary log** (`sources/bench-amd-mlperf-v6-0-raw-log-amd-gpt-oss-120b`) — benchmark · MLCommons
 - **MLPerf Inference v6.1 closed results: Intel 4x Arc Pro B70 Llama2-70B Offline summary log** (`sources/bench-intel-arc-pro-b70-mlperf-v6-1-llama2-70b`) — benchmark · MLCommons / Intel
+- **MLPerf Inference: Datacenter benchmark suite description** (`sources/ev-mlperf-inference-datacenter-page`) — benchmark · MLCommons
 - **MLX-LM benchmark data for Qwen3-4B and Qwen3-30B-A3B across precisions (mlx-lm PR #552)** (`sources/bench-apple-mlx-lm-qwen3-benchmarks`) — benchmark · ml-explore (Apple) / community
 - **PicClick eBay listing aggregator (asking prices)** (`sources/sup-price-picclick-ebay-asking`) — benchmark · PicClick
 - **Reproducing the AMD MLPerf Inference v6.0 Submission Result (ROCm Blogs)** (`sources/bench-amd-mlperf-v6-0-repro-guide`) — benchmark · AMD
@@ -1096,6 +1117,7 @@
 - **EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees (arXiv:2406.16858)** (`sources/pap-eff-eagle-2`) — blog
 - **EAGLE-3: Scaling up Inference Acceleration of Large Language Models via Training-Time Test (arXiv:2503.01840)** (`sources/pap-eff-eagle-3`) — blog
 - **Evaluating Llama 3.3 70B Inference on NVIDIA H100 and A100 GPUs (genai-perf)** (`sources/bench-nv-silexdata-h100-a100-blog`) — blog · Silex Data Solutions
+- **Export control driven GPU price distortion - H20/H200/H800 as worked example** (`sources/ppl-dep-export-control-price-distortion`) — blog · Reuters / derived from multiple repo records
 - **Falcon-H1 release blogpost** (`sources/hf-eco-falcon-h1-blog`) — blog · TII Falcon Team
 - **Flash-Decoding for long-context inference** (`sources/flop-flashdecoding`) — blog · Stanford CRFM / Tri Dao
 - **FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision** (`sources/kern-flashattention-3-blog`) — blog · Tri Dao
@@ -1136,6 +1158,7 @@
 - **Recursive Speculative Decoding: Accelerating LLM Inference via Sampling Without Replacement (arXiv:2402.14160)** (`sources/pap-eff-recursive-specdec`) — blog
 - **Reuters: Nvidia tweaks flagship H100 chip for export to China as H800 (2023-03-21)** (`sources/acc-fill-reuters-h800-export-china`) — blog · Reuters
 - **Runpod GPU Cloud published hourly pricing (Community and Secure Cloud)** (`sources/pwr-runpod-pricing-page`) — blog · Runpod
+- **SGLang: Fast and Expressive LLM Inference with RadixAttention (LMSYS blog post)** (`sources/ev-sglang-lmsys-benchmark-blog`) — blog · LMSYS Org (UC Berkeley)
 - **Self-Consistency Improves Chain of Thought Reasoning in Language Models (arXiv:2203.11171)** (`sources/pap-eff-self-consistency`) — blog
 - **Sequoia: Scalable, Robust, and Hardware-aware Speculative Decoding (arXiv:2402.12374)** (`sources/pap-eff-sequoia`) — blog
 - **ShortGPT: Layers in Large Language Models are More Redundant Than You Expect (arXiv:2403.03853)** (`sources/pap-eff-shortgpt`) — blog
@@ -1148,10 +1171,15 @@
 - **mirrorfrog.com AI Compute Cards Wiki - Ascend 310P / Enflame T21 pages** (`sources/cn-cn-ai-accelerator-wiki`) — blog · mirrorfrog.com
 - **s1: Simple test-time scaling (arXiv:2501.19393)** (`sources/pap-eff-s1-budget-forcing`) — blog
 - **vLLM Reaches 25K Total TPS/GPU on Qwen3.5 (GB200 NVL72 PD serving)** (`sources/bench-nv-vllm-qwen35-25k-tps-blog`) — blog · vLLM project
+- **AWS EC2 Data Transfer Out pricing - NEGATIVE: pricing table not accessible via static fetch** (`sources/ppl-dep-aws-egress-negative`) — database · Amazon Web Services
 - **AWS EC2 Price List API - US East (N. Virginia), current** (`sources/sup-cloud-aws-ec2-price-list-use1`) — database · Amazon Web Services
 - **AWS EC2 Price List API - US West (Oregon), current** (`sources/sup-cloud-aws-ec2-price-list-usw2`) — database · Amazon Web Services
 - **Amazon EC2 Capacity Blocks for ML pricing** (`sources/sup-cloud-aws-ec2-capacityblocks-pricing`) — database · Amazon Web Services
 - **Amazon.com search results for RTX 3090** (`sources/noncuda-amazon-rtx3090-search`) — database · Amazon
+- **Anyscale ACU pricing - Compute unit rates and instance mapping** (`sources/ppl-cloud-anyscale-acu-detail`) — database · Anyscale
+- **Anyscale Pricing - Pay-as-you-go GPU rates (Hosted tier)** (`sources/ppl-cloud-anyscale-pricing`) — database · Anyscale
+- **Anyscale as cloud orchestrator - ACU billing, Ray platform, BYOC or hosted** (`sources/ppl-orch-anyscale-billing-model`) — database · Anyscale
+- **Anyscale vs raw cloud GPU pricing - ACU rates vs per-GPU-hour** (`sources/ppl-cloud-anyscale-vs-cloud-price`) — database · Anyscale
 - **Azure Retail Prices API - ND96asr / ND96amsr A100 v4 (eastus)** (`sources/sup-cloud-azure-retail-prices-a100`) — database · Microsoft
 - **Azure Retail Prices API - ND96isr H100 v5 (eastus)** (`sources/sup-cloud-azure-retail-prices-h100`) — database · Microsoft
 - **Azure Retail Prices API - ND96isr H200 v5 (eastus2, westus2)** (`sources/sup-cloud-azure-retail-prices-h200`) — database · Microsoft
@@ -1160,10 +1188,14 @@
 - **B&H Photo Video RTX PRO 6000 Blackwell search results** (`sources/noncuda-bhphoto-rtxpro6000-search`) — database · B&H Photo Video
 - **B&H Photo Video Radeon RX 9070 XT search results** (`sources/noncuda-bhphoto-rx9070xt-search`) — database · B&H Photo Video
 - **Baseten cloud pricing - GPU instances** (`sources/sup-cloud-baseten-pricing`) — database · Baseten
+- **Beam Cloud Pricing - Serverless per-second and On-demand per-machine GPU rates** (`sources/ppl-cloud-beam-pricing`) — database · Beam
+- **Beam Cloud vs raw cloud GPU pricing - Serverless and On-demand comparison** (`sources/ppl-cloud-beam-vs-cloud-price`) — database · Beam
+- **Beam as cloud orchestrator - Per-second serverless, per-machine on-demand, BYOC** (`sources/ppl-orch-beam-billing-model`) — database · Beam
 - **Berkeley Lab 'Queued Up: 2026 Edition' - US transmission interconnection queue characteristics through end of 2025** (`sources/pwr2-lbnl-queued-up-2026`) — database · Lawrence Berkeley National Laboratory / GridTracker
 - **Best Buy search results for Radeon RX 9070 XT** (`sources/noncuda-bestbuy-rx9070xt-search`) — database · Best Buy
 - **CDW product page: PNY NVIDIA RTX PRO 6000 96 GB GDDR7** (`sources/noncuda-cdw-rtxpro6000-pny-96gb`) — database · CDW
 - **CDW search results for RTX PRO 6000** (`sources/noncuda-cdw-rtxpro6000-search`) — database · CDW
+- **Colocation pricing by power density tier - Air-cooled vs liquid-cooled deployment costs** (`sources/ppl-dep-colocation-tiers`) — database · Vantage / derived from existing repo records
 - **CompuCycle corporate IT asset disposal and remarketing services** (`sources/sup-used-compucycle`) — database · CompuCycle
 - **CoreWeave Cloud pricing** (`sources/sup-cloud-coreweave-pricing`) — database · CoreWeave
 - **DeepSpeed-Inference Crossref record (SC22)** (`sources/pap-sys-deepspeed-inference-crossref`) — database · IEEE SC22 (via Crossref)
@@ -1171,6 +1203,12 @@
 - **Fireworks AI pricing - On-Demand deployments** (`sources/sup-cloud-fireworks-pricing`) — database · Fireworks AI
 - **FrugalGPT OpenReview record (TMLR)** (`sources/pap-sys-frugalgpt-openreview`) — database · OpenReview (TMLR)
 - **FrugalGPT OpenReview record — already used for TMLR; see notes on route/cascade adoption** (`sources/pap-sys-frugal-serving-note`) — database · OpenReview (TMLR)
+- **GPU cloud billing granularity comparison - Per-second, per-minute, per-hour, per-millisecond** (`sources/ppl-bench-billing-granularity`) — database · Derived from multiple sources in this repo
+- **GPU rental vs purchase break-even - Cloud per-GPU-hour vs used hardware asking prices** (`sources/ppl-dep-rental-vs-purchase-breakeven`) — database · Derived from multiple sources in this repo
+- **GPU.ai GPU Cloud Price Index - Live floor prices across 12+ clouds, snapshot 2026-10-04** (`sources/ppl-cloud-gpu-ai-price-index`) — database · GPU.ai
+- **GPU.ai as cloud orchestrator - Per-second billing, zero markup claim, 12+ cloud aggregation** (`sources/ppl-orch-gpu-ai-billing-model`) — database · GPU.ai
+- **GPU.ai as price benchmark - Cross-provider comparison and market range data** (`sources/ppl-bench-gpu-ai-price-benchmark`) — database · GPU.ai
+- **GPU.ai pricing methodology - Per-second billing, zero markup, secure vs community tiers** (`sources/ppl-cloud-gpu-ai-methodology`) — database · GPU.ai
 - **Geizhals product page: ASRock Arc B580 Challenger 12GB OC** (`sources/noncuda-geizhals-b580-asrock-challenger`) — database · Geizhals
 - **Geizhals product page: ASUS ROG Astral GeForce RTX 5090 OC** (`sources/noncuda-geizhals-5090-rog-astral`) — database · Geizhals
 - **Geizhals product page: ASUS ROG Strix GeForce RTX 3090 OC** (`sources/noncuda-geizhals-3090-rog-strix`) — database · Geizhals
@@ -1179,9 +1217,18 @@
 - **GitHub REST API repository metadata endpoint (repos/{owner}/{repo})** (`sources/niche-github-rest-api-repo-metadata`) — database · GitHub
 - **Google Cloud TPU pricing** (`sources/sup-cloud-gcp-tpu-pricing`) — database · Google
 - **Google Cloud accelerator-optimized VM pricing** (`sources/sup-cloud-gcp-accelerator-optimized-pricing`) — database · Google
+- **Hugging Face Inference Endpoints (dedicated) - Hourly instance pricing across AWS and GCP** (`sources/ppl-cloud-huggingface-inference-endpoints-pricing`) — database · Hugging Face
+- **Hugging Face Inference Endpoints as orchestrator - Per-minute billing, managed model hosting** (`sources/ppl-orch-huggingface-billing-model`) — database · Hugging Face
+- **Hugging Face Inference Endpoints vs raw cloud GPU pricing - same hardware, different rates** (`sources/ppl-cloud-huggingface-vs-cloud-price`) — database · Hugging Face
 - **IT Creations NVIDIA GPU and accelerator catalogue** (`sources/sup-used-itcreations-gpu`) — database · IT Creations
 - **LMCache OpenReview record (ICLR 2025)** (`sources/pap-sys-lmcache-openreview`) — database · OpenReview (ICLR)
 - **Lambda AI cloud pricing - GPU instances and 1-Click Clusters** (`sources/sup-cloud-lambda-gpu-pricing`) — database · Lambda AI
+- **MLPerf Inference v3.1 Results** (`sources/src5-mlperf-inference-results-v3-1`) — database · MLCommons
+- **MLPerf Inference v4.0 Results** (`sources/src5-mlperf-inference-results-v4-0`) — database · MLCommons
+- **MLPerf Inference v4.1 Results** (`sources/src5-mlperf-inference-results-v4-1`) — database · MLCommons
+- **MLPerf Inference v5.0 Results** (`sources/src5-mlperf-inference-results-v5`) — database · MLCommons
+- **MLPerf Results Change Log - invalidated and modified results** (`sources/ev-mlperf-results-change-log`) — database · MLCommons
+- **Managed service premium quantification - Same hardware, different providers, different rates** (`sources/ppl-bench-managed-service-premium`) — database · Derived from multiple sources in this repo
 - **Micro Center refurbished GeForce RTX 3090 / RTX 3090 Ti listing pages** (`sources/sup-used-microcenter-refurb-3090`) — database · Micro Center
 - **Micro Center search results for Intel Arc B580** (`sources/noncuda-microcenter-arc-b580-search`) — database · Micro Center
 - **Micro Center search results for RTX PRO 6000** (`sources/noncuda-microcenter-rtxpro6000-search`) — database · Micro Center
@@ -1200,11 +1247,28 @@
 - **Overclockers UK search results for Intel Arc B580** (`sources/noncuda-overclockers-uk-arc-b580-search`) — database · Overclockers UK
 - **Overclockers UK search results for RTX 3090 / RTX 4090** (`sources/noncuda-overclockers-uk-rtx3090-search`) — database · Overclockers UK
 - **Overclockers UK search results for RTX 5090** (`sources/noncuda-overclockers-uk-rtx5090-search`) — database · Overclockers UK
+- **Paperspace (DigitalOcean) Core GPU Pricing - Hourly dedicated GPU rates** (`sources/ppl-cloud-paperspace-pricing`) — database · Paperspace (DigitalOcean)
+- **Paperspace as cloud orchestrator - Per-hour billing, Gradient platform, auto-shutdown** (`sources/ppl-orch-paperspace-billing-model`) — database · Paperspace (DigitalOcean)
+- **Paperspace vs raw cloud GPU pricing - Dedicated GPU rates vs market** (`sources/ppl-cloud-paperspace-vs-cloud-price`) — database · Paperspace (DigitalOcean)
 - **Pre-gated MoE Crossref record (ISCA 2024)** (`sources/pap-sys-pregatedmoe-crossref`) — database · ACM/IEEE ISCA 2024 (via Crossref)
+- **Refurbished channel for datacenter accelerators - ITAD and refurbisher market** (`sources/ppl-dep-refurbished-datacenter-channel`) — database · IT Creations / derived from multiple repo records
+- **Replicate Pricing - Per-second hardware rates for CPU and GPU instances** (`sources/ppl-cloud-replicate-pricing`) — database · Replicate
+- **Replicate as cloud orchestrator - Per-second billing, model hosting, multi-GPU requires commitment** (`sources/ppl-orch-replicate-billing-model`) — database · Replicate
+- **Replicate multi-GPU tiers require committed spend contracts** (`sources/ppl-cloud-replicate-committed-spend`) — database · Replicate
+- **Replicate vs raw cloud GPU pricing - Per-second rates vs per-hour cloud rates** (`sources/ppl-cloud-replicate-vs-cloud-price`) — database · Replicate
 - **RouteLLM OpenReview record (ICLR 2025)** (`sources/pap-sys-routellm-openreview`) — database · OpenReview (ICLR)
 - **Runpod GPU Cloud pricing** (`sources/sup-cloud-runpod-gpu-pricing`) — database · Runpod
 - **SGLang Crossref record (NeurIPS 2024)** (`sources/pap-sys-sglang-crossref`) — database · Advances in Neural Information Processing Systems (via Crossref)
+- **SkyPilot Catalog - Automated multi-cloud GPU price database, refreshed every 7 hours** (`sources/ppl-cloud-skypilot-catalog`) — database · SkyPilot
+- **SkyPilot Catalog AWS GPU instances extract - Key instance types with per-hour rates** (`sources/ppl-cloud-skypilot-aws-gpu-extract`) — database · SkyPilot
+- **SkyPilot Catalog Azure GPU instances extract - ND series with per-hour rates** (`sources/ppl-cloud-skypilot-azure-gpu-extract`) — database · SkyPilot
+- **SkyPilot Catalog GCP GPU instances extract - A2/A3/A4 instance types with per-hour rates** (`sources/ppl-cloud-skypilot-gcp-gpu-extract`) — database · SkyPilot
+- **SkyPilot as cloud orchestrator - Open-source, per-hour billing, 20+ cloud coverage** (`sources/ppl-orch-skypilot-billing-model`) — database · SkyPilot
+- **SkyPilot as price benchmark - Open-source multi-cloud GPU price comparison** (`sources/ppl-bench-skypilot-price-benchmark`) — database · SkyPilot
 - **Splitwise Crossref record (ISCA 2024)** (`sources/pap-sys-splitwise-crossref`) — database · ACM/IEEE ISCA 2024 (via Crossref)
+- **Together AI Dedicated Inference - Per-GPU-hour single-tenant pricing** (`sources/ppl-cloud-together-dedicated-inference`) — database · Together AI
+- **Together AI Pricing - GPU Clusters on-demand/preemptible/reserved + Dedicated Inference** (`sources/ppl-cloud-together-ai-full-pricing`) — database · Together AI
+- **Together AI as cloud orchestrator - Per-GPU-hour, per-token, and PTU billing models** (`sources/ppl-orch-together-billing-model`) — database · Together AI
 - **Together AI pricing - GPU Clusters** (`sources/sup-cloud-together-gpu-clusters-pricing`) — database · Together AI
 - **USENIX NSDI '17 technical sessions (full program page)** (`sources/pap-sys-nsdi17-proceedings`) — database · USENIX Association
 - **USENIX OSDI '20 technical sessions (full program page)** (`sources/pap-sys-osdi20-proceedings`) — database · USENIX Association
@@ -1223,9 +1287,13 @@
 - **eBay listing: NVIDIA H100 SXM5 80GB, pre-owned, tested (item 158372715590)** (`sources/sup-used-ebay-h100-sxm`) — database · eBay / frenchy2k1
 - **AirLLM user reports contradicting the compression speed-up claim** (`sources/niche-airllm-speed-issue`) — forum · GitHub
 - **Dynamo issue #12463: vLLM disaggregated serving over InfiniBand returns garbage tokens; GPUDirect RDMA failure on PIX-adjacent passthrough NICs** (`sources/pd-gh-dynamo-12463-rdma-failure-silent-garbage`) — forum · ai-dynamo/dynamo
+- **Dynamo#12463: UCX_NET_DEVICES unset causes garbage tokens in P/D serving** (`sources/src5-gotcha-dynamo-12463-ucx-net-devices`) — forum · NVIDIA Dynamo
 - **LMCache issue #4463: Silent KV cache corruption on vLLM 0.26 fused/packed KV layout** (`sources/pd-gh-lmcache-4463-packed-kv-silent-corruption`) — forum · LMCache/LMCache
+- **LMCache#4463: Silent KV cache corruption on vLLM 0.26 fused/packed layout** (`sources/src5-gotcha-lmcache-4463-fused-kv-corruption`) — forum · LMCache
 - **MLX-LM M3 Pro benchmarks for Qwen3-4B-Instruct-2507-4bit (mlx-lm PR #1569)** (`sources/bench-apple-mlx-lm-m3-pro-qwen3-4b`) — forum · community / ml-explore
 - **Mooncake issue #4209: TCP transport first transfer after an idle gap fails with queue-full rejections; PD decode hangs until timeout** (`sources/pd-gh-mooncake-4209-tcp-queue-full-hang`) — forum · kvcache-ai/Mooncake
+- **Mooncake#4209: TCP transport queue-full after idle gap causes PD hang** (`sources/src5-gotcha-mooncake-4209-tcp-queue-full`) — forum · Mooncake
+- **ROCm/vllm#630: MXFP4 kernel dispatch fix for garbage output** (`sources/src5-gotcha-rocm-vllm-630-mxfp4-dispatch`) — forum · AMD ROCm
 - **SGLang issue #36140: DFLASH speculative decoding unsupported under PD disaggregation (spec_info None crash, then watchdog self-kill)** (`sources/pd-gh-sglang-36140-dflash-spec-under-pd`) — forum · sgl-project/sglang
 - **SGLang issue #39147: HiCacheFile reports an unrestorable prefix for hybrid cache pools** (`sources/pd-gh-sglang-39147-hicache-false-prefix-hit`) — forum · sgl-project/sglang
 - **TensorRT-LLM issue #17665: NIXL cache-transceiver hangs forever if a single completion notification is dropped** (`sources/pd-gh-trtllm-17665-nixl-notify-hang`) — forum · NVIDIA/TensorRT-LLM
@@ -1289,12 +1357,27 @@
 - **vLLM issue #59086: VLLM_BATCH_INVARIANT=1 is not batch-invariant for AWQ models on sm8x in the default mode** (`sources/nrg2-gh-vllm-59086-awq-not-invariant`) — forum · vLLM project
 - **vLLM issue #59203: DeepSeek-V4.1-Flash cannot run on SM120, compressed-layer page_block_size=32 has no FlashInfer sparse-MLA decode kernel** (`sources/gotcha-vllm-issue-59203-sm120-sparse-mla-block-size`) — forum · vLLM GitHub issues
 - **vLLM issue #59362: FA4 ignores num_splits on SM90 in v0.30.0, up to 48% slower decode** (`sources/gotcha-vllm-issue-59362-fa4-num-splits-sm90`) — forum · vLLM GitHub issues
+- **vLLM#27579: AITER FP8 GEMM performance on MI355** (`sources/src5-gotcha-vllm-27579-aiter-fp8-gemm`) — forum · vLLM / AMD
+- **vLLM#40677: FlashInfer head_size not supported on Blackwell SM120** (`sources/src5-gotcha-vllm-40677-flashinfer-head-size`) — forum · vLLM
+- **vLLM#47159: Triton W4A16 qzeros assertion fails on GPTQ models** (`sources/src5-gotcha-vllm-47159-triton-w4a16-qzeros`) — forum · vLLM
+- **vLLM#50881: MiniMax-M3 fp8 KV cache garbage under CUDA graphs on SM80** (`sources/src5-gotcha-vllm-50881-fp8-kv-cache-cudagraph`) — forum · vLLM
+- **vLLM#52617: LMCache P/D receiver reports full hit but decoding diverges** (`sources/src5-gotcha-vllm-52617-lmcache-pd-divergence`) — forum · vLLM
+- **vLLM#52627: Kimi-K3 silent corruption with Mooncake+NIXL MultiConnector** (`sources/src5-gotcha-vllm-52627-kimi-k3-mooncake-corruption`) — forum · vLLM
+- **vLLM#52663: FP8 on RDNA3 exceeds 600s engine-ready timeout (no tuned configs)** (`sources/src5-gotcha-vllm-52663-fp8-rdna3-cold-start`) — forum · vLLM
+- **vLLM#53328: FP4 warning incorrectly blames GPU when checkpoint is weight-only** (`sources/src5-gotcha-vllm-53328-fp4-warning-weight-only`) — forum · vLLM
+- **vLLM#55131: Batch-invariant matmul not actually batch-invariant, TF32 precision loss** (`sources/src5-gotcha-vllm-55131-batch-invariant-tf32`) — forum · vLLM
+- **vLLM#56535: FlashInfer b12x MoE runs W4A16 checkpoints as W4A4** (`sources/src5-gotcha-vllm-56535-flashinfer-b12x-w4a16`) — forum · vLLM
+- **vLLM#56770: MXFP4 W4A16 misclassified as W4A4 on SM100+** (`sources/src5-gotcha-vllm-56770-mxfp4-w4a16-misclassified`) — forum · vLLM
+- **vLLM#57838: RowWise FP8 kernel regression on RDNA4 (gfx1201)** (`sources/src5-gotcha-vllm-57838-rdna4-fp8-regression`) — forum · vLLM
+- **vLLM#58263: Batch-invariant mode not in KV-offload namespace** (`sources/src5-gotcha-vllm-58263-batch-invariant-namespace`) — forum · vLLM
 - **vLLM-metal issue #713: benchmarking pitfalls on macOS (in-process decode penalty, GPU co-tenancy, non-diagnostic short probes)** (`sources/pwr2-vllm-metal-issue-713`) — forum · vllm-project
 - **A Length-Extrapolatable Transformer** (`sources/pap-attn-ntk-aware-scaled-rope`) — paper · arXiv
+- **A Survey on Efficient Inference for Large Language Models (arXiv:2404.14294)** (`sources/mkt-efficient-inference-survey`) — paper · arXiv
 - **AI Application Benchmarking: Power-Aware Performance Analysis for Vision and Language Models (arXiv:2603.16164, RRZE-HPC)** (`sources/nrg2-arxiv-rrze-hpc-ai-power-limits`) — paper · arXiv
 - **AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration** (`sources/quant-awq-paper`) — paper · arXiv
 - **AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration (Lin et al., MLSys 2024)** (`sources/bench-meth-awq`) — paper · arXiv
 - **Accelerating Large Language Model Decoding with Speculative Sampling** (`sources/flop-speculative-sampling-deepmind`) — paper · arXiv (Chen et al.; DeepMind)
+- **Agentless: Demystifying LLM-based Software Engineering Agents** (`sources/ev-agentless-swebench-paper`) — paper · Chunqiu Steven Xia et al.
 - **AlpaServe: Statistical Multiplexing with Model Parallelism for Deep Learning Serving (arXiv 2302.11665)** (`sources/pap-sys-alpaserve-arxiv`) — paper · arXiv (Alibaba / SJTU)
 - **Atom: Low-bit Quantization for Efficient and Accurate LLM Serving (Zhao et al.)** (`sources/qlab-atom-paper`) — paper · arXiv
 - **Audio Flamingo: A Novel Audio Language Model with Few-Shot Learning and Dialogue Abilities (arXiv:2402.01831)** (`sources/pap-mm-audio-flamingo`) — paper · arXiv
@@ -1368,6 +1451,7 @@
 - **FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness** (`sources/flop-flashattention`) — paper · arXiv (Dao, Fu, Wolf, Rudenstein, Smith; NeurIPS 2022)
 - **FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness** (`sources/pap-attn-flashattention`) — paper · arXiv
 - **FlashDecoding++: Faster Large Language Model Inference on GPUs** (`sources/pap-attn-flashdecoding`) — paper · arXiv
+- **FlashDecoding: Splitting long sequences for parallel decoding** (`sources/src5-flashdecoding-paper`) — paper · Stanford
 - **FlashInfer-Bench: Building the Virtuous Cycle for AI-driven LLM Systems** (`sources/pap-attn-flashinfer-bench`) — paper · arXiv
 - **FlashInfer: Efficient and Customizable Attention Engine for LLM Inference Serving** (`sources/flop-flashinfer`) — paper · arXiv (FlashInfer team)
 - **FlashInfer: Efficient and Customizable Attention Engine for LLM Inference Serving** (`sources/pap-attn-flashinfer-paper`) — paper · arXiv
@@ -1390,6 +1474,7 @@
 - **High Fidelity Neural Audio Compression (EnCodec) (arXiv:2210.13438)** (`sources/pap-mm-encodec`) — paper · arXiv
 - **HuBERT-EE: Early Exiting HuBERT for Efficient Speech Recognition (arXiv:2204.06328)** (`sources/pap-mm-hubert-ee`) — paper · arXiv
 - **HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction of Hidden Units (arXiv:2106.07447)** (`sources/pap-mm-hubert`) — paper · arXiv
+- **Hydra: Sequentially-Dependent Draft Heads for Medusa Decoding (arXiv:2402.05109)** (`sources/mkt-hydra-draft-heads`) — paper · arXiv
 - **Hyena Hierarchy: Towards Larger Convolutional Language Models** (`sources/pap-arch-2302-10866`) — paper · arXiv
 - **Hyena Hierarchy: Towards Larger Convolutional Language Models** (`sources/pap-attn-hyena`) — paper · arXiv
 - **Inference without Interference: Disaggregate LLM Inference for Mixed Downstream Workloads (arXiv 2401.11181)** (`sources/pap-sys-tetriinfer-arxiv`) — paper · arXiv (SUSTech / HKUST)
@@ -1403,6 +1488,7 @@
 - **KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache** (`sources/flop2-kivi`) — paper · arXiv
 - **KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache (Yuan et al., LMSYS)** (`sources/qlab-kivi-paper`) — paper · arXiv
 - **KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization (Hooper et al.)** (`sources/qlab-kvquant-paper`) — paper · arXiv
+- **KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization (arXiv:2401.18079)** (`sources/mkt-kvquant-neurips2024`) — paper · arXiv
 - **Kimi Linear: An Expressive, Efficient Attention Architecture** (`sources/arch-kimi-linear`) — paper · Moonshot AI (arXiv)
 - **Kimi Linear: An Expressive, Efficient Attention Architecture** (`sources/pap-arch-2510-26692`) — paper · arXiv
 - **Kimi Linear: An Expressive, Efficient Attention Architecture** (`sources/pap-attn-kimi-linear`) — paper · arXiv
@@ -1420,6 +1506,7 @@
 - **LQER: Low-Rank Quantization Error Reconstruction for LLMs (Zhang et al.)** (`sources/qlab-lqer-paper`) — paper · arXiv
 - **Large Language Diffusion Models (LLaDA)** (`sources/arch-llada`) — paper · Nie et al. (arXiv)
 - **Large Language Diffusion Models (LLaDA)** (`sources/pap-arch-2502-09992`) — paper · arXiv
+- **Large Language Monkeys: Scaling Inference Compute with Repeated Sampling (arXiv:2407.21787)** (`sources/mkt-large-language-monkeys`) — paper · arXiv
 - **Learning Transferable Visual Models From Natural Language Supervision (CLIP) (arXiv:2103.00020)** (`sources/pap-mm-clip`) — paper · arXiv
 - **Learning to Compress Prompts with Gist Tokens** (`sources/pap-attn-gist-tokens`) — paper · arXiv
 - **Leave No Context Behind: Efficient Infinite Context Transformers with Infini-attention** (`sources/pap-attn-infini-attention`) — paper · arXiv
@@ -1427,6 +1514,7 @@
 - **Lightning Attention-2: A Free Lunch for Handling Unlimited Sequence Lengths in Large Language Models** (`sources/pap-attn-lightning-attention-2`) — paper · arXiv
 - **Linear Transformers Are Secretly Fast Weight Programmers** (`sources/pap-arch-2102-11174`) — paper · arXiv
 - **Linformer: Self-Attention with Linear Complexity** (`sources/pap-attn-linformer`) — paper · arXiv
+- **Loki: Low-rank Keys for Efficient Sparse Attention (arXiv:2406.02542)** (`sources/mkt-loki-sparse-attention-neurips2024`) — paper · arXiv
 - **LongRoPE2: Near-Lossless LLM Context Window Scaling** (`sources/pap-attn-longrope2`) — paper · arXiv
 - **LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens** (`sources/pap-attn-longrope`) — paper · arXiv
 - **M3-Embedding: Multi-Linguality, Multi-Functionality, Multi-Granularity Text Embeddings (arXiv:2402.03216)** (`sources/pap-mm-bge-m3`) — paper · arXiv
@@ -1451,6 +1539,8 @@
 - **MiniMax-M1: Scaling Test-Time Compute Efficiently with Lightning Attention** (`sources/pap-arch-2506-13585`) — paper · arXiv
 - **Mixtral of Experts** (`sources/model-fr-arxiv-mixtral-8x7b`) — paper · Mistral AI
 - **Mixtral of Experts** (`sources/pap-arch-2401-04088`) — paper · arXiv
+- **Mixture of A Million Experts (PEER layers)** (`sources/ev-moe-million-experts`) — paper · Xu Owen He
+- **Mixture of Experts: Efficient Sparse Models** (`sources/src5-moe-paper`) — paper · Google
 - **Mixture-of-Experts with Expert Choice Routing** (`sources/pap-arch-2202-09368`) — paper · arXiv
 - **MoBA: Mixture of Block Attention for Long-Context LLMs** (`sources/pap-attn-moba`) — paper · arXiv
 - **Molmo and PixMo: Open Weights and Open Data for State-of-the-Art Vision-Language Models (arXiv:2409.17146)** (`sources/pap-mm-molmo`) — paper · arXiv
@@ -1468,6 +1558,7 @@
 - **PLAID: An Efficient Engine for Late Interaction Retrieval (CIKM 2022)** (`sources/niche-colbert-plaid-paper`) — paper · arXiv
 - **PLAID: An Efficient Engine for Late Interaction Retrieval (arXiv:2205.09707)** (`sources/pap-mm-plaid`) — paper · arXiv
 - **PackServe: SLO-Aware Request Scheduling for Agentic LLM Serving at Scale (arXiv 2609.33224)** (`sources/pap-sys-packserve-arxiv`) — paper · arXiv (Microsoft Research Asia / Peking University)
+- **PagedAttention: Efficient Memory Management for LLM Serving** (`sources/src5-paged-attention-paper`) — paper · UC Berkeley
 - **PaliGemma: A versatile 3B VLM for transfer (arXiv:2407.07726)** (`sources/pap-mm-paligemma`) — paper · arXiv
 - **Parrot: Efficient Serving of LLM-based Applications with Semantic Variable (arXiv 2405.19888)** (`sources/pap-sys-parrot-arxiv`) — paper · arXiv (Shanghai Jiao Tong University / Microsoft Research)
 - **Pixtral 12B (arXiv:2410.07073)** (`sources/pap-mm-pixtral`) — paper · arXiv
@@ -1488,6 +1579,7 @@
 - **Qwen-VL: A Versatile Vision-Language Model for Understanding, Localization, and Text Recognition (arXiv:2308.12966)** (`sources/pap-mm-qwen-vl`) — paper · arXiv
 - **Qwen2-Audio Technical Report (arXiv:2407.10759)** (`sources/pap-mm-qwen2-audio`) — paper · arXiv
 - **Qwen2-VL: Enhancing Vision-Language Model's Perception of the World at Any Resolution** (`sources/pap-attn-qwen2-vl-mrope`) — paper · arXiv
+- **RULER: What's the Real Context Size of Your Long-Context Language Models? (arXiv:2404.06654)** (`sources/mkt-ruler-long-context-benchmark`) — paper · arXiv
 - **RWKV: Reinventing RNNs for the Transformer Era** (`sources/arch-rwkv`) — paper · Peng et al. / EleutherAI (arXiv)
 - **RWKV: Reinventing RNNs for the Transformer Era** (`sources/pap-arch-2305-13048`) — paper · arXiv
 - **RWKV: Reinventing RNNs for the Transformer Era** (`sources/pap-attn-rwkv`) — paper · arXiv
@@ -1497,6 +1589,7 @@
 - **Retentive Network: A Successor to Transformer for Large Language Models** (`sources/pap-arch-2307-08621`) — paper · arXiv
 - **Retentive Network: A Successor to Transformer for Large Language Models** (`sources/pap-attn-retnet`) — paper · arXiv
 - **Rethinking Attention with Performers** (`sources/pap-attn-performer`) — paper · arXiv
+- **Revisiting Lossy Verification in Speculative Decoding: Mechanisms, Trade-offs, and Failure Modes** (`sources/ev-lossy-verification-speculative-decoding`) — paper · Tianyu Wang et al.
 - **Ring Attention with Blockwise Transformers for Near-Infinite Context** (`sources/flop2-ring-attention`) — paper · arXiv
 - **Ring Attention with Blockwise Transformers for Near-Infinite Context** (`sources/pap-attn-ring-attention`) — paper · arXiv
 - **Roofline: An Insightful Visual Performance Model for Floating-Point Programs and Multicore Architectures** (`sources/flop-roofline-williams-2008`) — paper · ACM Communications of the ACM
@@ -1526,6 +1619,7 @@
 - **SoundStream: An End-to-End Neural Audio Codec (arXiv:2107.03312)** (`sources/pap-mm-soundstream`) — paper · arXiv
 - **Sparse Attention with Linear Units** (`sources/pap-attn-sau`) — paper · arXiv
 - **SparseVLM: Visual Token Sparsification for Efficient Vision-Language Model Inference (arXiv:2410.04417)** (`sources/pap-mm-sparsevlm`) — paper · arXiv
+- **Speculative Decoding: Fast Inference with Speculative Sampling** (`sources/src5-speculative-decoding-paper`) — paper · Google
 - **SpeechGPT: Empowering Large Language Models with Intrinsic Cross-Modal Conversational Abilities (arXiv:2305.11000)** (`sources/pap-mm-speechgpt`) — paper · arXiv
 - **SpinQuant: LLM Quantization with Learned Rotations (Liu et al., ICLR 2025)** (`sources/bench-meth-spin`) — paper · arXiv / ICLR 2025
 - **SpinQuant: LLM quantization with learned rotations** (`sources/quant-spinquant-paper`) — paper · arXiv
@@ -1542,6 +1636,7 @@
 - **Text Embeddings by Weakly-Supervised Contrastive Pre-training (E5) (arXiv:2212.03533)** (`sources/pap-mm-e5`) — paper · arXiv
 - **The Embedder's Dilemma: LLMs Are Better, but at What Cost? (arXiv:2608.12875)** (`sources/pap-mm-embedder-dilemma`) — paper · arXiv
 - **The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits** (`sources/quant-bitnet-paper`) — paper · arXiv
+- **The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale** (`sources/ev-fineweb-dataset-paper`) — paper · Hugging Face
 - **The Joule Point: an Energy-Optimal Operating Point for AI Inference (arXiv:2609.27926)** (`sources/pwr2-arxiv-joule-point`) — paper · Alexander Apartsin, Yehudit Aperstein
 - **Titans: Learning to Memorize at Test Time** (`sources/pap-arch-2501-00663`) — paper · arXiv
 - **Titans: Learning to Memorize at Test Time** (`sources/pap-attn-titans`) — paper · arXiv
@@ -1554,8 +1649,10 @@
 - **Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality** (`sources/pap-arch-2405-21060`) — paper · arXiv
 - **Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality** (`sources/pap-attn-mamba-2`) — paper · arXiv
 - **Tutel: Adaptive Mixture-of-Experts at Scale** (`sources/pap-arch-2206-03382`) — paper · arXiv
+- **Unchosen Experts Can Contribute Too: Unleashing MoE Models' Power by Self-Contrast (NeurIPS 2024)** (`sources/ev-scmoe-moe-paper`) — paper · Chufan Shi et al.
 - **United States Data Center Energy Usage Report (LBNL, Shehabi et al. 2016)** (`sources/nrg2-lbnl-2016-us-dc-energy-report`) — paper · Lawrence Berkeley National Laboratory
 - **United States Data Center Energy Usage Report: 2025 Update (LBNL / DOE, Shehabi et al.)** (`sources/nrg2-lbnl-2025-us-dc-energy-report`) — paper · Lawrence Berkeley National Laboratory
+- **Unlocking Efficiency in LLM Inference: A Comprehensive Survey of Speculative Decoding (ACL 2024)** (`sources/ev-speculative-decoding-survey`) — paper · Heming Xia et al. (Peking University)
 - **Unsupervised Dense Information Retrieval with Contrastive Learning (Contriever) (arXiv:2112.09118)** (`sources/pap-mm-contriever`) — paper · arXiv
 - **Various Lengths, Constant Speed: Efficient Language Modeling with Lightning Attention** (`sources/arch-lightning-attention`) — paper · Qin et al. (arXiv)
 - **VisionZip: Longer is Better but Not Necessary in Vision Language Models (arXiv:2412.04467)** (`sources/pap-mm-visionzip`) — paper · arXiv
@@ -1658,6 +1755,9 @@
 - **ROCm Linux install system requirements (supported GPU list)** (`sources/amd-rocm-system-requirements`) — release-notes · AMD
 - **Step-3.5-Flash model card and config (huggingface.co/stepfun-ai)** (`sources/model-cn-step-3-5-card`) — release-notes · StepFun
 - **vllm-project/flash-attention PR #198: Fix SM90 SplitKV work distribution** (`sources/gotcha-flash-attention-pr-198-sm90-splitkv`) — release-notes · vllm-project/flash-attention
+- **AITER: AMD's AI Tensor Engine for ROCm** (`sources/src5-aiter-github`) — repo · AMD ROCm
+- **AMD ROCm: Open-source software stack for AMD GPU computing** (`sources/src5-rocm-github`) — repo · AMD
+- **AWQ: Activation-aware Weight Quantization** (`sources/src5-awq-github`) — repo · AutoAWQ
 - **AirLLM GitHub repository** (`sources/niche-airllm-repo`) — repo · Gavin Li
 - **Albert Tseng - Research (publication list)** (`sources/quant-tseng-publications`) — repo · personal (Cornell / Cornell-RelaxML)
 - **Alibaba-NLP/gte-Qwen2-1.5B-instruct config.json** (`sources/hf-embed-gte-qwen2-1-5b-instruct`) — repo · Hugging Face
@@ -1668,10 +1768,12 @@
 - **BAAI/bge-reranker-v2-m3 config.json** (`sources/hf-embed-bge-reranker-v2-m3`) — repo · Hugging Face
 - **BAAI/bge-small-en-v1.5 config.json** (`sources/hf-embed-bge-small-en-v1-5`) — repo · Hugging Face
 - **CLIP-as-service README** (`sources/embed-clip-as-service-github`) — repo · Jina AI
+- **CUTLASS: CUDA Templates and Python DSLs for High-Performance Linear Algebra** (`sources/src5-cutlass-github`) — repo · NVIDIA
 - **Clipper2: Triton Inference Server: An Open Source Triton Inference Server for Machine Learning (arXiv)** (`sources/pap-sys-clipper2-arxiv`) — repo · NVIDIA
 - **ColBERT GitHub repository** (`sources/niche-colbert-repo`) — repo · Stanford Future Data Systems
 - **DeepEP GitHub repository (DeepSeek)** (`sources/kern-deepep-github`) — repo · deepseek-ai
 - **DeepGEMM GitHub repository (DeepSeek)** (`sources/kern-deepgemm-github`) — repo · deepseek-ai
+- **DeepGEMM: DeepSeek's FP8 GEMM implementation** (`sources/src5-deepgemm-github`) — repo · DeepSeek
 - **DeepSpeed-MII GitHub repository (org moved from microsoft/)** (`sources/niche-deepspeed-mii-repo`) — repo · DeepSpeed (formerly Microsoft)
 - **DistServe GitHub repository (LLMServe/DistServe)** (`sources/pd-distserve-repo`) — repo · LLMServe (Peking University)
 - **Dynamo components/src/dynamo/common/backend/disagg.py** (`sources/pd-dynamo-disagg-py`) — repo · NVIDIA
@@ -1681,10 +1783,13 @@
 - **ExLlamaV3 GitHub repo** (`sources/cpuedge-exllamav3-github`) — repo · turboderp-org
 - **FastChat GitHub repository (lm-sys)** (`sources/niche-fastchat-repo`) — repo · LMSYS
 - **FlashAttention GitHub repository (FA2/FA3/FA4)** (`sources/kern-flashattention-github`) — repo · Dao-AILab
+- **FlashAttention: Fast and memory-efficient exact attention** (`sources/src5-flashattention-github`) — repo · Dao-AILab (Tri Dao)
 - **FlashInfer GitHub repository** (`sources/engine-flashinfer-github`) — repo · flashinfer-ai
 - **FlashInfer GitHub repository** (`sources/kern-flashinfer-github`) — repo · flashinfer-ai
+- **FlashInfer: Kernel Library for LLM Serving** (`sources/src5-flashinfer-github`) — repo · flashinfer-ai
 - **FlashMLA GitHub repository (DeepSeek)** (`sources/kern-flashmla-github`) — repo · deepseek-ai
 - **GPTQ reference implementation (IST-DASLab/gptq GitHub repository README)** (`sources/qlab-gptq-github`) — repo · IST-DASLab on GitHub
+- **GPTQ: Accurate Post-Training Quantization for GPT models** (`sources/src5-gptq-github`) — repo · AutoGPTQ
 - **GSAI-ML/LLaDA-8B-Instruct model repo** (`sources/hf-eco-llada-8b-instruct`) — repo · GAIR / Ant Group
 - **Granite 4.0 Language Models model card (H-Tiny spec table)** (`sources/hf-eco-granite-4-0-h-tiny-modelcard`) — repo · IBM Granite
 - **Guidance GitHub repository** (`sources/niche-guidance-repo`) — repo · guidance-ai
@@ -1730,11 +1835,14 @@
 - **MLC LLM python/mlc_llm/quantization/quantization.py QUANTIZATION registry** (`sources/qlab2-mlc-quantization-py`) — repo · MLC AI
 - **MLC-LLM GitHub repository** (`sources/engine-mlc-llm-github`) — repo · mlc-ai
 - **MLC-LLM quick start docs** (`sources/engine-mlc-llm-quickstart`) — repo · mlc-ai
+- **MLPerf Inference Benchmark Suite** (`sources/src5-mlperf-inference-github`) — repo · MLCommons
 - **MLPerf Inference v4.1 NVIDIA Makefile.power - locked GPU clock (GPUCLK=1000) and per-host MaxQ power state** (`sources/pwr-mlperf-v4-1-nvidia-makefile-power`) — repo · MLCommons and NVIDIA
 - **MLX-LM GitHub repository** (`sources/engine-mlx-lm-github`) — repo · ml-explore
 - **MLX-LM server CLI source** (`sources/engine-mlx-lm-server`) — repo · ml-explore
+- **MLX: An array framework for Apple silicon** (`sources/src5-mlx-github`) — repo · Apple Machine Learning Research
 - **MNN GitHub repository (Alibaba)** (`sources/niche-mnn-repo`) — repo · Alibaba
 - **Magistral-Small-2509 config.json** (`sources/model-fr-hf-config-magistral-small`) — repo · Hugging Face (Mistral AI)
+- **Mamba: Linear-Time Sequence Modeling with Selective State Spaces** (`sources/src5-mamba-ssm-github`) — repo · state-spaces (Albert Gu, Tri Dao)
 - **Medusa GitHub repository (stale)** (`sources/niche-medusa-repo`) — repo · FasterDecoding
 - **Meta-Llama-3-8B config.json (open mirror)** (`sources/flop2-llama3-8b-config`) — repo · Hugging Face hub (NousResearch mirror of Meta-Llama-3-8B)
 - **Meta-Llama-3.1-8B-Instruct config.json** (`sources/model-fr-hf-config-llama-3-1-8b`) — repo · Hugging Face (NousResearch mirror of Meta weights)
@@ -1746,6 +1854,7 @@
 - **Ministral-8B-Instruct-2410 config.json** (`sources/model-fr-hf-config-ministral-8b`) — repo · Hugging Face (Mistral AI)
 - **Mixtral-8x22B-Instruct-v0.1 config.json** (`sources/model-fr-hf-config-mixtral-8x22b`) — repo · Hugging Face (Mistral AI)
 - **Mixtral-8x7B-Instruct-v0.1 config.json** (`sources/model-fr-hf-config-mixtral-8x7b`) — repo · Hugging Face (Mistral AI)
+- **ModelOpt: NVIDIA Model Optimization Toolkit** (`sources/src5-modelopt-github`) — repo · NVIDIA
 - **Molmo-7B-D-0924 config.json (HuggingFace)** (`sources/hf-mm-molmo-7b-d-config`) — repo · HuggingFace / Ai2
 - **Molmo-7B-D-0924 modeling_molmo.py (vision backbone + 2D pooling)** (`sources/hf-mm-molmo-7b-d-modeling`) — repo · HuggingFace / Ai2
 - **Mooncake GitHub repository (kvcache-ai/Mooncake)** (`sources/pd-mooncake-repo`) — repo · kvcache-ai (Moonshot AI)
@@ -1758,6 +1867,7 @@
 - **NCCL issue 418: Multiple MPI ranks in the same GPU using Nvidia Multiprocess Service** (`sources/mgpu-nccl-418-duplicate-device-mps`) — repo · NVIDIA/nccl
 - **NCCL issue 582: OOM during init rank causes deadlock** (`sources/mgpu-nccl-582-init-oom-deadlock`) — repo · NVIDIA/nccl
 - **NCCL issue 949: Slow (~56%) inter-node all_reduce_perf performance on A100 Virtual Machine** (`sources/mgpu-nccl-949-vm-topology-perf`) — repo · NVIDIA/nccl
+- **NCCL: NVIDIA Collective Communications Library** (`sources/src5-nccl-github`) — repo · NVIDIA
 - **NVIDIA CUTLASS GitHub repository** (`sources/kern-cutlass-github`) — repo · NVIDIA
 - **NVIDIA Dynamo GitHub repository (ai-dynamo/dynamo)** (`sources/pd-dynamo-repo`) — repo · NVIDIA
 - **NVIDIA Inference Xfer Library (NIXL) GitHub repository** (`sources/pd-nixl-repo`) — repo · NVIDIA (ai-dynamo)
@@ -1769,15 +1879,18 @@
 - **ONNX Runtime NNAPI Execution Provider doc (supported ops table)** (`sources/qlab2-ort-nnapi-ep-doc`) — repo · ONNX Runtime (Microsoft)
 - **ONNX Runtime documentation: Quantize ONNX Models** (`sources/qlab2-ort-quant-doc`) — repo · ONNX Runtime (Microsoft)
 - **ONNX Runtime onnxruntime/python/tools/quantization README** (`sources/qlab2-ort-quant-tool-readme`) — repo · ONNX Runtime (Microsoft)
+- **ONNX Runtime: Cross-platform inference engine** (`sources/src5-onnxruntime-github`) — repo · Microsoft
 - **Ollama GitHub repo** (`sources/cpuedge-ollama-github`) — repo · Ollama
 - **Ollama hardware support docs** (`sources/cpuedge-ollama-gpu-docs`) — repo · Ollama
 - **Olmo-3-7B-Instruct config.json** (`sources/model-fr-hf-config-olmo-3-7b`) — repo · Hugging Face (Ai2)
 - **OpenVINO GenAI GitHub repo** (`sources/cpuedge-openvino-genai-github`) — repo · Intel / openvinotoolkit
+- **OpenVINO: Intel's AI inference toolkit** (`sources/src5-openvino-github`) — repo · Intel
 - **Outlines GitHub repository (dottxt-ai/outlines)** (`sources/niche-outlines-repo`) — repo · dottxt
 - **PaliGemma-3b-mix-224 model card (gated repo)** (`sources/hf-mm-paligemma-3b-mix-224-card`) — repo · HuggingFace / Google DeepMind
 - **Phi-3.5-vision-instruct config.json (HuggingFace)** (`sources/hf-mm-phi-3-5-vision-config`) — repo · HuggingFace / Microsoft
 - **Phi-4-multimodal-instruct config.json (HuggingFace)** (`sources/hf-mm-phi-4-multimodal-config`) — repo · HuggingFace / Microsoft
 - **Pixtral-12B-2409 params.json (HuggingFace)** (`sources/hf-mm-pixtral-12b-params`) — repo · HuggingFace / Mistral
+- **PyTorch Inductor: torch/_inductor - ML compiler for PyTorch** (`sources/src5-pytorch-inductor-github`) — repo · PyTorch / Meta
 - **Qdrant FastEmbed README** (`sources/embed-qdrant-fastembed-github`) — repo · Qdrant
 - **QuaRot reference implementation (spcl/QuaRot GitHub repository README)** (`sources/qlab-quarot-github`) — repo · spcl (Stanford / Sparsity in ML) on GitHub
 - **Qwen2-Audio-7B-Instruct config.json (HuggingFace)** (`sources/hf-mm-qwen2-audio-7b-config`) — repo · HuggingFace / Qwen
@@ -1804,6 +1917,7 @@
 - **SGLang supported models: Large Language Models (generative)** (`sources/mdl2-sglang-generative-models`) — repo · SGLang project
 - **SGLang supported models: Multimodal Language Models** (`sources/mdl2-sglang-multimodal-language-models`) — repo · SGLang project
 - **SGLang supported models: embedding, rerank, classify and reward pages** (`sources/mdl2-sglang-embedding-rerank-models`) — repo · SGLang project
+- **SGLang: Fast inference for LLMs and multimodal models** (`sources/src5-sglang-github`) — repo · sgl-project (LMSYS)
 - **Semi-PD GitHub repository (infinigence/Semi-PD)** (`sources/pd-semipd-repo`) — repo · Infinigence AI
 - **Sentence Transformers README (embeddings, retrieval, reranking)** (`sources/embed-sbert-github`) — repo · UKP Lab
 - **SmolVLM-Instruct config.json (HuggingFace)** (`sources/hf-mm-smolvlm-instruct-config`) — repo · HuggingFace / HuggingFaceTB
@@ -1818,6 +1932,8 @@
 - **TensorRT-LLM architecture overview docs** (`sources/engine-trtllm-architecture`) — repo · NVIDIA
 - **TensorRT-LLM parallelism docs** (`sources/engine-trtllm-parallel`) — repo · NVIDIA
 - **TensorRT-LLM supported models and feature matrices (PyTorch backend)** (`sources/mdl2-trtllm-supported-models`) — repo · NVIDIA
+- **TensorRT-LLM: LLM inference on NVIDIA GPUs** (`sources/src5-tensorrt-llm-github`) — repo · NVIDIA
+- **TensorRT: NVIDIA's inference optimizer and runtime** (`sources/src5-tensorrt-github`) — repo · NVIDIA
 - **Text Embeddings Inference GitHub repository** (`sources/niche-tei-repo`) — repo · Hugging Face
 - **ThunderKittens GitHub repository (HazyResearch)** (`sources/kern-thunderkittens-github`) — repo · HazyResearch
 - **TileKernels GitHub repository (DeepSeek)** (`sources/kern-tilekernels-github`) — repo · deepseek-ai
@@ -1826,6 +1942,7 @@
 - **Triton Inference Server GitHub repository** (`sources/niche-triton-repo`) — repo · NVIDIA
 - **Triton Inference Server README** (`sources/embed-triton-inference-server-github`) — repo · NVIDIA
 - **Triton language and compiler GitHub repository** (`sources/kern-triton-github`) — repo · triton-lang
+- **UCX: Unified Communication X framework** (`sources/src5-ucx-github`) — repo · OpenUCX
 - **Voxtral-Mini-3B-2507 config.json (HuggingFace)** (`sources/hf-mm-voxtral-mini-3b-config`) — repo · HuggingFace / Mistral
 - **WebLLM GitHub repository** (`sources/niche-webllm-repo`) — repo · MLC AI
 - **XGrammar GitHub repository (mlc-ai/xgrammar)** (`sources/niche-xgrammar-repo`) — repo · MLC AI
@@ -2034,6 +2151,7 @@
 - **CDW product page - NVIDIA DGX B200 8x180GB server (quote-only)** (`sources/sup-buy-cdw-dgx-b200`) — spec-sheet · CDW
 - **CDW product page - NVIDIA RTX PRO 6000 Blackwell Server Edition (4-6+ week lead time)** (`sources/sup-buy-cdw-rtx-pro-6000-be`) — spec-sheet · CDW
 - **CDW search results for NVIDIA H100 (catalog scope: PCIe/pro workstation cards, DGX, no H100 SXM)** (`sources/sup-buy-cdw-h100-catalog`) — spec-sheet · CDW
+- **CXL: Compute Express Link** (`sources/src5-cxl-docs`) — spec-sheet · CXL Consortium
 - **Cambricon AIDC MLU370-S4/S8 product page** (`sources/asic-cambricon-mlu370-s4`) — spec-sheet · Cambricon Technologies
 - **Cambricon MLU370 (Siyuan 370) chip overview** (`sources/asic-cambricon-mlu370-chip`) — spec-sheet · Cambricon Technologies
 - **Cambricon MLU370-X8 AIDC accelerator card product page** (`sources/cn-cambricon-mlu370-x8`) — spec-sheet · Cambricon Technologies (寒武纪)
@@ -2059,12 +2177,14 @@
 - **Iluvatar CoreX Zhikai 100 / 50 (MR-V100 / MR-V50) inference accelerator card product page** (`sources/cn-iluvatar-zhikai100`) — spec-sheet · Iluvatar CoreX (天数智芯)
 - **InfiniBand Trade Association: InfiniBand Architecture Specification and FAQ** (`sources/link-ibta-specification`) — spec-sheet · InfiniBand Trade Association
 - **InfiniBand Trade Association: What's new in Release 2.1, Volumes 1 and 2** (`sources/link-ibta-release-2-1`) — spec-sheet · InfiniBand Trade Association
+- **InfiniBand: High-Performance Network Interconnect** (`sources/src5-infiniband-docs`) — spec-sheet · NVIDIA
 - **Intel Arc B580 Graphics ARK product specifications (SKU 241598)** (`sources/consumer-intel-arc-b580-ark-specifications`) — spec-sheet · Intel
 - **Intel Arc Pro B60 GPU datasheet (v1.0)** (`sources/consumer-intel-arc-pro-b60-datasheet`) — spec-sheet · Intel
 - **Intel Arc Pro B70 ARK specifications** (`sources/acc2-arc-pro-b70-ark`) — spec-sheet · Intel
 - **Intel Arc Pro B70 Graphics ARK product specifications (SKU 245797)** (`sources/acc-fill-intel-arc-pro-b70-ark-specs`) — spec-sheet · Intel
 - **Intel Gaudi AI Accelerator products page** (`sources/asic-intel-gaudi-product`) — spec-sheet · Intel
 - **Intel Gaudi AI accelerator products page (Shop section: Dell/HPE/Supermicro)** (`sources/sup-buy-intel-gaudi`) — spec-sheet · Intel
+- **Intel Level Zero Specification** (`sources/src5-intel-level-zero-spec`) — spec-sheet · Intel
 - **LiquidStack - CDU-1MW and GigaModular CDU product pages (published rack-density ceilings for liquid cooling)** (`sources/pwr2-liquidstack-cdu`) — spec-sheet · LiquidStack
 - **Llama 4 Scout model card** (`sources/model-fr-meta-llama-4-scout-card`) — spec-sheet · Meta
 - **MLPerf Inference v4.1 NVIDIA H200-SXM-141GBx8_TRT_MaxQ system description (TGP 700W, air-cooled, 8x H200-SXM-141GB)** (`sources/pwr-mlperf-v4-1-h200-maxq-system-json`) — spec-sheet · MLCommons and NVIDIA
@@ -2113,16 +2233,20 @@
 - **NVIDIA System Management Interface (nvidia-smi) documentation - clock locking, power limit, and clocks throttle reasons** (`sources/pwr2-nvidia-smi-throttle-reasons`) — spec-sheet · NVIDIA
 - **NVIDIA Tesla P100 datasheet (SXM2, 16 GB)** (`sources/net2-nvidia-p100-datasheet`) — spec-sheet · NVIDIA
 - **NVIDIA V100 Tensor Core GPU datasheet** (`sources/nv-v100-datasheet`) — spec-sheet · NVIDIA
+- **NVLink: NVIDIA High-Speed GPU Interconnect** (`sources/src5-nvlink-docs`) — spec-sheet · NVIDIA
 - **OCP Microscaling Formats (MX) Specification v1.0** (`sources/quant-ocp-mx-spec`) — spec-sheet · Open Compute Project
 - **Olmo 3 model flow** (`sources/model-fr-ai2-olmo-page`) — spec-sheet · Ai2
 - **PCI-SIG 'PCI Express 6.0 Specification' page** (`sources/net2-pcisig-pcie6-spec`) — spec-sheet · PCI-SIG
 - **PCI-SIG FAQ 'What bit rates does the PCIe 5.0 specification support and how does it compare to prior PCIe generations?'** (`sources/net2-pcisig-pcie5-faq`) — spec-sheet · PCI-SIG
 - **PCI-SIG specifications library index** (`sources/link-pcisig-specifications`) — spec-sheet · PCI-SIG
+- **PCIe: Peripheral Component Interconnect Express** (`sources/src5-pcie-docs`) — spec-sheet · PCI-SIG
 - **Pinghu (平湖) 4th-generation MUSA GPU architecture page (Moore Threads)** (`sources/cn-mthreads-pinghu`) — spec-sheet · Moore Threads (摩尔线程)
 - **QCT where-to-buy (distributor / reseller / SI list by country)** (`sources/sup-buy-qct-where-to-buy`) — spec-sheet · QCT
 - **Qualcomm Cloud AI 100 Ultra product brief** (`sources/acc2-qcom-cloud-ai100-ultra-product-brief`) — spec-sheet · Qualcomm Technologies
 - **Qualcomm Cloud AI 100 announcement deck (hardware architecture slide)** (`sources/acc2-qcom-cloud-ai100-announcement-deck`) — spec-sheet · Qualcomm Technologies
 - **Qualcomm Cloud AI 100 product brief (five PCIe/M.2 form factors, spec table)** (`sources/acc2-qcom-cloud-ai100-product-brief`) — spec-sheet · Qualcomm Technologies
+- **RDMA: Remote Direct Memory Access** (`sources/src5-rdma-docs`) — spec-sheet · RDMA Consortium
+- **ROCm 10.0.0 Compatibility Matrix** (`sources/src5-rocm-compatibility-matrix-10`) — spec-sheet · AMD
 - **Rebellions Rebel100 product page** (`sources/asic-rebellions-rebel100`) — spec-sheet · Rebellions
 - **Servers Direct AI infrastructure shop (build-to-order, publish base config prices)** (`sources/sup-buy-servers-direct`) — spec-sheet · Servers Direct
 - **Supermicro SYS-521GE-TNRT 5U 10-GPU PCIe system** (`sources/sup-buy-supermicro-sys-521ge`) — spec-sheet · Supermicro
@@ -2145,12 +2269,18 @@
 - **vLLM pooling models documentation** (`sources/embed-vllm-pooling-models-docs`) — spec-sheet · vLLM project
 - **AMD 'Introducing AMD CDNA 4 Architecture' white paper** (`sources/net2-amd-cdna4-whitepaper`) — whitepaper · AMD
 - **Biren Technology Hot Chips 34 presentation 'BR100 GPGPU: Accelerating Datacenter Scale AI Computing'** (`sources/net2-biren-hotchips-br100`) — whitepaper · Biren Technology
+- **CUDA Graphs: Official Documentation** (`sources/src5-cuda-graphs-docs`) — whitepaper · NVIDIA
+- **CUDA Programming Guide (v13.4.2)** (`sources/src5-cuda-programming-guide`) — whitepaper · NVIDIA
 - **DeepSeek-V3 Technical Report (arXiv:2412.19437)** (`sources/model-cn-deepseek-v3-report`) — whitepaper · arXiv / DeepSeek-AI
+- **GPU interconnect and cluster costs - NVLink, InfiniBand, and Ethernet options** (`sources/ppl-dep-interconnect-cluster-costs`) — whitepaper · NVIDIA / derived from existing repo records
+- **GPU rack power density and cooling requirements - Air cooling ceiling and liquid cooling requirement** (`sources/ppl-dep-power-density-cooling`) — whitepaper · Vantage / derived from multiple repo records
+- **GPUDirect Storage Documentation** (`sources/src5-gpudirect-storage-docs`) — whitepaper · NVIDIA
 - **Huawei CloudMatrix 384 (CM384) supernode — system architecture and specifications** (`sources/cn-huawei-cloudmatrix384`) — whitepaper · Huawei (arXiv:2506.12708v1, cited by China Research Collective and SemiAnalysis)
 - **Intel Gaudi 3 AI Accelerator Technical Paper (July 2025, V1 Rev 3)** (`sources/asic-intel-gaudi3-tech-paper`) — whitepaper · Intel
 - **Introducing the AMD CDNA 2 Architecture (white paper)** (`sources/link2-amd-cdna2-whitepaper`) — whitepaper · AMD
 - **Kimi K2: Open Agentic Intelligence (arXiv:2507.20534)** (`sources/model-cn-kimi-k2-paper`) — whitepaper · arXiv / Moonshot AI
 - **Kimi Linear: An Expressive, Efficient Attention Architecture (arXiv:2510.26692)** (`sources/model-cn-kimi-linear-paper`) — whitepaper · arXiv / Moonshot AI
+- **MLPerf Inference Rules (official submission rules document)** (`sources/ev-mlperf-inference-rules-official`) — whitepaper · MLCommons
 - **MiniMax-M1: Scaling Test-Time Compute Efficiently with Lightning Attention (arXiv:2506.13585)** (`sources/model-cn-minimax-m1-paper`) — whitepaper · arXiv / MiniMax
 - **NVIDIA A100 Tensor Core GPU Architecture white paper** (`sources/link2-nvidia-ampere-architecture-whitepaper`) — whitepaper · NVIDIA
 - **NVIDIA A100 Tensor Core GPU Architecture white paper (Ampere) - Table 4 Comparison of NVIDIA Data Center GPUs** (`sources/acc-fill-nvidia-ampere-whitepaper-a100-40gb`) — whitepaper · NVIDIA
@@ -2160,14 +2290,16 @@
 - **NVIDIA developer blog 'NVSwitch Accelerates NVIDIA DGX-2'** (`sources/net2-nvidia-nvswitch1-dgx2-blog`) — whitepaper · NVIDIA
 - **NVIDIA developer blog 'Upgrading Multi-GPU Interconnectivity with the Third-Generation NVIDIA NVSwitch' (GB200 NVL72)** (`sources/net2-nvidia-nvswitch3-blog`) — whitepaper · NVIDIA
 - **NVIDIA technical blog: NVLink and NVSwitch supercharge large language model inference** (`sources/link-nvlink-nvswitch-inference-blog`) — whitepaper · NVIDIA
+- **NVSHMEM: Parallel programming interface for NVIDIA GPU clusters** (`sources/src5-nvshmem-developer-page`) — whitepaper · NVIDIA
 - **Qwen3 Technical Report (arXiv:2505.09388)** (`sources/model-cn-qwen3-report`) — whitepaper · arXiv / Alibaba Qwen
 - **ROCm MI100 microarchitecture reference (gfx908)** (`sources/amd-rocm-mi100-microarch`) — whitepaper · AMD
 - **ROCm MI300 series microarchitecture reference (gfx942, XCD)** (`sources/amd-rocm-mi300-microarch`) — whitepaper · AMD
 - **UALink white paper (TASK Consultancy)** (`sources/link-ualink-whitepaper`) — whitepaper · UALink Consortium / TASK Consultancy
+- **Uptime Institute Global Data Center Survey Results 2026 - 16th annual survey, published July 2026** (`sources/ppl-dep-uptime-institute-2026-survey`) — whitepaper · Uptime Institute
 
 ## Coverage
 
-Total records: **2130**
+Total records: **2262**
 
 | group | records |
 |---|---|
