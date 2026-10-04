@@ -1,28 +1,28 @@
 {
-  "id": "pyramidkv",
-  "type": "quantization",
-  "name": "PyramidKV (layer-dependent KV budget) - NOT KV quantization",
-  "scheme": "kv-eviction",
-  "bits": "none - allocates different KV cache SIZES per layer (more in lower layers, less in higher ones) rather than reducing bits.",
-  "weight_group_size": null,
-  "activation_scheme": "None. Based on Pyramidal Information Funneling: attention scatters widely in lower layers, consolidates in middle layers, and concentrates on a few critical tokens in higher layers. The KV budget is therefore allocated inversely - more cache low, less cache high - diverging from uniform-budget methods.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "Evaluated on LongBench and Needle-in-a-Haystack; no specific kernel named in the abstract."
-  ],
-  "quality_delta": "From the abstract: matches full-KV-cache performance on LongBench while retaining only 12% of the KV cache; at an extreme 0.7% retention it surpasses other KV compression techniques with up to 20.5 absolute accuracy improvement on TREC; retaining just 128 KV entries gives LLaMA-3-70B 100.0 accuracy on Needle-in-a-Haystack.",
-  "notes": "Boundary record, and the most surprising one: 128 total KV entries is a compression ratio so extreme that it stops being about compression and becomes about caching only attention sinks. That is a real finding about where attention information actually lives, and it is worth reading alongside KIVI - if a handful of entries carry most of the attention mass, then spending 4 bits per entry on the rest is largely wasted. Boundary stated plainly because the 12%-of-KV-cache phrasing sounds like a bit-width claim and is not one. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-eviction'. ",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab-pyramidkv-paper"
-  ]
+ "id": "pyramidkv",
+ "type": "quantization",
+ "name": "PyramidKV (layer-dependent KV budget) - NOT KV quantization",
+ "scheme": "kv-eviction",
+ "bits": "none - allocates different KV cache SIZES per layer (more in lower layers, less in higher ones) rather than reducing bits.",
+ "weight_group_size": null,
+ "activation_scheme": "None. Based on Pyramidal Information Funneling: attention scatters widely in lower layers, consolidates in middle layers, and concentrates on a few critical tokens in higher layers. The KV budget is therefore allocated inversely - more cache low, less cache high - diverging from uniform-budget methods.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "Evaluated on LongBench and Needle-in-a-Haystack; no specific kernel named in the abstract."
+ ],
+ "quality_delta": "From the abstract: matches full-KV-cache performance on LongBench while retaining only 12% of the KV cache; at an extreme 0.7% retention it surpasses other KV compression techniques with up to 20.5 absolute accuracy improvement on TREC; retaining just 128 KV entries gives LLaMA-3-70B 100.0 accuracy on Needle-in-a-Haystack.",
+ "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: eviction reduces HOW MANY KV positions are retained; no bits per retained value change, so there is no weight grid to group. The null here is a fact about the method, not missing data. Boundary record, and the most surprising one: 128 total KV entries is a compression ratio so extreme that it stops being about compression and becomes about caching only attention sinks. That is a real finding about where attention information actually lives, and it is worth reading alongside KIVI - if a handful of entries carry most of the attention mass, then spending 4 bits per entry on the rest is largely wasted. Boundary stated plainly because the 12%-of-KV-cache phrasing sounds like a bit-width claim and is not one. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-eviction'. ",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab-pyramidkv-paper"
+ ]
 }

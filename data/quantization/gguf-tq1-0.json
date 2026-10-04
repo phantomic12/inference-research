@@ -1,29 +1,30 @@
 {
-  "id": "gguf-tq1-0",
-  "type": "quantization",
-  "name": "GGUF TQ1_0 / TQ2_0 (ternarized quants, QK_K super-block, trit-packed)",
-  "scheme": "gguf-tq1-0",
-  "bits": "TQ1_0 1.6875 bpw, TQ2_0 2.0625 bpw (both from the struct comments in ggml-common.h). Quantize tool strings: TQ1_0 '1.69 bpw ternarization', TQ2_0 '2.06 bpw ternarization'",
-  "weight_group_size": 256,
-  "activation_scheme": null,
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-rtx-4090",
-    "intel-arc-b580",
-    "intel-arc-pro-b60"
-  ],
-  "kernels": [
-    "ggml dequantize_row_tq1_0 / dequantize_row_tq2_0 + get_rows"
-  ],
-  "quality_delta": "Official quantizer strings only (qlab2-quantize-options-table): TQ1_0 '1.69 bpw ternarization', TQ2_0 '2.06 bpw ternarization'. No controlled fp16 perplexity delta published in any primary source found. Null + note.",
-  "notes": "Weight-only: activations are promoted to q8_K for the dot product and the matmul runs at fp16/bf16, so native_support is deliberately EMPTY and the whole accelerator ecosystem is emulated_support. No accelerator has a GGUF quant path in silicon - this is the single most commonly botched field in this repo. TQ = TERNARIZED QUANT, structurally verified from ggml-common.h: block_tq1_0 = { uint8_t qs[(QK_K - 4*QK_K/64)/5];  // the comment is '5 elements per byte (3^5 = 243 < 256)' - trits base-3 packed 5 to a byte uint8_t qh[QK_K/64];        // '4 elements per byte', and the struct comment says 'high bits' ggml_half d; } with the size assert sizeof(half) + QK_K/64 + (QK_K - 4*QK_K/64)/5. So 3^5 = 243 <= 256 is the packing constraint - the reason you cannot simply pack 5.33 trits per byte. block_tq2_0 is the near-true-2-bit sibling: { uint8_t qs[QK_K/4] (2 bits per element); ggml_half d; } = 66 bytes / 256 = 2.0625 bpw, identical in size to iq2_xxs. Both use the FULL 256-value super-block, which is what lets them beat the 32-value legacy ternary schemes at equal bpw. Weight type ids are 34 (TQ1_0) and 35 (TQ2_0), i.e. they were added late to the ggml enum, after the i-quants. Note TQ quants are a SEPARATE lineage from the ternary/bitnet-b158 records already in this repo: those are training-time ternary weights, these are post-training ternarization of an fp16/bf16 checkpoint inside the GGUF pipeline. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'ternary' (a proxy recorded while the enum lacked a legal value) and is now 'gguf-tq1-0'. ",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab2-ggml-common-header",
-    "qlab2-llama-quant-cpp",
-    "qlab2-llamafile-support-docs",
-    "qlab2-quantize-options-table"
-  ]
+ "id": "gguf-tq1-0",
+ "type": "quantization",
+ "name": "GGUF TQ1_0 / TQ2_0 (ternarized quants, QK_K super-block, trit-packed)",
+ "scheme": "gguf-tq1-0",
+ "bits": "TQ1_0 1.6875 bpw, TQ2_0 2.0625 bpw (both from the struct comments in ggml-common.h). Quantize tool strings: TQ1_0 '1.69 bpw ternarization', TQ2_0 '2.06 bpw ternarization'",
+ "weight_group_size": 256,
+ "activation_scheme": null,
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-rtx-4090",
+  "intel-arc-b580",
+  "intel-arc-pro-b60"
+ ],
+ "kernels": [
+  "ggml dequantize_row_tq1_0 / dequantize_row_tq2_0 + get_rows"
+ ],
+ "quality_delta": "Official quantizer strings only (qlab2-quantize-options-table): TQ1_0 '1.69 bpw ternarization', TQ2_0 '2.06 bpw ternarization'. No controlled fp16 perplexity delta published in any primary source found. Null + note.",
+ "notes": "CORRECTED/EXPLICIT 2026-10-04: this record previously used 256 implicitly for both TQ1_0 and TQ2_0. TQ1_0 genuinely has a 256-value scale group - block_tq1_0 carries ONE fp16 d for the whole 256-value super-block and no sub-block scale plane; dequantize_row_tq1_0 iterates the 8-element groups inside qh[] but every group is scaled by the same d. It is also the only GGUF block struct in ggml-common.h with NO sub-block scales at all. TQ2_0 also uses a single fp16 d over 256. So for these two the super-block size and the scale group genuinely coincide, unlike the K-quants. Weight-only: activations are promoted to q8_K for the dot product and the matmul runs at fp16/bf16, so native_support is deliberately EMPTY and the whole accelerator ecosystem is emulated_support. No accelerator has a GGUF quant path in silicon - this is the single most commonly botched field in this repo. TQ = TERNARIZED QUANT, structurally verified from ggml-common.h: block_tq1_0 = { uint8_t qs[(QK_K - 4*QK_K/64)/5];  // the comment is '5 elements per byte (3^5 = 243 < 256)' - trits base-3 packed 5 to a byte uint8_t qh[QK_K/64];        // '4 elements per byte', and the struct comment says 'high bits' ggml_half d; } with the size assert sizeof(half) + QK_K/64 + (QK_K - 4*QK_K/64)/5. So 3^5 = 243 <= 256 is the packing constraint - the reason you cannot simply pack 5.33 trits per byte. block_tq2_0 is the near-true-2-bit sibling: { uint8_t qs[QK_K/4] (2 bits per element); ggml_half d; } = 66 bytes / 256 = 2.0625 bpw, identical in size to iq2_xxs. Both use the FULL 256-value super-block, which is what lets them beat the 32-value legacy ternary schemes at equal bpw. Weight type ids are 34 (TQ1_0) and 35 (TQ2_0), i.e. they were added late to the ggml enum, after the i-quants. Note TQ quants are a SEPARATE lineage from the ternary/bitnet-b158 records already in this repo: those are training-time ternary weights, these are post-training ternarization of an fp16/bf16 checkpoint inside the GGUF pipeline. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'ternary' (a proxy recorded while the enum lacked a legal value) and is now 'gguf-tq1-0'. ",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab2-ggml-common-header",
+  "qlab2-llama-quant-cpp",
+  "qlab2-llamafile-support-docs",
+  "qlab2-quantize-options-table",
+  "qzgw-ggml-quants-kernel"
+ ]
 }

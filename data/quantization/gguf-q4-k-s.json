@@ -1,36 +1,37 @@
 {
-  "id": "gguf-q4-k-s",
-  "type": "quantization",
-  "name": "GGUF Q4_K_S (4-bit K-quant, small)",
-  "scheme": "gguf-q4_k_s",
-  "bits": "4.6672 measured avg (llama.cpp quantize README, Llama-3.1-8B); pure block_q4_K is 4.5 bpw",
-  "weight_group_size": 256,
-  "activation_scheme": null,
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-h100-nvl",
-    "nvidia-l40s",
-    "nvidia-l4",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-a10"
-  ],
-  "kernels": [
-    "ggml dequantize_row_q4_K + get_rows",
-    "ggml-cuda mul_mat_vec_q / dequantize_mul_mat_vec + convert_mul_mat_q"
-  ],
-  "quality_delta": "Llama-3.1-8B-Instruct (quant-gguf-kquant-study): WikiText-2 ppl 7.62 vs 7.32 F16 (+0.30); GSM8K 70.83 vs 77.63; HellaSwag 77.33 vs 72.51; IFEval 72.79 vs 78.93; MMLU 80.26 vs 63.50; TruthfulQA 53.40 vs 54.79; unweighted mean 69.17 vs 69.47 (-0.43% AvgLoss); size 4468 MiB (-70.83%).",
-  "notes": "Every K-quant shares the same super-block shape: QK_K = 256 values per block (ggml/src/ggml-common.h, `#define QK_K 256`), with K_SCALE_SIZE = 12 bytes of packed sub-block scales. Verify layouts in that file, not in blog posts - the per-type 'effectively N bits per weight' figures are comments in the struct definitions themselves. Structurally IDENTICAL to q4_K: block_q4_K, 8 sub-blocks of 32, uniform 4-bit weights, 6-bit sub-block scale+min on fp16 super-block scales. The difference from Q4_K_M is only the promotion schedule: src/llama-quant.cpp promotes attn_v to Q5_K for the first 4 layers (i_attention_wv < 4) and ffn_down to Q5_K for the first n_layer/8 layers (non-Falcon only). Q4_K_M instead promotes those to Q6_K and additionally hits attn_output. Hence 4.6672 vs 4.8944 bpw. Neither is 'better' - they are different points on the size/quality curve, and the independent k-quant study put Q4_K_S on a better Pareto point than Q4_K_M, which is why this pair is recorded as contested rather than resolved. Weight-only: activations stay FP16/BF16 at runtime. ggml has per-type dequant+gemm kernels; no accelerator has a k-quant silicon path. vLLM labels GGUF experimental/under-optimized. Consumer-GPU note identical to Q4_K_M: CUDA/HIP have mul_mat_vec_q, Vulkan does not and has a documented Q4_K speed regression (gotcha-llamacpp-issue-11559-vulkan-q4km-regression).",
-  "status": "contested",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab2-ggml-common-header",
-    "qlab2-llama-quant-cpp",
-    "qlab2-quantize-options-table",
-    "quant-ggml-header",
-    "quant-gguf-kquant-study",
-    "quant-llamacpp-quantize-readme",
-    "quant-vllm-gguf-doc"
-  ]
+ "id": "gguf-q4-k-s",
+ "type": "quantization",
+ "name": "GGUF Q4_K_S (4-bit K-quant, small)",
+ "scheme": "gguf-q4_k_s",
+ "bits": "4.6672 measured avg (llama.cpp quantize README, Llama-3.1-8B); pure block_q4_K is 4.5 bpw",
+ "weight_group_size": 32,
+ "activation_scheme": null,
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-h100-nvl",
+  "nvidia-l40s",
+  "nvidia-l4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a10"
+ ],
+ "kernels": [
+  "ggml dequantize_row_q4_K + get_rows",
+  "ggml-cuda mul_mat_vec_q / dequantize_mul_mat_vec + convert_mul_mat_q"
+ ],
+ "quality_delta": "Llama-3.1-8B-Instruct (quant-gguf-kquant-study): WikiText-2 ppl 7.62 vs 7.32 F16 (+0.30); GSM8K 70.83 vs 77.63; HellaSwag 77.33 vs 72.51; IFEval 72.79 vs 78.93; MMLU 80.26 vs 63.50; TruthfulQA 53.40 vs 54.79; unweighted mean 69.17 vs 69.47 (-0.43% AvgLoss); size 4468 MiB (-70.83%).",
+ "notes": "CORRECTED 2026-10-04: was 256. Same basis as Q4_K_M - base type Q4_K, 32-value scale group per dequantize_row_q4_K. MIXTURE CAVEAT: Q4_K_S contains a larger share of Q5_K (group 32) than Q4_K_M and some Q6_K (group 16). Every K-quant shares the same super-block shape: QK_K = 256 values per block (ggml/src/ggml-common.h, `#define QK_K 256`), with K_SCALE_SIZE = 12 bytes of packed sub-block scales. Verify layouts in that file, not in blog posts - the per-type 'effectively N bits per weight' figures are comments in the struct definitions themselves. Structurally IDENTICAL to q4_K: block_q4_K, 8 sub-blocks of 32, uniform 4-bit weights, 6-bit sub-block scale+min on fp16 super-block scales. The difference from Q4_K_M is only the promotion schedule: src/llama-quant.cpp promotes attn_v to Q5_K for the first 4 layers (i_attention_wv < 4) and ffn_down to Q5_K for the first n_layer/8 layers (non-Falcon only). Q4_K_M instead promotes those to Q6_K and additionally hits attn_output. Hence 4.6672 vs 4.8944 bpw. Neither is 'better' - they are different points on the size/quality curve, and the independent k-quant study put Q4_K_S on a better Pareto point than Q4_K_M, which is why this pair is recorded as contested rather than resolved. Weight-only: activations stay FP16/BF16 at runtime. ggml has per-type dequant+gemm kernels; no accelerator has a k-quant silicon path. vLLM labels GGUF experimental/under-optimized. Consumer-GPU note identical to Q4_K_M: CUDA/HIP have mul_mat_vec_q, Vulkan does not and has a documented Q4_K speed regression (gotcha-llamacpp-issue-11559-vulkan-q4km-regression).",
+ "status": "contested",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab2-ggml-common-header",
+  "qlab2-llama-quant-cpp",
+  "qlab2-quantize-options-table",
+  "quant-ggml-header",
+  "quant-gguf-kquant-study",
+  "quant-llamacpp-quantize-readme",
+  "quant-vllm-gguf-doc",
+  "qzgw-ggml-quants-kernel"
+ ]
 }

@@ -1,36 +1,40 @@
 {
-  "id": "rent-commitment-discounts-change-the-effective-rate",
-  "type": "supply",
-  "name": "Commitment discounts: reservations and CUDs are where the real GPU price lives, and they are mutually exclusive with spot",
-  "kind": "cloud",
-  "vendor": null,
-  "accelerator_ids": [
-    "nvidia-h100-sxm",
-    "nvidia-h200-sxm",
-    "nvidia-a100-80gb-sxm4"
-  ],
-  "region": "multi-cloud; savings depend entirely on region and term",
-  "channels": [
-    "reserved",
-    "commitment",
-    "on-demand"
-  ],
-  "price_usd": 36.0,
-  "price_basis": "PERCENT DISCOUNT, not a price - price_usd carries the Azure ND96isr H100 v5 1-year reservation discount of ~36%, derived as stated. Derivation: the Azure Retail Prices API normalised Reservation meter for ND96isr H100 v5 reads $551,221/hour-meter which works out to about $62.88 per instance-hour = about $7.86 per H100-hour against $12.29 on-demand, i.e. ~36% off. AWS Capacity Blocks read $41.528 per instance-hour for p5.48xlarge = $5.191 per H100 (25% off the $6.88 on-demand) and $54.92 for p5en.48xlarge = $6.865 per H200 (13% off). By contrast GCP Spot states credits for Compute Engine do not apply to Spot VMs. OBSERVATION DATE: the figure above was observed/listed on 2026-10-04 unless a different date is stated inline; treat it as needing re-verification once it is more than a quarter old. PRICE CLASS: this is a PUBLISHED LIST PRICE - an asking rate a new customer is quoted, not a realised, discounted or negotiated transaction rate. A real bill is at or below this and typically well below it once commitments, credits and committed-use discounts are applied.",
-  "availability": "unknown",
-  "lead_time_weeks": null,
-  "export_controlled": true,
-  "notes": "A 13% TO 36% DISCOUNT IS A DIFFERENT PRODUCT, NOT A BETTER PRICE, AND THREE RULES DECIDE WHETHER IT APPLIES TO YOU. (1) COMMITMENT AND SPOT ARE MUTUALLY EXCLUSIVE. GCP states plainly that 'credits for Compute Engine don't apply to Spot VMs'. If you modelled a blended rate of spot x (1 - cud), that rate does not exist and your cost estimate is fiction. You choose one instrument or the other. (2) THE HEADLINE DISCOUNT IS NOT THE DISCOUNT YOU GET, AND NOT ALWAYS EVEN OFFERED. Azure's own VM pricing page shows '-' in BOTH the 1-year and 3-year savings-plan columns for ND96isr H100 v5, while the Retail Prices API's normalised reservation meter implies ~36% off. That is a real conflict between two first-party Azure surfaces and the honest reading is that the derived figure is indicative of the reservation meter's mechanics, not an offer. Read the reservation meter, not the marketing page, and treat a reservation that does not appear on the pricing page as something to confirm with sales. (3) TERM AND UTILISATION DECIDE, AND THE COMMITMENT IS A LIABILITY. A 1-year reservation for a GPU you stop using is a year of paying for an idle H100. The repo's own energy record is the reminder: an idle 8xH200 node still draws 41.7% of its loaded watts, so an under-utilised reservation burns money twice - once in the reservation and once in the power bill for GPUs that are paid for and not busy. Use reservations for a baseline of continuously-needed capacity and spot for the burst above it; do not reserve the burst. AWS Capacity Blocks sit between the two instruments and are the right tool when the pool must still be there tomorrow without a year-long commitment - the p5 allocation problem is precisely why they exist.\n\n EXPORT CONTROL (2026-10-04, mechanism-level; sources spl-bis-2026-05-d5-guidance, spl-bis-2026-01-advanced-computing-case-by-case): renting capacity does NOT remove the export-control question, it relocates it. Providing remote access to controlled computing capability can constitute a transfer under the EAR, so the provider must screen the end user; and separately, under the 91 FR 1684 licence regime the consignee must run KYC procedures to prevent unauthorized remote access and must manage and limit IaaS access to the hardware - obligations pushed onto the customer, who must be told to implement them. For a customer headquartered or parented in Country Group D:5 or Macau the 742.6(a)(6)(iii)(A) end-user/parent test can bite even when the capacity is consumed in a permitted region. Recorded true because the underlying hardware is controlled and the provider carries the screening duty, not because access to a US region is itself restricted.\n\n LEAD TIME: null - correct and not a gap. A token-priced serverless API is provisioned on request, so there is no lead time to publish; the binding constraint when a model is at capacity is provider-side queuing and any per-account concurrency limit, which this repo records in notes where a vendor publishes one (see the DeepSeek concurrency figures already here). Deliberately NOT recorded: any 'model capacity lead time' estimate, because vendors publish none and the SEO 'GPU lead time' numbers that circulate do not apply to a rented endpoint. Probe log in source spl-negative-no-oem-publishes-lead-time.",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-04",
-  "sources": [
-    "rent-src-aws-ec2-price-list-use1",
-    "rent-src-gcp-spot-vm-doc",
-    "rent-src-azure-spot-vm-doc",
-    "spl-eccn-3a090-ccl",
-    "spl-bis-2026-01-advanced-computing-case-by-case",
-    "spl-bis-2026-05-d5-guidance",
-    "spl-negative-no-oem-publishes-lead-time"
-  ]
+ "id": "rent-commitment-discounts-change-the-effective-rate",
+ "type": "supply",
+ "name": "Commitment discounts: reservations and CUDs are where the real GPU price lives, and they are mutually exclusive with spot",
+ "kind": "cloud",
+ "vendor": null,
+ "accelerator_ids": [
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "region": "multi-cloud; savings depend entirely on region and term",
+ "channels": [
+  "reserved",
+  "commitment",
+  "on-demand"
+ ],
+ "price_usd": 36.0,
+ "price_basis": "PERCENT DISCOUNT, not a price - price_usd carries the Azure ND96isr H100 v5 1-year reservation discount of ~36%, derived as stated. Derivation: the Azure Retail Prices API normalised Reservation meter for ND96isr H100 v5 reads $551,221/hour-meter which works out to about $62.88 per instance-hour = about $7.86 per H100-hour against $12.29 on-demand, i.e. ~36% off. AWS Capacity Blocks read $41.528 per instance-hour for p5.48xlarge = $5.191 per H100 (25% off the $6.88 on-demand) and $54.92 for p5en.48xlarge = $6.865 per H200 (13% off). By contrast GCP Spot states credits for Compute Engine do not apply to Spot VMs. OBSERVATION DATE: the figure above was observed/listed on 2026-10-04 unless a different date is stated inline; treat it as needing re-verification once it is more than a quarter old. PRICE CLASS: this is a PUBLISHED LIST PRICE - an asking rate a new customer is quoted, not a realised, discounted or negotiated transaction rate. A real bill is at or below this and typically well below it once commitments, credits and committed-use discounts are applied PERISHABLE-FIGURE STAMP (added 2026-10-04, uniform across data/supply/ so it is greppable). PRICE CLASS: PUBLISHED LIST PRICE - an asking rate a new customer is quoted, NOT a realised, discounted or negotiated transaction rate. A real bill is at or below this and typically well below it once commitments, credits and committed-use discounts apply. OBSERVED: 2026-10-04 (the date this record was verified against its source; the per-figure fetch date is not restated in price_basis) RE-VERIFY BY: 2027-01-04 - the repo's quarterly re-verification bar. After that date this figure is presumed drifted and must be re-checked against its source before it is quoted again. A price without its observation date is noise; this stamp exists so a reader can tell a fresh figure from a stale one without reading prose. UNIT: PERCENT DISCOUNT, not a price READING RULE: MAJOR UNIT WARNING: price_usd is a PERCENT DISCOUNT, not a price. The underlying rates it was derived from live in other records in this directory. ",
+ "availability": "unknown",
+ "lead_time_weeks": null,
+ "export_controlled": true,
+ "notes": "A 13% TO 36% DISCOUNT IS A DIFFERENT PRODUCT, NOT A BETTER PRICE, AND THREE RULES DECIDE WHETHER IT APPLIES TO YOU. (1) COMMITMENT AND SPOT ARE MUTUALLY EXCLUSIVE. GCP states plainly that 'credits for Compute Engine don't apply to Spot VMs'. If you modelled a blended rate of spot x (1 - cud), that rate does not exist and your cost estimate is fiction. You choose one instrument or the other. (2) THE HEADLINE DISCOUNT IS NOT THE DISCOUNT YOU GET, AND NOT ALWAYS EVEN OFFERED. Azure's own VM pricing page shows '-' in BOTH the 1-year and 3-year savings-plan columns for ND96isr H100 v5, while the Retail Prices API's normalised reservation meter implies ~36% off. That is a real conflict between two first-party Azure surfaces and the honest reading is that the derived figure is indicative of the reservation meter's mechanics, not an offer. Read the reservation meter, not the marketing page, and treat a reservation that does not appear on the pricing page as something to confirm with sales. (3) TERM AND UTILISATION DECIDE, AND THE COMMITMENT IS A LIABILITY. A 1-year reservation for a GPU you stop using is a year of paying for an idle H100. The repo's own energy record is the reminder: an idle 8xH200 node still draws 41.7% of its loaded watts, so an under-utilised reservation burns money twice - once in the reservation and once in the power bill for GPUs that are paid for and not busy. Use reservations for a baseline of continuously-needed capacity and spot for the burst above it; do not reserve the burst. AWS Capacity Blocks sit between the two instruments and are the right tool when the pool must still be there tomorrow without a year-long commitment - the p5 allocation problem is precisely why they exist.\n\n EXPORT CONTROL (2026-10-04, mechanism-level; sources spl-bis-2026-05-d5-guidance, spl-bis-2026-01-advanced-computing-case-by-case): renting capacity does NOT remove the export-control question, it relocates it. Providing remote access to controlled computing capability can constitute a transfer under the EAR, so the provider must screen the end user; and separately, under the 91 FR 1684 licence regime the consignee must run KYC procedures to prevent unauthorized remote access and must manage and limit IaaS access to the hardware - obligations pushed onto the customer, who must be told to implement them. For a customer headquartered or parented in Country Group D:5 or Macau the 742.6(a)(6)(iii)(A) end-user/parent test can bite even when the capacity is consumed in a permitted region. Recorded true because the underlying hardware is controlled and the provider carries the screening duty, not because access to a US region is itself restricted.\n\n LEAD TIME: null - correct and not a gap. A token-priced serverless API is provisioned on request, so there is no lead time to publish; the binding constraint when a model is at capacity is provider-side queuing and any per-account concurrency limit, which this repo records in notes where a vendor publishes one (see the DeepSeek concurrency figures already here). Deliberately NOT recorded: any 'model capacity lead time' estimate, because vendors publish none and the SEO 'GPU lead time' numbers that circulate do not apply to a rented endpoint. Probe log in source spl-negative-no-oem-publishes-lead-time.",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "rent-src-aws-ec2-price-list-use1",
+  "rent-src-gcp-spot-vm-doc",
+  "rent-src-azure-spot-vm-doc",
+  "spl-eccn-3a090-ccl",
+  "spl-bis-2026-01-advanced-computing-case-by-case",
+  "spl-bis-2026-05-d5-guidance",
+  "spl-negative-no-oem-publishes-lead-time"
+ ],
+ "export_control_regime": "EAR 742.6(a)(6)(iii)(A) + EAR 744.23/744.6 (Entity, Unverified, MEU list screening of the end user) + the advanced-computing IaaS obligations of 91 FR 1684 (consignee KYC, and management/limitation of IaaS access to the hardware)",
+ "export_control_note": "LAYER 1, EXPORT LICENCE: under the Jan 2026 BIS rule 91 FR 1684 (effective 2026-01-15) the license review policy for advanced-computing commodities with TPP < 21,000 AND total DRAM bandwidth < 6,500 GB/s - the NVIDIA H200 and AMD MI325X are the rule's named examples - moved from PRESUMPTION OF DENIAL to CASE-BY-CASE REVIEW, but only for exports FROM THE UNITED STATES to end users located in China or Macau, and only against six exporter certifications filed via SNAP-R before shipment: (1) items below the thresholds with the count of units shipped in the US; (2) sufficient US supply, judged 'taking into account normal lead times'; (3) no diversion of global foundry capacity away from US end users; (4) aggregate China+Macau shipments <= 50% of total US end-use shipments of that product; (5) no end-user or use prohibition; (6) the consignee runs rigorous KYC. Every shipment must then pass a qualified third-party testing lab - US-headquartered, not controlled by a D:5/Macau entity, no ownership stake in any party, qualification revocable by BIS at any time - verifying TPP, total DRAM bandwidth, interconnect bandwidth and copackaged DRAM capacity. Reexports and in-country transfers of the same chips to China/Macau REMAIN PRESUMPTION OF DENIAL. LAYER 2, END-USER AND PARENT SCREENING: per BIS guidance of 2026-05-31 a licence is required where the consignee is HEADQUARTERED in Country Group D:5 (15 CFR part 740 supplement no. 1) or Macau OR whose ULTIMATE PARENT COMPANY is so headquartered - even when the consignee itself sits outside D:5/Macau. The requirement sits at EAR 742.6(a)(6)(iii)(A) for destinations outside the US, with an exception available only under the license exception at 740.2(a)(9)(ii). The destination country alone therefore never answers the question; screen the parent. LAYER 3, REMAINING LIMITS: exports to D:5/Macau-headquartered OR -parented entities stay PRESUMPTION OF DENIAL wherever the buyer sits, and the AI Diffusion Rule that would have set a country-tier structure on who could lawfully buy what was RESCINDED on 2025-05-13 and is not being enforced, so any recorded status rests on the instruments named here rather than on tiering.",
+ "lead_time_source": "structural-na",
+ "lead_time_basis": "lead_time_weeks is null because the quantity is structurally not applicable: this record is about commitment DISCOUNT tiers, where the trade is term length against rate, not a wait. The relevant horizon is a contractual term, not a lead time."
 }

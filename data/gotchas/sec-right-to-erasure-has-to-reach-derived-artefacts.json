@@ -2,7 +2,7 @@
   "id": "sec-right-to-erasure-has-to-reach-derived-artefacts",
   "type": "gotcha",
   "name": "A right-to-erasure request has to reach logs, traces and caches, not just the primary store - and 164.316 wants the audit documentation kept for 6 years",
-  "class": "config",
+  "class": "compliance",
   "affects": [
     "vllm",
     "lmcache"
@@ -22,7 +22,7 @@
   "root_cause": "GDPR Article 17(1) requires erasure without undue delay on several grounds including withdrawal of consent and objection, and 17(2) requires the controller - taking account of available technology and the cost of implementation - to inform other controllers processing the same data where it was made public. Article 5(1)(5) storage limitation requires identifiable data to be kept no longer than necessary. Meanwhile 45 CFR 164.316 requires HIPAA documentation to be retained 6 years from creation or last effective date. So a deployment under both regimes has two clocks pulling in opposite directions on the same record: one says delete on request, the other says keep for six years. These records cannot be resolved by policy alone - they require the retention design to separate the audit artefact from the content artefact at write time.",
   "workaround": "Decide at write time whether an event is an audit artefact or a content artefact, and never make one record serve both purposes. Audit events (principal, request ID, timestamp, model, counts, outcome) are retained on the compliance clock; content (prompt and completion text) is retained on the minimisation clock and must be reachable by an erasure procedure. Make erasure an operational capability with a named owner and a tested path to every store - logs, traces, object storage and any multi-turn cache - not a database DELETE. Document where the six-year clock and the erasure clock both apply and which record satisfies which.",
   "severity": "major",
-  "notes": "The two-clock conflict is the genuinely useful part of this record and it is not a contradiction in the sources - it is the result of applying two different retention regimes to the same deployment, which is exactly what a deployment subject to both must handle. Note also that Article 32(1) explicitly takes 'the costs of implementation' into account when judging whether a security measure is adequate, which is the textual basis for arguing that an expensive-but-effective isolation control meets the standard.",
+  "notes": "The two-clock conflict is the genuinely useful part of this record and it is not a contradiction in the sources - it is the result of applying two different retention regimes to the same deployment, which is exactly what a deployment subject to both must handle. Note also that Article 32(1) explicitly takes 'the costs of implementation' into account when judging whether a security measure is adequate, which is the textual basis for arguing that an expensive-but-effective isolation control meets the standard. SCHEME RECLASSIFIED (2026-10-04): was 'config'.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-04",

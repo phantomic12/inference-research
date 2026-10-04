@@ -2,7 +2,7 @@
   "id": "sec-watermark-kgw-green-list-mechanism-and-cost",
   "type": "gotcha",
   "name": "KGW watermarking: hash the previous token, split the vocabulary in half, promote green tokens - and the decode-time cost is dominated by the vocabulary permutation",
-  "class": "framework",
+  "class": "security",
   "affects": [],
   "concepts": [
     "watermark",
@@ -17,7 +17,7 @@
   "root_cause": "KGW (Kirchenbauer et al.) partitions the vocabulary per token: hash the previous token, seed a PRNG, split the vocabulary into equal green and red lists, softly promote green tokens during sampling, detect with a one-proportion z-test that needs no model access. Detection is cheap and needs only the secret key. The insertion cost is the partitioning: KGW's per-token membership complexity is O(V log V) because it requires a vocabulary permutation via randperm, repeated at every decode step for every batch row. Stateless Bernoulli Watermarking reduces membership to a single comparison against a counter-based RNG, O(1) per token, reporting under 1% end-to-end generation overhead at all batch sizes on a Qwen3-8B (vocab 151,936) at temperature 1.0 with a single RTX 3090. SynthID-Text sits in between at O(k*m) with m=30 tournament reweighting passes.",
   "workaround": "If you must watermark, prefer a stateless formulation over a vocabulary permutation. If you serve SynthID, note that the tournament depth is a direct per-token cost knob (m reweighting passes) and that its own analysis shows the mean detection score degrades as layers increase - so the layers you add for robustness are the ones costing you speed and detection power.",
   "severity": "minor",
-  "notes": "COST NUMBERS ARE NARROWLY SOURCED. The O(V log V) vs O(1) vs O(k*m) comparison and the sub-1% end-to-end figure are SBW's own measurements on consumer hardware at temperature 1.0 with pure sampling - not a server benchmark, and not a batched multi-tenant one. Nobody has published a watermarking overhead figure for a production serving stack under continuous batching. Treat the DIRECTION (permutation is the expensive part) as solid and the magnitude as unestablished.",
+  "notes": "COST NUMBERS ARE NARROWLY SOURCED. The O(V log V) vs O(1) vs O(k*m) comparison and the sub-1% end-to-end figure are SBW's own measurements on consumer hardware at temperature 1.0 with pure sampling - not a server benchmark, and not a batched multi-tenant one. Nobody has published a watermarking overhead figure for a production serving stack under continuous batching. Treat the DIRECTION (permutation is the expensive part) as solid and the magnitude as unestablished. SCHEME RECLASSIFIED (2026-10-04): was 'framework'.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-04",

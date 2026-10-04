@@ -1,27 +1,27 @@
 {
-  "id": "qhw-signround",
-  "type": "quantization",
-  "name": "SignRound (signed gradient descent for weight rounding optimization)",
-  "scheme": "gptq",
-  "bits": "w4a16 (2-4 bits per weight, with optimized rounding)",
-  "weight_group_size": 128,
-  "activation_scheme": "FP16 activations, no quantization. Weights are quantized to 2-4 bits with per-group scales. The rounding is optimized via signed gradient descent (SignSGD) rather than round-to-nearest.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s"
-  ],
-  "kernels": [
-    "auto-round (Intel)",
-    "Integrated into various quantization toolkits"
-  ],
-  "quality_delta": "From the paper abstract: 'SignRound achieved absolute average accuracy improvements ranging from 6.91% to 33.22% at 2 bits, as measured by the average zero-shot accuracy across 11 tasks.' This is a large improvement over baseline RTN at 2-bit. The paper also claims 'near-lossless 4-bit quantization in most scenarios'. The 6.91-33.22% improvement at 2-bit is the key figure - it shows that optimized rounding matters enormously at very low bit widths. At 4-bit, the improvement is smaller but still positive.",
-  "notes": "SignRound is a weight-only quantization method that optimizes the rounding decision using signed gradient descent. The key idea is that round-to-nearest is not optimal: by adjusting the rounding direction (up or down) for each weight, the overall quantization error can be reduced. This is a PTQ method that requires a calibration set and 200 optimization steps. The method is implemented in Intel's auto-round toolkit. RELEVANCE TO THE REPO'S THEME: SignRound is another example of the 'quantization methods do not compose' pattern. The optimized rounding is specific to the calibration data and the model - it cannot be combined with other quantization methods (like AWQ's scaling or GPTQ's Hessian-based rounding) without re-running the optimization. The 6.91-33.22% improvement at 2-bit is the most dramatic accuracy delta in the quantization literature, and it shows that the rounding decision is a major source of quantization error that is often overlooked. The paper is by Cheng et al. (arXiv:2309.05516), EMNLP 2024 Findings.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-04",
-  "sources": [
-    "qhw-src-signround-paper"
-  ]
+ "id": "qhw-signround",
+ "type": "quantization",
+ "name": "SignRound (signed gradient descent for weight rounding optimization)",
+ "scheme": "gptq",
+ "bits": "w4a16 (2-4 bits per weight, with optimized rounding)",
+ "weight_group_size": 128,
+ "activation_scheme": "FP16 activations, no quantization. Weights are quantized to 2-4 bits with per-group scales. The rounding is optimized via signed gradient descent (SignSGD) rather than round-to-nearest.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s"
+ ],
+ "kernels": [
+  "auto-round (Intel)",
+  "Integrated into various quantization toolkits"
+ ],
+ "quality_delta": "From the paper abstract: 'SignRound achieved absolute average accuracy improvements ranging from 6.91% to 33.22% at 2 bits, as measured by the average zero-shot accuracy across 11 tasks.' This is a large improvement over baseline RTN at 2-bit. The paper also claims 'near-lossless 4-bit quantization in most scenarios'. The 6.91-33.22% improvement at 2-bit is the key figure - it shows that optimized rounding matters enormously at very low bit widths. At 4-bit, the improvement is smaller but still positive.",
+ "notes": "PROXY ENUM VALUE - DECLARED 2026-10-04: SignRound is a ROUNDING ALGORITHM (signed gradient descent on the rounding direction), not a format. It is the same idea as the AutoRound toolkit record and is in fact implemented by it. Filing an algorithm under a format enum is the weakest form of proxy in this set: the record's own quality finding (a 6.91-33.22% improvement at 2-bit) is a property of the rounding, and attaching it to 'gptq' implies it is a GPTQ variant. REQUESTED ENUM ADDITION: 'signround'. SignRound is a weight-only quantization method that optimizes the rounding decision using signed gradient descent. The key idea is that round-to-nearest is not optimal: by adjusting the rounding direction (up or down) for each weight, the overall quantization error can be reduced. This is a PTQ method that requires a calibration set and 200 optimization steps. The method is implemented in Intel's auto-round toolkit. RELEVANCE TO THE REPO'S THEME: SignRound is another example of the 'quantization methods do not compose' pattern. The optimized rounding is specific to the calibration data and the model - it cannot be combined with other quantization methods (like AWQ's scaling or GPTQ's Hessian-based rounding) without re-running the optimization. The 6.91-33.22% improvement at 2-bit is the most dramatic accuracy delta in the quantization literature, and it shows that the rounding decision is a major source of quantization error that is often overlooked. The paper is by Cheng et al. (arXiv:2309.05516), EMNLP 2024 Findings.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "qhw-src-signround-paper"
+ ]
 }

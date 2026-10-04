@@ -1,28 +1,28 @@
 {
-  "id": "bitnet-b158",
-  "type": "quantization",
-  "name": "BitNet b1.58 (ternary LLM)",
-  "scheme": "bitnet-b158",
-  "bits": "1.58 avg",
-  "weight_group_size": null,
-  "activation_scheme": "activations remain 8-bit in the b1.58 recipe (weights are the ternary part); BitNet v2 explored sparsified lower-precision activations",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-l4",
-    "amd-radeon-pro-vii"
-  ],
-  "kernels": [
-    "BitBLAS / bitblas reference kernels (Microsoft)",
-    "llama.cpp and mlx community bitnet builds (unofficial)"
-  ],
-  "quality_delta": "From the paper, as a training result rather than a post-training delta: BitNet b1.58 'matches the full-precision (i.e., FP16 or BF16) Transformer LLM with the same model size and training tokens in terms of both perplexity and end-task performance', while being 'significantly more cost-effective in terms of latency, memory, throughput, and energy consumption' (quant-bitnet-paper). This is a matched-size-and-token-budget training claim, NOT an fp16-inference-baseline delta, and it is the paper's own headline rather than an independent replication.",
-  "notes": "Every parameter is ternary {-1, 0, 1}. The framing that matters: this is a TRAINING-TIME recipe, not a post-training one. There is no such thing as PTQ-ing an existing fp16 LLM to 1.58 bits and keeping its quality - you constrain the weights to the ternary set during training. Read the quality claim correctly: 'matches fp16' means 'a ternary model trained from scratch on the same token budget matches an fp16 model trained from scratch on the same token budget', which is a statement about the expressiveness of the ternary set at fixed compute, not about quantization loss on a pretrained checkpoint. The paper explicitly frames 1-bit hardware as an open design target ('opens the door for designing specific hardware optimized for 1-bit LLMs'), so no accelerator here has a native ternary path. Confidence kept moderate because the authors label the paper 'Work in progress' and the match-claim is their own headline; no third-party perplexity comparison was located. UPGRADE (2026-10-03) - b1.58 vs b1.0, which the parent asked to be pinned down: the repo holds the B1.58 recipe only (2402.17764, quant-bitnet-paper). The B1 paper is a DIFFERENT and earlier architecture: arXiv 2310.11453, 'BitNet: Scaling 1-bit Transformers for Large Language Models' (qlab-bitnet-b1-paper), which introduces BitLinear as a drop-in nn.Linear replacement and reports competitive performance with substantially reduced memory and energy versus both an 8-bit quantized baseline and an FP16 baseline, plus evidence that BitNet follows a scaling law analogous to full-precision transformers. The substantive differences, sourced from the two abstracts: b1 is '1-BIT' with weights constrained to a binary set and BitLinear performing the binary accumulation, whereas b1.58 is '1.58-BIT' with every weight TERNARY {-1,0,+1} - the third state exists specifically because pure binary weights lose too much, and b1.58's activations stay in 8-bit. So '1.58' is not a marketing average of 1 bit; it is a specific ternary weight set with 8-bit activations, and it is a different architecture from the b1 paper. The b1 abstract also stresses 'scalable and STABLE' 1-bit training, and its scaling-law claim is what the later b1.58 work builds on. Recommend the parent add a separate bitnet-b1 record; I did not create one because the repo already has b1.58 and two adjacent bitnet records with the same scheme enum would need the schema widened.",
-  "status": "draft",
-  "confidence": 0.6,
-  "updated": "2026-10-03",
-  "sources": [
-    "quant-bitnet-paper",
-    "qlab-bitnet-b1-paper"
-  ]
+ "id": "bitnet-b158",
+ "type": "quantization",
+ "name": "BitNet b1.58 (ternary LLM)",
+ "scheme": "bitnet-b158",
+ "bits": "1.58 avg",
+ "weight_group_size": null,
+ "activation_scheme": "activations remain 8-bit in the b1.58 recipe (weights are the ternary part); BitNet v2 explored sparsified lower-precision activations",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-l4",
+  "amd-radeon-pro-vii"
+ ],
+ "kernels": [
+  "BitBLAS / bitblas reference kernels (Microsoft)",
+  "llama.cpp and mlx community bitnet builds (unofficial)"
+ ],
+ "quality_delta": "From the paper, as a training result rather than a post-training delta: BitNet b1.58 'matches the full-precision (i.e., FP16 or BF16) Transformer LLM with the same model size and training tokens in terms of both perplexity and end-task performance', while being 'significantly more cost-effective in terms of latency, memory, throughput, and energy consumption' (quant-bitnet-paper). This is a matched-size-and-token-budget training claim, NOT an fp16-inference-baseline delta, and it is the paper's own headline rather than an independent replication.",
+ "notes": "GROUP SIZE LEFT NULL 2026-10-04: BitNet b1.58 weights are trained to be ternary {-1,0,+1} at 1.58 bits average. There is no scale and no group - the clipping threshold is absorbed into training. The '32' in the sibling ternary record is a real quantization block for that method, and must not be copied here. Every parameter is ternary {-1, 0, 1}. The framing that matters: this is a TRAINING-TIME recipe, not a post-training one. There is no such thing as PTQ-ing an existing fp16 LLM to 1.58 bits and keeping its quality - you constrain the weights to the ternary set during training. Read the quality claim correctly: 'matches fp16' means 'a ternary model trained from scratch on the same token budget matches an fp16 model trained from scratch on the same token budget', which is a statement about the expressiveness of the ternary set at fixed compute, not about quantization loss on a pretrained checkpoint. The paper explicitly frames 1-bit hardware as an open design target ('opens the door for designing specific hardware optimized for 1-bit LLMs'), so no accelerator here has a native ternary path. Confidence kept moderate because the authors label the paper 'Work in progress' and the match-claim is their own headline; no third-party perplexity comparison was located. UPGRADE (2026-10-03) - b1.58 vs b1.0, which the parent asked to be pinned down: the repo holds the B1.58 recipe only (2402.17764, quant-bitnet-paper). The B1 paper is a DIFFERENT and earlier architecture: arXiv 2310.11453, 'BitNet: Scaling 1-bit Transformers for Large Language Models' (qlab-bitnet-b1-paper), which introduces BitLinear as a drop-in nn.Linear replacement and reports competitive performance with substantially reduced memory and energy versus both an 8-bit quantized baseline and an FP16 baseline, plus evidence that BitNet follows a scaling law analogous to full-precision transformers. The substantive differences, sourced from the two abstracts: b1 is '1-BIT' with weights constrained to a binary set and BitLinear performing the binary accumulation, whereas b1.58 is '1.58-BIT' with every weight TERNARY {-1,0,+1} - the third state exists specifically because pure binary weights lose too much, and b1.58's activations stay in 8-bit. So '1.58' is not a marketing average of 1 bit; it is a specific ternary weight set with 8-bit activations, and it is a different architecture from the b1 paper. The b1 abstract also stresses 'scalable and STABLE' 1-bit training, and its scaling-law claim is what the later b1.58 work builds on. Recommend the parent add a separate bitnet-b1 record; I did not create one because the repo already has b1.58 and two adjacent bitnet records with the same scheme enum would need the schema widened.",
+ "status": "draft",
+ "confidence": 0.6,
+ "updated": "2026-10-04",
+ "sources": [
+  "quant-bitnet-paper",
+  "qlab-bitnet-b1-paper"
+ ]
 }

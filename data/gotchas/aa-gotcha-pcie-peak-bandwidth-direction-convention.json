@@ -1,0 +1,39 @@
+{
+  "id": "aa-gotcha-pcie-peak-bandwidth-direction-convention",
+  "type": "gotcha",
+  "name": "A vendor 'PCIe peak bandwidth' number may be per-direction or bidirectional aggregate, and the two differ by exactly 2x, so a spec that does not state which one silently halves or doubles every host-bandwidth number",
+  "class": "hardware",
+  "affects": [
+    "intel-gaudi2",
+    "intel-gaudi3",
+    "cambricon-mlu370-x8",
+    "amd-instinct-mi350p",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-rtx-pro-4500-blackwell",
+    "huawei-atlas-800i-a2",
+    "iluvatar-bi-v100-mr-v100"
+  ],
+  "concepts": [
+    "pcie",
+    "per-direction",
+    "bidirectional",
+    "scale-out",
+    "host-memory",
+    "ingest"
+  ],
+  "symptom": "Two failure directions, both already seen in this repo. (a) DOUBLE-HALVING: a correct aggregate figure is halved because the reader assumes the sheet quotes per-direction, or is halved twice - once for a 'sparse' reading it does not need and once for a 'per-direction' reading it already had. (b) The inverse, newly found on the Cambricon MLU370-X8: the record derived '4 ports x 16 lanes at 50 Gbps = 200 GB/s' with no direction stated and then labelled the result 'bidirectional aggregate', when 4 x 16 x 50 = 3,200 Gbit/s of raw lanes is 400 GB/s AGGREGATE across both directions - i.e. 200 GB/s PER DIRECTION. The vendor's own comparison then contradicts the label: Cambricon states the 200 GB/s is '3.1x PCIe 4.0 bandwidth', and 200 / 64 = 3.125, which only works if the comparison is against PCIe Gen4 x16's 64 GB/s BIDIRECTIONAL AGGREGATE (32 GB/s per direction). So the vendor's own text is internally ambiguous about direction, and the record inherited the ambiguity instead of flagging it.",
+  "root_cause": "PCIe is full duplex, so every link has two independently-counted bandwidths and vendors pick whichever convention flatters their part, without always saying which. The arithmetic anchor: PCIe Gen5 x16 is 32 GT/s x 16 lanes / 8 = 64 GB/s PER DIRECTION, 128 GB/s bidirectional aggregate; Gen4 x16 is 32 / 64 GB/s. Intel's Gaudi 3 technical paper is the model behaviour here - it prints BOTH numbers in the same table cell, 'Host Interface Peak BW 64 GB/s (32 GB/s per direction)' for Gaudi 2 and '128 GB/s (64 GB/s per direction)' for Gaudi 3, so 'peak BW' is unambiguously the aggregate. NVIDIA's Blackwell sheets print a bare 'PCIe Gen5: 128 GB/s' (aggregate) and Blackwell Ultra a bare 'PCIe Gen6: 256 GB/s' (aggregate). A bare number with no direction qualifier is the dangerous case: it is unresolvable from the sheet alone and must be recorded as a vendor claim with the convention stated as an assumption, not silently assigned.",
+  "workaround": "When a sheet prints a bare PCIe figure, state the convention in the basis field and compute the per-direction number rather than storing an unexplained number. Treat a per-pin-and-lane derivation as direction-free (lane counts are per direction) and a vendor 'aggregate' or 'bidirectional' label as explicitly aggregate. If a vendor's own ratio claim disagrees with your assumed convention, that is evidence the convention is the other one - use the ratio as a cross-check, as the Cambricon 3.1x claim does. When even that is inconclusive (as for MLU-Link), leave the ambiguity flagged in notes rather than picking silently; the interconnect vocabulary field carries only the PCIe generation, which is unambiguous, so nothing downstream is silently halved by an unresolved directional question.",
+  "severity": "major",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "asic-intel-gaudi3-tech-paper",
+    "cn-cambricon-mlu370-x8",
+    "nv-blackwell-datasheet",
+    "nv-blackwell-ultra-datasheet"
+  ],
+  "notes": "Practical stakes: PCIe is the ONLY scale-up path on the consumer and workstation parts this repo audits, so a 2x error here directly doubles or halves the achievable tensor-parallel efficiency and the weight-streaming rate for model load and KV transfer. It is also the reason several records deliberately store only the generation slug ('pcie-gen5') in the interconnect array instead of a numeric bandwidth - the generation is unambiguous, a number is not. Related but distinct from mgpu-pcie-only-multigpu-is-communication-bound, which is about the measured throughput ceiling once PCIe is the only link rather than about how to read the link rate. Also note Intel Gaudi's 600 GB/s and 1200 GB/s networking figures are separately labelled 'Networking (bidirectional)' in the same table, so on that sheet bidirectional is explicitly flagged for the network path and the host path is labelled 'Peak BW' with the per-direction value parenthetically - two different conventions two rows apart in one table."
+}

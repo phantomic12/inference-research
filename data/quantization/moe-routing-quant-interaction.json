@@ -1,34 +1,34 @@
 {
-  "id": "moe-routing-quant-interaction",
-  "type": "quantization",
-  "name": "MoE routing-instability under quantization (VSRAQ / EAQuant routing-consistency alignment)",
-  "scheme": "modelopt",
-  "bits": "not a distinct format - a PTQ OBJECTIVE that constrains which bit-allocations are acceptable, used on top of otherwise-standard schemes at W4A4 / W3A4 / W3A3 / W2A4",
-  "weight_group_size": null,
-  "activation_scheme": "the schemes being stabilized are low-precision on BOTH sides: activations are in the 3-4 bit range in the EAQuant evaluation",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "amd-instinct-mi300x",
-    "intel-gaudi3"
-  ],
-  "kernels": [
-    "routing-consistency alignment loss (EAQuant) - added to the PTQ objective to preserve pre-quantization expert selection",
-    "value alignment + structure alignment objective (VSRAQ) - matches routing logits AND preserves expert ordering / top-k boundaries",
-    "smoothed-activation aggregation (EAQuant) to suppress activation outliers at low bit width"
-  ],
-  "quality_delta": "EAQuant reports average accuracy improvements of 1.15-13.81% over existing methods across three MoE architectures at W4A4/W3A4/W3A3/W2A4, with the largest gains on reasoning tasks (qlab2-arxiv-eaquant). Architectures and benchmark names are not given in the abstract - paper-claim-grade, model unnamed.",
-  "notes": "RECORDED SEPARATELY FROM THE MIXED-PRECISION RECORD because this is a different MECHANISM, not a different allocation. VSRAQ (qlab2-arxiv-vsraq) states the problem in one sentence that is the most useful sentence in this whole area: 'Unlike dense models, MoE models are sensitive to routing instability: small quantization-induced perturbations can change the top-k expert selection, altering the computation path and degrading model quality.' The consequence is specific and easy to miss - quantization noise does not merely perturb the expert's output, it can change WHICH expert runs, so the error is not the smooth perturbation PTQ theory assumes. That also means perplexity deltas measured on MoE can understate the damage: a swapped expert is a different function, not a slightly noisier one. VSRAQ's fix is two-sided: value alignment matches the routing-relevant logits or scores, structure alignment preserves expert ORDERING and the top-k decision boundary - the second is the part that matters for top-k routing, since a perturbation that does not change the top score can still change rank-2 and swap the selection. EAQuant (qlab2-arxiv-eaquant) independently reaches the same diagnosis from the other side, naming three failures of generic PTQ on MoE - activation outliers, ROUTING INSTABILITY, and sparse expert calibration - and adds a routing-consistency alignment term plus calibration-data balancing plus smoothing aggregation. PRACTICAL READ-ACROSS for this repo: on an MoE model, a perplexity delta from a quant change is not a clean signal the way it is for a dense model. If expert selection shifts, the comparison confounds 'bits per expert' with 'different function'. The cheap diagnostic nobody runs: log the top-k expert assignment distribution before and after quantization and diff it. Nothing in the literature reports this as a standard step, which is itself the gap. Also note that the router itself is a small GEMM that is normally left unquantized - the interaction being studied is the perturbation of router INPUTS by quantized upstream layers, not a quantized router.",
-  "status": "verified",
-  "confidence": 0.7,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab2-arxiv-alphaq",
-    "qlab2-arxiv-eaquant",
-    "qlab2-arxiv-moequant",
-    "qlab2-arxiv-moqe",
-    "qlab2-arxiv-mxmoe",
-    "qlab2-arxiv-quantmoebench",
-    "qlab2-arxiv-vsraq"
-  ]
+ "id": "moe-routing-quant-interaction",
+ "type": "quantization",
+ "name": "MoE routing-instability under quantization (VSRAQ / EAQuant routing-consistency alignment)",
+ "scheme": "modelopt",
+ "bits": "not a distinct format - a PTQ OBJECTIVE that constrains which bit-allocations are acceptable, used on top of otherwise-standard schemes at W4A4 / W3A4 / W3A3 / W2A4",
+ "weight_group_size": null,
+ "activation_scheme": "the schemes being stabilized are low-precision on BOTH sides: activations are in the 3-4 bit range in the EAQuant evaluation",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "amd-instinct-mi300x",
+  "intel-gaudi3"
+ ],
+ "kernels": [
+  "routing-consistency alignment loss (EAQuant) - added to the PTQ objective to preserve pre-quantization expert selection",
+  "value alignment + structure alignment objective (VSRAQ) - matches routing logits AND preserves expert ordering / top-k boundaries",
+  "smoothed-activation aggregation (EAQuant) to suppress activation outliers at low bit width"
+ ],
+ "quality_delta": "EAQuant reports average accuracy improvements of 1.15-13.81% over existing methods across three MoE architectures at W4A4/W3A4/W3A3/W2A4, with the largest gains on reasoning tasks (qlab2-arxiv-eaquant). Architectures and benchmark names are not given in the abstract - paper-claim-grade, model unnamed.",
+ "notes": "NOT A DISTINCT FORMAT - DECLARED 2026-10-04: as with the mixed-precision record, the seven sources are arXiv papers with no ModelOpt involvement. This record documents a quantization OBJECT (routing instability under PTQ) and its mitigation, not a storage layout. A query for ModelOpt returns two literature records that are not ModelOpt's. NOT A DISTINCT FORMAT: this record documents a quantization OBJECT (routing instability under PTQ on MoE) and its mitigation terms, not a storage layout. It inherits no group size and should not be given one. Its mechanism is discussed in the sibling moe-mixed-precision record. RECORDED SEPARATELY FROM THE MIXED-PRECISION RECORD because this is a different MECHANISM, not a different allocation. VSRAQ (qlab2-arxiv-vsraq) states the problem in one sentence that is the most useful sentence in this whole area: 'Unlike dense models, MoE models are sensitive to routing instability: small quantization-induced perturbations can change the top-k expert selection, altering the computation path and degrading model quality.' The consequence is specific and easy to miss - quantization noise does not merely perturb the expert's output, it can change WHICH expert runs, so the error is not the smooth perturbation PTQ theory assumes. That also means perplexity deltas measured on MoE can understate the damage: a swapped expert is a different function, not a slightly noisier one. VSRAQ's fix is two-sided: value alignment matches the routing-relevant logits or scores, structure alignment preserves expert ORDERING and the top-k decision boundary - the second is the part that matters for top-k routing, since a perturbation that does not change the top score can still change rank-2 and swap the selection. EAQuant (qlab2-arxiv-eaquant) independently reaches the same diagnosis from the other side, naming three failures of generic PTQ on MoE - activation outliers, ROUTING INSTABILITY, and sparse expert calibration - and adds a routing-consistency alignment term plus calibration-data balancing plus smoothing aggregation. PRACTICAL READ-ACROSS for this repo: on an MoE model, a perplexity delta from a quant change is not a clean signal the way it is for a dense model. If expert selection shifts, the comparison confounds 'bits per expert' with 'different function'. The cheap diagnostic nobody runs: log the top-k expert assignment distribution before and after quantization and diff it. Nothing in the literature reports this as a standard step, which is itself the gap. Also note that the router itself is a small GEMM that is normally left unquantized - the interaction being studied is the perturbation of router INPUTS by quantized upstream layers, not a quantized router.",
+ "status": "verified",
+ "confidence": 0.7,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab2-arxiv-alphaq",
+  "qlab2-arxiv-eaquant",
+  "qlab2-arxiv-moequant",
+  "qlab2-arxiv-moqe",
+  "qlab2-arxiv-mxmoe",
+  "qlab2-arxiv-quantmoebench",
+  "qlab2-arxiv-vsraq"
+ ]
 }

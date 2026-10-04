@@ -1,30 +1,30 @@
 {
-  "id": "qhw-int8-kv-cache",
-  "type": "quantization",
-  "name": "INT8 KV cache quantization (8-bit keys and values)",
-  "scheme": "kv-cache-quant",
-  "bits": "8-bit KV cache (INT8 format for both keys and values)",
-  "weight_group_size": null,
-  "activation_scheme": "Not an activation scheme - KV cache quantization. INT8 format with per-token or per-channel scales. The KV cache is quantized after computation, so the attention kernel must dequantize before the dot product.",
-  "native_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s"
-  ],
-  "emulated_support": [
-    "amd-instinct-mi300x",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "vLLM quantized KV cache (INT8 path)",
-    "TensorRT-LLM INT8 KV cache"
-  ],
-  "quality_delta": null,
-  "notes": "INT8 KV cache quantization reduces KV cache memory by 2x compared to FP16. INT8 has ~2 decimal digits of precision (same as FP8 E4M3) but with a different distribution - INT8 is symmetric around zero while FP8 has an exponent. For attention keys that feed into softmax, the INT8 format may be more appropriate because the key distribution is roughly symmetric. However, no controlled benchmark with named accuracy delta was found. The vLLM docs list 'Quantized KV Cache' as a supported feature but do not publish accuracy figures. This is a significant gap: INT8 KV cache is widely deployed but the accuracy impact is not well-documented in public sources. The attention kernel interaction is the same as FP8 KV: the KV cache is quantized after the KV projection, so the attention kernel must dequantize before computing attention scores. PRIORITY FOR FURTHER RESEARCH: finding a source that reports measured accuracy delta on a named benchmark for INT8 KV cache.",
-  "status": "draft",
-  "confidence": 0.5,
-  "updated": "2026-10-04",
-  "sources": [
-    "qhw-src-vllm-quant-docs"
-  ]
+ "id": "qhw-int8-kv-cache",
+ "type": "quantization",
+ "name": "INT8 KV cache quantization (8-bit keys and values)",
+ "scheme": "kv-cache-quant",
+ "bits": "8-bit KV cache (INT8 format for both keys and values)",
+ "weight_group_size": null,
+ "activation_scheme": "Not an activation scheme - KV cache quantization. INT8 format with per-token or per-channel scales. The KV cache is quantized after computation, so the attention kernel must dequantize before the dot product.",
+ "native_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s"
+ ],
+ "emulated_support": [
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "vLLM quantized KV cache (INT8 path)",
+  "TensorRT-LLM INT8 KV cache"
+ ],
+ "quality_delta": null,
+ "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: this scheme quantizes the KV cache, not the weights, so there are no weight groups to size. A number in this field would be a category error. (Where the underlying method has a real grouping - e.g. KIVI per-channel keys, KVQuant per-channel - that lives in the method's own record, not in weight_group_size.) INT8 KV cache quantization reduces KV cache memory by 2x compared to FP16. INT8 has ~2 decimal digits of precision (same as FP8 E4M3) but with a different distribution - INT8 is symmetric around zero while FP8 has an exponent. For attention keys that feed into softmax, the INT8 format may be more appropriate because the key distribution is roughly symmetric. However, no controlled benchmark with named accuracy delta was found. The vLLM docs list 'Quantized KV Cache' as a supported feature but do not publish accuracy figures. This is a significant gap: INT8 KV cache is widely deployed but the accuracy impact is not well-documented in public sources. The attention kernel interaction is the same as FP8 KV: the KV cache is quantized after the KV projection, so the attention kernel must dequantize before computing attention scores. PRIORITY FOR FURTHER RESEARCH: finding a source that reports measured accuracy delta on a named benchmark for INT8 KV cache.",
+ "status": "draft",
+ "confidence": 0.5,
+ "updated": "2026-10-04",
+ "sources": [
+  "qhw-src-vllm-quant-docs"
+ ]
 }

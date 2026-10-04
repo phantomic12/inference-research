@@ -1,28 +1,28 @@
 {
-  "id": "h2o-kv-eviction",
-  "type": "quantization",
-  "name": "H2O (heavy-hitter KV eviction) - NOT KV quantization",
-  "scheme": "kv-eviction",
-  "bits": "none - no bits are reduced. Evicts tokens instead. Retains a configurable budget of heavy-hitter plus recent tokens (20% heavy hitters in the paper's throughput results).",
-  "weight_group_size": null,
-  "activation_scheme": "None. The mechanism is KV cache EVICTION: a dynamic submodular formulation retains a balance of recent and high-attention-score 'heavy hitter' tokens. Nothing is quantized; entries are dropped entirely.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "Runs on top of existing inference engines (the paper evaluates against DeepSpeed Zero-Inference, HuggingFace Accelerate and FlexGen)."
-  ],
-  "quality_delta": "From the abstract: with 20% heavy hitters, H2O improves throughput over DeepSpeed Zero-Inference by up to 29x, HuggingFace Accelerate by up to 29x, and FlexGen by up to 3x on OPT-6.7B and OPT-30B; at the same batch size it reduces latency by up to 1.9x. Validated across OPT, LLaMA and GPT-NeoX. The 29x figures are against systems whose baselines are far weaker, so they mostly measure the baseline gap, not H2O.",
-  "notes": "Recorded explicitly to PREVENT A CONFUSION, which is why it exists. H2O is the canonical example of a KV-cache method that is not quantization: it reduces KV memory by discarding tokens, not by reducing bits. Every bit saved is a token of context thrown away permanently, which is a qualitatively different trade from quantization's lossy-but-uniform compression. This matters for capacity planning: quantized KV degrades gracefully, evicted KV cannot be recovered. The paper also establishes the heavy-hitter observation that later KV-quantization and KV-sparsity work all build on. scheme is a deliberate placeholder - request the parent add 'kv-eviction' and 'kv-sparsity' enum values. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-eviction'. ",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab-h2o-paper"
-  ]
+ "id": "h2o-kv-eviction",
+ "type": "quantization",
+ "name": "H2O (heavy-hitter KV eviction) - NOT KV quantization",
+ "scheme": "kv-eviction",
+ "bits": "none - no bits are reduced. Evicts tokens instead. Retains a configurable budget of heavy-hitter plus recent tokens (20% heavy hitters in the paper's throughput results).",
+ "weight_group_size": null,
+ "activation_scheme": "None. The mechanism is KV cache EVICTION: a dynamic submodular formulation retains a balance of recent and high-attention-score 'heavy hitter' tokens. Nothing is quantized; entries are dropped entirely.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "Runs on top of existing inference engines (the paper evaluates against DeepSpeed Zero-Inference, HuggingFace Accelerate and FlexGen)."
+ ],
+ "quality_delta": "From the abstract: with 20% heavy hitters, H2O improves throughput over DeepSpeed Zero-Inference by up to 29x, HuggingFace Accelerate by up to 29x, and FlexGen by up to 3x on OPT-6.7B and OPT-30B; at the same batch size it reduces latency by up to 1.9x. Validated across OPT, LLaMA and GPT-NeoX. The 29x figures are against systems whose baselines are far weaker, so they mostly measure the baseline gap, not H2O.",
+ "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: eviction reduces HOW MANY KV positions are retained; no bits per retained value change, so there is no weight grid to group. The null here is a fact about the method, not missing data. Recorded explicitly to PREVENT A CONFUSION, which is why it exists. H2O is the canonical example of a KV-cache method that is not quantization: it reduces KV memory by discarding tokens, not by reducing bits. Every bit saved is a token of context thrown away permanently, which is a qualitatively different trade from quantization's lossy-but-uniform compression. This matters for capacity planning: quantized KV degrades gracefully, evicted KV cannot be recovered. The paper also establishes the heavy-hitter observation that later KV-quantization and KV-sparsity work all build on. scheme is a deliberate placeholder - request the parent add 'kv-eviction' and 'kv-sparsity' enum values. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-eviction'. ",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab-h2o-paper"
+ ]
 }

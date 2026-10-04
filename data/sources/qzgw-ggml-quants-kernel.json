@@ -1,0 +1,15 @@
+{
+ "id": "qzgw-ggml-quants-kernel",
+ "type": "source",
+ "name": "llama.cpp ggml-quants.c dequantize_row_* kernels (authoritative scale-group sizes)",
+ "status": "verified",
+ "confidence": 0.95,
+ "updated": "2026-10-04",
+ "url": "https://raw.githubusercontent.com/ggml-org/llama.cpp/master/ggml/src/ggml-quants.c",
+ "publisher": "ggml-org",
+ "kind": "repo",
+ "published": null,
+ "accessed": "2026-10-04",
+ "archived_url": null,
+ "notes": "The dequantize_row_* reference kernels, which are the AUTHORITATIVE answer to 'what is the scale-sharing group size' for every GGUF/GGML type. This is the file that resolves cases where the struct in ggml-common.h is ambiguous: the struct declares an ARRAY LENGTH, the kernel declares HOW MANY DISTINCT SCALES ARE APPLIED and over how many elements. Verified from the loop bounds: dequantize_row_q2_K applies one (scale,min) pair per 16 values (16 blocks of 16, loop `for n in 0..QK_K step 128` consuming 4 scales each); dequantize_row_q6_K applies one int8 scale per 16 values (`sc[is+0..is+6]`, is=l/16); dequantize_row_q4_K and q5_K apply one scale+min pair per 32 values (`j += 64` consuming two get_scale_min_k4 pairs of 32 each); dequantize_row_iq2_s applies two 4-bit sub-scales per 32 values (`db[0]`,`db[1]` from one scales byte); dequantize_row_iq3_s applies two 4-bit sub-scales per 64 values (`ib32 += 2`); dequantize_row_iq4_xs applies one 6-bit scale per 32 values (`ib < QK_K/32`); dequantize_row_iq1_m applies two 3-bit sub-scales per 32 values (`dl1`,`dl2` from one sc uint16 per 32). Accessed 2026-10-04."
+}

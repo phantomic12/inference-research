@@ -2,6 +2,8 @@
   "id": "obs-llama-cpp-observability",
   "type": "engine",
   "name": "llama.cpp server (observability surface: 14 hand-built Prometheus metrics, off by default, no OTel)",
+  "tracing_support": "none",
+  "verified_negatively": true,
   "status": "verified",
   "confidence": 0.92,
   "updated": "2026-10-04",
@@ -61,5 +63,5 @@
     "Distributed tracing: an in-repo code search for opentelemetry in ggml-org/llama.cpp returns 0 hits. There is no tracing support at all"
   ],
   "docs_url": "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md",
-  "notes": "Transcribed from server_task_result_metrics::to_metrics() in tools/server/server-task.cpp on master and cross-checked against the 'Available metrics' table in tools/server/README.md; the two agree except that the README table omits `llamacpp:prompt_tokens_cached_total` while the code emits it. Two related counters exist: `llamacpp:prompt_tokens_cached_total` ('Number of prompt tokens reused from the cache') and `llamacpp:spec_decode_num_accepted_tokens_per_pos_total{position=\"N\"}`. Note the naming oddity that `llamacpp:n_tokens_max` is emitted as a Counter although it is documented as a high-watermark of observed context size - a monotonic max is legitimately counter-shaped, but the name reads like a gauge. `llamacpp:n_busy_slots_per_decode` is 'Average number of busy slots per llama_decode() call', computed as n_busy_slots / max(n_decode, 1), which is a batching-efficiency signal rather than a latency signal."
+  "notes": "Transcribed from server_task_result_metrics::to_metrics() in tools/server/server-task.cpp on master and cross-checked against the 'Available metrics' table in tools/server/README.md; the two agree except that the README table omits `llamacpp:prompt_tokens_cached_total` while the code emits it. Two related counters exist: `llamacpp:prompt_tokens_cached_total` ('Number of prompt tokens reused from the cache') and `llamacpp:spec_decode_num_accepted_tokens_per_pos_total{position=\"N\"}`. Note the naming oddity that `llamacpp:n_tokens_max` is emitted as a Counter although it is documented as a high-watermark of observed context size - a monotonic max is legitimately counter-shaped, but the name reads like a gauge. `llamacpp:n_busy_slots_per_decode` is 'Average number of busy slots per llama_decode() call', computed as n_busy_slots / max(n_decode, 1), which is a batching-efficiency signal rather than a latency signal. tracing_support=none, verified_negatively=true (set 2026-10-04). What was searched: an in-repo code search for opentelemetry in ggml-org/llama.cpp returns 0 hits; the only observability surface is the hand-built /metrics endpoint assembled by string concatenation in server_task_result_metrics::to_metrics(), which contains no span or exporter code (obs-llamacpp-metrics-source, obs-llamacpp-server-readme-metrics). This is a verified negative rather than an unchecked null, and the distinction matters: llama.cpp does have a Prometheus surface, just no tracing, and a reader seeing tracing_support=none with no verification could not tell that apart from nobody having looked."
 }

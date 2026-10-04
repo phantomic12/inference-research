@@ -2,7 +2,7 @@
   "id": "sec-guardrail-on-user-turn-misses-the-retrieved-turn",
   "type": "gotcha",
   "name": "Input guardrails on the user turn do not cover the retrieved turn, because indirect injection arrives as data the app itself fetched",
-  "class": "config",
+  "class": "security",
   "affects": [],
   "concepts": [
     "prompt-injection",
@@ -17,7 +17,7 @@
   "root_cause": "Greshake et al.'s framing is that LLM-integrated applications blur the line between data and instructions: the assumption that the user is the one prompting no longer holds. Their indirect prompt injection has the attacker never touch the user interface at all - they write into data the application will later retrieve. A guardrail placed on the user turn is structurally incapable of seeing this, because the malicious text is not in the user turn; it is in a document your retrieval layer placed into the model's context. The attack surface grows with every retrieval source you add.",
   "workaround": "Treat retrieved content as untrusted input of the same class as user input, and filter it as such - at ingestion, not only at the prompt boundary. Concretely: (a) screen documents at index time so poisoned content never enters a context; (b) mark or delimit retrieved spans so the model can distinguish them from instructions; (c) if the model has tools, constrain what any single retrieved span can cause, because an agent's damage is bounded by its capabilities rather than by its instructions.",
   "severity": "blocker",
-  "notes": "This is the highest-severity record in the safety slice because the mitigation is architectural, not a knob, and the failure is invisible to prompt-level testing. Related risk recorded separately: corpus poisoning, where the attacker does not need to win the user's request, only to get a document retrieved.",
+  "notes": "This is the highest-severity record in the safety slice because the mitigation is architectural, not a knob, and the failure is invisible to prompt-level testing. Related risk recorded separately: corpus poisoning, where the attacker does not need to win the user's request, only to get a document retrieved. SCHEME RECLASSIFIED (2026-10-04): was 'config'.",
   "status": "verified",
   "confidence": 0.9,
   "updated": "2026-10-04",

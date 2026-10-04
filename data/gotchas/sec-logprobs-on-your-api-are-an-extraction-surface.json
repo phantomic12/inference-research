@@ -2,7 +2,7 @@
   "id": "sec-logprobs-on-your-api-are-an-extraction-surface",
   "type": "gotcha",
   "name": "Returning logprobs turns your endpoint into a training-data oracle: top-k logits from under 10,000 queries are enough to reconstruct the output projection and distil a clone",
-  "class": "framework",
+  "class": "security",
   "affects": [
     "vllm"
   ],
@@ -19,7 +19,7 @@
   "root_cause": "Clone What You Can't Steal reconstructs the OUTPUT PROJECTION MATRIX from top-k logits collected in under 10,000 black-box queries via SVD over the logits, then distils the remaining architecture into a student. A 6-layer student recovers 97.6% of the 6-layer teacher's hidden-state geometry at a +7.31% perplexity increase (7.58 NLL); a 4-layer variant achieves 17.1% faster inference and 18.1% parameter reduction with comparable performance. The entire attack completes in under 24 GPU-hours. So logprob exposure is qualitatively different from text exposure: sampled text is a lossy 1-bit-per-token observation, whereas top-k logits carry the information about the final projection that makes reconstruction tractable.",
   "workaround": "Do not return logprobs (especially top-k, and especially full-rank ones) on an endpoint serving weights that are worth protecting, unless the business need is worth a demonstrably extractable clone. If a feature needs them, scope it to authenticated first-party use, restrict k to the minimum, and prefer a derived quantity over raw logits. Rate limiting does not mitigate this - 10,000 queries is a small budget against any real per-key quota, and the attack is explicitly engineered to work under tight query budgets.",
   "severity": "blocker",
-  "notes": "SCHEME RECLASSIFIED (2026-10-04): filed under class 'framework' because schemas/gotcha.schema.json has no 'security' value. True class is 'security' - see the enum addition requested in this slice's report. The uncomfortable asymmetry: a model-extraction attacker benefits from you being GENEROUS with observability. The vLLM logprobs machinery (max_num_logprobs, logprobs_mode including raw_logits, and the generative_scoring API that gathers logprobs for caller-supplied token ids) is a debugging and evaluation feature, and every part of it is also an extraction surface. Note this attack is on a model whose weights were already public, so what it extracts is a deployable clone - the lesson is that logprob exposure costs you model ACCESS control, not model SECRECY.",
+  "notes": "SCHEME RECLASSIFIED (2026-10-04): was 'framework'. The uncomfortable asymmetry: a model-extraction attacker benefits from you being GENEROUS with observability. The vLLM logprobs machinery (max_num_logprobs, logprobs_mode including raw_logits, and the generative_scoring API that gathers logprobs for caller-supplied token ids) is a debugging and evaluation feature, and every part of it is also an extraction surface. Note this attack is on a model whose weights were already public, so what it extracts is a deployable clone - the lesson is that logprob exposure costs you model ACCESS control, not model SECRECY.",
   "status": "verified",
   "confidence": 0.9,
   "updated": "2026-10-04",

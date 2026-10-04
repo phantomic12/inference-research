@@ -1,28 +1,28 @@
 {
-  "id": "qserve-w4a8kv4",
-  "type": "quantization",
-  "name": "QServe / QoQ (W4A8KV4 quantization and system co-design)",
-  "scheme": "w4a8kv4",
-  "bits": "w4a8kv4 (4-bit weights, 8-bit activations, 4-bit KV cache) - explicitly named QoQ, quattuor-octo-quattuor, i.e. 4-8-4",
-  "weight_group_size": null,
-  "activation_scheme": "8-bit activations, kept cheap by PROGRESSIVE QUANTIZATION, which allows low dequantization overhead in the W4A8 GEMM. The KV cache is quantized to 4 bits with SmoothAttention, a technique added specifically to mitigate the accuracy degradation 4-bit KV quantization causes.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "QServe inference library (QoQ). Compute-aware weight reordering, register-level parallelism to cut dequantization latency, and fused attention made memory-bound to exploit the KV4 gain."
-  ],
-  "quality_delta": "From the abstract: QServe improves maximum achievable serving throughput of LLaMA-3-8B by 1.2x on A100 and 1.4x on L40S, and Qwen1.5-72B by 2.4x on A100 and 3.5x on L40S, versus TensorRT-LLM. The paper also quantifies the problem it solves: existing INT4 methods suffer 20-90% runtime overhead from dequantizing weights or partial sums on GPUs. Throughput figures from the authors' own system; no perplexity number in the abstract.",
-  "notes": "Enum mismatch, and this one matters: recorded as 'wq4a4' because that is the nearest 4-bit-weight value, but QServe is W4A8 - activations are 8-bit, not 4-bit. Anyone reading this as a W4A4 method would be wrong; bits field says w4a8kv4 and this note says so explicitly. Request the parent add 'w4a8kv4'. The real contribution is SYSTEM co-design: it identifies that INT4 serving on GPUs is bottlenecked not by the GEMM but by dequantization on low-throughput CUDA cores, which is the same class of problem as the w4a16-vs-w4a4 distinction - INT4 weight-only buys memory, not compute, and unless you also fix the dequant path it can be slower than fp16. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'wq4a4' (a proxy recorded while the enum lacked a legal value) and is now 'w4a8kv4'. ",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab-qserve-paper"
-  ]
+ "id": "qserve-w4a8kv4",
+ "type": "quantization",
+ "name": "QServe / QoQ (W4A8KV4 quantization and system co-design)",
+ "scheme": "w4a8kv4",
+ "bits": "w4a8kv4 (4-bit weights, 8-bit activations, 4-bit KV cache) - explicitly named QoQ, quattuor-octo-quattuor, i.e. 4-8-4",
+ "weight_group_size": null,
+ "activation_scheme": "8-bit activations, kept cheap by PROGRESSIVE QUANTIZATION, which allows low dequantization overhead in the W4A8 GEMM. The KV cache is quantized to 4 bits with SmoothAttention, a technique added specifically to mitigate the accuracy degradation 4-bit KV quantization causes.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "QServe inference library (QoQ). Compute-aware weight reordering, register-level parallelism to cut dequantization latency, and fused attention made memory-bound to exploit the KV4 gain."
+ ],
+ "quality_delta": "From the abstract: QServe improves maximum achievable serving throughput of LLaMA-3-8B by 1.2x on A100 and 1.4x on L40S, and Qwen1.5-72B by 2.4x on A100 and 3.5x on L40S, versus TensorRT-LLM. The paper also quantifies the problem it solves: existing INT4 methods suffer 20-90% runtime overhead from dequantizing weights or partial sums on GPUs. Throughput figures from the authors' own system; no perplexity number in the abstract.",
+ "notes": "GROUP SIZE LEFT NULL 2026-10-04: the QServe/QoQ record describes the W4A8KV4 SCHEME and its system co-design (SmoothAttention, token-wise smoothing), not one concrete weight grid. The KV group detail lives in the sibling qserve-kv4 record. Enum mismatch, and this one matters: recorded as 'wq4a4' because that is the nearest 4-bit-weight value, but QServe is W4A8 - activations are 8-bit, not 4-bit. Anyone reading this as a W4A4 method would be wrong; bits field says w4a8kv4 and this note says so explicitly. Request the parent add 'w4a8kv4'. The real contribution is SYSTEM co-design: it identifies that INT4 serving on GPUs is bottlenecked not by the GEMM but by dequantization on low-throughput CUDA cores, which is the same class of problem as the w4a16-vs-w4a4 distinction - INT4 weight-only buys memory, not compute, and unless you also fix the dequant path it can be slower than fp16. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'wq4a4' (a proxy recorded while the enum lacked a legal value) and is now 'w4a8kv4'. ",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab-qserve-paper"
+ ]
 }

@@ -2,7 +2,7 @@
   "id": "sec-kv-cache-hash-seed-is-fixed-by-default-for-cross-node-reuse",
   "type": "gotcha",
   "name": "vLLM derives prefix-cache block hashes from a FIXED default seed so nodes can share a cache - keeping the seed secret is not a security control",
-  "class": "config",
+  "class": "privacy",
   "affects": [
     "vllm",
     "lmcache"
@@ -21,7 +21,7 @@
   "root_cause": "The source is explicit. Block hashes default to sha256, 'derived deterministically from a fixed default seed, so independent vLLM processes compute identical block hashes for identical content and can share a prefix cache (e.g. KV cache reuse across nodes) without extra configuration.' The comment continues: 'This does not weaken collision resistance, which for SHA-256 does not depend on keeping the seed secret; cache_salt remains the mechanism for intentional cache isolation.' Non-cryptographic hash algorithms behave differently and are given a per-process RANDOM seed, because there a predictable seed would let an attacker precompute colliding blocks offline (issue #12621); setting PYTHONHASHSEED overrides the seed in both cases. The trade is explicit and deliberate: cross-process reproducibility, with a separate named knob for isolation.",
   "workaround": "Use cache_salt for isolation, not the hash seed. If you rely on collision resistance, rely on sha256 rather than on seed secrecy. If you are on a non-cryptographic hash, set PYTHONHASHSEED to a shared value to keep cross-process reuse working, or move to sha256 - and do not read the per-process random seed as protecting you against offline precomputation, because preventing exactly that is its stated purpose.",
   "severity": "minor",
-  "notes": "Worth recording because it is a rare case of a security-relevant default that is CORRECT and still easy to misread in the opposite direction. The comment's own framing - seed secrecy is not the mechanism for cryptographic hashes, cache_salt is the isolation mechanism - should be treated as authoritative over any assumption that hiding a seed is a control.",
+  "notes": "Worth recording because it is a rare case of a security-relevant default that is CORRECT and still easy to misread in the opposite direction. The comment's own framing - seed secrecy is not the mechanism for cryptographic hashes, cache_salt is the isolation mechanism - should be treated as authoritative over any assumption that hiding a seed is a control. SCHEME RECLASSIFIED (2026-10-04): was 'config'. Filed as privacy: the fixed seed is what makes cross-node prefix reuse portable, i.e. it is the enabling condition for cross-tenant KV cache leakage. Not filed as security because seed secrecy is explicitly NOT the control - cache_salt is.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-04",

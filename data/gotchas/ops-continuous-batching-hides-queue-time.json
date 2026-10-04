@@ -2,7 +2,7 @@
   "id": "ops-continuous-batching-hides-queue-time",
   "type": "gotcha",
   "name": "Continuous batching makes the engine look permanently busy, so queue time disappears into per-request TTFT while throughput stays high — the queue is not empty, it has been absorbed into the batch",
-  "class": "framework",
+  "class": "operations",
   "affects": [
     "vllm",
     "text-generation-inference",
@@ -20,7 +20,7 @@
   "root_cause": "Continuous batching admits new requests into a running batch each step and evicts finished ones, so there is no discrete 'batch boundary' at which a queue is visible — the queue is expressed purely as wait time folded into each request's TTFT. TGI's design note states the consequence for latency accounting: since prefill is much more expensive than decode, admitting a new query requires pausing the running batch to run a prefill first, and --max-waiting-tokens decides how many tokens may pass before waiting queries are forced in ('With a value too small, queries will always steal the compute to run prefill and running queries will be delayed by a lot. With a value too big, waiting queries could wait for a very long time'). The engine-side counters are the waiting-queue gauges (vllm:num_requests_waiting, with the by_reason breakdown where 'capacity' means waiting for scheduling capacity and 'deferred' means blocked by LoRA budget, KV transfer or blocked status) — not the batch counters, which describe only the admitted set.",
   "workaround": "Alert on the queue gauges and the queue-time histogram, never on batch occupancy: vllm:num_requests_waiting (and vllm:num_requests_waiting_by_reason, whose reasons sum to the total), plus vllm:request_queue_time_seconds; TGI's equivalents are tgi_queue_size and tgi_request_queue_duration. Use the by_reason breakdown to distinguish real capacity pressure from a stuck KV transfer or a LoRA budget stall — they have entirely different fixes. This is also why the gateway-side queue in ops-queue-belongs-at-the-gateway matters: it makes the wait externally observable before it becomes TTFT.",
   "severity": "major",
-  "notes": "The benign framing is 'the queue is absorbed', but the sharp edge is that TTFT and queue time are not separable from the client side, so any TTFT SLO silently doubles as a queue-depth SLO. Chunked prefill is the mitigation that changes the shape of the curve rather than the level — it bounds the prefill chunk so a long prompt cannot monopolise a step and starve the whole batch, at the cost of slightly worse prefill efficiency. SGLang exposes the same trade via --prefill-delayer-queue-min-ratio and its wall-clock cap --prefill-delayer-max-delay-ms, which the docs describe as bounding 'worst-case TTFT'; both are opt-in (default None).",
+  "notes": "The benign framing is 'the queue is absorbed', but the sharp edge is that TTFT and queue time are not separable from the client side, so any TTFT SLO silently doubles as a queue-depth SLO. Chunked prefill is the mitigation that changes the shape of the curve rather than the level — it bounds the prefill chunk so a long prompt cannot monopolise a step and starve the whole batch, at the cost of slightly worse prefill efficiency. SGLang exposes the same trade via --prefill-delayer-queue-min-ratio and its wall-clock cap --prefill-delayer-max-delay-ms, which the docs describe as bounding 'worst-case TTFT'; both are opt-in (default None). SCHEME RECLASSIFIED (2026-10-04): was 'framework'.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-04",

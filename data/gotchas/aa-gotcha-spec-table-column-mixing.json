@@ -1,0 +1,34 @@
+{
+  "id": "aa-gotcha-spec-table-column-mixing",
+  "type": "gotcha",
+  "name": "A multi-column vendor spec table lets a record silently inherit every number from the wrong product column, and the error survives review because one field in each group is right",
+  "class": "hardware",
+  "affects": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "amd-instinct-mi355x",
+    "amd-instinct-mi350x"
+  ],
+  "concepts": [
+    "spec-table",
+    "dense",
+    "sparse",
+    "procurement",
+    "roofline",
+    "blackwell"
+  ],
+  "symptom": "A record named for one product carries another product's memory capacity, bandwidth and FLOPS from the same datasheet, while its power figure is correct - so no internal cross-check flags it. Concretely: nvidia-b200 stored 186 GB / 8 TB/s / fp32 80 / tf32 1250 / fp4 10000, every one of which is the GB200 NVL72 column of NVIDIA's Blackwell datasheet, on a record describing a B200 module whose column says 180 GB / 7.7 TB/s / 75 / 1100 / 9000. The stored tdp_w 1000 WAS correct (the HGX B200 column), which is precisely why the record read as internally consistent: 186 GB at 8 TB/s is a real published pairing, and 1000 W is a real published pairing, they just come from different columns of the same table.",
+  "root_cause": "NVIDIA's Blackwell datasheet prints ONE 'Individual Blackwell GPU Specifications' block with THREE per-GPU columns - GB200 NVL72 (186 GB / 8 TB/s), GB200 NVL4 (186 GB / 8 TB/s) and HGX B200 (180 GB / 7.7 TB/s) - and the values in each column are close enough (186 vs 180, 8.0 vs 7.7) that a skim cannot tell them apart, while the compute rows differ by a consistent 10-11% that reads as normal rounding. The deeper cause is that GB200 NVL72 and HGX B200 differ only in how many GPUs are in the enclosure, and 'a B200' is a loose phrase in the industry that legitimately means either. An agent summarising the datasheet has no way to tell which column an extraction came from unless the column identity is recorded per field. This is the same failure mode as the B300 FP4 9000-vs-15000 error this repo already corrected: a figure that is real, published, and wrong for this record.",
+  "workaround": "When transcribing a multi-column spec table, record the column identity in the basis field of EVERY number, not just the ones that look surprising. Treat 'the datasheet prints X' as incomplete unless it names the column. When a record's own name does not obviously match a column header (GB200 NVL72 vs HGX B300 vs HGX B200), treat the mapping as an explicit decision to be written down. Cross-vendor corroboration is the cheapest detector: AMD's MI355X and MI350X product pages plot B200 as '180 GB' at '7.7 TB/s' with FP64 37 and FP32 75 in all three of their comparison charts, which would have caught this immediately.",
+  "severity": "major",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "nv-blackwell-datasheet",
+    "nv-blackwell-ultra-datasheet",
+    "amd-mi355x-product-page"
+  ],
+  "notes": "Two independent instances of this class are now corrected in this repo: nvidia-b200 (GB200 NVL72 column stored on a B200 record) and, on the adjacent sheet, the B300 record's own note flags that it mixes the GB300 NVL72 and HGX B300 columns. The Blackwell Ultra sheet makes it worse by giving the FP4 row a 'Specification in Sparse | Dense' footnote 1 while every other row carries footnote 2 'Specification in sparse. Dense is one-half of the sparse spec shown' - so the same table uses two opposite conventions and the direction of each pair must be read off the footnote number, never assumed. There is also a whole-spec-sheet revision hazard: an earlier edition of the Blackwell datasheet printed footnote 1 as a bare 'Specifications in sparse | dense.' with no per-row exclusion, while a later edition reads 'All Tensor Core numbers except FP64 with sparsity.' That single added clause is what settles whether FP64 40 should be halved. Always record which datasheet edition/revision a figure came from."
+}

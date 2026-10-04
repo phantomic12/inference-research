@@ -1,28 +1,28 @@
 {
-  "id": "kvquant",
-  "type": "quantization",
-  "name": "KVQuant (per-channel + pre-RoPE key quantization, non-uniform KV)",
-  "scheme": "kv-cache-quant",
-  "bits": "3-bit keys and values are the headline (<0.1 perplexity degradation); the method is a toolkit that also supports 2-bit and 4-bit",
-  "weight_group_size": null,
-  "activation_scheme": "Not an activation scheme - KV cache. Four components: (i) per-channel key quantization; (ii) PRE-RoPE key quantization - keys are quantized BEFORE the rotary positional embedding is applied, mitigating the way RoPE smears quantization error across the rotation; (iii) non-uniform per-layer sensitivity-weighted datatypes; (iv) per-vector dense-and-sparse quantization isolating outliers separately for each vector.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "Custom CUDA kernels developed for KVQuant; the paper reports throughput results with them but the abstract truncates the figure."
-  ],
-  "quality_delta": "From the abstract: '<0.1 perplexity degradation with 3-bit quantization on both Wikitext-2 and C4', outperforming existing approaches, across LLaMA, Llama-2, Llama-3 and Mistral. Enables serving LLaMA-7B at up to 1 million context on a single A100-80GB and up to 10 million on an 8-GPU system.",
-  "notes": "Second KV record; same enum mismatch as KIVI (no KV-cache enum exists). The substantive addition here is PRE-RoPE KEY QUANTIZATION, which is the single most transferable idea in the KV-quantization literature: RoPE rotates the key vector, and a rotation applied AFTER quantization mixes each coordinate with several others, so the quantization error is no longer axis-aligned and cannot be corrected per-channel. Quantizing first and rotating second keeps the error structured. This matters for the rotation family too - QuaRot and SpinQuant rotate the KV cache as well, and doing that BEFORE quantization is what makes it work. Dense-and-sparse per-vector outlier handling here is the same trick as LLM.int8(), Atom and SqueezeLLM, now applied to the cache. The 10-million-token claim is a memory-capacity claim enabled by 3-bit KV, not a latency claim. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. ",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab-kvquant-paper"
-  ]
+ "id": "kvquant",
+ "type": "quantization",
+ "name": "KVQuant (per-channel + pre-RoPE key quantization, non-uniform KV)",
+ "scheme": "kv-cache-quant",
+ "bits": "3-bit keys and values are the headline (<0.1 perplexity degradation); the method is a toolkit that also supports 2-bit and 4-bit",
+ "weight_group_size": null,
+ "activation_scheme": "Not an activation scheme - KV cache. Four components: (i) per-channel key quantization; (ii) PRE-RoPE key quantization - keys are quantized BEFORE the rotary positional embedding is applied, mitigating the way RoPE smears quantization error across the rotation; (iii) non-uniform per-layer sensitivity-weighted datatypes; (iv) per-vector dense-and-sparse quantization isolating outliers separately for each vector.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "Custom CUDA kernels developed for KVQuant; the paper reports throughput results with them but the abstract truncates the figure."
+ ],
+ "quality_delta": "From the abstract: '<0.1 perplexity degradation with 3-bit quantization on both Wikitext-2 and C4', outperforming existing approaches, across LLaMA, Llama-2, Llama-3 and Mistral. Enables serving LLaMA-7B at up to 1 million context on a single A100-80GB and up to 10 million on an 8-GPU system.",
+ "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: this scheme quantizes the KV cache, not the weights, so there are no weight groups to size. A number in this field would be a category error. (Where the underlying method has a real grouping - e.g. KIVI per-channel keys, KVQuant per-channel - that lives in the method's own record, not in weight_group_size.) Second KV record; same enum mismatch as KIVI (no KV-cache enum exists). The substantive addition here is PRE-RoPE KEY QUANTIZATION, which is the single most transferable idea in the KV-quantization literature: RoPE rotates the key vector, and a rotation applied AFTER quantization mixes each coordinate with several others, so the quantization error is no longer axis-aligned and cannot be corrected per-channel. Quantizing first and rotating second keeps the error structured. This matters for the rotation family too - QuaRot and SpinQuant rotate the KV cache as well, and doing that BEFORE quantization is what makes it work. Dense-and-sparse per-vector outlier handling here is the same trick as LLM.int8(), Atom and SqueezeLLM, now applied to the cache. The 10-million-token claim is a memory-capacity claim enabled by 3-bit KV, not a latency claim. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. ",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab-kvquant-paper"
+ ]
 }

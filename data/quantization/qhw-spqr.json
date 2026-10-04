@@ -1,28 +1,28 @@
 {
-  "id": "qhw-spqr",
-  "type": "quantization",
-  "name": "SpQR (Sparse-Quantized Representation for near-lossless 3-4 bit compression)",
-  "scheme": "gptq",
-  "bits": "w4a16 (3-4 bits per weight with sparse outlier preservation)",
-  "weight_group_size": 128,
-  "activation_scheme": "FP16 activations, no quantization. Weights are quantized to 3-4 bits with per-group scales, but outlier weights (those causing large quantization error) are stored in higher precision (FP16) in a sparse format.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "SpQR GPU inference algorithm (custom CUDA kernels)",
-    "Integrated into GPTQModel"
-  ],
-  "quality_delta": "From the paper abstract: 'relative accuracy losses of less than 1% in perplexity for highly-accurate LLaMA and Falcon LLMs' at 3-4 bits per parameter. This is a stronger claim than GPTQ or AWQ make for the same bit width. The paper also reports '15% speedup' and 'memory compression gains of more than 4x' for a 33B parameter LLM on a single 24 GB consumer GPU. The <1% perplexity loss is the key differentiator: GPTQ at 4-bit typically shows 0.1-0.3 perplexity increase on Llama2-7B (see gptq record), which is already quite good, but SpQR claims to be near-lossless even at 3-bit.",
-  "notes": "SpQR is a weight-only quantization method that specifically targets the outlier problem. The key insight is that most weights can be quantized to 3-4 bits with small error, but a small fraction of outlier weights cause disproportionately large errors. SpQR isolates these outliers and stores them in FP16 in a sparse format, while compressing all other weights to 3-4 bits. This is conceptually similar to SpQR's contemporary Atom (which also isolates outliers) but uses a different sparse encoding. The <1% perplexity loss claim is significant because it suggests that with proper outlier handling, 3-bit weight-only quantization can be nearly lossless. This is relevant to the repo's theme of silent failures: SpQR's approach makes the outlier problem explicit and visible, rather than letting it silently degrade quality. The paper is by Dettmers et al. (arXiv:2306.03078), who also created GPTQ, so SpQR can be seen as an evolution of GPTQ that adds explicit outlier handling. The 15% speedup is modest because the sparse outlier storage adds overhead - this is a case where the accuracy improvement comes at a small speed cost.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-04",
-  "sources": [
-    "qhw-src-spqr-paper"
-  ]
+ "id": "qhw-spqr",
+ "type": "quantization",
+ "name": "SpQR (Sparse-Quantized Representation for near-lossless 3-4 bit compression)",
+ "scheme": "gptq",
+ "bits": "w4a16 (3-4 bits per weight with sparse outlier preservation)",
+ "weight_group_size": 128,
+ "activation_scheme": "FP16 activations, no quantization. Weights are quantized to 3-4 bits with per-group scales, but outlier weights (those causing large quantization error) are stored in higher precision (FP16) in a sparse format.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "SpQR GPU inference algorithm (custom CUDA kernels)",
+  "Integrated into GPTQModel"
+ ],
+ "quality_delta": "From the paper abstract: 'relative accuracy losses of less than 1% in perplexity for highly-accurate LLaMA and Falcon LLMs' at 3-4 bits per parameter. This is a stronger claim than GPTQ or AWQ make for the same bit width. The paper also reports '15% speedup' and 'memory compression gains of more than 4x' for a 33B parameter LLM on a single 24 GB consumer GPU. The <1% perplexity loss is the key differentiator: GPTQ at 4-bit typically shows 0.1-0.3 perplexity increase on Llama2-7B (see gptq record), which is already quite good, but SpQR claims to be near-lossless even at 3-bit.",
+ "notes": "PROXY ENUM VALUE - DECLARED 2026-10-04: SpQR is a quantization METHOD (sparse outlier preservation), not a format or a GPTQ variant. Filed under 'gptq' because both are grouped weight-only PTQ over the same grid and SpQR ships custom CUDA kernels. Nothing here misrepresents SpQR's target - it is a weight format, never KV or activation - but the enum makes a method queryable as if it were a storage format. REQUESTED ENUM ADDITION: 'spqr'. SpQR is a weight-only quantization method that specifically targets the outlier problem. The key insight is that most weights can be quantized to 3-4 bits with small error, but a small fraction of outlier weights cause disproportionately large errors. SpQR isolates these outliers and stores them in FP16 in a sparse format, while compressing all other weights to 3-4 bits. This is conceptually similar to SpQR's contemporary Atom (which also isolates outliers) but uses a different sparse encoding. The <1% perplexity loss claim is significant because it suggests that with proper outlier handling, 3-bit weight-only quantization can be nearly lossless. This is relevant to the repo's theme of silent failures: SpQR's approach makes the outlier problem explicit and visible, rather than letting it silently degrade quality. The paper is by Dettmers et al. (arXiv:2306.03078), who also created GPTQ, so SpQR can be seen as an evolution of GPTQ that adds explicit outlier handling. The 15% speedup is modest because the sparse outlier storage adds overhead - this is a case where the accuracy improvement comes at a small speed cost.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "qhw-src-spqr-paper"
+ ]
 }

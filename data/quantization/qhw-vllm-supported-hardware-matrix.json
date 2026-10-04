@@ -1,0 +1,38 @@
+{
+ "id": "qhw-vllm-supported-hardware-matrix",
+ "type": "quantization",
+ "name": "vLLM Implementation x Hardware support matrix (which quantization implementation runs on which architecture, and where it does NOT)",
+ "scheme": "gptq",
+ "bits": "matrix record - spans AWQ, GPTQ, Marlin, llm-compressor INT8 W8A8/W4A8, llm-compressor FP8 W8A8, bitsandbytes, DeepSpeedFP, GGUF",
+ "weight_group_size": null,
+ "activation_scheme": "matrix record - spans weight-only (W4A16), weight+activation (W8A8, W4A8) and cache schemes",
+ "native_support": [
+  "nvidia-a100-40gb-sxm4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a100-80gb-pcie",
+  "nvidia-rtx-4090",
+  "nvidia-rtx-6000-ada",
+  "nvidia-l40s",
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-rtx-5090",
+  "nvidia-rtx-pro-6000-blackwell",
+  "nvidia-b200"
+ ],
+ "emulated_support": [],
+ "kernels": [
+  "Marlin",
+  "bitsandbytes",
+  "GGUF",
+  "DeepSpeedFP"
+ ],
+ "quality_delta": null,
+ "notes": "GROUP SIZE LEFT NULL 2026-10-04 and NOT MEANINGFUL FOR THIS RECORD: it spans nine implementation rows covering per-tensor, per-channel, 64, 128 and 32 group conventions. Read the per-format records for group sizes. PROXY ENUM VALUE - DECLARED 2026-10-04: this is a MATRIX record spanning nine implementation rows (AWQ, GPTQ, Marlin, llm-compressor INT8 W8A8 and W4A8, llm-compressor FP8 W8A8, bitsandbytes, DeepSpeedFP, GGUF), filed under 'gptq'. GPTQ is the right anchor for a reason worth stating: it is the only row in the matrix that covers Volta, so it is the format whose availability actually varies most across the architectures listed. But a query for GPTQ returns this matrix rather than the format record; use the gptq record for GPTQ itself. REQUESTED ENUM ADDITION: a 'hardware-matrix' or 'support-matrix' value distinct from any format. THE COMPLEMENT TO THE TensorRT-LLM MATRIX, AND IT CORRECTS THE COMMONEST MISREADING. Columns Volta, Turing, Ampere, Ada, Hopper, AMD GPU, Intel GPU, x86 CPU, Arm CPU. Rows verbatim, YES/NO: AWQ = no Volta, yes Turing, yes Ampere, yes Ada, yes Hopper, NO AMD GPU, yes Intel GPU, yes x86 CPU, NO Arm CPU. GPTQ = yes Volta, yes Turing, yes Ampere, yes Ada, yes Hopper, NO AMD GPU, yes Intel GPU, yes x86 CPU, NO Arm CPU. Marlin (GPTQ/AWQ/FP8/FP4) = no Volta, Turing YES-WITH-A-FOOTNOTE, yes Ampere, yes Ada, yes Hopper, NO AMD GPU, NO Intel GPU, NO x86 CPU, NO Arm CPU. llm-compressor INT8 (W8A8) = no Volta, yes Turing, yes Ampere, yes Ada, yes Hopper, no AMD, no Intel, YES x86 CPU, no Arm. llm-compressor INT8 (W4A8) = NO on Volta, Turing, Ampere, Ada AND Hopper - i.e. not a single NVIDIA GPU - NO AMD, NO Intel, NO x86 CPU, YES Arm CPU. llm-compressor FP8 (W8A8) = no Volta, no Turing, no Ampere, YES Ada, YES Hopper, no AMD, no Intel, no x86 CPU, no Arm. bitsandbytes = yes Volta through Hopper, no AMD/Intel/CPU. DeepSpeedFP = yes Volta through Hopper, no AMD/Intel/CPU. GGUF = yes Volta through Hopper, no AMD, no Intel, no CPU.\n\nFOUR FINDINGS THAT MATTER MORE THAN THE TABLE ITSELF. (1) GPTQ IS THE ONLY ROW THAT COVERS VOLTA. AWQ and Marlin both exclude Volta (SM7.0) while GPTQ includes it, so 'GPTQ is the older format' is exactly backwards as a compatibility statement - on a V100 the only one of the three that runs is GPTQ. (2) THE TURING FOOTNOTE IS NARROWER THAN THE CELL SUGGESTS. The star on Marlin's Turing cell expands to 'Turing does not support Marlin MXFP4' - so the cell means Marlin-minus-MXFP4, and a reader treating the column as a flat yes will pick MXFP4 on a T4 and fail. (3) THE W4A8 ROW IS THE STRANGE ONE, NOT A BUG IN THE TABLE. llm-compressor INT8 W4A8 is supported on Arm CPU and on NOTHING else in the matrix - not on any NVIDIA generation, not AMD, not Intel, not x86. A format available exclusively on Arm CPU is a backend-selection fact, not a hardware-capability one, and it means the obvious substitution 'run W4A8 on the CPU' is false on x86. (4) FP8 W8A8 IS ADA-AND-HOPPER-ONLY, WHICH IS NARROWER THAN 'FP8 works on Ampere and up'. The Ampere row is NO for llm-compressor FP8 while bitsandbytes and GGUF on the same row are YES - so at the same compute capability one format is available and another is not.\n\nTHE AMD COLUMN IS A WHOLE-COLUMN BLANK THAT READS LIKE A DATA GAP. Every NVIDIA format row is NO on AMD GPU, which is TRUE for these particular vLLM BACKENDS but must not be read as 'AMD GPUs cannot do quantized inference' - AMD's own path is Quark plus its FP8/INT8 kernels, covered by the separate quark and rocm-quant records in this repo, and the row's own header says these are vLLM IMPLEMENTATION compatibilities. Related known gap already recorded in this repo: all Intel Gaudi quantization support has been migrated to vLLM-Gaudi, which is why Gaudi appears nowhere in this table.\n\nSCOPE: the doc itself warns 'This compatibility chart is subject to change as vLLM continues to evolve'. It covers Volta through Hopper only - Blackwell is absent from this table, which is why it must be read together with the TensorRT-LLM matrix in the sibling record rather than instead of it.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "qzgw-vllm-supported-hardware-table",
+  "qhw-src-vllm-quant-docs"
+ ]
+}

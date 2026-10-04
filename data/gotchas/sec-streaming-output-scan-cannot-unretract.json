@@ -2,7 +2,7 @@
   "id": "sec-streaming-output-scan-cannot-unretract",
   "type": "gotcha",
   "name": "On a streaming endpoint an output filter that inspects completed text cannot un-send the tokens it already streamed",
-  "class": "framework",
+  "class": "security",
   "affects": [
     "vllm",
     "sglang"
@@ -18,7 +18,7 @@
   "root_cause": "Output scanning is a post-hoc decision on text that already exists. On a streaming HTTP endpoint the token stream is delivered incrementally, so the check necessarily runs after some prefix has been transmitted. Buffering the whole completion before release makes the scan sound and reinstates the whole time-to-first-token cost of non-streaming generation; incremental sentence-level checks shrink the exposed prefix but cannot eliminate it, and a payload harmful only in aggregate defeats sentence-level granularity.",
   "workaround": "Decide explicitly, per endpoint, which of three contracts you are offering: (a) buffered - scan then release, costs TTFT, the only sound version; (b) streaming with a stated exposure prefix - document how much text can escape before the check fires; (c) streaming unfiltered, with the filter applied only to the next turn or to logging. Silently choosing (c) because the framework streams by default is the common failure.",
   "severity": "major",
-  "notes": "Residual risk for (b) and (c) is the same and it is not zero: the exposure window is a function of generation speed, so a faster server is a larger breach. This interacts with the speculative-decoding records elsewhere in this repo - higher decode throughput widens the window.",
+  "notes": "Residual risk for (b) and (c) is the same and it is not zero: the exposure window is a function of generation speed, so a faster server is a larger breach. This interacts with the speculative-decoding records elsewhere in this repo - higher decode throughput widens the window. SCHEME RECLASSIFIED (2026-10-04): was 'framework'.",
   "status": "verified",
   "confidence": 0.8,
   "updated": "2026-10-04",

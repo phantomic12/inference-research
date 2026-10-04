@@ -2,7 +2,7 @@
   "id": "sec-output-filter-three-placement-cost",
   "type": "gotcha",
   "name": "Output filtering at serve time: logit masking, post-hoc scanning and a separate guard model are three different systems with three different bills",
-  "class": "framework",
+  "class": "security",
   "affects": [
     "vllm",
     "sglang"
@@ -22,7 +22,7 @@
   "root_cause": "The three mechanisms act at different points with different side-effect surfaces. (1) Per-token logit masking is a logits processor: in vLLM it consumes a (num_logits_rows) x vocab_size tensor at batch granularity and runs on EVERY forward step, so its cost is per-token-per-batch-row across the whole batch, not per request. (2) Output scanning runs after the text exists - but on a streaming API the first tokens are already on the wire before the scanner has read anything, so scan-then-release is only available if you buffer, which costs TTFT. (3) A separate guard model is a second LLM in the path; Llama Guard 3-1B-INT4 is the smallest published option (440 MB, about 7x smaller than the fp 1B) and still reports TTFT of 2.5 s or less and at least 30 tok/s on a commodity Android mobile CPU. That is the floor, not the ceiling.",
   "workaround": null,
   "severity": "major",
-  "notes": "COST LEDGER, as far as sources establish it. Logit masking: no published absolute ms or throughput figure exists for a masking processor inside a production server. SafeDecoding is the best-characterised example, and its authors claim only 'negligible' overhead against a self-defined ratio metric, while explicitly applying the transform to the first m decode steps rather than every step - so part of its cheapness comes from NOT running in the hot loop. Scanning: free on GPU, but on a streaming endpoint it is a policy decision you must make explicit. Guard model: seconds at the small end. THE PRACTICAL POINT: of the three, logit masking is the one whose cost scales with batch size and step count, while the guard model's cost scales with request count only.",
+  "notes": "COST LEDGER, as far as sources establish it. Logit masking: no published absolute ms or throughput figure exists for a masking processor inside a production server. SafeDecoding is the best-characterised example, and its authors claim only 'negligible' overhead against a self-defined ratio metric, while explicitly applying the transform to the first m decode steps rather than every step - so part of its cheapness comes from NOT running in the hot loop. Scanning: free on GPU, but on a streaming endpoint it is a policy decision you must make explicit. Guard model: seconds at the small end. THE PRACTICAL POINT: of the three, logit masking is the one whose cost scales with batch size and step count, while the guard model's cost scales with request count only. SCHEME RECLASSIFIED (2026-10-04): was 'framework'.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-04",

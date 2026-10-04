@@ -1,28 +1,28 @@
 {
-  "id": "zipcache",
-  "type": "quantization",
-  "name": "ZipCache (channel-separable tokenwise KV quantization + salient token identification)",
-  "scheme": "kv-cache-quant",
-  "bits": "mixed precision across salient and non-salient tokens; headline is a 4.98x KV compression ratio, not a single bit width",
-  "weight_group_size": null,
-  "activation_scheme": "Not an activation scheme - KV cache. Two mechanisms: (1) CHANNEL-SEPARABLE TOKENWISE quantization - quantizing per token but keeping scales separate per channel, which substantially reduces quantization-parameter memory overhead versus fine-grained groupwise schemes (this matters because at 2-3 bits the scales themselves become a significant fraction of the cache); (2) normalized attention score as a saliency metric exploiting the lower-triangle structure of the attention matrix, with an efficient approximation that decouples the metric from full attention scores so it stays compatible with FlashAttention-style kernels.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "Designed explicitly for compatibility with fast attention implementations like FlashAttention - a constraint most KV-quantization papers ignore and which determines whether the method survives contact with a real serving stack."
-  ],
-  "quality_delta": "From the abstract: on Mistral-7B / GSM8k, compresses the KV cache by 4.98x with only a 0.38% drop in accuracy. On LLaMA3-8B at input length 4096: 37.3% reduction in prefill-phase latency, 56.9% reduction in decoding-phase latency, 19.8% reduction in GPU memory usage.",
-  "notes": "Third KV record; same enum mismatch. Note the name collision risk: there is an unrelated DRAM/SSD key-value-cache systems paper also called ZipCache (arXiv 2411.03174, 'A DRAM/SSD Cache with Built-in Transparent Compression'). Different field entirely - that one is about storage hardware, not quantization. This record is the KV quantization paper (2405.14256); the other is explicitly out of scope for this repo's quantization type. The idea worth stealing is that scale metadata is not free: at 2-3 bits the scales can dominate, so choosing the grouping axis to minimize scale overhead (channel-separable rather than fine-grained groupwise) is a first-order decision, not a detail. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. ",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab-zipcache-paper"
-  ]
+ "id": "zipcache",
+ "type": "quantization",
+ "name": "ZipCache (channel-separable tokenwise KV quantization + salient token identification)",
+ "scheme": "kv-cache-quant",
+ "bits": "mixed precision across salient and non-salient tokens; headline is a 4.98x KV compression ratio, not a single bit width",
+ "weight_group_size": null,
+ "activation_scheme": "Not an activation scheme - KV cache. Two mechanisms: (1) CHANNEL-SEPARABLE TOKENWISE quantization - quantizing per token but keeping scales separate per channel, which substantially reduces quantization-parameter memory overhead versus fine-grained groupwise schemes (this matters because at 2-3 bits the scales themselves become a significant fraction of the cache); (2) normalized attention score as a saliency metric exploiting the lower-triangle structure of the attention matrix, with an efficient approximation that decouples the metric from full attention scores so it stays compatible with FlashAttention-style kernels.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "Designed explicitly for compatibility with fast attention implementations like FlashAttention - a constraint most KV-quantization papers ignore and which determines whether the method survives contact with a real serving stack."
+ ],
+ "quality_delta": "From the abstract: on Mistral-7B / GSM8k, compresses the KV cache by 4.98x with only a 0.38% drop in accuracy. On LLaMA3-8B at input length 4096: 37.3% reduction in prefill-phase latency, 56.9% reduction in decoding-phase latency, 19.8% reduction in GPU memory usage.",
+ "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: this scheme quantizes the KV cache, not the weights, so there are no weight groups to size. A number in this field would be a category error. (Where the underlying method has a real grouping - e.g. KIVI per-channel keys, KVQuant per-channel - that lives in the method's own record, not in weight_group_size.) Third KV record; same enum mismatch. Note the name collision risk: there is an unrelated DRAM/SSD key-value-cache systems paper also called ZipCache (arXiv 2411.03174, 'A DRAM/SSD Cache with Built-in Transparent Compression'). Different field entirely - that one is about storage hardware, not quantization. This record is the KV quantization paper (2405.14256); the other is explicitly out of scope for this repo's quantization type. The idea worth stealing is that scale metadata is not free: at 2-3 bits the scales can dominate, so choosing the grouping axis to minimize scale overhead (channel-separable rather than fine-grained groupwise) is a first-order decision, not a detail. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. ",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab-zipcache-paper"
+ ]
 }

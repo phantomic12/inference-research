@@ -1,37 +1,37 @@
 {
-  "id": "ortgenai-int4-fp8",
-  "type": "quantization",
-  "name": "ONNX Runtime GenAI model-builder quantization paths (int4, fp8, ModelOpt/compressed-tensors ingest)",
-  "scheme": "int8",
-  "bits": "int4 (MatMulNBits weight-only, block size selectable), fp16/bf16/fp32 I/O, plus direct ingest of an already-quantized AutoGPTQ/AutoAWQ checkpoint and of a ModelOpt or compressed-tensors NVFP4/FP8 checkpoint",
-  "weight_group_size": 128,
-  "activation_scheme": "quantized KV cache is a separate option (int8 or int4 KV with per-channel scale geometry); activations are fp32 on WebGPU EP or bf16 on CUDA EP unless use_cuda_bf16 is set",
-  "native_support": [
-    "nvidia-h100-sxm",
-    "nvidia-h100-pcie",
-    "nvidia-l40s",
-    "nvidia-l4",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-a10",
-    "nvidia-a30",
-    "nvidia-rtx-4090",
-    "amd-instinct-mi300x"
-  ],
-  "emulated_support": [
-    "intel-arc-b580"
-  ],
-  "kernels": [
-    "MatMulNBits + QMoE contrib ops (qmoe_block_size, qmoe_weights_prepacked)",
-    "CUDA / TRT-RTX EP with optional bf16 I/O (use_cuda_bf16)",
-    "WebGPU EP with fp32 I/O (use_webgpu_fp32)"
-  ],
-  "quality_delta": "n/a - the builder README documents no numeric quality delta. Null + note.",
-  "notes": "RECORDED AS THE QUANT PATHS, NOT AS AN ENGINE: an engine record for onnxruntime-genai already exists, so this record covers only what formats it accepts and emits. INPUT PATHS verified from the builder README: (1) a dense HF checkpoint with -p precision; (2) an ALREADY int4-quantized PyTorch checkpoint loadable via AutoGPTQ or AutoAWQ with -p int4; (3) an existing float16/float32 GGUF on disk, which the builder consumes directly - so GGUF is an INPUT to ORT-GenAI, not only an output of llama.cpp. AWQ and GPTQ usage is redirected here from the ORT quantization page. OUTPUT PATHS: the builder can export a ModelOpt or compressed-tensors NVFP4/FP8 checkpoint, which is the interoperability bridge from Microsoft's stack to Red Hat's - ORT-GenAI can emit the compressed-tensors format and llmcompressor can emit ModelOpt/compressed-tensors NVFP4. PER-TENSOR-ROLE OPTIONS: qmoe_block_size and qmoe_weights_prepacked, matmulnbits_block_size, accuracy_level, is_symmetric, op_types_to_quantize, nodes_to_exclude, algo_config, int8_bit_placement, use_qdq_pattern, and use_8_bits_quantization_in_qmoe / use_fp4_quantization_in_qmoe - the last two are notable because they make bit-width a PER-EXPERT-CHOICE inside a single MoE graph, which is the ONNX-side equivalent of the mixed-precision MoE literature. PROVENANCE AND STATUS: builder_config_version 2 is explicitly labelled an EXPERIMENTAL implementation of the shared configuration design; the README also lists 'Olive integration, target checkpoint conversion policy, and INT8 embedding export remain pending'. So do not assume Olive and the ORT-GenAI builder currently compose.",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab2-ort-quant-doc",
-    "qlab2-ortgenai-model-builder"
-  ]
+ "id": "ortgenai-int4-fp8",
+ "type": "quantization",
+ "name": "ONNX Runtime GenAI model-builder quantization paths (int4, fp8, ModelOpt/compressed-tensors ingest)",
+ "scheme": "int8",
+ "bits": "int4 (MatMulNBits weight-only, block size selectable), fp16/bf16/fp32 I/O, plus direct ingest of an already-quantized AutoGPTQ/AutoAWQ checkpoint and of a ModelOpt or compressed-tensors NVFP4/FP8 checkpoint",
+ "weight_group_size": 128,
+ "activation_scheme": "quantized KV cache is a separate option (int8 or int4 KV with per-channel scale geometry); activations are fp32 on WebGPU EP or bf16 on CUDA EP unless use_cuda_bf16 is set",
+ "native_support": [
+  "nvidia-h100-sxm",
+  "nvidia-h100-pcie",
+  "nvidia-l40s",
+  "nvidia-l4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a10",
+  "nvidia-a30",
+  "nvidia-rtx-4090",
+  "amd-instinct-mi300x"
+ ],
+ "emulated_support": [
+  "intel-arc-b580"
+ ],
+ "kernels": [
+  "MatMulNBits + QMoE contrib ops (qmoe_block_size, qmoe_weights_prepacked)",
+  "CUDA / TRT-RTX EP with optional bf16 I/O (use_cuda_bf16)",
+  "WebGPU EP with fp32 I/O (use_webgpu_fp32)"
+ ],
+ "quality_delta": "n/a - the builder README documents no numeric quality delta. Null + note.",
+ "notes": "PROXY ENUM VALUE - DECLARED 2026-10-04: this is an INGEST/EXPORT PATH record (MatMulNBits int4 plus ModelOpt and compressed-tensors ingest), filed under 'int8'. The int4 part is covered precisely by the separate ort-matmulnbits-int4 record at group_size 128, so 'int8' is wrong even as an approximation here - the record's own bits field reads 'int4 (MatMulNBits weight-only, block size selectable)'. A query for INT8 returns a record whose primary path is INT4. REQUESTED ENUM ADDITION: 'ortgenai-model-builder'. RECORDED AS THE QUANT PATHS, NOT AS AN ENGINE: an engine record for onnxruntime-genai already exists, so this record covers only what formats it accepts and emits. INPUT PATHS verified from the builder README: (1) a dense HF checkpoint with -p precision; (2) an ALREADY int4-quantized PyTorch checkpoint loadable via AutoGPTQ or AutoAWQ with -p int4; (3) an existing float16/float32 GGUF on disk, which the builder consumes directly - so GGUF is an INPUT to ORT-GenAI, not only an output of llama.cpp. AWQ and GPTQ usage is redirected here from the ORT quantization page. OUTPUT PATHS: the builder can export a ModelOpt or compressed-tensors NVFP4/FP8 checkpoint, which is the interoperability bridge from Microsoft's stack to Red Hat's - ORT-GenAI can emit the compressed-tensors format and llmcompressor can emit ModelOpt/compressed-tensors NVFP4. PER-TENSOR-ROLE OPTIONS: qmoe_block_size and qmoe_weights_prepacked, matmulnbits_block_size, accuracy_level, is_symmetric, op_types_to_quantize, nodes_to_exclude, algo_config, int8_bit_placement, use_qdq_pattern, and use_8_bits_quantization_in_qmoe / use_fp4_quantization_in_qmoe - the last two are notable because they make bit-width a PER-EXPERT-CHOICE inside a single MoE graph, which is the ONNX-side equivalent of the mixed-precision MoE literature. PROVENANCE AND STATUS: builder_config_version 2 is explicitly labelled an EXPERIMENTAL implementation of the shared configuration design; the README also lists 'Olive integration, target checkpoint conversion policy, and INT8 embedding export remain pending'. So do not assume Olive and the ORT-GenAI builder currently compose.",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab2-ort-quant-doc",
+  "qlab2-ortgenai-model-builder"
+ ]
 }

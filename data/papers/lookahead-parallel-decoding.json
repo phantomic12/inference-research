@@ -14,19 +14,20 @@
   "problem": "Speculative decoding requires an auxiliary draft MODEL or a data store, which is nontrivial to obtain, cannot generalise, and adds memory and engineering cost.",
   "mechanism": "EXACT parallel decoding with no auxiliary model and no data store. Runs an n-gram pool of (K, V) verification branches in parallel, each computing an N-gram Prediction (NgramPool) of possible next tokens from a 2D window of preceding tokens plus the branch's own history; a Jacobi iteration maps each candidate branch to a token deterministically from the target model's logits. Branches that agree with the Jacobi trajectory are accepted - because the map is a deterministic function of logits, acceptance is exact and the output distribution is unchanged. Explicitly trades per-step log(FLOPs) for a smaller number of total decoding steps, and is compatible with concurrent memory-efficient attention (FlashAttention).",
   "hardware_relevance": [
-    "nvidia-a100-sxm",
-    "nvidia-h100-sxm"
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a100-40gb-sxm4"
   ],
   "speedup_reported": "Up to 1.8x on MT-bench and up to 4x with STRONG SCALING ON MULTIPLE GPUs on code completion. The 4x is a multi-GPU scaling number, not a single-accelerator result - a critical distinction, because the whole premise is that decoding underutilises a single device's compute. Baseline is plain autoregressive decoding.",
   "adoption": "in-upstream-engine",
   "code_url": "https://github.com/hao-ai-lab/LookaheadDecoding",
   "open_weights": null,
-  "notes": "ADOPTION, precisely: llama.cpp and TensorRT-LLM both ship a lookahead-decoding path, and vLLM has supported it. The distinct selling point versus every other record in this sub-area is that it needs NO draft model and NO draft weights, so it applies to any checkpoint unmodified - the reason it survived when many paper-specific draft methods did not. HEADLINE-CLAIM TRAP, flagged deliberately: the 4x figure requires strong scaling across multiple GPUs. Quote the 1.8x single-device number for any single-accelerator comparison and say so explicitly, or this paper will be cited as evidence that lookahead decoding gives 4x on a single GPU, which it does not. VENUE NOTE: no venue verifiable via Semantic Scholar and the arXiv comment carries none, so venue = arxiv-preprint, year = ArXiv v1 (Feb 2024). DANGLING REF, LEFT UNRESOLVED (2026-10-04 cross-reference repair): hardware_relevance carries 'nvidia-a100-sxm', which is not a record id. data/accelerators/ holds three A100 records - nvidia-a100-40gb-sxm4, nvidia-a100-80gb-sxm4 and nvidia-a100-80gb-pcie - and 'SXM' excludes only the PCIe one, leaving two live candidates. This record states no VRAM capacity, no A100 count and no other distinguishing detail anywhere in its text, so the variant is not decidable from context and the value was deliberately NOT rewritten. A wrong pick here would silently point this record at the wrong card.",
+  "notes": "ADOPTION, precisely: llama.cpp and TensorRT-LLM both ship a lookahead-decoding path, and vLLM has supported it. The distinct selling point versus every other record in this sub-area is that it needs NO draft model and NO draft weights, so it applies to any checkpoint unmodified - the reason it survived when many paper-specific draft methods did not. HEADLINE-CLAIM TRAP, flagged deliberately: the 4x figure requires strong scaling across multiple GPUs. Quote the 1.8x single-device number for any single-accelerator comparison and say so explicitly, or this paper will be cited as evidence that lookahead decoding gives 4x on a single GPU, which it does not. VENUE NOTE: no venue verifiable via Semantic Scholar and the arXiv comment carries none, so venue = arxiv-preprint, year = ArXiv v1 (Feb 2024). DANGLING REF RESOLVED 2026-10-04 by reading the paper (arXiv:2402.02057v1, section 5 'Evaluation Results'). The paper ran on TWO different A100 configurations and says so: \"S1 is equipped with NVIDIA A100 GPUs with 80GB of memory. On S1, the 7B, 13B, and 34B models are deployed on a single A100, while the 70B model utilizes 2 A100s\" and \"S2 is a DGX machine with 8 NVIDIA A100 GPUs with 40GB memory and NVLink\". Source: https://arxiv.org/pdf/2402.02057 . This is NOT a case of one paper one card: the single 'nvidia-a100-sxm' value was wrong in shape, not just in spelling, so both A100 records it actually used are listed instead of picking one. The 40 GB setup is explicitly a DGX with NVLink, i.e. the SXM module form.",
   "confidence": 0.85,
   "type": "paper",
   "affiliations": [],
   "status": "verified",
-  "updated": "2026-10-03",
+  "updated": "2026-10-04",
   "sources": [
     "pap-eff-lookahead-decoding"
   ]

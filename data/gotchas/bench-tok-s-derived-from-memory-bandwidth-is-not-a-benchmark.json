@@ -1,0 +1,39 @@
+{
+  "id": "bench-tok-s-derived-from-memory-bandwidth-is-not-a-benchmark",
+  "type": "gotcha",
+  "name": "A tok/s figure obtained by dividing a spec sheet's memory bandwidth by a guessed bytes-per-token is not a measurement, and it passes the load-condition rule because it inherits the right condition words",
+  "class": "measurement",
+  "affects": [
+    "nvidia-rtx-5090",
+    "nvidia-rtx-pro-6000-blackwell",
+    "apple-m4-max",
+    "llama-cpp",
+    "mlx-lm"
+  ],
+  "concepts": [
+    "tokens-per-second",
+    "memory-bandwidth",
+    "spec-sheet",
+    "benchmark-methodology",
+    "fabrication",
+    "estimate-vs-measurement",
+    "goodhart",
+    "decode",
+    "roofline"
+  ],
+  "symptom": "A record states a clean decode figure - 25 tok/s on an 8GB card, 120 tok/s on an RTX 5070, 22 tok/s on an M5 Max - and states its load conditions too: batch size 1, 512-token prompt, 128-token output, a named precision, a named backend. It looks like the model answer to 'does this record comply with the load-condition rule'. The conditions are all there. The number is still fabricated, because it was never measured: it was projected from the part's published memory bandwidth, and the source cited is the GPU architecture whitepaper or the vendor tech-specs page, which contains no tokens-per-second measurement of any kind. The tell is in the record's own prose, which says so plainly - 'the 614 GB/s bandwidth yields ~22 tokens/sec for decode', 'the 546 GB/s bandwidth yields ~18 tokens/sec'. Bandwidth divided by an assumed bytes-per-token is a roofline ESTIMATE. It ignores that a real decode step also pays attention over the whole KV cache, that the bytes-per-token constant is not a constant (weights are read once per step but KV grows with context), that prompt length changes the prefill/decode mix, and that the achievable fraction of peak bandwidth for a 4-bit decode kernel is itself the thing being estimated. The estimate can be off by 2x or more in either direction, and the resulting record carries a number precise enough to be quoted.",
+  "root_cause": "This is the load-condition rule's blind spot rather than a violation of it. The rule exists to stop a reader from treating an unconditioned number as comparable, and it is satisfied here by construction - the generic conditions were attached and they are true as statements about the intended configuration. The defect is upstream of conditioning: nothing in the record schema or the validator checks that a throughput value has a MEASUREMENT behind it, only that it has conditions and a source. A spec sheet is an acceptable source for a bandwidth or a capacity, and it is in the repo's source list, so citing one passes every mechanical check while supporting none of the numbers. Two aggravating details. First, bandwidth is a plausible input to a tok/s estimate, so the derivation looks like physics rather than invention - and the repo has a legitimate record family (flops/ridge-crossing, decode-gemm arithmetic-intensity) where exactly this arithmetic is correct, which makes the illegitimate use look like the legitimate one. The same arithmetic applied to a real measurement is a cross-check; applied to nothing it is a number from nowhere. Second, precise round values are self-certifying: 25.0, 120.0, 55.0 read as observed measurements to anyone skimming, and the record is then more trusted than the honest benchmark next to it that states it had to assume a condition.",
+  "workaround": "Treat any tok/s figure as a measurement only if some source states it was observed, and require one of: a harness counter's output, a vendor page whose measured-throughput section it is (not a spec table), or a reproducible command line plus its raw log. Explicitly reject the pattern 'X GB/s yields ~N tokens/sec' - bandwidth is not a throughput measurement and there is no bytes-per-token constant that makes it one. When auditing a record, read the cited source for the number rather than the record's characterisation of it; in this repo's case all eleven offenders cited specification documents that contain no throughput figure, and the numbers appeared in no cited source at all. Secondary checks that catch the same family: (1) internal inconsistency - a 672 GB/s part carrying 120 tok/s against a 1792 GB/s part carrying 85 tok/s is a 2.7x bandwidth advantage producing a lower figure, so at least one number is wrong; (2) `reproducible: true` on a record whose source contains no run; (3) a note conceding the model does not fit the stated VRAM, which means the record describes a partially-offloaded configuration whose offload split is never quantified; (4) conditions that are identical across a whole record family are defaults being copied, not observations - when every record in a cluster states batch 1 / 512 / 128, those three values carry no information. Mark such records status: deprecated with the reason recorded, and do not delete them: a record that says its number came from a bandwidth estimate is useful evidence that the estimate was circulating, and the audit trail is what stops it being reintroduced. Keep the number in place rather than nulling it where the schema requires a number, so that anyone who has already seen the figure can find this explanation.",
+  "severity": "major",
+  "notes": "Found by auditing all 150 records in data/benchmarks/ against the load-condition rule on 2026-10-04: 104 throughput-bearing records were checked for model, hardware, batch-or-concurrency, input length, output length, engine version and warmup. Eleven records - the local-8gb-7b, local-16gb-13b, local-24gb-13b, local-rtx-5070-13b, local-rtx-5080-32b, local-rtx-5090-32b, local-rtx-5090-70b, local-rtx-pro-6000-70b, local-m4-max-70b, local-m5-max-70b and local-m5-ultra-70b family - were all fully condition-complete and all unsourced, which is the signature of this failure rather than of an ordinary incomplete record. They were also mutually inconsistent in a way that settled the question: the RTX 5070 at 672 GB/s claimed 120 tok/s while the RTX 5090 at 1792 GB/s claimed 85, so the estimate did not even track its own input monotonically. All eleven are now status: deprecated with confidence 0.2, reproducible false, and a note recording that the figure is unsourced; their value and measured_by fields could not be nulled because schemas/benchmark.schema.json types value as number and measured_by as a closed enum with no null, and the audit was scoped not to edit schemas/. Both should become null the moment the schema permits it - that is a real schema gap worth filing, since 'nobody measured this' is currently inexpressible in a benchmark record. The distinction this gotcha draws is the same one the repo already draws in ev-llamacpp-spec-bench-replay-inflates: there the number was measured and the PROTOCOL was wrong, inflating it 9.5-16.9x; here the number was never measured at all. A protocol error is catchable by fixing the protocol. A missing measurement is catchable only by noticing the absence, which is why it needs saying out loud.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper",
+    "consumer-nvidia-rtx-pro-6000-blackwell-datasheet",
+    "local-nvidia-rtx-5070-product-page",
+    "local-apple-macbook-pro-m5-tech-specs",
+    "consumer-apple-macbook-pro-14-m4-max-tech-specs"
+  ]
+}

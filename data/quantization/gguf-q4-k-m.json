@@ -1,38 +1,39 @@
 {
-  "id": "gguf-q4-k-m",
-  "type": "quantization",
-  "name": "GGUF Q4_K_M (4-bit K-quant, medium)",
-  "scheme": "gguf-q4_k_m",
-  "bits": "4.8944 measured avg (llama.cpp quantize README, Llama-3.1-8B). The pure block_q4_K is 4.5 bpw (source comment); 4.8944 is the Q4_K_M mixture.",
-  "weight_group_size": 256,
-  "activation_scheme": null,
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-h100-nvl",
-    "nvidia-l40s",
-    "nvidia-l4",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-a10"
-  ],
-  "kernels": [
-    "ggml dequantize_row_q4_K + get_rows",
-    "ggml-cuda mul_mat_vec_q / dequantize_mul_mat_vec + convert_mul_mat_q (per-type)",
-    "ggml-cpu q4_K x q8_K dot products"
-  ],
-  "quality_delta": "Llama-3.1-8B-Instruct (quant-gguf-kquant-study): WikiText-2 ppl 7.56 vs 7.32 F16 (+0.24, the smallest perplexity cost of any 4-bit option measured); GSM8K 69.41 vs 77.63; IFEval 72.35 vs 78.93; unweighted mean 69.15 vs 69.47 (-0.46% AvgLoss); size 4685 MiB (-69.41%).",
-  "notes": "Every K-quant shares the same super-block shape: QK_K = 256 values per block (ggml/src/ggml-common.h, `#define QK_K 256`), with K_SCALE_SIZE = 12 bytes of packed sub-block scales. Verify layouts in that file, not in blog posts - the per-type 'effectively N bits per weight' figures are comments in the struct definitions themselves. block_q4_K = { ggml_half d; ggml_half dmin;  // super-block scales FOR THE QUANTIZED SCALES and MINS uint8_t scales[K_SCALE_SIZE];  // 12 bytes: 8 scales AND 8 mins at 6 bits each, packed uint8_t qs[QK_K/2]; }.  IMPORTANT CORRECTION to the common 'Q4_K_M mixes 6-bit and 4-bit sub-blocks' claim: it does not. All 256 weights in block_q4_K are uniform 4-bit (qs is a flat QK_K/2 nibble array, 128 bytes). What is mixed is the METADATA: the 8 sub-blocks of 32 elements each have a 6-bit scale and a 6-bit min. 4 (fp16) + 12 (scales/mins) + 128 (quants) = 144 bytes / 256 values = 4.5 bpw, matching the header comment 'Effectively 4.5 bits per weight'. This corrects a widespread misreading and is the single most useful thing to know about q4_K: the quality advantage over legacy q4_0 comes from 6-bit per-32 sub-block scales plus per-32 mins on an fp16 super-block scale, not from wider weights. 8 blocks of 32 elements, x = a*q + b. Q4_K_M IS A MIXTURE, not a type. From src/llama-quant.cpp: base q4_K; attn_v -> Q6_K when use_more_bits(i,n); ffn_down -> Q6_K when use_more_bits(i,n) (Falcon gets a three-way split: Q6_K for i<n/16, Q5_K when use_more_bits, else Q4_K); attn_output stays Q4_K. On the 70B path attn_v is promoted Q4_K -> Q5_K. The plain 'Q4_K' CLI name is an ALIAS for Q4_K_M (llama-quant.cpp: LLAMA_FTYPE_MOSTLY_Q4_K_M). Q4_K_S keeps the same structure but only bumps attn_v (first 4 layers) and ffn_down (first n/8 layers) to Q5_K, not Q6_K, which is why it is smaller at 4.6672 bpw. --pure disables all of this. Weight-only: activations stay FP16/BF16 at runtime; there is no '4-bit activations with hardware support' claim. ggml has bespoke dequantize+gemm kernels per type, but no accelerator has a GGUF/k-quant path in silicon. Consumer-GPU relevance (RTX 4090 / Arc B580 / Arc Pro B60 / RX 7900 XTX): CUDA and HIP have dedicated mul_mat_vec_q paths; Vulkan does not, and a single llama.cpp commit regressed Vulkan Q4_K_M decode with no prompt-processing change (gotcha-llamacpp-issue-11559-vulkan-q4km-regression). Vulkan Flash Attention also cuts prompt processing ~60% and decode ~48% (gotcha-llamacpp-issue-25207-vulkan-fa-slowdown). Contested caveat retained: in quant-gguf-kquant-study Q4_K_S dominates Q4_K_M on both size and AvgLoss, the opposite of the folk rule.",
-  "status": "contested",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab2-ggml-common-header",
-    "qlab2-ik-llama-cpp-readme",
-    "qlab2-llama-quant-cpp",
-    "qlab2-quantize-options-table",
-    "quant-ggml-header",
-    "quant-gguf-kquant-study",
-    "quant-llamacpp-quantize-readme",
-    "quant-vllm-gguf-doc"
-  ]
+ "id": "gguf-q4-k-m",
+ "type": "quantization",
+ "name": "GGUF Q4_K_M (4-bit K-quant, medium)",
+ "scheme": "gguf-q4_k_m",
+ "bits": "4.8944 measured avg (llama.cpp quantize README, Llama-3.1-8B). The pure block_q4_K is 4.5 bpw (source comment); 4.8944 is the Q4_K_M mixture.",
+ "weight_group_size": 32,
+ "activation_scheme": null,
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-h100-nvl",
+  "nvidia-l40s",
+  "nvidia-l4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a10"
+ ],
+ "kernels": [
+  "ggml dequantize_row_q4_K + get_rows",
+  "ggml-cuda mul_mat_vec_q / dequantize_mul_mat_vec + convert_mul_mat_q (per-type)",
+  "ggml-cpu q4_K x q8_K dot products"
+ ],
+ "quality_delta": "Llama-3.1-8B-Instruct (quant-gguf-kquant-study): WikiText-2 ppl 7.56 vs 7.32 F16 (+0.24, the smallest perplexity cost of any 4-bit option measured); GSM8K 69.41 vs 77.63; IFEval 72.35 vs 78.93; unweighted mean 69.15 vs 69.47 (-0.46% AvgLoss); size 4685 MiB (-69.41%).",
+ "notes": "CORRECTED 2026-10-04: was 256. Base type Q4_K has a 32-value scale group: dequantize_row_q4_K does `for (j = 0; j < QK_K; j += 64)` consuming TWO get_scale_min_k4 scale/min pairs of 32 values each - 8 sub-blocks of 32 per 256-value super-block, with each 6-bit scale and 6-bit min sitting on the fp16 d/dmin super-block scales. MIXTURE CAVEAT: Q4_K_M also contains Q5_K tensors (also group 32) and Q6_K tensors (group 16). Every K-quant shares the same super-block shape: QK_K = 256 values per block (ggml/src/ggml-common.h, `#define QK_K 256`), with K_SCALE_SIZE = 12 bytes of packed sub-block scales. Verify layouts in that file, not in blog posts - the per-type 'effectively N bits per weight' figures are comments in the struct definitions themselves. block_q4_K = { ggml_half d; ggml_half dmin;  // super-block scales FOR THE QUANTIZED SCALES and MINS uint8_t scales[K_SCALE_SIZE];  // 12 bytes: 8 scales AND 8 mins at 6 bits each, packed uint8_t qs[QK_K/2]; }.  IMPORTANT CORRECTION to the common 'Q4_K_M mixes 6-bit and 4-bit sub-blocks' claim: it does not. All 256 weights in block_q4_K are uniform 4-bit (qs is a flat QK_K/2 nibble array, 128 bytes). What is mixed is the METADATA: the 8 sub-blocks of 32 elements each have a 6-bit scale and a 6-bit min. 4 (fp16) + 12 (scales/mins) + 128 (quants) = 144 bytes / 256 values = 4.5 bpw, matching the header comment 'Effectively 4.5 bits per weight'. This corrects a widespread misreading and is the single most useful thing to know about q4_K: the quality advantage over legacy q4_0 comes from 6-bit per-32 sub-block scales plus per-32 mins on an fp16 super-block scale, not from wider weights. 8 blocks of 32 elements, x = a*q + b. Q4_K_M IS A MIXTURE, not a type. From src/llama-quant.cpp: base q4_K; attn_v -> Q6_K when use_more_bits(i,n); ffn_down -> Q6_K when use_more_bits(i,n) (Falcon gets a three-way split: Q6_K for i<n/16, Q5_K when use_more_bits, else Q4_K); attn_output stays Q4_K. On the 70B path attn_v is promoted Q4_K -> Q5_K. The plain 'Q4_K' CLI name is an ALIAS for Q4_K_M (llama-quant.cpp: LLAMA_FTYPE_MOSTLY_Q4_K_M). Q4_K_S keeps the same structure but only bumps attn_v (first 4 layers) and ffn_down (first n/8 layers) to Q5_K, not Q6_K, which is why it is smaller at 4.6672 bpw. --pure disables all of this. Weight-only: activations stay FP16/BF16 at runtime; there is no '4-bit activations with hardware support' claim. ggml has bespoke dequantize+gemm kernels per type, but no accelerator has a GGUF/k-quant path in silicon. Consumer-GPU relevance (RTX 4090 / Arc B580 / Arc Pro B60 / RX 7900 XTX): CUDA and HIP have dedicated mul_mat_vec_q paths; Vulkan does not, and a single llama.cpp commit regressed Vulkan Q4_K_M decode with no prompt-processing change (gotcha-llamacpp-issue-11559-vulkan-q4km-regression). Vulkan Flash Attention also cuts prompt processing ~60% and decode ~48% (gotcha-llamacpp-issue-25207-vulkan-fa-slowdown). Contested caveat retained: in quant-gguf-kquant-study Q4_K_S dominates Q4_K_M on both size and AvgLoss, the opposite of the folk rule.",
+ "status": "contested",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab2-ggml-common-header",
+  "qlab2-ik-llama-cpp-readme",
+  "qlab2-llama-quant-cpp",
+  "qlab2-quantize-options-table",
+  "quant-ggml-header",
+  "quant-gguf-kquant-study",
+  "quant-llamacpp-quantize-readme",
+  "quant-vllm-gguf-doc",
+  "qzgw-ggml-quants-kernel"
+ ]
 }

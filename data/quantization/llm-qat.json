@@ -1,29 +1,29 @@
 {
-  "id": "llm-qat",
-  "type": "quantization",
-  "name": "LLM-QAT (data-free quantization-aware training, NVIDIA)",
-  "scheme": "qat",
-  "bits": "w4a4 to w8a8 plus 4-bit KV cache (per-tensor/per-channel groups configured per experiment)",
-  "weight_group_size": null,
-  "activation_scheme": "Quantization-aware training: straight-through estimators over weights AND activations AND the KV cache, with the distillation target being the pretrained model's own greedy/sampled generations rather than any training corpus. This is what makes it 'data-free' and usable on models whose training data is unavailable.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x",
-    "intel-arc-b580",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "Research-only. No shipping kernel named in the paper; evaluated with simulation/fake-quant in the paper's harness."
-  ],
-  "quality_delta": "Paper states 'large improvements over training-free methods, especially in the low-bit settings' for LLaMA 7B/13B/30B down to 4-bit. The abstract gives no numeric perplexity delta and the experiments section was not read this session, so no number is recorded here. Third-party comparisons elsewhere cite LLM-QAT trailing W4A4 by ~22 points of zero-shot accuracy, but that figure is from SpinQuant's table, not from this paper.",
-  "notes": "Enum mismatch, deliberate: the closest existing value is 'ternary' but LLM-QAT is a training regime, not a ternary format - it is reported at 4-bit and above. Request the parent add a 'qat' enum value. The important thing this record captures is the W4A4-vs-W4A16 distinction: LLM-QAT is a genuine W4A4 method (it quantizes activations, unlike GPTQ/AWQ), but its W4A4 has no hardware int4xint4 path - same caveat as QuaRot and SpinQuant. Also note the KV cache is quantized here, which is unusual for a weight-quantization paper and links Task A to Task D. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'ternary' (a proxy recorded while the enum lacked a legal value) and is now 'qat'. ",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab-llm-qat-paper"
-  ]
+ "id": "llm-qat",
+ "type": "quantization",
+ "name": "LLM-QAT (data-free quantization-aware training, NVIDIA)",
+ "scheme": "qat",
+ "bits": "w4a4 to w8a8 plus 4-bit KV cache (per-tensor/per-channel groups configured per experiment)",
+ "weight_group_size": null,
+ "activation_scheme": "Quantization-aware training: straight-through estimators over weights AND activations AND the KV cache, with the distillation target being the pretrained model's own greedy/sampled generations rather than any training corpus. This is what makes it 'data-free' and usable on models whose training data is unavailable.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x",
+  "intel-arc-b580",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "Research-only. No shipping kernel named in the paper; evaluated with simulation/fake-quant in the paper's harness."
+ ],
+ "quality_delta": "Paper states 'large improvements over training-free methods, especially in the low-bit settings' for LLaMA 7B/13B/30B down to 4-bit. The abstract gives no numeric perplexity delta and the experiments section was not read this session, so no number is recorded here. Third-party comparisons elsewhere cite LLM-QAT trailing W4A4 by ~22 points of zero-shot accuracy, but that figure is from SpinQuant's table, not from this paper.",
+ "notes": "GROUP SIZE LEFT NULL 2026-10-04: LLM-QAT is a quantization-AWARE TRAINING recipe spanning w4a4 to w8a8 plus 4-bit KV, so the group size is a free choice per configuration. Its KV-cache variant is the record that carries the KV detail. Enum mismatch, deliberate: the closest existing value is 'ternary' but LLM-QAT is a training regime, not a ternary format - it is reported at 4-bit and above. Request the parent add a 'qat' enum value. The important thing this record captures is the W4A4-vs-W4A16 distinction: LLM-QAT is a genuine W4A4 method (it quantizes activations, unlike GPTQ/AWQ), but its W4A4 has no hardware int4xint4 path - same caveat as QuaRot and SpinQuant. Also note the KV cache is quantized here, which is unusual for a weight-quantization paper and links Task A to Task D. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'ternary' (a proxy recorded while the enum lacked a legal value) and is now 'qat'. ",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab-llm-qat-paper"
+ ]
 }

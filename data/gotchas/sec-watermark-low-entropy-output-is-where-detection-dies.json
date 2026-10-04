@@ -2,7 +2,7 @@
   "id": "sec-watermark-low-entropy-output-is-where-detection-dies",
   "type": "gotcha",
   "name": "Watermark detection fails exactly where the output matters most: low-entropy text, and about 25% of assistant-style responses",
-  "class": "measurement",
+  "class": "security",
   "affects": [],
   "concepts": [
     "watermark",
@@ -16,7 +16,7 @@
   "root_cause": "KGW Section 1.2 states the two low-entropy problems directly: humans and machines give similar or identical completions for low-entropy prompts, making them indistinguishable in principle; and perturbing the token choice in a low-entropy position produces high-perplexity unexpected tokens that degrade quality, so the watermark cannot be applied without paying for it. Both the detectability and the quality cost of watermarking are worst exactly where the distribution is peaked - which is most assistant replies, most code, and most structured output. STA-1 (Sampling One Then Accepting) is an unbiased scheme designed for this case, preserving the token distribution in expectation with lower risk of unsatisfactory output at low entropy.",
   "workaround": "Before deploying a watermark, measure detection rate on YOUR traffic distribution, not on a benchmark. Split it by entropy and by task type. If a large share of your output is low-entropy, a KGW-style watermark will either be undetectable there or will visibly damage it - and no amount of delta tuning fixes that, because the constraint is distributional.",
   "severity": "major",
-  "notes": "This is the honest core of watermark deployment: the scheme works, and it works on the wrong distribution for most serving deployments. The ~25% figure is specific to Alpaca-7B responding to typical user instructions, and is not a general constant - it is a demonstration that the failure mode is large enough to matter, at one model and one prompt style.",
+  "notes": "This is the honest core of watermark deployment: the scheme works, and it works on the wrong distribution for most serving deployments. The ~25% figure is specific to Alpaca-7B responding to typical user instructions, and is not a general constant - it is a demonstration that the failure mode is large enough to matter, at one model and one prompt style. SCHEME RECLASSIFIED (2026-10-04): was 'measurement'.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-04",

@@ -1,36 +1,40 @@
 {
-  "id": "gcp-cloud-tpu-v4-v5e-v5p",
-  "type": "supply",
-  "name": "Google Cloud TPU v4 / v5e / v5p (per chip-hour, in a pod)",
-  "status": "verified",
-  "confidence": 0.95,
-  "updated": "2026-10-04",
-  "sources": [
-    "sup-cloud-gcp-tpu-pricing",
-    "spl-eccn-3a090-ccl",
-    "spl-bis-2026-05-d5-guidance",
-    "spl-negative-no-oem-publishes-lead-time"
-  ],
-  "kind": "cloud",
-  "vendor": "google",
-  "accelerator_ids": [
-    "google-tpu-v5e",
-    "google-tpu-v5p",
-    "google-tpu-v4",
-    "google-tpu-v6e"
-  ],
-  "region": "us-central1 (v5e, v4), us-east1 and us-east5 (v5p, v6e), plus europe-west1/4, asia-northeast1, asia-southeast1, us-south1",
-  "channels": [
-    "rental",
-    "on-demand",
-    "spot",
-    "reserved",
-    "per-pod"
-  ],
-  "price_usd": 1.2,
-  "price_basis": "PER CHIP-HOUR in USD, not per VM - Google states this explicitly. v5e $1.20/chip-h on-demand (us-central1, us-east5, us-west1, us-west4); $1.416 us-south1 Dallas; $1.32132 europe-west1; $1.56 europe-west4 and asia-southeast1. v5p $4.20/chip-h (us-east5, us-east1). v4 $3.22/chip-h (us-central2). v6e Trillium $2.70 (us-east1, us-east5). DWS Flex-start halves v5e to $0.60 and v5p to $2.10; 3-year commitment takes v5e to $0.54 and v5p to $1.89. Published 2026-10-03. PRICE CLASS: this is a PUBLISHED LIST PRICE - an asking rate a new customer is quoted, not a realised, discounted or negotiated transaction rate. A real bill is at or below this and typically well below it once commitments, credits and committed-use discounts are applied.",
-  "availability": "lead-time",
-  "lead_time_weeks": null,
-  "export_controlled": null,
-  "notes": "Cloud TPU is the cheapest credible accelerator hour in this slice on a like-for-like basis: TPU v5e at $1.20 per chip-hour is less than AWS g6's L4 ($1.67) and far under any H100 hour, and v5p at $4.20 is under AWS p5's on-demand $6.88. But three structural caveats make it NOT a drop-in substitute for a GPU hour. (1) UNIT: the price is per CHIP inside a pod, and the page warns that the console displays VM-hours - a v4 host with 4 chips shows as $12.88/h which is exactly 4 x $3.22 - so reading the console figure as a per-VM price understates by the chip count, and the minimum billable object is a slice, not a chip. (2) QUOTA, not payment, is the gate: the page directs you to the Cloud TPU quota policy to learn how to request quota, so availability is lead-time-bound, not credit-bound. (3) Portability: XLA/JAX only. Every engine, kernel and quantization path elsewhere in this repo is CUDA-shaped. Also note the discount ladder here is the deepest in the whole slice - DWS Flex-start at 50% off on-demand and a 3-year commitment at 55% off for v5e - and unlike GCP's accelerator-optimized VMs, TPU consumption does carry 1-year and 3-year CUDs. TPU v4 and v3 are legacy pods; Ironwood at $12.00/chip-h in us-central1 is the newest and by far the most expensive per chip.\n\n EXPORT CONTROL (2026-10-04): this is a first-party silicon SKUs record (AWS Trainium / Google TPU) - non-US-origin designs that are not classified under the US ECCN 3A090 advanced-computing regime at all. Recorded null deliberately rather than false: the EAR does not govern the part, so the relevant controls are AWS's and Google's own regional service-availability policies plus the destination's import rules, which this repo has no primary source for. Do NOT read null here as 'unrestricted'. Sources for why a null is the honest answer rather than a gap: spl-eccn-3a090-ccl (the US regime whose scope is defined by US-origin classification), spl-bis-2026-05-d5-guidance (end-user/parent screening, which applies to where the customer is rather than to which silicon is supplied).\n\n LEAD TIME: null, and correct as null. For a listed on-demand instance type the provisioning delay is effectively zero - capacity is allocated per request - so a week count would be meaningless; the real gate for scarce shapes is either a quota increase or a capacity reservation, not a lead time. Where a published commitment horizon exists it IS recorded: AWS documents that a Capacity Block may be reserved with a start time up to EIGHT WEEKS in the future (source spl-aws-capacity-block-booking-horizon), which is a floor on how far ahead scarce capacity must be committed, not a wait. On-demand and Spot tiers publish no lead time at all; their constraint is availability, and the repo records that as availability=in-stock or a spot/reality note rather than as a fabricated week figure. Probe log in source spl-negative-no-oem-publishes-lead-time."
+ "id": "gcp-cloud-tpu-v4-v5e-v5p",
+ "type": "supply",
+ "name": "Google Cloud TPU v4 / v5e / v5p (per chip-hour, in a pod)",
+ "status": "verified",
+ "confidence": 0.95,
+ "updated": "2026-10-04",
+ "sources": [
+  "sup-cloud-gcp-tpu-pricing",
+  "spl-eccn-3a090-ccl",
+  "spl-bis-2026-05-d5-guidance",
+  "spl-negative-no-oem-publishes-lead-time"
+ ],
+ "kind": "cloud",
+ "vendor": "google",
+ "accelerator_ids": [
+  "google-tpu-v5e",
+  "google-tpu-v5p",
+  "google-tpu-v4",
+  "google-tpu-v6e"
+ ],
+ "region": "us-central1 (v5e, v4), us-east1 and us-east5 (v5p, v6e), plus europe-west1/4, asia-northeast1, asia-southeast1, us-south1",
+ "channels": [
+  "rental",
+  "on-demand",
+  "spot",
+  "reserved",
+  "per-pod"
+ ],
+ "price_usd": 1.2,
+ "price_basis": "PER CHIP-HOUR in USD, not per VM - Google states this explicitly. v5e $1.20/chip-h on-demand (us-central1, us-east5, us-west1, us-west4); $1.416 us-south1 Dallas; $1.32132 europe-west1; $1.56 europe-west4 and asia-southeast1. v5p $4.20/chip-h (us-east5, us-east1). v4 $3.22/chip-h (us-central2). v6e Trillium $2.70 (us-east1, us-east5). DWS Flex-start halves v5e to $0.60 and v5p to $2.10; 3-year commitment takes v5e to $0.54 and v5p to $1.89. Published 2026-10-03. PRICE CLASS: this is a PUBLISHED LIST PRICE - an asking rate a new customer is quoted, not a realised, discounted or negotiated transaction rate. A real bill is at or below this and typically well below it once commitments, credits and committed-use discounts are applied PERISHABLE-FIGURE STAMP (added 2026-10-04, uniform across data/supply/ so it is greppable). PRICE CLASS: PUBLISHED LIST PRICE - an asking rate a new customer is quoted, NOT a realised, discounted or negotiated transaction rate. A real bill is at or below this and typically well below it once commitments, credits and committed-use discounts apply. OBSERVED: 2026-10-03 RE-VERIFY BY: 2027-01-04 - the repo's quarterly re-verification bar. After that date this figure is presumed drifted and must be re-checked against its source before it is quoted again. A price without its observation date is noise; this stamp exists so a reader can tell a fresh figure from a stale one without reading prose. UNIT: PER CHIP-HOUR in USD, not per VM READING RULE: UNIT NOTE: this is per CHIP-hour, which the provider states explicitly - it is not a per-VM price. ",
+ "availability": "lead-time",
+ "lead_time_weeks": null,
+ "export_controlled": null,
+ "notes": "Cloud TPU is the cheapest credible accelerator hour in this slice on a like-for-like basis: TPU v5e at $1.20 per chip-hour is less than AWS g6's L4 ($1.67) and far under any H100 hour, and v5p at $4.20 is under AWS p5's on-demand $6.88. But three structural caveats make it NOT a drop-in substitute for a GPU hour. (1) UNIT: the price is per CHIP inside a pod, and the page warns that the console displays VM-hours - a v4 host with 4 chips shows as $12.88/h which is exactly 4 x $3.22 - so reading the console figure as a per-VM price understates by the chip count, and the minimum billable object is a slice, not a chip. (2) QUOTA, not payment, is the gate: the page directs you to the Cloud TPU quota policy to learn how to request quota, so availability is lead-time-bound, not credit-bound. (3) Portability: XLA/JAX only. Every engine, kernel and quantization path elsewhere in this repo is CUDA-shaped. Also note the discount ladder here is the deepest in the whole slice - DWS Flex-start at 50% off on-demand and a 3-year commitment at 55% off for v5e - and unlike GCP's accelerator-optimized VMs, TPU consumption does carry 1-year and 3-year CUDs. TPU v4 and v3 are legacy pods; Ironwood at $12.00/chip-h in us-central1 is the newest and by far the most expensive per chip.\n\n EXPORT CONTROL (2026-10-04): this is a first-party silicon SKUs record (AWS Trainium / Google TPU) - non-US-origin designs that are not classified under the US ECCN 3A090 advanced-computing regime at all. Recorded null deliberately rather than false: the EAR does not govern the part, so the relevant controls are AWS's and Google's own regional service-availability policies plus the destination's import rules, which this repo has no primary source for. Do NOT read null here as 'unrestricted'. Sources for why a null is the honest answer rather than a gap: spl-eccn-3a090-ccl (the US regime whose scope is defined by US-origin classification), spl-bis-2026-05-d5-guidance (end-user/parent screening, which applies to where the customer is rather than to which silicon is supplied).\n\n LEAD TIME: null, and correct as null. For a listed on-demand instance type the provisioning delay is effectively zero - capacity is allocated per request - so a week count would be meaningless; the real gate for scarce shapes is either a quota increase or a capacity reservation, not a lead time. Where a published commitment horizon exists it IS recorded: AWS documents that a Capacity Block may be reserved with a start time up to EIGHT WEEKS in the future (source spl-aws-capacity-block-booking-horizon), which is a floor on how far ahead scarce capacity must be committed, not a wait. On-demand and Spot tiers publish no lead time at all; their constraint is availability, and the repo records that as availability=in-stock or a spot/reality note rather than as a fabricated week figure. Probe log in source spl-negative-no-oem-publishes-lead-time.",
+ "export_control_regime": "not an EAR citation: provider service terms and end-use policy (the AI Diffusion Rule briefly tiered service access before its 2025-05-13 rescission)",
+ "export_control_note": "MECHANISM: first-party silicon (AWS Trainium/Inferentia, Google TPU), which is not US-origin and is not classified under ECCN 3A090 at all, so the hardware regime does not apply. The live controls are the provider's own regional service-availability policy and the destination's import rules; this repo has no primary source for either, which is why the boolean is null rather than false.",
+ "lead_time_source": "structural-na",
+ "lead_time_basis": "lead_time_weeks is null because the quantity is structurally not applicable: on-demand cloud capacity starts on request, so there is no order-to-delivery lead time. The constraint is the price per GPU-hour and the availability snapshot, not an interval. The one caveat worth keeping: scarce tiers gate capacity behind a reservation or Capacity Block commitment (AWS caps the booking horizon at 8 weeks, source spl-aws-capacity-block-booking-horizon), and that is a commitment window, not a lead time."
 }

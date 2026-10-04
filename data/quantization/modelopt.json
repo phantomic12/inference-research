@@ -1,38 +1,38 @@
 {
-  "id": "modelopt",
-  "type": "quantization",
-  "name": "NVIDIA Model Optimizer (ModelOpt) quantization recipes",
-  "scheme": "modelopt",
-  "bits": "w4a16 / w4a8 / w8a8 / w4a4-fp4 depending on the recipe (FP4, FP8 per-tensor, FP8 block scaling, FP8 rowwise, NVFP4, W4A16/W4A8 AWQ, W4A16/W4A8 GPTQ)",
-  "weight_group_size": null,
-  "activation_scheme": "set by the selected recipe: per-tensor, per-row/rowwise, per-block, or NVFP4's 16-element micro-block E4M3 scale with a per-tensor FP32 scale",
-  "native_support": [
-    "nvidia-h100-sxm",
-    "nvidia-l4",
-    "nvidia-l40s",
-    "nvidia-b200",
-    "nvidia-b300",
-    "nvidia-gb200-nvl72"
-  ],
-  "emulated_support": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-a10",
-    "amd-radeon-pro-vii"
-  ],
-  "kernels": [
-    "TensorRT-LLM plugins consuming ModelOpt checkpoints",
-    "cutlass FP8/FP4 GEMMs",
-    "Transformer Engine FP8/NVFP4",
-    "Marlin (W4A16 AWQ/GPTQ)"
-  ],
-  "quality_delta": null,
-  "notes": "ModelOpt is a quantization *toolkit*, not a format: it emits checkpoints for every recipe in the TensorRT-LLM list, which is why its scheme value in this enum is the honest 'modelopt' rather than a specific bit-width. Worth knowing because it is now the front door for NVIDIA-format inference - TensorRT-LLM's docs tell you to quantize offline with ModelOpt and then run, including for the NVFP4 KV cache, where they note only FP8 weight/activation quantization is currently supported alongside an NVFP4 KV cache (quant-trtllm-quantization). The doc also documents a real constraint that shows up in practice: vision components of multimodal models stay FP16 by default and the language component decides which quantization methods are available. bits is therefore a set, not a number, and weight_group_size is null because it follows the recipe.",
-  "status": "verified",
-  "confidence": 0.75,
-  "updated": "2026-10-03",
-  "sources": [
-    "quant-trtllm-quantization",
-    "quant-nvfp4-blog",
-    "quant-nvfp4-te-docs"
-  ]
+ "id": "modelopt",
+ "type": "quantization",
+ "name": "NVIDIA Model Optimizer (ModelOpt) quantization recipes",
+ "scheme": "modelopt",
+ "bits": "w4a16 / w4a8 / w8a8 / w4a4-fp4 depending on the recipe (FP4, FP8 per-tensor, FP8 block scaling, FP8 rowwise, NVFP4, W4A16/W4A8 AWQ, W4A16/W4A8 GPTQ)",
+ "weight_group_size": null,
+ "activation_scheme": "set by the selected recipe: per-tensor, per-row/rowwise, per-block, or NVFP4's 16-element micro-block E4M3 scale with a per-tensor FP32 scale",
+ "native_support": [
+  "nvidia-h100-sxm",
+  "nvidia-l4",
+  "nvidia-l40s",
+  "nvidia-b200",
+  "nvidia-b300",
+  "nvidia-gb200-nvl72"
+ ],
+ "emulated_support": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a10",
+  "amd-radeon-pro-vii"
+ ],
+ "kernels": [
+  "TensorRT-LLM plugins consuming ModelOpt checkpoints",
+  "cutlass FP8/FP4 GEMMs",
+  "Transformer Engine FP8/NVFP4",
+  "Marlin (W4A16 AWQ/GPTQ)"
+ ],
+ "quality_delta": null,
+ "notes": "GROUP SIZE LEFT NULL 2026-10-04: ModelOpt is a recipe SELECTOR, not a format - the record's own bits field is 'w4a16 / w4a8 / w8a8 / w4a4-fp4 depending on the selected recipe', spanning group sizes 16, 32, 64, 128 and -1 depending on which recipe and export target is chosen. Recording one number would attribute a specific format's group size to a tool that has many. ModelOpt is a quantization *toolkit*, not a format: it emits checkpoints for every recipe in the TensorRT-LLM list, which is why its scheme value in this enum is the honest 'modelopt' rather than a specific bit-width. Worth knowing because it is now the front door for NVIDIA-format inference - TensorRT-LLM's docs tell you to quantize offline with ModelOpt and then run, including for the NVFP4 KV cache, where they note only FP8 weight/activation quantization is currently supported alongside an NVFP4 KV cache (quant-trtllm-quantization). The doc also documents a real constraint that shows up in practice: vision components of multimodal models stay FP16 by default and the language component decides which quantization methods are available. bits is therefore a set, not a number, and weight_group_size is null because it follows the recipe.",
+ "status": "verified",
+ "confidence": 0.75,
+ "updated": "2026-10-04",
+ "sources": [
+  "quant-trtllm-quantization",
+  "quant-nvfp4-blog",
+  "quant-nvfp4-te-docs"
+ ]
 }

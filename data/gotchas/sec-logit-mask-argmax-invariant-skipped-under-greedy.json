@@ -2,7 +2,7 @@
   "id": "sec-logit-mask-argmax-invariant-skipped-under-greedy",
   "type": "gotcha",
   "name": "A logits processor that reports is_argmax_invariant() is never called under greedy decoding - the sampler returns before that stage",
-  "class": "framework",
+  "class": "security",
   "affects": [
     "vllm"
   ],
@@ -18,7 +18,7 @@
   "root_cause": "vLLM's sampler orders its stages explicitly: logit processors that are NOT argmax-invariant run before sampling, but the argmax-invariant group (by default min_p) is applied INSIDE the random-sampling branch, after temperature. When the whole batch is greedy, sample() returns immediately after greedy_sample(logits) and the argmax-invariant group never executes. The interface makes each processor declare is_argmax_invariant() and the sampler trusts that declaration, so a processor that is wrong about its own argmax-invariance is silently skipped on greedy requests.",
   "workaround": "In vLLM, never implement a safety transform as a processor reporting is_argmax_invariant() = True. If the transform can change which token is argmax it must report False. Treat all_greedy as a distinct configuration and test it explicitly rather than assuming the filter is uniform across sampling settings. Note the same batching hazard recorded elsewhere in this repo: greedy_sampled and random_sampled are merged with torch.where over one batch, so a partly-greedy batch mixes both paths.",
   "severity": "major",
-  "notes": "STATUS CONTESTED, deliberately. The ordering and the early return are read directly from the vLLM sampler source and the interface declaration, which is solid. What is NOT established from a source is the real-world incidence: no published report quantifies how often mixed greedy/random batches occur in production, so treat the mechanism as certain and the prevalence as unmeasured.",
+  "notes": "STATUS CONTESTED, deliberately. The ordering and the early return are read directly from the vLLM sampler source and the interface declaration, which is solid. What is NOT established from a source is the real-world incidence: no published report quantifies how often mixed greedy/random batches occur in production, so treat the mechanism as certain and the prevalence as unmeasured. SCHEME RECLASSIFIED (2026-10-04): was 'framework'.",
   "status": "contested",
   "confidence": 0.8,
   "updated": "2026-10-04",

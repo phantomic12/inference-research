@@ -1,31 +1,31 @@
 {
-  "id": "qhw-fp8-kv-cache",
-  "type": "quantization",
-  "name": "FP8 KV cache quantization (E4M3 keys and values)",
-  "scheme": "kv-cache-quant",
-  "bits": "8-bit KV cache (E4M3 format for both keys and values)",
-  "weight_group_size": null,
-  "activation_scheme": "Not an activation scheme - KV cache quantization. FP8 E4M3 format (1 sign, 4 exponent, 3 mantissa) with per-tensor or per-token scaling. The KV cache is quantized after computation, so the attention kernel must dequantize before the dot product.",
-  "native_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s"
-  ],
-  "emulated_support": [
-    "amd-instinct-mi300x",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "vLLM quantized KV cache (FP8 path)",
-    "TensorRT-LLM FP8 KV cache",
-    "FlashAttention FP8 KV support"
-  ],
-  "quality_delta": "No controlled benchmark with named accuracy delta found in the sources accessed. The vLLM quantization docs list 'Quantized KV Cache' as a supported feature but do not publish accuracy figures. The SGLang docs mention FP8 KV cache support but similarly lack quantitative accuracy data. This is a significant gap: FP8 KV cache is widely deployed but the accuracy impact is not well-documented in public sources.",
-  "notes": "FP8 KV cache quantization reduces KV cache memory by 2x compared to FP16. The key question is accuracy: FP8 E4M3 has ~2 decimal digits of precision, which is marginal for attention keys that feed into softmax. The repo already documents that sliding-window attention plus FP8 KV plus speculative decoding causes silent corruption (see existing records). The attention kernel interaction is critical: the KV cache is quantized after the KV projection, so the attention kernel must dequantize before computing attention scores. This dequantization adds latency to the decode phase. The vLLM docs mention FP8 KV cache as a feature but the SGLang docs do not list it as a separate quantization method - it may be handled internally. HARDWARE SUPPORT: FP8 is natively supported on Hopper (SM90) and Ada (SM89) with FP8 tensor cores. On Ampere (SM80), FP8 is emulated via FP16 with reduced precision. The accuracy delta is expected to be larger on Ampere where the FP8 path is emulated. This is a priority for further research: finding a source that reports measured accuracy delta on a named benchmark.",
-  "status": "draft",
-  "confidence": 0.5,
-  "updated": "2026-10-04",
-  "sources": [
-    "qhw-src-sglang-quant-docs"
-  ]
+ "id": "qhw-fp8-kv-cache",
+ "type": "quantization",
+ "name": "FP8 KV cache quantization (E4M3 keys and values)",
+ "scheme": "kv-cache-quant",
+ "bits": "8-bit KV cache (E4M3 format for both keys and values)",
+ "weight_group_size": null,
+ "activation_scheme": "Not an activation scheme - KV cache quantization. FP8 E4M3 format (1 sign, 4 exponent, 3 mantissa) with per-tensor or per-token scaling. The KV cache is quantized after computation, so the attention kernel must dequantize before the dot product.",
+ "native_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s"
+ ],
+ "emulated_support": [
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "vLLM quantized KV cache (FP8 path)",
+  "TensorRT-LLM FP8 KV cache",
+  "FlashAttention FP8 KV support"
+ ],
+ "quality_delta": "No controlled benchmark with named accuracy delta found in the sources accessed. The vLLM quantization docs list 'Quantized KV Cache' as a supported feature but do not publish accuracy figures. The SGLang docs mention FP8 KV cache support but similarly lack quantitative accuracy data. This is a significant gap: FP8 KV cache is widely deployed but the accuracy impact is not well-documented in public sources.",
+ "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: this scheme quantizes the KV cache, not the weights, so there are no weight groups to size. A number in this field would be a category error. (Where the underlying method has a real grouping - e.g. KIVI per-channel keys, KVQuant per-channel - that lives in the method's own record, not in weight_group_size.) FP8 KV cache quantization reduces KV cache memory by 2x compared to FP16. The key question is accuracy: FP8 E4M3 has ~2 decimal digits of precision, which is marginal for attention keys that feed into softmax. The repo already documents that sliding-window attention plus FP8 KV plus speculative decoding causes silent corruption (see existing records). The attention kernel interaction is critical: the KV cache is quantized after the KV projection, so the attention kernel must dequantize before computing attention scores. This dequantization adds latency to the decode phase. The vLLM docs mention FP8 KV cache as a feature but the SGLang docs do not list it as a separate quantization method - it may be handled internally. HARDWARE SUPPORT: FP8 is natively supported on Hopper (SM90) and Ada (SM89) with FP8 tensor cores. On Ampere (SM80), FP8 is emulated via FP16 with reduced precision. The accuracy delta is expected to be larger on Ampere where the FP8 path is emulated. This is a priority for further research: finding a source that reports measured accuracy delta on a named benchmark.",
+ "status": "draft",
+ "confidence": 0.5,
+ "updated": "2026-10-04",
+ "sources": [
+  "qhw-src-sglang-quant-docs"
+ ]
 }

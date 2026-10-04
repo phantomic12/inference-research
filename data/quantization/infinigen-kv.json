@@ -1,28 +1,28 @@
 {
-  "id": "infinigen-kv",
-  "type": "quantization",
-  "name": "InfiniGen (speculative KV prefetch for offloaded serving) - NOT KV quantization",
-  "scheme": "kv-sparsity",
-  "bits": "none - no bits reduced. Reduces how much of the KV cache must be FETCHED from host memory.",
-  "weight_group_size": null,
-  "activation_scheme": "None. Performs a 'minimal rehearsal' using the current layer's inputs plus part of the NEXT layer's query weight and key cache to speculate which tokens will matter for the following attention layer, then prefetches only those KV entries.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "Designed to synergize with modern offloading-based inference systems; improves such a system by up to 3.00x over prior KV cache management methods."
-  ],
-  "quality_delta": "From the abstract: improves overall performance of a modern offloading-based system by up to 3.00x compared to prior KV cache management methods, while offering 'substantially better model accuracy'. No accuracy number given; none recorded.",
-  "notes": "Boundary record. InfiniGen is often mis-filed under KV quantization because of the speculative-decoding framing, but it neither quantizes nor compresses - it changes WHICH entries cross the PCIe boundary, using the next layer's partial query to predict them. That is a fetch-scheduling result, and it composes with quantization rather than competing: quantize the cache with KIVI and use InfiniGen-style prediction to avoid fetching all of what remains. It is also a reminder that at long context the bottleneck is frequently KV TRANSFER, not KV CAPACITY, and the two need different fixes. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-sparsity'. ",
-  "status": "verified",
-  "confidence": 0.78,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab-infini-gen-paper"
-  ]
+ "id": "infinigen-kv",
+ "type": "quantization",
+ "name": "InfiniGen (speculative KV prefetch for offloaded serving) - NOT KV quantization",
+ "scheme": "kv-sparsity",
+ "bits": "none - no bits reduced. Reduces how much of the KV cache must be FETCHED from host memory.",
+ "weight_group_size": null,
+ "activation_scheme": "None. Performs a 'minimal rehearsal' using the current layer's inputs plus part of the NEXT layer's query weight and key cache to speculate which tokens will matter for the following attention layer, then prefetches only those KV entries.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "Designed to synergize with modern offloading-based inference systems; improves such a system by up to 3.00x over prior KV cache management methods."
+ ],
+ "quality_delta": "From the abstract: improves overall performance of a modern offloading-based system by up to 3.00x compared to prior KV cache management methods, while offering 'substantially better model accuracy'. No accuracy number given; none recorded.",
+ "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: page/head-level selection of which KV to keep or prefetch. No weights are re-gridded. Boundary record. InfiniGen is often mis-filed under KV quantization because of the speculative-decoding framing, but it neither quantizes nor compresses - it changes WHICH entries cross the PCIe boundary, using the next layer's partial query to predict them. That is a fetch-scheduling result, and it composes with quantization rather than competing: quantize the cache with KIVI and use InfiniGen-style prediction to avoid fetching all of what remains. It is also a reminder that at long context the bottleneck is frequently KV TRANSFER, not KV CAPACITY, and the two need different fixes. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-sparsity'. ",
+ "status": "verified",
+ "confidence": 0.78,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab-infini-gen-paper"
+ ]
 }

@@ -1,38 +1,38 @@
 {
-  "id": "fp8-e5m2",
-  "type": "quantization",
-  "name": "FP8 E5M2",
-  "scheme": "fp8-e5m2",
-  "bits": "w8a8 (or, in practice, KV-cache format)",
-  "weight_group_size": null,
-  "activation_scheme": "same scaling families as E4M3; E5M2's extra exponent bit is chosen when dynamic range matters more than mantissa precision",
-  "native_support": [
-    "nvidia-h100-sxm",
-    "nvidia-h100-nvl",
-    "nvidia-l4",
-    "nvidia-l40s",
-    "nvidia-b200",
-    "nvidia-b300"
-  ],
-  "emulated_support": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-a10",
-    "amd-radeon-pro-vii"
-  ],
-  "kernels": [
-    "TensorRT-LLM FP8 KV-cache path",
-    "FlashAttention-3 fp8 KV",
-    "FlashInfer fp8 KV cache",
-    "cutlass FP8 GEMM"
-  ],
-  "quality_delta": null,
-  "notes": "E5M2 (1 sign, 5 exp, 2 mantissa) has the same native hardware story as E4M3 - the tensor core does not care which FP8 exponent layout, and the MI300X datasheet explicitly rates FP8 for both E5M2 and E4M3 at the same 2.61 PFLOPs. Its distinctive use is the KV cache: the TensorRT-LLM docs expose 'FP8 KV Cache' as a separable option that can be enabled even on checkpoints that do not have it by default, which is the main reason someone reaches for E5M2 (quant-trtllm-quantization). No fp16 quality delta recorded: KV-cache quantization trades are reported as length/throughput wins, not as a controlled perplexity number in any primary source read.",
-  "status": "verified",
-  "confidence": 0.75,
-  "updated": "2026-10-03",
-  "sources": [
-    "quant-trtllm-quantization",
-    "quant-nvfp4-te-docs",
-    "quant-nvfp4-blog"
-  ]
+ "id": "fp8-e5m2",
+ "type": "quantization",
+ "name": "FP8 E5M2",
+ "scheme": "fp8-e5m2",
+ "bits": "w8a8 (or, in practice, KV-cache format)",
+ "weight_group_size": null,
+ "activation_scheme": "same scaling families as E4M3; E5M2's extra exponent bit is chosen when dynamic range matters more than mantissa precision",
+ "native_support": [
+  "nvidia-h100-sxm",
+  "nvidia-h100-nvl",
+  "nvidia-l4",
+  "nvidia-l40s",
+  "nvidia-b200",
+  "nvidia-b300"
+ ],
+ "emulated_support": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a10",
+  "amd-radeon-pro-vii"
+ ],
+ "kernels": [
+  "TensorRT-LLM FP8 KV-cache path",
+  "FlashAttention-3 fp8 KV",
+  "FlashInfer fp8 KV cache",
+  "cutlass FP8 GEMM"
+ ],
+ "quality_delta": null,
+ "notes": "GROUP SIZE LEFT NULL 2026-10-04, same reason as fp8-e4m3: per-tensor scaling is the definition of the per-tensor scheme, so there is no weight group. E5M2 vs E4M3 is an exponent/mantissa choice (2 vs 3 mantissa bits) and does not create a grouping. E5M2 (1 sign, 5 exp, 2 mantissa) has the same native hardware story as E4M3 - the tensor core does not care which FP8 exponent layout, and the MI300X datasheet explicitly rates FP8 for both E5M2 and E4M3 at the same 2.61 PFLOPs. Its distinctive use is the KV cache: the TensorRT-LLM docs expose 'FP8 KV Cache' as a separable option that can be enabled even on checkpoints that do not have it by default, which is the main reason someone reaches for E5M2 (quant-trtllm-quantization). No fp16 quality delta recorded: KV-cache quantization trades are reported as length/throughput wins, not as a controlled perplexity number in any primary source read.",
+ "status": "verified",
+ "confidence": 0.75,
+ "updated": "2026-10-04",
+ "sources": [
+  "quant-trtllm-quantization",
+  "quant-nvfp4-te-docs",
+  "quant-nvfp4-blog"
+ ]
 }

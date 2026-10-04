@@ -2,7 +2,7 @@
   "id": "ops-autoscaler-telemetry-lag-thundering-herd",
   "type": "gotcha",
   "name": "A closed-loop autoscaler on scraped telemetry overshoots because the signal is stale by the time the decision is made — several replicas are added for a burst that one replica would have absorbed",
-  "class": "config",
+  "class": "operations",
   "affects": [
     "llm-d"
   ],
@@ -17,7 +17,7 @@
   "root_cause": "llm-d names this as the tradeoff of the closed-loop detector: the utilization-detector is 'Highly accurate but subject to telemetry lag (\"thundering herd\")' because it reacts to real-time telemetry that is scraped, not observed. The queued work was already in the system when the first scale decision was made; the signal reports that backlog, and acting on it adds capacity for work that will have been absorbed by the time the new pods are ready. The consequence is not merely a few extra pods but a feedback loop in which each added pod briefly raises the aggregate saturation reading before its warmup completes (see ops-scale-down-never-reaches-idle), which can push the signal higher and trigger more replicas. The alternative detector trades the other way: the concurrency-detector reacts instantly but is 'blind to actual hardware memory pressure (KV cache filling)'.",
   "workaround": "Choose the detector for the failure mode you can tolerate. Use the closed-loop utilization-detector when you must not over-provision (cost-sensitive steady state) and accept lag; use the open-loop concurrency-detector when over-provisioning is worse than latency, accepting that it can dispatch into a full KV cache. Then damp the loop in the scaler rather than the detector: clamp and smooth the saturation signal (llm-d clamps at C=2.0 and smooths with avg_over_time over 45s, warning that without the clamp a single 10-90x SLO spike 'only poisons the moving average so it stays inflated long after the pool recovers'), and set a hysteresis band rather than a single set point. Their thresholds sit at 0.55 up and 0.40 down, chosen because the signal 'sits around 0.2-0.45 of the SLO and then goes vertical at the queueing knee' — a set point near 1.0 'fires only after the SLO budget is nearly burned'. Also mind the heterogeneity trap: the utilization-detector 'treats all endpoints equally (unweighted average), meaning a small saturated endpoint can trigger global backpressure'.",
   "severity": "major",
-  "notes": "Honestly unsolved: the lag is a property of the measurement path, not of the controller, and no amount of controller tuning removes it. The documented mitigations all move latency somewhere else — into a longer scale-up transient, into over-provisioning, or into an SLO breach during the burst. The genuinely effective structural answer is to not need the scale-up: keep a small healthy buffer and accept a warm floor, which is the same trade the llm-d buffer principle makes for the queue.",
+  "notes": "Honestly unsolved: the lag is a property of the measurement path, not of the controller, and no amount of controller tuning removes it. The documented mitigations all move latency somewhere else — into a longer scale-up transient, into over-provisioning, or into an SLO breach during the burst. The genuinely effective structural answer is to not need the scale-up: keep a small healthy buffer and accept a warm floor, which is the same trade the llm-d buffer principle makes for the queue. SCHEME RECLASSIFIED (2026-10-04): was 'config'.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-04",

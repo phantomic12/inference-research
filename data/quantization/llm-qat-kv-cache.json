@@ -1,28 +1,28 @@
 {
-  "id": "llm-qat-kv-cache",
-  "type": "quantization",
-  "name": "LLM-QAT KV cache quantization (4-bit KV inside a QAT regime)",
-  "scheme": "kv-cache-quant",
-  "bits": "4-bit KV cache, alongside quantized weights and activations",
-  "weight_group_size": null,
-  "activation_scheme": "Not an activation scheme - the KV cache is quantized as part of quantization-aware training with straight-through estimators, so the network is trained knowing the cache will be 4-bit. The paper treats KV quantization as essential rather than optional, on the grounds that it is what actually enables long-sequence throughput at current model sizes.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "Research only; no shipping kernel."
-  ],
-  "quality_delta": null,
-  "notes": "Separate record for the KV dimension of LLM-QAT because KV-cache quantization is a distinct decision from weight quantization and the repo's schema has no way to express 'quantizes the KV cache' except through bits and activation_scheme free text. Do not fold this into the llm-qat record: that record is about the training regime, this one is about the cache format, and a reader deciding how many bits to spend on KV should not have to read a QAT paper to find out. Symmetric key/value bits here (4 and 4) - the asymmetric alternative is KIVI's 2-bit-key / 4-bit-value. Request the parent add a kv-cache enum family so records like this one stop needing a weight-format enum value as a stand-in. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. ",
-  "status": "verified",
-  "confidence": 0.7,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab-llm-qat-paper"
-  ]
+ "id": "llm-qat-kv-cache",
+ "type": "quantization",
+ "name": "LLM-QAT KV cache quantization (4-bit KV inside a QAT regime)",
+ "scheme": "kv-cache-quant",
+ "bits": "4-bit KV cache, alongside quantized weights and activations",
+ "weight_group_size": null,
+ "activation_scheme": "Not an activation scheme - the KV cache is quantized as part of quantization-aware training with straight-through estimators, so the network is trained knowing the cache will be 4-bit. The paper treats KV quantization as essential rather than optional, on the grounds that it is what actually enables long-sequence throughput at current model sizes.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "Research only; no shipping kernel."
+ ],
+ "quality_delta": null,
+ "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: this scheme quantizes the KV cache, not the weights, so there are no weight groups to size. A number in this field would be a category error. (Where the underlying method has a real grouping - e.g. KIVI per-channel keys, KVQuant per-channel - that lives in the method's own record, not in weight_group_size.) Separate record for the KV dimension of LLM-QAT because KV-cache quantization is a distinct decision from weight quantization and the repo's schema has no way to express 'quantizes the KV cache' except through bits and activation_scheme free text. Do not fold this into the llm-qat record: that record is about the training regime, this one is about the cache format, and a reader deciding how many bits to spend on KV should not have to read a QAT paper to find out. Symmetric key/value bits here (4 and 4) - the asymmetric alternative is KIVI's 2-bit-key / 4-bit-value. Request the parent add a kv-cache enum family so records like this one stop needing a weight-format enum value as a stand-in. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. ",
+ "status": "verified",
+ "confidence": 0.7,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab-llm-qat-paper"
+ ]
 }

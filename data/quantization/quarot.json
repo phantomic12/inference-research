@@ -1,29 +1,29 @@
 {
-  "id": "quarot",
-  "type": "quantization",
-  "name": "QuaRot (rotation-based outlier removal, W4A4KV4)",
-  "scheme": "quarot",
-  "bits": "w4a4kv4 (weights, activations AND KV cache all at 4 bits); the paper also reports lossless 6-bit and 8-bit round-to-nearest results with no calibration data",
-  "weight_group_size": null,
-  "activation_scheme": "Orthogonal rotations (randomized Hadamard) applied offline to the residual/hidden state, to feed-forward activations, to parts of the attention computation, and to the KV cache. Computational invariance means the rotated network computes the same function in full precision, so the rotations cost accuracy nothing before quantization. Crucially the paper reports NO channels retained at higher precision - unlike LLM.int8() or Atom, there is no outlier escape hatch.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "spcl/QuaRot reference implementation: custom CUDA/Triton kernels plus a fake_quant directory for simulation. These are research kernels; there is no INT4 x INT4 tensor-core instruction on the emulated hardware."
-  ],
-  "quality_delta": "CONTESTED between two primary artifacts of the same paper. The arXiv v2 abstract states the 4-bit LLaMa2-70B model has 'losses of at most 0.47 WikiText-2 perplexity and retains 99% of the zero-shot performance'; the repository README states 'at most 0.29 WikiText perplexity' for the same model. Both figures are recorded here rather than picking one; neither was checked against the experiments section, which was not read. The 6-bit and 8-bit lossless claim is stated qualitatively in the abstract only.",
-  "notes": "Enum mismatch: 'spinquant' is the closest existing value and is genuinely the same family - both are rotation-based, both target W4A4KV4. SpinQuant is the learned-rotation successor; QuaRot uses a fixed randomized Hadamard. Request the parent add a 'quarot' enum value. THE CENTRAL POINT FOR THIS RECORD: QuaRot is W4A4 in the genuine sense (weights AND activations at 4-bit) and it is one of the papers that made W4A4 defensible, but it is NOT native anywhere. Its 'all matrix multiplications are performed in 4 bits' phrasing describes arithmetic in the authors' own kernels. The only W4A4 with a real hardware path in this repo is nvfp4 on Blackwell. Any blog that says '4-bit quantization is now fast on your GPU' is describing either W4A16 weight-only (memory win, fp16 compute) or this paper's research kernels - not silicon. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'spinquant' (a proxy recorded while the enum lacked a legal value) and is now 'quarot'. ",
-  "status": "contested",
-  "confidence": 0.75,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab-quarot-paper",
-    "qlab-quarot-github"
-  ]
+ "id": "quarot",
+ "type": "quantization",
+ "name": "QuaRot (rotation-based outlier removal, W4A4KV4)",
+ "scheme": "quarot",
+ "bits": "w4a4kv4 (weights, activations AND KV cache all at 4 bits); the paper also reports lossless 6-bit and 8-bit round-to-nearest results with no calibration data",
+ "weight_group_size": null,
+ "activation_scheme": "Orthogonal rotations (randomized Hadamard) applied offline to the residual/hidden state, to feed-forward activations, to parts of the attention computation, and to the KV cache. Computational invariance means the rotated network computes the same function in full precision, so the rotations cost accuracy nothing before quantization. Crucially the paper reports NO channels retained at higher precision - unlike LLM.int8() or Atom, there is no outlier escape hatch.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "spcl/QuaRot reference implementation: custom CUDA/Triton kernels plus a fake_quant directory for simulation. These are research kernels; there is no INT4 x INT4 tensor-core instruction on the emulated hardware."
+ ],
+ "quality_delta": "CONTESTED between two primary artifacts of the same paper. The arXiv v2 abstract states the 4-bit LLaMa2-70B model has 'losses of at most 0.47 WikiText-2 perplexity and retains 99% of the zero-shot performance'; the repository README states 'at most 0.29 WikiText perplexity' for the same model. Both figures are recorded here rather than picking one; neither was checked against the experiments section, which was not read. The 6-bit and 8-bit lossless claim is stated qualitatively in the abstract only.",
+ "notes": "GROUP SIZE LEFT NULL 2026-10-04: QuaRot is a rotation-based outlier-removal METHOD (Hadamard rotation, then W4A4KV4), and rotations are what remove the need for outlier handling in the first place. The group size belongs to whichever underlying grid quantizer is chosen after the rotation (INT4 grouped at whatever width, or a MX/NV format), so it is not a property of QuaRot. Enum mismatch: 'spinquant' is the closest existing value and is genuinely the same family - both are rotation-based, both target W4A4KV4. SpinQuant is the learned-rotation successor; QuaRot uses a fixed randomized Hadamard. Request the parent add a 'quarot' enum value. THE CENTRAL POINT FOR THIS RECORD: QuaRot is W4A4 in the genuine sense (weights AND activations at 4-bit) and it is one of the papers that made W4A4 defensible, but it is NOT native anywhere. Its 'all matrix multiplications are performed in 4 bits' phrasing describes arithmetic in the authors' own kernels. The only W4A4 with a real hardware path in this repo is nvfp4 on Blackwell. Any blog that says '4-bit quantization is now fast on your GPU' is describing either W4A16 weight-only (memory win, fp16 compute) or this paper's research kernels - not silicon. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'spinquant' (a proxy recorded while the enum lacked a legal value) and is now 'quarot'. ",
+ "status": "contested",
+ "confidence": 0.75,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab-quarot-paper",
+  "qlab-quarot-github"
+ ]
 }

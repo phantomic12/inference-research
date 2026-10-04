@@ -1,36 +1,37 @@
 {
-  "id": "gguf-q6-k",
-  "type": "quantization",
-  "name": "GGUF Q6_K (6-bit K-quant)",
-  "scheme": "gguf-q6_k",
-  "bits": "6.5633 measured avg (llama.cpp quantize README, Llama-3.1-8B); block_q6_K is 6.5625 bpw (source comment) - Q6_K is essentially a pure type",
-  "weight_group_size": 256,
-  "activation_scheme": null,
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-h100-nvl",
-    "nvidia-l40s",
-    "nvidia-l4",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-a10"
-  ],
-  "kernels": [
-    "ggml dequantize_row_q6_K + get_rows",
-    "ggml-cuda mul_mat_vec_q / dequantize_mul_mat_vec + convert_mul_mat_q"
-  ],
-  "quality_delta": "Llama-3.1-8B-Instruct (quant-gguf-kquant-study): WikiText-2 ppl 7.35 vs 7.32 F16 (+0.03, within noise); unweighted mean 69.23 vs 69.47; size 6283 MiB (-58.98%). GSM8K reported 58.98 vs 77.63 for F16, which is a 18-point drop inconsistent with a +0.03 perplexity change and with the paper's own claim that Q6_K is near-baseline - treat the Q6_K GSM8K cell as unverified.",
-  "notes": "Every K-quant shares the same super-block shape: QK_K = 256 values per block (ggml/src/ggml-common.h, `#define QK_K 256`), with K_SCALE_SIZE = 12 bytes of packed sub-block scales. block_q6_K = { uint8_t ql[QK_K/2];      // 128 bytes: LOWER 4 bits of each 6-bit quant uint8_t qh[QK_K/4];      // 64 bytes: UPPER 2 bits of each 6-bit quant, 4 quants per byte int8_t scales[QK_K/16]; // 16 scales, FULL 8-BIT (int8), one per 16 elements ggml_half d; }.  2+16+128+64 = 210 bytes / 256 values = 6.5625 bpw, matching the header comment. Verified task shorthand: q6_K IS pure 6-bit, and its sub-block scales are int8, NOT the 6-bit packed scales of q3_K/q4_K/q5_K. It has no per-block minimum (x = a*q) and, unlike q2_K/q4_K/q5_K, needs no second fp16 super-block scale. 16 blocks of 16. Q6_K IS NOT A MIXTURE: llama-quant.cpp's llama_tensor_get_quant_type maps LLAMA_FTYPE_MOSTLY_Q6_K straight to GGML_TYPE_Q6_K with no per-tensor promotion. It is however frequently used as the PROMOTION TARGET inside Q3_K_M/Q4_K_M/Q5_K_M mixtures (use_more_bits layers get Q6_K), so a Q4_K_M file contains real Q6_K tensors. The tool's own numbers on Llama-3-8B: Q6_K is +0.0217 ppl, versus Q5_K_M +0.0569 and Q8_0 +0.0026 (qlab2-quantize-options-table) - Q6_K is the last k-quant that is effectively lossless, and is the usual 'I want no quality risk and will pay the bytes' choice. Weight-only: activations stay FP16/BF16 at runtime. No accelerator has a k-quant path in silicon. Note block_q8_K is NOT a storage format: ggml-common.h comments it as 'only used for intermediate quantization and dot products' (a float32 scale, 256 int8 quants and 16 int16 block sums), so llama.cpp promotes activations to q8_K for the dot product rather than storing weights in it.",
-  "status": "contested",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab2-ggml-common-header",
-    "qlab2-llama-quant-cpp",
-    "qlab2-quantize-options-table",
-    "quant-ggml-header",
-    "quant-gguf-kquant-study",
-    "quant-llamacpp-quantize-readme",
-    "quant-vllm-gguf-doc"
-  ]
+ "id": "gguf-q6-k",
+ "type": "quantization",
+ "name": "GGUF Q6_K (6-bit K-quant)",
+ "scheme": "gguf-q6_k",
+ "bits": "6.5633 measured avg (llama.cpp quantize README, Llama-3.1-8B); block_q6_K is 6.5625 bpw (source comment) - Q6_K is essentially a pure type",
+ "weight_group_size": 16,
+ "activation_scheme": null,
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-h100-nvl",
+  "nvidia-l40s",
+  "nvidia-l4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a10"
+ ],
+ "kernels": [
+  "ggml dequantize_row_q6_K + get_rows",
+  "ggml-cuda mul_mat_vec_q / dequantize_mul_mat_vec + convert_mul_mat_q"
+ ],
+ "quality_delta": "Llama-3.1-8B-Instruct (quant-gguf-kquant-study): WikiText-2 ppl 7.35 vs 7.32 F16 (+0.03, within noise); unweighted mean 69.23 vs 69.47; size 6283 MiB (-58.98%). GSM8K reported 58.98 vs 77.63 for F16, which is a 18-point drop inconsistent with a +0.03 perplexity change and with the paper's own claim that Q6_K is near-baseline - treat the Q6_K GSM8K cell as unverified.",
+ "notes": "CORRECTED 2026-10-04: was 256. Base type Q6_K has a 16-value scale group: dequantize_row_q6_K indexes `int is = l/16; y[l+0] = d*sc[is+0]*q1; ...` with `sc += 8` per 128 values - 16 int8 sub-block scales per 256-value super-block. Note Q6_K is asymmetric-free (scale only, no min), which is why it needs twice as many scales as Q4_K/Q5_K to hit the same width. Every K-quant shares the same super-block shape: QK_K = 256 values per block (ggml/src/ggml-common.h, `#define QK_K 256`), with K_SCALE_SIZE = 12 bytes of packed sub-block scales. block_q6_K = { uint8_t ql[QK_K/2];      // 128 bytes: LOWER 4 bits of each 6-bit quant uint8_t qh[QK_K/4];      // 64 bytes: UPPER 2 bits of each 6-bit quant, 4 quants per byte int8_t scales[QK_K/16]; // 16 scales, FULL 8-BIT (int8), one per 16 elements ggml_half d; }.  2+16+128+64 = 210 bytes / 256 values = 6.5625 bpw, matching the header comment. Verified task shorthand: q6_K IS pure 6-bit, and its sub-block scales are int8, NOT the 6-bit packed scales of q3_K/q4_K/q5_K. It has no per-block minimum (x = a*q) and, unlike q2_K/q4_K/q5_K, needs no second fp16 super-block scale. 16 blocks of 16. Q6_K IS NOT A MIXTURE: llama-quant.cpp's llama_tensor_get_quant_type maps LLAMA_FTYPE_MOSTLY_Q6_K straight to GGML_TYPE_Q6_K with no per-tensor promotion. It is however frequently used as the PROMOTION TARGET inside Q3_K_M/Q4_K_M/Q5_K_M mixtures (use_more_bits layers get Q6_K), so a Q4_K_M file contains real Q6_K tensors. The tool's own numbers on Llama-3-8B: Q6_K is +0.0217 ppl, versus Q5_K_M +0.0569 and Q8_0 +0.0026 (qlab2-quantize-options-table) - Q6_K is the last k-quant that is effectively lossless, and is the usual 'I want no quality risk and will pay the bytes' choice. Weight-only: activations stay FP16/BF16 at runtime. No accelerator has a k-quant path in silicon. Note block_q8_K is NOT a storage format: ggml-common.h comments it as 'only used for intermediate quantization and dot products' (a float32 scale, 256 int8 quants and 16 int16 block sums), so llama.cpp promotes activations to q8_K for the dot product rather than storing weights in it.",
+ "status": "contested",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab2-ggml-common-header",
+  "qlab2-llama-quant-cpp",
+  "qlab2-quantize-options-table",
+  "quant-ggml-header",
+  "quant-gguf-kquant-study",
+  "quant-llamacpp-quantize-readme",
+  "quant-vllm-gguf-doc",
+  "qzgw-ggml-quants-kernel"
+ ]
 }

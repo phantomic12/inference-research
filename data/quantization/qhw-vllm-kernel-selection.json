@@ -1,35 +1,35 @@
 {
-  "id": "qhw-vllm-kernel-selection",
-  "type": "quantization",
-  "name": "vLLM quantization backend selection and hardware compatibility",
-  "scheme": "gptq",
-  "bits": "varies by method - W4A16 (GPTQ/AWQ/Marlin), W8A8 (FP8/INT8), W4A4 (NVFP4 on Blackwell)",
-  "weight_group_size": null,
-  "activation_scheme": "Depends on the quantization method. The backend selection is based on hardware compute capability and the quantization format.",
-  "native_support": [
-    "nvidia-b200",
-    "nvidia-b300",
-    "nvidia-gb200-nvl72"
-  ],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x"
-  ],
-  "kernels": [
-    "Marlin (GPTQ/AWQ/FP8/FP4 on Turing+)",
-    "Machete (Hopper-optimized)",
-    "CUTLASS (FP8/INT8)",
-    "Triton (fallback)",
-    "TensorRT-LLM plugins"
-  ],
-  "quality_delta": null,
-  "notes": "VLLM's quantization backend selection is documented in the Implementation x Hardware support table. KEY FACTS: (1) Marlin supports Turing (SM7.5) and above but NOT Volta (SM7.0). (2) llm-compressor FP8 (W8A8) only supports Ada (SM89) and Hopper (SM90) - not Ampere. (3) llm-compressor INT8 (W4A8) only supports ARM CPU - not NVIDIA GPUs. (4) The --linear-backend flag selects one backend for all quantized linear layers, with --kernel-config for per-quantization overrides. The vLLM docs show an example: '--linear-backend cutlass --kernel-config {\"linear_backend_per_quant\":{\"nvfp4_w4a16\":\"humming\"}}' which uses Humming for NVFP4 W4A16 layers and CUTLASS for everything else. This is the documented case where a format (NVFP4) is classified as weight-only (W4A16) when it is actually weight-and-activation (W4A4). On pre-Blackwell hardware, NVFP4 checkpoints are served with Marlin (W4A16), which dequantizes FP4 weights to FP16 and upcasts FP4 activations to FP16. The memory saving materializes but the compute speedup does not. This is a SILENT PRECISION DEGRADATION that the user may not be aware of.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-04",
-  "sources": [
-    "qhw-src-vllm-quant-docs"
-  ]
+ "id": "qhw-vllm-kernel-selection",
+ "type": "quantization",
+ "name": "vLLM quantization backend selection and hardware compatibility",
+ "scheme": "gptq",
+ "bits": "varies by method - W4A16 (GPTQ/AWQ/Marlin), W8A8 (FP8/INT8), W4A4 (NVFP4 on Blackwell)",
+ "weight_group_size": null,
+ "activation_scheme": "Depends on the quantization method. The backend selection is based on hardware compute capability and the quantization format.",
+ "native_support": [
+  "nvidia-b200",
+  "nvidia-b300",
+  "nvidia-gb200-nvl72"
+ ],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x"
+ ],
+ "kernels": [
+  "Marlin (GPTQ/AWQ/FP8/FP4 on Turing+)",
+  "Machete (Hopper-optimized)",
+  "CUTLASS (FP8/INT8)",
+  "Triton (fallback)",
+  "TensorRT-LLM plugins"
+ ],
+ "quality_delta": null,
+ "notes": "GROUP SIZE LEFT NULL 2026-10-04: this record documents vLLM's BACKEND SELECTION LOGIC across many schemes (W4A16 GPTQ/AWQ, W8A8 FP8, W4A8 INT8, NVFP4 W4A16), each with its own grouping. The bits field already says 'varies by method'. VLLM's quantization backend selection is documented in the Implementation x Hardware support table. KEY FACTS: (1) Marlin supports Turing (SM7.5) and above but NOT Volta (SM7.0). (2) llm-compressor FP8 (W8A8) only supports Ada (SM89) and Hopper (SM90) - not Ampere. (3) llm-compressor INT8 (W4A8) only supports ARM CPU - not NVIDIA GPUs. (4) The --linear-backend flag selects one backend for all quantized linear layers, with --kernel-config for per-quantization overrides. The vLLM docs show an example: '--linear-backend cutlass --kernel-config {\"linear_backend_per_quant\":{\"nvfp4_w4a16\":\"humming\"}}' which uses Humming for NVFP4 W4A16 layers and CUTLASS for everything else. This is the documented case where a format (NVFP4) is classified as weight-only (W4A16) when it is actually weight-and-activation (W4A4). On pre-Blackwell hardware, NVFP4 checkpoints are served with Marlin (W4A16), which dequantizes FP4 weights to FP16 and upcasts FP4 activations to FP16. The memory saving materializes but the compute speedup does not. This is a SILENT PRECISION DEGRADATION that the user may not be aware of.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "qhw-src-vllm-quant-docs"
+ ]
 }

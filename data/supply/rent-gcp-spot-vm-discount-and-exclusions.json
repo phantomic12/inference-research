@@ -1,33 +1,37 @@
 {
-  "id": "rent-gcp-spot-vm-discount-and-exclusions",
-  "type": "supply",
-  "name": "Google Cloud Spot VMs: up to 91% off, no SLA, and explicitly excluded from committed-use discounts",
-  "kind": "cloud",
-  "vendor": null,
-  "accelerator_ids": [
-    "nvidia-h100-sxm",
-    "nvidia-h200-sxm",
-    "nvidia-a100-80gb-sxm4"
-  ],
-  "region": "all GCP regions; per-zone availability",
-  "channels": [
-    "spot",
-    "interruptible"
-  ],
-  "price_usd": 91.0,
-  "price_basis": "PERCENT DISCOUNT CEILING, not a price. The Spot VM documentation states Spot VMs 'are available at much lower prices - up to 91% discounts' and, in the same paragraph, that 'Compute Engine might preempt Spot VMs at any time to reclaim resources'. price_usd carries the 91 (percent), which is the only number the page publishes. OBSERVATION DATE: the figure above was observed/listed on 2026-10-04 unless a different date is stated inline; treat it as needing re-verification once it is more than a quarter old. PRICE CLASS: this is a PUBLISHED LIST PRICE - an asking rate a new customer is quoted, not a realised, discounted or negotiated transaction rate. A real bill is at or below this and typically well below it once commitments, credits and committed-use discounts are applied.",
-  "availability": "unknown",
-  "lead_time_weeks": null,
-  "export_controlled": true,
-  "notes": "The GCP spot documentation is unusually explicit about four limitations that together make the headline discount unbankable, and each is quoted from the page. (1) NO SLA: Spot VMs 'are not covered by any Service Level Agreement and are excluded from the Compute Engine SLA'. (2) NO LIVE MIGRATION: 'Spot VMs can't live migrate' - so a spot instance cannot be evacuated onto on-demand capacity when it is preempted. (3) NO COMMITMENT DISCOUNT: the page states that 'credits for Compute Engine don't apply to Spot VMs', which is the same mutual-exclusion that the pricing page states explicitly for both Spot and preemptible VMs against CUDs and SUDs. This is the single most common error in spot cost models - multiplying a spot rate by a commitment discount. (4) FINITE AND ZONE-LOCAL: 'Spot VMs are finite Compute Engine resources, so they might not always be available', and availability 'varies based on Compute Engine usage'. On interruption mechanism: Compute Engine either STOPS (default) or DELETES the VM depending on the termination action you set, and 'The probability that Compute Engine preempts Spot VMs is generally low, but might vary from day to day and from zone to zone depending on current conditions'. GCP publishes spot pricing per instance type in its VM pricing table and, unlike AWS, states the discount percentage up front - which makes GCP the easier of the two to reason about and the easier to overestimate.\n\n EXPORT CONTROL (2026-10-04, mechanism-level; sources spl-bis-2026-05-d5-guidance, spl-bis-2026-01-advanced-computing-case-by-case): renting capacity does NOT remove the export-control question, it relocates it. Providing remote access to controlled computing capability can constitute a transfer under the EAR, so the provider must screen the end user; and separately, under the 91 FR 1684 licence regime the consignee must run KYC procedures to prevent unauthorized remote access and must manage and limit IaaS access to the hardware - obligations pushed onto the customer, who must be told to implement them. For a customer headquartered or parented in Country Group D:5 or Macau the 742.6(a)(6)(iii)(A) end-user/parent test can bite even when the capacity is consumed in a permitted region. Recorded true because the underlying hardware is controlled and the provider carries the screening duty, not because access to a US region is itself restricted.\n\n LEAD TIME: null - correct and not a gap. A token-priced serverless API is provisioned on request, so there is no lead time to publish; the binding constraint when a model is at capacity is provider-side queuing and any per-account concurrency limit, which this repo records in notes where a vendor publishes one (see the DeepSeek concurrency figures already here). Deliberately NOT recorded: any 'model capacity lead time' estimate, because vendors publish none and the SEO 'GPU lead time' numbers that circulate do not apply to a rented endpoint. Probe log in source spl-negative-no-oem-publishes-lead-time.",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-04",
-  "sources": [
-    "rent-src-gcp-spot-vm-doc",
-    "spl-eccn-3a090-ccl",
-    "spl-bis-2026-01-advanced-computing-case-by-case",
-    "spl-bis-2026-05-d5-guidance",
-    "spl-negative-no-oem-publishes-lead-time"
-  ]
+ "id": "rent-gcp-spot-vm-discount-and-exclusions",
+ "type": "supply",
+ "name": "Google Cloud Spot VMs: up to 91% off, no SLA, and explicitly excluded from committed-use discounts",
+ "kind": "cloud",
+ "vendor": null,
+ "accelerator_ids": [
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "region": "all GCP regions; per-zone availability",
+ "channels": [
+  "spot",
+  "interruptible"
+ ],
+ "price_usd": 91.0,
+ "price_basis": "PERCENT DISCOUNT CEILING, not a price. The Spot VM documentation states Spot VMs 'are available at much lower prices - up to 91% discounts' and, in the same paragraph, that 'Compute Engine might preempt Spot VMs at any time to reclaim resources'. price_usd carries the 91 (percent), which is the only number the page publishes. OBSERVATION DATE: the figure above was observed/listed on 2026-10-04 unless a different date is stated inline; treat it as needing re-verification once it is more than a quarter old. PRICE CLASS: this is a PUBLISHED LIST PRICE - an asking rate a new customer is quoted, not a realised, discounted or negotiated transaction rate. A real bill is at or below this and typically well below it once commitments, credits and committed-use discounts are applied PERISHABLE-FIGURE STAMP (added 2026-10-04, uniform across data/supply/ so it is greppable). PRICE CLASS: PUBLISHED LIST PRICE - an asking rate a new customer is quoted, NOT a realised, discounted or negotiated transaction rate. A real bill is at or below this and typically well below it once commitments, credits and committed-use discounts apply. OBSERVED: 2026-10-04 (the date this record was verified against its source; the per-figure fetch date is not restated in price_basis) RE-VERIFY BY: 2027-01-04 - the repo's quarterly re-verification bar. After that date this figure is presumed drifted and must be re-checked against its source before it is quoted again. A price without its observation date is noise; this stamp exists so a reader can tell a fresh figure from a stale one without reading prose. UNIT: PERCENT DISCOUNT CEILING, not a price READING RULE: MAJOR UNIT WARNING: price_usd is a PERCENT DISCOUNT CEILING, not a price. It is a published maximum, not an expectation - realised discounts are usually far smaller. Do not treat it as a rate. ",
+ "availability": "unknown",
+ "lead_time_weeks": null,
+ "export_controlled": true,
+ "notes": "The GCP spot documentation is unusually explicit about four limitations that together make the headline discount unbankable, and each is quoted from the page. (1) NO SLA: Spot VMs 'are not covered by any Service Level Agreement and are excluded from the Compute Engine SLA'. (2) NO LIVE MIGRATION: 'Spot VMs can't live migrate' - so a spot instance cannot be evacuated onto on-demand capacity when it is preempted. (3) NO COMMITMENT DISCOUNT: the page states that 'credits for Compute Engine don't apply to Spot VMs', which is the same mutual-exclusion that the pricing page states explicitly for both Spot and preemptible VMs against CUDs and SUDs. This is the single most common error in spot cost models - multiplying a spot rate by a commitment discount. (4) FINITE AND ZONE-LOCAL: 'Spot VMs are finite Compute Engine resources, so they might not always be available', and availability 'varies based on Compute Engine usage'. On interruption mechanism: Compute Engine either STOPS (default) or DELETES the VM depending on the termination action you set, and 'The probability that Compute Engine preempts Spot VMs is generally low, but might vary from day to day and from zone to zone depending on current conditions'. GCP publishes spot pricing per instance type in its VM pricing table and, unlike AWS, states the discount percentage up front - which makes GCP the easier of the two to reason about and the easier to overestimate.\n\n EXPORT CONTROL (2026-10-04, mechanism-level; sources spl-bis-2026-05-d5-guidance, spl-bis-2026-01-advanced-computing-case-by-case): renting capacity does NOT remove the export-control question, it relocates it. Providing remote access to controlled computing capability can constitute a transfer under the EAR, so the provider must screen the end user; and separately, under the 91 FR 1684 licence regime the consignee must run KYC procedures to prevent unauthorized remote access and must manage and limit IaaS access to the hardware - obligations pushed onto the customer, who must be told to implement them. For a customer headquartered or parented in Country Group D:5 or Macau the 742.6(a)(6)(iii)(A) end-user/parent test can bite even when the capacity is consumed in a permitted region. Recorded true because the underlying hardware is controlled and the provider carries the screening duty, not because access to a US region is itself restricted.\n\n LEAD TIME: null - correct and not a gap. A token-priced serverless API is provisioned on request, so there is no lead time to publish; the binding constraint when a model is at capacity is provider-side queuing and any per-account concurrency limit, which this repo records in notes where a vendor publishes one (see the DeepSeek concurrency figures already here). Deliberately NOT recorded: any 'model capacity lead time' estimate, because vendors publish none and the SEO 'GPU lead time' numbers that circulate do not apply to a rented endpoint. Probe log in source spl-negative-no-oem-publishes-lead-time.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "rent-src-gcp-spot-vm-doc",
+  "spl-eccn-3a090-ccl",
+  "spl-bis-2026-01-advanced-computing-case-by-case",
+  "spl-bis-2026-05-d5-guidance",
+  "spl-negative-no-oem-publishes-lead-time"
+ ],
+ "export_control_regime": "EAR 742.6(a)(6)(iii)(A) + EAR 744.23/744.6 (Entity, Unverified, MEU list screening of the end user) + the advanced-computing IaaS obligations of 91 FR 1684 (consignee KYC, and management/limitation of IaaS access to the hardware)",
+ "export_control_note": "LAYER 1, EXPORT LICENCE: under the Jan 2026 BIS rule 91 FR 1684 (effective 2026-01-15) the license review policy for advanced-computing commodities with TPP < 21,000 AND total DRAM bandwidth < 6,500 GB/s - the NVIDIA H200 and AMD MI325X are the rule's named examples - moved from PRESUMPTION OF DENIAL to CASE-BY-CASE REVIEW, but only for exports FROM THE UNITED STATES to end users located in China or Macau, and only against six exporter certifications filed via SNAP-R before shipment: (1) items below the thresholds with the count of units shipped in the US; (2) sufficient US supply, judged 'taking into account normal lead times'; (3) no diversion of global foundry capacity away from US end users; (4) aggregate China+Macau shipments <= 50% of total US end-use shipments of that product; (5) no end-user or use prohibition; (6) the consignee runs rigorous KYC. Every shipment must then pass a qualified third-party testing lab - US-headquartered, not controlled by a D:5/Macau entity, no ownership stake in any party, qualification revocable by BIS at any time - verifying TPP, total DRAM bandwidth, interconnect bandwidth and copackaged DRAM capacity. Reexports and in-country transfers of the same chips to China/Macau REMAIN PRESUMPTION OF DENIAL. LAYER 2, END-USER AND PARENT SCREENING: per BIS guidance of 2026-05-31 a licence is required where the consignee is HEADQUARTERED in Country Group D:5 (15 CFR part 740 supplement no. 1) or Macau OR whose ULTIMATE PARENT COMPANY is so headquartered - even when the consignee itself sits outside D:5/Macau. The requirement sits at EAR 742.6(a)(6)(iii)(A) for destinations outside the US, with an exception available only under the license exception at 740.2(a)(9)(ii). The destination country alone therefore never answers the question; screen the parent. LAYER 3, REMAINING LIMITS: exports to D:5/Macau-headquartered OR -parented entities stay PRESUMPTION OF DENIAL wherever the buyer sits, and the AI Diffusion Rule that would have set a country-tier structure on who could lawfully buy what was RESCINDED on 2025-05-13 and is not being enforced, so any recorded status rests on the instruments named here rather than on tiering.",
+ "lead_time_source": "structural-na",
+ "lead_time_basis": "lead_time_weeks is null because the quantity is structurally not applicable: on-demand cloud capacity starts on request, so there is no order-to-delivery lead time. The constraint is the price per GPU-hour and the availability snapshot, not an interval. The one caveat worth keeping: scarce tiers gate capacity behind a reservation or Capacity Block commitment (AWS caps the booking horizon at 8 weeks, source spl-aws-capacity-block-booking-horizon), and that is a commitment window, not a lead time."
 }

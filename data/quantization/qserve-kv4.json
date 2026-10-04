@@ -1,28 +1,28 @@
 {
-  "id": "qserve-kv4",
-  "type": "quantization",
-  "name": "QServe SmoothAttention (4-bit KV cache with an accuracy-preserving correction)",
-  "scheme": "kv-cache-quant",
-  "bits": "4-bit KV cache (keys and values), the 'KV4' of W4A8KV4",
-  "weight_group_size": null,
-  "activation_scheme": "Not an activation scheme - 4-bit KV cache mitigated by SmoothAttention, which the paper introduces specifically to counter the accuracy degradation that 4-bit KV quantization causes. The system then makes fused attention memory-bound specifically to capture the KV4 bandwidth win.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "QServe inference library; fused attention kernels made memory-bound to exploit the KV4 reduction."
-  ],
-  "quality_delta": "Throughput figures only in the abstract (LLaMA-3-8B 1.2x on A100 / 1.4x on L40S vs TensorRT-LLM; Qwen1.5-72B 2.4x on A100 / 3.5x on L40S). No KV-specific quality number in the abstract.",
-  "notes": "Third distinct KV record tied to a weight-quantization paper, and the reason all three are kept separate: QServe's KV contribution is a CORRECTION METHOD (SmoothAttention) rather than a new grouping scheme. That is a genuinely different lever from KIVI's per-channel/per-token axis choice, and it is the one that matters at scale-serving batch sizes where KIVI's low-memory benefit has to coexist with high arithmetic intensity. Note the whole family (KIVI 2/4, KVQuant 3/3, QuaRot 4/4, QServe 4/4, ZipCache mixed) disagrees about the right key bit width - there is no settled answer, and the repo should not imply one by presenting a single record as canonical. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'wq4a4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. ",
-  "status": "verified",
-  "confidence": 0.75,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab-qserve-paper"
-  ]
+ "id": "qserve-kv4",
+ "type": "quantization",
+ "name": "QServe SmoothAttention (4-bit KV cache with an accuracy-preserving correction)",
+ "scheme": "kv-cache-quant",
+ "bits": "4-bit KV cache (keys and values), the 'KV4' of W4A8KV4",
+ "weight_group_size": null,
+ "activation_scheme": "Not an activation scheme - 4-bit KV cache mitigated by SmoothAttention, which the paper introduces specifically to counter the accuracy degradation that 4-bit KV quantization causes. The system then makes fused attention memory-bound specifically to capture the KV4 bandwidth win.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "QServe inference library; fused attention kernels made memory-bound to exploit the KV4 reduction."
+ ],
+ "quality_delta": "Throughput figures only in the abstract (LLaMA-3-8B 1.2x on A100 / 1.4x on L40S vs TensorRT-LLM; Qwen1.5-72B 2.4x on A100 / 3.5x on L40S). No KV-specific quality number in the abstract.",
+ "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: this scheme quantizes the KV cache, not the weights, so there are no weight groups to size. A number in this field would be a category error. (Where the underlying method has a real grouping - e.g. KIVI per-channel keys, KVQuant per-channel - that lives in the method's own record, not in weight_group_size.) Third distinct KV record tied to a weight-quantization paper, and the reason all three are kept separate: QServe's KV contribution is a CORRECTION METHOD (SmoothAttention) rather than a new grouping scheme. That is a genuinely different lever from KIVI's per-channel/per-token axis choice, and it is the one that matters at scale-serving batch sizes where KIVI's low-memory benefit has to coexist with high arithmetic intensity. Note the whole family (KIVI 2/4, KVQuant 3/3, QuaRot 4/4, QServe 4/4, ZipCache mixed) disagrees about the right key bit width - there is no settled answer, and the repo should not imply one by presenting a single record as canonical. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'wq4a4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. ",
+ "status": "verified",
+ "confidence": 0.75,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab-qserve-paper"
+ ]
 }

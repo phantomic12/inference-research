@@ -1,29 +1,29 @@
 {
-  "id": "zeroquant-v1",
-  "type": "quantization",
-  "name": "ZeroQuant v1 (fine-grained hardware-friendly PTQ + layer-by-layer distillation)",
-  "scheme": "zeroquant",
-  "bits": "w8a8 headline; also int4 weights in fully-connected modules with int8 weights in attention and int8 activations (a mixed w4a8 configuration)",
-  "weight_group_size": null,
-  "activation_scheme": "Fine-grained hardware-friendly per-token/per-channel dynamic quantization for activations, plus layer-by-layer knowledge distillation (LKD) that works without access to the original training data - LKD is regenerated from the model itself, so 'data-free' here means no corpus, not no compute.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x",
-    "intel-arc-b580",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "Purpose-built quantized CUDA backend in the paper, described as removing quantization/dequantization overhead."
-  ],
-  "quality_delta": "From the paper's abstract: INT8 weight+activation is cost-free for BERT and GPT-3 style models with minimal accuracy impact, giving up to 5.19x (BERT) and 4.16x (GPT-3 style) speedup over FP16; on GPT-J 6B and GPT-NeoX 20B the INT8 model achieves accuracy similar to FP16 with up to 5.2x better efficiency. These are speed figures, not a perplexity delta; no PPL number is given in the abstract.",
-  "notes": "Enum mismatch: 'gptq' is the closest enum - ZeroQuant v1 is weight-only-oriented PTQ in that lineage, and its int4 path is grouped/quantized weights with dequantization back to fp16. Request the parent add 'zeroquant'. The speedups above are from the authors' own system with their own kernels and no independent replication; treat as vendor_claim-style numbers rather than measured third-party results. ZeroQuant v1 predates W4A4 hardware entirely - on any of the accelerators listed under emulated_support, the int8 path is the only one with a plausible tensor-core story, and even that is per-tensor rather than block-scaled. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'gptq' (a proxy recorded while the enum lacked a legal value) and is now 'zeroquant'. ",
-  "status": "verified",
-  "confidence": 0.75,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab-zeroquant-paper"
-  ]
+ "id": "zeroquant-v1",
+ "type": "quantization",
+ "name": "ZeroQuant v1 (fine-grained hardware-friendly PTQ + layer-by-layer distillation)",
+ "scheme": "zeroquant",
+ "bits": "w8a8 headline; also int4 weights in fully-connected modules with int8 weights in attention and int8 activations (a mixed w4a8 configuration)",
+ "weight_group_size": null,
+ "activation_scheme": "Fine-grained hardware-friendly per-token/per-channel dynamic quantization for activations, plus layer-by-layer knowledge distillation (LKD) that works without access to the original training data - LKD is regenerated from the model itself, so 'data-free' here means no corpus, not no compute.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x",
+  "intel-arc-b580",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "Purpose-built quantized CUDA backend in the paper, described as removing quantization/dequantization overhead."
+ ],
+ "quality_delta": "From the paper's abstract: INT8 weight+activation is cost-free for BERT and GPT-3 style models with minimal accuracy impact, giving up to 5.19x (BERT) and 4.16x (GPT-3 style) speedup over FP16; on GPT-J 6B and GPT-NeoX 20B the INT8 model achieves accuracy similar to FP16 with up to 5.2x better efficiency. These are speed figures, not a perplexity delta; no PPL number is given in the abstract.",
+ "notes": "GROUP SIZE LEFT NULL 2026-10-04: ZeroQuant v1's contribution is FINE-GRAINED hardware-friendly quantization - per-token/per-channel granularity chosen for kernel efficiency - plus block-wise input quantization. Its granularity axes are per-token and per-channel, which are not the contiguous weight-group axis this field measures. Enum mismatch: 'gptq' is the closest enum - ZeroQuant v1 is weight-only-oriented PTQ in that lineage, and its int4 path is grouped/quantized weights with dequantization back to fp16. Request the parent add 'zeroquant'. The speedups above are from the authors' own system with their own kernels and no independent replication; treat as vendor_claim-style numbers rather than measured third-party results. ZeroQuant v1 predates W4A4 hardware entirely - on any of the accelerators listed under emulated_support, the int8 path is the only one with a plausible tensor-core story, and even that is per-tensor rather than block-scaled. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'gptq' (a proxy recorded while the enum lacked a legal value) and is now 'zeroquant'. ",
+ "status": "verified",
+ "confidence": 0.75,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab-zeroquant-paper"
+ ]
 }

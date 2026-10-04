@@ -1,29 +1,30 @@
 {
-  "id": "gguf-iq2-m",
-  "type": "quantization",
-  "name": "GGUF IQ2_M (mixture built on IQ2_S with Q4_K/Q5_K promoted tensors)",
-  "scheme": "gguf-iq2-m",
-  "bits": "2.9294 measured avg (llama.cpp quantize README, Llama-3.1-8B); official tool string '2.7 bpw quantization'. NOT a distinct block type - llama_tensor_get_quant_type maps LLAMA_FTYPE_MOSTLY_IQ2_M to GGML_TYPE_IQ2_S",
-  "weight_group_size": 32,
-  "activation_scheme": null,
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-rtx-4090",
-    "intel-arc-b580",
-    "intel-arc-pro-b60"
-  ],
-  "kernels": [
-    "ggml dequantize_row_iq2_s + get_rows (base type)",
-    "ggml-cuda dequantize_mul_mat_vec / convert_mul_mat"
-  ],
-  "quality_delta": "Official tool string '2.7 bpw quantization' (qlab2-quantize-options-table); no controlled fp16 delta published. Null + note.",
-  "notes": "SCHEMA MISMATCH: there is no ggml/iq* value in the quantization scheme enum, so this record uses the closest existing value 'gguf-q4_k_m' (or 'gguf-q2_k') and puts the true type in `name` and `bits`. Requested enum additions are listed in the task report. Weight-only by construction: activations are promoted to q8_K (an intermediate dot-product format, not a storage format) and the matmul runs at fp16/bf16, so native_support is deliberately EMPTY and the whole accelerator ecosystem is emulated_support. No accelerator has an i-quant or k-quant path in silicon. COMMON TO ALL IQ-QUANTS, verified from ggml/src/ggml-common.h: they use the QK_K = 256 super-block like the K-quants, but instead of a UNIFORM integer grid they quantize to indices into a per-block CODEBOOK of 256 learned non-uniform 4-bit values (the 'i' in i-quant is for the codebook grid / i-quant from the ik_llama.cpp lineage). The index lookup is table-driven at dequant time, which is why they compress better than K-quants at the same nominal bits and why they dequantize more slowly - the dot product needs a gather from the codebook. This is a real throughput trade, not a free win. BACKEND SITUATION, verified: the CUDA library shipped in llamafile releases is size-optimized and OMITS the IQ-quant kernels (IQ1_*, IQ2_*, IQ3_*, IQ4_*); offloading an IQ-quantized model to an NVIDIA GPU therefore leaves those layers on the CPU with correct output but no GPU acceleration (qlab2-llamafile-support-docs). The Metal and ROCm builds are NOT size-optimized and include full IQ-quant GPU support - so an RX 7900 XTX on ROCm/HIP is in a materially better IQ position than an RTX 4090 on a stock llamafile build. Vulkan has no dedicated IQ-quant path. Upstream llama.cpp has per-type dequant kernels; ik_llama.cpp additionally ships the Trellis family (IQ1_KT/IQ2_KT/IQ3_KT/IQ4_KT, integer-base trellis, CUDA PR 113 / Metal PR 475 / NEON PR 471 / CPU PR 441) and _R4/_R16 row-interleaved variants. IQ2_M IS A MIXTURE NAME, NOT A BLOCK TYPE - this is the single most useful fact about it and it is verified in src/llama-quant.cpp: `case LLAMA_FTYPE_MOSTLY_IQ2_M: return GGML_TYPE_IQ2_S;`. The identical trap exists for IQ3_M (-> GGML_TYPE_IQ3_S) and IQ3_XS (-> GGML_TYPE_IQ3_S). So a file labelled IQ2_M contains NO iq2_m tensor; its base weights are iq2_s and the remaining width comes from promoted tensors. The measured 2.9294 bpw against an iq2_s base of 2.5625 is that promotion, and it is the mechanism by which a nominal '2-bit' choice silently ships a 3-bit-average model. Promotions for this ftype: attn_v -> Q4_K, ffn_down -> Q3_K, attn_output -> Q3_K, Q5_K on attn_output for 8-expert models, and IQ3_S instead of IQ2_S for 8-expert models. The 'M' suffix across i-quants means 'medium' = the middle point of a three-way _XS/_M/_L size ladder, same convention as the K-quants - which is a naming coincidence, not a shared mechanism. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'gguf-q2_k' (a proxy recorded while the enum lacked a legal value) and is now 'gguf-iq2-m'. ",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab2-ggml-common-header",
-    "qlab2-quantize-options-table",
-    "qlab2-llamafile-support-docs"
-  ]
+ "id": "gguf-iq2-m",
+ "type": "quantization",
+ "name": "GGUF IQ2_M (mixture built on IQ2_S with Q4_K/Q5_K promoted tensors)",
+ "scheme": "gguf-iq2-m",
+ "bits": "2.9294 measured avg (llama.cpp quantize README, Llama-3.1-8B); official tool string '2.7 bpw quantization'. NOT a distinct block type - llama_tensor_get_quant_type maps LLAMA_FTYPE_MOSTLY_IQ2_M to GGML_TYPE_IQ2_S",
+ "weight_group_size": 32,
+ "activation_scheme": null,
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-rtx-4090",
+  "intel-arc-b580",
+  "intel-arc-pro-b60"
+ ],
+ "kernels": [
+  "ggml dequantize_row_iq2_s + get_rows (base type)",
+  "ggml-cuda dequantize_mul_mat_vec / convert_mul_mat"
+ ],
+ "quality_delta": "Official tool string '2.7 bpw quantization' (qlab2-quantize-options-table); no controlled fp16 delta published. Null + note.",
+ "notes": "CORRECTED 2026-10-04: IQ2_M is a MIXTURE NAME, not a block type - llama-quant.cpp maps LLAMA_FTYPE_MOSTLY_IQ2_M to GGML_TYPE_IQ2_S, so its base weights inherit the iq2_s 32-value scale group. The measured 2.9294 bpw against an iq2_s base of 2.5625 is promotion of attn_v to Q4_K (group 32), ffn_down to Q3_K (group 16) and attn_output to Q3_K (group 16). This single number describes the BASE type only. SCHEMA MISMATCH: there is no ggml/iq* value in the quantization scheme enum, so this record uses the closest existing value 'gguf-q4_k_m' (or 'gguf-q2_k') and puts the true type in `name` and `bits`. Requested enum additions are listed in the task report. Weight-only by construction: activations are promoted to q8_K (an intermediate dot-product format, not a storage format) and the matmul runs at fp16/bf16, so native_support is deliberately EMPTY and the whole accelerator ecosystem is emulated_support. No accelerator has an i-quant or k-quant path in silicon. COMMON TO ALL IQ-QUANTS, verified from ggml/src/ggml-common.h: they use the QK_K = 256 super-block like the K-quants, but instead of a UNIFORM integer grid they quantize to indices into a per-block CODEBOOK of 256 learned non-uniform 4-bit values (the 'i' in i-quant is for the codebook grid / i-quant from the ik_llama.cpp lineage). The index lookup is table-driven at dequant time, which is why they compress better than K-quants at the same nominal bits and why they dequantize more slowly - the dot product needs a gather from the codebook. This is a real throughput trade, not a free win. BACKEND SITUATION, verified: the CUDA library shipped in llamafile releases is size-optimized and OMITS the IQ-quant kernels (IQ1_*, IQ2_*, IQ3_*, IQ4_*); offloading an IQ-quantized model to an NVIDIA GPU therefore leaves those layers on the CPU with correct output but no GPU acceleration (qlab2-llamafile-support-docs). The Metal and ROCm builds are NOT size-optimized and include full IQ-quant GPU support - so an RX 7900 XTX on ROCm/HIP is in a materially better IQ position than an RTX 4090 on a stock llamafile build. Vulkan has no dedicated IQ-quant path. Upstream llama.cpp has per-type dequant kernels; ik_llama.cpp additionally ships the Trellis family (IQ1_KT/IQ2_KT/IQ3_KT/IQ4_KT, integer-base trellis, CUDA PR 113 / Metal PR 475 / NEON PR 471 / CPU PR 441) and _R4/_R16 row-interleaved variants. IQ2_M IS A MIXTURE NAME, NOT A BLOCK TYPE - this is the single most useful fact about it and it is verified in src/llama-quant.cpp: `case LLAMA_FTYPE_MOSTLY_IQ2_M: return GGML_TYPE_IQ2_S;`. The identical trap exists for IQ3_M (-> GGML_TYPE_IQ3_S) and IQ3_XS (-> GGML_TYPE_IQ3_S). So a file labelled IQ2_M contains NO iq2_m tensor; its base weights are iq2_s and the remaining width comes from promoted tensors. The measured 2.9294 bpw against an iq2_s base of 2.5625 is that promotion, and it is the mechanism by which a nominal '2-bit' choice silently ships a 3-bit-average model. Promotions for this ftype: attn_v -> Q4_K, ffn_down -> Q3_K, attn_output -> Q3_K, Q5_K on attn_output for 8-expert models, and IQ3_S instead of IQ2_S for 8-expert models. The 'M' suffix across i-quants means 'medium' = the middle point of a three-way _XS/_M/_L size ladder, same convention as the K-quants - which is a naming coincidence, not a shared mechanism. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'gguf-q2_k' (a proxy recorded while the enum lacked a legal value) and is now 'gguf-iq2-m'. ",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab2-ggml-common-header",
+  "qlab2-quantize-options-table",
+  "qlab2-llamafile-support-docs",
+  "qzgw-ggml-quants-kernel"
+ ]
 }

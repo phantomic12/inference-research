@@ -1,0 +1,49 @@
+{
+  "id": "nvidia-rtx-pro-4500-blackwell",
+  "type": "accelerator",
+  "name": "NVIDIA RTX PRO 4500 Blackwell Workstation Edition",
+  "vendor": "nvidia",
+  "architecture": "blackwell (GB203-class)",
+  "release_year": 2026,
+  "process_nm": 4,
+  "form_factors": [
+    "pcie",
+    "workstation"
+  ],
+  "vram_gb": 32,
+  "memory_type": "gddr7 with ECC",
+  "memory_bus_bit": 256,
+  "memory_bandwidth_gbps": 896,
+  "memory_bandwidth_basis": "Datasheet spec table prints 'Memory interface 256-bit' and 'Memory bandwidth 896 GB/s' directly. Arithmetic is internally consistent at 28 Gbps GDDR7: 28 x 256 / 8 = 896 GB/s. NOTE this is a COINCIDENCE OF NUMBERS, not the same part as the GeForce RTX 5070 Ti - that card also prints 896 GB/s on a 256-bit bus, but it is a consumer part with 16 GB, no ECC and 300 W. Do not carry figures between them.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 51,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "aa-nv-rtx-pro-4500-blackwell-datasheet",
+      "notes": "Datasheet 'Single-precision performance 51 TFLOPS' under footnote 1 'Peak rates based on GPU Boost Clock.' Not a sparsity-bearing row - FP32 has no 2:4 structured path - so dense:true with no dense/sparse ambiguity. Cross-check: 10,496 CUDA cores x 2 x 2,400 MHz boost = 50.4 TFLOPS, which rounds to the printed 51; the datasheet does not print the boost clock itself, so the 2,400 MHz is inferred and the printed 51 is what is stored."
+    },
+    {
+      "precision": "fp4",
+      "tflops": 1617,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "aa-nv-rtx-pro-4500-blackwell-datasheet",
+      "notes": "AUDIT CLASS NOTE - this row is the dense-flag trap the repo has been bitten by, in the CORRECT orientation. Datasheet prints 'AI TOPS 1,617 AI TOPS' under footnote 2, 'Effective FP4 TOPS using sparsity'. 1,617 is therefore the SPARSE number and dense FP4 is 808.5, i.e. any reader halving this value gets the right answer. Stored dense:false deliberately, NOT dense:true with a sparse value. Compare nvidia-rtx-pro-6000-blackwell, which stores its 4,000 AI TOPS the same way - both RTX PRO Blackwell parts print 'AI TOPS' with a 'with sparsity' footnote rather than the GeForce-style 'dense/sparse' pair, so there is no printed dense twin to record and only one row exists per precision."
+    }
+  ],
+  "tdp_w": 200,
+  "interconnect": [
+    "pcie-gen5"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "aa-nv-rtx-pro-4500-blackwell-datasheet"
+  ],
+  "notes": "AUDIT 2026-10-04: RECORD CREATED - this part had NO accelerator record despite shipping in the same MLPerf Inference v6.1 wave as the RTX PRO 6000 Blackwell and the Arc Pro B70, both of which were recorded. It is the 200 W / 32 GB middle member of the RTX PRO Blackwell workstation trio and the ECC-GDDR7 capacity tier between the RTX PRO 6000 (96 GB, 600 W) and consumer GeForce parts. Every stored number is transcribed from NVIDIA's own datasheet spec table and nothing was derived except the noted boost-clock cross-check. WHAT THE DATASHEET DOES NOT PUBLISH, and therefore what this record deliberately does not assert: no FP16/BF16, TF32, FP8 or INT8 figures at all, and no boost clock. NVIDIA's RTX PRO datasheets publish only three compute numbers (AI TOPS sparse-FP4, single-precision TFLOPS, RT Core TFLOPS), unlike the GeForce architecture whitepapers which give full dense/sparse tensor tables. Do NOT fill the gap from the GeForce RTX 5070 Ti - same 896 GB/s bandwidth, different CUDA count, different power, and NVIDIA's workstation part has ECC. SCALE-UP IS PCIe ONLY: no NVLink connector, so like every other RTX PRO Blackwell part in this repo (see nvidia-rtx-pro-6000-blackwell and gotcha mgpu-pcie-only-multigpu-is-communication-bound) multi-GPU tensor parallelism is bounded by the Gen5 x16 host link at 64 GB/s per direction, 128 GB/s aggregate. For a 32 GB ECC card the useful comparison is capacity plus ECC for long-running inference, not throughput: four cards give 128 GB of ECC'd pool. The datasheet's own 896 GB/s memory bandwidth at 200 W is the efficiency story that makes the part interesting - roughly 4.5 GB/s per watt of memory bandwidth, versus about 3.0 for the RTX PRO 6000 at 600 W."
+}

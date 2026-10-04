@@ -2,7 +2,7 @@
   "id": "sec-api-key-protects-capacity-not-the-weights",
   "type": "gotcha",
   "name": "An API key on an open-weights endpoint protects your serving capacity and quota - it never protected the model, and the weights are the thing worth stealing",
-  "class": "framework",
+  "class": "security",
   "affects": [
     "vllm",
     "sglang"
@@ -20,7 +20,7 @@
   "root_cause": "Separate the two assets. (1) The weights are protected by the host-side licence gate, entirely independent of your API key - measured directly here: an unauthenticated request to the gated Llama-Guard-3-1B config returns 'Access to model ... is restricted. You must have access to it and be authenticated.' (2) What your API key actually protects is the inference capacity, and vLLM's own control is thin: api_key is Optional[list[str]] = None, so the engine ships with NO authentication by default, and the flag is a list of shared bearer keys checked at the HTTP layer, with no per-key rate limit, no per-key quota and no per-key log attribution. Neither layer is an anti-extraction control. Black-box query access alone is sufficient for functionality stealing - the Knockoff Nets threat model assumes only image-in/prediction-out with no knowledge of training data, internals or output semantics, and that threat model transfers to a served LLM regardless of your key policy.",
   "workaround": "Assume the weights will be obtained by anyone who wants them, and protect what that actually costs you: serving margin, rate, and provenance. Publish terms and enforce attribution; treat an API key as an operational control (abuse, billing, capacity) and not as an intellectual-property control. If your defensible asset is the served behaviour rather than the weights, watermarking for tracing is one option - and note it is aimed at the EXTRACTOR, not the reader, via controlled noise in the token frequency distribution plus a KL-divergence test distinguishing original from modified distributions.",
   "severity": "major",
-  "notes": "SCHEME RECLASSIFIED (2026-10-04): filed under class 'framework' because schemas/gotcha.schema.json has no 'security' value. True class is 'security' - see the enum addition requested in this slice's report. The honest framing of the residual risk: for an open-weights model, extraction resistance is close to a category error. Anyone can download the weights, so the only real questions are whether YOUR endpoint lets an attacker obtain something they could not get from the weights (and logprobs are exactly that - see the logprobs record), and whether you can prove provenance after the fact.",
+  "notes": "SCHEME RECLASSIFIED (2026-10-04): was 'framework'. The honest framing of the residual risk: for an open-weights model, extraction resistance is close to a category error. Anyone can download the weights, so the only real questions are whether YOUR endpoint lets an attacker obtain something they could not get from the weights (and logprobs are exactly that - see the logprobs record), and whether you can prove provenance after the fact.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-04",

@@ -1,0 +1,15 @@
+{
+  "id": "vb-nvidia-blackwell-architecture-brief",
+  "type": "source",
+  "name": "NVIDIA Blackwell Architecture Technical Brief (HGX B300 / HGX B200 dense-sparse table)",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "url": "https://dam-cdn.nvd.orangelogic.com/AssetLink/gl2l4l4812s5fw0p614s6i8bv6mi3vx5.pdf",
+  "publisher": "NVIDIA (first-party CDN, linked from resources.nvidia.com/en-us-blackwell-architecture)",
+  "kind": "whitepaper",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "VERBATIM 2026-10-04. This is the only NVIDIA document found that prints DENSE and SPARSE as an explicit labelled PAIR on every tensor row, which makes it the strongest independent check on the dense/sparse flags. Comparison table for 'NVIDIA Blackwell HGX' (two columns, HGX B300 | HGX B200), verbatim:\n'FP4 Tensor Core Dense/Sparse | 14/18 petaFLOPS | 14/18 petaFLOPS'\n'FP8/FP6 Tensor Core Dense/Sparse | 4.5/9 petaFLOPS | 4.5/9 petaFLOPS'\n'INT8 Tensor Core Dense/Sparse | 0.15/0.30 petaOPS | 4.5/9 petaOPS'\n'FP16/BF16 Tensor Core Dense/Sparse | 2.2/4.5 petaFLOPS | 2.2/4.5 petaFLOPS'\n'TF32 Tensor Core Dense/Sparse | 1.1/2.2 petaFLOPS | 1.1/2.2 petaFLOPS'\n'FP32 | 75 teraFLOPS | 75 teraFLOPS'\n'FP64 Tensor Core | FP64 | 1.2 teraFLOPS | 37 teraFLOPS'\n'GPU memory | Bandwidth | 270 GB HBM3e | 7.7 TB/s | Up to 192 GB HBM3e | 7.7 TB/s'\n'Max thermal design power (TDP) | 1100 W | 1000W'\n'Interconnect | NVLink 5 PCIe Gen6 | NVLink 5 PCIe Gen5'\n\nCorroborates the nvidia-b200 record's dense flags exactly: HGX B200 FP4 dense 14 (note: 14, NOT the 9 the datasheet implies from 18 sparse - see DISCREPANCY), FP8 dense 4.5, FP16/BF16 dense 2.2, TF32 dense 1.1, FP32 75, FP64 37, memory 7.7 TB/s, TDP 1000 W, PCIe Gen5. Dense-first ordering confirms the repo convention that a Tensor Core number whose footnote says 'with sparsity' is the SPARSE figure and dense is one-half - EXCEPT the FP4 row, which is printed dense/sparse and whose dense value is close to but not exactly half.\n\nTWO DISCREPANCIES TO RECORD. (1) FP4: this brief prints HGX B200 dense 14 / sparse 18, while the Blackwell datasheet prints a bare 18 under 'dense is one-half', implying dense 9. 14 vs 9 is a real NVIDIA self-disagreement, not a repo error; nvidia-b200 stores 9000, which follows the datasheet and is defensible but is not the only first-party reading. (2) The HGX B200 memory cell reads 'Up to 192 GB HBM3e | 7.7 TB/s' here, whereas the Blackwell datasheet HGX B200 column reads '180 GB HBM3E | 7.7 TB/s'. The datasheet's 180 GB is the one nvidia-b200 stores; 192 GB appears nowhere else and should be logged as contested rather than silently preferred.\n\nThird oddity: the HGX B300 INT8 cell reads '0.15/0.30 petaOPS' against the datasheet's '330 TOPS | 307 TOPS' - three mutually inconsistent INT8 figures across NVIDIA's own documents, so no INT8 number in this family should be trusted."
+}

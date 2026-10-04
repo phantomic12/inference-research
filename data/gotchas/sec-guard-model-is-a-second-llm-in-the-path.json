@@ -2,7 +2,7 @@
   "id": "sec-guard-model-is-a-second-llm-in-the-path",
   "type": "gotcha",
   "name": "A separate guard model is a second LLM in the request path, and its cost is bounded below by seconds - not by the size of the flag you set",
-  "class": "framework",
+  "class": "security",
   "affects": [
     "vllm"
   ],
@@ -18,7 +18,7 @@
   "root_cause": "A guard model is a second autoregressive forward pass. Llama Guard's design applies one taxonomy-bearing model to BOTH the prompt and the response, so a fully guarded conversation can incur two guard passes per turn, not one. Cost depends on the model chosen: ShieldGemma reports +10.8% AU-PRC over Llama Guard and +4.3% over WildCard on public benchmarks, so accuracy and cost trade against each other with published numbers rather than being a free upgrade.",
   "workaround": "Budget the guard pass as a latency line item and measure it rather than assuming it. Quantise it. If you can only afford one guarded turn, guard the response - where the harmful content actually is - rather than doubling up on the prompt. Do not treat a guard as a substitute for in-decode masking when the threat model includes adaptive jailbreaks: JailbreakBench tracks attacks AND defences, and both layers are needed.",
   "severity": "major",
-  "notes": "Self-Guard's framing is the useful summary of the whole field: safety training cannot adapt to new attack types and drops performance, while safeguards (external models or filters) have been of limited help. Neither family is a control you can rely on alone. Residual risk is over-refusal, which JailbreakBench measures with a dedicated over-refusal dataset - a guard that refuses everything scores well on harmfulness and badly on usefulness.",
+  "notes": "Self-Guard's framing is the useful summary of the whole field: safety training cannot adapt to new attack types and drops performance, while safeguards (external models or filters) have been of limited help. Neither family is a control you can rely on alone. Residual risk is over-refusal, which JailbreakBench measures with a dedicated over-refusal dataset - a guard that refuses everything scores well on harmfulness and badly on usefulness. SCHEME RECLASSIFIED (2026-10-04): was 'framework'.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-04",

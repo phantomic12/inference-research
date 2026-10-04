@@ -1,0 +1,31 @@
+{
+ "id": "mlx-affine-quantized",
+ "type": "quantization",
+ "name": "MLX affine quantized linear (mlx-lm's default 4-bit weight format, group_size 64)",
+ "scheme": "int8",
+ "bits": "w4a16 default (mlx affine mode also supports 2, 3, 4, 5, 6, 8 bits and per-group sizes; activations stay fp16/bf16)",
+ "weight_group_size": 64,
+ "activation_scheme": "none - weight-only. Activations remain fp16/bf16 and the dequant+matmul happens in the compute dtype; the group size field governs the weight grid only.",
+ "native_support": [
+  "apple-m4-max",
+  "apple-m3-max",
+  "apple-m3-ultra",
+  "local-apple-m5-max",
+  "local-apple-m5-ultra",
+  "local-apple-m5-pro",
+  "local-apple-m4-pro"
+ ],
+ "emulated_support": [],
+ "kernels": [
+  "mx.quantized_matmul",
+  "QuantizedLinear"
+ ],
+ "quality_delta": null,
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "qzgw-mlx-quantized-layer"
+ ],
+ "notes": "ADDED FOR COVERAGE, AND IT CLOSES 3 OF THE 4 DANGLING REFERENCES IN THE REPO. The coverage audit found that benchmarks/local-m4-max-70b-q4-decode, local-m5-max-70b-q4-decode and local-m5-ultra-70b-q4-decode all carry format_id 'mlx-quantized-4bit', which is NOT a record id, and no MLX quantization record existed anywhere. Three benchmark records therefore pointed at a format the repo could not describe. This record exists so those references can be repointed; repointing them is a benchmark-directory edit and outside this task's file scope.\n\nGROUP SIZE 64 IS FROM THE SOURCE, AND THE SOURCE SAYS IT IS A DEFAULT NOT A CONSTANT. MLX nn/layers/quantized.py _defaults_for_mode: mode_defaults = {\"affine\": (64, 4), \"mxfp4\": (32, 4), \"nvfp4\": (16, 4), \"mxfp8\": (32, 8)} then 'return group_size or default_group_size, bits or default_bits'. The public API takes group_size: Optional[int] = None on nn.quantize, QuantizedLinear, QuantizedEmbedding and QuantizedKVCache, so every call can override it. The docstring's own example is nn.quantize(model, group_size=64, bits=4, mode=\"affine\").\n\nTHE POINT THAT MATTERS FOR A CROSS-FORMAT COMPARISON: MLX is the clearest existing demonstration in this repo that 'a 4-bit format' does not identify a bit width or a group size. MLX ships FOUR modes at four different group sizes - affine 64, mxfp4 32, nvfp4 16, mxfp8 32 - so a benchmark recorded as '4-bit' on Apple hardware may be any of a 64-group affine grid or a 32-group MX grid, and those differ in both memory arithmetic and quality. The nvfp4 mode at 16 matches the Blackwell convention recorded in the nvfp4 record, and the mxfp4 mode at 32 matches the MX block in the mxfp4 records, which is a useful cross-check that MLX's mode table is tracking the same standards rather than inventing its own widths.\n\nALSO WORTH RECORDING: MLX's quantized KV cache reuses the same group_size and bits parameters as the weights (mlx-lm models/base.py quantized_scaled_dot_product_attention passes group_size=cache.group_size, bits=cache.bits into mx.quantized_matmul), so the same integer governs the KV grid in MLX. That is the opposite of the KIVI/KVQuant design, where keys and values are deliberately quantized on DIFFERENT axes and at different widths - worth knowing before comparing an MLX KV benchmark against a KIVI one. Note also that the repo already carries several MLX-KV gotcha records (rotating KV quant, --kv-bits disabling batching, KV-bit crashes on hybrid attention), so the KV side is documented even though the weight format was not.\n\nHARDWARE: the native_support list is Apple silicon only because that is where mlx-lm is used in this repo's own benchmark records. MLX is also buildable for CUDA and ROCm upstream, but no repo evidence establishes kernel availability there, so emulated_support is left empty rather than populated with an unverified claim. No accelerator has a 'grouped affine 4-bit' hardware path: mx.quantized_matmul dequantizes to the compute dtype, so this is a memory-footprint win rather than a tensor-core precision win, exactly like the GGUF and EXL2 records.\n\nPROXY ENUM VALUE - DECLARED: scheme is 'int8' because the quantization scheme enum has no MLX value and 'int8' is the nearest low-bit-integer value. This proxy is benign on target (MLX affine 4-bit is a weight format, never KV or activation) but it is inaccurate: 'int8' names 8 bits while the default here is 4. A query for INT8 in this repo will return this record. REQUESTED ENUM ADDITION: 'mlx-affine' (or a broader 'mlx' value covering all four modes)."
+}

@@ -2,7 +2,7 @@
   "id": "ops-health-endpoint-lies-about-readiness",
   "type": "gotcha",
   "name": "/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes",
-  "class": "config",
+  "class": "operations",
   "affects": [
     "vllm",
     "llm-d"
@@ -18,7 +18,7 @@
   "root_cause": "There are three distinct lifecycle states — Container Running, API Server Ready, and Model Loaded — and vLLM's /health endpoint only reports the middle one. llm-d's readiness guide is explicit: 'The vLLM /health endpoint only indicates that the server process is running, not that models are loaded and ready to serve.' /health returns 200 as soon as the server process starts and does not wait for model loading; /v1/models returns 503 or connection-refused during loading and 200 with model metadata once ready. Because Kubernetes endpoint removal and InferencePool membership are readiness-driven ('as their readiness state changes, the EPP automatically updates its internal list of healthy candidates'), a wrong readiness definition propagates directly into routing decisions. TGI has the same shape of problem and its own solution to point at: a health() method with start_health() defaulting to false, commented 'Typically false, or true if the backend includes a warmup phase', plus /health returning 503 {\"error\":\"unhealthy\",\"error_type\":\"healthcheck\"}.",
   "workaround": "Use /health for liveness only and /v1/models for both startupProbe and readinessProbe, which is llm-d's recommended shape. Size the startupProbe to the actual load time: their worked example is failureThreshold 60 at periodSeconds 30, which they compute as a 30-minute maximum startup time, and the failure modes they list include 'Model download taking longer than the failureThreshold allows'. Match the probe port to the pod's role — prefill 8000, decode 8200 through a sidecar, standalone 8000 — since a port mismatch looks exactly like a pod that never becomes ready. Eliminate the variable rather than tuning it: pre-download weights with an init container or a persistent volume, mount a torch-compile cache (llm-d reports this plus a fast startupProbe taking pod-ready time from ~2m15s to ~100s), and note that some engines will not even accept a request until weights are present (SGLang has --checkpoint-engine-wait-weights-before-ready for exactly this class of problem).",
   "severity": "blocker",
-  "notes": "There is no first-class fix: vLLM has no dedicated model-aware readiness endpoint, and the reason is a tracked open request (vLLM #6073). Using /v1/models as the readiness probe is the current best practice precisely because it is a workaround for a missing endpoint, which means the probe's semantics are incidental — a future change to that endpoint's behaviour would silently change traffic routing. Record it as an open design gap, not a settled pattern.",
+  "notes": "There is no first-class fix: vLLM has no dedicated model-aware readiness endpoint, and the reason is a tracked open request (vLLM #6073). Using /v1/models as the readiness probe is the current best practice precisely because it is a workaround for a missing endpoint, which means the probe's semantics are incidental — a future change to that endpoint's behaviour would silently change traffic routing. Record it as an open design gap, not a settled pattern. SCHEME RECLASSIFIED (2026-10-04): was 'config'.",
   "status": "verified",
   "confidence": 0.9,
   "updated": "2026-10-04",

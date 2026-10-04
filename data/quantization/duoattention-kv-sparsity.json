@@ -1,28 +1,28 @@
 {
-  "id": "duoattention-kv-sparsity",
-  "type": "quantization",
-  "name": "DuoAttention (head-wise retrieval/streaming KV sparsity) - NOT KV quantization",
-  "scheme": "kv-sparsity",
-  "bits": "none by default - retrieval heads keep a full KV cache, streaming heads use a lightweight CONSTANT-LENGTH KV cache. The paper's headline long-context result is achieved combined WITH quantization.",
-  "weight_group_size": null,
-  "activation_scheme": "None. Heads are classified into retrieval heads (need full attention over all tokens) and streaming heads (attend to recent tokens and attention sinks only). Only retrieval heads get the full cache; streaming heads get a fixed small cache regardless of context length.",
-  "native_support": [],
-  "emulated_support": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-l40s",
-    "amd-instinct-mi300x",
-    "nvidia-rtx-4090"
-  ],
-  "kernels": [
-    "mit-han-lab/duo-attention implementation."
-  ],
-  "quality_delta": "From the abstract: reduces long-context inference memory by up to 2.55x for MHA and 1.67x for GQA, speeds decoding by up to 2.18x (MHA) and 1.50x (GQA), and accelerates pre-filling by up to 1.73x (MHA) and 1.63x (GQA), with minimal accuracy loss. Combined with quantization, it enables LLaMA-3-8B decoding at 3.3 million context length on a single A100 GPU.",
-  "notes": "Third boundary record, and the most useful one for planning because it demonstrates the two mechanisms COMPOSE. The 3.3M-token-on-one-A100 figure is explicitly 'combined with quantization' - sparsity alone does not get there. Practical reading: per-head structure means a uniform KV bit width is leaving value on the table, since most heads do not need full history at all. The classification is cheap (optimization-based, synthetic data, no retraining), which is why it is deployable on models whose training data you do not have. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'spinquant' (a proxy recorded while the enum lacked a legal value) and is now 'kv-sparsity'. ",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab-duoattention-paper"
-  ]
+ "id": "duoattention-kv-sparsity",
+ "type": "quantization",
+ "name": "DuoAttention (head-wise retrieval/streaming KV sparsity) - NOT KV quantization",
+ "scheme": "kv-sparsity",
+ "bits": "none by default - retrieval heads keep a full KV cache, streaming heads use a lightweight CONSTANT-LENGTH KV cache. The paper's headline long-context result is achieved combined WITH quantization.",
+ "weight_group_size": null,
+ "activation_scheme": "None. Heads are classified into retrieval heads (need full attention over all tokens) and streaming heads (attend to recent tokens and attention sinks only). Only retrieval heads get the full cache; streaming heads get a fixed small cache regardless of context length.",
+ "native_support": [],
+ "emulated_support": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-l40s",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "kernels": [
+  "mit-han-lab/duo-attention implementation."
+ ],
+ "quality_delta": "From the abstract: reduces long-context inference memory by up to 2.55x for MHA and 1.67x for GQA, speeds decoding by up to 2.18x (MHA) and 1.50x (GQA), and accelerates pre-filling by up to 1.73x (MHA) and 1.63x (GQA), with minimal accuracy loss. Combined with quantization, it enables LLaMA-3-8B decoding at 3.3 million context length on a single A100 GPU.",
+ "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: page/head-level selection of which KV to keep or prefetch. No weights are re-gridded. Third boundary record, and the most useful one for planning because it demonstrates the two mechanisms COMPOSE. The 3.3M-token-on-one-A100 figure is explicitly 'combined with quantization' - sparsity alone does not get there. Practical reading: per-head structure means a uniform KV bit width is leaving value on the table, since most heads do not need full history at all. The classification is cheap (optimization-based, synthetic data, no retraining), which is why it is deployable on models whose training data you do not have. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'spinquant' (a proxy recorded while the enum lacked a legal value) and is now 'kv-sparsity'. ",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab-duoattention-paper"
+ ]
 }

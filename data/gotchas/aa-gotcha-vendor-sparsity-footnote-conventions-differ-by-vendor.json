@@ -1,0 +1,46 @@
+{
+  "id": "aa-gotcha-vendor-sparsity-footnote-conventions-differ-by-vendor",
+  "type": "gotcha",
+  "name": "The dense FLOPS value is not always the first number printed and the governing footnote differs per row and per vendor, so NVIDIA alone uses three mutually inconsistent sparsity conventions",
+  "class": "hardware",
+  "affects": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "nvidia-h100-sxm",
+    "nvidia-rtx-4090",
+    "nvidia-rtx-5090",
+    "nvidia-rtx-pro-6000-blackwell",
+    "nvidia-rtx-pro-4500-blackwell",
+    "amd-instinct-mi355x",
+    "amd-instinct-mi350x",
+    "amd-instinct-mi350p",
+    "amd-radeon-rx-9070-xt"
+  ],
+  "concepts": [
+    "dense",
+    "sparse",
+    "spec-table",
+    "roofline",
+    "arithmetic-intensity",
+    "tflops",
+    "footnotes",
+    "procurement"
+  ],
+  "symptom": "A quoted peak FLOPS figure gets halved when it should not, or left unhalved when it should be, and the 2x error propagates into arithmetic intensity and every roofline, batching and cost conclusion built on it. The failure is silent because the wrong number is still a published NVIDIA or AMD number, and because a reader who checks one row's footnote has usually generalised it to the whole sheet. This repo has already been damaged by exactly this: a B300 FP4 figure recorded as 9,000 when the sheet prints 20 PFLOPS sparse beside 15 PFLOPS dense, and a GB200 FP64 row flagged dense:false that told every reader to halve a figure NVIDIA explicitly excludes from sparsity.",
+  "root_cause": "Vendors use the word 'sparse' to mean at least five different things across five sheets, and on two of those sheets the dense value is printed SECOND rather than first. Verified against primary PDFs on 2026-10-04. (1) HOPPER H100 datasheet, footnote 2 'With sparsity' over the whole tensor block: printed TF32 756, BF16/FP16 1513, FP8 3026 are ALL SPARSE, dense is half; FP64 34 and FP32 67 are dense and sparsity-independent. (2) BLACKWELL datasheet, footnote 2 'Specifications in sparse. Dense is one-half of the sparse spec shown' governs every Tensor Core row - but a later edition of the same document carves FP64 out explicitly with 'All Tensor Core numbers except FP64 with sparsity.', which an earlier edition did not say. Same sheet, same part, different answer for FP64 depending on which PDF revision you read. (3) BLACKWELL ULTRA / B300-GB300 sheet: footnote 1 'Specification in Sparse | Dense' on the FP4 row means 20 | 15 is sparse-THEN-dense, so dense is the SECOND number - the opposite of convention (1) - while every other row on that same sheet carries footnote 2 'Specification in sparse. Dense is ½ sparse spec shown', sparse-only. One table, two opposite orderings. (4) ADA and RTX BLACKWELL consumer whitepapers: unambiguous - every tensor row prints 'dense/sparse' with one footnote, 'Effective TOPS / TFLOPS using the Sparsity Feature', dense is FIRST, and the 'non-Tensor' rows plus the RT TFLOPS row carry no such footnote at all. (5) RTX PRO Blackwell workstation datasheets print a single 'AI TOPS' with footnote 'Effective FP4 TOPS with sparsity' and no dense twin: RTX PRO 6000's 4,000 is sparse (dense 2,000), RTX PRO 4500's 1,617 is sparse (dense 808.5). AMD is the cleanest - MI350-series pages annotate sparsity in the ROW TITLE ('Peak OCP-FP8 Performance with Structured Sparsity 10.1 PFLOPs' versus '5 PFLOPs' dense), every sparse figure exactly 2x its dense twin, no footnote reading required.",
+  "workaround": "Read the footnote governing the SPECIFIC ROW, never a global convention per vendor, and never one carried over from a sibling sheet in the same generation. Store the vendor's footnote wording verbatim in the row's notes and set the dense flag from that wording; where the basis cannot be resolved, store dense:false with the ambiguity stated rather than guessing. Note the flag has two distinct correct-looking orientations and confusing them is the whole risk: a SPARSE value flagged dense:false makes a reader halve something already correct (the bug class that corrupted this repo), while a DENSE value flagged dense:false halving to a correct dense number is harmless. NVIDIA also publishes accumulate-rate variants as SEPARATE rows with different values - RTX 5080 FP8 is 450.2 dense with FP16 accumulate but 225.1 dense with FP32 accumulate - so a record that does not name the accumulate path is ambiguous by 2x within a single precision. Automatic check worth re-running after any edit: for every (record, precision) that has both a dense and a sparse row, the sparse value must be exactly 2x the dense. As of 2026-10-04 all 54 dense:false rows across 105 accelerator records satisfy it, with no exceptions.",
+  "severity": "major",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "nv-blackwell-datasheet",
+    "nv-blackwell-ultra-datasheet",
+    "acc2-nv-h100-datasheet-2023",
+    "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper",
+    "aa-nv-rtx-pro-4500-blackwell-datasheet",
+    "amd-mi355x-product-page"
+  ],
+  "notes": "Written as a gotcha rather than a flops record deliberately: schemas/flops requires a class from the decode/prefill taxonomy and a bound_by of memory/compute/interconnect/launch_overhead, and none of those expresses 'this is a spec-table interpretation hazard'. That is a genuine gap in the schema - a records type for spec-interpretation rules would be the right home - reported rather than worked around by misusing an existing enum. Companion gotcha aa-gotcha-spec-table-column-mixing covers the orthogonal failure where the right convention is applied to the wrong product column, and aa-gotcha-accelerator-flops-derived-by-doubling-not-read covers values that match no printed row at all. Three distinct ways for a FLOPS number to be wrong on a perfectly-cited record, which is why none of them is caught by checking the citation alone."
+}

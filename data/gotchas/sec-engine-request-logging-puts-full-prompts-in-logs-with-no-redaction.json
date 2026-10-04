@@ -2,7 +2,7 @@
   "id": "sec-engine-request-logging-puts-full-prompts-in-logs-with-no-redaction",
   "type": "gotcha",
   "name": "vLLM's request logger writes full prompt bodies and token ids into the application log stream at DEBUG, with no field-level redaction anywhere in the engine",
-  "class": "config",
+  "class": "privacy",
   "affects": [
     "vllm"
   ],
@@ -19,7 +19,7 @@
   "root_cause": "RequestLogger.log_inputs() emits the raw prompt string via %r at DEBUG together with prompt_token_ids unredacted, and log_request_body() dumps request.model_dump_json(exclude_unset=True) at DEBUG. The engine-args doc makes the level dependency explicit: at INFO you get request id, parameters and LoRA request; the PROMPT TEXT AND TOKEN IDS require --log-level DEBUG. --max-log-len truncates and there is no counterpart flag for redaction. This is the concrete mechanism behind every compliance problem in this slice: the operational observability setting people actually turn on to debug a serving deployment is the same setting that writes user content to disk.",
   "workaround": "Never run a serving node containing regulated or personal data at DEBUG log level in production, and treat any log level above INFO as a privacy control rather than a verbosity choice. Where prompt-level debugging is required, capture to an access-controlled store with a defined TTL and a documented legal basis, not to the general log pipeline. If you need per-request correlation for audit, use the request ID, which is logged at INFO - that is sufficient for an audit trail without retaining content.",
   "severity": "blocker",
-  "notes": "The INFO-versus-DEBUG distinction is the single most useful operational fact here and it is easy to miss because the flag is named --enable-log-requests, which sounds like it enables request logging generally. It does not enable prompt content at INFO. Correlating audit events does NOT require prompt bodies: the request ID is logged at INFO.",
+  "notes": "The INFO-versus-DEBUG distinction is the single most useful operational fact here and it is easy to miss because the flag is named --enable-log-requests, which sounds like it enables request logging generally. It does not enable prompt content at INFO. Correlating audit events does NOT require prompt bodies: the request ID is logged at INFO. SCHEME RECLASSIFIED (2026-10-04): was 'config'. Filed as privacy rather than security: the subject is prompt content (and token ids) written unredacted into the log stream - a content-leakage-in-logs record, not an attack-surface one.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-04",

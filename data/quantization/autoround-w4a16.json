@@ -1,34 +1,34 @@
 {
-  "id": "autoround-w4a16",
-  "type": "quantization",
-  "name": "AutoRound (Intel) - SignRound weight-rounding PTQ toolkit, W4A16 and neighbours",
-  "scheme": "int8",
-  "bits": "W2A16 / W3A16 / W4A16 / W5A16 / W6A16 / W7A16 / W8A16, all defined as bits=N, group_size=128, sym=True, act_bits=16. Plus NVFP4 (group_size 16), MXFP4/MXINT4/MXFP4_RCEIL/MXFP8 (group_size 32, flagged 'research feature, no real kernel'), FP8_STATIC, FP8_BLOCK, FPW8A16 (group_size 0 = per-tensor)",
-  "weight_group_size": 128,
-  "activation_scheme": "16-bit activations in every WNA16 scheme - AutoRound is weight-only. W8A8 exists as a separate INT8 scheme and can be combined with AWQ smoothing for vLLM's compressed_tensors cutlass INT8 GEMM",
-  "native_support": [
-    "nvidia-h100-sxm",
-    "nvidia-l40s",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-rtx-4090",
-    "nvidia-a10",
-    "amd-instinct-mi300x",
-    "intel-arc-b580",
-    "intel-gaudi2"
-  ],
-  "emulated_support": [
-    "amd-radeon-pro-vii"
-  ],
-  "kernels": [
-    "inference backends it exports to: vLLM Marlin/AWQ/CUTLASS INT8 GEMM, Transformers bitsandbytes-style int4, SGLang, GGUF",
-    "forwards-compatible low-bit CUDA kernels reused from AutoGPTQ, AutoAWQ, GPTQModel, Triton, Marlin and ExLlamaV2 (acknowledged in the README)"
-  ],
-  "quality_delta": "Vendor claim, one controlled number with a named model: the INT2-mixed DeepSeek-R1 (~200GB) retains 97.9% accuracy (OPEA/DeepSeek-R1-int2-mixed-sym-inc, qlab2-autoround-step-by-step). Methodology (benchmark, eval set, baseline) is not stated in the source, so treat it as vendor-claim-grade. Everything else in the README is either a speed claim about quantization cost or a pointer to a leaderboard.",
-  "notes": "RECORDED RATHER THAN DUPLICATED because it is the tool that actually implements the low-bit path. What it is: a PTQ toolkit whose distinguishing idea is optimizing the ROUNDING (SignRoundV1, arXiv:2309.05516; SignRoundV2, arXiv:2512.04746) rather than the scales - learning a sign vector per weight that minimizes output error, with the scale fitted afterwards. `--iters 0` gives fast optimized-RTN. W4A16 CONFIRMED, and the whole WNA16 family confirmed, verbatim from the scheme table: bits 2 through 8, every one with group_size=128 and sym=True and act_bits=16. The project also recommends group_size=32 or mixed bits for better results in its troubleshooting section, so 128 is the default, not the optimum. BLOCKWISE AND GROUP SIZE, precisely: blockwise is a property of the MX/NV schemes, not of the INT schemes. NVFP4 uses group_size 16 (the NVFP4 sub-block size, matching the ggml/Blackwell convention); MXFP4, MXINT4 and MXFP4_RCEIL use group_size 32. Crucially the README labels MXFP4, MXINT4, MXFP4_RCEIL, MXFP8, FPW8A16 and FP8_STATIC as 'Research feature, no real kernel' - do not read them as deployable. ASYMMETRIC QUANTIZATION HAS A HARD PER-FORMAT LIMIT, and this is the single most practically important line in the guide: `--asym` supports weight bits <= 7 for the auto_round / auto_gptq / auto_awq exports, because vLLM serves W8 GPTQ-format weights symmetric-only and Marlin supports zero points at 4 bits only. The llm_compressor format DOES support 8-bit asymmetric, via Machete (SM90+, group sizes 64/128/-1) or Conch (SM80+, group size 128 or channelwise). The rule applies uniformly to AutoScheme choices and to fixed layer pins such as lm_head: a run exporting to llm_compressor keeps its 8-bit entries asymmetric and other formats pin them back to symmetric. AR_ALLOW_W8_ASYM=1 lifts the restriction for every format at the cost of possibly not loading in vLLM. EXPORT MATRIX (which schemes each format can actually carry): auto_round supports the widest set including MXFP4/MXFP8/MXFP4_RCEIL/MXFP8_RCEIL/NVFP4/FPW8A16/FP8_STATIC/FP8_BLOCK/BF16/MXINT4; llm_compressor supports NVFP4, MXFP4, MXFP8, FPW8A16, FP8_STATIC, FP8_BLOCK and W2-W8 including G32/G64 variants; mlx supports W2-W8 plus mixed-bit on Apple Silicon only; auto_awq supports only W4A16-W7A16 plus BF16; auto_gptq supports W2/W3/W5/W6/W7/W8/W4 plus G32/G64 variants. AutoAWQ is 'well-suited for asymmetric 4-bit'; AutoGPTQ is 'well-suited for symmetric quantization on CUDA devices' and its README warns the asymmetric kernel 'has issues that can cause considerable accuracy drops, particularly at 2-bit quantization'. MIXED-BIT: AutoScheme generates mixed-bit/mixed-group_size recipes in minutes at about 1.1x-1.5x the model's BF16 RAM overhead, and is limited to the INT (W2A16/W4A16/W8A16) and MXFP families - INT and MXFP cannot be mixed in one AutoScheme, and W3A16/GGUF:*/NVFP4 options raise ValueError when model_free=True. MoE: docs/moe.md reports MoE tuning speed improved more than 3x with significantly reduced RAM (2026-09), with an explicit warning that the optimization may introduce regressions. GGUF export is supported (2025-07). DEPLOYMENT: adopted by Transformers, vLLM and SGLang, and fully integrated into vLLM-Omni (2026-06). The README explicitly warns against manually moving a quantized model between devices (e.g. model.to('cpu')) as that can cause unexpected exceptions. Quantize a 7B in about 10 minutes on a single GPU.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "qlab2-autoround-step-by-step"
-  ]
+ "id": "autoround-w4a16",
+ "type": "quantization",
+ "name": "AutoRound (Intel) - SignRound weight-rounding PTQ toolkit, W4A16 and neighbours",
+ "scheme": "int8",
+ "bits": "W2A16 / W3A16 / W4A16 / W5A16 / W6A16 / W7A16 / W8A16, all defined as bits=N, group_size=128, sym=True, act_bits=16. Plus NVFP4 (group_size 16), MXFP4/MXINT4/MXFP4_RCEIL/MXFP8 (group_size 32, flagged 'research feature, no real kernel'), FP8_STATIC, FP8_BLOCK, FPW8A16 (group_size 0 = per-tensor)",
+ "weight_group_size": 128,
+ "activation_scheme": "16-bit activations in every WNA16 scheme - AutoRound is weight-only. W8A8 exists as a separate INT8 scheme and can be combined with AWQ smoothing for vLLM's compressed_tensors cutlass INT8 GEMM",
+ "native_support": [
+  "nvidia-h100-sxm",
+  "nvidia-l40s",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-rtx-4090",
+  "nvidia-a10",
+  "amd-instinct-mi300x",
+  "intel-arc-b580",
+  "intel-gaudi2"
+ ],
+ "emulated_support": [
+  "amd-radeon-pro-vii"
+ ],
+ "kernels": [
+  "inference backends it exports to: vLLM Marlin/AWQ/CUTLASS INT8 GEMM, Transformers bitsandbytes-style int4, SGLang, GGUF",
+  "forwards-compatible low-bit CUDA kernels reused from AutoGPTQ, AutoAWQ, GPTQModel, Triton, Marlin and ExLlamaV2 (acknowledged in the README)"
+ ],
+ "quality_delta": "Vendor claim, one controlled number with a named model: the INT2-mixed DeepSeek-R1 (~200GB) retains 97.9% accuracy (OPEA/DeepSeek-R1-int2-mixed-sym-inc, qlab2-autoround-step-by-step). Methodology (benchmark, eval set, baseline) is not stated in the source, so treat it as vendor-claim-grade. Everything else in the README is either a speed claim about quantization cost or a pointer to a leaderboard.",
+ "notes": "PROXY ENUM VALUE - DECLARED 2026-10-04: AutoRound is a PTQ TOOLKIT that spans W2A16 through W8A16, and 'int8' is both too narrow and the wrong KIND of thing - it names a bit width the toolkit is not limited to. The real content is the rounding method (SignRoundV1/V2), the export-format matrix, and the asymmetric-quantization limit (--asym only up to 7 bits for auto_round/auto_gptq/auto_awq exports, because vLLM serves W8 GPTQ-format weights symmetric-only and Marlin supports zero points at 4 bits only). Filed under 'int8' because the enum's low-bit integer values are the nearest fit. This record already documents group_size 128 for the whole W2-W8 A16 family, which is verified. REQUESTED ENUM ADDITION: 'autoround'. RECORDED RATHER THAN DUPLICATED because it is the tool that actually implements the low-bit path. What it is: a PTQ toolkit whose distinguishing idea is optimizing the ROUNDING (SignRoundV1, arXiv:2309.05516; SignRoundV2, arXiv:2512.04746) rather than the scales - learning a sign vector per weight that minimizes output error, with the scale fitted afterwards. `--iters 0` gives fast optimized-RTN. W4A16 CONFIRMED, and the whole WNA16 family confirmed, verbatim from the scheme table: bits 2 through 8, every one with group_size=128 and sym=True and act_bits=16. The project also recommends group_size=32 or mixed bits for better results in its troubleshooting section, so 128 is the default, not the optimum. BLOCKWISE AND GROUP SIZE, precisely: blockwise is a property of the MX/NV schemes, not of the INT schemes. NVFP4 uses group_size 16 (the NVFP4 sub-block size, matching the ggml/Blackwell convention); MXFP4, MXINT4 and MXFP4_RCEIL use group_size 32. Crucially the README labels MXFP4, MXINT4, MXFP4_RCEIL, MXFP8, FPW8A16 and FP8_STATIC as 'Research feature, no real kernel' - do not read them as deployable. ASYMMETRIC QUANTIZATION HAS A HARD PER-FORMAT LIMIT, and this is the single most practically important line in the guide: `--asym` supports weight bits <= 7 for the auto_round / auto_gptq / auto_awq exports, because vLLM serves W8 GPTQ-format weights symmetric-only and Marlin supports zero points at 4 bits only. The llm_compressor format DOES support 8-bit asymmetric, via Machete (SM90+, group sizes 64/128/-1) or Conch (SM80+, group size 128 or channelwise). The rule applies uniformly to AutoScheme choices and to fixed layer pins such as lm_head: a run exporting to llm_compressor keeps its 8-bit entries asymmetric and other formats pin them back to symmetric. AR_ALLOW_W8_ASYM=1 lifts the restriction for every format at the cost of possibly not loading in vLLM. EXPORT MATRIX (which schemes each format can actually carry): auto_round supports the widest set including MXFP4/MXFP8/MXFP4_RCEIL/MXFP8_RCEIL/NVFP4/FPW8A16/FP8_STATIC/FP8_BLOCK/BF16/MXINT4; llm_compressor supports NVFP4, MXFP4, MXFP8, FPW8A16, FP8_STATIC, FP8_BLOCK and W2-W8 including G32/G64 variants; mlx supports W2-W8 plus mixed-bit on Apple Silicon only; auto_awq supports only W4A16-W7A16 plus BF16; auto_gptq supports W2/W3/W5/W6/W7/W8/W4 plus G32/G64 variants. AutoAWQ is 'well-suited for asymmetric 4-bit'; AutoGPTQ is 'well-suited for symmetric quantization on CUDA devices' and its README warns the asymmetric kernel 'has issues that can cause considerable accuracy drops, particularly at 2-bit quantization'. MIXED-BIT: AutoScheme generates mixed-bit/mixed-group_size recipes in minutes at about 1.1x-1.5x the model's BF16 RAM overhead, and is limited to the INT (W2A16/W4A16/W8A16) and MXFP families - INT and MXFP cannot be mixed in one AutoScheme, and W3A16/GGUF:*/NVFP4 options raise ValueError when model_free=True. MoE: docs/moe.md reports MoE tuning speed improved more than 3x with significantly reduced RAM (2026-09), with an explicit warning that the optimization may introduce regressions. GGUF export is supported (2025-07). DEPLOYMENT: adopted by Transformers, vLLM and SGLang, and fully integrated into vLLM-Omni (2026-06). The README explicitly warns against manually moving a quantized model between devices (e.g. model.to('cpu')) as that can cause unexpected exceptions. Quantize a 7B in about 10 minutes on a single GPU.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "qlab2-autoround-step-by-step"
+ ]
 }

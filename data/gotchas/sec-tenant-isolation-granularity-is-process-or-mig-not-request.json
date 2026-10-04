@@ -2,7 +2,7 @@
   "id": "sec-tenant-isolation-granularity-is-process-or-mig-not-request",
   "type": "gotcha",
   "name": "Between two tenants sharing one vLLM process there is no isolation primitive at all - the granularity that exists is MIG, a container, or a process",
-  "class": "hardware",
+  "class": "security",
   "affects": [
     "vllm"
   ],
@@ -20,7 +20,7 @@
   "root_cause": "Enumerate what actually exists. (1) MIG is the real hardware primitive: from Ampere, up to 7 GPU instances, each with separate and isolated paths through the ENTIRE memory system - on-chip crossbar ports, L2 cache banks, memory controllers and DRAM address buses all assigned uniquely to one instance - which is what lets a CSP give one client QoS and fault isolation from others across VMs, containers or processes. (2) Time-slicing, the knob most multi-tenant Kubernetes setups reach for first, is explicitly NOT isolation: NVIDIA's own documentation states that unlike MIG there is no memory or fault isolation between replicas, each pod can run unlimited processes on the underlying GPU, and the GPU simply gives an equal share of time. (3) In-engine, the only isolation control vLLM exposes is cache_salt, which the source names as 'the mechanism for intentional cache isolation' and which is folded into the block hash only for the first block. That prevents cross-tenant prefix reuse. It does not create separate address spaces, GPU contexts or schedulers.",
   "workaround": "If tenants are mutually untrusted, isolate at the level that actually isolates: separate processes or containers with MIG partitioning, or separate deployments. Treat one vLLM process serving mutually untrusted tenants as a single security principal with internal request separation only. Within one process, set a per-tenant cache_salt and accept that this addresses the timing side channel and nothing else. Note the cost of MIG is capacity - partitioning reduces sellable GPU - while a TEE is cheap in overhead (below 7% for the majority of typical LLM queries, approaching zero for larger models and longer sequences) if you need memory isolation without giving up a whole device.",
   "severity": "blocker",
-  "notes": "The uncomfortable part, stated plainly: request-scoped KV ownership is a CORRECTNESS feature, not a security boundary. Two tenants sharing a process are separated by scheduling logic written for throughput, and 'no request can read another request's blocks' is a far weaker statement than 'tenant A cannot influence tenant B'. vLLM's own security documentation reinforces the point: all inter-node communication is insecure by default and must be protected by network isolation.",
+  "notes": "The uncomfortable part, stated plainly: request-scoped KV ownership is a CORRECTNESS feature, not a security boundary. Two tenants sharing a process are separated by scheduling logic written for throughput, and 'no request can read another request's blocks' is a far weaker statement than 'tenant A cannot influence tenant B'. vLLM's own security documentation reinforces the point: all inter-node communication is insecure by default and must be protected by network isolation. SCHEME RECLASSIFIED (2026-10-04): was 'hardware'.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-04",
