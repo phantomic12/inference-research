@@ -635,8 +635,9 @@ class TestCanonicalDirectories(Harness):
     """
 
     CANONICAL_DIRS = [
-        "accelerators", "benchmarks", "engines", "flops", "gotchas",
-        "interconnect", "models", "papers", "quantization", "sources", "supply",
+        "accelerators", "benchmarks", "compilers", "engines", "flops",
+        "gotchas", "interconnect", "models", "papers", "quantization",
+        "sources", "supply",
     ]
 
     def test_canonical_dir_list_is_exact(self):
@@ -653,7 +654,7 @@ class TestCanonicalDirectories(Harness):
         actual = {d.name for d in data_dir.iterdir() if d.is_dir()}
         expected = set(self.CANONICAL_DIRS)
         strays = actual - expected
-        self.assertEqual(strays, [], f"stray directories found: {strays}")
+        self.assertEqual(strays, set(), f"stray directories found: {strays}")
 
     def test_no_flop_singular_dir(self):
         """data/flop/ (singular) must not exist."""
