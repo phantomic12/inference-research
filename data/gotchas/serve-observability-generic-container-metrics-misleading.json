@@ -1,0 +1,29 @@
+{
+  "id": "serve-observability-generic-container-metrics-misleading",
+  "type": "gotcha",
+  "name": "Generic container metrics (CPU, memory, request count) are actively misleading for LLM serving",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "observability",
+    "metrics",
+    "monitoring",
+    "ttft",
+    "itl",
+    "tbt",
+    "kv-cache-utilization",
+    "queue-depth"
+  ],
+  "symptom": "Dashboard shows healthy CPU/memory/request metrics while users experience high latency. The monitoring stack reports green while the LLM service is degraded.",
+  "root_cause": "Generic container metrics do not capture LLM-specific load. CPU utilization is low because the GPU does the compute. Memory utilization is high but that is expected (KV cache fills GPU memory). Request count does not reflect concurrency or token throughput. The metrics that actually matter for LLM serving are: TTFT (time to first token), ITL/TBT (inter-token latency / time between tokens), throughput (tokens per second), queue depth (requests waiting), and KV cache utilization rate (percentage of GPU memory used for KV cache).",
+  "workaround": "Export LLM-specific metrics from the inference engine. vLLM exposes Prometheus metrics including: vllm:time_to_first_token_seconds, vllm:time_per_output_token_seconds, vllm:num_requests_running, vllm:num_requests_waiting, vllm:gpu_cache_usage_perc. SGLang exposes similar metrics. Alert on KV cache utilization > 80% (approaching OOM), queue depth > threshold, and TTFT p99 > SLO. Do not alert on CPU utilization.",
+  "severity": "major",
+  "notes": "The metrics that matter for LLM serving are fundamentally different from web service metrics. TTFT measures prefill latency (how long until the first token). ITL/TBT measures decode latency (time between subsequent tokens). Throughput measures aggregate tokens per second. Queue depth measures how many requests are waiting for a GPU slot. KV cache utilization measures how full the GPU memory is. These are the metrics that correlate with user experience. Generic container metrics (CPU, memory, request count) are actively misleading because they do not capture the GPU-bound nature of LLM inference.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-k8s-hpa-docs",
+    "serve-kserve-keda-autoscaling"
+  ]
+}

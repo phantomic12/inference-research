@@ -1,0 +1,39 @@
+{
+  "id": "board-power-vs-system-power-measurement-boundary",
+  "type": "gotcha",
+  "name": "GPU board power is 55-59% of system power: CPU, DRAM, NICs, PSU losses and cooling add 41-45% on top, so a joules-per-token figure without its measurement boundary is meaningless",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "pwr2-arxiv-where-does-energy-go",
+    "pwr2-nvidia-hgx-h100-h200-datasheet",
+    "pwr-mlperf-v4-1-nvidia-readme-maxq",
+    "pwr-mlperf-v4-1-nvidia-makefile-power"
+  ],
+  "class": "measurement",
+  "affects": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300"
+  ],
+  "concepts": [
+    "joules-per-token",
+    "power-scope",
+    "board-power",
+    "system-power",
+    "nvml",
+    "rapl",
+    "ipmi",
+    "ptdaemon",
+    "mlperf",
+    "energy-basis",
+    "measurement-boundary"
+  ],
+  "symptom": "A joules-per-token figure is quoted in a paper or vendor deck without stating whether it is measured at the GPU package, the accelerator board, the node, or the rack. The number is then compared against another figure measured at a different boundary, and the comparison is wrong by 40-70%. The most common form: NVML or nvidia-smi board power is treated as if it were the whole system, and the resulting 'energy per token' is understated by roughly half. A second form: an 8-GPU node figure is divided by 8 and presented as per-GPU, ignoring the fact that the host CPUs, DRAM, NICs and PSU losses are also being divided by 8 when they do not scale with GPU count.",
+  "root_cause": "The gap is measured, not theorized. The 'Where Does the Energy Go?' paper (arXiv:2609.29707) profiled 2x NVIDIA RTX PRO 6000 Blackwell with NVML GPU counters, Intel RAPL CPU/DRAM counters and IPMI system-level sensors simultaneously, and found that GPU-only telemetry misses 41-45% of system energy across all three workloads tested. The non-GPU remainder is host CPU, DRAM, NICs, storage, fans and PSU conversion losses. The MLPerf v4.1 8xH200 submission in this repo shows the same boundary from the other side: 8 x 700 W = 5,600 W of GPU TDP nameplate, but the measured whole-node plateau is 5,806.9 W — the node draws MORE than the GPU TDP sum because the rest of the machine adds ~200 W even when the GPUs are at their locked-clock plateau. At idle the gap is larger: the same node idles at 2,422.6 W, which is 41.7% of loaded power — that floor is entirely non-GPU (host CPUs, DRAM, NICs, PSU losses) plus GPU idle draw. The HGX H100/H200 datasheet publishes NO TDP or rack power figure at all, which means the boundary problem is not merely unmeasured — for Hopper it is unpublished.",
+  "workaround": "Always state the measurement boundary alongside any joules-per-token figure. The schema fields power_scope (device/node/rack), power_w, energy_basis, clock_lock_mhz and thermal_state exist for this reason. If you must estimate system energy from board power, apply a 1.4-1.7x overhead factor depending on the platform — 1.4x for a bare 8-GPU node with efficient host, 1.7x for a fully loaded node with 10x 400GbE NICs and 2TB DRAM. But label the result as ESTIMATED, not measured. The only honest way to get system-level joules-per-token is to measure at the wall (or via PTDaemon/IPMI for the whole node) and report the full trace, as the MLPerf power submissions do. NVML alone is a board-level measurement and must be labelled as such.",
+  "severity": "major",
+  "notes": "THE 41-45% FIGURE IS FROM A SINGLE PAPER on workstation-class RTX PRO 6000 Blackwell, not from datacenter parts. It should be read as a well-instrumented estimate of the ORDER of magnitude, not as a universal constant. The direction is unambiguous and confirmed by the MLPerf node-level data: non-GPU components add tens of percent, not single digits. The exact ratio depends on host CPU count, DRAM capacity, NIC count and PSU efficiency, all of which vary by platform. WHAT GENERALIZES: (1) any energy-per-token figure without a stated power_scope is uninterpretable; (2) NVML/nvidia-smi power is board-level, not system-level; (3) the gap is large enough that comparing a board-level figure against a system-level figure is a category error, not a minor correction. The MLPerf power methodology (PTDaemon at the wall, 1 Hz sampling, external Yokogawa meter) is the gold standard for system-level measurement, but it requires joining the MLCommons Power WG and signing the PTD EULA, which is why most published figures are NOT at this standard."
+}

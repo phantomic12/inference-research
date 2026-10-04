@@ -1,0 +1,32 @@
+{
+  "id": "nic-ndr-xdr-naming-confusion",
+  "type": "gotcha",
+  "name": "InfiniBand NDR/XDR naming refers to whole-port rate, not per-lane rate",
+  "class": "measurement",
+  "affects": [
+    "nic-connectx7-ndr-400gbps",
+    "nic-connectx8-xdr-800gbps",
+    "infiniband-xdr"
+  ],
+  "concepts": [
+    "ndr",
+    "xdr",
+    "infiniband",
+    "per-lane",
+    "per-port",
+    "bandwidth",
+    "naming"
+  ],
+  "symptom": "NDR is described as '400 Gb/s' and XDR as '800 Gb/s', but these are whole-port figures. The per-lane rates are 100 Gb/s and 200 Gb/s respectively. Confusing per-lane and per-port rates leads to 4x errors in bandwidth calculations.",
+  "root_cause": "InfiniBand speed nomenclature (NDR, XDR) refers to the total per-port bandwidth, not the per-lane rate. NDR = 400 Gb/s per port = 4 lanes x 100 Gb/s. XDR = 800 Gb/s per port = 4 lanes x 200 Gb/s. This is similar to how PCIe Gen5 x16 refers to the total bandwidth of 16 lanes, not the per-lane rate.",
+  "workaround": "Always check whether a bandwidth figure is per-lane or per-port. For InfiniBand, the convention is per-port. For NVLink, the convention in this repo is per-link (per-lane). When comparing InfiniBand to NVLink, ensure both are using the same convention.",
+  "severity": "major",
+  "notes": "This naming confusion is a common source of errors in bandwidth calculations. The repo's existing infiniband-xdr record was corrected for this exact issue. The key insight is that NDR and XDR are port-level designations, not lane-level.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "nic-connectx7-datasheet",
+    "nic-quantum2-datasheet"
+  ]
+}

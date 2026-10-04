@@ -1,0 +1,37 @@
+{
+  "id": "local-unified-memory-not-vram",
+  "type": "gotcha",
+  "name": "Unified memory is not VRAM: capacity, bandwidth, and sharing constraints",
+  "class": "hardware",
+  "affects": [
+    "apple-m4-max",
+    "apple-m3-max",
+    "apple-m3-ultra",
+    "apple-m1-ultra",
+    "local-apple-m4-pro",
+    "local-apple-m3-pro",
+    "local-apple-m5",
+    "local-apple-m5-pro",
+    "local-apple-m5-max",
+    "local-apple-m5-ultra"
+  ],
+  "concepts": [
+    "unified-memory",
+    "vram",
+    "memory-bandwidth",
+    "apple-silicon",
+    "metal"
+  ],
+  "symptom": "A Mac with 128GB unified memory can serve a larger model than a discrete GPU with 24GB VRAM, but the advantage is capacity, not speed. The unified memory bandwidth is shared with the CPU and is not dedicated to the GPU.",
+  "root_cause": "Apple Silicon uses a unified memory architecture where the CPU, GPU, and Neural Engine share a single memory pool. The GPU can only address part of the advertised capacity (the OS and CPU take their share). The bandwidth figure is the ceiling for the whole system memory subsystem, not a private GPU bus. A discrete GPU's VRAM is private to the GPU with a dedicated high-bandwidth bus (e.g., GDDR7 at 1792 GB/s on RTX 5090 vs LPDDR5X at 614 GB/s on M5 Max).",
+  "workaround": "For capacity-bound workloads (large model + long context), unified memory wins. For bandwidth-bound workloads (batch-1 decode), a discrete GPU with HBM/GDDR7 wins. Choose based on whether the workload is capacity-limited or bandwidth-limited.",
+  "severity": "major",
+  "notes": "The honest comparison: a 128GB Mac can hold a 70B model at 4-bit (~35GB weights) with room for KV cache, while a 24GB RTX 4090 cannot. But the Mac's 614GB/s bandwidth yields ~15-25 tokens/sec for a 70B model, while the RTX 4090's 1008GB/s yields ~30-50 tokens/sec for the same model (if it fits). The Mac wins on capacity, the discrete GPU wins on speed. For models that fit in both, the discrete GPU is faster. For models that only fit in the Mac, the Mac is the only option.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "consumer-apple-macbook-pro-14-m4-max-tech-specs",
+    "local-apple-macbook-pro-m5-tech-specs"
+  ]
+}

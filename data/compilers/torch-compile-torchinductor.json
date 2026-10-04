@@ -1,0 +1,46 @@
+{
+  "id": "torch-compile-torchinductor",
+  "type": "compiler",
+  "name": "torch.compile / TorchInductor",
+  "repo": "pytorch/pytorch",
+  "language": "Python",
+  "license": "BSD-3-Clause",
+  "first_release_year": 2022,
+  "category": "compiler-framework",
+  "target_backends": ["cuda", "rocm", "cpu-avx2", "cpu-avx512"],
+  "input_languages": ["pytorch"],
+  "output_artifacts": ["triton-ir", "ptx", "amdgcn", "c"],
+  "compilation_strategy": "jit",
+  "autotuning": true,
+  "production_ready": true,
+  "production_evidence": [
+    "vLLM uses torch.compile for some model paths",
+    "PyTorch 2.x makes torch.compile the default recommended path for performance",
+    "Used in production by Meta for some models"
+  ],
+  "strengths": [
+    "Seamless PyTorch integration: just add torch.compile() to existing code",
+    "Automatic fusion: fuses elementwise and reduction operations automatically",
+    "Triton backend: generates Triton kernels for GPU, combining Inductor's fusion with Triton's performance",
+    "Autotuning: autoheuristic and autotune modes search over configurations",
+    "Active development: part of PyTorch core, regular improvements"
+  ],
+  "weaknesses": [
+    "Graph breaks: when Dynamo cannot trace a function, it falls back to eager mode, causing performance cliffs",
+    "Recompilation storms: each new shape or Python value can trigger recompilation, leading to long warmup times",
+    "Debugging difficulty: errors in generated code are hard to trace back to source",
+    "Not all PyTorch operations are supported: unsupported ops cause graph breaks",
+    "Compile time: first compilation can take 30+ seconds for complex models",
+    "Dynamic shapes: handling dynamic shapes requires careful configuration to avoid excessive recompilations"
+  ],
+  "learning_curve": "moderate",
+  "compile_time_seconds": 30.0,
+  "notes": "torch.compile is PyTorch's recommended path for improving model performance. It consists of TorchDynamo (a Python bytecode tracer that captures the computation graph) and TorchInductor (a compiler that generates optimized code, primarily Triton kernels for GPU). The main failure modes are: (1) Graph breaks: when Dynamo encounters an operation it cannot trace (e.g., data-dependent control flow, unsupported Python constructs), it breaks the graph and falls back to eager mode for that segment. This can cause significant performance degradation. (2) Recompilation storms: Dynamo specializes on Python values (e.g., integer arguments), so each new value triggers recompilation. For inference with varying batch sizes, this can lead to dozens of recompilations. The recompile_limit (default 8) and accumulated_recompile_limit (default 256) control when compilation fails. (3) Dynamic shapes: by default, Dynamo specializes on tensor shapes, so each new shape triggers recompilation. The automatic_dynamic_shapes config can help, but it is not enabled by default. For production inference, torch.compile is most effective when the workload has fixed shapes (e.g., fixed batch size, fixed sequence length). For variable-length workloads, the recompilation overhead can dominate.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "src5-pytorch-inductor-github",
+    "torch-compile-documentation"
+  ]
+}

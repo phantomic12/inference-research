@@ -1,0 +1,26 @@
+{
+  "id": "serve-engine-crash-in-flight-requests-lost",
+  "type": "gotcha",
+  "name": "Engine crash loses all in-flight requests - no graceful degradation",
+  "class": "framework",
+  "affects": [],
+  "concepts": [
+    "crash",
+    "in-flight-requests",
+    "failure",
+    "restart",
+    "graceful-degradation"
+  ],
+  "symptom": "An inference engine crashes (OOM, CUDA error, segfault), and all requests being processed are lost. Clients receive connection errors and must retry.",
+  "root_cause": "Inference engines do not checkpoint in-flight requests. When the engine crashes, all requests in the queue and being processed are lost. There is no graceful degradation - the engine either runs or it does not. This is different from web services where in-flight requests can be drained before shutdown.",
+  "workaround": "Implement client-side retry with exponential backoff. Use a router/load balancer that detects engine health and routes around failed replicas. For critical workloads, run multiple replicas and accept that some requests will be lost on crash. LMCache can preserve KV cache across engine restarts, but only for completed requests, not in-flight ones.",
+  "severity": "major",
+  "notes": "Engine crash is a fundamental failure mode in LLM serving. Unlike web services, there is no way to drain in-flight requests before shutdown because the engine state (KV cache, batch state) is in GPU memory and cannot be checkpointed. The standard mitigation is client-side retry and multi-replica deployment. LMCache can preserve KV cache across restarts, but only for completed requests. For critical workloads, the only real solution is multiple replicas and accepting that some requests will be lost on crash.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-sglang-github",
+    "serve-kserve-github"
+  ]
+}

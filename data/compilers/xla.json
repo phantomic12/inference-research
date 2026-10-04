@@ -1,0 +1,44 @@
+{
+  "id": "xla",
+  "type": "compiler",
+  "name": "XLA",
+  "repo": "openxla/xla",
+  "language": "C++",
+  "license": "Apache-2.0",
+  "first_release_year": 2017,
+  "category": "compiler-framework",
+  "target_backends": ["cuda", "cpu-avx2", "tpu"],
+  "input_languages": ["jax", "pytorch", "tensorflow"],
+  "output_artifacts": ["llvm-ir", "ptx"],
+  "compilation_strategy": "aot",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "TensorFlow uses XLA as its default compiler for GPU and TPU",
+    "JAX uses XLA for all GPU and TPU execution",
+    "PyTorch has experimental XLA support via torch_xla"
+  ],
+  "strengths": [
+    "Mature: nearly a decade of development, used in production by Google for TensorFlow and JAX",
+    "TPU support: XLA is the only compiler that targets TPUs at scale",
+    "Operator fusion: automatically fuses elementwise and reduction operations",
+    "Layout optimization: optimizes data layout for target hardware",
+    "Part of OpenXLA: open governance, community contributions"
+  ],
+  "weaknesses": [
+    "Limited to Google's hardware ecosystem: TPU support is excellent, but NVIDIA GPU support lags behind Triton/CUTLASS",
+    "No autotuning: relies on heuristics rather than search-based optimization",
+    "Compilation time: AOT compilation can be slow for large models",
+    "Less control than Triton: users cannot easily write custom fused kernels",
+    "Not designed for inference-specific optimizations: XLA was designed for training, and inference-specific optimizations (e.g., KV cache management, continuous batching) are not part of XLA"
+  ],
+  "learning_curve": "high",
+  "compile_time_seconds": 120.0,
+  "notes": "XLA (Accelerated Linear Algebra) is Google's ML compiler, originally developed for TensorFlow and now part of the OpenXLA project. It is the only production compiler that targets TPUs, making it essential for TPU-based inference. For NVIDIA GPUs, XLA is less commonly used directly; instead, JAX and PyTorch models are often compiled with Triton or hand-written CUDA kernels. XLA's strength is its integration with the TensorFlow/JAX ecosystem and its mature optimization pipeline. However, for LLM inference on NVIDIA GPUs, XLA is not the primary compilation path. The lack of autotuning is a significant disadvantage: kernel performance on modern GPUs is highly sensitive to tile sizes, and XLA's heuristics often miss optimal configurations. XLA is also not designed for inference-specific optimizations like KV cache management or continuous batching, which are implemented at the engine level (e.g., vLLM, TensorRT-LLM) rather than in the compiler.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "openxla-project-overview"
+  ]
+}

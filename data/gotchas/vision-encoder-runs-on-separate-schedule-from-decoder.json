@@ -1,0 +1,30 @@
+{
+  "id": "vision-encoder-runs-on-separate-schedule-from-decoder",
+  "type": "gotcha",
+  "name": "Vision encoder runs on separate schedule from decoder",
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-04",
+  "sources": [
+    "mdl2-trtllm-supported-models",
+    "mdl2-vllm-supported-models-2026-10"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "sglang",
+    "tensorrt-llm"
+  ],
+  "concepts": [
+    "vision-encoder",
+    "decoder",
+    "scheduling",
+    "cuda-stream",
+    "prefetch"
+  ],
+  "symptom": "The vision encoder and LLM decoder run on separate schedules, leading to underutilization. While the encoder is running, the decoder is idle, and vice versa.",
+  "root_cause": "The vision encoder is a separate forward pass that must complete before the LLM prefill can start. Engines that do not overlap these phases leave the GPU underutilized.",
+  "workaround": "Use an engine with explicit encoder-decoder overlap. TRT-LLM has a Multimodal Encoder Side Stream that prefetches encoder work on a separate CUDA stream. This overlaps the vision encoder forward pass with the LLM's text prefill, improving utilization.",
+  "severity": "major",
+  "notes": "ENCODER-DECODER OVERLAP IS CRITICAL FOR UTILIZATION: Without it, the vision encoder and LLM prefill run serially, leaving the GPU idle during each phase. TRT-LLM's Multimodal Encoder Side Stream prefetches encoder work on a separate CUDA stream, overlapping it with the LLM's text prefill. This is especially important for high-resolution images where the encoder cost is significant. The overlap can improve throughput by 20-30% for vision-language workloads. The mechanism is from TRT-LLM docs; the utilization analysis is derived from the vision encoder FLOP counts."
+}

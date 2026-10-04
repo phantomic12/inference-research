@@ -1,0 +1,33 @@
+{
+  "id": "nic-bluefield-dpu-offload-limits",
+  "type": "gotcha",
+  "name": "BlueField DPU offloads network processing but not GPU compute or NCCL collectives",
+  "class": "hardware",
+  "affects": [
+    "nic-bluefield3-dpu",
+    "nic-bluefield4-dpu"
+  ],
+  "concepts": [
+    "bluefield",
+    "dpu",
+    "offload",
+    "networking",
+    "storage",
+    "security",
+    "nccl",
+    "collective-communication",
+    "gpu-compute"
+  ],
+  "symptom": "BlueField DPU is sometimes described as offloading 'AI workloads' or 'collective communication', but it actually offloads network, storage, and security processing - not GPU compute or NCCL collectives.",
+  "root_cause": "The BlueField DPU contains ConnectX networking hardware and Arm cores, but it does not contain GPU compute units. NCCL collectives run on the GPU and use the network interface (which may be on the DPU) but the collective computation happens on the GPU. The DPU can offload the network transport layer (RDMA, RoCE, congestion control) but not the collective algorithm itself.",
+  "workaround": "Use BlueField DPU for network offload (OVS, overlays, storage, security) but do not expect it to accelerate NCCL collectives. For collective acceleration, use InfiniBand SHARP (in-network reduction) or NVLink SHARP (in-switch reduction).",
+  "severity": "minor",
+  "notes": "The distinction between network transport offload and collective computation is important. The DPU handles the former; the GPU handles the latter. SHARP (on InfiniBand switches or NVSwitch) handles in-network reduction, which is a different kind of offload.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "nic-bluefield3-user-guide",
+    "nic-nvidia-bluefield-page"
+  ]
+}

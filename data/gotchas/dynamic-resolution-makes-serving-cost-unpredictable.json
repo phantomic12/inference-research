@@ -1,0 +1,30 @@
+{
+  "id": "dynamic-resolution-makes-serving-cost-unpredictable",
+  "type": "gotcha",
+  "name": "Dynamic resolution makes serving cost unpredictable",
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-04",
+  "sources": [
+    "navit-patch-n-pack-any-aspect-ratio-and-resolution-arxiv-2307-06",
+    "pixtral-12b-arxiv-2410-07073"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "sglang",
+    "tensorrt-llm"
+  ],
+  "concepts": [
+    "dynamic-resolution",
+    "any-resolution",
+    "vision-encoder",
+    "serving-cost",
+    "attacker-controlled"
+  ],
+  "symptom": "Serving cost is unpredictable because the token count depends on the input image size, which is attacker-controlled. A malicious user can send a 4096x4096 image to cause a 65,536-token prefill, exhausting GPU memory.",
+  "root_cause": "Dynamic resolution models (NaViT, Pixtral, LLaVA-NeXT/AnyRes) allow images at any resolution, so the token count is a function of the input, not a model constant. This makes the worst-case cost unbounded.",
+  "workaround": "Cap maximum image dimensions in the serving config. vLLM and SGLang allow setting max_image_size or similar limits. Alternatively, use a fixed-resolution model or a Perceiver/Q-Former that compresses to a fixed token count.",
+  "severity": "blocker",
+  "notes": "DYNAMIC RESOLUTION IS A SECURITY RISK: An attacker can send a 4096x4096 image to a Pixtral server, causing a 65,536-token prefill that consumes 20 GB of KV cache (for a 70B model). This can OOM the GPU or cause denial of service. The fix is to cap maximum image dimensions in the serving config. vLLM and SGLang allow setting max_image_size or similar limits. This is analogous to max_tokens for text, but for images. The token counts are derived from the model configs; the security analysis is from the serving cost formula."
+}

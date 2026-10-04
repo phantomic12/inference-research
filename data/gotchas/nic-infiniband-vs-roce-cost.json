@@ -1,0 +1,33 @@
+{
+  "id": "nic-infiniband-vs-roce-cost",
+  "type": "gotcha",
+  "name": "InfiniBand costs 2-5x more than RoCE per port but offers hardware congestion control and SHARP",
+  "class": "hardware",
+  "affects": [
+    "nic-connectx7-ndr-400gbps",
+    "nic-quantum2-switch",
+    "nic-spectrumx-ethernet",
+    "roce"
+  ],
+  "concepts": [
+    "infiniband",
+    "roce",
+    "cost",
+    "congestion-control",
+    "sharp",
+    "in-network-computing",
+    "collective-communication"
+  ],
+  "symptom": "InfiniBand hardware costs significantly more than equivalent Ethernet/RoCE hardware, but provides hardware-based congestion control, SHARP in-network reduction, and better tail latency under load.",
+  "root_cause": "InfiniBand switches and adapters include dedicated hardware for credit-based flow control, adaptive routing, and SHARP in-network reduction. This hardware complexity increases cost. RoCE runs on commodity Ethernet silicon but requires PFC/ECN/DCQCN software configuration for lossless operation, and lacks in-network reduction. The cost difference is approximately 2-5x per port depending on the specific products and scale.",
+  "workaround": "For small clusters (<100 GPUs), RoCE may be cost-effective despite operational complexity. For large clusters (>1000 GPUs), InfiniBand's hardware congestion control and SHARP provide better performance and lower operational overhead that justifies the cost. Cloud providers typically use RoCE (e.g., AWS EFA, GCP) because they can manage the operational complexity at scale.",
+  "severity": "major",
+  "notes": "The cost comparison is complicated by the fact that InfiniBand requires a subnet manager and specialized expertise, while RoCE can use standard Ethernet tooling. The total cost of ownership (TCO) may be closer than the hardware cost difference suggests. NVIDIA's Spectrum-X platform aims to close the performance gap while keeping Ethernet economics.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-04",
+  "sources": [
+    "nic-nvidia-infiniband-page",
+    "nic-nvidia-spectrumx-page"
+  ]
+}

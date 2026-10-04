@@ -1,0 +1,24 @@
+{
+  "id": "serve-mps-no-error-isolation",
+  "type": "gotcha",
+  "name": "CUDA MPS provides no error isolation - one client crash kills all clients on the GPU",
+  "class": "hardware",
+  "affects": [],
+  "concepts": [
+    "mps",
+    "gpu-sharing",
+    "multi-tenant",
+    "error-isolation"
+  ],
+  "symptom": "One inference engine crashes, and all other engines on the same GPU crash with it. The failure is not contained.",
+  "root_cause": "CUDA MPS (Multi-Process Service) allows multiple processes to share a GPU, but they share the same GPU context. If one process triggers a CUDA error (OOM, illegal memory access), the error propagates to all processes sharing the GPU. MPS provides compute isolation (SM partitioning) but not error isolation.",
+  "workaround": "Use MIG instead of MPS if error isolation is required. MIG provides hardware-level isolation including separate memory and compute contexts. Alternatively, run each inference engine in a separate container with its own GPU (no sharing). For development/testing, MPS is fine; for production multi-tenant serving, MIG or separate GPUs are safer.",
+  "severity": "major",
+  "notes": "MPS is the simplest way to share a GPU across multiple inference engines, but it comes with a significant caveat: no error isolation. A single crash takes down all engines on the GPU. This is acceptable for development and testing, but for production multi-tenant serving, MIG or separate GPUs are safer. The tradeoff is that MIG has its own limitations (no NCCL support, shared NVLink bandwidth).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-mig-nvidia-docs"
+  ]
+}

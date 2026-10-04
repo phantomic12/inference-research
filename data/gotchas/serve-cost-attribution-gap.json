@@ -1,0 +1,26 @@
+{
+  "id": "serve-cost-attribution-gap",
+  "type": "gotcha",
+  "name": "Cost attribution per model/tenant is a known gap - no standard solution exists",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "cost-attribution",
+    "multi-tenant",
+    "showback",
+    "chargeback",
+    "billing"
+  ],
+  "symptom": "The finance team asks how much each model/tenant costs to serve, and there is no answer. GPU utilization is known, but per-request cost is not.",
+  "root_cause": "LLM serving cost attribution is an unsolved problem. The cost components are: GPU time (known from utilization), memory (known from allocation), network (known from transfer metrics), and storage (known from model size). But attributing these to specific requests/tenants/models is hard because: (1) continuous batching means requests share GPU time in complex ways, (2) prefix caching means some requests are much cheaper than others, (3) multi-tenant GPU sharing (MPS/MIG) makes per-tenant GPU time ambiguous, (4) there is no standard metrics format for LLM cost attribution.",
+  "workaround": "Approximate cost attribution: (1) track tokens processed per model/tenant (most engines expose this), (2) use a cost model based on tokens processed and GPU time, (3) for multi-tenant, use MIG to get hardware-level isolation, (4) LiteLLM provides cost tracking per API key which can serve as a proxy for tenant attribution. But all of these are approximations, not exact measurements.",
+  "severity": "major",
+  "notes": "Cost attribution is a known gap in the LLM serving ecosystem. The fundamental problem is that continuous batching and prefix caching make per-request cost highly variable, and there is no standard way to attribute shared GPU time to specific requests. The best current approximation is token-based cost modeling: track tokens processed per model/tenant and apply a cost-per-token rate. LiteLLM provides per-API-key cost tracking which can serve as a proxy for tenant attribution. But this is an approximation, not an exact measurement.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-kserve-github",
+    "serve-ray-docs"
+  ]
+}

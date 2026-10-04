@@ -1,0 +1,32 @@
+{
+  "id": "vision-language-connector-cost-mlp-projector-perceiver-resampler",
+  "type": "flop",
+  "name": "Vision-language connector cost (MLP projector / Perceiver resampler / Q-Former)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "flamingo-a-visual-language-model-arxiv-2204-14198",
+    "blip-2-bootstrapping-language-image-pre-training-arxiv-2301-1259",
+    "pap-mm-llava"
+  ],
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The connector is a small transformer or MLP that maps vision encoder output to LLM embedding space. For a 2-layer MLP projector (LLaVA style): input dim 1024 (ViT-L hidden), output dim 4096 (LLM hidden), 256 tokens. FLOPs = 2*1024*4096*256*2 = 4.3 GFLOPs. For a Perceiver resampler (Flamingo style): 64 learned queries, cross-attention over 256 visual tokens, 8 layers. FLOPs ~ 64*256*1024*2*8*2 = 0.5 GFLOPs. For a Q-Former (BLIP-2 style): 32 learned queries, 12 layers, cross-attention over 256 visual tokens. FLOPs ~ 32*256*768*2*12*2 = 0.3 GFLOPs. The connector is negligible compared to the vision encoder itself (<5% of total vision cost).",
+  "bound_by": "compute",
+  "scales_with": [
+    "number of visual tokens (linear for MLP projector, constant for resampler)",
+    "LLM hidden size (linear)",
+    "connector depth (linear)",
+    "number of learned queries (linear for resampler/Q-Former)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "workarounds": [
+    "Use MLP projector instead of Perceiver/Q-Former - simpler, fewer FLOPs, but passes all visual tokens to LLM",
+    "Use Perceiver resampler or Q-Former to compress visual tokens to fixed small count (32-64) - adds small connector cost but dramatically reduces LLM prefill cost",
+    "Use spatial merge (2x2 pixel shuffle) before connector - 4x fewer tokens, 4x less connector compute"
+  ],
+  "notes": "THREE CONNECTOR ARCHITECTURES: (1) MLP projector (LLaVA): 2-layer MLP, maps each visual token independently to LLM embedding space. Passes ALL visual tokens to LLM. Cost: ~4.3 GFLOPs for ViT-L/16 at 224x224 with 7B LLM. (2) Perceiver resampler (Flamingo): learned queries with cross-attention over visual tokens. Compresses variable-length visual sequence to fixed 64 tokens. Cost: ~0.5 GFLOPs. (3) Q-Former (BLIP-2): 32 learned queries, 12 layers, cross-attention. Compresses to 32 tokens. Cost: ~0.3 GFLOPs. The connector cost is negligible compared to the vision encoder, but the choice of connector has a HUGE impact on LLM prefill cost: MLP projector passes 256 tokens (224x224) or 1024 tokens (448x448) to the LLM, while Perceiver/Q-Former pass only 32-64 tokens. This is the single most important architectural decision for multimodal serving cost. The FLOP counts are derived from standard transformer FLOP formulas; the architectures are from the original papers."
+}

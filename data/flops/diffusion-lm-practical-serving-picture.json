@@ -1,0 +1,40 @@
+{
+  "id": "diffusion-lm-practical-serving-picture",
+  "type": "flop",
+  "name": "Diffusion LM practical serving: denoising steps, per-step cost, and throughput competitiveness vs AR decoding",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The serving picture for diffusion LMs is fundamentally different from AR. An AR model does 1 forward pass per token: flops = 2*N_active, constant per token. A diffusion LM does S denoising steps, each a full forward pass over the sequence: flops per step = 2*N_active + attention over L tokens. The total flops for generating Lg tokens is S * (2*N_active + attention). The effective flops per generated token is S * 2*N_active / Lg (if each step emits Lg/S tokens). For LLaDA 8B (d_model 4096, 8B params, max_seq 4096): per step flops = 2*8e9 = 16 GFLOP for the weight GEMMs alone, plus attention. With S=256 steps and Lg=1024 tokens: total flops = 256 * 16e9 = 4.1 TFLOP, effective flops per token = 4.1e12 / 1024 = 4 GFLOP/token. Compare AR: 2*8e9 = 16 GFLOP/token. So diffusion is 4x fewer flops per token in this configuration. But the wall-clock story is different: each step is a full forward pass with prefill-like arithmetic intensity, so it is compute-bound, not memory-bound. The weight stream is paid S times (unless cached), and there is no KV cache to reuse across steps (LLaDA: 'incompatible with KV caching'). The batch scaling is also different: diffusion's natural parallelism axis is the batch, not the sequence, so batch 1 is compute-bound while AR at batch 1 is memory-bound.",
+  "bound_by": "compute",
+  "scales_with": [
+    "num_denoising_steps S (the master knob \u2014 flops per token scale linearly in S)",
+    "generation_length Lg (flops per step scale with full sequence; tokens per step scale inversely)",
+    "num_layers and hidden_size (every step pays the full dense weight set)",
+    "prompt_length (full bidirectional attention over prompt+response every step)",
+    "remask strategy / block length"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Fewer denoising steps (the exposed quality/speed dial)",
+    "Semi-autoregressive block sampling to constrain the working sequence",
+    "Low-confidence remasking so each step commits positions it is confident about",
+    "KV caching of the PROMPT portion only (the prompt prefix is stable across steps)",
+    "Parallel-batch many independent sequences so a step's flops are shared across the batch",
+    "Speculative-style multi-token acceptance from a single step"
+  ],
+  "notes": "The existing diffusion-lm-denoising-steps record covers the flop arithmetic. This record adds the practical serving picture. (1) Throughput competitiveness: LLaDA reports 'performing comparably to the authors' self-constructed autoregressive baselines at the same size' on quality, but no tok/s throughput ratio is published. Dream 7B reports 'tunable quality-speed trade-offs' via step count. The honest status is that diffusion LMs are NOT yet competitive with AR on raw throughput for standard serving workloads \u2014 the compute-bound per-step cost and lack of KV cache reuse mean the wall-clock per token is higher despite lower flops per token. (2) The batch-size regime where diffusion wins: at large batch, diffusion's compute-bound nature means it scales better with batch than AR (which is memory-bound at small batch and becomes compute-bound at large batch). At batch 1, AR wins. At batch 128+, diffusion may win. (3) TTFT vs ITL: diffusion has excellent TTFT (first step emits many tokens) but terrible ITL (each step takes full forward pass time). This makes it suitable for batch/offline workloads but poor for interactive serving. (4) The weight stream is paid S times: for LLaDA 8B at S=256, that is 256 * 16 GB = 4 TB of weight reads, vs AR's 16 GB. This is the fundamental serving cost that flop arithmetic alone does not capture.",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-04",
+  "sources": [
+    "arch-llada",
+    "arch-hf-config-llada",
+    "arch-dream-7b",
+    "arch-hf-config-dream",
+    "arch-diffusion-lm",
+    "mdl2-sglang-diffusion-language-models"
+  ]
+}

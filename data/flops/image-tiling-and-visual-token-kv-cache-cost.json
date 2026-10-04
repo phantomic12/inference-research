@@ -1,0 +1,37 @@
+{
+  "id": "image-tiling-and-visual-token-kv-cache-cost",
+  "type": "flop",
+  "name": "Image tiling and visual token KV cache cost",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "pap-mm-llava-next",
+    "pixtral-12b-arxiv-2410-07073",
+    "navit-patch-n-pack-any-aspect-ratio-and-resolution-arxiv-2307-06"
+  ],
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Image tiling multiplies visual token count by the number of tiles. For a 4-tile image (2x2 grid), the LLM sees 4x the visual tokens. KV cache cost scales linearly with token count: KV_bytes = num_layers * num_kv_heads * head_dim * 2 * bytes_per_element. For a 7B model with 28 layers, 4 KV heads, 128 head_dim, bf16: 28*4*128*2*2 = 57,344 B/token. A 4-tile image at 448x448 (256 tokens per tile) = 1024 visual tokens = 57.3 MB of KV cache. A single 1024x1024 tile (Pixtral) = 4096 tokens = 229 MB of KV cache. The KV cache cost of visual tokens can exceed the model weights themselves.",
+  "bound_by": "memory",
+  "scales_with": [
+    "number of tiles (linear)",
+    "tokens per tile (linear)",
+    "num_layers (linear)",
+    "num_kv_heads (linear)",
+    "head_dim (linear)",
+    "bytes_per_element (linear - bf16=2, fp8=1)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Use fewer tiles - trade resolution for lower KV cost",
+    "Use Perceiver/Q-Former to compress visual tokens before LLM - 32-64 tokens regardless of tile count",
+    "Use FP8 KV cache - halves memory cost",
+    "Use vision encoder caching - avoid re-encoding same image",
+    "Use sliding window attention for visual tokens - only attend to recent visual tokens"
+  ],
+  "notes": "IMAGE TILING MULTIPLIES KV COST: When an image is split into tiles, each tile becomes its own set of visual tokens in the LLM's KV cache. A 4-tile image means 4x the visual tokens in the cache. This is the hidden cost of high-resolution multimodal inference. LLaVA-NeXT uses anyres tiling: a 448x448 image is split into a global view + 4 local crops (2x2 grid), each 448x448, so 5x the tokens of a single 448x448 image. Pixtral splits large images into 1024x1024 tiles: a 4096x4096 image is a 4x4 grid = 16 tiles = 65,536 visual tokens. The KV cache cost of visual tokens can exceed the model weights: a 7B model has ~14 GB of weights (bf16), but a 65,536-token image at 57,344 B/token = 3.6 GB of KV cache. For a 70B model with 80 layers, 8 KV heads, 128 head_dim: 80*8*128*2*2 = 327,680 B/token, so 65,536 tokens = 20 GB of KV cache. The token counts are from the model configs; the KV cache formula is standard."
+}

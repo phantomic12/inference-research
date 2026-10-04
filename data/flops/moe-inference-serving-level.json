@@ -1,0 +1,39 @@
+{
+  "id": "moe-inference-serving-level",
+  "type": "flop",
+  "name": "MoE at the inference level: routing overhead, load balancing, expert parallelism, and the memory-bandwidth story",
+  "class": "moe_routing",
+  "arithmetic_intensity": "MoE changes the memory-bandwidth story in a way that is the opposite of what the flop count suggests. A dense model with N params has flops = 2*N per token and bytes = 2*N (the weight stream), so AI = 1 flop/byte. An MoE with E experts, top-k, has flops = 2*N*(k/E) per token but bytes = 2*N (the entire expert weight set must be streamed), so AI = k/E flop/byte. For DeepSeek-V3 (256 experts, 8 per token): AI = 8/256 = 1/32 flop/byte. This is 32x worse than dense. The H100 ridge point is ~295 flop/byte, so an MoE decode step needs a batch of 32*295 = 9,440 to reach compute-bound where a dense model needs ~295. The routing overhead is a network problem: the all-to-all dispatch moves B*k*d*2 bytes per layer per step. At B=32, k=8, d=7168: 32*8*7168*2 = 3.67 MB per layer, ~220 MB per step across 61 layers. This is 0.3% of the expert weight stream (74 GB) but sits on the interconnect, not HBM, so it shows up as latency bubbles. The load-balancing problem at inference is that a hot expert inflates both compute and the receive buffer on one rank. Expert parallelism shards experts across devices, which means the all-to-all is unavoidable when experts are on different devices.",
+  "bound_by": "memory",
+  "scales_with": [
+    "batch_size (AI = B*k/E \u2014 the dominant lever, E/k times harder than dense)",
+    "num_experts and top_k (through k/E)",
+    "expert_parallel_degree (sharding splits bytes but adds all-to-all)",
+    "routing imbalance (a hot expert inflates compute and buffer on one rank)",
+    "weight_dtype (the only lever that reduces bytes)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Fused MoE kernels: gather -> grouped GEMM -> scatter in one launch",
+    "Block-sparse GEMM (MegaBlocks) to handle expert-size dynamism without padding",
+    "Expert pruning and merging (DeepSpeed-MoE reports up to 3.7x)",
+    "int4/fp8 expert weights to halve the bytes",
+    "Device-limited routing (DeepSeek-V3: M=4) to cap all-to-all fan-out",
+    "Auxiliary-loss-free load balancing (DeepSeek-V3 bias term) to avoid quality cost"
+  ],
+  "notes": "The existing moe-routing and moe-experts records cover the arithmetic. This record adds the inference-level serving picture. (1) The memory-bandwidth story: MoE has more weights to stream per token but fewer FLOPs per token. The net effect is that MoE is MORE memory-bound than dense, not less. A 671B MoE with 37B active is slower to serve than a dense 70B at the same batch size, because the memory roof is set by 671B while the flops are set by 37B. (2) The batch-size regime where MoE wins: at very large batch (B > 9440 for DeepSeek-V3), MoE becomes compute-bound and the flop advantage kicks in. At small batch, MoE is more memory-bound than dense. (3) Expert parallelism: sharding experts across devices is necessary for large MoE models, but it makes the all-to-all unavoidable. The all-to-all is the serving bottleneck, not the expert GEMM. (4) Load balancing at inference: the auxiliary loss shapes the router during training, but at inference the load is determined by the input distribution. A hot expert can cause one rank to become the bottleneck. DeepSeek-V3's auxiliary-loss-free bias term is the current best practice.",
+  "status": "draft",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "arch-deepseek-v3",
+    "arch-deepseekmoe",
+    "arch-hf-config-deepseek-v3",
+    "flop-deepspeed-moe",
+    "flop-megablocks"
+  ]
+}

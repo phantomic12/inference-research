@@ -1,0 +1,30 @@
+{
+  "id": "pue-colocation-1-9-not-1-2",
+  "type": "gotcha",
+  "name": "Colocation PUE is ~1.9, not the 1.2 often quoted: the 1.2 figure is hyperscale-only, and most third-party inference runs in colocation where the LBNL 2014 baseline shows midtier at 1.9 with cooling alone contributing 0.63",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "nrg2-lbnl-2016-us-dc-energy-report",
+    "nrg2-lbnl-2025-us-dc-energy-report",
+    "pwr2-vantage-power-density"
+  ],
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "pue",
+    "colocation",
+    "hyperscale",
+    "cooling-overhead",
+    "power-distribution",
+    "facility-efficiency",
+    "energy-per-token",
+    "carbon-accounting"
+  ],
+  "symptom": "A carbon or energy calculation for an inference deployment uses PUE = 1.2, producing an emissions estimate that is 35-40% too low for a colocation facility. The 1.2 figure is real — it is the LBNL 2014 baseline for hyperscale facilities — but it is the BEST case, not the typical case, and it applies to facilities that are structurally different from colocation: no UPS double-conversion loss, cooling at 0.16 (vs 0.63 for midtier), and transformer losses of 0.02 (vs 0.05). Most third-party inference runs in colocation, where the same LBNL table shows midtier PUE of 1.9. The error compounds when the PUE is applied to a board-level joules-per-token figure that already excludes host overhead — the result double-counts the efficiency of the facility while undercounting the energy of the machine.",
+  "root_cause": "The LBNL 2016 report (Table 4, '2014 PUE by Space Type') decomposes PUE by facility type: Closet 2.0, Room 2.5, Localized 2.0, Midtier 1.9, High-end 1.7, Hyperscale 1.2. The report states that service-provider space types are inclusive of colocation facilities. The midtier row decomposes as IT=1.0, transformer=0.05, UPS=0.20, cooling=0.63, lighting=0.02 — cooling alone contributes 0.63 of overhead per IT watt, and the UPS double-conversion loss adds 0.20. The hyperscale row has NO UPS term at all (distribution runs without double conversion) and cooling of only 0.16. The 2025 Update report gives a national all-equipment average of 1.45 for 2024 (down from 1.55 in 2018) and 1.145 for facilities serving AI equipment specifically — but these are modeled averages, not metered values for a specific colocation site. The Vantage Data Centers power page publishes 'annualized PUE under 1.3' for its facilities, which is better than the LBNL midtier baseline but still far from 1.2, and Vantage is a premium operator. The Google fleet average of 1.09 (2024) is a ceiling, not a typical value — it belongs to a fleet deliberately engineered for efficiency with custom power distribution and on-site generation.",
+  "workaround": "For any energy-per-token or carbon-per-token calculation, use a PUE that matches the facility type where the inference actually runs. For colocation: 1.9 (LBNL 2014 midtier baseline) or 1.3 (Vantage published, if that specific operator is used). For hyperscale: 1.2 (LBNL 2014) or 1.09 (Google fleet average, if that specific operator is used). For a modern AI-serving facility: 1.145 (LBNL 2025 modeled). Never mix a hyperscale PUE with a colocation deployment. State the PUE value and its source alongside any energy or carbon figure, just as the schema requires power_scope and energy_basis for joules-per-token.",
+  "severity": "major",
+  "notes": "THE 1.9 FIGURE IS FROM 2014. The LBNL 2025 Update does not publish a per-facility-type breakdown — it gives only national averages (1.45 all-equipment, 1.145 AI-serving). The 2014 table is retained in this repo because it is the only public source that decomposes PUE by facility type, and the structural differences between hyperscale and colocation (UPS presence, cooling architecture) have not changed. The 2025 report attributes the national average improvement to 'the continued shift in server energy use into the types of data centers that have the lowest PUEs, namely those deploying liquid cooling systems for AI servers' — a composition effect, not a retrofit effect. A colocation facility retrofitted for liquid cooling would improve its PUE, but the LBNL data does not quantify by how much. The Vantage figure of 'under 1.3' is a vendor claim from a premium operator and should be treated as an upper bound on what a well-run colocation facility can achieve, not as a typical value."
+}

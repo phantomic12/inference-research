@@ -1,0 +1,45 @@
+{
+  "id": "liquid-cooling-retrofit-lead-time-and-rack-power-limits",
+  "type": "gotcha",
+  "name": "Rack power limits (32kW air-cooled, 48kW liquid-cooled) determine whether a big die can be deployed at all: GB200 NVL72 draws ~120kW and GB300 NVL72 up to 140kW, requiring liquid cooling and a facility retrofit with 12-24 month lead times",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "pwr2-nvidia-dgx-gb200-hardware",
+    "pwr2-nvidia-blackwell-ultra-datasheet",
+    "pwr2-nvidia-blackwell-datasheet",
+    "pwr2-vantage-cooling",
+    "pwr2-vantage-power-density",
+    "pwr2-liquidstack-cdu"
+  ],
+  "class": "hardware",
+  "affects": [
+    "nvidia-gb200-nvl72",
+    "nvidia-b200",
+    "nvidia-b300",
+    "amd-instinct-mi325x",
+    "amd-instinct-mi350x",
+    "amd-instinct-mi355x"
+  ],
+  "concepts": [
+    "liquid-cooling",
+    "direct-to-chip",
+    "immersion-cooling",
+    "rack-power",
+    "rack-density",
+    "retrofit",
+    "cdu",
+    "passive-oam",
+    "cold-plate",
+    "facility-constraint",
+    "power-delivery",
+    "54v-ubb",
+    "lead-time"
+  ],
+  "symptom": "A procurement plan assumes a new GPU rack can be dropped into an existing colocation facility. The plan fails at the facility integration stage: the rack draws 120-140 kW, the facility delivers 8-32 kW per rack, the chassis has no cold plates, and the building has no coolant distribution. The failure is not a performance or price problem — it is a physical infrastructure constraint that was not checked before the procurement conversation started. The lead time for a liquid-cooling retrofit (CDU installation, manifold routing, coolant supply, leak detection, power shelf upgrades) is 12-24 months in an existing facility, which is longer than the hardware lead time for the GPUs themselves.",
+  "root_cause": "The GB200 NVL72 rack draws approximately 120 kW (NVIDIA DGX GB200 hardware guide, verbatim: 'The rack power consumption is approximately 120kW'). The GB300 NVL72 uses Blackwell Ultra GPUs with 'Configurable up to 1,400 W' Max TDP per GPU (Blackwell Ultra datasheet), and 72 GPUs at that TDP would be 100.8 kW of GPU alone, with the full rack likely drawing 130-140 kW including Grace CPUs, NVLink switches, networking and cooling. The Blackwell datasheet states the GB200 NVL72 is 'fully liquid-cooled' and the GB300 NVL72 is a 'fully liquid-cooled, rack-scale architecture'. The Vantage Data Centers power page publishes the facility-side constraint: standard racks at 8.3 kW average, up to 20 kW with traditional air cooling, and 'more than 50kW racks using liquid to rack cooling solutions'. Even the liquid-cooled tier at Vantage (50+ kW) is well below the 120-140 kW that a GB200/GB300 NVL72 rack requires. The LiquidStack CDU product page shows the density ceiling of the retrofit market: CDU-1MW supports 'rack densities up to 1.35MW per row', which is the right order of magnitude for a GB200/GB300 deployment but requires a purpose-built or heavily retrofitted facility. The Vantage cooling page confirms the retrofit posture: 'Vantage has utilized various cooling technologies since our inception, including air-cooled chillers, water-cooled chillers, indirect heat exchange and liquid to the rack' and is 'committed to an air-cooled chiller model as our preferred design moving forward', with direct-to-chip described as 'ideal for a build-to-suit data center' — not a retrofit.",
+  "workaround": "Check facility power and cooling capability BEFORE selecting the accelerator. For a GB200 or GB300 NVL72 deployment, the facility must deliver 120-140 kW per rack with liquid cooling (cold plates on every GPU and CPU position, coolant supply at the right temperature and flow, CDU capacity, leak detection). This is a build-to-suit or major retrofit project, not a colocation rental. For a retrofit, budget 12-24 months for CDU installation, manifold routing, coolant supply, power shelf upgrades (the GB200/GB300 racks use 50-51V DC busbar, not standard AC), and facility integration testing. The LiquidStack CDU-1MW quick-ship ('live in weeks') is the fastest path to liquid cooling capacity, but it still requires facility-side power and space preparation. Do not assume a 50 kW liquid-cooled colocation rack can be upgraded to 120 kW — the power delivery, cooling distribution and structural capacity are all different at that scale.",
+  "severity": "blocker",
+  "notes": "THE 120 kW FIGURE IS FOR GB200 NVL72. The GB300 NVL72 with Blackwell Ultra at 1,400 W per GPU TDP would draw more, but NVIDIA has not published a rack-level power figure for GB300 NVL72 at the time of this record. The 130-140 kW estimate for GB300 is derived from the per-GPU TDP and the GB200 rack overhead ratio, and should be treated as an estimate, not a vendor-published figure. The Vantage 50+ kW liquid-cooled rack limit is a vendor claim from one operator; other colocation facilities may differ. The 12-24 month retrofit lead time is an industry rule of thumb, not a vendor-published figure — it is consistent with the LBNL 'Queued Up' 2026 report finding that median interconnection request-to-commercial-operation duration exceeded 5 years for generation projects, but load-side interconnection (which is what a data center waits on) is typically faster. The key point is that the retrofit lead time is measured in quarters, not weeks, and is longer than the GPU procurement lead time."
+}

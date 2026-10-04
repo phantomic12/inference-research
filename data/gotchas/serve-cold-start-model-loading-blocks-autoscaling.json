@@ -1,0 +1,26 @@
+{
+  "id": "serve-cold-start-model-loading-blocks-autoscaling",
+  "type": "gotcha",
+  "name": "Cold start cost of loading a model makes reactive autoscaling structurally late",
+  "class": "config",
+  "affects": [],
+  "concepts": [
+    "autoscaling",
+    "cold-start",
+    "startup-delay",
+    "model-loading",
+    "scale-from-zero"
+  ],
+  "symptom": "New replicas take 2-10 minutes to start because multi-gigabyte weights must load from storage. By the time the new replica is ready, the traffic spike has passed. The fleet is always either over-provisioned (wasting money) or under-provisioning (dropping SLOs).",
+  "root_cause": "LLM models are large (10-100+ GB). Loading weights from disk/network takes minutes. Kubernetes HPA reacts to current load, but by the time new pods are scheduled, pulled, and loaded, the load spike has passed. This is a structural problem: no amount of reaction speed can beat the actuation delay. The 2026 paper 'Decomposing Predictive Kubernetes Autoscaling for Large Language Model Serving Under Long Startup Delays' (arXiv:2609.20874) shows that reactive QPS-based scaling has 53% TTFT SLO violations, while predictive scaling with startup-delay lookahead reduces this to 0.5%.",
+  "workaround": "Use predictive autoscaling: forecast load and start replicas before the spike. KServe with KEDA supports idleReplicaCount=0 for scale-to-zero, but this requires predictive scaling to work. Pre-warm replicas during known peak hours. Use model caching (KServe LocalModel, OCI model delivery) to reduce load time. Consider smaller models or LoRA adapters that load faster.",
+  "severity": "blocker",
+  "notes": "This is the fundamental tension in LLM autoscaling: models are too large to load quickly, but traffic is too spiky to pre-provision. The solution is predictive scaling - forecasting load and starting replicas before the spike. The arXiv paper shows that a simple EWMA with delay-aware lookahead captures most of the benefit, and that Kalman filters do NOT consistently beat EWMA (a useful negative result). KServe v0.21.0's KEDA integration with idleReplicaCount=0 is the first production-ready scale-to-zero path, but it requires predictive scaling to be useful.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-kserve-keda-autoscaling",
+    "serve-kserve-release-notes"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "serve-time-slicing-no-throughput-isolation",
+  "type": "gotcha",
+  "name": "Time-slicing provides no throughput isolation - one tenant's load silently degrades all others",
+  "class": "hardware",
+  "affects": [],
+  "concepts": [
+    "time-slicing",
+    "gpu-sharing",
+    "multi-tenant",
+    "throughput-isolation"
+  ],
+  "symptom": "One tenant runs a large batch job, and all other tenants on the same GPU experience latency degradation. There is no isolation.",
+  "root_cause": "Time-slicing (the default GPU sharing mode) schedules GPU kernels from different processes in a time-shared manner. There is no throughput guarantee - a process that submits large kernels can monopolize the GPU. Unlike MIG, time-slicing does not partition SMs or memory, so there is no isolation.",
+  "workaround": "Use MIG for hardware-level isolation. Alternatively, use separate GPUs per tenant. For development/testing, time-slicing is acceptable; for production multi-tenant serving, MIG or separate GPUs are required.",
+  "severity": "major",
+  "notes": "Time-slicing is the default GPU sharing mode and provides zero isolation. It is suitable only for development and testing. For production multi-tenant serving, MIG is the minimum acceptable isolation level. The tradeoff is that MIG has its own limitations (no NCCL, shared NVLink).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-mig-nvidia-docs"
+  ]
+}

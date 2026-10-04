@@ -1,0 +1,44 @@
+{
+  "id": "local-power-thermal-sustained-clocks",
+  "type": "gotcha",
+  "name": "Sustained clocks are lower than burst clocks: power and thermal limits in compact cases",
+  "class": "hardware",
+  "affects": [
+    "nvidia-rtx-5090",
+    "nvidia-rtx-5080",
+    "nvidia-rtx-5070-ti",
+    "local-nvidia-rtx-5070",
+    "nvidia-rtx-pro-6000-blackwell",
+    "apple-m4-max",
+    "apple-m3-max",
+    "apple-m3-ultra",
+    "apple-m1-ultra",
+    "local-apple-m4-pro",
+    "local-apple-m3-pro",
+    "local-apple-m5",
+    "local-apple-m5-pro",
+    "local-apple-m5-max",
+    "local-apple-m5-ultra"
+  ],
+  "concepts": [
+    "tdp",
+    "tgp",
+    "power-limit",
+    "thermal-throttling",
+    "sustained-clock",
+    "burst-clock",
+    "boost-clock"
+  ],
+  "symptom": "A GPU's sustained inference performance is significantly lower than its burst performance. A card rated at 575W TGP (RTX 5090) may sustain only 400-450W under continuous load, reducing clocks by 10-20%. A laptop SoC may reduce power by 30-50% under sustained load to manage thermals.",
+  "root_cause": "Consumer and mobile GPUs are designed for burst workloads (gaming, short compute tasks) and are thermally constrained by their cooling solution. Under sustained load (like LLM inference), the GPU hits power and thermal limits and reduces clocks to stay within the envelope. Datacenter GPUs (H100, B200) are designed for sustained load with higher power budgets and better cooling. The gap between burst and sustained performance is 10-30% for desktop GPUs and 30-50% for laptop SoCs.",
+  "workaround": "Measure sustained performance, not burst. Run a continuous inference benchmark for 5-10 minutes and measure the average tokens/sec, not the peak. For desktop GPUs, ensure adequate case cooling. For laptops, use a cooling pad or accept the reduced performance. Power-limit the GPU to a sustainable level rather than letting it throttle.",
+  "severity": "major",
+  "notes": "This is the single most important gotcha for local inference. A benchmark that measures 30 seconds of inference will show burst performance. A benchmark that measures 30 minutes will show sustained performance. The difference is 10-30% for desktop GPUs and 30-50% for laptops. For the RTX 5090 at 575W TGP, sustained power is typically 400-450W in a well-ventilated case. For the M5 Max in a MacBook Pro, sustained power is typically 40-50W vs a 70W burst. Always measure sustained performance for local inference planning.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper",
+    "local-apple-macbook-pro-m5-tech-specs"
+  ]
+}

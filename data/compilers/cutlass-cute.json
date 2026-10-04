@@ -1,0 +1,47 @@
+{
+  "id": "cutlass-cute",
+  "type": "compiler",
+  "name": "CUTLASS / CuTe",
+  "repo": "NVIDIA/cutlass",
+  "language": "C++",
+  "license": "BSD-3-Clause",
+  "first_release_year": 2017,
+  "category": "template-library",
+  "target_backends": ["cuda"],
+  "input_languages": ["cutlass-cpp"],
+  "output_artifacts": ["cubin"],
+  "compilation_strategy": "template-instantiation",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "TensorRT-LLM uses CUTLASS kernels for GEMM and attention",
+    "vLLM uses CUTLASS for some fused kernels",
+    "PyTorch uses CUTLASS for some GEMM operations",
+    "FlashAttention-2/3 use CUTLASS-style abstractions"
+  ],
+  "strengths": [
+    "Highest performance: CUTLASS achieves the best known performance for GEMM on NVIDIA GPUs",
+    "Mature: nearly a decade of development, extensive architecture support (Volta through Blackwell)",
+    "Composable: hierarchical decomposition allows mixing and matching tiling strategies",
+    "CuTe DSL (CUTLASS 4.0+): Python interface that provides CUTLASS-level performance with a smoother learning curve",
+    "Extensive examples: 50+ example kernels covering GEMM, convolution, attention, and more"
+  ],
+  "weaknesses": [
+    "Very steep learning curve: C++ template metaprogramming is one of the hardest paradigms in systems programming",
+    "Long compile times: template instantiation can take minutes for complex kernels",
+    "NVIDIA-only: no AMD, Intel, or other GPU support",
+    "CuTe DSL is still in beta (as of CUTLASS 4.8, Sept 2026): not yet production-ready",
+    "Debugging is extremely difficult: template errors produce thousands-line error messages",
+    "No autotuning: tile sizes and other parameters must be chosen manually"
+  ],
+  "learning_curve": "very-high",
+  "compile_time_seconds": 300.0,
+  "notes": "CUTLASS is NVIDIA's C++ template library for high-performance GEMM and related computations. It provides abstractions for hierarchical decomposition (thread block, warp, and thread-level tiling) and data movement (async copy, tensor core MMA). CUTLASS has been the foundation for nearly all high-performance NVIDIA GPU kernels since Volta. The learning curve is extremely steep: C++ template metaprogramming requires understanding of partial specialization, SFINAE, and complex type computations. Compile times are significant: a single complex kernel can take minutes to compile due to template instantiation. CUTLASS 4.0 introduced CuTe, a Python DSL that provides the same abstractions with a smoother learning curve and faster compile times. CuTe DSL is in public beta (as of 4.8, Sept 2026) and is expected to graduate by end of summer 2026. For production inference, CUTLASS is used indirectly through TensorRT-LLM and vLLM rather than directly by most teams. The realistic learning curve for CUTLASS C++ is 3-6 months to become productive; for CuTe DSL, 2-4 weeks.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "kern-cutlass-github",
+    "cutlass-3-x-and-cute-documentation"
+  ]
+}

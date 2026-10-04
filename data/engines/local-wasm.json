@@ -1,0 +1,66 @@
+{
+  "id": "local-wasm",
+  "type": "engine",
+  "name": "WebAssembly (WASM) inference",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "local-wasm-spec"
+  ],
+  "repo": "WebAssembly/spec",
+  "languages": [
+    "C++",
+    "Rust",
+    "AssemblyScript"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2017,
+  "design_goal": [
+    "ubiquitous-hardware",
+    "minimal-deps",
+    "local/edge"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "wasm-simd",
+    "wasm-threads"
+  ],
+  "supported_formats": [
+    "gguf",
+    "onnx",
+    "wasm"
+  ],
+  "notable_features": [
+    "WebAssembly enables near-native performance in browsers and standalone runtimes",
+    "WASM SIMD (128-bit SIMD) is critical for LLM inference - shipped in all major browsers",
+    "WASM threads enable multi-threaded inference via SharedArrayBuffer",
+    "llama.cpp WASM build runs GGUF models in the browser",
+    "ONNX Runtime Web runs ONNX models with WASM backend",
+    "Standalone WASM runtimes (Wasmtime, WasmEdge) enable server-side WASM inference"
+  ],
+  "hardware_caveats": [
+    "Performance is 2-10x slower than native CPU inference without SIMD",
+    "WASM SIMD is 128-bit vs 256-bit AVX2 - half the SIMD throughput",
+    "WASM threads require SharedArrayBuffer and cross-origin isolation",
+    "Memory is limited by WASM linear memory (4GB max in most runtimes)",
+    "No direct GPU access - WASM is CPU-only (WebGPU is the GPU path)",
+    "Smaller ecosystem than native inference - fewer optimized kernels"
+  ],
+  "best_for": [
+    "Cross-platform inference in browsers and standalone runtimes",
+    "Server-side inference with WASM sandboxing (Wasmtime, WasmEdge)",
+    "Applications requiring near-native performance without native compilation",
+    "Small to medium models (1-13B) with WASM SIMD"
+  ],
+  "avoid_for": [
+    "Maximum performance - native CPU/GPU inference is 2-10x faster",
+    "Large models (70B+) - WASM memory constraints are too tight",
+    "GPU-accelerated inference - WASM is CPU-only",
+    "Production serving - no batching, scheduling, or multi-tenant support"
+  ],
+  "docs_url": "https://webassembly.org/",
+  "notes": "WebAssembly enables near-native CPU inference in browsers and standalone runtimes. WASM SIMD (128-bit) is critical for LLM inference performance. The primary use cases are llama.cpp WASM build (GGUF models in browser) and ONNX Runtime Web (ONNX models). WASM is CPU-only - WebGPU is the GPU path. Performance is 2-10x slower than native CPU inference. WASM is the right choice for cross-platform deployment and sandboxed inference, but not for maximum performance."
+}

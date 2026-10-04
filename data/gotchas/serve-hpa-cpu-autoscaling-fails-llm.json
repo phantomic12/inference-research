@@ -1,0 +1,27 @@
+{
+  "id": "serve-hpa-cpu-autoscaling-fails-llm",
+  "type": "gotcha",
+  "name": "CPU-based HPA autoscaling fails for LLM serving because load is not visible in request count",
+  "class": "config",
+  "affects": [],
+  "concepts": [
+    "autoscaling",
+    "hpa",
+    "kubernetes",
+    "llm-serving",
+    "gpu-utilization"
+  ],
+  "symptom": "HPA scales on CPU utilization, but LLM inference is GPU-bound and CPU utilization stays low even when the GPU is saturated. A single request can hold a GPU for minutes during decode, so request count does not correlate with GPU load. The HPA never scales up, and the fleet is under-provisioned.",
+  "root_cause": "Kubernetes HPA defaults to CPU/memory utilization metrics. LLM inference is GPU-bound: the GPU does the compute while the CPU mostly waits on GPU kernels. CPU utilization stays low even when the GPU is fully saturated. Additionally, a single long-running decode request can hold a GPU for minutes, so request count (QPS) does not reflect actual GPU load - 10 concurrent requests may use less GPU than 1 long-context request.",
+  "workaround": "Use KEDA with custom metrics from Prometheus. Scale on LLM-specific metrics: KV cache utilization rate, queue depth, or TTFT. KServe v0.21.0 added direct KEDA scaling with idleReplicaCount=0 for true scale-to-zero. Alternatively, use GPU utilization via DCGM exporter, but note that GPU utilization is also a poor proxy for LLM load because batching means the GPU can be 'utilized' while throughput is low.",
+  "severity": "blocker",
+  "notes": "This is the single most common production mistake in LLM serving on Kubernetes. The HPA is designed for web services where CPU utilization correlates with load. LLM serving breaks this assumption completely. The fix is to scale on metrics that actually reflect LLM load: KV cache utilization (how full is the GPU memory), queue depth (how many requests are waiting), or TTFT (time to first token). KEDA with Prometheus scaler is the standard solution. KServe v0.21.0 added direct KEDA integration.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-k8s-hpa-docs",
+    "serve-keda-docs",
+    "serve-kserve-keda-autoscaling"
+  ]
+}

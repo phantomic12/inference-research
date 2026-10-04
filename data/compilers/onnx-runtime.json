@@ -1,0 +1,46 @@
+{
+  "id": "onnx-runtime",
+  "type": "compiler",
+  "name": "ONNX Runtime",
+  "repo": "microsoft/onnxruntime",
+  "language": "C++",
+  "license": "MIT",
+  "first_release_year": 2018,
+  "category": "runtime",
+  "target_backends": ["cuda", "rocm", "cpu-avx2", "cpu-avx512", "xnnpack", "opencl", "webgpu"],
+  "input_languages": ["onnx"],
+  "output_artifacts": ["c"],
+  "compilation_strategy": "graph-rewrite",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "Used in production by Microsoft (Office, Azure, Bing)",
+    "Cross-platform: Windows, Linux, macOS, iOS, Android",
+    "Extensible execution provider framework"
+  ],
+  "strengths": [
+    "Cross-platform: runs on Windows, Linux, macOS, iOS, Android",
+    "Graph optimizations: constant folding, node elimination, fusion (GEMM+Activation, Attention, LayerNorm, etc.)",
+    "Execution provider framework: extensible to new hardware (CUDA, TensorRT, OpenVINO, DirectML, etc.)",
+    "Production-proven: used by Microsoft in production services",
+    "ONNX format: framework-neutral model representation",
+    "Offline optimization: can save optimized graph to disk"
+  ],
+  "weaknesses": [
+    "Graph-level only: does not generate new kernels, only optimizes existing ONNX operators",
+    "No autotuning: relies on heuristics for operator selection and fusion",
+    "Limited fusion compared to Triton/Inductor: cannot fuse arbitrary operations",
+    "ONNX export: not all PyTorch/TensorFlow models export cleanly to ONNX",
+    "Performance gap: for GPU inference, ONNX Runtime typically underperforms native Triton or TensorRT kernels"
+  ],
+  "learning_curve": "low",
+  "compile_time_seconds": 5.0,
+  "notes": "ONNX Runtime is a cross-platform inference runtime that optimizes and executes ONNX models. It is not a kernel compiler: it does not generate new GPU kernels, but instead applies graph-level optimizations (constant folding, node elimination, operator fusion) and partitions the graph across execution providers. The execution provider framework is its key strength: the same model can run on CUDA, TensorRT, OpenVINO, DirectML, or CPU by simply changing the provider configuration. For production deployment, ONNX Runtime is most valuable when cross-platform support is required (e.g., Windows + Linux + mobile). For pure GPU inference on NVIDIA hardware, TensorRT or Triton-based engines typically outperform ONNX Runtime. The graph optimizations are effective but limited compared to what Triton or Inductor can achieve: ONNX Runtime can fuse GEMM+Activation or Attention, but cannot fuse arbitrary sequences of operations into a single kernel.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "onnx-runtime-documentation",
+    "onnx-runtime-execution-providers"
+  ]
+}

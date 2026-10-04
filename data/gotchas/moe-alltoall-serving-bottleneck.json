@@ -1,0 +1,28 @@
+{
+  "id": "moe-alltoall-serving-bottleneck",
+  "type": "gotcha",
+  "class": "hardware",
+  "affects": [],
+  "concepts": [
+    "moe",
+    "expert-parallelism",
+    "all-to-all",
+    "deepseek",
+    "mixtral",
+    "expert-choice-routing"
+  ],
+  "symptom": "The all-to-all communication in MoE expert parallelism is the serving bottleneck, not the expert GEMM. At decode batch B, the dispatch volume per step per layer is B*k*d*2 bytes outbound and the same inbound on combine. This sits on the interconnect, not HBM, so it shows up as latency bubbles and jitter rather than bandwidth saturation.",
+  "root_cause": "When experts are sharded across devices (expert parallelism), each token must be sent to the devices holding its top-k experts. This is an all-to-all operation: every device sends a portion of every token to every other device. The volume is B*k*d*2 bytes per layer per step. At B=32, k=8, d=7168 (DeepSeek-V3 geometry): 32*8*7168*2 = 3.67 MB per layer, ~220 MB per step across 61 layers. This is 0.3% of the expert weight stream (74 GB) but sits on a different resource (the interconnect).",
+  "workaround": "Use device-limited routing (DeepSeek-V3: M=4) to cap the all-to-all fan-out. Use fused MoE kernels that do gather -> grouped GEMM -> scatter in one launch. Overlap all-to-all with compute. Use expert-parallel communication/computation fusion. Avoid CPU synchronization in the dispatch path (DeepEP's do_cpu_sync=False).",
+  "severity": "major",
+  "notes": "The existing moe-routing flop record covers the arithmetic. This gotcha covers the practical serving consequence: the all-to-all is the bottleneck, not the expert GEMM. This means interconnect choice matters twice for MoE: once for weights staying local, once for the all-to-all. The all-to-all is latency-shaped, not bandwidth-shaped, so it shows up as bubbles and jitter. The single highest-leverage fix is removing the CPU sync in the dispatch path.",
+  "name": "MoE all-to-all communication is the serving bottleneck",
+  "status": "draft",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "arch-deepseek-v3",
+    "arch-deepseekmoe",
+    "flop-deepspeed-moe"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "ssm-state-no-paging-eviction",
+  "type": "gotcha",
+  "class": "config",
+  "affects": [],
+  "concepts": [
+    "kv-cache",
+    "paged-attention",
+    "ssm",
+    "mamba",
+    "hybrid-attention-ssm",
+    "continuous-batching"
+  ],
+  "symptom": "An SSM layer's recurrent state cannot be paged, evicted, or compressed like KV cache. It is a fixed-size per-sequence tensor that must be resident in HBM for the entire decode. Standard KV cache management (paged attention, eviction, prefix caching) does not apply to SSM layers.",
+  "root_cause": "The SSM state is a summary of all previous tokens, not a cache of individual token keys/values. It cannot be decomposed into per-token blocks that can be individually evicted. The state is d_inner * N elements per layer, and it is updated every decode step. There is no mechanism to 'page out' part of the state without losing information.",
+  "workaround": "Allocate the SSM state contiguously and never evict it. Do not use KV-style paged-attention machinery for SSM layers. Batch the state update across sequences so the state GEMM gets a real M dimension. Use fp8 state to halve the per-sequence cost. Cache the state across turns of multi-turn conversations so a resumed session skips prefill entirely.",
+  "severity": "major",
+  "notes": "This is a fundamental difference between SSM and attention for serving. KV cache can be paged, evicted, and compressed (GQA, MLA, sliding window, quantization). SSM state cannot. This means the memory management strategy for hybrid models must be split: KV cache for attention layers, fixed state for SSM layers. The fixed state is a per-sequence cost that never amortizes with batch, so at very large batch a pure-attention model with paged KV can hold more total tokens than a hybrid with 96 MiB/seq of undividable state.",
+  "name": "SSM state cannot be paged or evicted like KV cache",
+  "status": "draft",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "arch-mamba",
+    "arch-nemotron-h",
+    "arch-hf-config-nemotron-h"
+  ]
+}

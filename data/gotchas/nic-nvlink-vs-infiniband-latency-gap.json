@@ -1,0 +1,34 @@
+{
+  "id": "nic-nvlink-vs-infiniband-latency-gap",
+  "type": "gotcha",
+  "name": "Intra-node NVLink latency is ~10x lower than inter-node InfiniBand latency, dictating TP vs PP placement",
+  "class": "hardware",
+  "affects": [
+    "nvlink-4",
+    "nvswitch-4",
+    "nic-connectx7-ndr-400gbps",
+    "nic-connectx8-xdr-800gbps"
+  ],
+  "concepts": [
+    "nvlink",
+    "infiniband",
+    "latency",
+    "tensor-parallel",
+    "pipeline-parallel",
+    "intra-node",
+    "inter-node",
+    "collective-communication"
+  ],
+  "symptom": "Tensor-parallel sharding across a node boundary (using InfiniBand instead of NVLink) incurs ~10x higher latency per collective operation, which can dominate inference time for small-batch or low-latency workloads.",
+  "root_cause": "NVLink provides ~25 GB/s per link per direction with sub-microsecond latency (the physical link is on the same board or backplane). InfiniBand NDR provides 50 GB/s per port per direction but with ~1-2 microsecond latency due to the network interface card, switch hops, and protocol processing. The latency difference is approximately 10x. For tensor-parallel, every layer boundary requires an all-reduce, so the latency penalty is paid per layer. For pipeline-parallel, communication happens only at stage boundaries, so the latency penalty is amortized over a full pipeline stage.",
+  "workaround": "Keep tensor-parallel groups within a single node (8 GPUs with NVSwitch) to use NVLink. Use pipeline-parallel across nodes to minimize the number of inter-node collectives. For MoE models, use expert-parallel within a node if possible. The general rule: TP within node, PP across nodes, DP across nodes.",
+  "severity": "major",
+  "notes": "This is the fundamental reason the 8-GPU node exists as a unit of scaling. The 10x latency gap means that a TP=8 configuration across 2 nodes (4 GPUs each) will be significantly slower than TP=8 within a single node, even if the aggregate bandwidth is similar. The exact latency numbers depend on the specific hardware and NCCL version, but the order-of-magnitude difference is consistent across generations.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "nic-nccl-docs",
+    "nic-connectx7-datasheet"
+  ]
+}

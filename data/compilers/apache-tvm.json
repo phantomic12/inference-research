@@ -1,0 +1,44 @@
+{
+  "id": "apache-tvm",
+  "type": "compiler",
+  "name": "Apache TVM",
+  "repo": "apache/tvm",
+  "language": "Python",
+  "license": "Apache-2.0",
+  "first_release_year": 2017,
+  "category": "compiler-framework",
+  "target_backends": ["cuda", "rocm", "metal", "vulkan", "cpu-avx2", "opencl"],
+  "input_languages": ["python", "pytorch", "tensorflow", "onnx", "tflite"],
+  "output_artifacts": ["c", "llvm-ir"],
+  "compilation_strategy": "aot",
+  "autotuning": true,
+  "production_ready": false,
+  "production_evidence": [
+    "Used in some production deployments via Apache TVM Unity (Relax)",
+    "No major inference engine uses TVM as its primary compilation path"
+  ],
+  "strengths": [
+    "Python-first: most transformations are customizable in Python, lowering the barrier to compiler development",
+    "Cross-level design: TensorIR (tensor-level) + Relax (graph-level) enables joint optimization",
+    "Auto-tuning: MetaSchedule provides search-based auto-tuning",
+    "Broad hardware support: CUDA, ROCm, Metal, Vulkan, CPU, OpenCL",
+    "Decade of research: extensive publications and a mature optimization pipeline"
+  ],
+  "weaknesses": [
+    "No major production inference engine uses TVM as its primary path: vLLM, TensorRT-LLM, and SGLang all use Triton or hand-written CUDA",
+    "Compilation time is significant: AOT compilation with auto-tuning can take minutes to hours for complex models",
+    "The project has undergone multiple redesigns (TVM 0.x -> 1.x -> Relax), creating instability",
+    "Smaller community than Triton: fewer contributors, less industry adoption",
+    "Performance gap: for LLM inference, TVM-compiled models typically underperform Triton or hand-written CUDA kernels",
+    "Complexity: the cross-level design adds conceptual overhead without clear production benefits"
+  ],
+  "learning_curve": "high",
+  "compile_time_seconds": 300.0,
+  "notes": "Apache TVM is a research-oriented ML compiler framework that has been in development for nearly a decade. Despite extensive research contributions (TensorIR, Relax, MetaSchedule, DLight), it has not achieved significant production adoption for LLM inference. The fundamental issue is that the research community has moved to MLIR-based approaches (Triton, IREE, XLA), while TVM's custom IR stack has not kept pace. The auto-tuning capability is powerful but expensive: searching over the configuration space for a complex model can take hours. For inference workloads where compile time matters (e.g., serverless, edge deployment), this is a significant disadvantage. The project remains valuable for research and for non-LLM workloads (e.g., mobile, embedded), but for GPU-based LLM inference, Triton and hand-written CUDA dominate.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "apache-tvm-documentation"
+  ]
+}

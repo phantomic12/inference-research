@@ -1,0 +1,72 @@
+{
+  "id": "niche-kserve",
+  "type": "engine",
+  "name": "KServe",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-kserve-github",
+    "serve-kserve-docs-llmisvc",
+    "serve-kserve-release-notes",
+    "serve-kserve-keda-autoscaling"
+  ],
+  "repo": "kserve/kserve",
+  "languages": [
+    "Go",
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2019,
+  "design_goal": [
+    "production",
+    "multi-model",
+    "kubernetes-native",
+    "standardized-inference"
+  ],
+  "scheduling": [
+    "request-routing",
+    "prefix-cache",
+    "disaggregated-prefill-decode",
+    "KV-aware-routing"
+  ],
+  "supported_backends": [
+    "none (orchestration layer - drives vLLM, SGLang, TensorRT-LLM, Triton)"
+  ],
+  "supported_formats": [
+    "passthrough (does not load weights - orchestrates inference engines)"
+  ],
+  "notable_features": [
+    "CNCF incubating project (joined 2025-11-11) - the Kubernetes-native serving standard",
+    "LLMInferenceService CRD with prefix-aware routing, disaggregated serving, and fine-grained GPU scheduling",
+    "InferencePool and InferenceModel CRDs for multi-model routing with EPP (Endpoint Picker Pod)",
+    "Direct KEDA scaling support (v0.21.0) with idleReplicaCount=0 for true scale-to-zero",
+    "Canary traffic splitting for inference services",
+    "NixlConnector for P/D engines so KV actually transfers",
+    "DRA (Dynamic Resource Allocation) support via resourceClaims",
+    "OCI model delivery with measured startup benchmarks",
+    "6070 stars, active development with 100+ PRs per release"
+  ],
+  "hardware_caveats": [
+    "Kubernetes is not optional - the entire architecture is built around K8s CRDs and controllers",
+    "LLMInferenceService is v1alpha2 - still alpha API surface",
+    "Requires Envoy Gateway for traffic routing - additional infrastructure dependency",
+    "EPP (Endpoint Picker Pod) adds a hop to every request - latency cost for routing intelligence",
+    "KEDA integration is new (v0.21.0) and not yet battle-tested in production",
+    "Multi-node disaggregated serving requires RDMA-capable fabric"
+  ],
+  "best_for": [
+    "Kubernetes-native LLM serving with standardized APIs",
+    "Multi-model fleets where requests should route to the model with the best cache hit",
+    "Teams already invested in Kubernetes who want a vendor-neutral serving layer",
+    "Autoscaling on LLM-specific metrics (KV cache utilization, queue depth) via KEDA"
+  ],
+  "avoid_for": [
+    "Non-Kubernetes environments - the entire architecture assumes K8s",
+    "Single-model single-node serving where the overhead is not justified",
+    "Teams needing a stable GA API - LLMInferenceService is still alpha",
+    "Low-latency single-request serving where the EPP hop matters"
+  ],
+  "docs_url": "https://kserve.github.io/website/",
+  "notes": "KServe is the Kubernetes-native inference orchestration layer. It does not run inference itself - it drives vLLM, SGLang, TensorRT-LLM, and Triton Inference Server. The LLMInferenceService CRD is the key abstraction for LLM-specific features: prefix-aware routing (send requests to the replica with the best KV cache hit), disaggregated serving (separate prefill/decode pools), and fine-grained GPU scheduling. The EPP (Endpoint Picker Pod) is the routing brain - it makes per-request routing decisions based on cache state, load, and latency. KServe v0.21.0 (2026-09-25) added direct KEDA scaling with idleReplicaCount=0 for true scale-to-zero, which is the first production-ready path for LLM-specific autoscaling on Kubernetes. The project joined CNCF as an incubating project in November 2025."
+}

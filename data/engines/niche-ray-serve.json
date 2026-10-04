@@ -1,0 +1,66 @@
+{
+  "id": "niche-ray-serve",
+  "type": "engine",
+  "name": "Ray Serve",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-ray-docs"
+  ],
+  "repo": "ray-project/ray",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2022,
+  "design_goal": [
+    "multi-model",
+    "model-composition",
+    "ease-of-use",
+    "flexible-scheduling"
+  ],
+  "scheduling": [
+    "request-routing",
+    "dynamic-batching",
+    "fractional-gpu"
+  ],
+  "supported_backends": [
+    "none (orchestration layer - drives any Python callable)"
+  ],
+  "supported_formats": [
+    "passthrough (does not load weights - wraps Python callables)"
+  ],
+  "notable_features": [
+    "Framework-agnostic model serving - wraps any Python callable as a deployment",
+    "Model composition via DeploymentHandles - build complex inference pipelines in Python",
+    "Dynamic request batching for LLM workloads",
+    "Multi-node/multi-GPU serving with flexible scheduling",
+    "Fractional GPUs - share GPU resources across deployments",
+    "Response streaming for LLM workloads",
+    "Built on Ray core - scales to many machines",
+    "44k stars, active development"
+  ],
+  "hardware_caveats": [
+    "Python-only - no Go or Rust core",
+    "Fractional GPU sharing is not the same as MPS - it is Ray's own scheduling, not CUDA MPS",
+    "Model composition adds latency - each hop in the composition graph is a network call",
+    "Not Kubernetes-native - runs on Ray clusters, not K8s (though KubeRay provides a bridge)",
+    "Dynamic batching is per-deployment, not global - no cross-deployment batching",
+    "No built-in prefix-aware routing or KV cache management"
+  ],
+  "best_for": [
+    "Multi-model serving with complex composition (e.g., LLM + reranker + guardrail)",
+    "Teams already using Ray for training who want to use the same framework for serving",
+    "Python-heavy inference pipelines that need flexible composition",
+    "Fractional GPU sharing across many small models"
+  ],
+  "avoid_for": [
+    "Kubernetes-native deployments - Ray Serve is not K8s-native",
+    "Low-latency single-model serving where the composition overhead matters",
+    "Teams needing prefix-aware routing or KV cache management",
+    "Non-Python inference engines"
+  ],
+  "docs_url": "https://docs.ray.io/en/latest/serve/index.html",
+  "notes": "Ray Serve is a model serving library built on Ray. It is framework-agnostic and wraps any Python callable as a deployment. The key differentiator is model composition - you can build complex inference pipelines (LLM + reranker + guardrail) as a graph of deployments. Ray Serve supports dynamic request batching, multi-node/multi-GPU serving, and fractional GPU sharing. However, it is not Kubernetes-native (KubeRay provides a bridge), and it lacks LLM-specific features like prefix-aware routing and KV cache management. It is best suited for multi-model composition workloads rather than high-throughput single-model LLM serving."
+}

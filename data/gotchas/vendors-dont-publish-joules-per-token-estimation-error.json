@@ -1,0 +1,38 @@
+{
+  "id": "vendors-dont-publish-joules-per-token-estimation-error",
+  "type": "gotcha",
+  "name": "No vendor publishes joules-per-token for inference: the only way to get it is to measure it yourself or estimate from TDP and throughput, and the estimation error is 30-50% because TDP is a thermal ceiling not a power measurement and throughput depends on batch size, sequence length and model",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "pwr2-nvidia-hgx-h100-h200-datasheet",
+    "pwr2-nvidia-blackwell-datasheet",
+    "pwr2-nvidia-blackwell-ultra-datasheet",
+    "pwr2-arxiv-where-does-energy-go",
+    "pwr-mlperf-v4-1-nvidia-readme-maxq"
+  ],
+  "class": "measurement",
+  "affects": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300"
+  ],
+  "concepts": [
+    "joules-per-token",
+    "tdp",
+    "estimation-error",
+    "power-measurement",
+    "throughput",
+    "batch-size",
+    "sequence-length",
+    "model-size",
+    "measurement-methodology"
+  ],
+  "symptom": "A joules-per-token figure is needed for a cost model, a carbon calculation, or a capacity plan. The vendor datasheet does not contain it. The only available figures are TDP (a thermal design power ceiling, not a measured power draw) and peak throughput (a best-case number at maximum batch size, not a sustained rate). Dividing TDP by peak throughput produces a number that is wrong by 30-50% in either direction, because TDP is not the actual power draw (it is 20-40% above typical sustained power for most workloads) and peak throughput is not the sustained throughput (it is 20-50% above what a real deployment achieves at production batch sizes and sequence lengths). The error is not random — it is systematically biased toward understating energy per token, because TDP overstates power and peak throughput overstates tokens, and the two errors partially cancel in the wrong direction.",
+  "root_cause": "The NVIDIA HGX H100/H200 datasheet publishes NO TDP or rack power figure at all — the Hopper HGX platforms are sold without a power envelope. The Blackwell datasheets publish Max TDP per GPU ('Configurable up to 1,200 W' for GB200 NVL72, 'Configurable up to 1,400 W' for GB300 NVL72 Blackwell Ultra), but TDP is a thermal ceiling for cooling design, not a measured power draw during inference. The MLPerf v4.1 power submissions are the only published joules-per-token figures in this repo, and they are measured, not estimated: 0.2299 J/token for Llama 2 70B and 0.1195 J/token for Mixtral 8x7B on an 8xH200 SXM node at 5,806.9 W mean whole-node draw. These figures are for a specific model, specific batch size, specific sequence length, specific precision (not stated by the source), and specific clock state (locked to 1000 MHz). They are not transferable to other models, other batch sizes, or other hardware without re-measurement. The 'Where Does the Energy Go?' paper (arXiv:2609.29707) shows that the model alone moves energy per token by 2.6x on Apple silicon (0.09 to 0.25 J/token across 3-9B models), and that the workload shape (agentic vs saturated serving) moves it by 63x. No vendor publishes a joules-per-token figure because it would be meaningless without the full measurement context.",
+  "workaround": "To estimate joules-per-token without measuring: (1) Find a measured figure for a similar hardware platform and model size from a third-party source (MLPerf, academic paper, or your own measurement). (2) Scale by the ratio of model parameters (energy per token scales roughly linearly with active parameters for memory-bound decode). (3) Apply a 1.4-1.7x overhead factor if the measured figure is board-level and you need system-level. (4) Label the result as ESTIMATED with an error bar of 30-50%. The estimation error comes from: TDP vs actual power (20-40%), peak vs sustained throughput (20-50%), model size scaling (non-linear for MoE), and workload shape (batch size, sequence length, agentic vs saturated). The only way to get a honest figure is to measure it yourself with a wall meter or PTDaemon, using the methodology in the MLPerf power submissions: 1 Hz sampling, discard the ramp (first 5% of samples), report the mean watts and the measurement window.",
+  "severity": "major",
+  "notes": "THE 30-50% ESTIMATION ERROR IS DERIVED FROM THE GAP BETWEEN TDP AND MEASURED POWER in the MLPerf submissions (8 x 700 W = 5,600 W TDP vs 5,806.9 W measured, but the measured figure includes host overhead — the GPU-only measured power is not published separately) and from the gap between peak and sustained throughput (the MLPerf Offline scenario runs at maximum batch size, which is not what a latency-sensitive Server deployment achieves). The error is not a fixed constant — it depends on the workload, the model, and the hardware. The key point is that any joules-per-token figure without a stated measurement methodology, power scope, clock state, and workload context is an estimate, not a measurement, and should be treated as having 30-50% uncertainty. The MLPerf power submissions are the gold standard, but they require joining the MLCommons Power WG and signing the PTD EULA, which is why most published figures are NOT at this standard."
+}

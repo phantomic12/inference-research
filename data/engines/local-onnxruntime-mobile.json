@@ -1,0 +1,71 @@
+{
+  "id": "local-onnxruntime-mobile",
+  "type": "engine",
+  "name": "ONNX Runtime Mobile",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "local-ort-mobile-github"
+  ],
+  "repo": "microsoft/onnxruntime",
+  "languages": [
+    "C++",
+    "C",
+    "Java",
+    "Kotlin",
+    "Objective-C",
+    "Swift",
+    "Python"
+  ],
+  "license": "MIT",
+  "first_release_year": 2019,
+  "design_goal": [
+    "edge/mobile",
+    "minimal-deps",
+    "low-latency",
+    "embedded"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cpu",
+    "nnapi",
+    "coreml",
+    "xnnpack",
+    "qnn"
+  ],
+  "supported_formats": [
+    "onnx"
+  ],
+  "notable_features": [
+    "ONNX Runtime Mobile is the mobile/embedded deployment path for ONNX Runtime, optimized for Android and iOS",
+    "Supports ONNX format models with quantization support (int8, int4, uint8)",
+    "Execution Providers: NNAPI (Android), CoreML (iOS), XNNPack (CPU), QNN (Qualcomm)",
+    "Small binary footprint compared to full ONNX Runtime - designed for app bundling",
+    "Supports LLM models via ONNX Runtime GenAI API (2024+) with prefill/decode loops",
+    "No dependency on PyTorch or TensorFlow at runtime - self-contained C++ runtime"
+  ],
+  "hardware_caveats": [
+    "ONNX format requires conversion from PyTorch/TensorFlow - no direct GGUF or safetensors support",
+    "LLM support is newer and less mature than llama.cpp or MLX - fewer optimized kernels for transformer architectures",
+    "NNAPI and CoreML delegation depends on OS version and device capabilities - not all ops are delegated",
+    "No continuous batching or paged KV cache - single-stream inference only",
+    "Quantization quality depends on the calibration data used during ONNX quantization"
+  ],
+  "best_for": [
+    "Deploying ONNX models to Android and iOS apps with a single runtime",
+    "Cross-platform mobile inference where ONNX is the interchange format",
+    "Qualcomm devices with QNN backend for NPU acceleration",
+    "iOS devices with CoreML delegation for Neural Engine"
+  ],
+  "avoid_for": [
+    "Desktop or server inference - use full ONNX Runtime or vLLM instead",
+    "Models only available in GGUF format - conversion to ONNX is non-trivial",
+    "High-concurrency serving - no batching or scheduling support",
+    "Maximum performance on Apple Silicon - MLX is faster on Metal"
+  ],
+  "docs_url": "https://onnxruntime.ai/docs/get-started/with-java.html",
+  "notes": "ONNX Runtime Mobile is the standard path for deploying ONNX models to mobile devices. It is distinct from full ONNX Runtime in that it strips unused ops and backends to reduce binary size. The GenAI API (2024+) adds LLM-specific optimizations but the ecosystem is less mature than llama.cpp for local LLM inference. The key advantage is ONNX format interoperability - models trained in PyTorch or TensorFlow can be exported to ONNX and deployed without framework-specific runtimes."
+}

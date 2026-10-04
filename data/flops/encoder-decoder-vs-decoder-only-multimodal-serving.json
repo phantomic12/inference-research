@@ -1,0 +1,33 @@
+{
+  "id": "encoder-decoder-vs-decoder-only-multimodal-serving",
+  "type": "flop",
+  "name": "Encoder-decoder vs decoder-only multimodal serving",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "flamingo-a-visual-language-model-arxiv-2204-14198",
+    "blip-2-bootstrapping-language-image-pre-training-arxiv-2301-1259",
+    "pap-mm-llava"
+  ],
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Encoder-decoder architectures (Whisper, Flamingo) process the input modality in a separate encoder, then decode the output autoregressively. The encoder runs once per input, the decoder runs once per output token. Decoder-only with visual tokens (LLaVA, Pixtral, Qwen2-VL) processes the entire input (text + visual tokens) in one prefill pass, then decodes autoregressively. The serving implication is that encoder-decoder architectures have a fixed encoder cost per input, while decoder-only architectures have a prefill cost that scales with total input length (text + visual).",
+  "bound_by": "both",
+  "scales_with": [
+    "input_resolution (encoder-decoder: linear in encoder cost; decoder-only: linear in prefill cost)",
+    "output_length (both: linear in decode cost)",
+    "num_layers (both: linear)",
+    "model_width (both: quadratic in MLP, linear in attention)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "workarounds": [
+    "Use encoder-decoder for speech-to-text (Whisper) - encoder cost is fixed per audio input",
+    "Use decoder-only for vision-language (LLaVA, Pixtral) - simpler serving, no separate encoder schedule",
+    "Use Perceiver/Q-Former to compress visual tokens in decoder-only - reduces prefill cost",
+    "Use encoder caching for repeated inputs (multi-turn chat)"
+  ],
+  "notes": "TWO ARCHITECTURE FAMILIES: (1) Encoder-decoder (Whisper, Flamingo): separate encoder and decoder. The encoder processes the input modality (audio, vision) once, producing a latent representation. The decoder generates output autoregressively, attending to the encoder output. Serving implication: encoder cost is fixed per input, decoder cost scales with output length. The encoder can be cached for repeated inputs. (2) Decoder-only with visual tokens (LLaVA, Pixtral, Qwen2-VL): the vision encoder produces visual tokens that are prepended to the text tokens. The entire sequence is processed in one prefill pass. Serving implication: prefill cost scales with total input length (text + visual), decode cost scales with output length. The vision encoder is a separate forward pass that can be cached. The key difference is that encoder-decoder architectures separate the input processing from the output generation, while decoder-only architectures fuse them. For serving, this means encoder-decoder architectures can cache the encoder output independently of the decoder, while decoder-only architectures must cache the entire prefill. Whisper is the canonical encoder-decoder for speech; LLaVA/Pixtral/Qwen2-VL are the canonical decoder-only for vision."
+}

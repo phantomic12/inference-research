@@ -1,0 +1,29 @@
+{
+  "id": "local-webgpu-performance-gap",
+  "type": "gotcha",
+  "name": "WebGPU in-browser inference is 2-5x slower than native GPU inference",
+  "class": "framework",
+  "affects": [
+    "local-webgpu",
+    "local-wasm"
+  ],
+  "concepts": [
+    "webgpu",
+    "wasm",
+    "browser-inference",
+    "wgsl",
+    "compute-shaders"
+  ],
+  "symptom": "The same model that runs at 30 tokens/sec on a native GPU may run at 6-15 tokens/sec in the browser via WebGPU, or 1-5 tokens/sec via WASM.",
+  "root_cause": "Browser inference has multiple layers of overhead: the browser's sandboxed execution environment, WGSL shader compilation at runtime, lack of direct hardware access, and immature kernel libraries. WASM adds another layer of overhead with 128-bit SIMD vs 256-bit AVX2. The result is 2-5x slower than native GPU inference and 5-20x slower than native CPU inference.",
+  "workaround": "Use WebGPU for zero-install web applications where convenience matters more than performance. For maximum performance, use native inference (llama.cpp, MLX, ONNX Runtime). Consider WebGPU for small models (1-7B) where the performance gap is less noticeable.",
+  "severity": "major",
+  "notes": "The performance hierarchy for local inference: native GPU (CUDA/Metal) > native CPU (AVX2) > WebGPU > WASM. WebGPU is 2-5x slower than native GPU. WASM is 5-20x slower than native CPU. For a 7B model at 4-bit, native GPU might yield 50-100 tokens/sec, WebGPU 10-30 tokens/sec, WASM 2-10 tokens/sec. WebGPU is the right choice for web applications, not for maximum performance.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "local-webgpu-spec",
+    "local-wasm-spec"
+  ]
+}

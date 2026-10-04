@@ -1,0 +1,20 @@
+{
+  "id": "kernel-compilation-cost-dominates-for-short-running-or-frequentl",
+  "type": "gotcha",
+  "name": "Kernel compilation cost dominates for short-running or frequently-changing workloads",
+  "class": "toolchain",
+  "affects": ["triton", "torch-compile-torchinductor", "cutlass-cute"],
+  "concepts": ["triton", "torch.compile", "cutlass", "jit", "aot", "compile-time", "warmup", "recompilation", "graph-breaks"],
+  "symptom": "For workloads with short execution times or frequently-changing shapes, the cost of JIT compilation (Triton: 0.5-5s per kernel, torch.compile: 30s+ for complex models, CUTLASS: minutes for template instantiation) can exceed the actual inference time. A model with 50 unique kernel shapes could take 30-60 seconds to warm up with Triton, or minutes with torch.compile. For serverless or edge deployment where the process starts fresh for each request, this overhead is paid on every invocation.",
+  "root_cause": "JIT-based compilers (Triton, torch.compile) specialize kernels for specific shapes and configurations. Each new shape triggers recompilation. AOT compilers (IREE, XLA) have high upfront compilation but no runtime overhead. Template libraries (CUTLASS) have the highest compile times due to C++ template instantiation. The fundamental tradeoff is: specialization enables better kernel performance but requires compilation time that must be amortized over many executions.",
+  "workaround": "For short-running workloads: (1) Use AOT compilation (IREE, XLA) to move compilation cost to build time. (2) Pre-compile kernels for all expected shapes at startup. (3) Use CUDA graphs to capture and replay compiled kernels. (4) For Triton, use TRITON_ALWAYS_COMPILE=1 to force compilation at startup rather than on first call. (5) For torch.compile, use automatic_dynamic_shapes=True to reduce recompilations. (6) For CUTLASS, use the CuTe DSL which has faster compile times than C++ templates.",
+  "severity": "major",
+  "notes": "This is the key economic question for inference deployment. The compile-time-vs-runtime tradeoff is rarely quantified but has enormous practical impact. For a server handling 1000 requests/second with 10ms inference time, a 30-second warmup is negligible (amortized over 300,000 requests). For a serverless function handling 1 request/minute with 100ms inference time, a 30-second warmup dominates (300x the inference cost). The break-even point depends on: (1) number of unique kernel shapes, (2) compilation time per shape, (3) request rate, (4) inference time per request. As a rule of thumb: if warmup_time * request_rate > inference_time, compilation cost dominates. Triton's autotuning makes this worse: each config is compiled and benchmarked, multiplying the warmup time by the number of configs (typically 10-100). For production serving, the standard practice is to warm up all expected shapes at startup and then serve requests with zero compilation overhead.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "triton-paper-an-intermediate-language-and-compiler-for-tiled-neu",
+    "kern-triton-github"
+  ]
+}

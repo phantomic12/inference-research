@@ -1,0 +1,30 @@
+{
+  "id": "vision-encoder-re-encoding-waste-in-multi-turn-chat",
+  "type": "gotcha",
+  "name": "Vision encoder re-encoding waste in multi-turn chat",
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-04",
+  "sources": [
+    "mdl2-trtllm-supported-models",
+    "mdl2-vllm-supported-models-2026-10"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "sglang",
+    "tensorrt-llm"
+  ],
+  "concepts": [
+    "vision-encoder",
+    "multi-turn-chat",
+    "encoder-caching",
+    "kv-cache",
+    "prefix-caching"
+  ],
+  "symptom": "In multi-turn image/video chat, the vision encoder re-encodes the same image every turn, wasting compute. For a 448x448 image with ViT-L/16, this is ~763 GFLOPs per turn. Over 10 turns, that's 7.6 TFLOPs of wasted compute.",
+  "root_cause": "The vision encoder output is not cached between turns. Each turn, the full image is re-encoded from pixels to visual tokens, even though the image has not changed.",
+  "workaround": "Use a multimodal embeddings cache. TRT-LLM has a per-model Multimodal Embeddings Cache that stores the encoder output and reuses it for repeated images. vLLM and SGLang have similar mechanisms. The savings are significant: for a 10-turn conversation with the same image, caching reduces vision encoder compute by 90% (only the first turn encodes).",
+  "severity": "major",
+  "notes": "ENCODER CACHING IS CRITICAL FOR MULTI-TURN CHAT: Without it, the vision encoder cost multiplies by the number of turns. For a 448x448 image with ViT-L/16 at ~763 GFLOPs per forward pass, a 10-turn conversation wastes 6.9 TFLOPs (9 turns * 763 GFLOPs). TRT-LLM's Multimodal Embeddings Cache is currently available for seven architectures (Gemma4, Gemma4Unified, Mistral3, Qwen3VL, Qwen3VLMoe, Qwen3_5, Qwen3_5Moe). vLLM and SGLang have similar mechanisms but the exact API and coverage vary. The key insight is that the vision encoder is a pure function of the image pixels, so its output can be cached and reused. This is analogous to prefix caching for text, but for the vision encoder. The FLOP count is derived from the ViT paper Table 6; the caching mechanisms are from the engine docs."
+}

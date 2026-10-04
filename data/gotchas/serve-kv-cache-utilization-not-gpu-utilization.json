@@ -1,0 +1,26 @@
+{
+  "id": "serve-kv-cache-utilization-not-gpu-utilization",
+  "type": "gotcha",
+  "name": "GPU utilization is a poor proxy for LLM load - KV cache utilization is the metric that matters",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "gpu-utilization",
+    "kv-cache-utilization",
+    "metrics",
+    "monitoring",
+    "autoscaling"
+  ],
+  "symptom": "GPU utilization is high but throughput is low, or GPU utilization is low but the service is degraded. The metric does not correlate with user experience.",
+  "root_cause": "GPU utilization measures how busy the GPU is, but LLM serving is memory-bandwidth-bound, not compute-bound. A GPU can be 100% utilized while processing a small batch with low throughput, or 50% utilized while processing a large batch with high throughput. The metric that actually correlates with LLM serving capacity is KV cache utilization: how much of the GPU memory is used for the KV cache. When KV cache is full, new requests must wait or be rejected.",
+  "workaround": "Monitor KV cache utilization (percentage of GPU memory used for KV cache) instead of GPU utilization. vLLM exposes vllm:gpu_cache_usage_perc. SGLang exposes similar metrics. Alert when KV cache utilization exceeds 80% (approaching OOM). Use KV cache utilization as the autoscaling signal, not GPU utilization.",
+  "severity": "major",
+  "notes": "This is a subtle but important distinction. GPU utilization is the standard metric for compute workloads, but LLM serving is memory-bandwidth-bound. The GPU can be 'utilized' while throughput is low (small batch, long context) or under-utilized while throughput is high (large batch, short context). KV cache utilization is the metric that actually matters because it directly determines how many concurrent requests the engine can handle. When KV cache is full, the engine cannot accept new requests regardless of GPU compute capacity.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-k8s-hpa-docs",
+    "serve-kserve-keda-autoscaling"
+  ]
+}

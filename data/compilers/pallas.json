@@ -1,0 +1,43 @@
+{
+  "id": "pallas",
+  "type": "compiler",
+  "name": "Pallas",
+  "repo": "jax-ml/jax",
+  "language": "Python",
+  "license": "Apache-2.0",
+  "first_release_year": 2023,
+  "category": "kernel-dsl",
+  "target_backends": ["tpu"],
+  "input_languages": ["jax"],
+  "output_artifacts": ["llvm-ir"],
+  "compilation_strategy": "jit",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "Used in production for TPU-based inference at Google",
+    "Part of the JAX ecosystem, which is used for production TPU serving"
+  ],
+  "strengths": [
+    "TPU-native: the only Python DSL that targets TPUs with good performance",
+    "JAX integration: seamless with JAX transformations (jit, vmap, grad)",
+    "Pipelining: emit_pipeline handles double-buffering and memory/compute overlap automatically",
+    "Memory space abstraction: explicit HBM/VMEM management matches TPU architecture",
+    "SparseCore support: can target TPU SparseCores for structured sparsity"
+  ],
+  "weaknesses": [
+    "TPU-only: no NVIDIA or AMD GPU support",
+    "No autotuning: block sizes and other parameters must be chosen manually",
+    "Smaller community than Triton: fewer examples, less documentation",
+    "JAX dependency: requires JAX, which is a heavy dependency for kernel-only use",
+    "Less mature than Triton: newer project, fewer production deployments"
+  ],
+  "learning_curve": "moderate",
+  "compile_time_seconds": 5.0,
+  "notes": "Pallas is a Python DSL for writing TPU kernels, analogous to Triton for GPUs. It is part of the JAX ecosystem and provides a higher-level abstraction than raw XLA. The key concept is the Ref (mutable array reference) which lives in a specific memory space (HBM or VMEM). Kernels operate on VMEM Refs, and data must be explicitly copied between HBM and VMEM. The emit_pipeline function handles pipelining (overlapping memory transfers with compute) automatically. The matmul tutorial shows real TPU performance: 91% FLOP/s utilization at 8192x8192x8192 with bf16, which is competitive with hand-optimized TPU kernels. Pallas is the recommended way to write custom TPU kernels, just as Triton is for NVIDIA GPUs. The main limitation is TPU-only support: there is no path to NVIDIA or AMD GPUs. For teams standardizing on TPUs, Pallas is the clear choice. For GPU-based inference, Triton is the alternative.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "pallas-writing-tpu-kernels-in-jax"
+  ]
+}

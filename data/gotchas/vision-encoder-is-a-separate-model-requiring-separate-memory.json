@@ -1,0 +1,29 @@
+{
+  "id": "vision-encoder-is-a-separate-model-requiring-separate-memory",
+  "type": "gotcha",
+  "name": "Vision encoder is a separate model requiring separate memory",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "mdl2-trtllm-supported-models",
+    "mdl2-vllm-supported-models-2026-10"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "sglang",
+    "tensorrt-llm"
+  ],
+  "concepts": [
+    "vision-encoder",
+    "memory",
+    "gpu-memory",
+    "model-weights"
+  ],
+  "symptom": "The vision encoder is a separate model that requires its own GPU memory, reducing the memory available for the LLM and KV cache. For a ViT-L/16 encoder (304M params, bf16), this is ~608 MB of additional memory.",
+  "root_cause": "The vision encoder is a separate neural network with its own weights. It must be loaded into GPU memory alongside the LLM, reducing the memory available for the KV cache.",
+  "workaround": "Use a smaller vision encoder (ViT-B instead of ViT-L) to reduce memory usage. Alternatively, offload the vision encoder to CPU or use a shared encoder for multiple LLM instances.",
+  "severity": "minor",
+  "notes": "VISION ENCODER MEMORY OVERHEAD: The vision encoder is a separate model that requires its own GPU memory. For a ViT-L/16 encoder (304M params, bf16), this is ~608 MB. For a SigLIP SO400M encoder (400M params, bf16), this is ~800 MB. This memory is in addition to the LLM weights and KV cache. For a 7B model with 14 GB of weights, the vision encoder adds ~4-6% memory overhead. For a 70B model with 140 GB of weights, the overhead is smaller (~0.4-0.6%). The memory overhead is small but non-zero, and it reduces the memory available for the KV cache. The memory counts are derived from the parameter counts and precision sizes."
+}

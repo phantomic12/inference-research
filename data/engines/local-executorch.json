@@ -1,0 +1,67 @@
+{
+  "id": "local-executorch",
+  "type": "engine",
+  "name": "ExecuTorch",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "local-executorch-github"
+  ],
+  "repo": "pytorch/executorch",
+  "languages": [
+    "C++",
+    "Python"
+  ],
+  "license": "BSD-3-Clause",
+  "first_release_year": 2024,
+  "design_goal": [
+    "edge/mobile",
+    "minimal-deps",
+    "low-latency",
+    "embedded"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cpu",
+    "coreml",
+    "nnapi",
+    "qnn",
+    "vulkan",
+    "xnnpack"
+  ],
+  "supported_formats": [
+    "pt2"
+  ],
+  "notable_features": [
+    "ExecuTorch is PyTorch's official on-device inference engine, announced 2024",
+    "Uses .pt2 export format via torch.export - models are exported from PyTorch, not converted from other formats",
+    "Supports Android (NNAPI, QNN), iOS (CoreML), and Linux embedded targets",
+    "Quantization: supports int8, int4, and uint8 quantization via PyTorch quantization tools",
+    "Delegation to hardware backends: CoreML (Apple Neural Engine), NNAPI (Android), QNN (Qualcomm), Vulkan (GPU)",
+    "Part of the PyTorch ecosystem - seamless transition from training to on-device deployment"
+  ],
+  "hardware_caveats": [
+    ".pt2 format is PyTorch-specific - no GGUF, ONNX, or safetensors support without conversion",
+    "LLM support is early - fewer optimized kernels than llama.cpp for transformer architectures",
+    "No continuous batching or paged KV cache - single-stream inference only",
+    "Delegation coverage varies by platform - not all ops are delegated to hardware backends",
+    "Smaller community and ecosystem than llama.cpp for local LLM inference"
+  ],
+  "best_for": [
+    "PyTorch users who want to deploy models on-device without leaving the PyTorch ecosystem",
+    "Android apps using NNAPI or QNN for hardware acceleration",
+    "iOS apps using CoreML for Neural Engine acceleration",
+    "Models already in PyTorch format that need mobile deployment"
+  ],
+  "avoid_for": [
+    "Non-PyTorch models - conversion to PyTorch is required",
+    "Maximum performance on Apple Silicon - MLX is faster on Metal",
+    "High-concurrency serving - no batching or scheduling support",
+    "Models only available in GGUF format"
+  ],
+  "docs_url": "https://pytorch.org/executorch/",
+  "notes": "ExecuTorch is the newest entry in the on-device inference space, backed by PyTorch/Meta. Its main advantage is seamless PyTorch integration - models can be exported and deployed without format conversion. However, the LLM ecosystem is less mature than llama.cpp, and the .pt2 format is PyTorch-specific. For local LLM inference, MLX (Apple) or llama.cpp (cross-platform) are currently better choices, but ExecuTorch is the right choice for PyTorch-centric workflows."
+}

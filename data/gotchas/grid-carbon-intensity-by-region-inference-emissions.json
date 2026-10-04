@@ -1,0 +1,32 @@
+{
+  "id": "grid-carbon-intensity-by-region-inference-emissions",
+  "type": "gotcha",
+  "name": "Grid carbon intensity varies 10-50x by region, so a token generated in Quebec (~20 gCO2/kWh) is not the same as one generated in West Virginia (~900 gCO2/kWh) — and almost nobody accounts for it",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "pap-eff-carbon-intensity-cloud",
+    "pap-eff-carbon-nn-training",
+    "pwr2-lbnl-queued-up-2026"
+  ],
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "carbon-intensity",
+    "grid-emissions",
+    "geographic-location",
+    "marginal-emissions",
+    "emissions-accounting",
+    "inference-emissions",
+    "carbon-aware-scheduling",
+    "renewable-energy",
+    "pue",
+    "energy-per-token"
+  ],
+  "symptom": "An emissions claim for an inference deployment is computed as joules-per-token x average grid carbon intensity, producing a single number that is wrong by an order of magnitude depending on where the tokens are actually generated. The claim 'inference emits X gCO2 per token' is meaningless without the grid region, the time of day (marginal vs average intensity), and the facility PUE. A deployment in Quebec (hydro, ~20 gCO2/kWh) and a deployment in West Virginia (coal, ~900 gCO2/kWh) produce the same tokens with 45x different emissions, but the carbon accounting treats them as identical. The error is not academic: it determines whether a carbon-aware scheduler should route a request to a different region, and it determines whether a 'net zero' claim is honest.",
+  "root_cause": "The 'Measuring the Carbon Intensity of AI in Cloud Instances' paper (arXiv:2206.05229, Dodge et al., FAccT 2022) established that geographic region plays a significant role in carbon intensity for a given cloud instance, and that choosing an appropriate region can have the largest operational-emissions reduction impact of the strategies evaluated. The 'Carbon Emissions and Large Neural Network Training' paper (arXiv:2104.10350, Patterson et al., 2021) found that the carbon-free fraction and resulting CO2e vary ~5x-10x even within the same country and the same organization, and that the combined choice of DNN, datacenter, and processor can reduce the carbon footprint up to ~100-1000x. The LBNL 'Queued Up: 2026 Edition' report shows that new generation capacity faces a median 5+ year interconnection queue, which means the grid mix is not static — a region that is low-carbon today may not be low-carbon when a new data center comes online, and vice versa. The grid carbon intensity varies by region (Quebec ~20 gCO2/kWh from hydro, West Virginia ~900 gCO2/kWh from coal, California ~200 gCO2/kWh from a mix of renewables and natural gas, Texas ~400 gCO2/kWh from a mix of wind, gas and coal), by time of day (solar reduces midday intensity in California, wind varies with weather in Texas), and by marginal vs average (the marginal generator at peak demand is often gas or coal, even in regions with high average renewables).",
+  "workaround": "For any emissions claim about inference, state: (1) the grid region where the tokens are generated, (2) the carbon intensity value and whether it is average or marginal, (3) the time of day or season, (4) the facility PUE, and (5) the joules-per-token figure with its measurement boundary. Without all five, the claim is not falsifiable. For carbon-aware scheduling, use marginal emissions data (from a service like Electricity Maps or the WattTime API) rather than average grid intensity, because the marginal generator is what actually responds to a change in demand. For a 'net zero' claim, verify that the renewable energy is additional (not purchased from the existing grid mix) and that the temporal matching is hourly, not annual.",
+  "severity": "major",
+  "notes": "THE REGIONAL CARBON INTENSITY FIGURES (Quebec ~20, West Virginia ~900, California ~200, Texas ~400 gCO2/kWh) are approximate values from public sources including the EPA eGRID database and the Electricity Maps API. They are recorded here as order-of-magnitude illustrations of the regional variation, not as precise current values — the exact figures vary by year, by season, and by the specific grid subregion. The key point is the 10-50x variation, which is robust across all sources. The Dodge et al. paper measured this variation empirically on Azure and found it to be the largest single lever in operational emissions reduction. The Patterson et al. paper found 5-10x variation within a single country. The LBNL queue data is relevant because it shows that the grid mix is not static — a data center that signs a 10-year renewable energy contract today may find that the grid has decarbonized (or not) by the time the contract ends, and the 'net zero' claim may not hold over the contract period."
+}

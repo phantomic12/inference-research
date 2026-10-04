@@ -1,0 +1,24 @@
+{
+  "id": "serve-mig-blocks-nccl-tensor-parallel",
+  "type": "gotcha",
+  "name": "MIG slices cannot participate in NCCL tensor-parallel groups",
+  "class": "hardware",
+  "affects": [],
+  "concepts": [
+    "mig",
+    "nccl",
+    "tensor-parallel",
+    "gpu-sharing"
+  ],
+  "symptom": "A MIG slice cannot join a tensor-parallel group. NCCL initialization fails or hangs.",
+  "root_cause": "NCCL requires direct GPU-to-GPU communication via NVLink or PCIe P2P. MIG slices are isolated at the hardware level and do not expose the P2P capabilities that NCCL requires. MIG and tensor parallelism are mutually exclusive as shipped.",
+  "workaround": "Do not use MIG with tensor-parallel inference. If you need both GPU sharing and tensor parallelism, use separate GPUs for each TP rank instead of MIG slices. Alternatively, use data parallelism across MIG slices (each slice runs a full copy of the model).",
+  "severity": "blocker",
+  "notes": "This is a hard limitation: MIG and NCCL tensor parallelism are mutually exclusive. If you need tensor parallelism (which you do for any model larger than one GPU), you cannot use MIG. This means MIG is only useful for small models that fit in a single MIG slice, or for data-parallel deployments where each slice runs a full model copy.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-mig-nvidia-docs"
+  ]
+}

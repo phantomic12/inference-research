@@ -1,0 +1,38 @@
+{
+  "id": "hybrid-attn-ssm-kv-cache-sizing",
+  "type": "flop",
+  "name": "Hybrid attention-SSM KV cache sizing: how many SSM layers vs attention layers and what the KV-per-token becomes",
+  "class": "decode_attention",
+  "arithmetic_intensity": "In a hybrid model with A attention layers and S SSM layers, the KV cache per token is A * num_kv_heads * head_dim * 2 * 2 bytes (only attention layers contribute). The SSM layers contribute a fixed per-sequence state of S * d_inner * N * 2 bytes, independent of context. The KV-per-token is therefore A/(A+S) of a pure-attention model's KV-per-token. For Nemotron-H-8B (4 attention, 48 Mamba): KV-per-token = 4 * 8 * 128 * 2 * 2 = 16,384 bytes = 16 KiB/token. A pure-attention model with the same 52 layers would have 52 * 8 * 128 * 2 * 2 = 212,992 bytes = 208 KiB/token. The reduction is 13x. But the SSM state is 48 * 8192 * 128 * 2 = 100,663,296 bytes = 96 MiB per sequence. At 8K context, the attention KV is 8K * 16 KiB = 128 MiB, already exceeding the SSM state. At 128K context, the attention KV is 128K * 16 KiB = 2 GiB, while the SSM state remains 96 MiB. The crossover point where SSM state exceeds attention KV is at context = S * d_inner * N * 2 / (A * num_kv_heads * head_dim * 2 * 2) = 48 * 8192 * 128 * 2 / (4 * 8 * 128 * 2 * 2) = 100,663,296 / 16,384 = 6,144 tokens. Below 6K context, the attention KV is smaller; above 6K, the SSM state is smaller.",
+  "bound_by": "memory",
+  "scales_with": [
+    "num_attention_layers / num_ssm_layers ratio (the primary design knob)",
+    "context_length (attention KV grows linearly, SSM state is constant)",
+    "batch_size (both grow linearly, but SSM state does not amortize)",
+    "ssm_state_size N and d_inner",
+    "num_kv_heads and head_dim for the attention layers"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Choose the attention fraction based on the target context length: more attention for short context, more SSM for long context",
+    "Use sliding-window attention on the attention layers to cap their KV growth",
+    "Use GQA on the attention layers to reduce KV-per-token",
+    "fp8 state for SSM layers to halve the fixed cost",
+    "The optimal ratio is workload-dependent: Nemotron-H uses 8% attention, Granite-4.0 uses 10%, Jamba uses ~25%"
+  ],
+  "notes": "Verified hybrid ratios from configs: Nemotron-H-8B 48 Mamba / 4 attention (8% attention, 'Roughly 8% of the total layers in the model are self-attention layers' per the paper). Granite-4.0-h-tiny 36 mamba / 4 attention (10% attention). Jamba ~1:3 Mamba:Transformer block ratio (~25% attention). The KV-per-token reduction is the headline number (Jamba claims 8x), but the real serving question is the crossover context length where the SSM state exceeds the attention KV. For most hybrids, this crossover is at 4-8K tokens, which means for short-context workloads the hybrid is actually WORSE than pure attention (the SSM state is pure overhead), and for long-context workloads it is much better. The batch-size regime where each architecture wins: at small batch and long context, hybrid wins; at large batch and short context, pure attention wins (because paged KV can pack sequences efficiently while SSM state cannot).",
+  "status": "draft",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "arch-nemotron-h",
+    "arch-hf-config-nemotron-h",
+    "arch-hf-config-granite4",
+    "arch-jamba",
+    "arch-samba"
+  ]
+}

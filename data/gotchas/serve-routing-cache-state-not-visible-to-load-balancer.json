@@ -1,0 +1,26 @@
+{
+  "id": "serve-routing-cache-state-not-visible-to-load-balancer",
+  "type": "gotcha",
+  "name": "Standard load balancers cannot see KV cache state - routing decisions are blind to cache locality",
+  "class": "config",
+  "affects": [],
+  "concepts": [
+    "routing",
+    "load-balancing",
+    "kv-cache",
+    "prefix-caching",
+    "cache-aware-routing"
+  ],
+  "symptom": "A standard load balancer (round-robin, least-connections) sends requests to replicas that do not have the prefix cached, causing redundant prefill computation and higher TTFT.",
+  "root_cause": "Standard load balancers make routing decisions based on connection count or round-robin, which are blind to the KV cache state of each replica. For LLM serving with prefix caching, the optimal routing decision is to send requests to the replica that already has the prefix cached. This requires cache-aware routing, which standard load balancers do not support.",
+  "workaround": "Use a cache-aware router: SGLang's sgl-router with FOLLOW_BOOTSTRAP_ROOM, KServe's EPP (Endpoint Picker Pod), or NVIDIA Dynamo's KV-aware routing. These routers track which replica has which prefix and route accordingly. The tradeoff is an extra hop (the router) and the complexity of tracking cache state.",
+  "severity": "major",
+  "notes": "This is the routing/load-balancing problem specific to LLM serving. Standard load balancers are designed for stateless services where any replica can handle any request. LLM serving with prefix caching is stateful: the optimal replica depends on which prefix is cached. Cache-aware routing can significantly reduce TTFT for workloads with shared prefixes (agentic, multi-turn, RAG). The solutions are: SGLang's sgl-router (FOLLOW_BOOTSTRAP_ROOM), KServe's EPP, and NVIDIA Dynamo's KV-aware routing.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-sglang-dp-controller",
+    "serve-kserve-docs-llmisvc"
+  ]
+}

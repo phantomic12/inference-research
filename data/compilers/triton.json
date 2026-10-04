@@ -1,0 +1,50 @@
+{
+  "id": "triton",
+  "type": "compiler",
+  "name": "Triton",
+  "repo": "triton-lang/triton",
+  "language": "Python",
+  "license": "MIT",
+  "first_release_year": 2019,
+  "category": "dsl",
+  "target_backends": ["cuda", "rocm"],
+  "input_languages": ["python"],
+  "output_artifacts": ["ptx", "amdgcn"],
+  "compilation_strategy": "jit",
+  "autotuning": true,
+  "production_ready": true,
+  "production_evidence": [
+    "vLLM uses Triton kernels for attention, quantization, and fused operations",
+    "TorchInductor generates Triton kernels as its GPU backend",
+    "FlashAttention provides a Triton implementation",
+    "TensorRT-LLM uses Triton for some fused kernels"
+  ],
+  "strengths": [
+    "Tile-centric abstraction: operates on blocks of data rather than individual threads, making it far more productive than CUDA C++",
+    "Python-based: no separate compilation step, kernels are JIT-compiled at runtime",
+    "Autotuning built-in: @triton.autotune decorator searches over block sizes, num_warps, num_stages",
+    "Performance on par with cuBLAS for matmul: the tutorial shows 206 TFLOPS FP16 on H100 at 4096x4096x4096",
+    "Fused operations: easy to fuse elementwise ops into matmul/attention kernels without writing separate kernels",
+    "MLIR-based backend since v2.0: better optimization pipeline than the original LLVM-based approach",
+    "Active development: Triton Conference 2026, regular releases, strong community"
+  ],
+  "weaknesses": [
+    "JIT compilation overhead: first call to a kernel triggers compilation (typically 0.5-5 seconds per kernel)",
+    "Autotuning can be expensive: each config is compiled and benchmarked, adding significant warmup time",
+    "Limited to NVIDIA and AMD GPUs: no CPU, TPU, or other accelerator support",
+    "Less control than CUDA C++: cannot express all low-level optimizations (e.g., manual warp-level primitives)",
+    "Debugging is harder: errors in generated PTX/SASS are harder to trace than CUDA C++ errors",
+    "Compile-time scales with kernel complexity: large fused kernels can take 10+ seconds to compile",
+    "TRITON_F32_DEFAULT environment variable can silently change precision behavior (ieee vs tf32 vs tf32x3)"
+  ],
+  "learning_curve": "moderate",
+  "compile_time_seconds": 2.0,
+  "notes": "Triton is the most successful Python DSL for GPU kernel programming. The original paper (Tillet et al., MAPL 2019) demonstrated that a tile-based language could match cuBLAS/cuDNN performance. The key insight is that programmers specify operations on tiles (blocks of data) rather than individual threads, and the compiler handles thread-level mapping, shared memory allocation, and synchronization. The matmul tutorial shows real performance: 206 TFLOPS FP16 at 4096x4096x4096 on H100, which is competitive with cuBLAS. The autotuner is both a strength and a weakness: it finds good configurations automatically but adds significant warmup time. For inference, the JIT overhead is a real concern: a model with 50 unique kernel shapes could take 30-60 seconds to warm up. The Triton Conference 2026 (October 19, San Jose) signals continued investment. Supported on NVIDIA GPUs (CC 8.0+) and AMD GPUs (ROCm 6.2+). CPU support is under development but not production-ready.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "triton-paper-an-intermediate-language-and-compiler-for-tiled-neu",
+    "kern-triton-github"
+  ]
+}

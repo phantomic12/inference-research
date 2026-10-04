@@ -1,0 +1,34 @@
+{
+  "id": "nic-roce-pfc-incast-collapse",
+  "type": "gotcha",
+  "name": "RoCEv2 PFC-based lossless Ethernet suffers incast collapse at GPU scale",
+  "class": "hardware",
+  "affects": [
+    "roce",
+    "ethernet-uec",
+    "nic-spectrumx-ethernet"
+  ],
+  "concepts": [
+    "rocev2",
+    "pfc",
+    "ecn",
+    "dcqcn",
+    "incast",
+    "congestion-control",
+    "lossless-ethernet",
+    "gpu-scale",
+    "collective-communication"
+  ],
+  "symptom": "RoCEv2 networks using PFC (Priority-based Flow Control) for lossless operation experience throughput collapse and latency spikes when GPU count exceeds a threshold, typically around 1000-2000 GPUs in a single network domain.",
+  "root_cause": "PFC creates a lossless domain by pausing upstream switches when buffers fill. Under incast patterns (many-to-one traffic common in all-reduce collectives), PFC pause frames propagate upstream, creating head-of-line blocking and cascading congestion. DCQCN (Data Center Quantized Congestion Notification) provides ECN-based rate limiting but cannot fully prevent incast collapse at scale because the fundamental issue is many-to-one traffic patterns overwhelming a single destination port.",
+  "workaround": "Use InfiniBand instead (hardware-based congestion control with per-credit flow control, no PFC). Or implement Ultra Ethernet (UEC) which redesigns the transport to avoid PFC. Or use rail-optimized network topology to reduce incast patterns. Or limit the number of GPUs per lossless domain.",
+  "severity": "blocker",
+  "notes": "This is the primary reason InfiniBand dominates large-scale AI training clusters despite higher cost. The incast problem is fundamental to PFC-based lossless Ethernet and cannot be fully solved with tuning. NVIDIA's Spectrum-X platform claims to address this with advanced RoCE extensions and congestion management, but independent verification at scale is limited. The problem is well-documented in academic literature (e.g., 'Congestion Control for Large-Scale RDMA Deployments' by Zhu et al., SIGCOMM 2016).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "nic-nvidia-spectrumx-page",
+    "nic-nvidia-infiniband-page"
+  ]
+}

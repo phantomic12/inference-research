@@ -1,0 +1,45 @@
+{
+  "id": "iree",
+  "type": "compiler",
+  "name": "IREE",
+  "repo": "iree-org/iree",
+  "language": "C++",
+  "license": "Apache-2.0 with LLVM Exceptions",
+  "first_release_year": 2020,
+  "category": "compiler-framework",
+  "target_backends": ["cuda", "rocm", "vulkan", "metal", "cpu-avx2", "spirv", "webgpu"],
+  "input_languages": ["jax", "onnx", "pytorch", "tensorflow", "tflite"],
+  "output_artifacts": ["spirv", "air", "c"],
+  "compilation_strategy": "aot",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "AMD submitted an IREE-based SDXL implementation to MLPerf Inference (2025)",
+    "Used in production for mobile and edge deployment",
+    "Joined LF AI & Data Foundation (2024)"
+  ],
+  "strengths": [
+    "MLIR-based: leverages the same compiler infrastructure as Triton, XLA, and LLVM",
+    "End-to-end: from model import to runtime execution, including scheduling and execution logic",
+    "Ahead-of-time compilation: no JIT overhead at runtime, suitable for edge and mobile",
+    "Small binary size: as low as 30KB on embedded systems",
+    "Broad platform support: Linux, Windows, macOS, Android, iOS, bare metal, WebAssembly",
+    "Holistic approach: scheduling and execution are compiled together, enabling better optimization"
+  ],
+  "weaknesses": [
+    "No autotuning: relies on heuristics rather than search-based optimization",
+    "Smaller ecosystem than XLA or Triton: fewer pre-optimized kernels, less community support",
+    "LLM inference is not the primary focus: IREE targets mobile/edge more than datacenter GPU serving",
+    "Compilation time: AOT compilation can be slow for large models",
+    "Limited production evidence for LLM serving: the MLPerf submission is for SDXL (diffusion), not LLM text generation"
+  ],
+  "learning_curve": "high",
+  "compile_time_seconds": 60.0,
+  "notes": "IREE is an MLIR-based end-to-end compiler and runtime that takes a different approach from Triton: instead of JIT-compiling individual kernels, it compiles the entire model ahead-of-time into a unified IR, then lowers to target-specific binaries. This makes it particularly suitable for edge and mobile deployment where JIT compilation is not acceptable. The project joined the LF AI & Data Foundation in May 2024, signaling industry backing. AMD's MLPerf Inference submission using IREE for SDXL (2025) is the strongest production evidence. However, for datacenter LLM inference, IREE has not been adopted by major engines (vLLM, TensorRT-LLM, SGLang). The lack of autotuning is a significant disadvantage for GPU workloads where kernel performance is highly sensitive to tile sizes and other parameters. IREE's strength is its holistic approach: by compiling scheduling and execution together, it can make optimization decisions that are impossible with a kernel-only approach.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "iree-intermediate-representation-execution-environment"
+  ]
+}

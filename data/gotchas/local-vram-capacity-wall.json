@@ -1,0 +1,33 @@
+{
+  "id": "local-vram-capacity-wall",
+  "type": "gotcha",
+  "name": "VRAM capacity is the hard wall for local inference: models either fit or they don't",
+  "class": "hardware",
+  "affects": [
+    "nvidia-rtx-5090",
+    "nvidia-rtx-5080",
+    "nvidia-rtx-5070-ti",
+    "local-nvidia-rtx-5070",
+    "nvidia-rtx-4090",
+    "nvidia-rtx-3090"
+  ],
+  "concepts": [
+    "vram",
+    "memory-capacity",
+    "model-fitting",
+    "quantization",
+    "kv-cache"
+  ],
+  "symptom": "A model that fits in VRAM runs at full speed. A model that doesn't fit either fails to load or falls back to CPU inference, which is 10-100x slower. There is no middle ground.",
+  "root_cause": "LLM inference requires the model weights, KV cache, and activations to fit in GPU memory. If the total exceeds VRAM capacity, the model cannot be loaded. Unlike system RAM, there is no swap mechanism for VRAM (except unified memory on Apple Silicon, which is slower). The capacity wall is binary: the model fits or it doesn't.",
+  "workaround": "Quantize the model to fit. A 70B model at 4-bit requires ~35GB, which fits in 48GB (RTX 6000 Ada) but not 24GB (RTX 4090). A 70B model at 8-bit requires ~70GB, which fits in 96GB (RTX PRO 6000) or 128GB (M4 Max) but not 48GB. Choose the quantization level that fits your VRAM. Alternatively, use a smaller model or a Mac with unified memory.",
+  "severity": "blocker",
+  "notes": "The VRAM capacity wall is the primary constraint for local inference. The RTX 5070 with 12GB VRAM cannot run a 70B model at any quantization level (70B at 2-bit requires ~18GB). The RTX 5090 with 32GB VRAM can run a 70B model at 4-bit (~35GB) only with aggressive KV cache management or by offloading some layers to CPU. The RTX PRO 6000 with 96GB VRAM can run a 70B model at 8-bit (~70GB) comfortably. The M5 Ultra with 512GB unified memory can run multiple 70B models simultaneously. Always check VRAM requirements before choosing hardware.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper",
+    "consumer-nvidia-rtx-pro-6000-blackwell-datasheet"
+  ]
+}

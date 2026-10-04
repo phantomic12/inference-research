@@ -1,0 +1,33 @@
+{
+  "id": "nic-sharp-in-network-reduction-limits",
+  "type": "gotcha",
+  "name": "SHARP in-network reduction only helps all-reduce, not all-to-all or all-gather",
+  "class": "hardware",
+  "affects": [
+    "nic-quantum2-switch",
+    "nic-quantumx800-switch",
+    "nvswitch-4"
+  ],
+  "concepts": [
+    "sharp",
+    "in-network-computing",
+    "allreduce",
+    "all-to-all",
+    "all-gather",
+    "collective-communication",
+    "moe",
+    "expert-parallel"
+  ],
+  "symptom": "SHARP in-network reduction is often described as accelerating 'collective communication', but it only accelerates all-reduce operations. All-to-all (used in MoE expert-parallel) and all-gather do not benefit from SHARP.",
+  "root_cause": "SHARP performs reduction operations inside the switch. All-reduce is the only common collective that is a pure reduction. All-gather and all-to-all are data movement operations that cannot be reduced inside the switch. MoE models use all-to-all for expert-parallel routing, which does not benefit from SHARP.",
+  "workaround": "For MoE models, SHARP provides limited benefit. Focus on network bandwidth and latency for all-to-all operations. For dense models with tensor-parallel, SHARP provides significant benefit for all-reduce.",
+  "severity": "major",
+  "notes": "This is an important distinction for MoE models. The marketing around SHARP and in-network computing often implies broad collective acceleration, but the actual benefit is limited to all-reduce. MoE expert-parallel all-to-all remains a network-bound operation.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "nic-quantum2-datasheet",
+    "nic-nvidia-infiniband-page"
+  ]
+}

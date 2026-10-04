@@ -1,0 +1,32 @@
+{
+  "id": "vision-encoder-vs-llm-prefill-cost-comparison",
+  "type": "flop",
+  "name": "Vision encoder vs LLM prefill cost comparison",
+  "status": "contested",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "vit-an-image-is-worth-16x16-words-arxiv-2010-11929",
+    "siglip-sigmoid-loss-for-language-image-pre-training-arxiv-2303-1",
+    "pap-mm-llava"
+  ],
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The vision encoder forward pass and the LLM prefill are both compute-bound, but they scale differently. Vision encoder cost scales with image resolution (quadratically in patches for attention, linearly for MLP). LLM prefill cost scales with text length (linearly). At 224x224, the vision encoder is ~1.4% of the LLM prefill for a 1000-token prompt. At 448x448, it is ~5.5%. At 1024x1024, it is ~87%. The crossover point where vision encoder cost equals LLM prefill cost depends on the model size and image resolution.",
+  "bound_by": "compute",
+  "scales_with": [
+    "image_resolution (quadratically for vision encoder, not at all for LLM prefill)",
+    "text_length (linearly for LLM prefill, not at all for vision encoder)",
+    "model_size (linearly for both)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "workarounds": [
+    "Reduce image resolution - cuts vision encoder cost quadratically",
+    "Use a smaller vision encoder - cuts cost linearly",
+    "Use Perceiver/Q-Former to compress visual tokens - cuts LLM prefill cost",
+    "Cache vision encoder output - eliminates repeated cost"
+  ],
+  "notes": "The vision encoder's share of prefill cost is RESOLUTION-DEPENDENT, not a fixed property of VLM inference, and the crossover is much later than commonly claimed. ViT-L/16 at 224x224 = 190.7 GFLOPs (ViT paper Table 6). A 7B LLM prefill over a 1000-token prompt = 2*7e9*1000 = 14 TFLOPs = 14,000 GFLOPs, so at 224x224 the encoder is ~1.4% of prefill. Encoder FLOPs scale with the SQUARE of resolution: 224->448 is 4x (763 GFLOPs, ~5.4% of a 7B prefill), and 224->1024 is ~20.9x (~3,985 GFLOPs, ~28.5% of a 7B prefill). CORRECTION: an earlier draft of this record scaled 224->1024 by 64x, reporting a wrong figure of 12,200 GFLOPs and 87% of prefill. The correct factor is (1024/224)^2 = 20.9, so the true figure is ~28.5%, not 87%. Against a 70B model the encoder is a negligible share at every resolution tested (0.1% at 224, 0.5% at 448, 2.8% at 1024) because prefill cost scales with parameter count while encoder cost does not. The practical conclusion is that the vision encoder matters for LATENCY and MEMORY (it is a separate model with its own weights and its own schedule) far more than for FLOPs against a large LLM."
+}

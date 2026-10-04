@@ -1,0 +1,27 @@
+{
+  "id": "local-mlx-kv-bits-disables-batching",
+  "type": "gotcha",
+  "name": "MLX-LM KV cache quantization disables batching: concurrency vs memory tradeoff",
+  "class": "framework",
+  "affects": [
+    "mlx-lm"
+  ],
+  "concepts": [
+    "mlx-lm",
+    "kv-cache",
+    "quantization",
+    "batching",
+    "concurrency"
+  ],
+  "symptom": "Enabling KV cache quantization (4-bit or 8-bit) in MLX-LM disables batching entirely, reducing the server to single-request inference. This is a hard tradeoff: save memory or serve concurrent users, not both.",
+  "root_cause": "MLX-LM's KV cache quantization and batching are separate code paths that are mutually exclusive. The quantized KV cache path does not support the batched decode path. This is a design choice, not a bug, but it is not obvious from the documentation.",
+  "workaround": "If you need batching, do not enable KV cache quantization. If you need KV cache quantization (for long context or large models), accept single-request inference. For multi-user serving on Apple Silicon, use vLLM-Metal instead of MLX-LM.",
+  "severity": "major",
+  "notes": "This is a critical gotcha for anyone using MLX-LM for serving. The --kv-bits flag (4 or 8) enables KV cache quantization but disables batching. The server will serve one request at a time. For single-user local inference, this is fine. For multi-user serving, use vLLM-Metal which supports both KV cache quantization and continuous batching.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "engine-mlx-lm-github"
+  ]
+}

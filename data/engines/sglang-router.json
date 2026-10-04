@@ -1,0 +1,62 @@
+{
+  "id": "sglang-router",
+  "type": "engine",
+  "name": "SGLang Router (sgl-router)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "serve-sglang-github",
+    "serve-sglang-dp-controller"
+  ],
+  "repo": "sgl-project/sglang",
+  "languages": [
+    "Rust",
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "design_goal": [
+    "multi-model",
+    "load-balancing",
+    "request-routing"
+  ],
+  "scheduling": [
+    "request-routing",
+    "load-balancing",
+    "KV-aware-routing"
+  ],
+  "supported_backends": [
+    "none (routing layer - drives SGLang engine instances)"
+  ],
+  "supported_formats": [
+    "passthrough (does not load weights - routes to SGLang instances)"
+  ],
+  "notable_features": [
+    "Rust-based router for SGLang multi-model serving",
+    "Data parallel controller with LoadBalanceMethod enum: ROUND_ROBIN, FOLLOW_BOOTSTRAP_ROOM, TOTAL_REQUESTS, TOTAL_TOKENS",
+    "TOTAL_TOKENS routing - sends requests to the worker with the fewest total tokens, which is a proxy for KV cache pressure",
+    "FOLLOW_BOOTSTRAP_ROOM - routes to the worker that already has the prefix cached",
+    "ZMQ-based communication between router and workers",
+    "Part of the SGLang project - tight integration with the engine"
+  ],
+  "hardware_caveats": [
+    "SGLang-specific - does not route to vLLM or other engines",
+    "TOTAL_TOKENS is a proxy for cache pressure, not a direct measurement - it does not account for cache hits",
+    "FOLLOW_BOOTSTRAP_ROOM requires the router to track which worker has which prefix - this state can become stale",
+    "No active health checking of workers - a dead worker continues to receive requests until the router notices",
+    "Rust core means debugging requires Rust tooling"
+  ],
+  "best_for": [
+    "Multi-model SGLang serving where requests should route to the model with the best cache hit",
+    "Data parallel SGLang deployments needing load balancing across workers",
+    "Agentic workloads with long shared prefixes where prefix-aware routing matters"
+  ],
+  "avoid_for": [
+    "Non-SGLang engines - the router is SGLang-specific",
+    "Single-model single-worker deployments where routing adds overhead",
+    "Deployments needing active health checking and circuit breaking"
+  ],
+  "docs_url": "https://docs.sglang.io/",
+  "notes": "SGLang's router is the routing layer for multi-model and data-parallel SGLang deployments. The data_parallel_controller.py implements four load balancing methods: ROUND_ROBIN (simple round-robin), FOLLOW_BOOTSTRAP_ROOM (route to the worker with the prefix cached), TOTAL_REQUESTS (route to the worker with the fewest requests), and TOTAL_TOKENS (route to the worker with the fewest total tokens). TOTAL_TOKENS is the most relevant for LLM serving because it is a proxy for KV cache pressure - a worker processing more tokens has less KV cache available. However, it is a proxy, not a direct measurement: it does not account for cache hits, and it does not account for the fact that a worker with many short requests may have more available cache than a worker with few long requests. The router is SGLang-specific and does not route to other engines."
+}

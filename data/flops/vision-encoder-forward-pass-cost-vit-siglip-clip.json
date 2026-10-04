@@ -1,0 +1,39 @@
+{
+  "id": "vision-encoder-forward-pass-cost-vit-siglip-clip",
+  "type": "flop",
+  "name": "Vision encoder forward pass cost (ViT/SigLIP/CLIP)",
+  "status": "contested",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "vit-an-image-is-worth-16x16-words-arxiv-2010-11929",
+    "siglip-sigmoid-loss-for-language-image-pre-training-arxiv-2303-1",
+    "clip-learning-transferable-visual-models-arxiv-2103-00020",
+    "dinov2-learning-robust-visual-features-arxiv-2304-07193"
+  ],
+  "class": "custom_kernel",
+  "arithmetic_intensity": "ViT forward pass is compute-bound at typical resolutions. For ViT-L/16 at 224x224: 190.7 GFLOPs total, with attention FLOPs ~2*L^2*d_h*n_q = 2*256^2*1024*16 = 2.1 GFLOPs (L=256 patches) and MLP FLOPs ~2*L*d_h*4*d_h = 2*256*1024*4096 = 2.1 GFLOPs per layer, 24 layers = ~103 GFLOPs MLP + ~51 GFLOPs attention = ~154 GFLOPs + patch embedding ~0.5 GFLOPs. The MLP dominates at 224x224. At higher resolutions (448x448, 1024x1024), attention FLOPs grow quadratically and become dominant.",
+  "bound_by": "compute",
+  "scales_with": [
+    "image_resolution (quadratically in patches for attention, linearly for MLP)",
+    "patch_size (smaller patches = more tokens = more FLOPs)",
+    "model_depth (linear in layers)",
+    "model_width (quadratically in hidden dim for MLP)",
+    "number_of_images (linear - each image is a separate forward pass)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-rtx-4090",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Use smaller vision encoder (ViT-B instead of ViT-L) - 86M params vs 304M, ~6x fewer FLOPs",
+    "Reduce input resolution - 224x224 instead of 448x448 cuts FLOPs by 4x",
+    "Use spatial merge / pixel shuffle to reduce token count before LLM (Qwen2-VL uses 2x2 merge = 4x fewer tokens)",
+    "Use Perceiver resampler or Q-Former to compress visual tokens to a fixed small count (32-64 tokens)",
+    "Cache vision encoder output for repeated images (multi-turn chat)",
+    "Use FP8/INT8 quantization for vision encoder weights"
+  ],
+  "notes": "THE CENTRAL COST FACT: For a single 224x224 image, the vision encoder forward pass costs MORE total FLOPs than the entire LLM prefill for a typical prompt. ViT-L/16 at 224x224 = 190.7 GFLOPs (source: ViT paper Table 6). A 7B LLM prefill for a 1000-token prompt costs ~2*7e9*1000 = 14 TFLOPs = 14,000 GFLOPs. So the vision encoder is ~1.4% of the LLM prefill at 224x224. Encoder FLOPs scale with the SQUARE of resolution: 224->448 is 4x (~763 GFLOPs) and 224->1024 is (1024/224)^2 = 20.9x (~3,985 GFLOPs). CORRECTION: an earlier draft of this record wrongly reported 12,200 GFLOPs at 1024x1024 (a 64x factor) and that this is 'comparable to or exceeds the LLM prefill'. The 64x factor is wrong; 20.9x is correct. At 3,985 GFLOPs the encoder is ~28.5% of a 7B model's 1000-token prefill and only ~2.8% of a 70B model's. The encoder is NOT comparable to prefill for a large LLM at any tested resolution. The key insight is that vision encoder cost scales with resolution while LLM prefill cost scales with text length, so the ratio is attacker-controlled via image size. SigLIP SO400M at 224x224 = ~41 GFLOPs (source: Google Big Vision repo). CLIP ViT-L/14 at 224x224 = ~17.5 GFLOPs (source: OpenCLIP). DINOv2-L at 224x224 = ~17.5 GFLOPs (same architecture as CLIP ViT-L/14). The FLOP counts are from the original papers or standard calculations; the ViT paper Table 6 is the most authoritative source. The comparison to LLM prefill is derived: 2*params*tokens is the standard prefill FLOP formula."
+}

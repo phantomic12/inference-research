@@ -1,0 +1,32 @@
+{
+  "id": "local-consumer-gpu-no-nvlink",
+  "type": "gotcha",
+  "name": "Consumer GPUs have no NVLink: multi-GPU inference requires PCIe or model sharding",
+  "class": "hardware",
+  "affects": [
+    "nvidia-rtx-5090",
+    "nvidia-rtx-5080",
+    "nvidia-rtx-5070-ti",
+    "local-nvidia-rtx-5070",
+    "nvidia-rtx-4090",
+    "nvidia-rtx-3090"
+  ],
+  "concepts": [
+    "nvlink",
+    "pcie",
+    "multi-gpu",
+    "tensor-parallel",
+    "model-sharding"
+  ],
+  "symptom": "Multi-GPU inference on consumer GPUs is limited by PCIe bandwidth, not NVLink. Two RTX 4090s connected via PCIe 4.0 x16 have ~64 GB/s of interconnect bandwidth, compared to 900 GB/s on NVLink. This makes tensor parallelism across consumer GPUs much less efficient than on datacenter GPUs.",
+  "root_cause": "NVLink is a high-bandwidth interconnect available only on datacenter GPUs (A100, H100, B200). Consumer GPUs (RTX 4090, RTX 5090) use PCIe, which has much lower bandwidth. Multi-GPU inference requires frequent communication between GPUs (e.g., all-reduce in tensor parallelism), and PCIe becomes the bottleneck.",
+  "workaround": "For multi-GPU inference on consumer hardware, use model sharding (different layers on different GPUs) rather than tensor parallelism (same layer split across GPUs). Model sharding requires less inter-GPU communication. Alternatively, use a single large GPU (RTX PRO 6000 with 96GB) or a Mac with unified memory (M5 Ultra with 512GB).",
+  "severity": "major",
+  "notes": "The lack of NVLink on consumer GPUs is a fundamental limitation for multi-GPU inference. Two RTX 4090s with 24GB each cannot be treated as a single 48GB GPU. The PCIe bottleneck makes tensor parallelism inefficient. For local inference, a single large GPU or a Mac with unified memory is usually a better choice than multiple consumer GPUs.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+  ]
+}

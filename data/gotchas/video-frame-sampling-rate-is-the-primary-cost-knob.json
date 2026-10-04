@@ -1,0 +1,29 @@
+{
+  "id": "video-frame-sampling-rate-is-the-primary-cost-knob",
+  "type": "gotcha",
+  "name": "Video frame sampling rate is the primary cost knob",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "pap-mm-llava-next",
+    "pixtral-12b-arxiv-2410-07073"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "sglang",
+    "tensorrt-llm"
+  ],
+  "concepts": [
+    "video",
+    "frame-sampling",
+    "vision-encoder",
+    "kv-cache"
+  ],
+  "symptom": "Video inference cost is dominated by the frame sampling rate. A 1-minute video at 1 fps = 60 frames, but at 2 fps = 120 frames, doubling the cost.",
+  "root_cause": "Each frame is processed independently by the vision encoder, so the total cost scales linearly with the number of frames. The frame sampling rate is the primary cost knob.",
+  "workaround": "Reduce the frame sampling rate. For most applications, 0.5-1 fps is sufficient. Use keyframe sampling to only process frames with significant visual change. Use temporal pooling to pool adjacent frames before the LLM.",
+  "severity": "major",
+  "notes": "FRAME SAMPLING IS THE PRIMARY COST KNOB FOR VIDEO: The total cost of video inference is frame_sampling_rate * tokens_per_frame * num_frames. For a 1-minute video at 1 fps = 60 frames, at 448x448 per frame with 2x2 spatial merge = 256 tokens per frame, total visual tokens = 60*256 = 15,360. At 2 fps, this doubles to 30,720 tokens. The frame sampling rate is the most important cost knob because it directly multiplies the per-frame cost. LLaVA-NeXT-Video uses 1 fps sampling. Pixtral uses variable frame sampling based on video duration. The token counts are derived from the model configs; the cost formula is standard."
+}

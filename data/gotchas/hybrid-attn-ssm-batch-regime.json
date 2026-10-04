@@ -1,0 +1,30 @@
+{
+  "id": "hybrid-attn-ssm-batch-regime",
+  "type": "gotcha",
+  "class": "config",
+  "affects": [],
+  "concepts": [
+    "hybrid-attention-ssm",
+    "mamba",
+    "jamba",
+    "samba",
+    "zamba",
+    "nemotron-h",
+    "batch-size",
+    "kv-cache"
+  ],
+  "symptom": "The optimal batch size for a hybrid attention-SSM model is set by the SSM state footprint, not by available KV memory. At small batch and long context, the hybrid wins (SSM state is smaller than KV cache). At large batch and short context, pure attention wins (paged KV can pack sequences efficiently while SSM state cannot).",
+  "root_cause": "The SSM state is a fixed per-sequence cost that does not amortize with batch. At batch B, the total SSM state memory is B * num_ssm_layers * d_inner * N * 2 bytes. The KV cache, by contrast, grows with context length but can be paged and packed efficiently. The crossover point where SSM state exceeds attention KV is at context = S * d_inner * N * 2 / (A * num_kv_heads * head_dim * 2 * 2) tokens.",
+  "workaround": "Choose the architecture based on the workload: for long-context, small-batch workloads, use a high SSM fraction (Nemotron-H: 92% SSM). For short-context, large-batch workloads, use pure attention or a low SSM fraction. The optimal ratio is workload-dependent.",
+  "severity": "major",
+  "notes": "This is the unifying question for hybrid architectures: for each architecture, what is the per-token decode cost as a function of batch size, and where does it beat or lose to a dense transformer of similar quality? The answer is that the crossover is at a specific context length and batch size that depends on the SSM state size and the attention KV geometry. For most hybrids, the crossover is at 4-8K tokens context and batch 32-128. Below the crossover, pure attention wins. Above it, the hybrid wins.",
+  "name": "Hybrid attention-SSM batch-size regime crossover",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-04",
+  "sources": [
+    "arch-nemotron-h",
+    "arch-jamba",
+    "arch-samba"
+  ]
+}

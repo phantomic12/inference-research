@@ -1,0 +1,33 @@
+{
+  "id": "dynamic-resolution-and-any-resolution-vision-token-cost",
+  "type": "flop",
+  "name": "Dynamic resolution and any-resolution vision token cost",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "navit-patch-n-pack-any-aspect-ratio-and-resolution-arxiv-2307-06",
+    "pixtral-12b-arxiv-2410-07073",
+    "pap-mm-llava-next"
+  ],
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Dynamic resolution approaches (NaViT, Pixtral, LLaVA-NeXT/AnyRes) allow the vision encoder to process images at their native resolution and aspect ratio, rather than resizing to a fixed grid. The token count is determined by the image dimensions: tokens = (H/patch_size) * (W/patch_size). For a 448x448 image with patch_size 14 and 2x2 spatial merge: (448/14/2)^2 = 16^2 = 256 tokens. For a 1024x1024 image with patch_size 16 and no merge: (1024/16)^2 = 64^2 = 4096 tokens. The token count is attacker-controlled via image size, which makes serving cost unpredictable.",
+  "bound_by": "compute",
+  "scales_with": [
+    "image_height (linear in tokens)",
+    "image_width (linear in tokens)",
+    "patch_size (inverse quadratic - smaller patches = more tokens)",
+    "spatial_merge_size (inverse quadratic - larger merge = fewer tokens)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "workarounds": [
+    "Cap maximum image dimensions - limits worst-case token count",
+    "Use spatial merge (2x2 or 4x4) - reduces token count by 4x or 16x",
+    "Use Perceiver/Q-Former - compresses to fixed token count regardless of input size",
+    "Use tiling with a fixed number of tiles - bounds token count"
+  ],
+  "notes": "DYNAMIC RESOLUTION TOKEN COUNT: The token count for a dynamic resolution model is determined by the image dimensions and the patch/merge configuration. Qwen2-VL: patch_size 14, spatial_merge 2, so tokens = (H/28)*(W/28). A 448x448 image = 16*16 = 256 tokens. A 3840x2160 image = 137*77 = 10,549 tokens. Pixtral: patch_size 16, no merge, so tokens = (H/16)*(W/16). A 1024x1024 image = 64*64 = 4096 tokens. A 4096x4096 image = 256*256 = 65,536 tokens. LLaVA-NeXT/AnyRes: uses a grid of predefined resolutions (384, 768, 1152, 1536, 1920, 2304) and splits the image into a global view + local crops. The token count depends on the number of tiles selected. The key insight is that dynamic resolution makes the token count a function of the input image, not a model constant, which makes serving cost unpredictable and attacker-controlled. The token counts are derived from the model configs; the formulas are standard."
+}

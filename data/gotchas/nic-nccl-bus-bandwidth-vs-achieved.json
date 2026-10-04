@@ -1,0 +1,35 @@
+{
+  "id": "nic-nccl-bus-bandwidth-vs-achieved",
+  "type": "gotcha",
+  "name": "NCCL bus bandwidth is typically 2x achieved bandwidth for inter-node collectives",
+  "class": "measurement",
+  "affects": [
+    "nic-connectx7-ndr-400gbps",
+    "nic-connectx8-xdr-800gbps",
+    "nic-quantum2-switch",
+    "nic-quantumx800-switch"
+  ],
+  "concepts": [
+    "nccl",
+    "bus-bandwidth",
+    "achieved-bandwidth",
+    "allreduce",
+    "collective-communication",
+    "ring-algorithm",
+    "tree-algorithm",
+    "infiniband",
+    "roce"
+  ],
+  "symptom": "NCCL all-reduce performance over InfiniBand achieves only ~50-60% of the theoretical bus bandwidth, and this gap is rarely stated explicitly.",
+  "root_cause": "Bus bandwidth (also called busbw or algorithmic bandwidth) is calculated as (N-1)/N * data_size / time for all-reduce, which assumes perfect overlap of communication and computation. Achieved bandwidth is the actual data moved divided by time. The gap comes from: (1) synchronization overhead between ranks, (2) the reduce-scatter + all-gather pattern of all-reduce means data is sent twice (once in each phase), (3) network protocol overhead, (4) the ring algorithm's serialization - each rank sends to only one neighbor at a time. For a ring all-reduce with N ranks, the ring algorithm achieves (N-1)/N of peak bandwidth in the ideal case, but real-world factors reduce this further.",
+  "workaround": "Use tree algorithm for small message sizes (lower latency). Use ring algorithm for large message sizes (higher bandwidth). For inter-node, ensure NCCL is using the correct IB transport (not falling back to socket). Set NCCL_IB_HCA to specify the correct HCA. Use NCCL_NET_GDR_LEVEL=5 for GPUDirect RDMA.",
+  "severity": "major",
+  "notes": "The 2x gap between bus bandwidth and achieved bandwidth is one of the most commonly misunderstood performance metrics in distributed training. When a benchmark reports 'NCCL achieved 400 GB/s all-reduce bandwidth,' it may mean bus bandwidth (which counts data twice) or achieved bandwidth (which counts once). Always check which metric is being reported. The NCCL documentation and nccl-tests benchmark report bus bandwidth by default.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "nic-nccl-docs",
+    "nic-nccl-github"
+  ]
+}

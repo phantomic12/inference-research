@@ -1,0 +1,33 @@
+{
+  "id": "video-inference-frame-sampling-and-per-frame-token-cost",
+  "type": "flop",
+  "name": "Video inference: frame sampling and per-frame token cost",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "pap-mm-llava-next",
+    "pixtral-12b-arxiv-2410-07073"
+  ],
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Video inference cost = frame_sampling_rate * tokens_per_frame * num_frames. For a 1-minute video at 1 fps = 60 frames. At 448x448 per frame with 2x2 spatial merge = 256 tokens per frame. Total visual tokens = 60*256 = 15,360. LLM prefill cost = 2*7e9*15,360 = 215 TFLOPs. KV cache cost = 15,360 * 57,344 B/token = 881 MB. For a 5-minute video at 2 fps = 600 frames = 153,600 visual tokens = 8.6 GB KV cache. Video blows up both prefill and KV cache because frame count multiplies the per-frame cost.",
+  "bound_by": "both",
+  "scales_with": [
+    "frame_sampling_rate (linear)",
+    "num_frames (linear)",
+    "tokens_per_frame (linear - depends on resolution and spatial merge)",
+    "video_duration (linear)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "workarounds": [
+    "Reduce frame sampling rate - 0.5 fps instead of 1 fps halves cost",
+    "Use keyframe sampling - only sample frames with significant visual change",
+    "Use temporal pooling - pool adjacent frames before LLM",
+    "Use Perceiver/Q-Former per frame - compress each frame to 32-64 tokens",
+    "Use video-specific encoders (VideoMAE, TimeSformer) that process multiple frames jointly"
+  ],
+  "notes": "VIDEO INFERENCE COST: Video is the most expensive multimodal input because frame count multiplies the per-frame cost. A 1-minute video at 1 fps = 60 frames. At 448x448 per frame with 2x2 spatial merge (Qwen2-VL style) = 256 tokens per frame. Total visual tokens = 60*256 = 15,360. This is 15x a typical 1000-token text prompt. LLM prefill cost = 2*7e9*15,360 = 215 TFLOPs, which is 15x the cost of a 1000-token text prompt. KV cache cost = 15,360 * 57,344 B/token = 881 MB for a 7B model. For a 5-minute video at 2 fps = 600 frames = 153,600 visual tokens = 8.6 GB KV cache. The frame sampling rate is the primary cost knob: halving the rate halves the cost. LLaVA-NeXT-Video uses 1 fps sampling. Pixtral uses variable frame sampling based on video duration. The token counts are derived from the model configs; the FLOP and KV cache formulas are standard."
+}

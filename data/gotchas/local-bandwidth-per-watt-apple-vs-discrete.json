@@ -1,0 +1,42 @@
+{
+  "id": "local-bandwidth-per-watt-apple-vs-discrete",
+  "type": "gotcha",
+  "name": "Apple Silicon has better bandwidth-per-watt than discrete GPUs, but lower absolute bandwidth",
+  "class": "hardware",
+  "affects": [
+    "apple-m4-max",
+    "apple-m3-max",
+    "apple-m3-ultra",
+    "apple-m1-ultra",
+    "local-apple-m4-pro",
+    "local-apple-m3-pro",
+    "local-apple-m5",
+    "local-apple-m5-pro",
+    "local-apple-m5-max",
+    "local-apple-m5-ultra",
+    "nvidia-rtx-5090",
+    "nvidia-rtx-5080",
+    "nvidia-rtx-5070-ti",
+    "local-nvidia-rtx-5070"
+  ],
+  "concepts": [
+    "memory-bandwidth",
+    "power-efficiency",
+    "bandwidth-per-watt",
+    "apple-silicon",
+    "gddr7",
+    "lpddr5x"
+  ],
+  "symptom": "Apple Silicon delivers more memory bandwidth per watt than discrete GPUs, but the absolute bandwidth is lower. A Mac can run a model longer on battery, but a discrete GPU will decode faster when both are plugged in.",
+  "root_cause": "Apple Silicon uses LPDR5X memory integrated on the package, which is very power-efficient but limited in absolute bandwidth (614GB/s for M5 Max, 1.2TB/s for M5 Ultra). Discrete GPUs use GDDR7 or HBM3, which deliver much higher absolute bandwidth (1792GB/s for RTX 5090) but at much higher power (575W TGP). The bandwidth-per-watt ratio favors Apple Silicon, but the absolute bandwidth favors discrete GPUs.",
+  "workaround": "For battery-powered inference, Apple Silicon is the clear winner. For plugged-in maximum performance, discrete GPUs are faster. Choose based on the use case: portable/battery (Apple) vs desktop/maximum performance (discrete).",
+  "severity": "minor",
+  "notes": "The bandwidth-per-watt comparison: M5 Max delivers 614GB/s at ~50W sustained (12.3 GB/s/W). RTX 5090 delivers 1792GB/s at ~450W sustained (4.0 GB/s/W). Apple Silicon is 3x more power-efficient per unit of bandwidth. But the RTX 5090 has 2.9x the absolute bandwidth. For a 70B model at 4-bit, the M5 Max yields ~15-25 tokens/sec on battery, while the RTX 5090 yields ~30-50 tokens/sec plugged in. The choice depends on whether portability or maximum performance matters more.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper",
+    "local-apple-macbook-pro-m5-tech-specs"
+  ]
+}

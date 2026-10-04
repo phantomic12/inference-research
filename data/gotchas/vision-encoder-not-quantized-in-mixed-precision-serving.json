@@ -1,0 +1,30 @@
+{
+  "id": "vision-encoder-not-quantized-in-mixed-precision-serving",
+  "type": "gotcha",
+  "name": "Vision encoder not quantized in mixed-precision serving",
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-04",
+  "sources": [
+    "mdl2-trtllm-supported-models",
+    "mdl2-vllm-supported-models-2026-10"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "sglang",
+    "tensorrt-llm"
+  ],
+  "concepts": [
+    "vision-encoder",
+    "quantization",
+    "mixed-precision",
+    "bf16",
+    "fp8"
+  ],
+  "symptom": "The vision encoder runs in BF16 even when the LLM decoder is quantized to FP8 or INT8, leading to a precision mismatch and wasted memory.",
+  "root_cause": "The vision encoder is often kept in BF16 for quality reasons, while the LLM decoder is quantized. This creates a mixed-precision pipeline where the encoder uses 2x the memory and compute of a quantized encoder.",
+  "workaround": "Quantize the vision encoder to FP8 or INT8. This reduces memory by 2x and improves throughput. The quality impact is typically small for vision encoders. TRT-LLM and vLLM support FP8 quantization for some vision encoders.",
+  "severity": "minor",
+  "notes": "MIXED-PRECISION SERVING IS COMMON: Many production VLM deployments run the vision encoder in BF16 and the LLM decoder in FP8 or INT8. This is because the vision encoder is more sensitive to quantization than the LLM decoder. However, this creates a precision mismatch that wastes memory and compute. Quantizing the vision encoder to FP8 can reduce memory by 2x and improve throughput by 1.5-2x. The quality impact is typically small for vision encoders. The support varies by engine and model architecture. The precision analysis is from the engine docs; the memory and throughput estimates are derived from the precision sizes."
+}

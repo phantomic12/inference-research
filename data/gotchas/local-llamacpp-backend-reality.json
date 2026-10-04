@@ -1,0 +1,29 @@
+{
+  "id": "local-llamacpp-backend-reality",
+  "type": "gotcha",
+  "name": "llama.cpp backend performance varies dramatically: CUDA > Metal > Vulkan > CPU",
+  "class": "framework",
+  "affects": [
+    "llama-cpp"
+  ],
+  "concepts": [
+    "llama-cpp",
+    "cuda",
+    "metal",
+    "vulkan",
+    "sycl",
+    "cpu-backend",
+    "gpu-backend"
+  ],
+  "symptom": "The same GGUF model on the same hardware can run at wildly different speeds depending on the llama.cpp backend. CUDA is typically 2-5x faster than Metal, which is 2-5x faster than Vulkan, which is 2-5x faster than CPU.",
+  "root_cause": "Each backend has different levels of optimization. CUDA benefits from NVIDIA's highly optimized kernels and tensor cores. Metal is well-optimized for Apple Silicon but has fewer kernels than CUDA. Vulkan is the universal fallback but is not optimized for any specific hardware. CPU is the baseline with AVX2/AVX512 optimizations but no GPU acceleration.",
+  "workaround": "Always use the best available backend for your hardware: CUDA for NVIDIA GPUs, Metal for Apple Silicon, Vulkan for AMD/Intel GPUs. Check llama.cpp benchmarks for your specific hardware and model. Do not assume that a faster GPU always yields faster inference - the backend matters as much as the hardware.",
+  "severity": "major",
+  "notes": "The backend hierarchy for llama.cpp: CUDA (NVIDIA) > Metal (Apple) > Vulkan (AMD/Intel) > CPU. The gap between backends can be 2-5x. For example, a 70B model at 4-bit on an RTX 4090 might run at 35 tokens/sec with CUDA but only 15 tokens/sec with Vulkan. On an M4 Max, Metal might yield 20 tokens/sec while Vulkan yields 8 tokens/sec. Always benchmark with the correct backend for your hardware.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "engine-llamacpp-github"
+  ]
+}

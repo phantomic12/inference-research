@@ -1,0 +1,28 @@
+{
+  "id": "diffusion-lm-serving-shape-gotcha",
+  "type": "gotcha",
+  "class": "config",
+  "affects": [],
+  "concepts": [
+    "diffusion",
+    "llada",
+    "dream",
+    "mercury",
+    "non-autoregressive",
+    "denoising-steps"
+  ],
+  "symptom": "Diffusion language models cannot be served with standard AR inference machinery. Continuous batching, paged KV, speculative decode, and FlashDecoding all assume one forward pass per token. Diffusion LMs do S full forward passes per generation, with no KV cache reuse across steps.",
+  "root_cause": "Diffusion LMs generate by iterative denoising: start from a fully masked sequence, run S denoising steps, each a full forward pass over the current sequence. There is no causal mask (the model sees the entire sequence), no KV cache (every step is a fresh full-attention pass), and no incremental decode (the cost per step is the full sequence length, not one token).",
+  "workaround": "Use a separate serving path for diffusion LMs. SGLang has a dedicated diffusion LM section with --dllm-algorithm flags. Cache the KV for the prompt portion only (the prompt is stable across steps). Batch many independent sequences so a step's flops are shared across the batch. Use fewer denoising steps for faster inference at the cost of quality.",
+  "severity": "major",
+  "notes": "The existing diffusion-lm-denoising-steps flop record covers the arithmetic. This gotcha covers the practical serving consequence: you cannot just plug a diffusion LM into vLLM or llama.cpp and expect it to work. The serving shape is fundamentally different. SGLang is the only major engine with explicit diffusion LM support. The batch-size regime where diffusion wins is at large batch (compute-bound), not at small batch (where AR is memory-bound and diffusion is compute-bound).",
+  "name": "Diffusion LM serving shape is fundamentally different from AR",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-04",
+  "sources": [
+    "arch-llada",
+    "arch-dream-7b",
+    "mdl2-sglang-diffusion-language-models"
+  ]
+}
