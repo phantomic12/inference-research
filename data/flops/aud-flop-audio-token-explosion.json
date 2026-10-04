@@ -1,0 +1,25 @@
+{
+  "id": "aud-flop-audio-token-explosion",
+  "type": "flop",
+  "name": "Audio input token count explodes relative to text output",
+  "class": "custom_kernel",
+  "bound_by": "memory",
+  "scales_with": ["audio_duration", "sample_rate", "mel_bins", "encoder_layers", "encoder_hidden_size"],
+  "affected_by_hardware": ["gpu-vram", "memory-bandwidth"],
+  "workarounds": [
+    "Use 30-second windowing (Whisper's max_source_positions=1500 at 50Hz mel frame rate)",
+    "Use VAD to skip non-speech segments",
+    "Use streaming ASR for long audio (with quality tradeoff)"
+  ],
+  "notes": "A 1-hour recording at 16kHz is 57,600,000 samples. After the log-mel frontend (80 or 128 mel bins, 100Hz frame rate for Whisper), this becomes 360,000 mel frames. Whisper's encoder uses 30-second windowing (max_source_positions=1500 at 50Hz after 2x subsampling), so a 1-hour recording is processed as 120 separate 30-second windows. Each window produces 1,500 encoder positions. The encoder is bidirectional with full attention, so the compute cost per window is O(1500^2 * d_model * num_layers). For large-v3 (d_model=1280, 32 layers), this is approximately 1500^2 * 1280 * 32 * 2 * 2 = 368 GFLOP per window, or 44 TFLOP for the full hour. The decoder then generates text tokens autoregressively, but the encoder dominates the compute. This is fundamentally different from text-to-text models where input and output token counts are comparable.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "aud-src-whisper-tiny-config",
+    "aud-src-whisper-base-config",
+    "aud-src-whisper-small-config",
+    "aud-src-whisper-medium-config",
+    "aud-src-whisper-large-v2-config"
+  ]
+}

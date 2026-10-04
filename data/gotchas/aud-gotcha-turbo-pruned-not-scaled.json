@@ -1,0 +1,20 @@
+{
+  "id": "aud-gotcha-turbo-pruned-not-scaled",
+  "type": "gotcha",
+  "name": "Whisper large-v3-turbo is pruned, not scaled",
+  "class": "config",
+  "affects": ["whisper-large-v3-turbo"],
+  "concepts": ["whisper", "turbo", "pruning", "encoder-decoder", "decoder-layers"],
+  "symptom": "Assuming Whisper large-v3-turbo is simply a smaller version of large-v3 with proportional speedup across all components.",
+  "root_cause": "Turbo is a PRUNED model, not a scaled one. The encoder is identical (32 layers, d_model 1280, 20 heads). Only the decoder is reduced from 32 layers to 4 layers. This means the speedup is concentrated in the decode phase, not the encoder. For short clips where the encoder dominates (>95% of FLOPs), the speedup is much smaller than the 2x parameter reduction suggests.",
+  "workaround": "Benchmark turbo for your specific use case. For short clips, expect modest speedup. For long transcripts with many tokens, expect larger speedup. The memory savings (8x less KV cache) are real and consistent.",
+  "severity": "major",
+  "notes": "The turbo model's decoder_layers=4 vs large-v3's decoder_layers=32 is the key architectural difference. The encoder is bit-for-bit identical. This is why turbo shows ~2x speedup end-to-end but the encoder (the compute-heavy part) is unchanged. The 8x reduction in KV cache memory is the more consistent win.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "hf-mm-whisper-large-v3-config",
+    "hf-mm-whisper-large-v3-turbo-config"
+  ]
+}

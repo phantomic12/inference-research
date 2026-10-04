@@ -1,0 +1,17 @@
+{
+  "id": "emb-bi-encoder-vs-cross-encoder-cost",
+  "type": "gotcha",
+  "name": "Bi-encoder encodes corpus once; cross-encoder costs O(corpus) per query",
+  "class": "config",
+  "affects": [],
+  "concepts": ["bi-encoder", "cross-encoder", "reranker", "embedding", "retrieval", "RAG"],
+  "symptom": "Reranking the full corpus with a cross-encoder is prohibitively expensive; the standard pattern is to retrieve 100 candidates with a cheap bi-encoder and rerank only those 100 with an expensive cross-encoder.",
+  "root_cause": "A bi-encoder (embedding model) encodes each document independently and stores the resulting vector. At query time, only the query is encoded (one forward pass), and the stored document vectors are searched via approximate nearest neighbor (ANN) — O(1) per query. A cross-encoder (reranker) concatenates query and passage into a single sequence and scores the pair with a full bidirectional forward pass. N passages means N independent forward passes over N (query+passage) sequences with NO KV reuse between them, because the query text sits inside each pair's sequence and cannot be cached across pairs. So rerank cost is O(N) per query where N is the number of candidate passages.",
+  "workaround": "Retrieve wide with a cheap bi-encoder (e.g., bge-small, 33M params, 384 dims), then rerank only the top 50-100 candidates with an expensive cross-encoder (e.g., bge-reranker-v2-m3, 568M params). The bi-encoder's recall determines the ceiling; the cross-encoder's precision determines the final quality. This two-stage funnel is the standard production RAG architecture.",
+  "severity": "major",
+  "notes": "This is the fundamental cost model that shapes every production RAG system. The bi-encoder's corpus encoding is a one-time cost (amortized over all queries), while the cross-encoder's per-query cost scales with the number of candidates. This is why you never rerank the whole corpus — you rerank the top-K from the bi-encoder. The bi-encoder is fast but approximate (ANN search); the cross-encoder is accurate but expensive (full forward pass per pair). The tradeoff is recall vs precision, and the two-stage funnel gets you both.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": ["hf-embed-bge-m3", "hf-embed-bge-reranker-v2-m3"]
+}

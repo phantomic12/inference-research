@@ -1,0 +1,17 @@
+{
+  "id": "emb-matryoshka-dimension-truncation",
+  "type": "gotcha",
+  "name": "Matryoshka embedding models support dimension truncation with minimal quality loss",
+  "class": "config",
+  "affects": [],
+  "concepts": ["matryoshka", "embedding", "dimension truncation", "vector storage", "nomic-embed", "jina-embeddings"],
+  "symptom": "Embedding models trained with Matryoshka Representation Learning (MRL) can be truncated to fewer dimensions at inference time with little to no loss in retrieval quality, turning the vector-store storage/compute tradeoff into a simple configuration choice.",
+  "root_cause": "Matryoshka-trained models are explicitly optimized so that a prefix of their output dimensions remains a valid embedding. For example, nomic-embed-text-v1.5 (768 dims) can be truncated to 512, 256, 128, or 64 dims. jina-embeddings-v3 (1024 dims) supports [32, 64, 128, 256, 512, 768, 1024]. jina-embeddings-v4 (2048 dims) supports [128, 256, 512, 1024, 2048]. This is an inference-time property, not visible in config.json — it is a training-time design choice.",
+  "workaround": "At 64 dims, a document costs 256 bytes instead of 3 KB (fp32), a 12x storage and search-speed reduction. This is a real serving advantage: instead of choosing between a small model (fast, low quality) and a large model (slow, high quality), you can deploy a large model and truncate to the dimension that fits your storage/latency budget. The quality loss from truncation is typically small (often <1% on retrieval benchmarks) because the model was trained to make the prefix dimensions meaningful.",
+  "severity": "minor",
+  "notes": "This is a serving advantage worth its own record because it changes the deployment calculus. Without Matryoshka, you must choose a model size and live with its fixed output dimension. With Matryoshka, you can deploy one model and tune the dimension as a runtime parameter — the same model can serve a high-recall production system (full dims) and a low-latency edge system (truncated dims) without retraining or re-indexing.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": ["hf-embed-nomic-embed-text-v1-5", "hf-embed-jina-embeddings-v3", "hf-embed-jina-embeddings-v4"]
+}

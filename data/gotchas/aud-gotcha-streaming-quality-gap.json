@@ -1,0 +1,19 @@
+{
+  "id": "aud-gotcha-streaming-quality-gap",
+  "type": "gotcha",
+  "name": "Streaming ASR quality is materially worse than offline ASR",
+  "class": "config",
+  "affects": [],
+  "concepts": ["streaming-asr", "whisper", "localagreement", "bounded-latency", "chunked-inference"],
+  "symptom": "Streaming ASR systems (whisper-streaming, WhisperLive, etc.) produce transcription quality that is noticeably worse than offline Whisper on the same audio. Word error rates are higher, especially at segment boundaries.",
+  "root_cause": "Streaming ASR must emit tokens with bounded latency as audio arrives, which requires chunked inference with causal masking and finite look-ahead. The model cannot see future audio context, so it makes decisions with incomplete information. The LocalAgreement algorithm and other streaming policies trade quality for latency.",
+  "workaround": "Use offline ASR when latency is not critical. For streaming, tune the latency/quality tradeoff parameters (look-ahead window, chunk size) and accept the quality gap.",
+  "severity": "major",
+  "notes": "This is a fundamental tradeoff, not a bug. The Whisper-Streaming paper (arXiv 2307.14743) reports 3.3 seconds latency on unsegmented long-form speech but does not claim parity with offline Whisper. The quality gap is most pronounced at word boundaries and in noisy conditions.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "aud-src-whisper-streaming-paper"
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "id": "faster-whisper",
+  "type": "engine",
+  "name": "faster-whisper",
+  "repo": "SYSTRAN/faster-whisper",
+  "languages": ["Python", "C++"],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": ["high-performance", "CTranslate2-backend", "batch-transcription", "ease-of-use"],
+  "scheduling": ["none"],
+  "supported_backends": ["cuda", "cpu-avx512", "cpu-avx2"],
+  "supported_formats": ["safetensors"],
+  "notable_features": [
+    "Reimplementation of OpenAI's Whisper using CTranslate2 inference engine",
+    "Up to 4x faster than openai/whisper for the same accuracy with less memory",
+    "8-bit quantization (int8) on both CPU and GPU for further speedup",
+    "Batched transcription pipeline for processing multiple audio files efficiently",
+    "Supports distil-whisper models",
+    "Word-level timestamps",
+    "Silero VAD integration for filtering non-speech segments",
+    "OpenAI-compatible server via speaches-ai/speaches"
+  ],
+  "hardware_caveats": [
+    "GPU execution requires CUDA 12 and cuDNN 9 (or downgrade CTranslate2 for older CUDA)",
+    "No Metal, Vulkan, or ROCm support -- CUDA or CPU only",
+    "int8 quantization on GPU uses int8_float16 compute type (not pure int8)",
+    "Batched transcription requires significant VRAM (6GB+ for large-v3 batch_size=8)"
+  ],
+  "best_for": [
+    "Batch transcription of many audio files on NVIDIA GPUs",
+    "Python-based workflows that need Whisper accuracy with better speed",
+    "Word-level timestamps and VAD filtering"
+  ],
+  "avoid_for": [
+    "Apple Silicon or AMD GPU users (no Metal/Vulkan/ROCm)",
+    "Production serving with continuous batching (use vLLM or SGLang)",
+    "Real-time streaming (use whisper-streaming or WhisperLive instead)"
+  ],
+  "docs_url": "https://github.com/SYSTRAN/faster-whisper",
+  "notes": "faster-whisper is a Python wrapper around CTranslate2 that reimplements Whisper inference. It is up to 4x faster than the original OpenAI implementation. The project is actively maintained. It does NOT support Metal, Vulkan, or ROCm -- only CUDA and CPU. The batched transcription pipeline is the key feature for throughput. int8 quantization provides additional speedup on both CPU and GPU.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "aud-src-faster-whisper-readme"
+  ]
+}
