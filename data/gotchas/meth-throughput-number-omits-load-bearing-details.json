@@ -1,0 +1,27 @@
+{
+  "id": "meth-throughput-number-omits-load-bearing-details",
+  "type": "gotcha",
+  "name": "A throughput number without batch size, concurrency, input/output length, and warmup is meaningless",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "throughput",
+    "batch-size",
+    "concurrency",
+    "input-length",
+    "output-length",
+    "warmup",
+    "tokens-per-second"
+  ],
+  "symptom": "A vendor claims '1000 tokens/sec' but doesn't specify whether that's at batch 1 or batch 128, with 128-token or 8192-token inputs, with or without warmup. The actual serving throughput at your workload could be 10x lower.",
+  "root_cause": "Throughput is a function of: batch size (larger = higher throughput but higher latency), input length (longer = more prefill work), output length (longer = more decode steps), concurrency (more requests = better GPU utilization), and warmup (JIT compilation, cache warming). Omitting any of these makes the number uninterpretable.",
+  "workaround": "Always require: (1) batch size or concurrency level, (2) input token length, (3) output token length, (4) warmup procedure (e.g., '100 warmup iterations'), (5) whether the number is per-request or aggregate. Compare only numbers measured at the same operating point.",
+  "severity": "major",
+  "notes": "This is the most common performance marketing trick. A '1000 tokens/sec' claim at batch 128 with 8192-token inputs might be 50 tokens/sec at batch 1 with 128-token inputs. The repo's benchmark schema requires methodology for exactly this reason.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "meth-mlperf-invalidation-context"
+  ]
+}

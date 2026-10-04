@@ -1,0 +1,26 @@
+{
+  "id": "meth-pickle-code-execution-vector",
+  "type": "gotcha",
+  "name": "torch.load with pickle is a remote code execution vector: loading a malicious model file can execute arbitrary code",
+  "class": "format",
+  "affects": [],
+  "concepts": [
+    "pickle",
+    "torch.load",
+    "model-serialization",
+    "remote-code-execution",
+    "safetensors",
+    "security"
+  ],
+  "symptom": "You download a .pt or .bin model file from an untrusted source and load it with torch.load(). The file contains malicious pickle opcodes that execute arbitrary code on your machine.",
+  "root_cause": "Python's pickle format is a stack-based instruction language. When unpickling, the GLOBAL opcode imports modules and REDUCE calls functions. A malicious pickle can import os and call os.system() to execute arbitrary commands. This is not a bug in pickle — it's the intended behavior. PyTorch's torch.load uses pickle by default.",
+  "workaround": "Never load model files from untrusted sources with torch.load(). Use safetensors format instead (HuggingFace's safe alternative). If you must use torch.load, use weights_only=True (available in PyTorch 2.0+). On HuggingFace Hub, check the Pickle Import scan results before downloading. Use GPG-signed commits when available.",
+  "severity": "blocker",
+  "notes": "HuggingFace's documentation explicitly warns: 'there are dangerous arbitrary code execution attacks that can be perpetrated when you load a pickle file.' The Hub runs a Pickle Import scan using pickletools.genops. The fickling library (trailofbits) can analyze malicious pickles. This is a real, documented attack surface — not theoretical.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "meth-huggingface-pickle-security"
+  ]
+}

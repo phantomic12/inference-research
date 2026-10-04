@@ -1,0 +1,25 @@
+{
+  "id": "meth-trust-remote-code-execution",
+  "type": "gotcha",
+  "name": "trust_remote_code=True in HuggingFace transformers executes arbitrary Python code from the model repository",
+  "class": "framework",
+  "affects": [],
+  "concepts": [
+    "trust_remote_code",
+    "huggingface",
+    "transformers",
+    "remote-code-execution",
+    "model-loading"
+  ],
+  "symptom": "You call AutoModel.from_pretrained() with trust_remote_code=True on a malicious model repository. The repository's custom modeling code executes arbitrary Python code on your machine with your privileges.",
+  "root_cause": "HuggingFace transformers allows model repositories to include custom Python code (modeling_*.py, configuration_*.py). When trust_remote_code=True, this code is imported and executed. A malicious repository can include code that exfiltrates data, installs backdoors, or destroys files.",
+  "workaround": "Never set trust_remote_code=True unless you have audited the model repository's code. Prefer models that use standard architectures (no custom code). If you must use trust_remote_code, inspect the repository's Python files first. Consider running in a sandboxed environment.",
+  "severity": "blocker",
+  "notes": "This is the HuggingFace equivalent of the pickle problem. The trust_remote_code flag is needed for some custom architectures (e.g., early MoE models), but it is a powerful attack surface. Combined with pickle, a malicious model repository has two independent code execution vectors.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "meth-huggingface-pickle-security"
+  ]
+}

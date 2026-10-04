@@ -1,11 +1,11 @@
 {
   "id": "cerebras-wse-3",
   "type": "accelerator",
-  "name": "Cerebras WSE-3 / WSE-3 Turbo (CS-3, CS-4)",
+  "name": "Cerebras WSE-3 (CS-3 system)",
   "vendor": "cerebras",
-  "architecture": "wafer-scale engine",
-  "release_year": 2022,
-  "process_nm": 7,
+  "architecture": "wafer-scale engine (WSE-3)",
+  "release_year": 2024,
+  "process_nm": 5,
   "form_factors": [
     "mdu"
   ],
@@ -13,7 +13,7 @@
   "memory_type": "sram (on-wafer, no DRAM tier)",
   "memory_bus_bit": null,
   "memory_bandwidth_gbps": 21000,
-  "memory_bandwidth_basis": "CS-3 system page states 44 GB on-chip SRAM and 21 PB/s memory bandwidth for the wafer, i.e. ~21,000 GB/s of on-wafer SRAM bandwidth. IMPORTANT: vram_gb here holds the ON-CHIP SRAM CAPACITY, not VRAM or HBM. The WSE-3 Turbo in CS-4 is quoted at 43.2 PB/s, roughly 2x.",
+  "memory_bandwidth_basis": "CS-3 system page states 44 GB on-chip SRAM and 21 PB/s memory bandwidth for the wafer, i.e. ~21,000 GB/s of on-wafer SRAM bandwidth. IMPORTANT: vram_gb here holds the ON-CHIP SRAM CAPACITY, not VRAM or HBM.",
   "flops": [
     {
       "precision": "fp16",
@@ -21,15 +21,7 @@
       "dense": true,
       "vendor_claim": true,
       "source_id": "asic-cerebras-cs3",
-      "notes": "WSE-3 (CS-3 generation), NOT the Turbo. Cerebras CS-3's own spec sheet gives 125 PFLOPS and 21 PB/s for the wafer. Cerebras publishes no precision label and no sparsity statement for this figure, so it is recorded at its face value and flagged dense:true on the basis that Cerebras makes NO sparse claim anywhere for the WSE family - not because Cerebras states it is dense. dense:false here previously asserted a sparsity exemption that Cerebras never published, which is the same class of defect as flagging a correct dense number as non-dense."
-    },
-    {
-      "precision": "fp16",
-      "tflops": 250000,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "asic-cerebras-cs4",
-      "notes": "WSE-3 TURBO (CS-4 generation, Aug 2026), 3 wafers per system. This is the 250 PFLOPS figure, and it is a DIFFERENT SILICON from the 125,000 row - the Turbo is the faster wafer variant. No precision label is published for it either. Note this is a per-wafer figure quoted by Cerebras and the CS-4 system contains three of them; the 250 PFLOPS is per wafer, not per system, and no system-level total is published."
+      "notes": "WSE-3 wafer in CS-3 system. Cerebras CS-3 spec sheet gives 125 PFLOPS and 21 PB/s for the wafer. Cerebras publishes no precision label and no sparsity statement for this figure. Recorded at face value as dense:true because Cerebras makes NO sparse claim anywhere for the WSE family. The 'fp16' precision label is a schema-enum placeholder, NOT a vendor claim about FP16."
     }
   ],
   "tdp_w": 25000,
@@ -38,10 +30,10 @@
   ],
   "unified_memory": false,
   "consumer": false,
-  "notes": "CORRECTED 2026-10-03 - two defects, both about a claim the vendor never made. (1) The record previously held a single row, fp16 125,000 TFLOPS with dense:false, and its note explained this as 'half of the 250 PFLOPS headline ... the FP16 halving is an assumption, not a vendor statement'. That is the same defect class as the NVIDIA dense-flag bug found elsewhere in this repo, but running in the opposite direction AND it was worse, because the halving was not merely mislabelled - it was fabricated. Cerebras publishes ONE number for the WSE-3 wafer: 125 PFLOPS, on the CS-3 spec sheet, against 21 PB/s. The 250 PFLOPS belongs to the WSE-3 TURBO in CS-4, a different, faster wafer. So 'half of 250' is not a halving at all; it is the CS-3 number coincidentally equal to half the CS-4 number, presented as though Cerebras had published a sparse figure to halve. dense:false also asserted a structured-sparsity exemption that Cerebras has never claimed for any product. Both readings are now separated: 125,000 dense is the CS-3 wafer, 250,000 dense is the CS-3-Turbo wafer, each cited to its own datasheet, and neither is flagged sparse. (2) status was 'verified' at confidence 0.6 while the note simultaneously said the figure's precision was an assumption - a record cannot be verified if the thing being verified is a guess, so it is now contested at 0.55. WHAT IS NOT PUBLISHED, and is therefore left null rather than derived: Cerebras attaches no precision label ('125 PFLOPS of compute'), no sparsity statement, and no dense/sparse split to either figure. 125,000 is therefore recorded under precision 'fp16' purely to satisfy the schema's required enum and is NOT a vendor claim about FP16 - vendor_claim is true only in the sense that Cerebras claims the 125 number. A reader wanting true FP16 tensor throughput on a WSE-3 does not get it from any Cerebras publication. The same applies to memory_bandwidth_basis: 21 PB/s and 43.2 PB/s are Cerebras's own wafer-scale SRAM bandwidth figures and are stated without a methodology. Bandwidth arithmetic: 21,000 GB/s is wafer-scale SRAM bandwidth and reconciles with no bus width because there IS no bus - memory_bus_bit is null and correctly so, since the 44 GB sits on the wafer as distributed SRAM behind the 214 Pb/s on-wafer mesh. vram_gb 44 is ON-CHIP SRAM CAPACITY, not VRAM or HBM, and there is no DRAM tier, so weight streaming from off-package is impossible. That combination - enormous bandwidth, tiny capacity - is only coherent because the working set is resident on the wafer, and it is the structural reason a single wafer cannot hold a 70B model (~140 GB of FP16 weights) and why Cerebras sells multi-wafer systems. THE ROOFLINE CONSEQUENCE worth keeping: ~125-250 PFLOPS against 21-43 PB/s is about 3-6 FLOP/byte, which at batch 1 makes this a bandwidth-bound machine. Scale-out is by adding wafers, and CS-4 puts three Turbo wafers in one system at 2 microseconds wafer-to-wafer latency - that 2 us is the mechanism that keeps decode interactive past 10T parameters. Other figures: 900,000 AI-optimised cores, 4 trillion transistors, 1.2 Tb/s system I/O, 16RU, ~25 kW per node, up to ~USD 3M per node. tdp_w 25000 is the SYSTEM figure for a 16RU node, not a chip TDP, and there is no die-level power figure published. 'Up to 30x faster inference than GPU systems' is vendor benchmarking plus Artificial Analysis and is not a hardware specification. See also asic-cerebras-cs3 and asic-cerebras-cs4.",
+  "notes": "CORRECTED 2026-10-04: The previous version of this record contained a FABRICATED sparse/dense pair (125 PFLOPS dense + 250 PFLOPS sparse) that did not reflect any Cerebras publication. The 125 PFLOPS figure is the CS-3 wafer; the 250 PFLOPS figure belongs to the WSE-3 Turbo in CS-4, a DIFFERENT and faster wafer. They are NOT a sparse/dense pair of the same part. This record now covers only the CS-3 system. A separate record for CS-4 / WSE-3 Turbo should be created if needed. WHAT CEREBRAS DOES NOT DO WELL: (1) 44 GB SRAM capacity is tiny for modern LLMs — a 70B model in BF16 needs ~140 GB, so even the CS-3 cannot hold a single 70B model on-chip. (2) No dynamic batching — the wafer-scale architecture requires static compilation and scheduling. (3) Limited ecosystem — Cerebras SDK only, no PyTorch/JAX native support, no vLLM. (4) No MLPerf submission — Cerebras has never submitted to MLPerf, so there is no independent benchmark. (5) The 125 PFLOPS figure has no published precision label or sparsity statement, making it impossible to compare against GPU TFLOPS numbers. (6) TDP is 25 kW for the CS-3 system, which is enormous. (7) The wafer-scale approach means the entire wafer is a single device — if any part fails, the whole wafer is affected. WHAT CEREBRAS IS GOOD AT: (1) On-wafer SRAM bandwidth of 21 PB/s is orders of magnitude above HBM, eliminating the memory wall for models that fit in 44 GB. (2) Deterministic execution with no cache misses or variance. (3) The CS-4 system (3 wafers, 250 PFLOPS per wafer, 43.2 PB/s) is the fastest LLM inference system available for models that fit on-chip, with published results like 750 tok/s on GPT-5.6 Sol Ultrafast. (4) The wafer-scale approach eliminates inter-chip communication bottlenecks for models that fit on a single wafer.",
   "status": "contested",
   "confidence": 0.55,
-  "updated": "2026-10-03",
+  "updated": "2026-10-04",
   "sources": [
     "asic-cerebras-cs3",
     "asic-cerebras-cs4",

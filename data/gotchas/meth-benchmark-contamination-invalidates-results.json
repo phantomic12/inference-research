@@ -1,0 +1,26 @@
+{
+  "id": "meth-benchmark-contamination-invalidates-results",
+  "type": "gotcha",
+  "name": "Benchmark contamination: if a model has seen the test set in training, the result is meaningless",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "benchmark-contamination",
+    "data-leakage",
+    "evaluation-validity",
+    "perplexity",
+    "test-set"
+  ],
+  "symptom": "A model reports a benchmark score that looks impressive but is actually measuring memorization, not capability. The model's perplexity on the test set is artificially low because it has seen the exact text during training.",
+  "root_cause": "LLMs are trained on trillions of tokens scraped from the internet, which almost certainly includes test data for widely reported benchmarks (MMLU, HumanEval, GSM8K, etc.). The Shi et al. 2023 paper (arXiv 2310.16789) introduces Min-K% Prob, a method to detect whether a model was trained on given text, and shows it works with no knowledge of the pretraining corpus.",
+  "workaround": "Before trusting a benchmark result, check: (1) Is the benchmark in the model's training data? Use Min-K% Prob or similar detection. (2) Is the benchmark result reproducible on a held-out test set? (3) Has the benchmark been independently verified? MLPerf has invalidated submissions from Google, NVIDIA, and AMD/UntetherAI for rule violations.",
+  "severity": "blocker",
+  "notes": "This is the single most important validity threat to any published LLM benchmark number. The Shi et al. paper shows that pretraining data detection is possible without knowing the training corpus. The MLPerf invalidations show that even industry-standard benchmarks with strict rules can be violated.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "meth-detecting-pretraining-data-arxiv",
+    "meth-mlperf-invalidation-context"
+  ]
+}

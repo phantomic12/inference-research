@@ -1,0 +1,62 @@
+{
+  "id": "aws-trainium3",
+  "type": "accelerator",
+  "name": "AWS Trainium3",
+  "vendor": "amazon",
+  "architecture": "NeuronCore-v4 (8 cores per chip)",
+  "release_year": 2025,
+  "process_nm": 3,
+  "form_factors": ["oam"],
+  "vram_gb": 144,
+  "memory_type": "hbm3e",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 4900,
+  "memory_bandwidth_basis": "Vendor-published per-chip figure: 144 GiB HBM3e at 4.9 TB/s (Neuron docs and EC2 Trn3 page both state this directly). Trn3 UltraServer aggregates to 706 TB/s across 144 chips.",
+  "flops": [
+    {
+      "precision": "fp8",
+      "tflops": 2517,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "aws-trainium3-architecture-neuron-docs",
+      "notes": "2,517 MXFP8/MXFP4 TFLOPS dense. The Neuron docs list this as 'MXFP8/MXFP4 TFLOPS' — the same figure covers both precisions. The EC2 Trn3 page rounds to '362 MXFP8 PFLOPs' for the 144-chip UltraServer (362,000 / 144 ≈ 2,514 per chip, consistent with 2,517)."
+    },
+    {
+      "precision": "bf16",
+      "tflops": 671,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "aws-trainium3-architecture-neuron-docs",
+      "notes": "671 BF16/FP16/TF32 TFLOPS dense. The Neuron docs list '671 BF16/FP16/TF32 TFLOPS' as a single row covering all three precisions."
+    },
+    {
+      "precision": "fp16",
+      "tflops": 2517,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "aws-trainium3-architecture-neuron-docs",
+      "notes": "2,517 FP16/BF16/TF32 sparse TFLOPS. The Neuron docs list this as a separate row from the dense 671 figure, indicating 2:4 structured sparsity. This is the ONLY sparse figure published for Trainium3."
+    },
+    {
+      "precision": "fp32",
+      "tflops": 183,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "aws-trainium3-architecture-neuron-docs",
+      "notes": "183 FP32 TFLOPS dense."
+    }
+  ],
+  "tdp_w": null,
+  "interconnect": ["aws-neuronlink", "aws-efa"],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "Trainium3 is AWS's fourth-generation AI chip and first 3nm accelerator. GA announced December 2025 at re:Invent; Amazon Bedrock is already serving production workloads on it. KEY NEURON COMPILER CONSTRAINTS (same as Trainium2, per alt-neuron-compiler source): (1) neuronx-cc auto-casts FP32 to BF16 at compile time — FP32 models are silently downcast, changing effective throughput without changing the peak number. (2) The compiler outputs NEFF (Neuron Executable Format), a proprietary intermediate format — models must be compiled for Trainium and cannot run on other hardware without recompilation. (3) Logical NeuronCore Configuration (LNC) lets multiple physical NeuronCores be combined into one logical core for sharding. ARCHITECTURE: 8 NeuronCore-v4 cores per chip, 16 CC-Cores for collective communication, 256 MiB SBUF (on-chip SRAM), NeuronLink-v4 at 2.56 TB/s per device (2x Trainium2). NeuronSwitch-v1 is an all-to-all fabric that doubles interchip bandwidth over Trn2. Trainium3 supports dynamic shapes and control flow via ISA extensions — a first for the Trainium line. Built-in collective communication engines accelerate synchronization for large transformer, diffusion, and MoE models. Trn3 UltraServers scale to 144 chips in EC2 UltraClusters 3.0 with hundreds of thousands of chips in a single non-blocking petabit-scale network. TDP is not published. Process node is 3nm (TSMC). The 4.4x performance improvement over Trn2 is a vendor claim comparing Trn3 UltraServer to Trn2 UltraServer at the system level, not per-chip.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "aws-trainium3-architecture-neuron-docs",
+    "amazon-ec2-trn3-ultraservers-trainium3",
+    "trainium3-ultraservers-now-available-aws-press-release"
+  ]
+}
