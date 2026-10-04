@@ -30,6 +30,19 @@ WT="$SCRATCH/ir-index-$$"
 cd "$REPO"
 git fetch -q origin
 
+# Which ref should the index describe? The set of records that will exist on the
+# branch AFTER the caller's pending push. Using origin/main unconditionally is
+# wrong whenever local commits are unpushed -- the index then omits them and CI
+# fails on an off-by-N that looks like a stale-index bug. If HEAD is ahead of
+# origin/main, HEAD is the correct input.
+AHEAD="$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)"
+if [ "$AHEAD" -gt 0 ]; then
+  REF=HEAD
+  echo "HEAD is $AHEAD commit(s) ahead of origin/main; indexing HEAD"
+else
+  REF=origin/main
+fi
+
 # Refuse to run if the index would be generated against uncommitted work that
 # the caller probably forgot about. Warn loudly rather than silently commit a
 # mismatched index.
@@ -40,7 +53,7 @@ fi
 cleanup() { git worktree remove --force "$WT" 2>/dev/null || true; git worktree prune; }
 trap cleanup EXIT
 
-git worktree add -q --detach "$WT" origin/main
+git worktree add -q --detach "$WT" "$REF"
 ( cd "$WT" && python tools/index.py )
 
 cp "$WT/docs/00-index.md" "$REPO/docs/00-index.md"
