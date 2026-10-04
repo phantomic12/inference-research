@@ -1,0 +1,36 @@
+{
+  "id": "mlperf-maxq-is-not-a-watt-cap",
+  "type": "gotcha",
+  "name": "MLPerf 'MaxQ' is not a power cap - on H100-SXM it sets no watt limit at all and can disable NVLink, so MaxQ-vs-MaxP throughput gaps are not efficiency curves",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-mlperf-v4-1-nvidia-makefile-power",
+    "pwr-mlperf-v4-1-h200-maxp-l70-offline-summary",
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-summary",
+    "pwr-mlperf-v4-1-nvidia-readme-maxq"
+  ],
+  "class": "config",
+  "affects": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-gb200-nvl72"
+  ],
+  "concepts": [
+    "mlperf",
+    "maxq",
+    "power-cap",
+    "nvlink",
+    "benchmark-methodology",
+    "controlled-comparison",
+    "clock-lock",
+    "hopper"
+  ],
+  "symptom": "The same benchmark, same node, reports about 19% lower throughput in the power-measured submission than in the ordinary one - 25262.1 versus 31302.7 tokens/s for llama2-70b-99.9 Offline on an 8xH200 SXM node (19.3% lower), and a consistent 17.0% for mixtral-8x7b (48987.9 versus 59022.3). The tempting and wrong conclusion is that MaxQ applied a lower TDP and this is a power-efficiency trade-off curve. People then quote the MaxQ number as the 'energy-efficient' configuration, or extrapolate a watts-versus-throughput curve from two points, or attribute a regression to their own code when they have merely switched submissions.",
+  "root_cause": "'MaxQ' is NVIDIA's name for its MLPerf power-category submission, and the state it sets is a PER-HOSTNAME chain in Makefile.power, not a uniform watt cap. On the H100-SXM host (viking-cr-194) that branch sets NO power limit whatsoever - its only line is the commented-out '#sudo cpupower --cpu all frequency-set --governor powersave'. Other branches DO set caps, and inconsistently: 'sudo nvidia-smi -pl 250' for the DGX Station A100 host, '-pl 275' for DGX A100, '-pl 200' for A100-PCIe, and 'sudo nvidia-smi -pl 300 # TODO: Find the right power limit for this one.' for H100-PCIe - an explicit acknowledgement in NVIDIA's own file that the cap was not determined. Several branches additionally run power/set_fan_speed.sh and power/set_nvlink.sh 0, and the README's own command is 'power/set_maxq_state', so on some hosts 'MaxQ' disables NVLINK entirely. A second, independent confound sits on top: Makefile.power sets 'GPUCLK?=1000' with the comment '# nsys and nvprof locked clock frequency' and locks it via 'sudo nvidia-smi -lgc $(GPUCLK),$(GPUCLK)', so the MaxQ run is at a fixed 1000 MHz while nothing in the MaxP summary establishes that the non-power run shares that lock.",
+  "workaround": "Never present a MaxQ-versus-MaxP throughput gap as a power-cap trade-off. To claim anything about watts you need an actual power measurement for the configuration in question - and the non-power submissions publish none, which is why this repo's MaxP control record deliberately carries no watts. If you want the efficiency direction at higher clocks, you must run it: measure the non-power configuration yourself with the same instrument and lock state, then you will know whether raising the clock improves joules per token or degrades it, and neither this repository nor the MLCommons public results answer it. When reproducing a MaxQ number, reproduce the state: lock clocks to 1000 MHz, and check the host branch in Makefile.power for whether your machine also gets an NVLink disable - because on a machine where MaxQ means 'no NVLink', the throughput gap is mostly interconnect and has nothing to do with watts.",
+  "severity": "major",
+  "notes": "READ THIS BEFORE TRUSTING ANY MLPerf MaxQ NUMBER, INCLUDING THE GOOD ONES IN THIS REPO. The joules/token records here are sound as MEASUREMENTS - the watts are real, externally instrumented, and auditable trace by trace - but the MaxQ label on them means 'this is the run that was power-instrumented', not 'this run ran at a reduced power cap'. Those are different claims and the second one is not supported for this hardware. SECOND REASON THE LABEL MISLEADS: 'MaxQ' is a branding name for a submission category, and the MLPerf power metric it serves is described by NVIDIA's README as 'Perf per watt ... rather than comparing systems peak throughput, it compares the ratio between the peak throughput and the power usage of the machine during inference'. So a MaxQ result is a ratio by construction - the throughput and the watts are only meaningful TOGETHER, and quoting either one alone (including the watts alone, as a hardware-efficiency claim) misrepresents what was measured. WHAT REMAINS GENUINELY USEFUL HERE, and it is not nothing: the MaxQ-versus-MaxP gap proves the power-measured submission is not free, so any joules-per-token figure cited as production-achievable came with roughly a 19% throughput cost on this node. And the internal comparison between the two models measured under the SAME MaxQ state - Llama 2 70B at 0.2299 J/token versus mixtral-8x7b at 0.1195 J/token on one node, one instrument, one clock state - is a legitimate controlled comparison, because there the power and clock state are held constant by construction and only the model varies."
+}

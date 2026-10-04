@@ -1,0 +1,24 @@
+{
+  "id": "apple-m4-pro-5-model-system-joules-per-token-range",
+  "type": "benchmark",
+  "name": "Apple M4 Pro via Ollama, five 3-9B models: 0.09-0.25 J/output token system-level, 4.4-11.6 mJ/token package-level, spanning a 2.6x range by model size alone",
+  "engine_id": "ollama",
+  "accelerator_ids": [
+    "apple-m4-max"
+  ],
+  "model": "Llama 3.2 3B / Phi-3 3.8B / Qwen 2.5 7B / Mistral 7B / Gemma 2 9B (Q4_K_M)",
+  "format_id": null,
+  "metric": "tps_aggregate",
+  "value": 59.0,
+  "unit": "output tokens/s (Qwen 2.5 7B); ENERGY PER TOKEN, SYSTEM-LEVEL: Llama 3.2 3B 0.09, Phi-3 3.8B 0.12, Qwen 2.5 7B 0.20, Mistral 7B 0.22, Gemma 2 9B 0.25 J/tok. PACKAGE-LEVEL mJ/tok: 4.4, 5.4, 9.4, 10.4, 11.6 respectively. Energy metric absent from the enum; joules carried in the unit string",
+  "methodology": "Same GreenBench setup: Apple M4 Pro 12C/16GPU MacBook Pro Mac16,8, 48 GB unified, 273 GB/s, macOS 15.4, Ollama v0.21.2 (llama.cpp), powermetrics package power at 2 s intervals paired with per-call timing, 10 W system estimate for the system-level column. Models all Q4_K_M. The aggregate value 59.0 tok/s is Qwen 2.5 7B, the paper's recommended accuracy-efficiency compromise; per-model throughput is 175 (Llama 3.2 3B, cited as the latency-oriented pick), 115.2, 91.1 (Phi-3 3.8B), 59.0 and 45.8 (Mistral 7B) and 42.0 (Gemma 2 9B) tok/s. Energy basis: generation phase of each request; package and system reported separately rather than summed.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "RECORDED FOR THE SPREAD, WHICH IS THE USEFUL PART: holding hardware, engine and precision constant, the model alone moves energy per token by 2.6x (0.09 to 0.25 J/tok system, 4.4 to 11.6 mJ/tok package). So a per-token energy figure without its model named is not a hardware property. ALSO NOTE THE PACKAGE/SYSTEM RATIO IS ABOUT 20-50x, which is the real headline for anyone budgeting edge inference: on Apple silicon the SoC package is a small fraction of system draw, so a package-level measurement systematically understates what a wall meter would show. The paper's own cross-platform table puts a published H100 7B baseline at ~4.0 J/tok but flags it as ESTIMATED as 400 W / 100 tok/s - an estimate, not a measurement, so it is deliberately NOT recorded here as an H100 joules figure. Small models (3-3.8B) gave 2.6-4.2x higher throughput and up to 62% less energy per token than the 7-9B models.",
+  "status": "verified",
+  "confidence": 0.76,
+  "updated": "2026-10-03",
+  "sources": [
+    "nrg2-arxiv-greenbench-apple-silicon"
+  ]
+}

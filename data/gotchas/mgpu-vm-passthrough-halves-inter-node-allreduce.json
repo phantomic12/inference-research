@@ -1,0 +1,27 @@
+{
+  "id": "mgpu-vm-passthrough-halves-inter-node-allreduce",
+  "type": "gotcha",
+  "name": "Inter-node all-reduce runs at roughly half speed under SR-IOV InfiniBand VF pass-through into VMs, and NCCL needs a hand-written topology XML to even see the fabric",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-nccl-949-vm-topology-perf"
+  ],
+  "class": "hardware",
+  "affects": [
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "concepts": [
+    "virtualisation",
+    "sriov",
+    "infiniband",
+    "topology-file",
+    "inter-node"
+  ],
+  "symptom": "Two physical A100 SXM4*8 nodes with two HDR InfiniBand cards each, with SR-IOV VF pass-through into a VM per node (host NUMA and PCIe topology mirrored, hugepages and vCPU pinning applied): inter-node all_reduce_perf runs at about 56% of expected. To get NCCL to recognise the topology at all, a topology xml had to be hand-authored and injected with NCCL_TOPO_FILE, listing every PCI busid, link_speed and link_width per NUMA node - the virtualised view is not usable as NCCL's auto-discovery input.",
+  "root_cause": "Passing an SR-IOV virtual function into a guest gives the guest a different, narrower device identity from the physical NIC, and NCCL's sysfs-based topology discovery does not reconstruct the host's rail layout from that virtual view. Even with a correct hand-written topology file the ~56% figure stands, which points at the virtualised data path itself (VF queue and interrupt overhead, and the host-side SR-IOV switching) rather than at topology misdetection alone. Note the topology XML in the report is also what surfaces the GPU<->NIC pairing that fast designs depend on.",
+  "workaround": "Author an NCCL_TOPO_FILE for the VM rather than relying on discovery, and pin vCPUs and hugepages as the report does. For inter-node scale-out where all-reduce bandwidth is decision-relevant, pass through the full physical function (PF) rather than a VF, or run on bare metal. Treat any inter-node collective measurement taken under VF pass-through as not comparable to bare-metal numbers.",
+  "severity": "major",
+  "notes": "The virtualisation counterpart to mgpu-mig-slice-nvlink-and-memory-bandwidth-are-shared-not-isolated: MIG's isolation story stops at the GPU, and virtualisation reintroduces shared fabric and a reduced inter-node ceiling underneath it. Also relevant to the existing vllm-arc-b60-no-pcie-p2p-kv-transfer record, which is the same 'no usable P2P transport' problem on a different silicon."
+}

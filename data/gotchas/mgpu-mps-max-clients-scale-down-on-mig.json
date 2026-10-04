@@ -1,0 +1,28 @@
+{
+  "id": "mgpu-mps-max-clients-scale-down-on-mig",
+  "type": "gotcha",
+  "name": "CUDA MPS on top of MIG caps the 48-client limit proportionally to Compute Instance size, and gives up the error isolation that justified MIG",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-nvidia-mig-user-guide"
+  ],
+  "class": "hardware",
+  "affects": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "vllm"
+  ],
+  "concepts": [
+    "mps",
+    "mig",
+    "concurrency",
+    "multi-tenancy"
+  ],
+  "symptom": "Stacking MPS over MIG produces a lower client ceiling than the headline 48: 'CUDA MPS is supported on top of MIG. The only limitation is that the maximum number of clients (48) is lowered proportionally to the Compute Instance size.' Separately, MPS never provided error isolation at all - 'MPS currently does not offer error isolation between clients' - and its SM limits are 'by percentage, not partitioning', so a busy client can still affect a co-tenant's latency even inside a MIG slice.",
+  "root_cause": "MIG and MPS solve different halves of the same problem, and composing them weakens both. MIG partitions physically (SM slices, memory slices, engines); MPS is a logical partition that caps each client's SM share by percentage while leaving 'the scheduling hardware ... still shared' and 'Memory bandwidth, caches and capacity are all shared between MPS clients'. Putting MPS inside a MIG Compute Instance inherits the physical isolation but has its client budget scaled down by how small that Compute Instance is, so the practical number of co-tenants on a 1c slice is far below 48.",
+  "workaround": "Prefer plain MIG with one engine per GPU Instance over MPS-over-MIG. If MPS is required inside a MIG slice, size the Compute Instance for the client count you actually need rather than assuming the 48-client figure, and do not treat MPS as providing fault isolation - a client error under MPS is not contained. Note MPS is one of the supported ways to place multiple ranks on one GPU (see mgpu-multiple-ranks-per-gpu-requires-mps), which is exactly why the two are usually confused.",
+  "severity": "minor",
+  "notes": "Table 3's MPS column (max 48 partitions, SM isolation 'by percentage not partitioning', no memory-bandwidth QoS, no error isolation, cross-partition interop via IPC, dynamic process launch) is the cleanest statement of what MPS does not give you. Pairs with mgpu-mig-slice-nvlink-and-memory-bandwidth-are-shared-not-isolated for what MIG does and does not partition."
+}

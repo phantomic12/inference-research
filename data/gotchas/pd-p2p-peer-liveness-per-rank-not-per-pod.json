@@ -1,0 +1,21 @@
+{
+  "id": "pd-p2p-peer-liveness-per-rank-not-per-pod",
+  "type": "gotcha",
+  "name": "One dead rank does not stop new KV loads to its siblings: per-port peer identity means a 30 s timeout is the only terminator",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "llm-d"
+  ],
+  "symptom": "On a disaggregated P/D deployment with multi-rank prefill pods, a source pod became unavailable mid-transfer. The consumer marked the source's rank-0 control peer down within a second - and then submitted a NEW load to a sibling rank of the same dead pod, which ran the full load timeout before aborting. Requests bound to that source fell back to local prefill only after 36 s to 43 s. One rank was still answering control messages at 10:47:36 while its pod was failing Kubernetes health checks.",
+  "root_cause": "Peer liveness is tracked per control connection, not per pod. peer_id is built from host:port, so an 8-rank source pod registers as 8 independent peers; _reap_dead_sessions fails in-flight loads only for the peer whose ZMQ connection died, and nothing groups sibling ports of one pod. There is also no progress field anywhere in the load path, so the 30 s _LOAD_TIMEOUT_S walk is the only thing that ends a stalled transfer. Compounding it, a rank whose pod was failing health checks could still answer control messages, so the 10 s ZMQ heartbeat never fired for it - the data path stalled on a control-alive peer.",
+  "workaround": "Size client and gateway timeouts knowing that a failed handoff can take 30-45 s to resolve, and treat a load-timeout-driven fallback to local prefill as a signal to drain the source pod rather than retry against it. When qualifying a P/D deployment, kill an entire pod (not one rank) and verify no new loads are submitted to the survivors - the current behaviour submits them. Maintainer-confirmed against main, so a fix is plausible but not present as of 2026-10-03.",
+  "severity": "major",
+  "notes": "Confirmed line by line by vLLM maintainer he-yufeng on 2026-09-15 against main (3f55ad2f0 and later), which is why this is recorded as verified rather than draft. The general lesson is that per-connection liveness is not per-resource liveness whenever a resource is fanned out across connections - and in disaggregated serving the resource is a pod, not a socket. The companion point about heartbeat vs data path is worth stating separately: a peer that is alive on the control plane but dead on the data plane defeats control-plane-only failure detection entirely.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-gh-vllm-56828-p2p-peer-down-no-fail"
+  ]
+}

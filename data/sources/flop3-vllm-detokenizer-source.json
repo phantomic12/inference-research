@@ -1,0 +1,15 @@
+{
+  "id": "flop3-vllm-detokenizer-source",
+  "type": "source",
+  "name": "vLLM vllm/v1/engine/detokenizer.py (main)",
+  "url": "https://raw.githubusercontent.com/vllm-project/vllm/main/vllm/v1/engine/detokenizer.py",
+  "publisher": "vllm-project/vllm",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "Per-token detokenisation and stop-string detection as shipped. BaseIncrementalDetokenizer.update() runs per step: (1) detokenise the new token ids through the tokenizer's DecodeStream, (2) evaluate stop criteria. stop_buffer_length = max(len(s) for s in stop) - 1 characters are HELD BACK from the streamed text whenever stop strings are set and not included in the output - so enabling stop strings changes what is emitted per step, not just when generation ends. check_stop_strings then does one output_text.find(stop_str, 1 - new_char_count - len(stop_str)) PER STOP STRING, restricted to the new-character window, so the per-step scan is O(num_stop_strings x (new chars + stop length)), and the hold-back guarantees the window is long enough to catch a match split across tokens. When several stop strings match inside one step (speculative decoding appends several tokens at once) it selects the one completing earliest in the text so the result matches one-token-at-a-time emission. FastIncrementalDetokenizer is used when the tokenizer is a fast one, SlowIncrementalDetokenizer otherwise; with tokenizer=None detokenisation is skipped entirely.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

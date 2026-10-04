@@ -1,0 +1,36 @@
+{
+  "id": "pwr-idle-node-draw-defeats-naive-cost-per-token",
+  "type": "gotcha",
+  "name": "An idle 8xH200 node still draws 41.7% of its loaded watts, so per-token energy RISES as utilisation falls and naive cost-per-token arithmetic understates cost without bound",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-ranging-spl",
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-spl",
+    "pwr-mlperf-v4-1-h200-maxq-l70-server-spl"
+  ],
+  "class": "measurement",
+  "affects": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300"
+  ],
+  "concepts": [
+    "idle-power",
+    "utilisation",
+    "cost-per-token",
+    "energy-per-token",
+    "batching",
+    "capacity-planning",
+    "provisioning",
+    "tpu",
+    "mlperf"
+  ],
+  "symptom": "Cost per token improves when the fleet gets BUSIER, which is backwards from the intuition that sparser workloads are cheaper per request. A utilisation-based cost model built as (power_at_full_load x hours x price) / tokens under-reports the cost of every low-traffic deployment, and the error grows without bound as traffic approaches zero: the model never goes to zero cost, but reality keeps paying the idle floor forever. The symptom an operator sees is a serving bill that does not scale down with traffic, and a cost-per-token number that improves after you deploy batching - which gets attributed to the batching software being 'more efficient' when the real mechanism is that the fleet stopped idling.",
+  "root_cause": "Measured, not modelled. On the audited MLPerf v4.1 8xH200 SXM node, the idle floor is 2422.6 W and the loaded plateau is 5806.93 W, so idle is 41.7% of loaded - about 302.8 W per GPU stranded at zero throughput. That floor is real silicon and memory draw, plus two Xeon Platinum 8480C hosts, ten 400 GbE NICs, storage and PSU conversion losses, and it persists regardless of what the engine is doing. The arithmetic the floor breaks, at 15% utilisation: naive power = 0.15 x 5806.93 = 871 W; actual power = 0.15 x 5806.93 + 0.85 x 2422.6 = 2930 W - about 3.4x the naive figure while delivering 1/6.7th of the tokens. Because the correction term is a CONSTANT rather than a proportional one, per-token energy rises as utilisation falls - the exact opposite of the intuition that idle hardware is merely wasted rather than actively expensive.",
+  "workaround": "Model energy as a FIXED floor plus a proportional term whenever you model cost per token: energy_per_token = (idle_w + utilisation x (loaded_w - idle_w) x hours) / total_tokens. Then optimise the same knobs the schedule does - batch size, concurrency, and above all avoiding provisioned-but-idle capacity - because they move utilisation, which is the only thing that moves the wasted term. Do not buy capacity on a worst-peak-traffic assumption when the energy floor makes idle hours proportionally the most expensive hours in the day. Where a workload is genuinely spiky, prefer a shape that holds one busy node over a wide idle fleet. When quoting any per-token energy figure, state the utilisation it was measured at: joules per token at Offline aggregate throughput is NOT the joules per token a latency-sensitive Server deployment will see, and the measured gap between those two on this same node is 0.2299 versus 0.2495 J/token - a 8.5% penalty for continuous operation, because the Server trace holds near its plateau for its whole window instead of ramping.",
+  "severity": "major",
+  "notes": "THE NUMBER THAT SHOULD CHANGE A DECISION: a fleet provisioned for peak and idle half the time pays roughly 42% of peak power for zero output, and no amount of engine tuning recovers it. This is the strongest argument in the whole power slice for treating batch size and concurrency as ENERGY controls and not merely as throughput controls. AN HONEST LIMIT ON THE PRECISION OF THE CLAIM: the 2422.6 W figure is taken from the first and last 20 samples of the MLPerf 'ranging run', and that run is still cycling the harness by design - so 2422.6 W is an UPPER BOUND on true idle draw, not a floor. This is safe in the direction the conclusion points: a genuinely quiesced node would draw less, making the idle fraction SMALLER than 41.7% and the wasted-energy effect correspondingly less severe. The conclusion 'idle draw is large enough to dominate low-utilisation economics' holds across the plausible range; the specific figure 41.7% should be quoted as 'about 42%' and sourced to the trace, not treated as a hardware constant. SCOPE: the figure is for one air-cooled 8xH200 SXM node specifically. Do not extrapolate the 41.7% fraction to other accelerators - the idle-to-loaded ratio is a property of the specific part, its memory and its host, and an H100 NVL pair or a TPU slice has a different one. What generalises is the SHAPE of the correction and the fact that it is never negligible for a part with large HBM."
+}

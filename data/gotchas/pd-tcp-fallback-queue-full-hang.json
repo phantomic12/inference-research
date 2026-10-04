@@ -1,0 +1,21 @@
+{
+  "id": "pd-tcp-fallback-queue-full-hang",
+  "type": "gotcha",
+  "name": "Mooncake's TCP fallback fails the first transfer after an idle gap, and the decode side hangs until timeout",
+  "class": "framework",
+  "affects": [
+    "mooncake",
+    "vllm"
+  ],
+  "symptom": "With the TCP transport, the first KV transfer between two engine instances succeeds, then a transfer submitted after a short idle gap (~5 s) fails: on the producer every slice of the batch is rejected by the TCP lane queue (queue-full rejection count climbing 1 -> 2 -> 4 -> ... -> 512+ within milliseconds), batch_transfer_sync_write returns -1, and the error is relayed to the consumer. The consumer request then sits in WAITING_FOR_REMOTE_KVS and the client hangs until its own timeout. A request sent ~90 s later succeeds, so deployments observe either 60-90 s TTFT spikes after every idle period or outright failures, depending on client timeout.",
+  "root_cause": "A stale lane state in the TCP transport: after an idle gap the lane queues are full and reject, and the synchronous write returns an error that does not recover. Not stated as a diagnosed root cause upstream - this is the reported behaviour, so treat the mechanism as unconfirmed and the observation as solid.",
+  "workaround": "Do not treat TCP as a safe fallback for RDMA in a latency-sensitive path. Use it only where the 60-90 s post-idle spike is acceptable, and put a client-side timeout well below 90 s so the failure is visible as an error rather than an apparent hang. Prefer an RDMA-capable fabric (or a same-host shm path) for production PD.",
+  "severity": "major",
+  "notes": "Recorded because 'fall back to TCP' is the obvious remediation when RDMA is unavailable and it has its own distinct failure mode. Env: mooncake-transfer-engine 0.3.13.post1, also reproduced on 0.3.14rc1; vLLM 0.29.0 built-in MooncakeConnector; 1P1D on one host, 2x H20 96GB, mooncake_protocol tcp with MC_FORCE_TCP=1 (RDMA path not usable on this host); Qwen3-8B. Open at 2026-10-03. The idle-gap precondition is what makes this nastier than a throughput problem: a benchmark that sends requests back-to-back will never see it.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-gh-mooncake-4209-tcp-queue-full-hang"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "flop3-llamacpp-issue-27050-backend-sampling",
+  "type": "source",
+  "name": "llama.cpp issue #27050: backend sampling (-bs) gives +48% throughput at 32 slots; default path copies the whole logits matrix D2H every decode step",
+  "url": "https://github.com/ggml-org/llama.cpp/issues/27050",
+  "publisher": "ggml-org/llama.cpp GitHub issues",
+  "kind": "forum",
+  "published": "2026-09",
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "Measured, not inferred. RTX 5090 32GB, CUDA, llama-server with -np 32 -cb -fa on, Qwen2.5-7B-Instruct F16 (n_vocab 152064), 512 prompt + 128 generated tokens per request, prompt cache disabled, closed loop. Default vs -bs at 32 slots: 705.9 tok/s TPOT 41.21 ms -> 1045.8 tok/s TPOT 25.39 ms; at 1 slot 100.1 tok/s TPOT 9.65 ms -> 101.4 tok/s TPOT 9.43 ms (i.e. no single-slot effect). D2H memcpy per copy: 608.3 KB at 1 slot, which the issue identifies as exactly 152064 vocab x 4 B = 608,256 B, one full fp32 logits row, once per decode step (938 copies in a 10 s window at ~94 decode steps/s); at 32 slots ~16.16 MB per copy (181 copies, 2.924 GB total in 10 s). With -bs: 16252 copies, ~0.000 GB. CPU sampling of on-CPU samples falling inside >=1 ms GPU idle gaps at 32 slots: common_sampler_sample 45.2%, llama_token_data_array_partial_sort_inplace 12.7%, sampler total 58.6% -> 1.0% with -bs; at 1 slot the sampler is 5.1% of a much smaller idle budget (0.185 s in 10 s). GPU busy 88.5% at 1 slot vs 41.2% at 32 slots (296 gaps >=1 ms, 5.70 s of a 10 s window, mean 19.3 ms). Control experiment: top_k=1 does NOT help (711 tok/s vs 717) even though partial_sort is still 12.7% of in-gap CPU. vLLM BF16 reference on the same GPU/model/client: 1404.7 tok/s TPOT 17.68 ms at 32 slots, 92.9 tok/s TPOT 10.41 ms at 1 slot.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03"
+}

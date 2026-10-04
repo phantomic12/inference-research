@@ -1,0 +1,15 @@
+{
+  "id": "flop3-vllm-logits-processor-builtin",
+  "type": "source",
+  "name": "vLLM vllm/v1/sample/logits_processor/builtin.py (main) - min_p, logit bias, min_tokens processors",
+  "url": "https://raw.githubusercontent.com/vllm-project/vllm/main/vllm/v1/sample/logits_processor/builtin.py",
+  "publisher": "vllm-project/vllm",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "The device-side half of logit processing, and it is a full pass over the vocab per active processor. MinPLogitsProcessor.apply does softmax(logits, dim=-1) over the whole [B, V] tensor, amax over dim=-1, a mul_, a comparison, and masked_fill_ on the logits in place - four-to-five full-width passes over V, at fp32, once per step, whenever ANY request in the batch sets min_p (gated by self.min_p_count, an O(batch) count maintained from batch add/remove/move events). LogitBiasLogitsProcessor.apply is a single scatter-add, but its state (biases dict -> three device tensors via async_tensor_h2d) is rebuilt in Python whenever any request's logit_bias changes. MinTokensLogitsProcessor mutates logits at specific ids and carries a restore_logits_slice for structured-output stop tokens. Also documents is_argmax_invariant() per processor - min_p returns True, logit_bias False - which is how engines decide whether a processor can be skipped for greedy requests.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

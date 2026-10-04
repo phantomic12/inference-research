@@ -1,0 +1,33 @@
+{
+  "id": "mgpu-mig-slice-nvlink-and-memory-bandwidth-are-shared-not-isolated",
+  "type": "gotcha",
+  "name": "MIG isolates SMs, memory capacity, L2 and bandwidth per slice, but NVLink and the interconnect path remain shared physical links - so a MIG partition is not a bandwidth-isolated device",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-nvidia-mig-user-guide"
+  ],
+  "class": "hardware",
+  "affects": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "nvlink-4",
+    "nvlink-5"
+  ],
+  "concepts": [
+    "mig",
+    "virtualisation",
+    "nvlink",
+    "bandwidth",
+    "isolation",
+    "profiling"
+  ],
+  "symptom": "Under-appreciated rather than loud: there is no error and no warning. Two MIG instances on one A100/H100 both reach high SM utilization while neither can reach its nominal memory bandwidth or full NVLink line rate, because the NVLink interfaces and their bandwidth are properties of the physical GPU and are not partitioned. Concretely from the MIG User Guide: each GPU memory slice is 'roughly one eighth of the total GPU memory resources, including both capacity and bandwidth' and each SM slice is roughly one seventh of the SMs - the NVLink interfaces are assigned to the GPU as a whole, not to a slice. A second consequence bites profiling: 'Profiling of shared GPU resources is not supported. This is an existing limitation.'",
+  "root_cause": "MIG partitions compute (SM slices), memory (memory slices with their own memory controllers, L2 banks and DRAM address ranges) and specific engines (copy, NVDEC, JPEG, OFA). It does not partition the NVLink interfaces, which remain a shared resource of the physical GPU. So the isolation guarantee NVIDIA's Table 3 gives MIG over both MPS and streams - 'Memory Bandwidth QoS: Yes' versus 'No' for both alternatives, plus 'Error Isolation: Yes' - is true for DRAM bandwidth within the GPU, and says nothing about inter-GPU fabric. The document is careful to scope the claim to 'the entire memory system' of the instance, which is a GPU-internal statement.",
+  "workaround": "Do not price a MIG partition as 'an Nth of a GPU' when the workload is interconnect-sensitive. Size MIG on SM count, memory capacity and DRAM bandwidth; treat NVLink as a shared uplink and keep TP inside a physical GPU on MIG (which is also forced by mgpu-mig-blocks-nccl-tensor-parallel). If you need NVLink-bandwidth isolation, use physical GPUs. Separately, do not attempt to profile shared GPU resources under MIG - the profiling limitation is documented and unconditional, so profile on a non-MIG instance.",
+  "severity": "major",
+  "notes": "Table 3 in section 6.3 is the reference: Streams gives 0/8 SM performance isolation and No memory protection; MPS gives up to 48 partitions with percentage SM limits but 'No' for memory bandwidth QoS and error isolation; MIG gives max 7 partitions with Yes on all four. This record exists because that table is widely read as covering NVLink too, which it does not. Cross-reference the vendor's own GB200 MIG entry (7 instances, 186 GB) for the ceiling on how far partitioning scales."
+}

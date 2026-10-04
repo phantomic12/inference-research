@@ -1,0 +1,28 @@
+{
+  "id": "mgpu-rccl-heterogeneous-amd-gpu-archs-fail-first-collective",
+  "type": "gotcha",
+  "name": "A mixed-arch AMD GPU box initialises its RCCL communicator fine over P2P and then aborts on the first collective with 'invalid device function' on the older card",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-rccl-2189-heterogeneous-arch"
+  ],
+  "class": "driver",
+  "affects": [
+    "amd-instinct-mi250x"
+  ],
+  "concepts": [
+    "rccl",
+    "heterogeneous",
+    "hsa-override-gfx-version",
+    "p2p",
+    "mi300",
+    "mi200"
+  ],
+  "symptom": "RCCL 2.30.4 in a process spanning one gfx1201 and one gfx1200 device: communicator init succeeds - channels connect via 'P2P/direct' - and then the first ncclAllReduce raises '[FATAL ERROR]: HIP failure: \\'invalid device function\\'' on the gfx1200 device. The identical binary passes when HSA_OVERRIDE_GFX_VERSION=12.0.1 makes both devices report as gfx1201. Reproduces identically on ROCm 7.14.0-3, which ships the same RCCL 2.30.4, so this is not a ROCm 10 regression. It reproduces with a minimal ~70-line standalone program - no llama.cpp, no HIP graphs, no framework - and on hardware with GPUs on different sockets (3 PCIe hops, no switch), canAccessPeer=1 in both directions, iommu=pt, ACS disabled.",
+  "root_cause": "RCCL 2.30.4 ships per-architecture packages, and both amdrocm-rccl10.0-gfx1200 and amdrocm-rccl10.0-gfx1201 being installed does not produce a code object set that works across both targets in one process. Communicator init takes a path (P2P/direct channel setup) that does not exercise the device kernels, so init succeeding is not evidence the collective will. HSA_OVERRIDE_GFX_VERSION working as the fix localizes it precisely to the device-code load rather than to transport, driver state, or the P2P capability check.",
+  "workaround": "Force a homogeneous reported arch with HSA_OVERRIDE_GFX_VERSION rather than mixing a newer and an older consumer card in one RCCL process. For inference, prefer homogeneous nodes. If you must mix, do not trust a successful communicator init as a smoke test - run one actual collective, which is what distinguishes this from every working multi-GPU configuration.",
+  "severity": "major",
+  "notes": "The AMD counterpart to mgpu-mig-blocks-nccl-tensor-parallel: both are cases where an apparent 'I have multiple GPUs' setup is not actually usable as one collective domain, for entirely different reasons (virtual slicing vs mixed silicon generations). Also note the general lesson shared with mgpu-multinode-tp-across-fabrics-hangs-in-comm-init and mgpu-mps-max-clients-scale-down-on-mig: init success is not the same as collective viability, so smoke-test with an actual collective."
+}

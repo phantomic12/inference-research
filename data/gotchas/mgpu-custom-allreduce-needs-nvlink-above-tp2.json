@@ -1,0 +1,29 @@
+{
+  "id": "mgpu-custom-allreduce-needs-nvlink-above-tp2",
+  "type": "gotcha",
+  "name": "Custom all-reduce works over PCIe at TP=2 but is silently disabled above TP=2 without full one-hop NVLink, so a PCIe box quietly falls back to the slower NCCL path",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-vllm-52555-custom-ar-nvlink",
+    "mgpu-sglang-41479-multi-node-custom-ar"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "sglang"
+  ],
+  "concepts": [
+    "custom-all-reduce",
+    "nvlink",
+    "tensor-parallel",
+    "pcie",
+    "topology"
+  ],
+  "symptom": "No error. The observable is a throughput cliff with no diagnostic. The eligibility rule, stated explicitly in upstream: 'At TP=2, custom all-reduce can operate over PCIe when functional GPU P2P is available; NVLink is not required. At TP>2, the existing constructor requires full one-hop NVLink connectivity.' On a PCIe-only TP>2 group custom all-reduce is 'disabled entirely' - so a box that worked acceptably at TP=2 degrades on moving to TP=4 or TP=8, and the log shows nothing unless you were already looking for the CUSTOM-vs-NCCL path line. A related stale gate in SGLang cost 'about 19%' by forcing a two-node GB300 NVL72 group onto the slower collective path for a check that no longer guarded anything it cared about.",
+  "root_cause": "vLLM's custom all-reduce kernel is registered over a one-hop NVLink clique; the TP=2 exception exists because a 2-rank group has no ring to build and the kernel can work over any functional P2P link. Above 2 ranks the construction needs every rank pairwise adjacent on NVLink, so it disables the path rather than degrade. SGLang's multi-node custom all-reduce v2 had an additional VMM-backed-caching-allocator requirement, which was itself stale - the check had been added for graph zero-copy input registration that v2 already disables on multi-node groups. So 'we have NVLink' is necessary but not sufficient to predict which path you get; several independent gates can demote you.",
+  "workaround": "Check which all-reduce path is actually selected before attributing a TP scaling curve to the interconnect alone. For PCIe-only groups accept the NCCL fallback and size the deployment accordingly, or move to fewer ranks per node. Consumer GeForce SM12x generally does not expose working PCIe P2P, so custom all-reduce is off there and any max-size override is a no-op; RTX PRO 6000-class SM120 PCIe systems do expose P2P and are the stock beneficiary.",
+  "severity": "major",
+  "notes": "Related to mgpu-pcie-only-multigpu-is-communication-bound: on a measured 8x RTX PRO 6000 PCIe-only box, 128K cold prefill reached only 6,853 tok/s at ~87% GPU utilization and 220W of a 600W cap - the signature of being communication-bound rather than compute-bound. Also cross-reference the existing vllm-arc-b60-no-pcie-p2p-kv-transfer record for the P2P-unavailable case on Arc."
+}

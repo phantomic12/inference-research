@@ -1,0 +1,22 @@
+{
+  "id": "pd-multi-connector-stack-silent-corruption",
+  "type": "gotcha",
+  "name": "Stacking a KV-tier connector under the PD transfer connector silently corrupts output, while either alone is clean",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "lmcache",
+    "nvidia-dynamo"
+  ],
+  "symptom": "Intermittent silent output corruption / garbled generation in a two-node 1P1D disaggregated deployment: long runs of nonsensical mixed-language and repeated tokens (for example repeated 'Effective/effective' mixed with unrelated English/Chinese fragments), some streams eventually surfacing at the application layer as HTTP 502 / 7104_UPSTREAM_STREAM_INTERRUPTED. The engine keeps running throughout - 'the engine can continue running while individual outputs are already corrupted'.",
+  "root_cause": "Not established upstream. What IS established by the reporter's A/B is the trigger: NIXL-only PD is stable, NIXL plus MooncakeStoreConnector through MultiConnector reproduces the corruption under sustained load, and disabling speculative decoding does not stop it - so it is the connector stack, not the spec-decode interaction, and not PD disaggregation by itself. Two connectors writing and reading the same KV blocks through different paths is the plausible mechanism, but that is inference, not a confirmed root cause.",
+  "workaround": "Do not stack a KV-tier connector under the PD transfer connector without an end-to-end output-equivalence test; if you must, run one connector at a time and A/B them under sustained load rather than a smoke test. Note the deployment shape that reproduced it: MultiConnector with NixlConnector as kv_producer and MooncakeStoreConnector as kv_both with load_async and lookup_async both enabled, on the prefill side, with the decode side a plain NixlConnector consumer.",
+  "severity": "blocker",
+  "notes": "Valuable precisely because of the isolation: it shows a failure mode that neither component exhibits alone, which means component-level testing of NIXL and of Mooncake will both pass. Env: Kimi-K3, TP=8, two-node 1P1D, NIXL transfer, vLLM with MooncakeStoreConnector. Open at 2026-10-03. Confidence is set at verified for the observation and the A/B, not for a mechanism - no root cause is claimed here because none is sourced.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-gh-vllm-52627-kimi-k3-pd-silent-corruption"
+  ]
+}

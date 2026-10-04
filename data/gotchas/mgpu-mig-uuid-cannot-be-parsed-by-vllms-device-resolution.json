@@ -1,0 +1,28 @@
+{
+  "id": "mgpu-mig-uuid-cannot-be-parsed-by-vllms-device-resolution",
+  "type": "gotcha",
+  "name": "vLLM crashes on a MIG UUID in CUDA_VISIBLE_DEVICES, and its NVML path reports the parent GPU's memory for a MIG slice",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-vllm-41776-mig-uuid"
+  ],
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "concepts": [
+    "mig",
+    "nvml",
+    "cuda-visible-devices",
+    "uuid",
+    "virtualisation"
+  ],
+  "symptom": "On an A100 40GB split into 2x 3g.20gb MIG instances on bare metal, setting CUDA_VISIBLE_DEVICES to a MIG UUID crashes vLLM at startup with: 'ValueError: invalid literal for int() with base 10: \\'MIG-fe59bfcd-3946-5d58-a00e-183ee397373b\\''. There is also a silent second failure: every NVML caller passes the physical device ID to nvmlDeviceGetHandleByIndex(), which returns the parent GPU handle, so get_device_total_memory() reports 40GB instead of the MIG slice's actual 20GB - silently wrong capacity rather than an error.",
+  "root_cause": "Platform.device_id_to_physical_device_id() unconditionally calls int() on each CUDA_VISIBLE_DEVICES entry, and MIG UUIDs are strings, not integers. The NVML half of the bug is a device-model mismatch: nvmlDeviceGetHandleByIndex() resolves to the physical GPU, not the MIG device, so any memory/capability/name query against it describes the parent. Verified in the PR: before the fix get_device_name() N/A (crash) and get_device_total_memory() N/A (crash); after, 'NVIDIA A100-SXM4-40GB MIG 3g.20gb' and 19.6 GB (the correct slice).",
+  "workaround": "Pass MIG instances by their mapped cuda index rather than by UUID when running in a container - MIG works inside Docker via the NVIDIA Container Toolkit, which maps the MIG instance as cuda:0, so the UUID path only matters on bare metal. If you must use UUIDs on bare metal, the fix is in review upstream; until then prefer the index form and do not trust vLLM's reported device memory on MIG (read it from nvidia-smi instead).",
+  "severity": "major",
+  "notes": "The reported-capacity half is the more dangerous one because it feeds memory budgeting: --gpu-memory-utilization is computed against device total memory (see the existing vllm-kv-cache-block-budget record), so a MIG slice reporting its parent's 40GB will be budgeted as a 40GB card while actually having ~20GB. Distinct from mgpu-mig-driver-enumeration-limits-cut-ci-count, which is about how many devices exist rather than how they are named."
+}

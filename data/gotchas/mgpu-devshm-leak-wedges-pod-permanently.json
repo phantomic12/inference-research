@@ -1,0 +1,30 @@
+{
+  "id": "mgpu-devshm-leak-wedges-pod-permanently",
+  "type": "gotcha",
+  "name": "A persistent per-pod /dev/shm converts one scheduler crash into a permanent crashloop, because a container restart does not reclaim leaked segments",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-sglang-40723-devshm-leak",
+    "mgpu-sglang-40726-devshm-reclaim",
+    "mgpu-vllm-51241-shm-calculator"
+  ],
+  "class": "framework",
+  "affects": [
+    "sglang"
+  ],
+  "concepts": [
+    "shared-memory",
+    "kubernetes",
+    "emptydir",
+    "sigbus",
+    "nccl",
+    "fault-tolerance"
+  ],
+  "symptom": "Measured fleet-wide on ~700 H20 GPUs with TP4 pods: a single traffic burst produced scheduler crashes, and affected pods went from 4 to 101 in about 30 minutes with none recovering without pod deletion, each cycle producing a core dump. Two verbatim startup failure modes after the tmpfs fills: (a) 'Fatal Python error: Bus error' with a stack in load_snapshot.py _write_payload, followed by the surviving ranks timing out with 'torch.distributed.DistStoreError: Timed out after 601 seconds waiting for clients. 3/4 clients joined.' (crashloop period ~11 min); (b) 'NCCL WARN Error: failed to extend /dev/shm/nccl-XXXX to 34210180 bytes, error: No space left on device (28)' with 'proxy.cc:1458 (proxyProgressInit) -> 2' and 'init.cc:2572 (ncclCommInitRank) -> 2'. One pod leaked 852 segments / 18 GiB in 5 minutes.",
+  "root_cause": "The /dev/shm that makes TP work (an emptyDir with medium: Memory, sized for NCCL) has pod lifetime, not container lifetime, so a container restart does not clear it. The scheduler's shutdown path is SIGKILL-based (kill_process_tree, PDEATHSIG), which skips every Python-level unlink, so in-flight sgl_shm_mm_* segments are never unlinked; leaked files kept PIDs from a process generation that had died hours and ~20 restarts earlier. The existing reclaim sweep was gated on SGLANG_IS_IN_CI, so production never reclaimed anything. Note the misleading detail in (b): the GPU-side NCCL setup (bootstrap, P2P/IPC channels, rings) fully succeeds - only the 32.6 MiB x4 proxy segments fail - so 'NCCL worked' is not evidence that shm is healthy.",
+  "workaround": "Run the pid-stamped reclaim sweep at every scheduler startup (unlink sgl_shm_* / multi_tokenizer_args_* segments whose creator pid is dead), which the upstream fix implements; keep the orphan families (nccl-*, cuda.shm.*, sglang_loads_*) CI-only because unconditionally unlinking nccl-* could hit a live server on the same host. Operationally, monitor /dev/shm usage per pod and delete the pod rather than restarting the container. A pod whose /dev/shm fills while it is NOT restarting keeps serving but logs 'Failed to allocate shared memory for multimodal feature transport ([Errno 28] No space left on device); falling back to inline transport' - that silent inline-pickle fallback is both a throughput cliff and a warning that the next restart converts to the crashloop.",
+  "severity": "blocker",
+  "notes": "This is the direct cost of the fix for mgpu-tp-needs-dev-shm-larger-than-container-default: making /dev/shm large enough for NCCL is what exposes this. With the runtime-default per-container /dev/shm, a restart WOULD clear the leak - which is why it is rarely reported by users who did not take the emptyDir pattern."
+}

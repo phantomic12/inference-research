@@ -1,0 +1,15 @@
+{
+  "id": "pwr-mlperf-v4-1-nvidia-makefile-power",
+  "type": "source",
+  "name": "MLPerf Inference v4.1 NVIDIA Makefile.power - locked GPU clock (GPUCLK=1000) and per-host MaxQ power state",
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-03",
+  "url": "https://github.com/mlcommons/inference_results_v4.1/blob/main/closed/NVIDIA/Makefile.power",
+  "publisher": "MLCommons and NVIDIA",
+  "kind": "repo",
+  "published": "2024-08-28",
+  "accessed": "2026-10-03",
+  "archived_url": "https://raw.githubusercontent.com/mlcommons/inference_results_v4.1/main/closed/NVIDIA/Makefile.power",
+  "notes": "The build file that establishes HOW these power-submission numbers were produced, and the citable evidence for two things that are easy to get wrong. (1) CLOCKS ARE LOCKED: the header comment reads '# nsys and nvprof locked clock frequency' above 'GPUCLK?=1000', and the lock_clocks target runs 'sudo nvidia-smi -lgc $(GPUCLK),$(GPUCLK)' with a matching free_clocks target running 'nvidia-smi -rgc'. So the MaxQ throughput figures are at a fixed 1000 MHz, not at stock boost. Any joules/token derived from them is a fixed-clock figure and must not be compared to a stock-boost throughput record. (2) 'MaxQ' IS NOT A WATT CAP on this class of machine: the power_set_maxq_state target is a per-hostname chain, and the H100-SXM branch (host viking-cr-194) sets no -pl at all - the only line is the commented-out '#sudo cpupower --cpu all frequency-set --governor powersave'. Other branches do set caps: '-pl 250' for the DGX Station A100 host, '-pl 275' for DGX A100, '-pl 200' for A100-PCIe, and 'sudo nvidia-smi -pl 300 # TODO: Find the right power limit for this one.' for H100-PCIe. Several branches also call power/set_fan_speed.sh and power/set_nvlink.sh 0, so on some hosts 'MaxQ' disables NVLink. Also note 'Changing MaxQ/MaxP state on a multi-GPU node will FAIL unless you have full access to the system' - the power state is node-global and cannot be set from inside a shared multi-tenant allocation."
+}

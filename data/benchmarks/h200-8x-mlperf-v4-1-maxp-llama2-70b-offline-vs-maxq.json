@@ -1,0 +1,29 @@
+{
+  "id": "h200-8x-mlperf-v4-1-maxp-llama2-70b-offline-vs-maxq",
+  "type": "benchmark",
+  "name": "8xH200 SXM-141GB, MLPerf v4.1 llama2-70b Offline throughput under MaxP (no power measurement) vs MaxQ: 31302.7 vs 25262.1 tok/s",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-mlperf-v4-1-h200-maxp-l70-offline-summary",
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-summary",
+    "pwr-mlperf-v4-1-nvidia-makefile-power"
+  ],
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-h200-sxm"
+  ],
+  "interconnect_ids": [
+    "nvlink-4"
+  ],
+  "model": "Llama 2 70B (MLPerf 'llama2-70b-99.9')",
+  "format_id": null,
+  "metric": "tps_aggregate",
+  "value": 31302.7,
+  "unit": "output tokens/s (MLPerf 'Tokens per second', aggregate), non-power MaxP submission, NO POWER FIGURE PUBLISHED FOR THIS RUN - the comparison value is 25262.1 tok/s at 5806.9 W for the MaxQ submission of the same benchmark",
+  "methodology": "PRECISION: NOT STATED BY THE SOURCE AND DELIBERATELY NOT GUESSED. The paired measurements.json for this benchmark gives weight_data_types 'fp16', starting_weights_filename 'Original Hugginface model weights', weight_transformations 'quantization, affine fusion', input_data_types 'int32'. That says the weights began fp16 and were quantized, but it never names the served numeric format - not FP8, not INT8. format_id is therefore null rather than a guess. AGGREGATE. MLPerf Inference v4.1 Offline, closed division, NVIDIA NON-POWER submission system H200-SXM-141GBx8_TRT (as opposed to the power-measured H200-SXM-141GBx8_TRT_MaxQ). Provenance: closed/NVIDIA/results/H200-SXM-141GBx8_TRT/llama2-70b-99.9/Offline/performance/run_1/mlperf_log_summary.txt. LoadGen: 'Tokens per second: 31302.7', 'Samples per second: 107.477'. Cross-checked on the same node for mixtral-8x7b Offline: 59022.3 tok/s non-power versus 48987.9 tok/s MaxQ, a 17.0% MaxQ shortfall against 19.3% for llama2-70b. NO POWER TRACE EXISTS FOR THIS RUN - it is a plain performance submission, so no watts can be stated for it and none are guessed. That absence is the reason this record is worth having: it is the control that shows the power-measured submission is not free, while NOT supporting the naive reading that the gap is a watt cap.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "THE MAXQ-vs-MAXP GAP IS 25262.1 -> 31302.7 tok/s, A 19.3% THROUGHPUT DIFFERENCE - AND IT IS NOT A WATT CAP. This is the most misreadable comparison in MLPerf and the evidence is in NVIDIA's own Makefile.power. The 'MaxQ' power state is a PER-HOSTNAME chain, and on the H100-SXM host (viking-cr-194) the branch sets NO power limit at all - its only line is the commented-out '#sudo cpupower --cpu all frequency-set --governor powersave'. Other branches DO set caps ('-pl 250' DGX Station A100, '-pl 275' DGX A100, '-pl 200' A100-PCIe, '-pl 300 # TODO: Find the right power limit for this one.' H100-PCIe), and several also call power/set_nvlink.sh 0, so on some hosts 'MaxQ' DISABLES NVLINK. Consequently MaxQ-vs-MaxP is a bundle of power AND interconnect state, not a controlled watt-cap experiment, and the throughput gap cannot be read as an efficiency curve. WHAT THIS RECORD IS FOR: it establishes that the power-measured submission is roughly 24% slower than the same node asked to go fast, which is the price of the number. If you are citing the 0.2299 J/token figure as production-achievable efficiency, you are citing an efficiency that came with a 19% throughput cost. WHAT IT CANNOT SHOW: the missing watt. With MaxQ at 5806.9 W and MaxP unpublished, the efficiency direction is UNKNOWN - MaxP might be more joules-efficient at 31302.7 tok/s, or much less. Anyone tempted to divide a hypothetical MaxP wattage by 31302.7 should note that the experiment required to answer this was never run and is not in the public results. ALSO NOTE THE SECOND CONFOUND: the MaxQ run has CLOCKS LOCKED at 1000 MHz via 'nvidia-smi -lgc 1000,1000' (Makefile.power, GPUCLK?=1000, comment '# nsys and nvprof locked clock frequency'); whether the MaxP run shares that lock is not established by the summary file. Part of the 19.3% may be the clock lock rather than the power state, and these records cannot separate the two."
+}

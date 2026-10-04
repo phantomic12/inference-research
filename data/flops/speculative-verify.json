@@ -9,7 +9,9 @@
     "draft_k (AI = k; also multiplies the logit and attention work)",
     "context_length (verify attention flops scale as k*L and become compute-relevant)",
     "vocab_size (k*V logits to compare)",
-    "num_accepted_tokens (realized speedup, the other half of the cost model)"
+    "num_accepted_tokens (realized speedup, the other half of the cost model)",
+    "logprobs request (if per-token logprobs are requested, the target logits must be preserved uncloned-and-processed, which adds a full-width copy of the k x V tensor)",
+    "draft_probs availability (ngram speculation supplies no draft_probs, saving one [num_tokens, vocab_size] tensor and one comparison pass; model speculation supplies it)"
   ],
   "affected_by_hardware": [
     "nvidia-h100-sxm",
@@ -21,14 +23,19 @@
     "Batch the draft and verify passes so the draft model's tiny batch is not serialized with the target's",
     "Fused rejection-sampling kernel that compares all k drafts against the target distribution in one pass over the k x V logits",
     "Constrained / guided decoding so the acceptance test can be tightened rather than sampled",
-    "Adaptive draft_k - shorten the draft when acceptance rate drops"
+    "Adaptive draft_k - shorten the draft when acceptance rate drops",
+    "Fuse the whole verify-then-reject chain into one kernel pass over the [num_tokens, vocab_size] tensor, and keep it in bf16 when logprobs are not requested (vLLM's shipped path writes and re-reads up to three fp32 V-wide copies per step)",
+    "Capture verify + rejection in a CUDA graph so the kernel count is fixed rather than proportional to k (vLLM has shipped spec-decode CUDA-graph downgrades, so verify this on your build - see the spec-decode cudagraph gotcha sources)"
   ],
-  "notes": "Design consequence: verify is where speculative decoding's hidden cost lives, and it is what determines whether the scheme helps at long context or in a high-throughput regime. Two structural facts: (1) verify reads the target weights once for k positions, so it can never exceed roughly the arithmetic-intensity of a batch-k decode GEMM - a hardware part with poor FLOPs-per-byte will not gain from speculative decoding in proportion; (2) the k x V logit tensor and the k*L attention cost both grow with the knobs that are supposed to be free (k, context). Practically, engines that expose speculative decoding should report the acceptance rate and the effective k, since realized speedup = (1 + draft/target_cost) x acceptance - two different quantities that are routinely conflated. Also note the exactness property: Leviathan et al. show the combined draft+verify scheme leaves the target distribution unchanged, so any quality difference means the implementation is not doing modified rejection sampling correctly.",
+  "notes": "Design consequence: verify is where speculative decoding's hidden cost lives, and it is what determines whether the scheme helps at long context or in a high-throughput regime. Two structural facts: (1) verify reads the target weights once for k positions, so it can never exceed roughly the arithmetic-intensity of a batch-k decode GEMM - a hardware part with poor FLOPs-per-byte will not gain from speculative decoding in proportion; (2) the k x V logit tensor and the k*L attention cost both grow with the knobs that are supposed to be free (k, context). Practically, engines that expose speculative decoding should report the acceptance rate and the effective k, since realized speedup = (1 + draft/target_cost) x acceptance - two different quantities that are routinely conflated. Also note the exactness property: Leviathan et al. show the combined draft+verify scheme leaves the target distribution unchanged, so any quality difference means the implementation is not doing modified rejection sampling correctly. REJECTION-SAMPLING COST, deepened 2026-10-03 from vLLM's shipped verify path: the record above counts the verify GEMM (AI = k) and mentions the k x V logits. The rejection step itself is where that tensor is multiplied, and it is worse than 'k x V once' because of how many times the tensor is written and re-read. In vLLM's rejection_sampler.py the target's logits arrive as ONE [num_tokens + batch_size, vocab_size] tensor; they are float()-cast, then INDEXED TWICE by tensor (bonus_logits_indices, then target_logits_indices). PyTorch gives each tensor-index its own storage, so the V-wide tensor is copied twice before any sampling happens. The target slice is then .to(torch.float32), and whenever logprobs are not requested in processed mode it is additionally .clone()d to preserve the raw copy against the in-place processors - a third full-width fp32 buffer. draft_probs is an optional [num_tokens, vocab_size] tensor from the draft model, absent for ngram speculation. The op count is what matters: separate registered kernels for _rejection_greedy_sample, _rejection_random_sample, _expand and _sample_recovered_tokens, each with synthetic-acceptance-rate and fp64-Gumbel variants. Against a batch-1 Llama-3-8B decode step that streams 16.06 GB, a k x 128256 fp32 tensor is 501 KiB per position, so at k = 4 it is ~2.0 MB written and re-read several times over - still a small fraction of the weight stream, and still launch-dominated rather than bandwidth-dominated. That is the conclusion: rejection sampling's per-token cost is measured in extra passes and extra kernels over a V-wide tensor, not in arithmetic, and its cures are (a) a FUSED rejection kernel that compares all k drafts in one pass, (b) keeping the tensor at 2 bytes instead of fp32 when logprobs are not needed, and (c) capturing the whole verify+reject chain in a CUDA graph so the kernel count does not scale with k. One coupling worth recording: llama.cpp's backend-sampling PR has to use a TEMPORARY RNG for multi-output sampling so that rejected tokens do not advance the rng - the verify step and the sampler's RNG state are entangled, so moving the sampler on device is not a pure refactor.",
   "status": "verified",
-  "confidence": 0.8,
+  "confidence": 0.85,
   "updated": "2026-10-03",
   "sources": [
     "flop-speculative-decoding",
-    "flop-speculative-sampling-deepmind"
+    "flop-speculative-sampling-deepmind",
+    "flop3-vllm-rejection-sampler-source",
+    "flop3-llamacpp-pr-25532-backend-sampling",
+    "flop2-llama3-8b-config"
   ]
 }

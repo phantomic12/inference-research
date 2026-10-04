@@ -1,0 +1,20 @@
+{
+  "id": "pd-kv-tier-existence-query-over-reports-prefix",
+  "type": "gotcha",
+  "name": "A multi-tier KV existence query can report a prefix as available when no tier can actually serve it",
+  "class": "framework",
+  "affects": [
+    "sglang"
+  ],
+  "symptom": "HiCacheFile.batch_exists_v2() reports a hybrid prefix as a cache hit even when a required auxiliary pool cannot restore that prefix. With SWA valid endpoints {3} and Mamba valid endpoints {2}, the reported shared endpoint is 2 where the expected value is 0 (no common endpoint). With SWA {1,3} and Mamba {1,2}, it reports 2 where 1 is correct - overlooking an earlier valid common checkpoint. In the latter two cases the reported endpoint has no SWA object at all.",
+  "root_cause": "The file backend finds each pool's longest usable prefix and takes the MINIMUM of those lengths. That is correct only for contiguous ALL_PAGES coverage. TRAILING_PAGES pools can have holes in their valid endpoints, so a min-of-lengths is not the same as the greatest common legal endpoint, and it can name an endpoint no pool can serve. The correct operation is an intersection of legal endpoints - which MooncakeStore.batch_exists_v2() already implements, so the fix pattern exists in the same codebase.",
+  "workaround": "For multi-tier pools with trailing-page semantics, verify the existence query against a set of known-present and known-absent prefixes rather than trusting the aggregate length. If you are selecting an offload backend, prefer one that intersects legal endpoints. Note the author's own scoping, which is why this is major and not blocker: 'This report establishes an incorrect backend existence-query result. It does not claim a reproduced model-output error or an end-to-end load-back failure.'",
+  "severity": "major",
+  "notes": "Recorded because an over-reporting existence query is the precondition for every cache-hit correctness failure downstream: if the tier says a prefix is there, the engine will not recompute it. The severity is capped at major only because no end-to-end wrong output has been demonstrated from this specific bug - the reporter is careful about that distinction and so is this record. Env-independent (reproduces with empty files, no model or accelerator needed). Open at 2026-10-03. Separate from sgl-project/sglang#38452, which concerns whether the scheduler consults L3 at all.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-gh-sglang-39147-hicache-false-prefix-hit"
+  ]
+}

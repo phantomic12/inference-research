@@ -1,0 +1,31 @@
+{
+  "id": "mgpu-multinode-tp-across-fabrics-hangs-in-comm-init",
+  "type": "gotcha",
+  "name": "Tensor parallelism spanning nodes without a multi-node NVLink fabric hangs during communicator initialization, and the logs show partial success rather than failure",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-vllm-58290-multinode-init-hang",
+    "mgpu-vllm-59185-b200-cross-node-hang"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "nvidia-h200-nvl",
+    "nvidia-b200"
+  ],
+  "concepts": [
+    "tensor-parallel",
+    "multi-node",
+    "mnnvl",
+    "nccl",
+    "init",
+    "hang"
+  ],
+  "symptom": "Two distinct reports, same failure shape. (a) 2 nodes x 4 H200 NVL, TP=8: hangs in ncclCommInitRank during startup - and the diagnostic trap is that even local_rank ranks complete Init COMPLETE while the odd ranks block in the graph-connect phase, so a log that shows successful init on half the ranks is not evidence of health. (b) Two B200 nodes with two GPUs exposed each (CUDA_VISIBLE_DEVICES=0,1), TP=4, PP=1, DP=1 over the Ray executor, vLLM 0.29.1rc1.dev573+ge97573215, PyTorch 2.13.0+cu130, NCCL 2.30.7: GPUs have intra-node NVLink but the two nodes are NOT connected by a multi-node NVLink (MNNVL) fabric, and startup hangs during communicator initialization.",
+  "root_cause": "TP assumes a low-latency, high-bandwidth scale-up domain. Intra-node NVLink plus NVSwitch provides that; crossing to a second node over InfiniBand/RoCE does not, and NCCL's graph construction over the slower path can block rather than degrade - particularly when the hybrid local/remote graph leaves some ranks waiting in a connect phase their peers have already passed. Case (b) makes the underlying mistake explicit: the operator exposed two GPUs per node and asked for TP=4, silently crossing the node boundary. Over IB the same axis is usable but slow, and belongs to PP/DP rather than TP; for KV-heavy disaggregated designs the cross-node transfer needs its own transport decision.",
+  "workaround": "Keep TP inside a node's NVLink/NVSwitch domain. For cross-node scale use pipeline parallelism or data parallelism, and set tensor_parallel_size to the number of GPUs actually exposed on one node - if you expose 2 of 8 GPUs per node, TP must be <= 2, not 4. When a hang has partial COMPLETE lines in the log, count how many ranks reported completion: a rank-parity split across local_rank is the fingerprint of a hybrid intra/inter-node graph. Note also that mnnvl allreduce workspace init hangs 30 s and leaks GPU memory on IB-only multi-node, a related IB-path cost.",
+  "severity": "blocker",
+  "notes": "Directly downstream of the topology assumption in mgpu-pcie-only-multigpu-is-communication-bound: even when cross-node TP starts, PCIe/IB is the wrong fabric for it. The MNNVL distinction matters at the 8-GPU scale - NVLink 4 (H200 NVL) is intra-node only, so 'we have NVLink' is not sufficient to justify cross-node TP. Contrast mgpu-mig-blocks-nccl-tensor-parallel, where TP is unavailable inside a MIG slice for a completely different reason."
+}

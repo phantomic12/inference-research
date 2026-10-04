@@ -1,0 +1,15 @@
+{
+  "id": "flop3-vllm-issue-13247-penalties-tpot",
+  "type": "source",
+  "name": "vLLM issue #13247: with tp=1 and penalty parameters, TPOT becomes very slow for batch sizes > 20",
+  "url": "https://github.com/vllm-project/vllm/issues/13247",
+  "publisher": "vllm-project/vllm GitHub issues",
+  "kind": "forum",
+  "published": "2025-02",
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "The cleanest published demonstration that logit PROCESSORS, not logits arithmetic, can dominate a decode step. v0.7.2 (and v0.6.2) on A100-SXM4-80GB, Llama-3-8B-Instruct, max-model-len 8192, tp=1, 2000 prompt + 200 output tokens per request, 10 users added per minute each requesting every 10 s. TPOT in seconds vs concurrent users: 30 users 0.0356 -> 0.24; 50 users 0.0659 -> 0.275; 100 users 0.115 -> 0.314; 190 users 0.208 -> 0.544. Generated TPM at 30 users 33.3K -> 5.24K and at 190 users 53.1K -> 17.4K. CPU core usage 1.43 -> 2.6-3.96 cores (the pod's 4-core cap), GPU utilization 81-100% -> 0-25%. Regression window is v0.6.2 through v0.7.2; v0.6.0 was fine. Host CPU is a Xeon Platinum 8468. The mechanism is per-request CPU work serialised into the step, and it appears only above batch ~20 - below that the same penalty path is free.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

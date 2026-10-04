@@ -1,0 +1,34 @@
+{
+  "id": "node-global-power-state-unsettable-in-shared-allocation",
+  "type": "gotcha",
+  "name": "GPU power and link state are node-global, so you cannot set or change them from inside a shared multi-tenant allocation - and a node someone else down-clocked will silently cap your throughput",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-mlperf-v4-1-nvidia-makefile-power",
+    "pwr-nvidia-smi-docs"
+  ],
+  "class": "config",
+  "affects": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "concepts": [
+    "multi-tenancy",
+    "power-cap",
+    "nvlink",
+    "nvidia-smi",
+    "slurm",
+    "scheduler",
+    "shared-cluster",
+    "permissions",
+    "configuration-drift"
+  ],
+  "symptom": "A benchmark or production tuning session that works perfectly on a dedicated node behaves differently on a shared cluster, with no error from the tooling. Attempts to fix it fail confusingly: the clock lock does not take, or applies to some devices and not others, or the command errors with a permission or 'in use' style message. Two different jobs on the same node can silently influence each other's throughput, and a change made for one tenant is inherited by whoever runs next.",
+  "root_cause": "NVIDIA's own submission tooling documents the constraint, verbatim from Makefile.power: 'Changing MaxQ/MaxP state on a multi-GPU node will FAIL unless you have full access to the system. For SLURM, you need to have grabbed all the GPUs on this node.' Power and NVLink state are properties of the NODE and its management interface, not of an allocation slice, so a partial grant is insufficient - the operation needs the whole node. The same applies to the underlying commands the Makefile chains together: 'sudo nvidia-smi -pl' and 'sudo nvidia-smi -lgc' are root-requiring node-wide settings ('Requires root' per the nvidia-smi reference for both -pl and -lgc), and 'power/set_nvlink.sh 0' reconfigures the interconnect for every device in the chassis. 'lgc ... --lock-gpu-clocks' is documented as 'Supported on Volta+. Requires root.'",
+  "workaround": "Treat power, clock and link state as node properties to be negotiated and recorded, not knobs you turn per job. On a shared cluster, ask the operator what the node's power and clock configuration IS and capture it with the benchmark, rather than attempting to set it - a silent, unrecorded inherited configuration is the dangerous case, because your numbers then describe a machine state nobody wrote down. When a throughput number is unexpectedly low, check the node's throttle and clock state before suspecting your own code: another tenant's power or link configuration is a cheaper explanation than a kernel bug. For reproducible published figures, require a dedicated node and record the exact lock state, since the locked-clock requirement is what makes MLPerf power numbers comparable at all. Do not rely on per-process or per-container power configuration as a substitute - nothing in the vendor tooling supports it, and a container cannot grant itself the node access it does not have.",
+  "severity": "minor",
+  "notes": "SEVERITY IS MINOR DELIBERATELY AND THE REASON MATTERS: this cannot silently corrupt a result on a machine you control, because the operation fails loudly. It is rated minor as a blocker for reproducibility rather than minor as an impact - on a correctly managed cluster nothing goes wrong, and the danger is entirely in unmanaged clusters where nobody records the node state. THE RELATED SILENT-FAILURE RISK IS THE PART WORTH FLAGGING: if a previous job on a shared node left the node clock-locked or power-capped and the next job neither checks nor resets it, the second job's numbers are wrong with no error anywhere. That failure mode is the reason this record exists even though the command-level failure is loud. STATUS NOTE: NVIDIA's own documentation gives the honest workaround for the common case - grab all GPUs on the node under SLURM - which confirms the constraint is known to submitters and worked around in practice rather than solved."
+}

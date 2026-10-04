@@ -1,0 +1,87 @@
+{
+  "id": "nvidia-a100-40gb-sxm4",
+  "type": "accelerator",
+  "name": "NVIDIA A100 40GB SXM4",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+    "link2-nvidia-hgx-a100-datasheet",
+    "nv-a100-datasheet"
+  ],
+  "vendor": "nvidia",
+  "architecture": "ampere",
+  "release_year": 2020,
+  "process_nm": 7,
+  "form_factors": [
+    "sxm"
+  ],
+  "vram_gb": 40,
+  "memory_type": "HBM2",
+  "memory_bus_bit": 5120,
+  "memory_bandwidth_gbps": 1555,
+  "memory_bandwidth_basis": "Two first-party figures that agree exactly, so nothing is derived. NVIDIA Ampere white paper Table 4: 'Memory Interface 5120-bit HBM2', 'Memory Data Rate 1215 MHz DDR', 'Memory Bandwidth 1555 GB/sec'. Same document, prose: 'The A100 GPU includes 40 GB of fast HBM2 DRAM memory on its SXM4-style circuit board. The memory is organized as five active HBM2 stacks with eight memory dies per stack. With a 1215 MHz (DDR) data rate the A100 HBM2 delivers 1555 GB/sec memory bandwidth'. 1215 MHz x 2 (DDR) x 5120 bit / 8 = 1555 GB/s, consistent with the printed aggregate.",
+  "flops": [
+    {
+      "precision": "other",
+      "tflops": 9.7,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+      "notes": null
+    },
+    {
+      "precision": "other",
+      "tflops": 19.5,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+      "notes": null
+    },
+    {
+      "precision": "fp32",
+      "tflops": 19.5,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-nvidia-ampere-whitepaper-a100-40gb"
+    },
+    {
+      "precision": "tf32",
+      "tflops": 156,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-nvidia-ampere-whitepaper-a100-40gb"
+    },
+    {
+      "precision": "bf16",
+      "tflops": 312,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-nvidia-ampere-whitepaper-a100-40gb"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 312,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-nvidia-ampere-whitepaper-a100-40gb"
+    },
+    {
+      "precision": "int8",
+      "tflops": 624,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-nvidia-ampere-whitepaper-a100-40gb"
+    }
+  ],
+  "tdp_w": 400,
+  "interconnect": [
+    "nvlink-3",
+    "nvswitch-2",
+    "pcie-gen4"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "DISTINCT FROM BOTH OTHER A100 40GB FORMS, which is the whole point of this record. There are three 40 GB A100 variants and they are NOT interchangeable: (1) this one, 40 GB SXM4, the module form factor, 40 GB HBM2 on a 5120-bit bus at 1215 MHz DDR = 1555 GB/s, 400 W; (2) 40 GB PCIe, the same GA100-883AA-A1 die in a dual-slot FHFL card, which the A100 40GB PCIe Product Brief (PB-10137-001_v03) specifies identically for memory - 'Memory clock 1215 MHz', 'Memory type HBM2', 'Memory size 40 GB', 'Memory bus width 5120 bits', 'Peak memory bandwidth Up to 1555 GB/s' - but at 250 W with 765 MHz base / 1410 MHz boost clocks, a different package and no NVSwitch; (3) 80 GB SXM4, HBM2e, 2039 GB/s, also 400 W. The bus width and pin rate on THIS record are the ones that matter: the often-repeated claim that the 40 GB part has a 4096-bit bus is wrong for SXM4 - Table 4 of the white paper explicitly lists the A100's interface as 5120-bit HBM2. 4096-bit is the P100 and V100 interface in the same table, which is almost certainly the source of the confusion.\n\nWHERE THE SPECS COME FROM, and why that is unusual: the current public A100 datasheet (nv-a100-datasheet) carries spec columns for 'A100 80GB PCIe' and 'A100 80GB SXM' ONLY. The 40 GB cut has no column there, so an auditor looking at the datasheet will not find this part in it. The Ampere architecture white paper's Table 4 has a single 'NVIDIA A100' column that describes the 40 GB SXM4 die as originally shipped (40 GB, 1555 GB/sec, SXM4, 400 W, 108 SMs), and that is the primary source for every number above.\n\nPRECISION LABELS AND THE SPARSITY TRAP: the two 'other' rows are FP64, because this schema's precision enum has no fp64 member. They are NOT duplicates: 9.7 TFLOPS is the CUDA-core FP64 path ('Peak FP64 TFLOPS (non-Tensor)', with 3456 FP64 cores excluding Tensor) and 19.5 TFLOPS is the FP64 Tensor Core path ('Peak FP64 Tensor TFLOPS'), which Ampere's doubled double-precision Tensor Cores roughly double. FP32 19.5 is separately sourced and coincidentally equals the FP64 Tensor Core number. On the tensor rows the white paper prints slash pairs - 312/624 FP16, 156/312 TF32, 624/1248 INT8 - where the SECOND number is the with-sparsity figure (the A100 datasheet carries the matching '* With sparsity' footnote), so the DENSE values recorded here are the first of each pair. All rows are flagged dense:true because that is what they are; quoting NVIDIA's sparse 624 INT8 as dense would overstate dense throughput 2x.\n\nINT4 is deliberately absent from the flops list: Table 4 does print 'Peak INT4 Tensor TOPS 1248/2496', but this schema's precision enum has no int4-with-matrix distinction clean enough to record it without implying something the enum cannot express, so it is recorded here in prose instead.\n\nINTERCONNECT: NVLink 3 at 600 GB/s GPU-to-GPU and second-generation NVSwitch come from the HGX A100 datasheet (link2-nvidia-hgx-a100-datasheet), which is the platform document for 4/8/16-GPU HGX A100 nodes; the per-SKU white paper does not restate link bandwidth. PCIe Gen4 64 GB/s is the host link. Note that NVSwitch is absent on 4-GPU HGX configurations and present at 8 and 16 GPUs per the same datasheet.\n\nINFERENCE RELEVANCE: 40 GB of HBM2 at 1555 GB/s is the same memory subsystem speed as the 40 GB PCIe card but with a quarter more memory bandwidth headroom per watt than the 80 GB part's 2039 GB/s, and 1555 GB/s is still the highest-bandwidth memory in the A100 family relative to capacity. Against the H100 SXM this part has roughly a third of the FP16 throughput (312 vs 989.5 dense) at about half the bandwidth (1555 vs 3350), which is the wrong ratio for large-batch decode and the reason 40 GB A100 nodes persisted in the used market as a capacity-per-dollar part rather than a throughput part."
+}

@@ -1,0 +1,35 @@
+{
+  "id": "idle-and-underbatched-fleet-can-cost-more-than-busy-fleet",
+  "type": "gotcha",
+  "name": "A fleet at low utilisation can cost MORE in power than the same fleet at high utilisation - the fixed power floor makes naive cost-per-token arithmetic wrong",
+  "class": "measurement",
+  "affects": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "concepts": [
+    "idle-power",
+    "power-cap",
+    "energy-efficiency",
+    "cost-per-token",
+    "batching",
+    "dvfs",
+    "scheduling"
+  ],
+  "symptom": "Energy per unit of work is U-shaped in the operating point rather than monotonic, so the cheapest-to-run configuration is not the one that runs hardest. Measured: continuous batching improves system-level energy efficiency 3.2x from 1 to 16 requests per second because GPU power PLATEAUS while throughput continues to rise with batching depth. A sequential agentic workload consumed 63x more system energy per output token than saturated serving. Separately, on the cap side, energy per inference has a minimum at a power cap of 43-46% of rated power - i.e. running the card HARDER than the optimum costs more energy per inference than running it at roughly half power, even though throughput per second is higher.",
+  "root_cause": "Physics, not scheduling folklore. For a given workload a GPU's board power rises SUPERLINEARLY along its power-performance curve, on top of a fixed power floor that is paid for as long as the job runs. Energy per inference is therefore U-shaped in the operating point (GPU, power cap), with the minimum - the 'Joule Point' - at 43-46% of rated power. Because that floor is paid whether or not useful tokens come out, a fleet idling at low batch depth spends nearly the full floor for a fraction of the output.",
+  "workaround": "Never derive cost-per-token from a full-load benchmark. Compute it from the actual batching regime and the measured energy floor. Two levers the measurements support directly: (1) raise batching depth first - continuous batching gave 3.2x system-level efficiency from 1 to 16 req/s; (2) consider a static power cap around 43-46% of rated power for energy-constrained operation, which the measurements show costs only about 1.2x per-request latency and the same factor more cards to hold aggregate throughput, while cutting energy per inference by roughly a quarter to a third. Note the cap must be characterised per card type - under load the optimum is nearly a per-card-type constant (mean penalty under one per cent for using a single static cap), which turns an online per-job search into a one-time characterisation. Also note the free sensitivity: for a memory-bandwidth-bound decode workload, throughput was UNCHANGED under per-GPU power caps of 400-600 W and dropped sharply only at 300 W - so on decode-bound serving there is a wide cap range that costs nothing at all.",
+  "severity": "major",
+  "notes": "This is the gotcha most likely to be silently wrong in a cost model, because every intuition points the other way: people assume more load means more efficiency, and the data says the relationship is U-shaped. The Joule Point figure is specific to the measured setup (4 GPUs, 20 models) and should be re-characterised per card type before being applied to H100 or B200 in anger; the paper reports it as nearly a per-card-type constant under load, which is the reason to expect it to transfer. The 400-600 W insensitivity is the practically actionable half and is a stronger near-term lever than the 43-46% optimum, because it is a free operating range rather than a tradeoff.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr2-arxiv-joule-point",
+    "pwr2-arxiv-where-does-energy-go",
+    "pwr2-arxiv-multi-request-energy"
+  ]
+}

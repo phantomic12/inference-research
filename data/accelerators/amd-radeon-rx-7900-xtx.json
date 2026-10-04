@@ -1,0 +1,70 @@
+{
+  "id": "amd-radeon-rx-7900-xtx",
+  "type": "accelerator",
+  "name": "AMD Radeon RX 7900 XTX",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "acc-fill-amd-radeon-rx-7900xtx-product-page",
+    "acc-fill-amd-rx-7900-series-launch",
+    "acc-fill-amd-rx-7900-series-press-release-rdna3",
+    "acc-fill-amd-rdna-architecture-page"
+  ],
+  "vendor": "amd",
+  "architecture": "rdna3 (Navi 31, gfx1100)",
+  "release_year": 2022,
+  "process_nm": null,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 24,
+  "memory_type": "gddr6",
+  "memory_bus_bit": 384,
+  "memory_bandwidth_gbps": 960,
+  "memory_bandwidth_basis": "AMD product page prints 'Memory Speed Up to 20 Gbps' and 'Memory Bandwidth Up to 960 GB/s' but has NO 'Memory Interface' row for this SKU, so the 384-bit width is NOT from the product page: it comes from AMD's own RX 7900 Series launch article ('384-bit' in the spec table and '20Gbps over a 384-bit memory bus' in the prose, acc-fill-amd-rx-7900-series-launch) and is corroborated by the RDNA 3 press release ('up to 24GB of high-speed GDDR6 memory running at 20Gbps over a 384-bit memory bus', acc-fill-amd-rx-7900-series-press-release-rdna3). 20 Gbps x 384-bit / 8 = 960 GB/s, matching AMD's printed aggregate exactly, so the figure is quoted rather than re-derived. DO NOT confuse it with AMD's 'Effective Memory Bandwidth Up to 3500 GB/s' row on the same page: that is the Infinity-Cache-inclusive marketing number, sourced to footnote GD-151, and is not DRAM bandwidth.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 61.4,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-7900xtx-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 61.4,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-7900xtx-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 123,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-7900xtx-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 123,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-7900xtx-product-page"
+    },
+    {
+      "precision": "int4",
+      "tflops": 246,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-7900xtx-product-page"
+    }
+  ],
+  "tdp_w": 355,
+  "interconnect": [
+    "pcie-gen4"
+  ],
+  "unified_memory": false,
+  "consumer": true,
+  "notes": "RDNA 3 flagship consumer card: 96 CUs, 6144 stream processors, 96 ray accelerators, 192 AI accelerators, 2500 MHz boost / 2300 MHz game, 58 B transistors, 24 GB GDDR6 at 20 Gbps on a 384-bit bus = 960 GB/s, 96 MB Infinity Cache, 355 W typical board power, 287 mm / 2.5-slot, launched 12/13/2022 at $999 SEP. gfx1100 in ROCm terms; AMD's ROCm compatibility matrix lists 'AMD Radeon RX 7900 XTX | gfx1100' as a supported Radeon part, unlike the gfx906 Radeon Pro VII in this directory.\n\nREAD THE TWO FP16 ROWS AS A PAIR, NOT A DUPLICATE. AMD's page prints 'Peak Half Precision (FP16 Vector) Performance 61.4 TFLOPs' and 'Peak Half Precision (FP16 Matrix) Performance 123 TFLOPs'. Those are the vector (shader) path and the matrix (WMMA) path respectively - the 2x ratio is the matrix unit count, not a dense/sparse pair. Neither carries a structured-sparsity figure on this page, so both are flagged dense:true because that is what AMD states; there is no 246 TF16-sparse row to record. Compare the RDNA 4 parts (RX 9070 XT, Radeon AI PRO R9700), where AMD's page DOES print explicit 'with Structured Sparsity' rows and the halving is visible - RDNA 3's page does not use that convention. INT8 123 TOPs and INT4 246 TOPs are the matrix rows.\n\nNO FP8 ROW, DELIBERATELY: AMD publishes no FP8 figure for this part. RDNA 3 has no FP8 matrix path, so a reader must not carry an FP8 number over from the RX 9070 XT. This is the specific hardware reason behind the vLLM AITER gate in gotcha aiter-gate-skips-rdna3-gfx1100, which skips gfx1100 silently and falls back to TritonInt8ScaledMMLinearKernel - INT8 is the ceiling that the gating code can actually accelerate.\n\nPROCESS NODE LEFT NULL, and that is a source limitation rather than an AMD secret: AMD's own RDNA architecture page gives RDNA 3's process as a RANGE, '5~6nm' (acc-fill-amd-rdna-architecture-page), so there is no single vendor-stated node to record. The 5 nm and 6 nm figures that circulate for Navi 31 come from teardown and press aggregation, which AGENTS.md excludes, so process_nm stays null.\n\nINFERENCE RELEVANCE: 24 GB at 960 GB/s is the highest memory bandwidth of any discrete consumer card in this directory, and the repo's own llama.cpp measurement (benchmarks/llamacpp-rx7900xtx-gfx1100-qwen3-27b-q4-batch1-decode-tok-s) shows why that cuts both ways: a single card sustains about 65.9% of peak DRAM bandwidth on Qwen3.8-27B Q4_K_XL batch-1 decode, but tensor-splitting across two of them drops aggregate utilisation to 43.0% and yields only 1.31x throughput for 2x the hardware, because the only link between consumer cards is PCIe - there is no scale-up fabric. Treat multi-RDNA as capacity pooling, not as throughput scaling. Bandwidth per watt (960 GB/s at 355 W) is also why these cards remain attractive used for batch-1 decode despite the software gaps."
+}

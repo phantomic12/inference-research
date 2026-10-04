@@ -10,7 +10,10 @@
     "num_kernels_per_layer (model depth x ops per layer)",
     "number_of_experts (MoE dispatch launches per layer)",
     "host CPU speed and driver overhead (this is a CPU-bound cost)",
-    "static-vs-dynamic shapes (dynamic shapes force re-capture or eager launch)"
+    "static-vs-dynamic shapes (dynamic shapes force re-capture or eager launch)",
+    "ITERATION-LEVEL scheduler CPU (a separate, larger cost from per-kernel launch: 11.7% of wall on Qwen3-0.6B / H100 / enforce_eager / num_seqs=256, measured as schedule() 7.2% + update_from_output() 4.8%)",
+    "num_scheduled_tokens per step (vLLM flags its own update_from_output loop: 'can be up to 1K or more ... can be a performance bottleneck')",
+    "enforce_eager / graph-capture state (eager paths re-enter Python per step and cannot amortise anything)"
   ],
   "affected_by_hardware": [
     "nvidia-h100-sxm",
@@ -24,15 +27,18 @@
     "Kernel fusion - fewer, bigger kernels amortize launch overhead across more work",
     "Persistent / megakernel designs where one launch covers a whole layer or the whole step",
     "Static shape discipline so graphs stay valid and capturable",
-    "Batching, which raises the work per launch without touching the launch count"
+    "Batching, which raises the work per launch without touching the launch count",
+    "Port the per-step control plane out of Python (the vLLM RFC prototypes a Rust scheduler, KV-cache block pool and request-state structures via PyO3; it is an open PoC, not a shipped fix)",
+    "Make fewer, larger scheduling decisions per step - chunked prefill and iteration-level scheduling reduce the number of Python-level state updates per token relative to a per-token scheduler"
   ],
-  "notes": "Design consequence: at batch 1 the fastest kernel is often the one that is launched, not the one with the best FLOPs or bandwidth utilization, so launch overhead sets a floor on inter-token latency that no amount of FLOPS improvement can move. Two practical rules follow. For engine authors: if a decode loop is CPU-launch-bound, raising batch or capturing graphs will beat optimizing any single kernel. For hardware designers: the cost is CPU-side and driver-mediated, so fast host memory, low-latency launch paths and driver maturity matter for small-batch latency in a way they do not for throughput - and it means a part with strong FLOPS but a weak host interface can lose the batch-1 latency race outright. Note this class overlaps with norm_softmax and sampling: fusing those is simultaneously an HBM saving and a launch saving, which is why fusion is the first thing any decode path tries.",
+  "notes": "Design consequence: at batch 1 the fastest kernel is often the one that is launched, not the one with the best FLOPs or bandwidth utilization, so launch overhead sets a floor on inter-token latency that no amount of FLOPS improvement can move. Two practical rules follow. For engine authors: if a decode loop is CPU-launch-bound, raising batch or capturing graphs will beat optimizing any single kernel. For hardware designers: the cost is CPU-side and driver-mediated, so fast host memory, low-latency launch paths and driver maturity matter for small-batch latency in a way they do not for throughput - and it means a part with strong FLOPS but a weak host interface can lose the batch-1 latency race outright. Note this class overlaps with norm_softmax and sampling: fusing those is simultaneously an HBM saving and a launch saving, which is why fusion is the first thing any decode path tries. ITERATION-LEVEL (SCHEDULER) OVERHEAD, deepened 2026-10-03 - the distinction this record was missing. The original field covered PER-KERNEL launch: a fixed CPU cost per kernel, paid before bytes move. There is a second, larger CPU cost that is paid once per STEP, not once per kernel, and it is not captured by CUDA Graphs at all: the Python scheduler and control plane. The measurement is direct, from a vLLM RFC (Qwen3-0.6B on H100, enforce_eager=True, num_seqs=256, 12.68 s wall): Scheduler.schedule() 907 ms = 7.2% of wall; Scheduler.update_from_output() 572 ms = 4.8%; total scheduler CPU 11.7% of wall time. vLLM's own code flags the second loop at scheduler.py:1340 - 'As len(num_scheduled_tokens) can be up to 1K or more, the below loop can be a performance bottleneck.' The RFC also records user reports of 4 ms CPU / 1.4 ms GPU per step, i.e. the CPU plane about 3x the GPU work, and states the overhead fraction is much larger on CPU-heavy workloads - small models, multimodal/TTS, higher batch, lower-end GPUs. THE CROSSOVER IS COMPUTABLE, and it is the reason this matters: the step's GPU time at batch B for a dense model is approximately 2*P/BW_dev plus launch terms. For a small model on a fast part, the GPU time per step drops below the fixed CPU cost per step, and the step becomes host-bound even though every kernel inside it is cheap. Concretely: a 0.6B model in bf16 reads 2*0.6e9 = 1.2 GB per decode step; at an H100's 3350 GB/s that is 358 us of GPU time, against 11.7% scheduler CPU on a 12.68 s wall that is a per-step figure in the same order. So the regime where iteration overhead dominates is: small params AND fast bandwidth AND high concurrency (so the scheduler's per-step work grows with num_seqs and num_scheduled_tokens) AND enforce_eager or any path that re-enters Python. CUDA Graphs remove the PER-KERNEL part; they do not remove the PER-STEP scheduler part, which is why the fix being prototyped is a Rust control plane (PyO3) for the scheduler, KV cache manager and request-state structures rather than a graph capture. Design consequence: launch_overhead is not one knob but two, and they have different cures - fusion and graphs for per-kernel, a faster control plane (or fewer, larger scheduling decisions such as chunked prefill) for per-step. A benchmark that reports GPU utilisation near 100% has, by construction, hidden this class; a benchmark that reports tok/s at num_seqs=256 with enforce_eager has measured it.",
   "status": "verified",
-  "confidence": 0.8,
+  "confidence": 0.85,
   "updated": "2026-10-03",
   "sources": [
     "flop-nvidia-cuda-graphs",
     "flop-flashinfer",
-    "flop-nvidia-inference-optimization"
+    "flop-nvidia-inference-optimization",
+    "flop3-vllm-pr-40459-rust-control-plane"
   ]
 }

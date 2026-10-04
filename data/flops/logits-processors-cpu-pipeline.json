@@ -1,0 +1,48 @@
+{
+  "id": "logits-processors-cpu-pipeline",
+  "type": "flop",
+  "name": "Logit processors in the decode loop: penalties, min_p, bias, min_tokens, and the host work they force",
+  "class": "sampling",
+  "arithmetic_intensity": "Logit processors are not one cost, they are two, and conflating them is the whole reason this class has been invisible. (a) DEVICE half: each active processor is one or more full-width passes over the [B, V] logits tensor. vLLM's shipped MinPLogitsProcessor.apply does softmax over dim=-1, amax over dim=-1, mul_, a comparison, and masked_fill_ in place - four to five full V-wide passes at fp32, per step, whenever ANY request in the batch sets min_p. At V = 128256 that is 4-5 x 501.0 KiB = 2.0-2.5 MB read plus the same written per row, against a Llama-3-8B batch-1 step that streams 2*8.03e9 = 16.06 GB of weights: the processor is 0.012-0.016% of the step's bytes, so on the device it is again nearly free. LogitBias is a single scatter-add (V-independent work over |bias| ids). MinTokens mutates O(|min_tokens|) positions. So the arithmetic intensity is the same ~1 flop/byte as plain sampling and the DEVICE answer is the same: negligible. (b) HOST half, which is not negligible at all: vLLM's apply_all_penalties takes the per-request output_token_ids PYTHON lists every step, pads them into a CPU int64 tensor on PINNED memory with pad=vocab_size, and uploads it non-blocking - so the payload is max_output_len x batch x 8 B, rebuilt and re-uploaded every step, growing as sequences lengthen, and it also fills -1 placeholders (async-scheduling rows that will not be penalised) with vocab_size to keep the scatter valid. Add the batch bookkeeping: min_p state is a CPU-side mirror (min_p_cpu numpy view, an O(batch) min_p_count maintained from added/removed/moved batch events), and logit_bias state is a Python dict rebuilt into three device tensors via async_tensor_h2d whenever any request's bias changes. The published end-to-end measurement is unambiguous about which half binds: vLLM v0.6.2 through v0.7.2 on A100-SXM4-80GB with Llama-3-8B-Instruct, tp=1, penalty parameters set, 2000 prompt + 200 output tokens per request at 2000-4000 users' arrival scale - TPOT went 0.0356 s at 30 users to 0.24 s, 0.0659 -> 0.275 at 50, 0.115 -> 0.314 at 100, 0.208 -> 0.544 at 190, while generated TPM fell 33.3K -> 5.24K at 30 users and 53.1K -> 17.4K at 190, CPU core usage went 1.43 -> 3.7-4.0 cores (the pod cap) and GPU utilisation 81-100% -> 0-25%. v0.6.0 was fine, so the regression window is specific.",
+  "bound_by": "launch_overhead",
+  "scales_with": [
+    "batch_size (INVERSELY in the published failure - the regression appears only above batch ~20; below that the same penalty path is free. Device passes are linear in B, host bookkeeping linear in B)",
+    "output sequence length so far (the penalties upload payload is max_output_len x batch x 8 B, so it grows every step - the worst possible scaling for a per-step cost)",
+    "num_processors_enabled (each is a separate pass or a separate launch; the launch count is what the launch_overhead bound names)",
+    "num_stop_and_stateful_ids (min_tokens, stop-token ids, logit_bias entries drive a scatter whose width is set by request content, not by vocab)",
+    "vocab_size V (device passes only: 128256 for Llama-3-8B, 152064 for Qwen2.5, 32000 for Llama-2)",
+    "whether the processor is argmax-invariant (min_p returns True, logit_bias False - engines use this to skip the processor entirely for greedy requests, which is why enabling penalties can be free in a greedy-only deployment)",
+    "host CPU speed and pinned-memory availability (the upload and the Python list->tensor padding are host costs on the step's critical path)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090",
+    "nvidia-rtx-5090",
+    "amd-radeon-pro-vii"
+  ],
+  "workarounds": [
+    "Keep the processor state on device as a preallocated, batch-indexed tensor (vLLM's min_p path already does this - min_p_cpu numpy mirror plus a pinned CPU staging buffer and a preallocated device tensor, refreshed only when a batch update says needs_update) rather than rebuilding per step",
+    "Move presence/frequency/repetition penalties fully on device with no per-step host list marshalling; the shipped implementation's own comment says it is 'currently quite inefficient and will be reworked anyhow'",
+    "Fuse the whole logit-processing chain into one kernel that reads the logits once (min_p's five passes become one)",
+    "Skip processors that cannot change the outcome: is_argmax_invariant() is exactly the flag that lets an engine drop min_p for greedy requests",
+    "Use greedy decode where penalties are not semantically required - the published TPOT regression is a penalty-path regression, not a general one",
+    "Reduce the number of distinct processor features per request (each is a separate pass and, on the host path, separate Python work)",
+    "Serve penalties on a build without the regression: the issue's own comparison shows v0.6.0 healthy at the same settings"
+  ],
+  "notes": "CLASSIFICATION ARGUMENT: class 'sampling' because every one of these operations is applied to the logit tensor between the LM head and the token draw, on the same V-wide data, once per step; bound_by 'launch_overhead' for the same reason as host-side-sampling-loop - the device arithmetic intensity (~1 flop/byte, 0.012-0.016% of a dense batch-1 step's bytes) is not what binds, a host-side per-step cost on the critical path is. Requested enum addition for the schema owner: the taxonomy has no way to say 'this per-step cost is paid on the host and serialised'; a 'host_pipeline' bound_by value, or a provenance field on flop records distinguishing device passes from host passes, would make the whole launch_overhead family queryable. DESIGN CONSEQUENCE, and the non-obvious one: the cost of a logit processor is DISCONTINUOUS in batch size, not gradual. In the published data the identical code path is free at 20 users and costs 4-7x in TPOT at 30+. That is because the host work is serialised into the step until the batch is large enough to amortise it, and once it does amortise it does not - it just scales linearly. So the practical rule is: enabling penalties, min_p, logit_bias, or min_tokens on a latency-serving deployment is a change to the HOST configuration, not to the GPU one, and the benchmark that will catch it is one that sweeps concurrency rather than one that measures single-stream latency. That asymmetry also explains why single-user local sessions almost never see this class while a many-slot server sees it as a multi-fold regression. SECONDARY CONSEQUENCE for arithmetic: min_p's extra passes are over the V-wide tensor, but the penalties' extra work is over the GENERATED IDS, whose length is the thing the operator usually forgets when reasoning about a long-output workload. At 200 output tokens the penalties payload per sequence is on the order of thousands of bytes rebuilt and re-uploaded every step - small in absolute terms, but the published evidence says the surrounding Python path, not the bytes, is the cost. CAVEAT: the issue is a user report against two releases, not a root-caused upstream fix, so treat the specific v0.6.2-0.7.2 window as observed and the mechanism (per-request host work serialised into the step, visible above batch ~20) as the durable claim. The hardware cited is A100 and H100.",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop3-vllm-issue-13247-penalties-tpot",
+    "flop3-vllm-penalties-source",
+    "flop3-vllm-logits-processor-builtin",
+    "flop3-vllm-sampler-source",
+    "flop2-llama3-8b-config",
+    "flop-roofline-williams-2008",
+    "flop-nvidia-inference-optimization",
+    "flop-speculative-decoding"
+  ]
+}

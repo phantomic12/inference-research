@@ -34,7 +34,8 @@
       "tflops": 72.0,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi350p-product-page"
+      "source_id": "amd-mi350p-product-page",
+      "notes": "VECTOR FP16 ('Peak Half Precision (FP16) Performance 72 TFLOPs'). No sparsity variant, dense. NOTE the record also has an fp16 72.0 row that is the VECTOR path while the second fp16 row (1150) is the MATRIX path - on this part vector is 16x slower than matrix, so a naive reader taking 'the' FP16 number for this card would be off by 16x in either direction."
     },
     {
       "precision": "fp16",
@@ -69,7 +70,8 @@
       "tflops": 2300.0,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi350p-product-page"
+      "source_id": "amd-mi350p-product-page",
+      "notes": "AMD MI350P page: 'Peak Open Compute Project Eight-bit Precision Matrix (OCP-FP8) Performance 2.3 PFLOPs' DENSE, with 'with Structured Sparsity' 4.6 PFLOPs as the separate sparse row (stored separately here with dense:false)."
     },
     {
       "precision": "fp8",
@@ -83,14 +85,16 @@
       "tflops": 4600.0,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi350p-product-page"
+      "source_id": "amd-mi350p-product-page",
+      "notes": "AMD MI350P page: 'Peak Microscaling Six-bit Precision Matrix (MXFP6) Performance 4.6 PFLOPs' - NO 'with Structured Sparsity' row, so DENSE. Exactly half the MI350X's 9.2, consistent with this part having half the memory interface (4096-bit vs 8192-bit) and half the matrix cores per package."
     },
     {
       "precision": "fp4",
       "tflops": 4600.0,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi350p-product-page"
+      "source_id": "amd-mi350p-product-page",
+      "notes": "AMD MI350P page: 'Peak Microscaling Four-bit Precision Matrix (MXFP4) Performance 4.6 PFLOPs' - no sparsity variant, so DENSE. Same throughput as MXFP6 on this part."
     },
     {
       "precision": "int8",
@@ -113,5 +117,5 @@
   ],
   "unified_memory": false,
   "consumer": false,
-  "notes": "The CDNA4 part you can actually buy as a normal add-in card, and the only CDNA4 SKU without an OAM/8-GPU-platform story. Exactly HALF of an OAM part in every dimension: 128 CUs vs 256, 8192 SPs vs 16,384, 512 matrix cores vs 1024, 73B transistors vs 185B, 144 GB vs 288 GB, 4096-bit vs 8192-bit, 4 TB/s vs 8 TB/s, 128 MB Infinity Cache vs 256 MB.\n\nNote the page does NOT state a release year for MI350P (no 'Launch Date' field), so release_year 2025 is inferred from it shipping alongside the June 2025 MI350 series - treat it as approximate.\n\nPower is the interesting part: 600W max TBP but 450W TBP is configurable, and the card uses a standard 12V-2x6 connector rather than a 54V UBB. That makes it deployable in ordinary air-cooled servers. Passive cooling, full height / 267mm / double slot, Linux x86_64 only.\n\nNo Infinity Fabric links are listed on the spec page - scale-up beyond the card is PCIe only. That is a real limitation for multi-GPU inference: the OAM parts get a 153 GB/s scale-up mesh, this card gets PCIe Gen5 x16 (128 GB/s bidirectional) per card.\n\nCDNA4 software surface is confirmed on the product page: OpenMP, OpenCL, HIP, ROCm, TensorFlow, PyTorch, ONNX-RT, SGLang, JAX, Triton, Kokkos, RAJA. That is the broadest explicitly-listed framework support of any part here and worth noting for inference engine selection.\n\nTF32 is software-emulated on CDNA4. Sparse figures are 2x dense. Two fp16 entries on purpose: 72 TFLOPS vector, 1150 TFLOPS matrix. MXFP6/MXFP4 at 4600 PFLOPs. ROCm LLVM target gfx950."
+  "notes": "AUDIT 2026-10-03 (AMD convention re-verified against the MI350P page; no values changed): the MI350P page uses the identical labelling scheme as the MI350X - 'Peak X Performance' DENSE, 'Peak X Performance with Structured Sparsity' SPARSE at 2x - so every dense flag here is correct. Same micro-scaling caveat as the MI350X: the MXFP4 and MXFP6 rows print 4.6 PFLOPs with NO sparsity variant and are therefore dense, not sparse-and-not-to-be-halved. This page also prints the vector-vs-matrix split explicitly ('Peak Half Precision (FP16) Performance 72 TFLOPs' against 'Peak Half Precision Matrix (FP16) Performance 1.15 PFLOPs'), and the record's two fp16 rows are those two different paths - 72.0 vector and 1150 matrix - now annotated so they cannot be read as a contradiction. THE POINT OF THIS PART for inference: it is the only CDNA4 part with a 4096-bit interface and a PCIe add-in-card form factor ('PCIe Add-in Card', 'Dimensions Full Height / Double Slot', 600W TBP configurable to 450W), i.e. it is the air-cooled, rack-optional MI350 member. Its 4 TB/s and 144 GB are exactly half the MI350X's 8 TB/s and 288 GB, and its dense matrix throughput is exactly half too - but it needs no OAM baseboard, which is often the binding constraint. The CDNA4 part you can actually buy as a normal add-in card, and the only CDNA4 SKU without an OAM/8-GPU-platform story. Exactly HALF of an OAM part in every dimension: 128 CUs vs 256, 8192 SPs vs 16,384, 512 matrix cores vs 1024, 73B transistors vs 185B, 144 GB vs 288 GB, 4096-bit vs 8192-bit, 4 TB/s vs 8 TB/s, 128 MB Infinity Cache vs 256 MB.\n\nNote the page does NOT state a release year for MI350P (no 'Launch Date' field), so release_year 2025 is inferred from it shipping alongside the June 2025 MI350 series - treat it as approximate.\n\nPower is the interesting part: 600W max TBP but 450W TBP is configurable, and the card uses a standard 12V-2x6 connector rather than a 54V UBB. That makes it deployable in ordinary air-cooled servers. Passive cooling, full height / 267mm / double slot, Linux x86_64 only.\n\nNo Infinity Fabric links are listed on the spec page - scale-up beyond the card is PCIe only. That is a real limitation for multi-GPU inference: the OAM parts get a 153 GB/s scale-up mesh, this card gets PCIe Gen5 x16 (128 GB/s bidirectional) per card.\n\nCDNA4 software surface is confirmed on the product page: OpenMP, OpenCL, HIP, ROCm, TensorFlow, PyTorch, ONNX-RT, SGLang, JAX, Triton, Kokkos, RAJA. That is the broadest explicitly-listed framework support of any part here and worth noting for inference engine selection.\n\nTF32 is software-emulated on CDNA4. Sparse figures are 2x dense. Two fp16 entries on purpose: 72 TFLOPS vector, 1150 TFLOPS matrix. MXFP6/MXFP4 at 4600 PFLOPs. ROCm LLVM target gfx950."
 }

@@ -1,0 +1,28 @@
+{
+  "id": "mgpu-nccl-init-thread-error-deadlocks-others",
+  "type": "gotcha",
+  "name": "If one NCCL communicator-init thread errors (for example an OOM), the remaining init threads block forever on a bootstrap socket that has no timeout",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-nccl-582-init-oom-deadlock"
+  ],
+  "class": "driver",
+  "affects": [
+    "vllm",
+    "sglang"
+  ],
+  "concepts": [
+    "nccl",
+    "init",
+    "oom",
+    "bootstrap",
+    "hang"
+  ],
+  "symptom": "Observable is a hang, not an OOM error. NCCL's group.cc init path spawns one thread per rank and then joins them: it spins on pthread_tryjoin_np for each ASYNC_FUNC_INIT thread, propagating any thread's error into ret. The deadlock is that when one thread errors out, the others are already blocked in bootstrapAllGather on a socket read with no timeout, so the joining loop never gets a chance to observe the error and return it. The result is that a local, attributable failure - an out-of-memory allocation on one rank - is reported as an indefinite hang on every rank.",
+  "root_cause": "NCCL uses threads for communicator init and the join loop has no abort path that unblocks peers waiting on the bootstrap socket. bootstrapAllGather's socket read is not bounded by a timeout, so a peer that has already exited its own error path leaves the remaining ranks blocked on data that will never arrive. The failure is not detected by the NCCL watchdog either, because no collective is in flight yet - the job is still in ncclCommInitRank.",
+  "workaround": "Treat a hang inside ncclCommInitRank as an upstream rank failure until proven otherwise: check each rank's memory and its init logs for the first error, rather than escalating to interconnect debugging. Size memory so init allocations cannot fail (this is the same headroom as mgpu-tp-needs-dev-shm-larger-than-container-default, where host-side allocation failures surface as NCCL init trouble). A useful external bound is a torch distributed timeout, but note the interaction in mgpu-nccl-cumem-uds-fd-exchange-hangs-at-init: a lowered timeout can change how the hang presents without fixing it.",
+  "severity": "major",
+  "notes": "Third member of the same family - no-timeout collective wait paths converting errors into hangs: mgpu-partial-node-failure-deadlocks-instead-of-erroring (topology guard suppressed), mgpu-symm-mem-window-registration-deadlocks-without-timeout (blocking recvmsg in ncclCommWindowRegister), and mgpu-rccl-ll-protocol-deadlocks-gfx12 (device-side ordering bug). That pattern - an error or misconfiguration that should be a message and is instead a permanent spin - is the defining operational hazard of multi-GPU collectives."
+}

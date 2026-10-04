@@ -1,0 +1,34 @@
+{
+  "id": "sync-boost-slowest-gpu-caps-whole-node",
+  "type": "gotcha",
+  "name": "Sync Boost ties every GPU in a node to the slowest one's achievable clock, so one hot or throttled GPU silently caps the throughput of all eight",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-nvidia-smi-docs"
+  ],
+  "class": "hardware",
+  "affects": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300"
+  ],
+  "concepts": [
+    "sync-boost",
+    "nvidia-smi",
+    "dcgm",
+    "clocks",
+    "tensor-parallel",
+    "multi-gpu",
+    "performance-per-watt",
+    "hopper",
+    "blackwell"
+  ],
+  "symptom": "A tensor-parallel job runs at a clock set by whichever GPU in the node is worst-conditioned, and the operator has no idea which one. Node throughput sits noticeably below the per-GPU figure, uniformly across all eight devices, and the deficit is stable rather than noisy. The failure mode that wastes the most time is misattributing this to the interconnect, to NCCL, to the engine, or to 'the model being too big' - because the symptom looks exactly like a communication problem while the cause is thermal or power variance on a single device. Per-GPU inspection looks fine: every card reports acceptable temperature and acceptable power draw.",
+  "root_cause": "Per NVIDIA's System Management Interface documentation, verbatim: 'Sync Boost - This GPU has been added to a Sync boost group with nvidia-smi or DCGM in order to maximize performance per watt. All GPUs will be limited by the frequency which can be achieved by the slowest GPU. Look at the throttle reasons for other GPUs in the system to see why those GPUs are holding this one at lower clocks.' Note the motivation stated by the vendor is PERFORMANCE PER WATT - the feature is deliberately designed to let the slowest card drag the rest down, which is rational for a fleet running many small jobs and hostile to a benchmark or a latency-sensitive deployment that needs all eight devices. A dedicated 'Sync Boost Group' microsecond counter exists in the clocks event reasons set, so the condition is observable per GPU if someone looks.",
+  "workaround": "The documentation's own instruction is the procedure: inspect the throttle reasons of ALL GPUs in the node, not the one you are benchmarking, and find which card is holding the group down. In practice that means querying every device's clocks event reasons counters - especially 'Sync Boost Group' and 'HW Thermal Slowdown' - before trusting a multi-GPU throughput number, and treating a large Sync Boost Group time as an invalidation of the run rather than a footnote. Where the platform allows it, keep the group out of a heterogeneous or mixed-condition node. Confirm the group membership and, if you control the fleet, evaluate per-node rather than per-GPU efficiency: a node's joules-per-token figure already includes whatever idle headroom Sync Boost left on the table, because it is a whole-node measurement.",
+  "severity": "major",
+  "notes": "THE MECHANISM THAT MAKES THIS WORTH A RECORD: it converts a PER-DEVICE fault into a WHOLE-NODE throughput loss with no visible symptom on the device you happen to be watching. That is why it survives in production - the one bad card reports healthy. A SECOND REASON IT MATTERS HERE SPECIFICALLY: this repo's joules-per-token figures are all whole-node measurements (5806.93 W over 8 GPUs, not a per-GPU wattage), which is the correct unit for cost and makes them immune to Sync Boost attribution errors - but it also means they silently EMBED any Sync Boost throttling that occurred. If a future re-measurement wants per-GPU efficiency, this gotcha has to be checked first, because the two are not the same number. COUNTERVAILING HONESTY: I have NOT observed Sync Boost behaviour in any trace in this repo, and I cannot confirm that Sync Boost was active or inactive during the MLPerf v4.1 H200 runs - NVIDIA's submission does not state a Sync Boost setting, and the public logs do not report the counter for that run. The behaviour and its documentation are verified; its PRESENCE in these specific runs is unverified and is not claimed."
+}

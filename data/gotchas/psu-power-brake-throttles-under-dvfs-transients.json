@@ -1,0 +1,37 @@
+{
+  "id": "psu-power-brake-throttles-under-dvfs-transients",
+  "type": "gotcha",
+  "name": "HW Power Brake fires on external power-supply assertion and cuts core clocks by a factor of 2 or more - a PSU or power-delivery limit presents identically to thermal throttling",
+  "status": "verified",
+  "confidence": 0.72,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-nvidia-smi-docs"
+  ],
+  "class": "hardware",
+  "affects": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "concepts": [
+    "psu",
+    "power-delivery",
+    "power-brake",
+    "transient",
+    "dvfs",
+    "hot-plug",
+    "nvidia-smi",
+    "hardware-telemetry",
+    "high-density-rack",
+    "hopper",
+    "blackwell"
+  ],
+  "symptom": "Throughput drops sharply and then recovers, intermittently, with no thermal explanation available - and the symptom looks exactly like thermal throttling, which sends people to check fans and inlet temperature and find nothing wrong. The correlated signature is that the events cluster when several devices on the same board or chassis transition power state together, rather than tracking ambient temperature or load duration. On dense multi-GPU nodes it can also surface as crashes or power-fault events during load transients rather than as a clean slowdown.",
+  "root_cause": "Per the nvidia-smi reference, verbatim: 'HW Power Brake - External Power Brake Assertion is triggered (e.g. by the system power supply).' It is grouped under the umbrella condition 'HW Slowdown is engaged, reducing the core clocks by a factor of 2 or more. It is active if either HW Thermal Slowdown or HW Power Brake are active.' So a POWER DELIVERY assertion produces the same order-of-magnitude clock reduction as a thermal event, and the vendor's own text puts the two on equal footing as causes of the same condition. The distinction matters because the fixes are entirely different: the reference separates power into 'Average Power Draw' (a one-second average over the module), 'Instantaneous Power Draw', and explicit limits ('Enforced Power Limit - The power management algorithm power ceiling', 'Min Power Limit', 'Max Power Limit') with module-level readings documented as 'Supported on Hopper and newer datacenter products'. Averages hide transients by construction, which is why a PSU-limited event can coexist with reassuring average power readings.",
+  "workaround": "Separate the two causes using the per-cause counters rather than symptoms: check whether time is accruing in 'HW Power Braking' versus 'HW Thermal Slowdown' in the clocks event reasons set, since the vendor documentation gives them separate microsecond counters precisely so they can be told apart. If it is power braking, the problem is power DELIVERY - PSU capacity and headroom, power-supply transient response, cabling and power distribution, and the module power limits - not cooling, and no amount of fan work will help. Where a node has multiple GPUs under one power-supply budget, check the configured power limits against the aggregate rather than per device: NVIDIA's -pl option takes a scope of '0/GPU, 1/TOTAL_MODULE, 2/GPU_BASE', so a per-GPU limit can be set in a way that the module envelope does not actually support. On dense high-accelerator-count systems, treat transient behaviour under load steps as a first-class test - step the load, watch instantaneous rather than average power, and do not accept an average-only characterisation of a system whose failure mode is transient.",
+  "severity": "minor",
+  "notes": "RATED MINOR DELIBERATELY: power braking is a rarer and more hardware-environment-specific event than thermal or power-cap throttling, and it depends on the PSU, the power distribution and the facility rather than on the accelerator model. Its importance here is DIAGNOSTIC rather than statistical - the cost of misdiagnosing it as thermal is a long, fruitless search in the wrong subsystem, which is exactly the kind of waste this repo exists to prevent. THE HONEST LIMIT ON THIS RECORD: the trigger condition, the shared umbrella condition with HW Thermal Slowdown, and the existence of a dedicated counter are all vendor-documented and therefore solid. What I could NOT verify is any concrete measured instance of power braking on a specific configuration - I found no vendor, cloud provider or benchmark publication that quantifies how often it fires, on what nodes, or with what throughput impact. No frequency, no magnitude and no affected-hardware list is asserted here beyond what the reference states, and the 'e.g. dense multi-GPU nodes' framing in the name should be read as the class of system where this is worth checking, not as a claim that it has been observed there. Related: the 800V-DC and very-high-density rack designs that would make this class more prominent are noted as unverified in the parent report."
+}

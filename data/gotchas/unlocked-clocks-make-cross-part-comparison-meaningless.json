@@ -1,0 +1,33 @@
+{
+  "id": "unlocked-clocks-make-cross-part-comparison-meaningless",
+  "type": "gotcha",
+  "name": "Without locked clocks, cross-part and cross-run comparisons are meaningless - and short bursts measure the parked clock, not the machine",
+  "class": "measurement",
+  "affects": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "nvidia-gb200-nvl72",
+    "nvidia-b300"
+  ],
+  "concepts": [
+    "benchmarking",
+    "dvfs",
+    "locked-clocks",
+    "nvidia-smi",
+    "clock-boost",
+    "methodology"
+  ],
+  "symptom": "A fresh-process 8192x8192x256 bf16 matmul canary reads 25.0 TFLOPS in a quiet 0%-utilization window and 119.3 TFLOPS minutes later after a heavy workload - on the same machine, with pmset -g therm reporting clean and the host on AC high-power mode. A 2048^3 probe caps at ~19-30 TFLOPS regardless of machine state at all. The result is that a short benchmark taken on an idle machine measures the parked clock rate, and a benchmark taken with too small a shape never reaches the fast GEMM path; several false 'this machine is slow' conclusions traced to exactly these two shapes.",
+  "root_cause": "Clock parking plus slow ramp hysteresis. The GPU idles at a low clock and does not reach boost clocks until it has been under load for a sustained period, so a short burst after idle reads the parked-clock rate. Separately, a small GEMM shape cannot saturate the tensor-core path and therefore has a low ceiling independent of machine health. Both effects masquerade as machine degradation.",
+  "workaround": "Adopt the rule the upstream issue states: measure machine capability with the real workload or with a >=30s sustained probe, and never use short-probe TFLOPS as a state verdict. For cross-part or cross-run comparison, lock clocks first: nvidia-smi --lock-gpu-clocks=<min>,<max> (with --mode=0 default, or --mode=1 for the close-loop variant that trades slightly lower frequency accuracy for better perf-per-watt), and --lock-memory-clocks to pin memory clocks too; reset with --reset-gpu-clocks and --reset-memory-clocks when done. Note both operations require root. IMPORTANT HOPPER CAVEAT, documented by the vendor: --lock-memory-clocks 'does not work on GPUs based on NVIDIA Hopper architectures; to lock memory clocks on those systems use --lock-memory-clocks-deferred instead' - so on H100/H200 you are locking memory clocks at next GPU initialization, not at runtime, which makes 'lock clocks then immediately benchmark' wrong on Hopper.",
+  "severity": "major",
+  "notes": "The vendor explicitly documents both memory-clock-locking mechanisms and the Hopper restriction, plus the mode=0/mode=1 accuracy tradeoff ('Due to convergence latency of close loop controllers, the frequency accuracies may be slightly lower than default mode 0'). The measured 25.0 vs 119.3 TFLOPS spread - a ~4.8x swing on identical silicon - is the number to keep in mind: it is entirely an artifact of when you measured. This is the mechanism behind most 'X is faster than Y' claims that do not survive replication, and it silently affects every accelerator class, not just this one.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr2-vllm-metal-issue-713",
+    "pwr2-nvidia-smi-throttle-reasons"
+  ]
+}

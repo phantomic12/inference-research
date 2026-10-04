@@ -1,0 +1,21 @@
+{
+  "id": "pd-completion-notification-drop-hangs-receiver",
+  "type": "gotcha",
+  "name": "A dropped KV-transfer completion notification hangs the receiver forever at 100% CPU instead of erroring",
+  "class": "framework",
+  "affects": [
+    "nixl",
+    "mooncake"
+  ],
+  "symptom": "The decode (GEN) worker goes silent after model init with no error and no crash. The stack sits in check_gen_transfer_status, the GPU is idle, and the process spins at 100% CPU. Reproduced 100% of the time on one rack, worked around by switching that rack to the UCX backend, then the identical hang appeared on a different rack weeks later under the same config family.",
+  "root_cause": "The transfer and its completion signal are two separate messages. AgentConnection::send() submits the RDMA transfer, waits for it, then calls notifySyncMessage as an independent notification; the receive side waits for that notification in a loop with no timeout and no retry. terminateFlag only flips on executor shutdown, not on a stuck transfer, so a dropped notification packet spins forever. A prior NIXL fix handled the case where the notification arrives BEFORE the data but does not guarantee the notification is never dropped. The same AgentConnectionManager code path is shared by the Mooncake backend.",
+  "workaround": "Switch the affected fabric or pool to the UCX backend as an immediate mitigation, and prefer the Python transceiver runtime (transceiver_runtime: PYTHON in TensorRT-LLM) which the maintainer describes as providing better stability than the C++ transceiver. Do not treat in-flight cancellation as the fix - the TRT-LLM maintainer is explicit that 'enabling in-flight cancellation by default only mitigates the hang; it does not fix the missing completion notification itself'. The real fix is to bind the completion notification to the tracked transfer request; a proposed NIXL-scoped patch attaches the notification to the request via syncMessage and treats wait()==kSUCCESS as the sender's completion point.",
+  "severity": "blocker",
+  "notes": "The generic lesson is that a two-message protocol (data, then done) has a failure mode a one-message protocol does not: the done message can be lost with no timeout to notice. Any KV-transfer design should carry completion in-band with the transfer or bound the wait. Also recorded from the same thread because it constrains the fix: the current tag keeps only 12 request-ID bits, so duplicate retry would need a generation-safe identifier - ACK/retry and tag widening are follow-up protocol work, not done.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-gh-trtllm-17665-nixl-notify-hang"
+  ]
+}

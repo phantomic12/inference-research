@@ -1,0 +1,15 @@
+{
+  "id": "flop3-vllm-pr-54454-reasoning-end-quadratic",
+  "type": "source",
+  "name": "vLLM PR #54454: O(1) prefilter for the reasoning-end hot path (structured output)",
+  "url": "https://github.com/vllm-project/vllm/pull/54454",
+  "publisher": "vllm-project/vllm",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "A per-decode-step host predicate that re-detokenises the WHOLE sequence for every running request, making decoding quadratic in sequence length. is_reasoning_end_streaming runs in EngineCore once per decode step per running request while a structured-output request is still reasoning; the MuseGlimmer implementation answered by decoding the full sequence. Production numbers: MuseGlimmer-30B on RTX PRO 6000 Blackwell, vLLM 0.27.2rc1.dev116+gd4801990a, concurrency 50, JSON schema enforcement on, throughput decaying 260 -> 170 tok/s as sequences grew, GPU drawing ~150 W of its 300 W limit and EngineCore pinned below one CPU core, ~4.9 ms per decode step in that one predicate at 16k reasoning lengths. The fix is a prefilter: check the step's delta token ids against a precomputed set of ids whose text could supply the marker's final character (one pass over the vocabulary, cached per tokenizer), which settles almost every step in O(len(delta)) with no decoding.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

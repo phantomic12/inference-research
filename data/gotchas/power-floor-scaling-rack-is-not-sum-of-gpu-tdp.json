@@ -1,0 +1,35 @@
+{
+  "id": "power-floor-scaling-rack-is-not-sum-of-gpu-tdp",
+  "type": "gotcha",
+  "name": "Sizing a rack by summing GPU TDP understates it badly: a 72-GPU GB200 NVL72 rack draws ~120 kW against a 1,200 W per-GPU ceiling, and its installed PSU capacity is 264 kW",
+  "class": "config",
+  "affects": [
+    "nvidia-gb200-nvl72",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm"
+  ],
+  "concepts": [
+    "power-delivery",
+    "rack-scale",
+    "facility-constraint",
+    "tdp",
+    "pue",
+    "busbar",
+    "n+n-redundancy"
+  ],
+  "symptom": "A power budget built by multiplying published per-GPU Max TDP by GPU count is wrong by roughly 40% on facility draw and by more than 2x on installed electrical capacity. For GB200 NVL72: 72 x 1,200 W = 86.4 kW of GPU TDP, versus the vendor-stated 'The rack power consumption is approximately 120kW' - the missing ~33 kW is the 36 Grace CPUs, 9 NVLink switch trays, networking, storage, the busbar and PSU conversion losses, and the cooling loop itself. And the rack's eight power shelves at 33 kW input each come to 264 kW of installed PSU capacity feeding that 120 kW draw, because each shelf carries six air-cooled 5.5 kW PSUs for N+N redundancy.",
+  "root_cause": "GPU TDP is a per-chip ceiling, not a system accounting unit. The rack adds Grace CPUs, NVLink switch trays (9 x 1RU per rack), management and storage TOR switches, ConnectX/BlueField networking, fans on the air-cooled components, and every loss step from AC input through PSU conversion to the 50-51V DC busbar. Redundancy compounds it further: N+N on eight shelves is deliberately over-provisioned relative to load, because the rack must survive losing a shelf.",
+  "workaround": "Size facility and electrical infrastructure from the RACK figure when one is published, never from GPU TDP. Treat the gap between TDP-sum and rack power (about 1.4x here) as the rule of thumb for rack-scale platforms, and treat installed PSU capacity (about 2.2x the draw here) as the constraint on panel, feeder and switchgear sizing rather than the draw. Ask the vendor for the rack-level number explicitly; on Hopper the equivalent figure is not published at all (the HGX H100/H200 datasheet carries no TDP or rack power), so an H100 rack power budget must be derived and labelled as derived.",
+  "severity": "major",
+  "notes": "The 1.4x TDP-to-rack-draw and 2.2x draw-to-installed-PSU ratios are derived here from two vendor-published numbers on the same rack, so they are arithmetic rather than estimation - but they are ratios for THIS platform and should not be generalised to an 8-GPU node without checking. The DGX H100 comparison is instructive because it is the opposite shape: 8 x 700 W = 5.6 kW of GPU TDP against a 10.2 kW max system draw (1.8x), with 6 x 3.3 kW = 19.8 kW installed (1.9x). So the overhead factor is high at BOTH scales and is not a rack-scale-only artifact.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr2-nvidia-dgx-gb200-hardware",
+    "pwr2-nvidia-blackwell-datasheet",
+    "pwr2-nvidia-dgx-h100-power-specs"
+  ]
+}

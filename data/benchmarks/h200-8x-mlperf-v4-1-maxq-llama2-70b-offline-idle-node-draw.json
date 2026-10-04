@@ -1,0 +1,29 @@
+{
+  "id": "h200-8x-mlperf-v4-1-maxq-llama2-70b-offline-idle-node-draw",
+  "type": "benchmark",
+  "name": "8xH200 SXM-141GB (MaxQ), MLPerf v4.1 llama2-70b Offline RANGING run: 0 tok/s at 2411.2 W mean node draw - idle floor is 41.7% of the 5806.9 W loaded plateau",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-ranging-spl",
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-spl",
+    "pwr-mlperf-v4-1-nvidia-readme-maxq"
+  ],
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-h200-sxm"
+  ],
+  "interconnect_ids": [
+    "nvlink-4"
+  ],
+  "model": "Llama 2 70B (MLPerf 'llama2-70b-99.9') - model named for provenance only; at idle the engine emits nothing",
+  "format_id": null,
+  "metric": "tps_aggregate",
+  "value": 0,
+  "unit": "output tokens/s = ZERO, at 2411.2 W mean whole-node draw (first 20 samples 2411.18 W, last 20 samples 2455.93 W of the 3801-sample ranging trace) - deliberately a zero-value record: the entire point is that watts are non-zero when throughput is zero, and this is what breaks naive cost-per-token arithmetic",
+  "methodology": "PRECISION: NOT STATED BY THE SOURCE AND DELIBERATELY NOT GUESSED. The paired measurements.json for this benchmark gives weight_data_types 'fp16', starting_weights_filename 'Original Hugginface model weights', weight_transformations 'quantization, affine fusion', input_data_types 'int32'. That says the weights began fp16 and were quantized, but it never names the served numeric format - not FP8, not INT8. format_id is therefore null rather than a guess. MEASUREMENT WINDOW, STATED PRECISELY BECAUSE THIS RECORD IS A FLOOR CLAIM. Source: the 'ranging run' power trace, closed/NVIDIA/results/H200-SXM-141GBx8_TRT_MaxQ/llama2-70b-99.9/Offline/performance/ranging/spl.txt - 3801 one-second samples on the same Yokogawa WT333E. Per NVIDIA's README the ranging run exists 'to gather the maximum voltage and current that the system consumes so as to configure the power meter correctly'; it is untimed and its LoadGen run is not scored. Taking the first 20 and last 20 samples - the stretches before the scored work starts and after it drains - gives means of 2411.18 W and 2455.93 W respectively; the Idle figure quoted is 2422.6 W, the mean of the combined first/last 20-sample blocks. For context the whole-ranging-trace mean is 5547.21 W, which is the loaded plateau plus those ramps and is NOT an idle number. COMPARISON BASIS: the loaded plateau for this same node, same model, same scenario is 5806.93 W from the paired testing-run trace. 2422.6 / 5806.93 = 41.7%. Per GPU: 302.8 W idle versus 725.9 W loaded at node level.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "THE COST ARITHMETIC BREAK, QUANTIFIED. An 8xH200 node that is not generating any tokens still draws 2422.6 W - 41.7% of its loaded plateau and about 302.8 W per GPU. ANY cost-per-token model that divides total energy by total tokens without accounting for idle time UNDERSTATES COST PER TOKEN, and does so without bound as utilisation falls: at 15% utilisation you pay roughly (0.15 x 5806.93 + 0.85 x 2422.6) = 2930 W, not 0.15 x 5806.93 = 871 W - about 3.4x the naive figure, for 1/6.7th the tokens. THE ASYMMETRY IS THE POINT: per-token energy RISES as utilisation falls, so 'batch more requests together' improves energy per token up to the point where the batch stops being the bottleneck. STRICTLY, THIS IS AN UPPER BOUND ON IDLE, NOT A FLOOR, AND THAT IS THE HONEST LIMIT OF THE SOURCE. The ranging run is still cycling the harness - it is not a quiesced machine - so 2422.6 W overstates a true idle draw by whatever the harness itself costs to idle. It is the tightest published bound on idle draw I could verify for this configuration, and it is a bound in the safe direction for the conclusion being drawn, since a genuinely idle node would be lower and the idle-fraction claim would only get stronger. CONFOUND TO KEEP HONEST: 'idle' here still includes both Xeon Platinum 8480C hosts at their own idle draw, ten 400 GbE NICs, storage controllers and PSU conversion losses, so this is a NODE idle floor, not a GPU one. Do not attribute all 2422.6 W to the eight GPUs. THE POWERFUL COUNTER-EXAMPLE IS ALSO IN THE DATA: the Server-scenario record shows the same node holding ~5.8 kW CONTINUOUSLY rather than ramping from idle. Server-style steady load converts this wasted idle power into delivered tokens; Offline-style bursty load does not. Which is a utilisation question, not a hardware question. REPRODUCIBLE: FALSE - same private-PTDaemon reason as the sibling records."
+}

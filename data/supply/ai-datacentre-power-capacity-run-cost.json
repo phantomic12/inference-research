@@ -1,0 +1,32 @@
+{
+  "id": "ai-datacentre-power-capacity-run-cost",
+  "type": "supply",
+  "name": "High-density AI rack power as a procured constraint: an 8xH200 SXM node runs at a measured 5.8 kW, so rack and PUE decisions follow from measured draw rather than from TDP",
+  "status": "draft",
+  "confidence": 0.62,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-spl",
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-ranging-spl",
+    "pwr-mlperf-v4-1-h200-maxq-system-json"
+  ],
+  "kind": "integrator",
+  "vendor": null,
+  "accelerator_ids": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300"
+  ],
+  "region": "global (colo and hyperscale regions generally)",
+  "channels": [
+    "contact-sales",
+    "integrator"
+  ],
+  "price_usd": null,
+  "price_basis": "NO PRICE SET, DELIBERATELY. Colocation is sold as a per-kW-month recurring charge and that figure is site-specific to the point of being unquotable without a named facility, a named power envelope and a signed contract. Publishing a representative per-kW-month number here would be an invented price. What IS recorded is the QUANTITY that such a price is levied on, sourced and measured: 5806.93 W measured whole-node draw for a fully loaded 8xH200 SXM node, and 2422.6 W for the same node's idle floor, from the MLPerf v4.1 MaxQ power trace. Per-GPU at node level: 725.9 W loaded, 302.8 W idle. The same system description records the node as AIR-COOLED with hw_notes 'H200 TGP 700W'.",
+  "availability": "lead-time",
+  "lead_time_weeks": null,
+  "export_controlled": null,
+  "notes": "POWER DENSITY IS THE ACQUISITION CONSTRAINT, AND THE REAL NUMBER IS HIGHER THAN THE ONE ON THE SPEC SHEET. The headline people quote for an 8xH100 or 8xH200 node is roughly 10 kW. The audited MLPerf v4.1 system description for the H200 submission agrees with the intuition and sharpens it: nameplate GPU TGP is 700 W per device (hw_notes 'H200 TGP 700W'), so 8 GPUs are 5600 W, but the MEASURED whole-node plateau under a real 70B serving load is 5806.93 W - and that figure already includes two Intel Xeon Platinum 8480C hosts (56 cores each), 2 TB of host DRAM, ten 400 GbE InfiniBand NICs, NVMe and CIFS storage, and PSU conversion losses. So the two Xeon hosts and the interconnect add only ~200 W on top of the GPU nameplate; the density is set almost entirely by the GPUs, and it is the GPUs' 5600 W that a facility must cool, size and feed - not a smaller derived number. CONSEQUENCE FOR RACK PLANNING: 5806.93 W/node means a conventional 12 kW rack fits TWO such nodes, not three, once headroom is left. Sizing a rack on '10 kW per 8-GPU node' and then fitting three nodes is a 17.4 kW fit that does not exist. COOLING IS THE DECIDING DETAIL, AND IT IS RECORDED IN THE SAME SYSTEM FILE: cooling is 'Air-cooled'. At 700 W per SXM device the H200 generation is an AIR-cooled part. Anything denser - 132 kW-class NVL72 racks and Blackwell liquid-cooled designs - moves to direct-to-chip liquid, and that is a different facility class with different lead times, different retrofits and different failure modes (leak versus fan-failure), not a drop-in rack upgrade. A node that is air-cooled can go where liquid cannot; that flexibility is a real and rarely-priced advantage. IDLE CAPACITY IS THE OTHER HALF: the 2422.6 W idle floor means a provisioned-but-busy 8xH200 node holds 302.8 W per GPU of stranded capacity. Reserved-capacity contracts charge for that whether it is used or not. WHAT I COULD NOT VERIFY, STATED SO NOBODY FILLS THE GAP BY GUESSING: I did not obtain a quotable per-kW-month colocation rate from a named facility, and I did not obtain a vendor-published rack-density limit or PUE figure for a specific AI-hosting site. Those numbers exist commercially and are negotiated; they are absent here rather than guessed. Anyone needing them should quote a real facility. PUE in particular has no home in this repo's schema at all - see the gap flagged in the parent report."
+}

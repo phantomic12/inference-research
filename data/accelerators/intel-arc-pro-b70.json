@@ -1,0 +1,46 @@
+{
+  "id": "intel-arc-pro-b70",
+  "type": "accelerator",
+  "name": "Intel Arc Pro B70",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-03",
+  "sources": [
+    "acc-fill-intel-arc-pro-b70-ark-specs"
+  ],
+  "vendor": "intel",
+  "architecture": "battlemage (Xe2 HPG, BMG G21)",
+  "release_year": 2026,
+  "process_nm": 5,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 32,
+  "memory_type": "gddr6",
+  "memory_bus_bit": 256,
+  "memory_bandwidth_gbps": 608,
+  "memory_bandwidth_basis": "Intel ARK spec table, quoted verbatim and not re-derived: 'Graphics Memory Bandwidth 608 GB/s' together with 'Graphics Memory Interface 256 bit' and 'Memory 32 GB GDDR6'. Unlike the Arc B580 ARK page (which prints a 19 Gbps memory speed), the B70 ARK page prints NO per-pin memory data rate, so 608 GB/s cannot be checked against a published pin rate. 608 GB/s at 256 bit implies 19 Gbps per pin, but that pin rate is NOT stated by Intel on this page and is therefore not recorded as a field value.",
+  "flops": [
+    {
+      "precision": "int8",
+      "tflops": 367,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-intel-arc-pro-b70-ark-specs"
+    },
+    {
+      "precision": "fp32",
+      "tflops": 22.94,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-intel-arc-pro-b70-ark-specs"
+    }
+  ],
+  "tdp_w": 230,
+  "interconnect": [
+    "pcie-gen5"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "Blackwell-generation workstation part, and the largest Xe2-HPG card Intel has published: 32 Xe-cores, 8 render slices, 32 ray-tracing units, 256 XMX (Xe Matrix Extensions) engines, 256 Xe vector engines, 2280 MHz graphics clock / 2800 MHz max dynamic, TSMC N5, PCIe 5.0 x16 (full x16 electrical - note the contrast with the Arc Pro B60, which presents Gen5 x16 but is wired x8), 32 GB GDDR6 on a 256-bit bus at 608 GB/s with ECC supported, 230 W TBP, device ID 0xE223, launched Q1'26, 3-year warranty, no embedded options. ARK code name reads 'Products formerly Battlemage', i.e. Battlemage/BMG, same family as the Arc B580 in this directory.\n\nPRECISION CAVEAT - INTEL'S OWN LABELLING IS EXPLICIT, and the 367 figure should be read accordingly. ARK's row is literally 'GPU Peak TOPS (Int8) 367'. That is INT8, and it is the integer matrix path; it is NOT an INT4 number, NOT an FP16 number, and NOT a sparse figure. Intel's own Arc Pro B60 datasheet defines the equivalent family of figure as 'the peak throughput when running XMX workloads with INT8 datatype and DENSE models', which is why dense:true is set here. The FP32 row (22.94 TFLOPS) is Intel's own published 'GPU TFLOPS (FP32)' and is a shader-path figure. NO FP16/BF16/FP8 throughput is published for this part in ARK, so none is recorded - do not synthesise an FP16 figure from clock times width times anything.\n\nNO PUBLISHED MEMORY PIN RATE, said plainly: ARK prints 608 GB/s and 256-bit but no 'Graphics Memory Speed' row, unlike the B580 page which prints 19 Gbps. The pin rate implied by the pair is 19 Gbps, but Intel does not state it here, so memory_bandwidth_basis carries the two verbatim numbers and stops there.\n\nTDP IS A TOP-OF-RANGE FIGURE. ARK prints 'TBP 230 W' alongside a separate 'TBP - LP 160-290' row, so 230 W is Intel's nominal TBP for this SKU and 160-290 W is the configurable LP range. Record 230.\n\nWHY THIS RECORD MATTERS HERE: benchmarks/arc-pro-b70-mlperf-v6-1-llama2-70b-offline-tokens cites this id and is, as far as this repo goes, the only Intel non-Gaudi accelerator LLM throughput figure in MLCommons' results - 4x Arc Pro B70 running MLPerf Inference v6.1 Offline on Llama 2 70B at ~2465 aggregate output tok/s, with the submission's own hardware line independently confirming 32 GB GDDR6 at 2800 MHz per card and a PCIe Gen5 x16 host link. That MLCommons system JSON is a useful independent check on the ARK figures. Two caveats travel with that benchmark and apply here: the submission does NOT state its quantization, and the token count is harness-'inferred', so it must not be compared directly against the fp8 Gaudi 2 or WMXFP4 MI355X rows.\n\nSCALE-UP IS PCIe, NOT A FABRIC, which is the same structural limit as the RDNA consumer cards in this directory. Four B70s on PCIe can shard Llama 2 70B and serve it, which is what the MLPerf submission demonstrates, but there is no scale-up fabric and no equivalent of NVSwitch, so tensor-parallel efficiency across cards is bounded by PCIe. Per-card this is a strong LLM part by Intel standards: 32 GB of ECC GDDR6 at 608 GB/s is 22% more bandwidth than the 24 GB Arc Pro B60's 456 GB/s with a third more capacity."
+}

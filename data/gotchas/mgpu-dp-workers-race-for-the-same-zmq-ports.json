@@ -1,0 +1,28 @@
+{
+  "id": "mgpu-dp-workers-race-for-the-same-zmq-ports",
+  "type": "gotcha",
+  "name": "Each data-parallel worker picks free ports independently, so concurrent engines collide and the API server dies at startup with a ZMQ bind error",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-vllm-28498-zmq-port-conflict",
+    "mgpu-vllm-44813-port-fix"
+  ],
+  "class": "framework",
+  "affects": [
+    "vllm"
+  ],
+  "concepts": [
+    "data-parallel",
+    "zmq",
+    "port-allocation",
+    "race",
+    "ray"
+  ],
+  "symptom": "2P 4D (pipeline 2, data 4) DeepSeek-V3 on vllm 0.11.0: the API server dies during EngineCoreClient construction. The exact failure, at the bottom of the traceback: 'File \".../vllm/utils/__init__.py\", line 2983, in make_zmq_socket / socket.bind(path) ... zmq.error.ZMQError: Address already in use (addr=\\'tcp://slurm-h200-206-017:59251\\')'. It recurred on a clean node after being seen on reused nodes, which is what ruled out stale state. Root cause as established upstream: get_open_ports_list() scanned ports sequentially starting from VLLM_PORT, so assignments were predictable and multiple processes picked the same ports.",
+  "root_cause": "The port-discovery helper bound ports by scanning upward from a fixed base and assuming the result was still free when the socket bound later - a textbook time-of-check/time-of-use gap. Because the scan starts from a known base, the race is not merely possible but likely: every worker walks the same candidate list and lands on the same first-available port. The measured effect in the regression test is stark - five concurrent processes each calling get_open_ports_list(5) produced 25 port assignments with only 6 unique values (19 collisions) before the fix, and 25 unique after.",
+  "workaround": "Use OS-assigned port 0 binding (atomic - the OS guarantees the port is free at discovery) rather than a sequential scan; upstream replaced the scan exactly this way. When VLLM_PORT is set, treat it as a minimum bound rather than a start point, which preserves deployments with port-range restrictions (firewalls, k8s policies, Docker mappings). Note the fix is partial by the author's own account: other get_open_port() sites remain vulnerable and require Rust front-end or Ray changes.",
+  "severity": "major",
+  "notes": "Same class as mgpu-multiple-ranks-per-gpu-requires-mps: a resource that multiple processes each independently assume they own. Both are common in Ray/DP deployments where processes are started concurrently and coordinate only through the filesystem. The port itself is not the interesting part - the interesting part is that the collision is silent until bind, and the race widens with the number of concurrent workers, so it reproduces on busy shared clusters and not in single-process testing."
+}

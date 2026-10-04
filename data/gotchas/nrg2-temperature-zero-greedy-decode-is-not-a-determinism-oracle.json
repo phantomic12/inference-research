@@ -1,0 +1,28 @@
+{
+  "id": "nrg2-temperature-zero-greedy-decode-is-not-a-determinism-oracle",
+  "type": "gotcha",
+  "name": "Temperature-0 greedy decode is not a correctness oracle: the same prompt at temperature 0 produced 80 distinct completions across 1000 runs, all fluent and plausible, with first divergence at token 103",
+  "class": "measurement",
+  "affects": [
+    "vllm"
+  ],
+  "concepts": [
+    "determinism",
+    "testing",
+    "greedy-decoding",
+    "prefix-caching",
+    "kv-cache",
+    "speculative-decoding"
+  ],
+  "symptom": "The cheap oracle fails open. Serving Qwen/Qwen3-235B-A22B-Instruct-2507 at temperature 0 - the configuration everyone reaches for when they want reproducibility - and sampling 1000 completions of 1000 tokens from the single prompt 'Tell me about Richard Feynman' yields 80 UNIQUE completions, the most common occurring 78 times. All 1000 agree exactly for the first 102 tokens and first diverge at token 103, where 992 completions continue 'Queens, New York' and 8 produce 'New York City'. Every one of the 80 variants is coherent English. A test that asserts 'output at temperature 0 matches the expected string' therefore passes against a build whose sibling runs disagree 7.9% of the time, and the divergent branch reads as correct to a human reviewer. Enabling batch-invariant kernels collapses all 1000 to a single identical completion.",
+  "root_cause": "Temperature 0 removes SAMPLING as a source of variation but does nothing about the engine's arithmetic. The cause is batch-dependent reduction strategy: whether a given token's reduction runs split-K, stream-K, split-KV/FlashDecoding, a FlashInfer balanced-schedule split count, or a small-batch split reduction depends on how many other requests share the batch at that instant - which varies run to run under real server load. The popular 'concurrency + floating-point non-associativity' explanation is explicitly shown to be incomplete: running the same matmul 1000 times on identical data is bitwise identical, so concurrency alone does not produce the divergence. The 102-token agreement window localizes it - prefill agreed, and the divergence is in a decode-phase reduction whose extent depends on batch composition. Not a bug in any one component: an emergent property of dynamic kernel selection.",
+  "workaround": "Do not use text equality at temperature 0 as a pass/fail signal. In preference order of strength: (1) assert same-prompt-different-batch-size produces identical LOGITS - the batch-invariance oracle, which is 64x stronger than text equality and catches divergence that a single reference string never will; (2) if you must compare text, compare across at least N varied batch sizes and positions within the batch rather than against one stored golden string; (3) use a reference implementation with a stated tolerance for numeric comparison, and keep that separate from a bit-exactness check. Note the repo's existing records independently reach the same conclusion from the other direction: spec-decode-greedy-diverges-on-quantized-target uses greedy decode as a differential between configurations, and pd-cache-hit-silently-differs-from-cold-run shows a temperature-0 request returning output A on a fresh server and a stable different output B on runs 2..N, with a restart returning to A. Both are the same phenomenon: temperature 0 pins the sampler, not the kernels.",
+  "severity": "major",
+  "notes": "The single most important measurement-discipline record in this task, because it is the cheapest oracle and it fails open rather than loudly. It also sets the correct bar for reading the repo: 80/1000 distinct outputs at temperature 0 is not a rounding-level curiosity, it is 8% of runs landing on a minority branch. Two things this does NOT establish, stated to prevent over-reading: it does not show the minority branch is wrong (New York City is not less correct than Queens, New York - the point is that the engine cannot tell you which it will produce), and it says nothing about quantized paths specifically. The repo's docs/10-testing-methodology.md uses this as the motivating evidence for preferring logit-level batch invariance over text equality. Related: the same batch-dependent-reduction cause is stated to apply to CPU and TPU inference endpoints, not only GPUs, so this is not a CUDA-specific testing gap.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "nrg2-thinkingmachines-defeating-nondeterminism"
+  ]
+}

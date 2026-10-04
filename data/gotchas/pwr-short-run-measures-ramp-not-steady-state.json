@@ -1,0 +1,36 @@
+{
+  "id": "pwr-short-run-measures-ramp-not-steady-state",
+  "type": "gotcha",
+  "name": "A benchmark shorter than the queue ramp measures the idle-to-loaded transition, not the steady state - the MLPerf traces show ~15 minutes of sub-3 kW ramp before the plateau",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-spl",
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-ranging-spl",
+    "pwr-mlperf-v4-1-nvidia-readme-maxq"
+  ],
+  "class": "measurement",
+  "affects": [
+    "tensorrt-llm",
+    "vllm",
+    "sglang",
+    "triton-inference-server",
+    "text-generation-inference"
+  ],
+  "concepts": [
+    "benchmark-methodology",
+    "warmup",
+    "steady-state",
+    "tokens-per-second",
+    "latency-percentiles",
+    "energy-per-token",
+    "idle-power",
+    "mlperf"
+  ],
+  "symptom": "Two runs of the identical configuration on the identical node report different tokens/s, and the shorter run reports the HIGHER number. Mean power and joules per token come out too low in the same runs. There is no error, no warning, and the LoadGen-style harness declares the run VALID - 'Result is : VALID', 'No warnings encountered during test' - because the run met its duration floor while most of that duration was spent below working power. The trap is invisible precisely because the harness is behaving correctly: it measured a window that included the ramp and reported the window's aggregate rate.",
+  "root_cause": "A serving benchmark that starts from an empty queue and ramps to its target arrival rate spends its opening minutes at close to the node's IDLE draw, and only reaches its loaded plateau once the pipeline is full. This is directly measurable in the MLPerf v4.1 H200 MaxQ power trace rather than inferred: across the 3634 one-second samples of the llama2-70b-99.9 Offline testing run, the trace STARTS at 2406.5 W, is still around 2482.1 W at the 5th percentile (roughly 3 minutes in), reaches only 2619.0 W by the 10th percentile, and does not touch its plateau region until roughly the 25th percentile - about 15 minutes in - after which it sits at 6125-6219 W through the 50th, 75th and 90th percentiles before falling back to ~2450 W as the last batch drains. The whole-window mean is 5639.49 W; the post-ramp mean is 5806.93 W. A run cut at 60 seconds therefore measures a node drawing close to its 2422.6 W IDLE FLOOR, and reports an efficiency and a throughput that no sustained production workload would ever see.",
+  "workaround": "Discard the ramp explicitly and say so in the record. The approach used for every joules/token figure in this repo is to discard the first 5% of the 1 Hz power trace and average the remainder, stating the exclusion in the methodology field so the number can be re-derived - which is why those records name the sample count, the excluded count, the resulting mean watts and the arithmetic. Prefer a duration floor long enough to bury the ramp: the MLPerf submissions use min_duration 2400000 ms (40 minutes), and the ramp visible here is ~15 minutes, so the harness's own duration rule is doing real work. When you do not have a power trace, at minimum discard a warmup phase before timing and report the excluded duration. For tail-latency work, note the companion effect: percentile latencies measured across a ramp are mixtures of queue-depth regimes, so a p99 computed over a ramping window describes no single load state. If a run is short enough that ramp is a material fraction of it, treat the run as a smoke test and label it one - and never publish a mean power or an energy-per-token figure computed over a window that contains one.",
+  "severity": "major",
+  "notes": "THIS IS THE METHODOLOGY TRAP THAT MATTERS MOST FOR ENERGY WORK, and it is documented here from raw vendor-submitted trace data rather than from folklore. It is easy to state and easy to get wrong: any power or efficiency figure averaged over a window that includes a ramp is biased LOW in energy terms, because the node is drawing idle power while not delivering tokens. THE COMPANION ERROR IS NAMED EXPLICITLY IN THE MLPerf README, which requires the tooling to run the harness twice - a 'ranging run' 'to gather the maximum voltage and current that the system consumes so as to configure the power meter correctly', then the 'testing run' which 'actually collects the power readings'. Only the second is scored. Averaging across both runs - the natural thing to do with a directory of trace files - mixes a deliberately untimed calibration pass into a measurement. DIRECTLY ACTIONABLE CONSEQUENCE: this is why the idle-draw gotcha record quotes the ranging trace's first and last 20 samples rather than its whole-window mean of 5547.21 W. The whole-window mean of a ramping trace is not an idle figure and must not be quoted as one."
+}

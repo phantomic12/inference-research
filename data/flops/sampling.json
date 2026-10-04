@@ -9,7 +9,10 @@
     "vocab_size (logit bytes per token scale linearly with V)",
     "batch_size (logit bytes scale linearly with B - sampling gets no batching benefit per token)",
     "num_sampled_candidates (multiple-return sampling multiplies the softmax work)",
-    "temperature_and_top_p (compute cost of the sort/partial-sort, not memory)"
+    "temperature_and_top_p (compute cost of the sort/partial-sort, not memory)",
+    "vocab-to-param ratio V/P (the crossover test for DEVICE-side sampling being visible at all: 2*V/P of the step's bytes = 0.0032% for Llama-3-8B, 0.00095% for a Llama-2-7B-class vocab, ~5% only for a sub-1B model with a 128k vocab)",
+    "host-vs-device placement (this decides the regime: device-side sampling is 4*V bytes/token and negligible for every modern dense model, host-side sampling moves the same 4*V bytes to the CPU plus a serialised O(n_vocab) walk and becomes a batch-driven bottleneck - see host-side-sampling-loop)",
+    "logits dtype at the sampler (vLLM casts the whole [B, V] tensor to fp32 every step regardless of the model's output dtype, doubling both the device traffic and any downstream host payload)"
   ],
   "affected_by_hardware": [
     "nvidia-h100-sxm",
@@ -21,15 +24,19 @@
     "FlashInfer-style JIT-sampled sampling to avoid materializing the full V-wide distribution",
     "LM-head quantization, or keeping the LM head in a lower precision, since it is a bandwidth cost like any other decode GEMM",
     "Speculative sampling's rejection scheme, which replaces sampling from a V-wide distribution with a V-wide comparison against draft tokens",
-    "Batched sampling that coalesces many sequences' logits into one memory transaction"
+    "Batched sampling that coalesces many sequences' logits into one memory transaction",
+    "Keep the logits tensor in 2-byte form through the sampling chain unless fp32 is required, since the fp32 cast doubles the V-wide traffic on both device and host"
   ],
-  "notes": "Design consequence: sampling is small in flops and embarrassingly memory-bound, so its cost shows up as inter-token latency variance - a latency spike at the end of every step. Sampling cost per token is roughly fixed regardless of batch, so at high batch it becomes a small share of step time; at batch 1 it is a real share of it. Engine authors should fuse it rather than splitting softmax, top-k and multinomial draw into separate kernels, each of which re-reads the same V-wide vector. Hardware: nothing here stresses tensor cores; a part with modest FLOPS and high bandwidth serves sampling perfectly well, and on very large-vocab models the LM head deserves to be budgeted as a decode GEMM rather than as 'just sampling'.",
+  "notes": "Design consequence: sampling is small in flops and embarrassingly memory-bound, so its cost shows up as inter-token latency variance - a latency spike at the end of every step. Sampling cost per token is roughly fixed regardless of batch, so at high batch it becomes a small share of step time; at batch 1 it is a real share of it. Engine authors should fuse it rather than splitting softmax, top-k and multinomial draw into separate kernels, each of which re-reads the same V-wide vector. Hardware: nothing here stresses tensor cores; a part with modest FLOPS and high bandwidth serves sampling perfectly well, and on very large-vocab models the LM head deserves to be budgeted as a decode GEMM rather than as 'just sampling'. CROSSOVER / WHERE IT STARTS TO MATTER, deepened 2026-10-03: the record above gives the byte count but not the regime test, so here is the arithmetic. Sampling's device cost is 4*V bytes per token at fp32 (2*V at bf16) against a decode step that streams 2*P bytes of weights, i.e. sampling is 4*V/(2*P) = 2*V/P of the step's bytes. Llama-3-8B: 2*128256/8.03e9 = 0.0032%. Llama-2-7B-class with V=32000, P=6.74e9: 0.00095%. A small model with a large vocab is the worst case in the family and still only ~1% - e.g. a 0.5B model with a 128k vocab gives 2*128256/0.5e9 = 5.1%, which is the only shape in which plain sampling becomes a visible share of a DEVICE-bound step. The practical crossovers therefore are not about vocab: (i) device-side sampling crosses from negligible to visible only for models with V/P > ~0.01, i.e. sub-1B with a large vocab; (ii) HOST-side sampling crosses at batch ~32 and is governed by n_vocab x batch x 4 B moved to the CPU - see host-side-sampling-loop, where the measured D2H per copy goes 608.3 KB at 1 slot to 16,157.4 KB at 32 slots and removing the transfer is worth 48% throughput; (iii) sampling becomes a KERNEL-count problem the moment the step is launch-overhead-bound, because min_p alone is four to five full-width passes plus a chain of separately registered ops. One implementation detail that quietly doubles the cost: vLLM's sampler does an unconditional logits.to(torch.float32) every step, so even a bf16 model writes and re-reads the V-wide tensor at 4 bytes/element on the sampling path.",
   "status": "verified",
-  "confidence": 0.7,
+  "confidence": 0.8,
   "updated": "2026-10-03",
   "sources": [
     "flop-roofline-williams-2008",
     "flop-speculative-sampling-deepmind",
-    "flop-nvidia-inference-optimization"
+    "flop-nvidia-inference-optimization",
+    "flop3-vllm-sampler-source",
+    "flop3-vllm-logits-processor-builtin",
+    "flop3-llamacpp-sampler-source"
   ]
 }

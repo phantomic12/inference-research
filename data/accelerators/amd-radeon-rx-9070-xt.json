@@ -1,0 +1,103 @@
+{
+  "id": "amd-radeon-rx-9070-xt",
+  "type": "accelerator",
+  "name": "AMD Radeon RX 9070 XT",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "acc-fill-amd-radeon-rx-9070xt-product-page",
+    "acc-fill-amd-rdna-architecture-page"
+  ],
+  "vendor": "amd",
+  "architecture": "rdna4 (Navi 48, gfx1201)",
+  "release_year": 2025,
+  "process_nm": 4,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 16,
+  "memory_type": "gddr6",
+  "memory_bus_bit": 256,
+  "memory_bandwidth_gbps": 640,
+  "memory_bandwidth_basis": "AMD product page prints all three numbers directly: 'Memory Speed Up to 20 Gbps', 'Memory Interface 256-bit', 'Memory Bandwidth Up to 640 GB/s'. 20 Gbps x 256-bit / 8 = 640 GB/s, so the aggregate is consistent with the printed rate and width and is quoted rather than re-derived. Unlike the RX 7900 XTX page, this one does print a Memory Interface row. No Infinity-Cache-inclusive 'effective bandwidth' row appears on this page, so there is no competing figure to disambiguate.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 48.7,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-9070xt-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 48.7,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-9070xt-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 195,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-9070xt-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 389,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-9070xt-product-page"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 389,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-9070xt-product-page"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 779,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-9070xt-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 389,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-9070xt-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 779,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-9070xt-product-page"
+    },
+    {
+      "precision": "int4",
+      "tflops": 779,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-9070xt-product-page"
+    },
+    {
+      "precision": "int4",
+      "tflops": 1557,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-rx-9070xt-product-page"
+    }
+  ],
+  "tdp_w": 304,
+  "interconnect": [
+    "pcie-gen5"
+  ],
+  "unified_memory": false,
+  "consumer": true,
+  "notes": "First RDNA 4 consumer card: 64 CUs, 4096 stream processors, 64 ray accelerators, 128 AI accelerators, 2970 MHz boost / 2400 MHz game, 53.9 B transistors, 16 GB GDDR6 at 20 Gbps on a 256-bit bus = 640 GB/s, 64 MB Infinity Cache, 304 W typical board power, PCIe 5.0 x16, 2x8-pin power, DP 2.1a / HDMI 2.1b, TPP 3114. gfx1201 in ROCm terms, and AMD's ROCm compatibility matrix lists 'AMD Radeon RX 9070 XT | gfx1201' as supported. Architecture binding is AMD's own: 'the latest AMD RDNA 4 architecture ... featured in the AMD Radeon RX 9000 Series graphics' and AMD's generation table gives RDNA 4 as 4 nm with 4th-gen compute units, 3rd-gen raytracing and 2nd-gen AI engine (acc-fill-amd-rdna-architecture-page). Note this product page carries an 'Artist render. Not available for purchase.' caption on its hero image - it is a board-partner product, which is normal for this class.\n\nIT IS RDNA, NOT CDNA - the single most consequential thing about this record. RDNA is AMD's consumer/workstation graphics architecture; CDNA is the Instinct datacentre architecture, and they are different silicon families with different matrix-instruction sets, different ROCm kernel dispatch, and different supported quantization paths. Every Instinct record in this directory (MI210, MI250X, MI300X, MI355X) is CDNA and must not be compared to this row-for-row. Concretely: the ROCm ecosystem treats gfx1201 differently from CDNA targets, and the vLLM AITER gate in gotcha aiter-gate-skips-rdna3-gfx1100 shows the pattern - its CDNA path is gated on 'CDNA3-or-newer' while the RDNA path is gated on gfx1201 ONLY. gfx1201 being named there is the practical consequence of RDNA4 being the generation AITER's RDNA gate admits.\n\nRDNA4's AI-SPECIFIC INSTRUCTIONS ARE REAL BUT NOT A CDNA MATRIX CORE. AMD's page gives 'AI Accelerators 128' and the architecture page calls it a '2nd Generation AI' engine, with the first generation arriving in RDNA 3. These are integrated AI accelerators with dedicated packed-FP16/FP8/INT8/INT4 matrix support in the unified compute unit - they are not a separate CDNA-style matrix engine, they are part of the CU. The practical upshot for this repo is that a llama.cpp or vLLM tok/s figure on an RDNA4 card is a statement about the ROCm software path as much as the silicon, because the WGMMA/WMMA and __byte_perm lowering issues documented in benchmarks/llamacpp-radeon-r9700-gfx1201-q1-0-decode-tok-s are path artefacts, not hardware limits.\n\nDENSE vs SPARSE IS EXPLICIT HERE, unlike RDNA 3. AMD's page prints paired rows and names the sparse ones: 'Peak Half Precision (FP16 Matrix) Performance 195 TFLOPs' against '... with Structured Sparsity 389 TFLOPs'; FP8 (E5M2, E4M3) 389 against 779 with sparsity; INT8 389 TOPs against 779 with sparsity; INT4 779 against 1557 with sparsity. The dense rows are flagged dense:true and the 'with Structured Sparsity' rows dense:false, so nothing here can be misread as a 2x-dense figure. AMD also names the FP8 formats - E5M2 and E4M3 - which is why this is the first Radeon record in the directory to carry an fp8 row at all; the RDNA 3 RX 7900 XTX has no FP8 path.\n\nINFERENCE RELEVANCE, and the awkward comparison: this card has MORE peak matrix throughput than the RX 7900 XTX (195 vs 123 dense FP16 matrix TFLOPS) and native FP8, but LESS memory bandwidth (640 vs 960 GB/s) and two-thirds the VRAM (16 vs 24 GB). Batch-1 decode is bandwidth-bound, so the older, wider 7900 XTX decodes faster per token despite the newer card's compute advantage; the 9070 XT wins on prefill, on FP8/INT8 throughput, and on fitting a larger model in 16 GB. For LLM work the deciding question is which side of the roofline the workload sits on, and at 640 GB/s this card is 25% below an RTX 4090's 1008 GB/s while also having less VRAM - a combination that makes it a poor value-for-decode card and a decent prefill/preprocessing card."
+}

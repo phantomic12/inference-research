@@ -1,0 +1,15 @@
+{
+  "id": "pwr2-vllm-metal-issue-713",
+  "type": "source",
+  "name": "vLLM-metal issue #713: benchmarking pitfalls on macOS (in-process decode penalty, GPU co-tenancy, non-diagnostic short probes)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "url": "https://github.com/vllm-project/vllm-metal/issues/713",
+  "publisher": "vllm-project",
+  "kind": "forum",
+  "published": "2026-09-06",
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "Upstream issue with hard, reproduced numbers for three measurement hazards, which is the methodology evidence a power/thermal gotcha needs. Documents (1) an 8192x8192x256 bf16 canary matmul reading 25.0 TFLOPS in a 0%-utilization quiet window and 119.3 TFLOPS minutes later after a heavy workload, best explained by GPU clock parking plus slow ramp hysteresis, with sustained real workloads (an 8-minute prefill+decode) running at full speed immediately; (2) a 2048^3 probe capping at ~19-30 TFLOPS regardless of machine state, which traced several false 'machine is slow' conclusions; (3) desktop UI co-tenancy driving 57-59% device utilization with vLLM fully idle and all engine processes killed, moving real decode at 100k context from 11.2 to 9.44 tok/s (-16%) and a short GEMM probe by ~5x, while pmset -g therm stayed clean on AC high-power mode. The issue's stated rule: machine capability is measured by the real workload or a >=30s sustained probe, and short-probe TFLOPS is never used as a state verdict."
+}

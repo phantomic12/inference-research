@@ -1,0 +1,31 @@
+{
+  "id": "hw-power-brake-psu-instability-crash",
+  "type": "gotcha",
+  "name": "HW Power Brake means the PSU asserted: core clocks drop by 2x or more, and the symptom is an unexplained throughput collapse rather than a PSU error",
+  "class": "hardware",
+  "affects": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "nvidia-gb200-nvl72"
+  ],
+  "concepts": [
+    "power-delivery",
+    "psu",
+    "dvfs",
+    "nvidia-smi",
+    "hardware-failure",
+    "hopper-sm90"
+  ],
+  "symptom": "nvidia-smi reports 'HW Power Brake' active, meaning an external power brake assertion has been triggered by the system power supply. Per NVIDIA's definition this engages HW Slowdown, which is 'reducing the core clocks by a factor of 2 or more'. The observable is a sudden, large, unexplained throughput drop across the affected GPUs with correct output - no ECC errors, no Xid, no application error.",
+  "root_cause": "The power supply itself is asserting a brake, i.e. the PSU or its upstream feed cannot hold the requested power envelope. On dense 8-GPU nodes this is the mechanism by which an undersized or failing power shelf shows up. It is categorically different from an SW power cap (which is a configured software ceiling) and from thermal slowdown (which is a temperature ceiling) - the same visible throughput loss has three distinct causes.",
+  "workaround": "Read the throttle-reason enum and branch on it: SW Power Cap points at your configured limit, HW Thermal Slowdown at the cooling loop, HW Power Brake at the power supply. On HW Power Brake, escalate to the PSU/power-shelf hardware and the facility feed rather than to the model, the engine, or the cooling. Pair with PSU-population monitoring (gotchas/dgx-psu-depop-silent-degraded-throughput), since depopulated PSUs are a common trigger for a power brake assertion.",
+  "severity": "major",
+  "notes": "This is the single most under-diagnosed failure mode in the dense multi-GPU power envelope, because the throttle-reason field is opt-in to read and the throughput loss looks identical to a software regression. The vendor's own enumeration - 'HW Power Brake - External Power Brake Assertion is triggered (e.g. by the system power supply)' - is the whole evidentiary chain: an external component is asserting, and the GPU's response is a 2x clock cut.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr2-nvidia-smi-throttle-reasons"
+  ]
+}

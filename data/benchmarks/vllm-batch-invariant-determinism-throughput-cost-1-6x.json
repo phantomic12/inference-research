@@ -1,0 +1,24 @@
+{
+  "id": "vllm-batch-invariant-determinism-throughput-cost-1-6x",
+  "type": "benchmark",
+  "name": "Enabling batch-invariant (deterministic) kernels in vLLM costs 1.6x-2.1x wall clock: Qwen-3-8B, 1 GPU, 1000 sequences at 90-110 output tokens",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-h100-sxm"
+  ],
+  "model": "Qwen-3-8B",
+  "format_id": null,
+  "metric": "quality",
+  "value": 55.0,
+  "unit": "seconds for 1000 sequences of 90-110 output tokens on ONE GPU - unoptimized deterministic vLLM; baseline vLLM default is 26 s and the improved-attention-kernel variant is 42 s, i.e. 2.11x and 1.62x",
+  "methodology": "Single-GPU API server, Qwen-3-8B, 1000 requested sequences with output length between 90 and 110 tokens. Three configurations timed against each other: vLLM default 26 s; unoptimized deterministic vLLM 55 s; deterministic plus improved attention kernel 42 s. The deterministic path is the authors' batch-invariant kernel set, delivered via torch.Library operator substitution on top of vLLM's FlexAttention backend (released as github.com/thinking-machines-lab/batch_invariant_ops). The authors state they did not put significant effort into optimizing these kernels and attribute much of the remaining slowdown to FlexAttention integration being unoptimized in vLLM. Metric 'quality' is a placeholder for what is really a throughput comparison; the schema has no determinism or comparison metric.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "THE COST OF THE ORACLE, WHICH IS WHY DETERMINISM IS USUALLY SHIPPED OFF. Anyone proposing batch-invariance as a default needs this number: determinism is not free, it is 1.6x-2.1x on this workload and the authors were explicit they had not finished optimizing. This is also why the recommended posture is to run the invariant as a TEST ORACLE on a small configuration rather than enable it in production - you get the correctness signal without the throughput cost. The 42 s figure shows most of the recoverable cost is in attention specifically, which matches their analysis that attention is the hardest op to make batch-invariant (decode-time query length is tiny, so the reduction must be split along the KV dimension, and FlashInfer's 'balanced scheduling' picks a different split count per call). One caveat on reading the ratio: these are whole-request wall times, so the slowdown is not the same as a decode-throughput slowdown and should not be multiplied into an existing tok/s benchmark.",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "nrg2-thinkingmachines-defeating-nondeterminism"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "mgpu-ep-size-must-divide-physical-experts",
+  "type": "gotcha",
+  "name": "Expert-parallel size that does not divide the physical expert count fails with a bare AssertionError naming num_redundant_experts",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-vllm-52435-ep-divisibility",
+    "mgpu-vllm-52535-divisibility-actionable"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "sglang"
+  ],
+  "concepts": [
+    "expert-parallel",
+    "moe",
+    "divisibility"
+  ],
+  "symptom": "On a 3x A100-SXM4-80GB with --ep-size 3 and a MoE model with 256 physical experts: 'AssertionError: n_physical_experts=256 must be divisible by ep_size=3. Adjust num_redundant_experts.' The engine aborts during model construction. The message's suggested remedy (num_redundant_experts) is not the constraint the user is hitting - 256 simply does not divide by 3.",
+  "root_cause": "Expert parallelism partitions MoE experts across ranks, so the physical expert count must factor into ep_size. The assertion was originally written to guide the redundant-expert (EPLB) logic and was left carrying a remedy that only applies when the count divides unevenly. Being raised as a bare assert rather than a ValueError, it surfaces with no indication of what the valid ep_size values are.",
+  "workaround": "Choose ep_size as a divisor of n_physical_experts. The accompanying PR (#52446) converts the bare assert into a ValueError; the separate head-divisibility message improvement (#52535) is a different code path and does not cover this.",
+  "severity": "major",
+  "notes": "Linked to mgpu-tp-size-must-divide-attention-heads: when a user picks a TP/ep size from the physical GPU count, both checks can fire and it is easy to fix only one."
+}

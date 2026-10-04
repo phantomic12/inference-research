@@ -1,0 +1,51 @@
+{
+  "id": "detokenization-stop-string-scan",
+  "type": "flop",
+  "name": "Per-token detokenisation, EOS/stop-string detection, and the host work they put on the critical path",
+  "class": "sampling",
+  "arithmetic_intensity": "This class has no bytes-per-flop at all: it is host-side text processing that runs once per generated token, on the API server's critical path, outside the model's arithmetic. Two costs, and they scale differently. (1) PER-TOKEN DETOKENISATION: the new token id is turned into text. In the shipped vLLM path this is a lookup into the tokenizer's DecodeStream plus the native incremental decode of that one piece - a vocab-table lookup (llama.cpp's token_to_piece consults a cache_token_to_piece table) and a UTF-8 decode of the piece. The published failure mode shows what the lookup can cost when it is written badly: detokenize_incrementally evaluated len(tokenizer) on EVERY generated token to range-check the id, and DeepseekV32Tokenizer.__len__ returned vocab_size + len(self.get_added_vocab()), where get_added_vocab() called into the native tokenizer each time - so a 1-token range check triggered a native added-vocab map rebuild/lookup (visible as BTreeMap::insert) on the GIL-holding main thread, once per token. (2) STOP-STRING DETECTION: per step, per stop string, a substring search over the newly generated characters. vLLM's check_stop_strings does output_text.find(stop_str, 1 - new_char_count - len(stop_str)) once PER STOP STRING, and it works because stop_buffer_length = max(len(s) for s in stop) - 1 characters are deliberately held back from the stream - so the scan window is bounded by new chars plus stop length, not by output length. That hold-back is the price of correctness at token boundaries: a stop string can straddle any token, so the engine must withhold up to max_stop_len - 1 characters and cannot emit them until it knows they are not part of a match. So the per-step cost is O(num_stop_strings x (new_chars + max_stop_len)) of host substring search plus O(bytes emitted) of holding, and it does NOT grow with sequence length - the one class in this family with a bounded per-step cost, provided the engine does the bounded-window search.",
+  "bound_by": "launch_overhead",
+  "scales_with": [
+    "num_generated_tokens (both costs run once per token, on the host, inside the streaming path)",
+    "num_stop_strings (one substring search per stop string per step)",
+    "max_stop_string_length (the hold-back is max(len(s)) - 1 characters, so a long stop string withholds a long tail of the stream and widens every scan window)",
+    "include_stop_str_in_output (when false, the hold-back applies and stop_buffer_length > 0; when true it is 0 and the scan window shrinks to the new characters)",
+    "vocab_size (only through the tokenizer's added-vocab / piece-cache lookup cost - a 152064-vocab tokenizer does more per-token lookup work than a 32000 one)",
+    "bytes emitted per token (a byte-level BPE token can decode to several characters, widening the stop-string scan window)",
+    "number of concurrent streams on one event loop (the per-token work is serialised on the GIL/loop, so it multiplies with concurrency rather than amortising)",
+    "byte-fallback / partial-UTF-8 handling (an incomplete trailing codepoint must be held, so some steps emit nothing at all)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090",
+    "nvidia-rtx-5090",
+    "nvidia-l4",
+    "amd-radeon-pro-vii",
+    "apple-m3-max",
+    "apple-m4-max"
+  ],
+  "workarounds": [
+    "Bound the initial DecodeStream priming - vLLM primed with the ENTIRE prompt, costing ~0.5-1.5 us/token of native prefill (~3 ms at 5K ids, ~9 ms at 15K, ~12 ms at 20K, tokenizers 0.22.2); priming with only the last 32 prompt ids costs ~7 us once per request",
+    "Cache anything the per-token lookup recomputes - the added-vocab dict and its size prefetched once at tokenizer init, which is the entire fix for the DeepSeek-V3.2 starvation",
+    "Do the bounded-window stop-string search, never a full-output search: scan only the new characters plus the hold-back, as vLLM's check_stop_strings does with find(stop_str, 1 - new_char_count - stop_string_len)",
+    "Prefilter by token id before doing text work: a step whose delta ids contain none of the precomputed ids whose text could supply a marker's final character cannot have completed the marker, answered in O(len(delta)) with no decoding",
+    "Run detokenisation off the model thread or in a Rust/native extension - the shipped symptom is that a per-token native call on the GIL-holding main thread starves the event loop and hangs even /health",
+    "Skip detokenisation entirely where the client does not need text (a tokenizer=None path exists in vLLM, returning an IncrementalDetokenizer that decodes nothing)",
+    "Bound the number of stop strings, and prefer stop TOKEN ids over stop strings where the sentinel can be expressed as a token"
+  ],
+  "notes": "CLASSIFICATION ARGUMENT, and the enum gap this record exists to document. The schema's flop class enum has prefill_attention | decode_gemm | decode_attention | moe_routing | moe_experts | norm_softmax | sampling | embedding | speculative_draft | speculative_verify | kv_transfer | quantization_overhead | custom_kernel. There is no detokenisation class, and detokenisation is not sampling: sampling turns a logit tensor into a token id, detokenisation turns a token id into text, and they sit on opposite ends of the step with a host round trip between them. It is also not norm_softmax (no tensor), not embedding (no lookup into an embedding matrix), and not custom_kernel in the launch_overhead sense used by custom-kernel-launch-overhead (which is per KERNEL LAUNCH; this is per TOKEN of host text processing). REQUESTED ENUM ADDITION for the schema owner: add class 'detokenization' (and, if the taxonomy wants to name the second cost separately, 'stop_detection'). Recorded under 'sampling' as the nearest existing value - it is the same 'post-logit, per-token, host-side, batch-invariant-per-sequence' neighbourhood - but a reader querying class=sampling to find 'what happens after the token is chosen' will get the wrong answer. bound_by 'launch_overhead' is the closest existing value and is defensible: the cost is CPU-side, per-step, un-overlappable because the next step's streaming output depends on this one, and independent of how much GPU work the step contains. A cleaner value would be 'host' or 'cpu'. DESIGN CONSEQUENCE, the part that matters operationally: this class is invisible in every tok/s benchmark and dominant in every latency benchmark, because it is measured in the API server, not the engine. The published DeepSeek-V3.2 report is the sharp form: model unchanged, GPU unchanged, throughput unchanged on paper, and the server is unhealthy because /health hangs - the CPU cannot service HTTP because the decode loop's per-token detokenisation owns the main thread. The second published form (the bounded-tail priming fix) is the TTFT form: ~12 ms of native detokenisation prefill at a 20K-token prompt lands verbatim in that request's streaming TTFT AND head-of-line blocks the SSE deltas of every other stream on the same loop, i.e. it is a p99 contamination mechanism, not just a latency cost. The PR notes the cost hits hardest exactly where GPU-side TTFT is otherwise best - long warm-prefix prompts (agents, RAG) served with prefix caching. THE THIRD FORM is the worst, and it is a quadratic: a reasoning-end predicate that re-detokenises the whole sequence every step for every running request decayed a production structured-output deployment from 260 to 170 tok/s at concurrency 50, with ~4.9 ms per decode step in that one predicate at 16k reasoning lengths, the GPU drawing ~150 W of a 300 W limit and EngineCore pinned below one CPU core. The lesson generalises: the failure mode of every host-side per-token predicate is O(sequence length) work per step, i.e. quadratic decode, and it looks like a GPU utilisation collapse. ENGINE-AUTHOR CHECKLIST this implies, each item traceable to a published fix: (a) nothing in the per-token path may depend on the full prompt or the full output - bound it to a tail (32 ids) or to the delta; (b) nothing may call into the native tokenizer in a way that rebuilds a vocab-sized structure; (c) any per-step predicate must be O(delta), prefilterable by token id; (d) the stop-string scan must be windowed, with a deliberate hold-back sized max_stop_len - 1 and no full-text rescan. CAVEAT: all three published cases are single-engine (vLLM) reports with the fix verified as 'CPU utilisation returned to normal' rather than as a published tok/s delta, so the magnitudes are indicative and the mechanisms are the durable claim. No measured per-token detokenisation microsecond count is available in this repo; where a doc needs one it must say 'no record' rather than quote the 0.5-1.5 us/token priming figure, which is a different operation (full-prompt prime, not incremental detokenisation).",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "flop3-vllm-pr-30351-detokenizer-added-vocab",
+    "flop3-vllm-pr-51281-bounded-tail-detok",
+    "flop3-vllm-pr-54454-reasoning-end-quadratic",
+    "flop3-vllm-detokenizer-source",
+    "flop3-llamacpp-vocab-source",
+    "flop3-llamacpp-grammar-source",
+    "flop2-llama3-8b-config",
+    "flop-nvidia-inference-optimization"
+  ]
+}

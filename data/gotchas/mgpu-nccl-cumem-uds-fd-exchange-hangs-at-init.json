@@ -1,0 +1,29 @@
+{
+  "id": "mgpu-nccl-cumem-uds-fd-exchange-hangs-at-init",
+  "type": "gotcha",
+  "name": "On single-node PCIe boxes NCCL's cuMem UDS file-descriptor exchange loses a message and the engine hangs at startup in a spin-wait, intermittently, with no error",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-nccl-2379-cumem-uds-hang"
+  ],
+  "class": "driver",
+  "affects": [
+    "nvidia-rtx-3090",
+    "vllm"
+  ],
+  "concepts": [
+    "nccl",
+    "cumem",
+    "uds",
+    "peer-to-peer",
+    "init",
+    "hang"
+  ],
+  "symptom": "On a single-node 8x RTX 3090 box (no NVLink, P2P over PCIe at PXB level, NCCL 2.29.7+cuda13.2) serving a large MoE under vLLM with TP2xPP4 plus expert parallel - a layout that creates on the order of fifty communicators in quick succession at engine start - roughly one boot in seven never comes up. The affected ranks pin at 100% SM around 150W doing nothing, the classic spin-wait signature, until the framework watchdog gives up; under rapid restart cycling the odds degrade to roughly every second attempt. With NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=INIT,P2P the trail shows 52 communicator Init STARTs against 50 COMPLETEs, the two stragglers being 4-rank pipeline-parallel communicators each missing exactly one rank, and the stall mid P2P-channel build right after a clean 'UDS converted handle ... to fd ... on remote peer' / 'Imported shareable buffer' pair. With torch's distributed timeout lowered to 300s the failure surfaces as the launcher dying quietly rather than printing 'Watchdog caught collective operation timeout', so log-signature-based retry gates miss it.",
+  "root_cause": "NCCL's cuMem path passes physical memory handles between ranks over Unix-domain sockets during communicator init, and on PCIe-only P2P the interleaving of several concurrent communicators' fd-passing conversations over those sockets can lose a message. The isolation is decisive: with NCCL_CUMEM_ENABLE=0, 20 out of 20 boots came up on the first attempt including twelve back-to-back rapid cycles designed to provoke the race, against a control arm needing nine attempts across four boot cycles with at least five wedges and one burn of all three retries (Fisher's exact on first-attempt outcomes p = 0.00106). Steady-state performance is identical between the two settings on this topology - paired prefill and decode legs measured zero difference - which is consistent with an init-only mechanism: the legacy CUDA IPC path exchanges opaque handles through the bootstrap channel instead of fd-passing over UDS. Cleaning stale IPC files on every boot reduced the frequency but did not eliminate it, so leftover state is not the residual cause.",
+  "workaround": "Set NCCL_CUMEM_ENABLE=0 on PCIe-only multi-GPU nodes. It costs nothing measurable in steady state on this topology and removes the race entirely. Do not spend time cleaning stale IPC files - the submitter tried that and it only reduced the rate. Keep NCCL_DEBUG=INFO with NCCL_DEBUG_SUBSYS=INIT,P2P on during triage, but note that log-signature retry gates are unreliable here because the lowered-timeout presentation path swallows the watchdog message.",
+  "severity": "major",
+  "notes": "Adjacent but distinct from mgpu-partial-node-failure-deadlocks-instead-of-erroring (which is a topology error surviving into steady state) and from mgpu-symm-mem-window-registration-deadlocks-without-timeout (a blocking recvmsg inside ncclCommWindowRegister rather than init). The distinguishing feature here is intermittency under many-communicator init bursts on PCIe without NVLink, and the clean NCCL_CUMEM_ENABLE=0 isolation."
+}

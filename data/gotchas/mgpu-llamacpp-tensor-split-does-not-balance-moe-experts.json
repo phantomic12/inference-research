@@ -1,0 +1,26 @@
+{
+  "id": "mgpu-llamacpp-tensor-split-does-not-balance-moe-experts",
+  "type": "gotcha",
+  "name": "In llama.cpp, --tensor-split does not move MoE expert tensors, so a GPU split that looks configured is actually leaving expert compute on one device",
+  "status": "verified",
+  "confidence": 0.72,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-llamacpp-28185-tensor-split-degeneration"
+  ],
+  "class": "config",
+  "affects": [
+    "llama-cpp"
+  ],
+  "concepts": [
+    "tensor-split",
+    "moe",
+    "load-imbalance",
+    "multi-gpu"
+  ],
+  "symptom": "Observable is a persistent asymmetry, not a crash or corruption: 'Even where --tensor-split doesn't cause degeneration, it barely rebalances actual per-GPU compute load: MoE experts stay almost entirely on one device regardless of the split ratio tried; only non-MoE tensors seem affected by the split value. --main-gpu had no effect on the imbalance either.' Observed alongside --n-cpu-moe 34 on Qwen3-Coder-Next-UD-Q4_K_M with --split-mode layer --tensor-split 4,1.",
+  "root_cause": "llama.cpp's split-mode row/layer logic distributes buffers according to their sizes, but expert tensors in an MoE checkpoint follow a placement rule that the tensor-split weighting does not drive, and --main-gpu is documented as a preference for the heaviest device rather than a forcing constraint. The result is that the split ratio a user tunes has almost no effect on where expert compute actually runs, so per-GPU utilization stays lopsided regardless of the setting.",
+  "workaround": "Do not infer device placement from the --tensor-split value. Measure per-GPU utilization directly (nvidia-smi / rocm-smi during a real decode) to see where expert compute landed. Use --n-cpu-moe to control expert placement explicitly, and size the multi-GPU plan around the fact that expert weight is essentially fixed to one device unless offloaded.",
+  "severity": "minor",
+  "notes": "Same source as mgpu-llamacpp-tensor-split-breaks-nondivisible-multi-gpu-sharding and deliberately split out: that record is about the correctness symptom (output degeneration at long context), this one is about the persistent load imbalance which is a different mechanism and has a different fix. Recorded separately because the imbalance is present even in runs where output was correct, so the two never co-occur."
+}

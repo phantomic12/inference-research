@@ -1,0 +1,23 @@
+{
+  "id": "pd-rdma-transfer-failure-returns-http-200-garbage",
+  "type": "gotcha",
+  "name": "A failed RDMA KV transfer is reported as success: HTTP 200, valid envelope, garbage tokens",
+  "class": "hardware",
+  "affects": [
+    "nvidia-dynamo",
+    "nixl",
+    "vllm",
+    "mooncake"
+  ],
+  "symptom": "On a disaggregated vLLM deployment over InfiniBand, the served model returns garbage tokens with no error at all: 'The request returns HTTP 200 with a well-formed OpenAI response envelope, populated usage, and a finish_reason. No error is returned to the client.' Two consecutive requests with identical input both return garbage. It reproduces with prefill and decode on separate nodes AND with both on the same node.",
+  "root_cause": "GPUDirect RDMA fails when the GPU and the selected NIC are PIX-adjacent - they talk over a direct PCIe peer-to-peer path that never traverses the PCIe host bridge - on hosts where GPUs and NICs are PCIe passthrough devices in a VM. Two passthrough devices doing direct P2P get no IOMMU translation in the guest, so the HCA's read of GPU BAR memory is rejected. The transfer dies, and because the receiver treats a failed receive as complete rather than terminal or retriable, the request returns 200 with corrupt content. The original report blamed UCX_NET_DEVICES being unset; the maintainer root-cause pass found that was a proxy: the auto-selection wrapper picks each pod's GPU-affine NIC, which is precisely the PIX partner, so both sides land on the broken path. Setting UCX_NET_DEVICES=mlx5_0:1 'fixed' it by accident by moving 7 of 8 GPUs off their PIX pairing - the one GPU that really is PIX-adjacent to mlx5_0 still failed 100% of the time.",
+  "workaround": "Do not trust a KV-transfer success signal that is not end-to-end verified. On passthrough-virtualised hosts, pin UCX_NET_DEVICES to a NIC that is not the PIX partner of the GPU it serves, and verify per-GPU rather than per-pod - the per-pod check passes 7/8. Longer term the fix belongs in the connector: a failed NIXL receive must be terminal or retriable, not reported complete. Triage marked this urgent precisely because 'failed KV transfer currently becomes silent token corruption'.",
+  "severity": "blocker",
+  "notes": "This is the purest example in the whole class of 'hardware topology failure becomes silent numerics divergence'. Env: 8x H200 + 8x ConnectX-7 per node, KVM with PCIe passthrough, vLLM 0.23.0, nixl 1.2.0, NixlConnector, TP=1, Dynamo 1.3.0, Gemma-4-31B-IT-NVFP4. Open at 2026-10-03. Two transferable lessons. First, auto-selection heuristics that pick the 'affine' device are actively dangerous on virtualised hosts, because affinity is exactly the relationship that breaks. Second, the diagnostic that worked was ruling out hardware first - per-rail ib_write_bw, ucx_perftest -m cuda, UCX transport route logs, dmesg - all clean, before tracing to the code. A KV-transfer stack that reports success on a failed transfer will convert every fabric misconfiguration into plausible-looking model output.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-gh-dynamo-12463-rdma-failure-silent-garbage"
+  ]
+}

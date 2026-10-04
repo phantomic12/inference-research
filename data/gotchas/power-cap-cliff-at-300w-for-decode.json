@@ -1,0 +1,32 @@
+{
+  "id": "power-cap-cliff-at-300w-for-decode",
+  "type": "gotcha",
+  "name": "Decode throughput is flat from 400-600 W per GPU and then falls off a cliff at 300 W - a power cap below ~300 W is a hard throughput cliff, not a gradual efficiency gain",
+  "class": "measurement",
+  "affects": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "nvidia-rtx-pro-6000-blackwell",
+    "nvidia-h100-sxm"
+  ],
+  "concepts": [
+    "power-cap",
+    "decode",
+    "memory-bandwidth-bound",
+    "dvfs",
+    "cliff",
+    "energy-efficiency"
+  ],
+  "symptom": "For a memory-bandwidth-bound reasoning workload, per-GPU power caps of 400 W and 600 W leave throughput UNCHANGED, while a 300 W cap causes throughput to drop sharply. So the region between 400 and 600 W is free - you can halve or triple the power envelope with no throughput cost - and below roughly 300 W you fall off a cliff. A cap set by 'reduce power until throughput starts to suffer' will land somewhere unpredictable inside that cliff.",
+  "root_cause": "The workload is memory-bandwidth-bound rather than compute-bound, so its throughput depends on memory clock and data movement, not on the compute clock that a power cap directly constrains. Once the cap starts to constrain the memory subsystem itself, there is no further headroom to give back and throughput collapses. The flat 400-600 W region is the part of the curve where the cap constrains compute that was not on the critical path.",
+  "workaround": "Treat 400-600 W as the safe operating band for memory-bandwidth-bound decode and do not set a cap below it expecting graceful degradation - probe for the cliff before committing a cap. Crucially, LOCATE THE CLIFF PER WORKLOAD rather than assuming a fixed wattage: this measurement is workload-specific (memory-bandwidth-bound reasoning), and a compute-bound prefill-heavy configuration will have a different profile. Because the flat region is free, the correct default is to sit inside it, not at the edge below it.",
+  "severity": "major",
+  "notes": "The pair of gotchas - the flat 400-600 W band and the 43-46% Joule Point - must be read together and are in tension by design: one says capping is nearly free in a wide band, the other says the energy optimum sits near 43-46% of rated power. At 1000 W rated (B200/MI350X class), 43-46% is 430-460 W, which lands inside the flat 400-600 W band - consistent, and encouraging. That coincidence is worth noting but should not be over-read: the two measurements come from different studies on different hardware, and the Joule Point is explicitly reported as needing per-card-type characterisation.",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr2-arxiv-where-does-energy-go"
+  ]
+}

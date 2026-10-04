@@ -1,0 +1,40 @@
+{
+  "id": "amd-radeon-pro-w7900",
+  "type": "accelerator",
+  "name": "AMD Radeon PRO W7900",
+  "vendor": "amd",
+  "architecture": "rdna3",
+  "release_year": 2023,
+  "process_nm": 5,
+  "form_factors": [
+    "dual-slot",
+    "full-height"
+  ],
+  "vram_gb": 48,
+  "memory_type": "gddr6",
+  "memory_bus_bit": 384,
+  "memory_bandwidth_gbps": 864,
+  "memory_bandwidth_basis": "AMD Radeon PRO W7900 datasheet (source acc2-amd-radeon-pro-w7900-datasheet) prints 'Memory Interface 384-bit' and 'Memory Bandwidth 864 GB/s' in the same row. Arithmetic check: 384 bit x 18 Gbps per pin / 8 = 864 GB/s, i.e. 18.0 Gbps/pin on GDDR6. The datasheet itself does not print a per-pin data rate, so 18 Gbps is the standard GDDR6 rate implied by AMD's own pair of numbers rather than a separate AMD statement; the 864 GB/s figure is AMD's and is what is stored. ECC is supported ('Error Correcting Code (ECC): Yes'), which matters for a workstation part because ECC-enabled GDDR6 is a capacity tax on some boards - AMD does not publish how much of the 48 GB is lost to ECC.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 61.32,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc2-amd-radeon-pro-w7900-datasheet",
+      "notes": "AMD labels this row 'Peak Single-Precision Performance 61.32 Tflops'. Two things a reader must not miss. (1) AMD labels it single-precision, NOT matrix and NOT 'AI TOPS' - unlike the Radeon RX 7900 XTX, which is the same RDNA 3 silicon sold with a different memory configuration. So this figure is scalar FP32 and says nothing about INT8 or FP16 matrix throughput. (2) The datasheet prints NO sparsity row and NO sparsity footnote anywhere, so under AMD's own labelling convention ('Peak X Performance' dense / 'with Structured Sparsity' sparse at 2x) this is DENSE, and dense:true is correct. AMD publishes no FP16 matrix rate and no INT8 rate for this card, so none is recorded - see the record notes."
+    }
+  ],
+  "tdp_w": 295,
+  "unified_memory": false,
+  "consumer": false,
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "acc2-amd-radeon-pro-w7900-datasheet",
+    "acc-fill-amd-radeon-rx-7900xtx-product-page",
+    "gotcha-vllm-issue-51136-aiter-rdna3"
+  ],
+  "notes": "ADDED 2026-10-03 to close a real gap: this id was referenced by gotcha-aiter-gate-skips-rdna3-gfx1100 (and sits in that gotcha's affects[] array) with no accelerator record anywhere in the repo. Built from AMD's own two-page datasheet (source acc2-amd-radeon-pro-w7900-datasheet), not from the product page - AMD's current W7900 product page returns HTTP 404, while the datasheet PDF is still served and was archived 2024-06-03, so the datasheet is the durable primary source. WHY THIS PART MATTERS FOR LLM INFERENCE, and why the sparse compute spec is not the limiting factor: the datasheet's headline is 48 GB of ECC'd GDDR6 on a 384-bit interface at 864 GB/s, and the key-features list adds '2x AI Accelerators per Compute Unit' (i.e. the second-gen Matrix/AI accelerator per CU that RDNA 3 introduced). 48 GB of ECC'd GDDR6 with ECC enabled is unusual and is the whole story for on-prem serving: it is the largest ECC memory pool available on a PCIe workstation card short of the Instinct line, which matters because a 32 GB consumer card has nowhere to go once you have weights plus KV plus activations. That makes the W7900 the natural 'quiet workstation, ECC, 48 GB' part for a 30-70B model at 4-8 bit, even though its published compute figure is only 61.32 TFLOPS FP32. THE CAVEAT THAT DOMINATES ANY USE OF THIS CARD, and the reason its absence from the repo until now was a real defect: it is RDNA 3 / gfx1100, and vLLM's AITER gate silently excludes it. vLLM's is_aiter_found_and_supported() requires get_cdna_version() > 2 (CDNA3 or newer) and the separate RDNA path is gated on gfx1201 only, so gfx1100 falls into neither branch and vLLM logs 'AITER is not found or not supported on the current platform, QuarkOCP_MX will fall back to emulation' and selects TritonInt8ScaledMMLinearKernel instead of AiterInt8ScaledMMLinearKernel - with no error raised. AITER upstream lists 'AMD Pro W7900 | gfx1100 (RDNA3) | Experimental', and the library's CK/ASM kernels are CDNA-only, so gfx1100 needs the Triton WMMA route regardless. A vLLM maintainer confirmed RDNA support is not on the vLLM roadmap (redirected to ROCm/aiter#4604), so treat W7900 as unsupported for AITER-accelerated formats unless the four-part patch in vllm#51136 is applied. This is the same defect the sibling record amd-radeon-rx-7900-xtx already carries, and it applies to both because they are the same die. RELATIONSHIP TO THE EXISTING SIBLING RECORD amd-radeon-rx-7900-xtx: same RDNA 3 family and the same gfx1100 software story, but different memory - 24 GB / 384-bit / 96 GB/s-class consumer configuration versus 48 GB / 384-bit / 864 GB/s with ECC here. The bandwidth gap is roughly an order of magnitude, which is what makes the professional card the one that can actually hold a working set. WHAT AMD DOES NOT PUBLISH, left null rather than derived: no FP16 matrix throughput, no INT8 throughput, no AI TOPS figure, no bus-level data rate, no process node on the datasheet itself (process_nm 5 is the RDNA 3 family's published node, consistent with AMD's other RDNA 3 records here, not a figure from this sheet), and no ECC capacity overhead."
+}

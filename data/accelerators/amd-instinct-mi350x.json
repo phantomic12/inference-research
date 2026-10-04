@@ -34,7 +34,8 @@
       "tflops": 144.2,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi350x-product-page"
+      "source_id": "amd-mi350x-product-page",
+      "notes": "VECTOR FP16 path ('Peak Half Precision (FP16) Performance 144.2 TFLOPs' - note AMD's label omits 'Matrix' here, unlike the row below). No sparsity variant printed, so dense. Distinct from the 2300 TFLOPS matrix FP16 row: the scalar path is 16x slower than the matrix path on this part."
     },
     {
       "precision": "fp16",
@@ -69,7 +70,8 @@
       "tflops": 4600.0,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi350x-product-page"
+      "source_id": "amd-mi350x-product-page",
+      "notes": "AMD MI350X page: 'Peak Open Compute Project Eight-bit Precision Matrix (OCP-FP8) Performance (E5M2, E4M3) 4.6 PFLOPs' DENSE, with 'Peak ... with Structured Sparsity (E5M2, E4M3) 9.2 PFLOPs' as the separate sparse row. The sparse 9200 figure is stored separately on this record with dense:false."
     },
     {
       "precision": "fp8",
@@ -83,14 +85,16 @@
       "tflops": 9200.0,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi350x-product-page"
+      "source_id": "amd-mi350x-product-page",
+      "notes": "AMD MI350X page: 'Peak Microscaling Six-bit Precision Matrix (MXFP6) Performance 9.2 PFLOPs' - there is NO 'with Structured Sparsity' row for MXFP6, so under AMD's own labelling this is DENSE. Contrast the plain FP8 row on the same page, which DOES carry a sparsity variant (4.6 dense / 9.2 sparse). So on CDNA4 the micro-scaled 4-bit and 6-bit formats have no 2:4 path while OCP-FP8 does."
     },
     {
       "precision": "fp4",
       "tflops": 9200.0,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi350x-product-page"
+      "source_id": "amd-mi350x-product-page",
+      "notes": "AMD MI350X page: 'Peak Microscaling Four-bit Precision Matrix (MXFP4) Performance 9.2 PFLOPs' - no 'with Structured Sparsity' row, so DENSE. Same structure as the MXFP6 row. Note the practical consequence: on this part 4-bit MXFP4 is the SAME throughput as 6-bit MXFP6 (9.2 PFLOPs each) and the same as sparse OCP-FP8, so the argument for going below 8-bit on a MI350X is memory and accuracy, never compute."
     },
     {
       "precision": "int8",
@@ -115,5 +119,5 @@
   ],
   "unified_memory": false,
   "consumer": false,
-  "notes": "Air-cooled sibling of the MI355X. Same CDNA4 silicon, same 288 GB HBM3E, same 8 TB/s, same 8192-bit interface, same 185B transistors, same 8 XCDs / 256 CUs / 16,384 SPs / 1024 matrix cores. It differs ONLY in clock and power: 2200 MHz and 1000W (passive OAM) versus the MI355X's 2400 MHz and 1400W (passive & active).\n\nAMD's own MI355X brochure explains the split: MI355X's higher power budget lets it 'sustain higher performance over time, minimizing throttling and maximizing throughput during prolonged or intensive workloads'. So the real difference is sustained, not burst.\n\nSame eight-die caveat: 288 GB is one package address space across 8 XCDs, not multiple devices.\n\nCompute ratio to MI355X is 2300/2500 = 0.92 on FP16 matrix, matching the 2200/2400 = 0.917 clock ratio exactly - consistent with the same die.\n\nTwo fp16 entries on purpose: 144.2 TFLOPS is the VECTOR path, 2300 TFLOPS is the MATRIX path. TF32 is software-emulated on CDNA4 (AMD footnote), so there is no native TF32 figure to carry over from MI300X. Sparse figures are exactly 2x dense. MXFP6/MXFP4 at 9200 PFLOPs are the headline inference datatypes and are quoted without a sparse companion.\n\n7 scale-up Infinity Fabric links at 153 GB/s (product page; the MI355X datasheet gives the more precise 153.6) plus one 128 GB/s scale-out link. ROCm LLVM target gfx950."
+  "notes": "AUDIT 2026-10-03 (AMD's dense/sparse convention established from the MI350X page itself and applied to every row; no values changed): this page is the cleanest statement of AMD's convention anywhere in the lineup, because it prints BOTH forms side by side with explicit labels - 'Peak Half Precision Matrix (FP16) Performance 2.3 PFLOPs' (DENSE) and 'Peak Half Precision Matrix (FP16) Performance with Structured Sparsity 4.6 PFLOPs' (SPARSE) - and likewise for OCP-FP8 (4.6 / 9.2), INT8 (4.6 / 9.2) and BF16 (2.3 / 4.6). So AMD's convention is: the unlabelled-by-sparsity row is DENSE and is exactly half the 'with Structured Sparsity' row. Every dense flag on this record is correct against that rule. THE SUBTLE PART, and the one a mechanical audit gets wrong: the MXFP4 and MXFP6 rows on the same page print '9.2 PFLOPs' with NO sparsity variant at all, so 9.2 is DENSE for those formats - not sparse, and not half of anything on this sheet. A reader who assumes 'AMD's biggest printed number is always the sparse one' would wrongly halve the MXFP4 row to 4.6. The two 9.2 TFLOPS-per-PFLOP figures on this part mean different things by precision. Also relevant to any AMD-vs-NVIDIA comparison built from this part's spec page: AMD's own comparison chart here prints 'FP16/BF16 Tensor / FP16/BF16 Matrix (Sparsity) 4.5 | 4.6' and 'FP8 Tensor / OCP-FP8 Matrix (Sparsity) 9 | 9.2' for B200 SXM5 - i.e. AMD quotes NVIDIA's SPARSE numbers (4.5 and 9 PFLOPS). NVIDIA's own Blackwell datasheet footnotes exactly those as sparse, dense being 2.5 and 5. Using AMD's chart as if it were dense understates B200 by 2x. Air-cooled sibling of the MI355X. Same CDNA4 silicon, same 288 GB HBM3E, same 8 TB/s, same 8192-bit interface, same 185B transistors, same 8 XCDs / 256 CUs / 16,384 SPs / 1024 matrix cores. It differs ONLY in clock and power: 2200 MHz and 1000W (passive OAM) versus the MI355X's 2400 MHz and 1400W (passive & active).\n\nAMD's own MI355X brochure explains the split: MI355X's higher power budget lets it 'sustain higher performance over time, minimizing throttling and maximizing throughput during prolonged or intensive workloads'. So the real difference is sustained, not burst.\n\nSame eight-die caveat: 288 GB is one package address space across 8 XCDs, not multiple devices.\n\nCompute ratio to MI355X is 2300/2500 = 0.92 on FP16 matrix, matching the 2200/2400 = 0.917 clock ratio exactly - consistent with the same die.\n\nTwo fp16 entries on purpose: 144.2 TFLOPS is the VECTOR path, 2300 TFLOPS is the MATRIX path. TF32 is software-emulated on CDNA4 (AMD footnote), so there is no native TF32 figure to carry over from MI300X. Sparse figures are exactly 2x dense. MXFP6/MXFP4 at 9200 PFLOPs are the headline inference datatypes and are quoted without a sparse companion.\n\n7 scale-up Infinity Fabric links at 153 GB/s (product page; the MI355X datasheet gives the more precise 153.6) plus one 128 GB/s scale-out link. ROCm LLVM target gfx950."
 }

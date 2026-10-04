@@ -1,0 +1,32 @@
+{
+  "id": "sw-power-cap-silent-clock-reduction",
+  "type": "gotcha",
+  "name": "An SW power cap silently reduces clocks below requested with no error, so a capped fleet looks like a slow model",
+  "class": "config",
+  "affects": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "nvidia-gb200-nvl72",
+    "nvidia-h100-pcie"
+  ],
+  "concepts": [
+    "power-cap",
+    "dvfs",
+    "nvidia-smi",
+    "power-delivery",
+    "hopper-sm90",
+    "benchmarking"
+  ],
+  "symptom": "With nvidia-smi --power-limit set below the card's Max TDP, the GPU runs below its requested clocks and every workload gets slower, with nothing in the application, the engine logs, or a benchmark run reporting an error. The card still passes ECC checks, still returns correct output, and still shows as 'healthy'. The only observable is in nvidia-smi's clocks event-reasons field, where 'SW Power Cap' becomes active.",
+  "root_cause": "Per NVIDIA's own definition: 'SW Power Cap - SW Power Scaling algorithm is reducing the clocks below requested clocks because the GPU is consuming too much power. E.g. SW power cap limit can be changed with nvidia-smi --power-limit=<Power Limit Value in W>'. The mechanism is a DVFS response to a board-power ceiling. It is a normal, silent, self-consistent state - there is no fault to detect.",
+  "workaround": "Assert on the throttle-reason bitmask, not on throughput. Poll nvidia-smi clocks event reasons and alert whenever SW Power Cap, HW Thermal Slowdown, HW Slowdown or HW Power Brake is active; record which one, because each points at a different physical cause (facility power budget, cooling, PSU, or ambient). When comparing runs, capture the throttle-reason state at the same moment as the timing numbers, or the comparison is meaningless - see gotchas/short-benchmark-not-representative-of-sustained-serving.",
+  "severity": "major",
+  "notes": "The trap is that a power cap is often set DELIBERATELY for energy or power-budget reasons, so nothing looks wrong and the cap becomes invisible in the results. A fleet running a fleet-wide energy policy can quietly deliver materially lower throughput than a single-GPU benchmark predicts, and the only record of the cap is a field nobody reads. Note the adjacent hardware-level escalation: 'HW Slowdown - HW Slowdown is engaged, reducing the core clocks by a factor of 2 or more. It is active if either HW Thermal Slowdown or HW Power Brake are active', and 'HW Power Brake - External Power Brake Assertion is triggered (e.g. by the system power supply)'. A factor-of-2 clock reduction is the difference between a fleet that is slightly slow and one that appears catastrophically slow, and the enum is how you tell them apart.",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr2-nvidia-smi-throttle-reasons"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "us-electricity-industrial-tariff-2024",
+  "type": "supply",
+  "name": "Cost to RUN, not to buy: US average industrial electricity price, 8.13 cents/kWh in 2024 (derived from EIA volume and revenue tables)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-eia-epa-table-2-2",
+    "pwr-eia-epa-table-2-3",
+    "pwr-runpod-pricing-page"
+  ],
+  "kind": "unknown",
+  "vendor": null,
+  "accelerator_ids": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300"
+  ],
+  "region": "United States (national average across all 50 states and DC)",
+  "channels": [
+    "contact-sales",
+    "on-prem-cloud"
+  ],
+  "price_usd": 0.0813,
+  "price_basis": "USD per kWh, INDUSTRIAL sector average retail price, calendar year 2024, all US states. DERIVED, and the derivation is the point: EIA Electric Power Annual Table 2.3 revenue 84,095 million USD divided by Table 2.2 volume 1,034,584,190 MWh = 0.08128 USD/kWh. NOT A QUOTE and not a data-centre tariff - see notes. Cross-references, same derivation, same year: commercial sector 12.75 cents/kWh (185,043 M USD / 1,450,941,216 MWh), residential 16.48 cents/kWh (244,367 / 1,482,873,586), all-sector average 12.94 cents/kWh (514,396 / 3,975,381,832).",
+  "availability": "in-stock",
+  "lead_time_weeks": null,
+  "export_controlled": null,
+  "notes": "THE MISSING COST INPUT FOR ANY COST-PER-TOKEN MODEL. Cloud per-GPU-hour is already priced and recorded elsewhere in this repo; the electricity underneath an on-prem or colo deployment is not, and it is the number that decides whether owning hardware beats renting it. Worked example against the measured 8xH200 node, using this record and the MLPerf trace together: the measured loaded plateau of 5806.93 W is 5.8069 kWh per node-hour, so ONE NODE-HOUR COSTS $0.4721 AT THE INDUSTRIAL RATE, $0.7404 AT THE COMMERCIAL RATE (12.75 c), and $0.7514 AT THE ALL-SECTOR AVERAGE (12.94 c). The idle floor of 2422.6 W still costs $0.197 per node-hour at the industrial rate. THAT IS THE WHOLE ARGUMENT IN THREE NUMBERS: 8xH200 hardware is a purchase order, but the electricity is a permanent annuity that runs whether or not the node is busy - roughly $345 per node-MONTH at the industrial rate if left idle 24x7 ($0.197 x 730 h), and about $828 per node-month under full load ($0.4721 x 730 h). SCOPE LIMITS, stated plainly because a wrong tariff is worse than no tariff: (1) These are AVERAGE RETAIL prices to ultimate customers across all sectors and states, including residential volume. A real hyperscale AI load is bought at industrial or wholesale rates in ONE state under a contract that often prices CAPACITY separately from ENERGY. (2) They exclude demand charges, ramp rates, power-factor penalties and transmission congestion charges, all of which matter enormously at 5-10 MW and none of which is visible here. (3) They exclude PUE, so the figure above is utility-side only - a colo-quoted price bundles PUE into a per-kW-month number instead. (4) They exclude taxes, transmission and distribution line items that make up a material share of a retail bill. COMPARISON THAT SHOULD MAKE ANY READER PAUSE: at 8.13 c/kWh, the ELECTRICITY for an 8xH200 node-hour is $0.4721, while the cheapest published peer-to-peer H100 rental in this repo is $1.69/GPU-hr and the RunPod Community H200 ask is $4.59/GPU-hr ($36.72/node-hour). Electricity is therefore roughly 1% of what renting the same hardware costs - the machine is the price, not the watt. That holds even at the 20 c/kWh that expensive-grid industrial buyers face. THE CONSEQUENCE FOR THIS REPO: joules per token decides SCHEDULING and BATCHING and PUE and cooling strategy, because those are the levers that change watts; it is NOT the lever that decides buy-versus-rent. Model-cost work should not treat energy price as the dominant term."
+}

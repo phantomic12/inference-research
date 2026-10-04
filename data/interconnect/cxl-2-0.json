@@ -4,18 +4,19 @@
   "name": "Compute Express Link 2.0",
   "kind": "cxl",
   "version": "2.0 (32 GT/s)",
-  "bandwidth_gbps": 31.5,
-  "bandwidth_basis": "x16, PER DIRECTION, full duplex. CXL 2.0 runs on the PCIe 5.0 physical layer (32 GT/s with 128b/130b coding): 3.938 GB/s per lane per direction, 63.015 GB/s BIDIRECTIONAL AGGREGATE at x16, so the recorded per-direction value is 31.5 GB/s. The consortium's own 4.0 page confirms 2.0 is the 32 GT/s base of the family and that 4.0 'doubles the bandwidth from 64GTs to 128GTs'.",
+  "bandwidth_gbps": 63.0,
+  "bandwidth_basis": "CORRECTED IN AUDIT 2026-10-03: this record had HALVED A PER-DIRECTION FIGURE, storing the bidirectional aggregate as the per-direction value and thereby understating CXL by 2x. PCI-SIG quotes PCIe-family bandwidth PER LANE PER DIRECTION - its own FAQ states 32 GT/s is '32.0 Gigabits/second/Lane/DIRECTION' and that x32 at 32.0 GT/s gives '128.0 Gigabytes/second in each direction SIMULTANEOUSLY' (net2-pcisig-pcie5-faq). CXL shares the PCIe physical layer and the same convention. CXL 2.0 runs on the PCIe 5.0 physical layer: 32 GT/s NRZ with 128b/130b coding gives 3.938 GB/s per lane per direction, x16 = 63.01 GB/s PER DIRECTION, bidirectional aggregate 126.03 GB/s. The recorded value now equals pcie-gen5 exactly, which is the correct relationship because they are the same physical layer at the same signalling rate; the old value wrongly placed CXL 2.0 between PCIe generations 4 and 5. This is the same halving error that hit pcie-gen4 and pcie-gen5 in earlier passes, and it is the mirror image of the false claim in pcie-gen6's old basis text that CXL 'overstated PCIe 6.0 by 2x' - that claim was itself wrong.",
   "link_count": 16,
   "topology": "Point-to-point device attachment over PCIe PHY, extended with switching and memory pooling so a single host can reach pooled memory devices across a CXL domain.",
   "scale_up": false,
   "scale_out": false,
   "switching": "CXL 2.0 is where switching and memory pooling enter the family: multiple hosts can share a switched pool of memory devices, coherently, unlike DDR.",
-  "notes": "Inference consequence: CXL is a memory-capacity and coherency tier, not a tensor-parallel tier. At 31.5 GB/s per direction it is roughly 7x below PCIe 5.0 host attach per lane set on any realistic comparison of use, and 14x below NVLink 4, so KV-cache spilling to CXL memory saves HBM capacity but costs latency on every attention read. CXL 2.0 is sufficient for that only when the spill is streaming-batched; per-token sequential KV reads over CXL latency will show up directly in inter-token latency. The consortium page confirms full backward compatibility down to CXL 1.0/1.1.",
+  "notes": "Inference consequence: CXL is a memory-capacity and coherency tier, not a tensor-parallel tier. At 63 GB/s per direction x16 it is roughly 7x below NVLink 4 per direction per GPU, so KV-cache spilling to CXL memory saves HBM capacity but costs latency on every attention read. CXL 2.0 is sufficient for that only when the spill is streaming-batched; per-token sequential KV reads over CXL latency will show up directly in inter-token latency. The consortium page (link-cxl-about) confirms full backward compatibility down to CXL 1.0/1.1 and that switching and memory pooling enter the family at this generation, allowing multiple hosts to share a switched pool of memory devices coherently, unlike DDR. AUDIT NOTE: the previous stored value of 31.5 made CXL 2.0 look slower than PCIe 4.0 by 2x, which is impossible for a protocol riding the PCIe 5.0 physical layer - that internal inconsistency is what exposed the halving.",
   "status": "verified",
-  "confidence": 0.8,
+  "confidence": 0.85,
   "updated": "2026-10-03",
   "sources": [
+    "net2-pcisig-pcie5-faq",
     "link-cxl-about",
     "link-wikipedia-cxl"
   ]

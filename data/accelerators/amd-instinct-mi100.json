@@ -28,14 +28,16 @@
       "tflops": 23.1,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-rocm-mi100-microarch"
+      "source_id": "amd-rocm-mi100-microarch",
+      "notes": "VECTOR FP32 path (128 FLOPS/clock/CU per ROCm's MI100 architecture reference = 23.1 TFLOPS). AMD's product page prints the identical number for both its vector and matrix rows; the matrix figure is disputed - see the other fp32 row."
     },
     {
       "precision": "fp32",
       "tflops": 46.1,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-rocm-mi100-microarch"
+      "source_id": "amd-rocm-mi100-microarch",
+      "notes": "MATRIX FP32 path (256 FLOPS/clock/CU per ROCm's MI100 architecture reference, source amd-rocm-mi100-microarch). This is 2x the vector path. Note AMD's OWN product page disagrees: it prints 'Peak Single Precision Matrix (FP32) 23.1 TFLOPs', the same value as its vector row, and omits the vector/matrix split the architecture reference documents. Both readings are kept - see the record notes. This is an AMD-internal inconsistency, not a transcription error on our side."
     },
     {
       "precision": "fp16",
@@ -49,21 +51,24 @@
       "tflops": 92.3,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-rocm-mi100-microarch"
+      "source_id": "amd-rocm-mi100-microarch",
+      "notes": "ROCm MI100 architecture reference: 'Matrix BF16 512 FLOPS/CLOCK/CU, 92.3 Peak TFLOPS' - exactly half the Matrix FP16 figure (184.6). AMD's product page independently prints 'Peak bfloat16 92.3 TFLOPs'. So on MI100 BF16 runs at HALF FP16 rate, whereas on CDNA2 (MI210/MI250) AMD's page prints BF16 == FP16 == 181/362. This is a real generational difference, not a labelling artifact."
     },
     {
       "precision": "int8",
       "tflops": 92.3,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi100-product-page"
+      "source_id": "amd-mi100-product-page",
+      "notes": "AMD MI100 product page: 'Peak INT8 Performance 92.3 TOPs'. AMD publishes NO 'with Structured Sparsity' variant for INT8 on this part, so under AMD's own labelling convention this row is DENSE. Flagged dense:true on that basis, with the caveat that it is exactly half the FP16 Matrix figure (184.6) - on CDNA1 there is no 2:4 structured-sparsity path, so the INT8:FP16 1:2 ratio is an architectural property rather than a sparsity artifact."
     },
     {
       "precision": "int4",
       "tflops": 92.3,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi100-product-page"
+      "source_id": "amd-mi100-product-page",
+      "notes": "AMD MI100 product page: 'Peak INT4 Performance 92.3 TOPs' - the same figure as INT8. DENSE: AMD prints no structured-sparsity variant for INT4 on this part. Note INT4 == INT8 == BF16 == 92.3 on this part, i.e. no 4-bit throughput advantage, which is the opposite of every later AMD part."
     }
   ],
   "tdp_w": 300,
@@ -73,5 +78,5 @@
   ],
   "unified_memory": false,
   "consumer": false,
-  "notes": "First CDNA part, first Instinct card without the 'Radeon' brand name (AMD dropped it at MI100), and the first with a genuine Matrix Core. TSMC 7nm, 120 CUs / 7,680 SPs, 1502 MHz peak engine clock.\n\nTWO PRECISION ASYMMETRIES THAT ARE EASY TO GET WRONG:\n\n1. FP32: vector and matrix are DIFFERENT on CDNA1 - 23.1 TFLOPS vector, 46.1 TFLOPS matrix. AMD's product page only shows 'Peak Single Precision (FP32) 23.1' and 'Peak Single Precision Matrix (FP32) 23.1' - the page lists the SAME number twice, but ROCm's architecture reference table says Vector FP32 = 128 FLOPS/clock/CU (23.1 TFLOPS) and Matrix FP32 = 256 FLOPS/clock/CU (46.1 TFLOPS). The product page's matrix figure appears to be an error, or at minimum does not reflect the architecture reference. Recorded as contested within the notes; both numbers present, sourced separately.\n\n2. BF16 is HALF of FP16 on CDNA1 - 92.3 vs 184.6 TFLOPS, because Matrix BF16 is 512 FLOPS/clock/CU against Matrix FP16's 1024 (ROCm microarch table). This reversed on CDNA2 and later: from MI250X onward BF16 == FP16. So a MI100 with a BF16 path is half speed versus the same die's FP16 path, and that gap does not exist on any later Instinct part.\n\nFP64: 11.5 TFLOPS vector per AMD's product page, and ROCm's reference derives it explicitly as '4 SIMD units x 16 elements per instruction x 120 CU x 1.5 GHz'. That is the only FP64 number; there is no FP64 matrix path on CDNA1 at all (contrast MI250X's 2x matrix FP64). Not in the flops list because the schema enum has no fp64.\n\nINT8 and INT4 are both 92.3 TOPs - no 4-bit advantage. No TF32, no FP8, no structured sparsity.\n\nMemory: 32 GB HBM2 on 4096 bits, 1228 GB/s - the bandwidth figure is the tightest number in this repo because AMD publishes the derivation. For a memory-bound decode at batch 1, 1.23 TB/s on 32 GB is a very different operating point from a 5-8 TB/s HBM3 part: small models fit, but the KV cache is capped at 32 GB.\n\n300W TDP, passively cooled, PCIe 4.0 x16 (also PCIe 3.0 x16), 3 Infinity Fabric links at 92 GB/s. Four-GPU 'hive' topologies via an Infinity Fabric bridge card in adjacent slots - the MI100-era scale-up story was PCIe-adjacent pairs, not the all-to-all mesh of later parts. ROCm LLVM target gfx908."
+  "notes": "AUDIT 2026-10-03 (AMD's dense/sparse convention established from AMD's own pages, then every MI100 row re-checked; no value changed): AMD's labelling convention is unambiguous and was confirmed across six Instinct pages this pass - a row reading 'Peak X Performance' is DENSE, and only a row that explicitly reads 'Peak X Performance with Structured Sparsity' is SPARSE, carrying exactly 2x the dense value (source acc2-amd-ml300-convention). MI100's page prints NO structured-sparsity variant for ANY precision, so every number on it is dense and every dense flag on this record is correct. What the audit DID find is that the record's two fp32 rows (23.1 and 46.1) were indistinguishable to a reader, and they are genuinely two different hardware paths - vector FP32 and matrix FP32 - which AMD's own product page fails to distinguish (it prints 23.1 for both). Both rows are now annotated. This is a genuine AMD-internal inconsistency and is preserved as such rather than resolved: ROCm's architecture reference (amd-rocm-mi100-microarch) says Vector FP32 = 128 FLOPS/clock/CU = 23.1 TFLOPS and Matrix FP32 = 256 = 46.1; AMD's product page says the matrix path is also 23.1. First CDNA part, first Instinct card without the 'Radeon' brand name (AMD dropped it at MI100), and the first with a genuine Matrix Core. TSMC 7nm, 120 CUs / 7,680 SPs, 1502 MHz peak engine clock.\n\nTWO PRECISION ASYMMETRIES THAT ARE EASY TO GET WRONG:\n\n1. FP32: vector and matrix are DIFFERENT on CDNA1 - 23.1 TFLOPS vector, 46.1 TFLOPS matrix. AMD's product page only shows 'Peak Single Precision (FP32) 23.1' and 'Peak Single Precision Matrix (FP32) 23.1' - the page lists the SAME number twice, but ROCm's architecture reference table says Vector FP32 = 128 FLOPS/clock/CU (23.1 TFLOPS) and Matrix FP32 = 256 FLOPS/clock/CU (46.1 TFLOPS). The product page's matrix figure appears to be an error, or at minimum does not reflect the architecture reference. Recorded as contested within the notes; both numbers present, sourced separately.\n\n2. BF16 is HALF of FP16 on CDNA1 - 92.3 vs 184.6 TFLOPS, because Matrix BF16 is 512 FLOPS/clock/CU against Matrix FP16's 1024 (ROCm microarch table). This reversed on CDNA2 and later: from MI250X onward BF16 == FP16. So a MI100 with a BF16 path is half speed versus the same die's FP16 path, and that gap does not exist on any later Instinct part.\n\nFP64: 11.5 TFLOPS vector per AMD's product page, and ROCm's reference derives it explicitly as '4 SIMD units x 16 elements per instruction x 120 CU x 1.5 GHz'. That is the only FP64 number; there is no FP64 matrix path on CDNA1 at all (contrast MI250X's 2x matrix FP64). Not in the flops list because the schema enum has no fp64.\n\nINT8 and INT4 are both 92.3 TOPs - no 4-bit advantage. No TF32, no FP8, no structured sparsity.\n\nMemory: 32 GB HBM2 on 4096 bits, 1228 GB/s - the bandwidth figure is the tightest number in this repo because AMD publishes the derivation. For a memory-bound decode at batch 1, 1.23 TB/s on 32 GB is a very different operating point from a 5-8 TB/s HBM3 part: small models fit, but the KV cache is capped at 32 GB.\n\n300W TDP, passively cooled, PCIe 4.0 x16 (also PCIe 3.0 x16), 3 Infinity Fabric links at 92 GB/s. Four-GPU 'hive' topologies via an Infinity Fabric bridge card in adjacent slots - the MI100-era scale-up story was PCIe-adjacent pairs, not the all-to-all mesh of later parts. ROCm LLVM target gfx908."
 }

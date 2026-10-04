@@ -1,0 +1,30 @@
+{
+  "id": "mgpu-symm-mem-window-registration-deadlocks-without-timeout",
+  "type": "gotcha",
+  "name": "With symmetric memory enabled, all TP schedulers can deadlock permanently and silently inside ncclCommWindowRegister, while /health still returns 200 and GPUs sit at 0%",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-sglang-36943-symm-mem-deadlock"
+  ],
+  "class": "framework",
+  "affects": [
+    "sglang",
+    "nvidia-h200-sxm",
+    "nvidia-b200"
+  ],
+  "concepts": [
+    "symmetric-memory",
+    "nccl",
+    "uds",
+    "deadlock",
+    "health-check",
+    "watchdog"
+  ],
+  "symptom": "TL;DR from the reporter: with --enable-symm-mem on a multi-rank TP engine, every TP scheduler process deadlocks permanently and silently inside ncclCommWindowRegister. The trigger is routine - whenever the symmetric-memory mempool grows by a new segment at runtime, all ranks enter NCCL's symmetric window registration together and the fd-exchange rendezvous inside NCCL 2.29.7 can lose its Unix-domain-socket message. Every rank blocks in a timeout-less recvmsg while every NCCL UDS proxy thread sits idle in poll(). The operator-visible fingerprint: the scheduler stops between one batch log line and the next with no error and no traceback; /health stays 200 throughout; /get_server_info hangs; load balancers keep routing to a dead replica; all TP ranks freeze within the same second; GPU utilization is 0% and power at idle for the whole hang. In production this produced 15 watchdog kills across 10 engines in two days. The native stack (gdb, NCCL 2.29.7 with symbols) is recvmsg -> ncclIpcSocketRecvMsg -> ncclProxyCallBlockingUDS (type=9, respFd wanted) -> ncclProxyClientGetFdBlocking -> symMemoryImportAndMapSegmentHandle -> ... -> ncclCommWindowRegister.",
+  "root_cause": "Registration is driven by rank-local allocator behavior but performed as a collective, from the hot forward path, with no timeout and no logging - which is the failure mode the code itself worries about (pynccl_allocator.py _register_segments_for_comm / nccl_allocator_register_segments_with_comm). When one rank's message is lost, the proxy-side UDS threads have nothing to poll for and simply idle, so the diagnostic fingerprint is 'nothing happening anywhere' rather than 'an error'. A secondary reporting trap the reporter documents: the watchdog dump's leaked_full_pages / leaked_mamba_pages sets look alarming but are a red herring, because dump_info applies the idle-only pool invariant to a busy scheduler and prints the in-flight batch's own pages as leaked - this misdirected their investigation for a long time.",
+  "workaround": "Do not enable symmetric memory on multi-rank TP unless you have a watchdog and understand its timeout semantics. If you do, treat /health as meaningless for liveness in that configuration and alert on forward_ct / batch-log progress instead, since the health endpoint with health-endpoint generation disabled never touches the scheduler. Note the red herring above before chasing a KV-cache leak diagnosis from a watchdog dump. Restart fully recovers; there is no partial recovery.",
+  "severity": "major",
+  "notes": "Shares the lost-UDS-message mechanism with mgpu-nccl-cumem-uds-fd-exchange-hangs-at-init (fd exchange over UDS) but differs in phase and signature: that one is intermittent, init-time, PCIe-without-NVLink, and shows a 100% SM spin-wait at ~150 W; this one is steady-state during the forward pass, shows 0% GPU and idle power, and never recovers. Combined with the no-timeout pattern in mgpu-nccl-init-thread-error-deadlocks-others."
+}

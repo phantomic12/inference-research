@@ -1,0 +1,29 @@
+{
+  "id": "h200-8x-mlperf-v4-1-maxq-mixtral-8x7b-offline-energy-per-token",
+  "type": "benchmark",
+  "name": "8xH200 SXM-141GB (MaxQ), MLPerf v4.1 mixtral-8x7b Offline: 48987.9 output tok/s at 5854.3 W mean = 0.1195 J/output token",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-mlperf-v4-1-h200-maxq-mixtral-offline-spl",
+    "pwr-mlperf-v4-1-h200-maxq-mixtral-offline-summary",
+    "pwr-mlperf-v4-1-h200-maxq-system-json"
+  ],
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-h200-sxm"
+  ],
+  "interconnect_ids": [
+    "nvlink-4"
+  ],
+  "model": "Mixtral 8x7B (MLPerf 'mixtral-8x7b')",
+  "format_id": null,
+  "metric": "tps_aggregate",
+  "value": 48987.9,
+  "unit": "output tokens/s (MLPerf 'Tokens per second', aggregate) AT 5854.3 W MEAN WHOLE-NODE DRAW - i.e. 0.1195 J/output token; watts in the unit because the metric enum has no energy metric",
+  "methodology": "PRECISION: NOT STATED BY THE SOURCE AND DELIBERATELY NOT GUESSED. The paired measurements.json for this benchmark gives weight_data_types 'fp16', starting_weights_filename 'Original Hugginface model weights', weight_transformations 'quantization, affine fusion', input_data_types 'int32'. That says the weights began fp16 and were quantized, but it never names the served numeric format - not FP8, not INT8. format_id is therefore null rather than a guess. AGGREGATE. MLPerf Inference v4.1 Offline scenario, SAME closed-division system (H200-SXM-141GBx8_TRT_MaxQ), SAME instrument, SAME locked 1000 MHz clock, SAME node as the two Llama 2 70B records - only the model changes. Provenance: closed/NVIDIA/results/H200-SXM-141GBx8_TRT_MaxQ/mixtral-8x7b/Offline/performance/run_1/. LoadGen: 'Samples per second: 335.674', 'Tokens per second: 48987.9', 'Result is : VALID', min_duration 2400000 ms. POWER: spl.txt is 2980 samples; discarding the first 5% (149 samples, ramp) leaves 2831 samples with mean 5854.30 W (min 2377.9, max 6300.3). DERIVATION: J/token = 5854.30 / 48987.9 = 0.11951. This record exists because it is the controlled comparison the repo was missing: identical hardware and identical power envelope across two models, so the energy difference is attributable to the MODEL and not to the platform.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "MoE IS NEARLY TWICE AS ENERGY-FASTER PER TOKEN THAN THE DENSE 70B ON THIS EXACT NODE: 0.1195 J/token vs 0.2299 J/token for Llama 2 70B - a 48% reduction - and it draws essentially the SAME power (5854.3 W vs 5806.9 W, under 1% apart). THE HONEST READING, because 'MoE is cheaper' is the conclusion a reader will want and the data does not fully support it. What this shows is that PER TOKEN, Mixtral-8x7B extracts roughly twice the tokens from a watt-second than a dense 70B does, because only ~12.9B of its 46.7B parameters are active per token. What it does NOT show is that MoE is cheaper per USEFUL token, per byte of weight shipped, or per model of comparable quality: Mixtral-8x7B and Llama 2 70B are different models at different capability levels, and all 46.7B of Mixtral's weights still have to sit in HBM. Treat this as tokens-per-joule evidence, which is strong, and not as a model-selection verdict, which it is not. A SECOND CONFOUND TO STATE: Mixtral-8x7b and llama2-70b-99.9 have DIFFERENT input/output sequence lengths fixed by their MLPerf reference implementations, and MoE routing cost scales differently with sequence length than dense GEMM cost does. The J/token comparison holds the hardware constant but not the workload shape, so it is not a perfectly matched A/B. REPRODUCIBLE: FALSE - same private-PTDaemon reason as the sibling records."
+}

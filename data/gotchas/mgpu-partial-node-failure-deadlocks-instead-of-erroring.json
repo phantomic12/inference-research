@@ -1,0 +1,27 @@
+{
+  "id": "mgpu-partial-node-failure-deadlocks-instead-of-erroring",
+  "type": "gotcha",
+  "name": "NCCL's own mismatch guards convert a detectable multi-node configuration error into an unbounded hang, because suppressing them is the documented escape hatch",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-nccl-2428-net-mismatch-hang"
+  ],
+  "class": "driver",
+  "affects": [
+    "nvidia-h20"
+  ],
+  "concepts": [
+    "nccl",
+    "net-mismatch",
+    "hang",
+    "spin-wait",
+    "multi-node"
+  ],
+  "symptom": "2 nodes x 8x H20 over RoCE/eRDMA, NCCL 2.30.7. Node A exposes erdma_0 and erdma_1; node B has erdma_1 present in the container but not openable (ibv_open_device fails - the device plugin admits only one uverbs device). With NCCL_IGNORE_NET_MISMATCH=1 set to silence the mismatch warning: rank 0 builds channels across both HCAs ('Channel 00 -> NET/IB/0/GDRDMA', 'Channel 01 -> NET/IB/1', ...) while rank 1 builds every channel on NET/IB/0 only, logging 'NCCL WARN NET/IB : Unable to open device erdma_1'. Initialization completes, and the job then spins forever. Measured signature: GPU SM utilization 100% but memory throughput 0%, power ~118 W against a ~400 W cap, die 34-37 C; perf on the workers shows libnccl.so.2 recvProxyProgress, _raw_spin_lock, sched_yield, clock_gettime - busy-wait polling, not compute.",
+  "root_cause": "The guard that would have caught this configuration exists and can be turned off with NCCL_IGNORE_NET_MISMATCH, which is a legitimate escape hatch for asymmetric-but-usable topologies. When it is set, the channels a rank creates on an HCA its peer cannot open have no counterpart, so the collective waits on a peer that never arrives. The failure is silent by construction: NCCL has already reported init COMPLETE, so nothing downstream knows to check. There is no fail-fast path for this case - the reporter's request is narrower than that, asking only that the mismatch be logged prominently when the guard is suppressed.",
+  "workaround": "Do not set NCCL_IGNORE_NET_MISMATCH to silence a mismatch warning; fix the HCA exposure instead. The applied mitigation in the report was NCCL_IB_HCA=erdma_0 to pin both ranks to a single usable HCA, which resolved it. Diagnose by power, not by utilization: 100% SM with memory throughput at 0% and power a third of cap is an idle-wait spin, not work. Make uverbs device admission identical on every node in the group - a Kubernetes device plugin that admits fewer HCAs on one node than another is the underlying configuration error here.",
+  "severity": "blocker",
+  "notes": "Same class as mgpu-nccl-init-thread-error-deadlocks-others: NCCL collectives are launched on threads whose wait paths have no timeout, so a configuration error that should surface as a diagnostic instead surfaces as a permanent hang. Distinct from mgpu-nccl-cumem-uds-fd-exchange-hangs-at-init, which is a message-loss race during init on PCIe rather than a surviving topology mismatch."
+}

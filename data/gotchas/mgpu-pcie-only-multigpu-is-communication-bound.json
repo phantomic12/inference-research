@@ -1,0 +1,28 @@
+{
+  "id": "mgpu-pcie-only-multigpu-is-communication-bound",
+  "type": "gotcha",
+  "name": "A PCIe-only multi-GPU box serving a large MoE saturates interconnect rather than compute, so adding GPUs or SMs does not scale and utilization can look healthy while throughput is capped",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-sglang-40877-sm120-pcie-field-report"
+  ],
+  "class": "measurement",
+  "affects": [
+    "sglang",
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "concepts": [
+    "pcie",
+    "communication-bound",
+    "scaling",
+    "moe",
+    "prefill"
+  ],
+  "symptom": "Measured on 8x RTX PRO 6000 Blackwell Max-Q (SM120, 96 GB, PCIe-only, no NVLink) serving DeepSeek-V4.1-Flash: 128K cold prefill 6,853 tok/s (re-run 6,765, -1.3%), 32K prompt ~7,196 tok/s, at ~87% GPU utilization drawing 220 W of a 600 W cap - i.e. the box is communication-bound and ~7K tok/s is the ceiling for this board. GPU utilization reads high while power is a third of cap, which is the diagnostic signature: the SMs are resident, waiting on collectives. Decode was 93.9 tok/s prose and 134.1 tok/s structured. The only large multiplier found was the radix/prefix cache: a 112K-token cache-hit prefix prefilled in 0.34 s, ~325K tok/s (~39x).",
+  "root_cause": "Tensor parallelism over PCIe moves activation tensors per layer over a link orders of magnitude narrower than HBM/NVLink, so the per-layer all-reduce becomes the limiter and extra GPUs add sharding plus collectives rather than throughput. The 220W-of-600W at 87% utilization is the tell: a compute-bound workload would draw proportionally more power. With no NVLink there is no multi-rank custom all-reduce above TP=2 either (see mgpu-custom-allreduce-needs-nvlink-above-tp2), so both the interconnect and the collective implementation are on the slow path simultaneously.",
+  "workaround": "Measure at the wall (power) as well as in nvidia-smi - utilization alone will read as if the GPUs are saturated. On PCIe-only nodes prefer a topology that keeps TP inside a coherent set of peers and treat prefill throughput as capped; invest in prefix-cache hit rate rather than more GPUs. If throughput must scale, the interconnect has to change (NVLink/NVSwitch or MNNVL for multi-node), not the rank count.",
+  "severity": "major",
+  "notes": "The same field report lists concrete config traps worth knowing: SGLang takes ep_size (--enable-expert-parallel is a vLLM spelling and is rejected); docker run must pass TP_SIZE/DP_SIZE/EP_SIZE explicitly or the container silently serves TP8 defaults and the experiment records false data; ep_size must be <= tp_size or the MoE rank computation divides by zero; and --enable-dp-attention alone silently yields dp_size 1, which looks fine and is not. Distinct from mgpu-custom-allreduce-needs-nvlink-above-tp2, which is about path selection rather than the resulting ceiling."
+}

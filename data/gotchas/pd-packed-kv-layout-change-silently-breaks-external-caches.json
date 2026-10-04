@@ -1,0 +1,22 @@
+{
+  "id": "pd-packed-kv-layout-change-silently-breaks-external-caches",
+  "type": "gotcha",
+  "name": "An engine-side KV layout change silently invalidates every external KV cache written by the previous layout",
+  "class": "framework",
+  "affects": [
+    "lmcache",
+    "vllm"
+  ],
+  "symptom": "After upgrading vLLM to 0.26.0 with LMCache 0.5.2, a request served from the LMCache CPU tier produces different output than the same request computed from scratch, with no exception and no warning - generations are simply wrong. The in-process connector silently returns wrong KV data for models using the fused/packed layout where K and V share the trailing per-head dimension. Enabling the GPU connector V3 is not a workaround; it fails differently with a hard tensor-size mismatch on the first store. The multiprocess connector has the same class of bug on hybrid models, where the packed layout bypasses the required KV-group edit. A third variant reports cross-request KV contamination under disk-tier pressure.",
+  "root_cause": "vLLM PR #44455 changed the KV-cache layout from separate K/V tensors [num_blocks, 2, block_size, num_heads, head_size] to a packed [num_blocks, num_heads, block_size, 2*head_size]. LMCache's connectors encode the layout assumption structurally rather than as a validated field, so a layout change upstream silently invalidates every block written under the old layout. This is a missing-version/validation problem, not a kernel bug: nothing in the cache key records which layout produced the bytes.",
+  "workaround": "Treat any engine upgrade that touches KV cache layout or dtype as invalidating every external KV tier: flush the tier on upgrade. Require KV layout (and dtype, block size, TP size) to be part of the cache namespace and validated on read, not assumed on write. Until then, pin the engine version against the cache layer and validate with a cold-vs-warm output-equivalence test after every upgrade.",
+  "severity": "blocker",
+  "notes": "Generalised across three LMCache issues (#4463 in-process, #4247/#4253 MP on hybrid models, #4385 LocalDisk contamination) and surfaced independently through Dynamo #14416, so the class is well attested rather than a single report. All open at 2026-10-03. The general form: a KV cache is a serialised artefact whose validity depends on more than its token content. Every field that changes the produced bytes - layout, dtype, block size, parallel degrees, attention backend, adapter, numerical mode - belongs in the key, and any field you add later must invalidate the old entries.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-gh-lmcache-4463-packed-kv-silent-corruption",
+    "pd-gh-vllm-52617-lmcache-pd-hit-diverges"
+  ]
+}

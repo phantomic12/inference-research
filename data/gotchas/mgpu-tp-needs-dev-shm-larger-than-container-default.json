@@ -1,0 +1,31 @@
+{
+  "id": "mgpu-tp-needs-dev-shm-larger-than-container-default",
+  "type": "gotcha",
+  "name": "Tensor-parallel deployment fails NCCL init because the container's default 64 MiB /dev/shm is orders of magnitude too small",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-nccl-1214-azure-t4-shm",
+    "mgpu-vllm-51241-shm-calculator"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "sglang",
+    "tensorrt-llm"
+  ],
+  "concepts": [
+    "nccl",
+    "ipc",
+    "docker",
+    "kubernetes",
+    "shared-memory",
+    "tensor-parallel"
+  ],
+  "symptom": "TP>1 across GPUs on the same node fails at NCCL initialization or shortly after, with shm-ENOSPC signatures. The clearest verbatim record is 4x Tesla T4 under AzureML MpiDistribution, where the failure set is: 'OSError: [Errno 28] No space left on device', 'RuntimeError: cuDNN error: CUDNN_STATUS_ALLOC_FAILED', 'torch.cuda.OutOfMemoryError: CUDA out of memory.', and 'DataLoader worker (pid NNNN) is killed by signal: Bus error. It is possible that dataloader's workers are out of shared memory.' GPU memory is not actually full - the host shm segment is.",
+  "root_cause": "When TP splits a model across GPUs, the processes on a node talk over POSIX shared memory, not VRAM. Four components scale with TP: NCCL ring buffers (dominant, scaling with weight bytes per parameter and the number of GPU pairs), PyTorch tensor descriptors (per-layer metadata between workers), KV-cache block tables (PagedAttention index entries per request), and MMAP batch buffers (scheduler-to-worker token exchange). Docker and Kubernetes give a container ~64 MiB of /dev/shm by default, which is far below what any real TP deployment needs. The CUDA OOM in the signature is a red herring - it is the *host* allocation failing.",
+  "workaround": "Size /dev/shm explicitly and generously. Docker: --shm-size=64g (and often --ipc=host alongside it). Kubernetes: mount an emptyDir with medium: Memory at /dev/shm, which is the standard fix and is itself a trap - see mgpu-devshm-leak-wedges-pod-permanently. vLLM now ships examples/deployment/shm_size_calculator/shm_size_calculator.py, which sizes the four components above and applies a 30% safety margin; TP=1 needs no /dev/shm configuration at all.",
+  "severity": "blocker",
+  "notes": "Order matters: the CUDNN_STATUS_ALLOC_FAILED and CUDA OOM errors in the Azure T4 report look like a VRAM problem and send people down the --gpu-memory-utilization path, which is the wrong lever entirely. This is a host-RAM/shm problem. Distinct from mgpu-devshm-leak-wedges-pod-permanently (that one is a leak across restarts, this one is undersizing at first boot)."
+}

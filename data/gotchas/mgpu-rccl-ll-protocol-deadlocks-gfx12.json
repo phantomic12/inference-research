@@ -1,0 +1,29 @@
+{
+  "id": "mgpu-rccl-ll-protocol-deadlocks-gfx12",
+  "type": "gotcha",
+  "name": "On gfx12 (RDNA4) consumer silicon RCCL selects the LL protocol for small collectives even though the LL primitives were never given the gfx12 memory-ordering fixes, deadlocking multi-GPU inference",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-rccl-2187-gfx12-ll-deadlock",
+    "mgpu-vllm-40980-rocm-tp2-deadlock"
+  ],
+  "class": "kernel",
+  "affects": [
+    "vllm"
+  ],
+  "concepts": [
+    "rccl",
+    "rdna4",
+    "gfx1201",
+    "protocol",
+    "deadlock",
+    "numa"
+  ],
+  "symptom": "vLLM TP=2 inference on dual Radeon R9700 (gfx1201) deadlocks outright. In vLLM terms (issue 40980): 'Tensor Parallel = 2 across two AMD Radeon R9700 (gfx1201) GPUs results in a complete deadlock. The server starts, routes are registered, but both GPUs immediately sit at 100% utilization with no active requests. Inference requests hang indefinitely and return no tokens. TP=1 works flawlessly on the same hardware and software stack.' CUDA graph capture hangs at 0%; with --enforce-eager the server starts but requests return empty/timeout. RCCL's own PR states the mechanism: 'rcclUpdateCollectiveProtocol() ... can select NCCL_PROTO_LL for messages under the size thresholds (~890KB for AllReduce, ~96KB for AllGather/ReduceScatter). src/device/prims_ll.h never received the gfx12 memory-ordering fixes that src/device/prims_simple.h got ... so selecting LL on gfx1201 deadlocks during multi-GPU collectives.'",
+  "root_cause": "Commit 9545ae04 ('Navi4 LL enablement and tuning') added rcclGetProtoForGfx12() and removed the blanket LL disable for gfx12 from the tuning table without adding the corresponding gfx12 device-side fixes to the LL primitives. The device-side acquire semantics that prims_simple.h received were never mirrored into prims_ll.h, so the LL path on gfx1201 deadlocks. P2P send/recv had already been patched to disable LL for gfx12 explicitly (src/enqueue.cc:1012); the collective path was the remaining gap. Note this is a small-message threshold: a 1M-element bf16 AllReduce (2 MiB) is under the ~890 KB threshold only at reduced sizes, so behaviour depends on message size and batch, which is why it reads as flaky.",
+  "workaround": "Set NCCL_PROTO=Simple at runtime, which the RCCL PR confirms is functionally equivalent to the upstream fix. The PR bakes the fix into the build so downstream users need not set the env var. Longer term LL should be re-enabled for gfx12 once prims_ll.h gets the same gfx12 atomic-ordering treatment. Until then treat RDNA4 multi-GPU collectives as unusable at TP>1 rather than as a tuning problem.",
+  "severity": "blocker",
+  "notes": "Note that vLLM's issue report on the same hardware was initially misread as a v0.14-to-v0.19 regression on the ROCm multi-GPU path - the reporter bisected back to v0.14.0 working with RCCL 2.27.3 while 2.27.7 failed, and cleared caches, HIP_VISIBLE_DEVICES and NCCL_P2P_DISABLE with no effect. The RCCL-side analysis supersedes that framing: it is a device-side protocol-selection bug, not a vLLM regression. Also note the reported reproduction used NCCL_P2P_DISABLE=1, which removes P2P from the picture entirely."
+}

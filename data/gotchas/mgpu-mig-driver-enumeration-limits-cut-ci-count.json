@@ -1,0 +1,30 @@
+{
+  "id": "mgpu-mig-driver-enumeration-limits-cut-ci-count",
+  "type": "gotcha",
+  "name": "CUDA enumerates at most one Compute Instance per GPU Instance, at most 64 MIG devices total, and needs ulimit -n raised - so a MIG layout reports fewer usable devices than the profile table implies",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-nvidia-mig-user-guide"
+  ],
+  "class": "config",
+  "affects": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "vllm"
+  ],
+  "concepts": [
+    "mig",
+    "cuda-visible-devices",
+    "device-enumeration",
+    "open-files"
+  ],
+  "symptom": "A MIG layout created to expose many instances does not present that many usable CUDA devices. Driver >= R570 enumerates a single Compute Instance per GPU Instance, and CUDA 'supports at most 64 MIG instances across all GPUs'. The guide's instruction is explicit: 'Increase the open files limit above the common default of 1024 using ulimit -n <limit>'. On drivers < 570 the restriction is tighter: a single CUDA process can only enumerate a single MIG device, and CUDA will not enumerate a non-MIG GPU at all if any compute instance is enumerated on any other GPU. Under driver < R470 there is no MIG UUID either: devices are addressed as MIG-<GPU-UUID>/<GPU instance ID>/<compute instance ID>.",
+  "root_cause": "CUDA's device enumeration contract was made deliberately narrower than the number of MIG instances a driver can create. On R570 it will enumerate one CI per GI, treating a CI and its parent GI as a single CUDA device, and will pick the first available if several are visible. Each MIG device also carries its own set of /proc/driver/nvidia-caps minors and /dev/nvidia-caps device nodes, which is why the file-descriptor ceiling binds first on a node with many small instances. The pre-R470 addressing format is not a UUID at all, which is the root of the parsing failures in mgpu-mig-uuid-cannot-be-parsed-by-vllms-device-resolution.",
+  "workaround": "Set ulimit -n explicitly (above 1024) on any MIG node. On drivers < 570, address MIG devices by the full pre-R470 path form rather than a UUID. Verify what CUDA actually enumerates rather than what nvidia-smi lists - nvidia-smi -L shows every created instance, which is a strictly larger set than what one process can bind. On driver >= R570, expect at most one CI per GPU instance and cap any planned dense-CI layout at 64 devices per host.",
+  "severity": "major",
+  "notes": "The < 570 rule 'CUDA will not enumerate non-MIG GPU if any compute instance is enumerated on any other GPU' is a nasty mixed-mode trap: enabling MIG on one card in a node can make the other non-MIG cards vanish for a process that sets CUDA_VISIBLE_DEVICES broadly. Pairs with mgpu-mig-nvml-reports-parent-gpu-memory for the parallel bug where the enumerated device is right but its reported capacity is the parent GPU's."
+}

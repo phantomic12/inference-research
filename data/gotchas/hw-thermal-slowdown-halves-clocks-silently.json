@@ -1,0 +1,34 @@
+{
+  "id": "hw-thermal-slowdown-halves-clocks-silently",
+  "type": "gotcha",
+  "name": "HW Thermal Slowdown cuts core clocks by a factor of 2 or more, and nvidia-smi reports it as a microsecond counter rather than a visible failure",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-nvidia-smi-docs",
+    "pwr-mlperf-v4-1-h200-maxq-system-json"
+  ],
+  "class": "hardware",
+  "affects": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300"
+  ],
+  "concepts": [
+    "thermal-throttling",
+    "clocks",
+    "nvidia-smi",
+    "sustained-load",
+    "hopper",
+    "blackwell",
+    "air-cooling",
+    "benchmark-methodology"
+  ],
+  "symptom": "Sustained-token-rate collapses mid-run with no error, no crash and no assertion. A batch that measured X tokens/s over a short run measures roughly X/2 over a long one. The harness reports the run as VALID, the output stays correct, and nothing anywhere in the application's logs mentions temperature - unless someone ran nvidia-smi and read the 'Clocks Event Reasons' counters, which report the time SPENT throttled in microseconds. Because AI serving workloads are sustained by construction - unlike a training step, which is bounded and gets a cooldown - this is not a benchmark edge case, it is the normal operating condition of a node that is oversubscribed.",
+  "root_cause": "Per NVIDIA's System Management Interface documentation, verbatim: 'HW Thermal Slowdowns are reducing the core clocks by a factor of 2 or more due to temperature being too high.' The related umbrella condition is 'HW Slowdown is engaged, reducing the core clocks by a factor of 2 or more. It is active if either HW Thermal Slowdown or HW Power Brake are active.' So the degradation is a documented factor of TWO, not a few percent - a mechanism that can plausibly halve a reported throughput figure without changing a single line of code. The relevant system is AIR-COOLED: the audited MLPerf H200 submission system description records cooling 'Air-cooled' with 8x 700 W SXM devices on one node, so at this density the heatsink and the inlet air are the only thermal path, and ambient and rack airflow are part of the benchmark configuration whether anyone documents them or not.",
+  "workaround": "Read the clocks, not just the tokens. Query nvidia-smi's clocks event reasons before trusting any throughput number from a long run; the documentation states these are 'Counters, in microseconds, for the amount of time factors have been reducing the frequency of clocks', with a separate counter for HW Thermal Slowdown among SW Power Capping, Sync Boost Group, SW Thermal Slowdown and HW Power Braking. Treat a run with non-trivial HW Thermal Slowdown time as invalid and re-run it, rather than reporting the number. Log the counters into the same place as tokens/s so the two are read together permanently. When comparing across machines, fix the inlet temperature or state it; when comparing across time on one machine, watch for the counter climbing as the run goes on, which is the signature of a short run that measured a transient rather than a steady state. For any published efficiency figure, say whether the run was thermally steady - the joules/token numbers in this repo are 40-60 minute runs and that is part of why they are trustworthy.",
+  "severity": "major",
+  "notes": "THE 2x IS VENDOR-STATED, NOT VENDOR-MARKETING-EXAGGERATED - it is in the normative part of the nvidia-smi reference, which is the strongest form this claim can take. That also means 2x is a FLOOR on the damage, not a typical figure: real degradation depends on how far past the throttle point the die runs, and the doc's own phrasing ('a factor of 2 or more') does not bound it above. DO NOT CONFLATE THE THREE SLOWDOWN TIERS, which is the usual error: SW Thermal Slowdown is the 'capping algorithm ... reducing clocks below requested clocks because GPU temperature is higher than Max Operating Temp' (a graded response), while HW Thermal Slowdown is the discrete factor-of-2-or-more hardware intervention, and HW Power Brake is 'External Power Brake Assertion is triggered (e.g. by the system power supply)' - a POWER DELIVERY event that can look thermal-adjacent in a symptoms-only workflow but has its own counter and its own fix. WHAT I DID NOT MEASURE: I did not reproduce a thermal-throttled run myself, and the MLPerf traces in this repo do not let me quantify the effect - their clocks were deliberately LOCKED to 1000 MHz ('nvidia-smi -lgc 1000,1000', GPUCLK?=1000), and a clock lock interacts with the thermal power-management algorithm in ways the public logs do not describe. The 2x factor is cited from the vendor reference, not observed in this repo's own data, and is recorded at that confidence deliberately."
+}

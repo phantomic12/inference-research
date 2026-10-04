@@ -1,0 +1,103 @@
+{
+  "id": "amd-radeon-ai-pro-r9700",
+  "type": "accelerator",
+  "name": "AMD Radeon AI PRO R9700",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "acc-fill-amd-radeon-ai-pro-r9700-product-page",
+    "acc-fill-amd-rdna-architecture-page"
+  ],
+  "vendor": "amd",
+  "architecture": "rdna4 (Navi 48, gfx1201)",
+  "release_year": 2025,
+  "process_nm": 4,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 32,
+  "memory_type": "gddr6",
+  "memory_bus_bit": 256,
+  "memory_bandwidth_gbps": 640,
+  "memory_bandwidth_basis": "AMD product page, quoted verbatim: 'Dedicated Memory Size 32 GB', 'Dedicated Memory Type GDDR6', 'Memory Interface 256-bit', 'Peak Memory Bandwidth 640 GB/s', 'AMD Infinity Cache Technology 64 MB'. No 'Memory Speed' (per-pin) row is printed on this page, unlike the consumer RX 9070 XT page which states 'Up to 20 Gbps'. 640 GB/s at 256 bit implies 20 Gbps per pin, and the two parts share a bus width and a bandwidth, but AMD does not print the pin rate on THIS page, so it is not recorded as a field value and 640 GB/s stands on its own as AMD's stated peak.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 47.8,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-ai-pro-r9700-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 47.8,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-ai-pro-r9700-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 191,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-ai-pro-r9700-product-page"
+    },
+    {
+      "precision": "fp16",
+      "tflops": 383,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-ai-pro-r9700-product-page"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 383,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-ai-pro-r9700-product-page"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 766,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-ai-pro-r9700-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 383,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-ai-pro-r9700-product-page"
+    },
+    {
+      "precision": "int8",
+      "tflops": 766,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-ai-pro-r9700-product-page"
+    },
+    {
+      "precision": "int4",
+      "tflops": 766,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-ai-pro-r9700-product-page"
+    },
+    {
+      "precision": "int4",
+      "tflops": 1531,
+      "dense": false,
+      "vendor_claim": true,
+      "source_id": "acc-fill-amd-radeon-ai-pro-r9700-product-page"
+    }
+  ],
+  "tdp_w": 300,
+  "interconnect": [
+    "pcie-gen5"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "RDNA 4 workstation card, and the point of it is capacity plus ECC rather than speed. AMD's page states 'GPU Architecture AMD RDNA 4' directly. 64 CUs, 4096 stream processors, 64 ray accelerators, 128 AI accelerators, 2920 MHz boost / 2350 MHz game, 53.9 B transistors, 32 GB GDDR6 on a 256-bit bus at 640 GB/s, 64 MB Infinity Cache, PCIe 5.0 x16, 12V-2x6 power, 300 W TBP, active cooling, double slot, minimum 750 W PSU, TPP 3062. Same Navi 48 die family and same gfx1201 target as the consumer RX 9070 XT in this directory - see that record for the RDNA-vs-CDNA distinction, which applies identically here.\n\nECCCAPABILITY IS THE REAL DIFFERENTIATOR, and it is qualified: AMD prints 'Memory ECC Support Yes (Linux Only)'. ECC-protected 32 GB on a 256-bit bus is not something the consumer RX 9070 XT offers at all (AMD's consumer page has no ECC row), and it is the reason this part exists. Note the Linux-only restriction: on Windows this is unprotected memory, so the ECC benefit applies to ROCm/Linux deployments only, which is where LLM inference actually runs.\n\nSAME 640 GB/s AS THE CONSUMER 9070 XT, DESPITE DOUBLE THE VRAM - the central inference fact, and it is counter-intuitive enough to state plainly. A 32 GB card and a 16 GB card with identical bus width and identical peak bandwidth means the memory system serves twice the capacity at the same GB/s. For batch-1 LLM decode, which is bandwidth-bound and streaming the full weight set once per token, decode tok/s per user is therefore roughly IDENTICAL between the two parts for a model that fits in 16 GB - and half as fast for one that needs 17-32 GB, because there is no way around it. What the extra 16 GB buys is MODEL SIZE, not speed: fewer quantization compromises, longer context, and no CPU offload. That is the opposite trade from adding a second card, where capacity doubles AND aggregate bandwidth doubles.\n\nCOMPUTE IS SLIGHTLY LOWER THAN THE CONSUMER SIBLING, not higher: 191 vs 195 dense FP16 matrix TFLOPS, and 47.8 vs 48.7 FP32. The clocks are trimmed (2920 vs 2970 MHz boost, 2350 vs 2400 MHz game) to hold 300 W against the consumer card's 304 W in a workstation-validated, ECC-carrying, partner-branded package. 'PRO' again means qualified and certified, not faster - the same lesson as the Arc Pro B60 vs Arc B580 comparison in this directory.\n\nSPARSITY IS EXPLICIT AND LABELLED: paired dense/'with Structured Sparsity' rows for FP16 matrix (191 / 383), FP8 E5M2 and E4M3 (383 / 766), INT8 (383 / 766 TOPs) and INT4 (766 / 1531 TOPs). Dense rows are flagged dense:true, sparse rows dense:false.\n\nTWO QUALIFICATIONS FROM THE PAGE THAT MATTER FOR DEPLOYMENT: display support is 'Configuration varies by partner design. GPU supports up to 4x display out', so output count is board-dependent and not a property of the SKU; and this is a WORKSTATION part, so the relevant path is compute and the ROCm/XMX stack rather than display features.\n\nWHY THIS RECORD IS CITED: benchmarks/llamacpp-radeon-r9700-gfx1201-q1-0-decode-tok-s measures 61.66 tok/s batch-1 decode on Bonsai-27B at Q1_0 on this card under ROCm/TheRock 7.13, and the record is instructive because the measurement isolates an AMD-SPECIFIC SOFTWARE PENALTY rather than a hardware limit - HIP has no hardware __byte_perm, so Q1_0 unpacking lowered to a software routine called 20 times per 32-element chunk, making decode VALU-bound; one hardware v_perm_b32 per nibble doubled it. The lesson generalises: sub-2-bp quantization can be pathologically slow on AMD through software lowering, so a tok/s figure on RDNA4 is a statement about the ROCm build as much as about the silicon."
+}

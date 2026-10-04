@@ -1,0 +1,30 @@
+{
+  "id": "gb200-nvl72-rack-120kw-liquid-required",
+  "type": "supply",
+  "name": "NVIDIA GB200 NVL72 rack (72 Blackwell GPUs): ~120 kW per rack, liquid-cooled, requires facility liquid loop",
+  "kind": "oem-direct",
+  "vendor": "nvidia",
+  "accelerator_ids": [
+    "nvidia-gb200-nvl72",
+    "nvidia-b200"
+  ],
+  "region": "Global; sold through NVIDIA-Certified Systems and DGX GB rack deployments",
+  "channels": [
+    "direct-quote",
+    "contact-sales",
+    "integrator"
+  ],
+  "price_usd": null,
+  "price_basis": null,
+  "availability": "allocation-only",
+  "lead_time_weeks": null,
+  "export_controlled": null,
+  "notes": "THE POWER-DENSITY BLOCKER, AND THE ONE FACT THAT DETERMINES WHETHER A B200-CLASS PART CAN BE DEPLOYED AT ALL. Every figure here is vendor-published and comes from two independent NVIDIA documents that agree with each other. RACK POWER: the DGX GB Rack Scale Systems User Guide states verbatim 'The rack power consumption is approximately 120kW.' That is per rack, and the rack is 72 GPUs plus 36 Grace CPUs, 18x 1RU compute trays and 9x 1RU NVLink switch trays. 120 kW / 72 GPUs = ~1.67 kW per GPU of facility draw, against a published per-GPU Max TDP of 'Configurable up to 1,200 W' - the extra ~470 W per GPU is the NVLink switch trays, the busbar/PSU conversion losses, the 36 Grace CPUs, networking, storage and the cooling loop itself. A colo therefore cannot size a GB200 rack by adding up GPU TDPs; the rack-level figure is the number to plan against. POWER DELIVERY: the rack uses eight power shelves, each with six AIR-cooled 5.5 kW PSUs, providing N+N redundancy and 'the required input power of 33kW per power shelf'. So 8 x 33 kW = 264 kW of installed PSU capacity feeding ~120 kW of draw, i.e. redundancy alone is >2:1 on top of the load - the electrical build is far heavier than the IT load. Power shelves convert AC to nominal 50-51V DC and distribute via a bus bar; power whips energize the shelves from a REMOTE power panel, which means the panel is not in the rack and the cabling run is a real site-design item. COOLING IS MANDATORY, NOT OPTIONAL: the compute trays 'are cooled by liquid that runs up and down the rack through manifolds, then through the cold plates that are attached to the CPUs and the GPUs in the tray'. Only networking and storage remain air-cooled ('The rest of the components like networking and storage devices are air cooled'). The datasheet makes the same call - 'connects 36 NVIDIA Grace CPUs and 72 Blackwell GPUs in an NVLink-connected, liquid-cooled, rack-scale design'. Note the hybrid: liquid at CPU and GPU cold plates, fans still present for the non-compute components. LEAK DETECTION IS PART OF THE RACK: the DGX GB guide documents the liquid cooling manifolds, their inlets and outlets at the rear, and a dedicated Leak Detection section, because a coolant leak inside a 72-GPU rack is a rack-level availability event, not a component-level one. WHY THIS BLOCKS DEPLOYMENT: see supply/colo-vantage-liquid-to-rack-not-to-chip for the colo side. The short version is that a room built for air cooling at ~8 kW/rack cannot accept a 120 kW rack, and a room offering only liquid-to-the-RACK cannot accept a system whose cold plates are inside sealed compute trays needing the loop run up and down the rack through NVIDIA-specified manifolds. NO PRICE IS RECORDED because NVIDIA does not publish one; GB200 NVL72 is quote-only. Vendor-marketed performance claims on this platform (30x H100 inference, 25x energy efficiency) are excluded here because they are projected performance, not procurement facts.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr2-nvidia-dgx-gb200-hardware",
+    "pwr2-nvidia-blackwell-datasheet"
+  ]
+}

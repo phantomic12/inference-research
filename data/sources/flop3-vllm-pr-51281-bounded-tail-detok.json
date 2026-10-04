@@ -1,0 +1,15 @@
+{
+  "id": "flop3-vllm-pr-51281-bounded-tail-detok",
+  "type": "source",
+  "name": "vLLM PR #51281: optimize DecodeStream priming with a bounded prompt tail",
+  "url": "https://github.com/vllm-project/vllm/pull/51281",
+  "publisher": "vllm-project/vllm",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "The one-time-per-request detokenisation cost that lands in TTFT. FastIncrementalDetokenizer primed its DecodeStream with the ENTIRE prompt, and the native prefill does O(prompt_len) work: ~0.5-1.5 us/token measured with tokenizers 0.22.2 (whose Rust binding defers the decode to the first step() call), i.e. ~3 ms for 5K ids, ~9 ms for 15K, ~12 ms for 20K. It runs on the API-server event loop, so it lands verbatim in that request's streaming TTFT and head-of-line blocks the SSE deltas of every other active stream on the same loop (p99 contamination). Fix: prime with the last 32 prompt ids (DETOKENIZATION_OFFSET), decoding once per request in ~7 us. Precedent cited in the PR: vLLM's slow path has always primed with the last 7 ids, and SGLang with the last 5.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

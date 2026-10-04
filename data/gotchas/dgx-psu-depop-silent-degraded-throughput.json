@@ -1,0 +1,30 @@
+{
+  "id": "dgx-psu-depop-silent-degraded-throughput",
+  "type": "gotcha",
+  "name": "A DGX H100/H200 node continues to run at REDUCED performance with half its PSUs depopulated - the degradation is silent, not an alert",
+  "class": "hardware",
+  "affects": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm"
+  ],
+  "concepts": [
+    "power-delivery",
+    "psu-redundancy",
+    "datacenter-hardware",
+    "hopper-sm90",
+    "tail-latency",
+    "availability"
+  ],
+  "symptom": "After a data centre power-distribution or PSU failure takes three of the six PSUs offline, the system 'continues to function, but at a reduced performance level'. There is no crash, no error and no degraded-state alarm in normal monitoring: the node serves traffic, passes health checks, and simply delivers less throughput than its specs. Below three operational PSUs the node will not boot at all (only the BMC is available), so the failure mode is bimodal - a hard boot failure if you drop too far, silent slowdown if you drop exactly to three.",
+  "root_cause": "The DGX H100/H200 ships six 3.3 kW PSUs in a 4+2 redundant configuration against a 10.2 kW max system draw. With three PSUs gone the surviving three cannot deliver full draw, so the platform reduces clocks/power rather than tripping. The vendor documents this as intended continuous-operation behaviour, not a fault state - which is precisely why nothing raises an alarm.",
+  "workaround": "Monitor PSU population per node, not just PSU presence, and alert on any node whose PSU count is below six. nvidia-smi's clocks throttle-reason reasons field will show SW Power Cap active when the node is power-limited; treat a persistently active SW Power Cap on a node with all six PSUs present as a facility power problem, and with fewer than six PSUs as a PSU-population problem. Make PSU replacement part of the alerting path rather than waiting for a node to fail to boot on the second loss.",
+  "severity": "major",
+  "notes": "Distinct from the general power-cap gotcha: this one is triggered by the PSU INVENTORY of the chassis, not by a configured cap or by thermal state. The same user-visible symptom (less throughput, no error) has at least three causes - depopulated PSUs, a configured SW power cap, and thermal slowdown - and nvidia-smi's throttle-reason enum is the only thing that distinguishes them. A fleet that never reads that field will attribute all three to 'the model changed'. Cited verbatim from the DGX H100/H200 User Guide, which also states 'Do not operate the system with PSUs depopulated'.",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr2-nvidia-dgx-h100-power-specs",
+    "pwr2-nvidia-smi-throttle-reasons"
+  ]
+}

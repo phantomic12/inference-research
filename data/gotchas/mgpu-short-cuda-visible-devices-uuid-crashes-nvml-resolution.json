@@ -1,0 +1,27 @@
+{
+  "id": "mgpu-short-cuda-visible-devices-uuid-crashes-nvml-resolution",
+  "type": "gotcha",
+  "name": "The abbreviated GPU UUID form that NVIDIA documents for CUDA_VISIBLE_DEVICES crashes vLLM's device resolution before the model even loads",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-vllm-51677-short-uuid"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "nvidia-h200-sxm"
+  ],
+  "concepts": [
+    "cuda-visible-devices",
+    "uuid",
+    "nvml",
+    "device-resolution"
+  ],
+  "symptom": "On 8x H200 (driver 590.48.01, Rocky Linux 9.8), setting CUDA_VISIBLE_DEVICES to a short UUID - e.g. GPU-af7b61d8 where the driver reports GPU-af7b61d8-21af-baea-6a19-42a1f9f7c3cb - crashes during ModelConfig construction, before the model finishes loading: 'ValueError: invalid literal for int() with base 10: \\'GPU-af7b61d8\\'' followed by 'File \".../vllm/platforms/cuda.py\", line 728, in device_control_id_to_physical_device_id / handle = pynvml.nvmlDeviceGetHandleByUUID(device_id)' and 'vllm.third_party.pynvml.NVMLError_NotFound: Not Found'.",
+  "root_cause": "Two independent gaps stack. vLLM's device-id resolution assumes integers and lets the int() ValueError escape into an NVML call, and pynvml.nvmlDeviceGetHandleByUUID requires an exact full-UUID match with no prefix-matching fallback - so any abbreviated form raises NVMLError_NotFound. NVIDIA's own tooling and CUDA's device enumeration do accept the short form by prefix-matching, which is why the documented behaviour and vLLM's behaviour diverge. The crash happens inside a short-lived subprocess vLLM spawns to probe model architectures, so it surfaces before weights load and the log gives no hint that CUDA_VISIBLE_DEVICES is the culprit.",
+  "workaround": "Pass full UUIDs, or integers, or the bare index. If a fix lands it is by iterating all NVML-visible devices and prefix-matching each device's full UUID - that is the approach NVIDIA's tooling already takes. Note the interaction with mgpu-mig-uuid-cannot-be-parsed-by-vllms-device-resolution: MIG device IDs are strings that must never reach int() either, so the same fragile assumption breaks bare-metal MIG and short-UUID selection through one code path.",
+  "severity": "major",
+  "notes": "Device-selection by environment variable is the standard way to pin an engine to a specific GPU in a multi-tenant node, so this fires exactly when someone is doing deliberate, correct hardware selection. Distinct from the MIG case (mgpu-mig-uuid-cannot-be-parsed-by-vllms-device-resolution) only in the string's prefix: GPU- short form vs MIG- UUID, same int() assumption underneath."
+}

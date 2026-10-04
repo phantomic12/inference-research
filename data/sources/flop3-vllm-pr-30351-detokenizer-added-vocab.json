@@ -1,0 +1,15 @@
+{
+  "id": "flop3-vllm-pr-30351-detokenizer-added-vocab",
+  "type": "source",
+  "name": "vLLM PR #30351: cache added_vocab to avoid per-token overhead (DeepSeek-V3.2 tokenizer mode)",
+  "url": "https://github.com/vllm-project/vllm/pull/30351",
+  "publisher": "vllm-project/vllm",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "Per-token detokenisation starving the event loop. detokenize_incrementally runs on every generated token and evaluates len(tokenizer); DeepseekV32Tokenizer.__len__ returned vocab_size + len(self.get_added_vocab()), and get_added_vocab() called the native tokenizer's get_added_vocab() every time, showing up as BTreeMap::insert in the native layer. Because the token id check is `0 <= new_token_id < len(tokenizer)`, EVERY generated token paid a native vocab-map rebuild/lookup on the GIL-holding API-server main thread. Reported symptom: the main thread is busy in detokenisation, CPU stays persistently high, and /health plus other HTTP endpoints hang - i.e. the per-token host cost escapes the decode loop entirely. Fix: prefetch the added-vocab dict and its size once at tokenizer init. Config in the repro: DeepSeek-V3.2 tokenizer-mode, max-model-len 163840, max-num-seqs 256, chunked prefill, DP 8, expert parallel.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

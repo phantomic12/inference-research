@@ -1,0 +1,23 @@
+{
+  "id": "h100-8gpu-node-loaded-76-percent-of-tdp-measured",
+  "type": "benchmark",
+  "name": "8x H100 node under real AI training draws only 76% of its 10.2 kW TDP rating; calibrated model reaches 11.4% MAPE versus 27-37% for TDP-based estimates",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-h100-sxm"
+  ],
+  "format_id": null,
+  "metric": "quality",
+  "value": 76.0,
+  "unit": "percent of rated 10.2 kW node TDP actually drawn under compute-intensive training load",
+  "methodology": "MEASURED at Brookhaven National Laboratory on 8-GPU H100 systems during production AI training, not a synthetic loop: power was measured directly and combined with open-source benchmarking data to fit statistical models relating computational intensity to node-level power consumption. This is a TRAINING result, not an inference result - it is recorded here as evidence about the TDP-vs-actual gap, and it must not be read as an inference idle-draw figure. Metric 'quality' is a placeholder; the schema enum has no energy or power member.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "THE MOST TRANSFERABLE POWER NUMBER IN THIS TASK, and it is about method rather than a specific part: NAMEPLATE WATTS ARE NOT A POWER BUDGET. Even compute-intensive training on a 10.2 kW-rated 8xH100 node drew only 76% of the rating, and modelling from TDP gave 27-37% error where a calibrated model gave 11.4%. Combined with the repo's existing H200 finding (whole-node plateau 5806.9 W against a GPU-only nameplate sum of 5600 W - legitimately above it, because the node also carries two Xeon 8480C hosts, 2 TB DRAM, ten 400 GbE NICs and PSU losses), the rule is: TDP UNDERSTATES a loaded multi-GPU node, because the node's non-accelerator overhead is not in the GPU nameplate, while TDP OVERSTATES what a real workload pulls. Any cost-per-token model that multiplies tokens by a datasheet wattage is wrong in both directions at once. The paper also finds distinct power signatures for transformer vs convolutional architectures, with transformers showing fluctuations relevant to grid stability - which means a short measurement window can misattribute a ramp as a steady state (see the repo's pwr-short-run-measures-ramp-not-steady-state gotcha). The authors separately note that the 2025 LBNL update treats the underlying AI-server power uncertainty as resolved by measured and simulated data.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "nrg2-osti-h100-node-power-models"
+  ]
+}

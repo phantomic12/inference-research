@@ -1,0 +1,33 @@
+{
+  "id": "short-benchmark-not-representative-of-sustained-serving",
+  "type": "gotcha",
+  "name": "A short benchmark is not representative of a 24-hour serving run: the same probe spans ~4.8x depending on thermal/clock state, and GPU-only telemetry hides 41-45% of system energy",
+  "class": "measurement",
+  "affects": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "nvidia-rtx-pro-6000-blackwell",
+    "nvidia-h100-sxm"
+  ],
+  "concepts": [
+    "benchmarking",
+    "thermal-steady-state",
+    "sustained-throughput",
+    "energy-measurement",
+    "idle-power",
+    "nvml-rapl-ipmi"
+  ],
+  "symptom": "Two failures compound. First, short probes measure a cold or parked machine, not the steady state a 24-hour serving run reaches - the same bf16 canary read 25.0 TFLOPS idle and 119.3 TFLOPS after a heavy load on one machine, and an 8-minute sustained workload ran at full speed immediately where the short burst did not. Second, energy and power accounting based on GPU telemetry alone understates the system: a full-stack profiling study combining NVML GPU counters, Intel RAPL CPU/DRAM counters and IPMI system-level sensors found GPU-only telemetry MISSES 41-45% of system energy across all workloads profiled. A sequential agentic workload consumed 63x more system energy per output token than saturated serving.",
+  "root_cause": "Two independent causes. For throughput: clock parking and ramp hysteresis, plus the fact that a real serving run reaches and holds a thermal and power steady state a 30-second benchmark never reaches. For energy: the non-GPU components of the platform - CPU, DRAM, NICs, storage, fans, PSU losses - draw power that GPU-board telemetry does not see, and the size of that gap varies by workload. Idle or low-batching regimes are worst because the fixed non-GPU draw is amortised over almost no useful work.",
+  "workaround": "Require a sustained probe (>=30s, per the upstream rule) or the real workload before quoting a number. For energy, instrument the full stack - NVML plus RAPL plus IPMI - and never report cost-per-token derived from GPU power alone. When comparing serving configurations, hold the batching regime fixed: the same study measured continuous batching improving system-level energy efficiency 3.2x from 1 to 16 requests per second, as GPU power plateaus while throughput keeps climbing, so an under-batched serving config looks far more expensive per token than it is.",
+  "severity": "major",
+  "notes": "The 41-45% figure is the one to carry into any cost-per-token model: if you derive energy cost from nvidia-smi board power alone, you are understating by roughly half. The 63x figure is the under-batching trap - a sequential agentic workload pays all the fixed costs of a running system for very little useful output, so naive cost-per-token arithmetic on agentic traffic is wrong by more than an order of magnitude. These are measured on 2x RTX PRO 6000 Blackwell with Qwen3.8-27B, not on a datacentre rack, so treat the percentages as measured on that configuration.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr2-vllm-metal-issue-713",
+    "pwr2-arxiv-where-does-energy-go"
+  ]
+}

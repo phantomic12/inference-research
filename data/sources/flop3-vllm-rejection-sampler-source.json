@@ -1,0 +1,15 @@
+{
+  "id": "flop3-vllm-rejection-sampler-source",
+  "type": "source",
+  "name": "vLLM vllm/v1/sample/rejection_sampler.py (main)",
+  "url": "https://raw.githubusercontent.com/vllm-project/vllm/main/vllm/v1/sample/rejection_sampler.py",
+  "publisher": "vllm-project/vllm",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "The verify step's per-token cost as shipped. The target model's logits arrive as ONE [num_tokens + batch_size, vocab_size] tensor, are float()-cast, then INDEXED TWICE by tensor (bonus_logits_indices and target_logits_indices); PyTorch gives each index its own storage, so the [.., V] tensor is copied twice. The target slice is .to(torch.float32) and then, whenever logprobs are not requested in processed mode, .clone()d so the raw copy survives the in-place logit processors - a third full-width fp32 buffer. draft_probs is an optional [num_tokens, vocab_size] tensor (absent for ngram spec decode), and the registered kernels are separate ops: _rejection_greedy_sample, _rejection_random_sample, _expand, _sample_recovered_tokens, plus synthetic acceptance-rate and fp64-Gumbel variants. So rejection sampling's per-token cost is k x V fp32 written and re-read several times, and it is measured in extra kernels, not extra math.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

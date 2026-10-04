@@ -1,0 +1,28 @@
+{
+  "id": "mgpu-llamacpp-tensor-split-breaks-nondivisible-multi-gpu-sharding",
+  "type": "gotcha",
+  "name": "llama.cpp's --tensor-split can produce intermittent output degeneration on long-context MoE inference, and barely rebalances MoE experts regardless of the ratio given",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-llamacpp-28185-tensor-split-degeneration"
+  ],
+  "class": "framework",
+  "affects": [
+    "llama-cpp"
+  ],
+  "concepts": [
+    "tensor-split",
+    "moe",
+    "row-split",
+    "n-cpu-moe",
+    "long-context",
+    "load-imbalance"
+  ],
+  "symptom": "llama-server 0.3.0-dev (build 10731) with '--model Qwen3-Coder-Next-UD-Q4_K_M.gguf --ctx-size 65536 --gpu-layers 999 --split-mode layer --tensor-split 4,1 --n-cpu-moe 34 --flash-attn on --parallel 1' on sessions with growing multi-turn context: the model intermittently degenerates into repetitive/mechanical output instead of following the content - a single response ballooning to ~14 MB / 15+ minutes against 6-45 KB / 7-70 s for normal responses in the same session, or a consolidated list repeating the same claim ~55 times with only line numbers incrementing and citing line numbers up to 3281 in a 543-line source file. It reproduces without an agent framework: a minimal Python multi-turn script against /v1/chat/completions gave 1 of 2 runs clean. Critically it does NOT occur on short tasks with the same --tensor-split, nor across multiple long-context runs with the identical command minus --tensor-split (0 collapses observed there). A second, separate finding from the same report: --tensor-split 'barely rebalances actual per-GPU compute load: MoE experts stay almost entirely on one device regardless of the split ratio tried; only non-MoE tensors seem affected by the split value', and --main-gpu had no effect on the imbalance either.",
+  "root_cause": "A non-divisible row split (4,1 over 2 GPUs) leaves a partial tensor on the second device, and at long context with a large n_cpu_moe offload the ragged edge of that split interacts with the offloaded expert tensors. The load-imbalance finding is a separate mechanism: llama.cpp's tensor-split weights assignment by buffer size for non-MoE tensors, but MoE expert tensors are placed by a different rule, so the split ratio does not buy the balance a user is aiming for. Reported as intermittent and client-independent, which is what rules out prompt-formatting explanations.",
+  "workaround": "Treat --tensor-split ratios that do not divide the row count evenly as unsafe for long-context MoE serving; drop --tensor-split (or use --split-mode layer, which is what the working 0-collapse runs used) and validate with a long multi-turn session, not a short one. Do not expect --tensor-split to balance MoE expert load across GPUs - use --n-cpu-moe or a device-count change instead, and verify placement rather than assuming the ratio took effect.",
+  "severity": "major",
+  "notes": "No first-bad-commit was identified and root cause is explicitly the reporter's hypothesis ('a numerical-stability edge case ... or something else worth narrowing down'), so the mechanism is unresolved upstream; the symptom, the reproduction conditions and the 'MoE experts stay on one device' observation are the established parts. The only clean detector for this class is cross-configuration comparison at long context, not a benchmark - consistent with the existing llamacpp-rocm-ppl-explosion-silent-corrupt record."
+}

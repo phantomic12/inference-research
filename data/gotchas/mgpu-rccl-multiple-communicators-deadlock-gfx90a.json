@@ -1,0 +1,29 @@
+{
+  "id": "mgpu-rccl-multiple-communicators-deadlock-gfx90a",
+  "type": "gotcha",
+  "name": "Concurrent collectives on 2-3 RCCL communicators deadlock 50-100% of runs on gfx90a, which is the exact shape FSDP2+tensor-parallel produces",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-rccl-2191-multicomm-deadlock"
+  ],
+  "class": "kernel",
+  "affects": [
+    "amd-instinct-mi250",
+    "amd-instinct-mi250x"
+  ],
+  "concepts": [
+    "rccl",
+    "multi-communicator",
+    "fsdp",
+    "tensor-parallel",
+    "deadlock",
+    "launch-order"
+  ],
+  "symptom": "RCCL 2.30.4 (HIP 7.14) on 4x gfx90a GCD of an MI250 system deadlocks 50-100% of runs when a process uses 2-3 NCCL communicators concurrently. Upstream PyTorch tests reproduce it directly: TestFullyShardNDTraining.test_2d_mlp_with_nd_mesh ~50-60% hang, and TestFullyShardPerParamMeshOverlap.test_fully_shard_per_param_mesh_training_overlap 100% hang. Evidence at hang time: the NCCL watchdog reports collectives from all active communicators timed out simultaneously with matching sequence numbers across each communicator's ranks; all communicator inits are COMPLETE per NCCL_DEBUG=INFO; all GPUs sit at 100% utilization with no forward progress; rocgdb on a wedged rank shows multiple HSA queues with the read pointer frozen behind the write pointer (up to 165 packets pending) and no active dispatch, head packets decoding as header type INVALID (0x1) with partially written bodies.",
+  "root_cause": "RCCL's host-function-based launch tracking appears to be wedging HIP's callback worker: librccl.so references hipLaunchHostFunc (PyTorch's distributed path does not), and a libamdhip64 worker thread is blocked in hsa_signal_wait_scacquire. The deferred-header slots that were never finalized are the visible artifact. Importantly, the submission order is cross-rank consistent - TORCH_DISTRIBUTED_DEBUG=DETAIL collective fingerprinting shows zero mismatches in 6/6 runs, which incidentally serializes traffic and hides the hang. So this is not a user-side ordering bug, which is the natural first hypothesis and the one the fingerprinting data rules out.",
+  "workaround": "NCCL_LAUNCH_ORDER_IMPLICIT=1 makes the 2-communicator tests pass 10/10 against a baseline of roughly 50% failure, but does not help the 3-communicator per-param-mesh case (0/10) - so it is a mitigation, not a fix. Prefer a topology with fewer concurrent communicators per process. Falsified alternatives worth not re-testing: GPU_MAX_HW_QUEUES=8 (no change), HSA_ENABLE_INTERRUPT=0 (no change), and standalone multi-communicator/stream/event stress scripts (all clean).",
+  "severity": "major",
+  "notes": "These hangs are why PyTorch carries skip_if_rocm_arch_multiprocess(MI200_ARCH) on the affected tests - upstream accepted the multi-communicator deadlocks as unresolved rather than diagnosed away. Same observable class as mgpu-rccl-ll-protocol-deadlocks-gfx12 (multi-GPU RCCL collective deadlock on RDNA4) but a different silicon, a different mechanism (host-function launch tracking vs device-side protocol selection) and a different trigger (communicator count vs message size). Note the diagnostic trap in both: 100% GPU utilization with no forward progress is not work."
+}

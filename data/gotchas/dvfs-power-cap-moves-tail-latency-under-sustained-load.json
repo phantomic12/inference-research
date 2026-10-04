@@ -1,0 +1,36 @@
+{
+  "id": "dvfs-power-cap-moves-tail-latency-under-sustained-load",
+  "type": "gotcha",
+  "name": "Sustained load drives SW Power Cap and thermal throttling, which move the tail of the latency distribution rather than its mean - so a benchmark that reports only p50 hides the regression entirely",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-nvidia-smi-docs",
+    "pwr-mlperf-v4-1-h200-maxq-l70-server-summary"
+  ],
+  "class": "measurement",
+  "affects": [
+    "nvidia-h200-sxm",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300"
+  ],
+  "concepts": [
+    "dvfs",
+    "power-cap",
+    "tail-latency",
+    "percentiles",
+    "tpot",
+    "ttft",
+    "sustained-load",
+    "latency-slo",
+    "benchmark-methodology",
+    "nvidia-smi"
+  ],
+  "symptom": "Mean and median latency look fine while the tail degrades. A deployment passes an SLO defined on p50 and breaks for users, and the failures cluster in the long runs - after the node has been at full load for a while, or on the hottest day, or on the busiest GPU in the node. Benchmarks that report only mean TTFT or only mean time-per-output-token show a stable number across a 40-minute run while the p99 quietly walks upward. The reproducibility symptom is that a load test run in the morning and the same load test run in the evening disagree at the tail, with identical code and identical configuration.",
+  "root_cause": "Frequency is not constant under sustained load, and the vendor reference documents each mechanism that moves it. Per nvidia-smi: 'SW Power Cap - SW Power Scaling algorithm is reducing the clocks below requested clocks because the GPU is consuming too much power'; 'SW Thermal Slowdown - SW Thermal capping algorithm is reducing clocks below requested clocks because GPU temperature is higher than Max Operating Temp'; and the discrete 'HW Thermal Slowdown' which is 'reducing the core clocks by a factor of 2 or more'. Because decode time per token is set by achieved clock, a falling clock stretches time-per-output-token - and TPOT is exactly the metric an SLO is written against. The effect is inherently cumulative over a run, so it lands on the percentiles and not the average. THE MEASURED TAIL MARGIN IS ALREADY THIN ON HARDWARE THAT WAS NOT THROTTLING: in the MLPerf v4.1 8xH200 Server run, time to output token is 50th percentile 138.267 ms, 99th 158.802 ms and 99.9th 174.808 ms against a 200 ms constraint - so the p99.9 sits at 87% of its budget before any throttling at all, and first-token latency runs 50th 204.7 ms, 99th 519.3 ms, 99.9th 658.8 ms against 2000 ms. There is not much room for a clock drop to hide in.",
+  "workaround": "Report and gate on percentiles, never on the mean, and compute them over a window long enough to contain a real duty cycle - the MLPerf submissions use min_duration 2400000 ms and this node needs roughly 15 minutes to leave its ramp, which is the same ramp the measurement trap describes. Split the latency series by time-into-run, or plot percentiles against wall-clock, so a thermal or power-induced drift is visible as a slope rather than hidden in an aggregate. Monitor the clocks event reasons counters during the run and treat time spent in SW Power Capping or SW Thermal Slowdown as invalidating the percentiles, not merely explaining them. Where an SLO has tail headroom, make that explicit and leave room for the documented factor-of-2 hardware slowdown case, which would consume the entire TPOT budget rather than part of it. For capacity planning, size for the sustained power state and the sustained clock, not the burst one - the machine's power envelope is a function of how long it has been working, so a fleet's steady-state capacity is lower than its cold-start capacity.",
+  "severity": "major",
+  "notes": "COMPOSES WITH, AND IS DISTINCT FROM, THE OTHER TWO POWER GOTCHAS - worth stating because they are easy to conflate. The short-run trap biases the MEAN (a ramp contaminates an average). This one biases the TAIL (sustained load degrades the worst case). The idle-draw trap biases COST (a floor under energy at low utilisation). A benchmark suite that fixes only one of the three still reports misleading numbers. THE HARDWARE SIDE IS VENDOR-STATED AND NORMATIVE - the throttle definitions are in the reference section of the nvidia-smi documentation, including the 'factor of 2 or more' for HW Thermal Slowdown, and the existence of dedicated microsecond counters for 'SW Power Capping', 'SW Thermal Slowdown', 'HW Thermal Slowdown' and 'HW Power Braking' means the condition is directly observable rather than inferred from latency shapes. HONEST LIMIT: I did not MEASURE a DVFS-induced latency drift myself. The tail-margin numbers quoted are from a run that reported 'Performance constraints satisfied : Yes' - a VALID, non-throttled-looking MLPerf Server result - so they establish how little headroom exists, not that throttling occurred. The causal mechanism is documented; its magnitude on this node under this workload is not measured in this repo and is not claimed."
+}

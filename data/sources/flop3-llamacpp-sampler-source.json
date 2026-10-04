@@ -1,0 +1,15 @@
+{
+  "id": "flop3-llamacpp-sampler-source",
+  "type": "source",
+  "name": "llama.cpp src/llama-sampler.cpp (master) - host-side sampler chain and full-vocabulary candidate walk",
+  "url": "https://raw.githubusercontent.com/ggml-org/llama.cpp/master/src/llama-sampler.cpp",
+  "publisher": "ggml-org/llama.cpp",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-03",
+  "archived_url": null,
+  "notes": "Primary source for the STRUCTURE of a CPU sampler, which is what makes it O(n_vocab) regardless of top_k. llama_token_data_array_partial_sort_inplace cur_p->data onto std::partial_sort when npartial <= 128; otherwise it falls back to llama_token_data_array_partial_sort, which makes TWO passes over the full array to build a 128-bucket histogram over logits clamped to [-10,10] and then sorts only the top buckets. llama_sample_dist builds a std::discrete_distribution<int> over a probs_iterator spanning the candidate array. llama_sampler_temp_impl scans the whole array for the max when temp <= 0. So: the candidate array is walked in full at every step, and the cost is a function of n_vocab, not of top_k. Matches the measurement in issue #27050 that top_k=1 changes nothing.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03"
+}

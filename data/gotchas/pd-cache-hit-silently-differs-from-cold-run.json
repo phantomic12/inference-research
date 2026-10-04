@@ -1,0 +1,25 @@
+{
+  "id": "pd-cache-hit-silently-differs-from-cold-run",
+  "type": "gotcha",
+  "name": "A cache hit produces different output than a cold run, with no error anywhere in the stack",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "lmcache",
+    "nvidia-dynamo",
+    "nixl"
+  ],
+  "symptom": "The disaggregated deployment looks completely healthy and still returns wrong text. Both vLLM servers start, return HTTP 200, stay healthy after the requests, report that LMCache P/D mode is enabled, report the NIXL/UCX transfer channel active, and report COMPLETE prompt KV-cache hits on the decode receiver - and the generation still diverges from an equivalent monolithic vLLM server starting at generated token 0. The corrupted output characteristically begins by echoing tokens from the middle of the prompt body instead of answering the instruction at the end. Same failure with no external tier at all: with prefix caching on, the same request at temperature=0 returns output A on a freshly started server and a different, stable output B on runs 2..N, and restarting returns to A.",
+  "root_cause": "Two distinct causes, both worth separating. (1) Connector/KV-layer mismatch: the cached blocks were not produced by the code path that is reading them, so the restored KV is internally inconsistent with the current model. The vLLM 0.26 case is concrete - PR #44455 changed the KV block layout from [num_blocks, 2, block_size, num_heads, head_size] to a packed [num_blocks, num_heads, block_size, 2*head_size], and LMCache's connectors did not track it, so restores were silently wrong on models using the fused/packed layout. (2) Batch non-invariance: the cold path and the hit path run different kernel tilings, so the KV for the same tokens is not bit-identical depending on how the block was computed. In the no-external-tier case (#40896) prefix caching itself is enough to produce the divergence, which means it is not a tier bug at all.",
+  "workaround": "Treat a cache hit as a claim about provenance, not just about tokens: a KV block is only valid if every field that can change the produced KV is in the cache key - model id, KV dtype, TP/DP size, block size, KV layout, attention backend, adapter identity, and numerical mode. Until the upstream bugs are fixed, run an output-equivalence test against a monolithic, cache-disabled baseline on every model you intend to serve with a KV tier or PD disaggregation, and treat any mismatch as a blocker. Note that the reporter of #40896 found warm-up rounds mask the divergence, which is exactly why this needs a deliberate cold-vs-warm test rather than a smoke test.",
+  "severity": "blocker",
+  "notes": "This is the highest-value gotcha in the disaggregation class because the failure mode is invisible by construction: the optimization that makes it dangerous is the same one that makes it fast, and every health signal the system exposes says the cache is working. Quantification from #52617: '6/6 comparisons failed across two independent vLLM 0.26.0 runs. 3/3 comparisons failed in a separate vLLM 0.27.1 run. Total: 9/9 LMCache P/D versus monolithic comparisons failed. Native NIXL and Mooncake passed the identical monolithic-equivalence oracle.' That control is the methodologically important part - it isolates the connector rather than the architecture. Both issues were still open at 2026-10-03. Note the deployments that are clean: NIXL-native and Mooncake-native PD passed the same oracle, so this is a connector bug, not an inherent property of handing KV between processes.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-gh-vllm-52617-lmcache-pd-hit-diverges",
+    "pd-gh-lmcache-4463-packed-kv-silent-corruption",
+    "pd-gh-vllm-40896-prefix-cache-cold-vs-warm"
+  ]
+}

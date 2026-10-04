@@ -1,0 +1,33 @@
+{
+  "id": "mgpu-mig-blocks-nccl-tensor-parallel",
+  "type": "gotcha",
+  "name": "NCCL is not supported with MIG, so a MIG slice cannot participate in a tensor-parallel group - MIG and TP are mutually exclusive as shipped",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-nvidia-mig-user-guide",
+    "mgpu-nccl-1716-mig-support-request"
+  ],
+  "class": "hardware",
+  "affects": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "vllm",
+    "sglang"
+  ],
+  "concepts": [
+    "mig",
+    "nccl",
+    "tensor-parallel",
+    "expert-parallel",
+    "ci"
+  ],
+  "symptom": "Planning error rather than a runtime crash: an operator who partitions an H100 into MIG instances and then tries to run TP=2 inside them gets NCCL unsupported-with-MIG rather than a working deployment. The NVIDIA MIG User Guide lists it flatly under Application Considerations: 'NCCL is currently not supported with MIG.' The request to lift this has been open on NCCL since at least 2025 (NCCL #1716), whose stated motivation is exactly this use case: 'It'd much cheaper to rent 1x A100 or H100 split it 4 way and do a 4-way gpu testing on CI, than paying for 4 gpus.'",
+  "root_cause": "MIG instances are exposed as separate CUDA devices with their own GPU and Compute Instance scoping, and the vendor documents a matching set of restrictions that make collective communication across them non-functional: with driver R570 only P2P between MIG instances on the same GPU is supported - 'P2P between MIG instances on different GPUs, or between MIG instances to non-MIG mode GPU devices are not supported'; 'CUDA IPC across GPU instances is not supported. CUDA IPC across Compute instances is supported.' A collective library needs P2P or IPC across the group, so NCCL support was never enabled on MIG.",
+  "workaround": "Do not combine MIG with TP or EP. Either partition the GPU with MIG and run one engine per slice at TP=1 (the supported multi-tenant pattern), or leave MIG off and shard with TP across physical GPUs. If the need is many-GPU CI, MIG alone is the answer and the TP axis has to be dropped. Note CUDA IPC works across Compute instances within one GPU Instance, so MPS-style co-location of several ranks inside one GI is the closest supported approximation.",
+  "severity": "blocker",
+  "notes": "The same section of the guide blocks CUDA IPC across GPU Instances but permits it across Compute Instances - that asymmetry is the mechanism behind mgpu-mps-max-clients-scale-down-on-mig. Do not read 'MIG supports up to seven instances' as 'MIG gives you a 7-GPU TP group'."
+}

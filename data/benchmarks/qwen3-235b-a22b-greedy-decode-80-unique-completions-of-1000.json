@@ -1,0 +1,24 @@
+{
+  "id": "qwen3-235b-a22b-greedy-decode-80-unique-completions-of-1000",
+  "type": "benchmark",
+  "name": "Qwen3-235B-A22B-Instruct-2507, temperature 0, 1000 completions of 1000 tokens: 80 unique completions, first divergence at token 103; all 1000 identical with batch-invariant kernels",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-h100-sxm"
+  ],
+  "model": "Qwen/Qwen3-235B-A22B-Instruct-2507 (non-thinking mode)",
+  "format_id": null,
+  "metric": "quality",
+  "value": 80.0,
+  "unit": "distinct completions observed across 1000 runs at temperature 0 (a perfect implementation gives 1.0)",
+  "methodology": "The strongest published demonstration that fixed-seed greedy decode is NOT an oracle. 1000 completions of 1000 tokens each were sampled at temperature 0 from the single prompt 'Tell me about Richard Feynman' and compared. Result: 80 unique completions, the most frequent occurring 78 times. The divergence point is localized precisely - all 1000 completions are identical for the first 102 tokens and first differ at token 103, where 992 continue 'Queens, New York' and 8 produce 'New York City'. Re-running the same workload with the authors' batch-invariant kernels enabled made all 1000 completions identical. So the nondeterminism is in the engine's kernel selection, not in sampling: temperature 0 already removes sampling as a variable. Metric 'quality' placeholder - the schema enum has no reproducibility/determinism metric.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "WHY THIS IS THE HEADLINE NUMBER FOR THE TESTING METHODOLOGY DOC. It kills the most tempting cheap oracle: 'set temperature to 0 and compare output text'. That procedure passes on a broken build, because the 8/1000 minority completions are still fluent, plausible English that a human reviewer would pass. A text-equality assertion at temperature 0 has an observed false-pass rate on this model. The 102-token agreement window is the diagnostic gift: divergence starting mid-generation rather than at token 0 means the prompt encoding and prefill agreed, and the cause lies in a decode-phase reduction whose extent depends on how many other requests shared the batch. That is exactly the signature the repo's own gotchas show independently - pd-cache-hit-silently-differs-from-cold-run (cold vs hit path take different kernel tilings) and spec-decode-greedy-diverges-on-quantized-target (greedy decode diverging under speculative decoding). The authors state the cause is batch-dependent reduction strategy (split-K, stream-K, split-KV/FlashDecoding, small-batch split reductions), NOT the commonly repeated 'concurrency + floating-point non-associativity' story - they show the same matmul run 1000x on identical data is bitwise identical, so concurrency alone is not the culprit. Also relevant: they note the same batch-dependent-reduction cause applies to CPU and TPU endpoints, not only GPUs.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "nrg2-thinkingmachines-defeating-nondeterminism"
+  ]
+}

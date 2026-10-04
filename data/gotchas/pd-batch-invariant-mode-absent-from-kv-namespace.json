@@ -1,0 +1,23 @@
+{
+  "id": "pd-batch-invariant-mode-absent-from-kv-namespace",
+  "type": "gotcha",
+  "name": "Batch-invariant mode is not part of any KV-offload namespace or connector compatibility check, so a numerics-mode mismatch across prefill and decode is undetectable",
+  "class": "config",
+  "affects": [
+    "vllm",
+    "nixl",
+    "mooncache",
+    "nvidia-dynamo"
+  ],
+  "symptom": "No observed failure yet - this is the mechanism, documented from the code by the reporter, who is explicit: 'I have not reproduced a divergence.' The risk is that an instance running with VLLM_BATCH_INVARIANT=1 can load KV blocks that were produced under a different numerical configuration (non-invariant kernels, another attention backend, another GPU architecture) through a shared offload tier or a P/D transfer, and nothing signals that it happened. The output then depends on whether a block was a hit and on which instance wrote it, which undercuts the documented promise that output is 'deterministic and independent of the batch size or the order of requests in a batch'.",
+  "root_cause": "The compatibility metadata is incomplete in a specific, enumerable way. The offload namespace (FileMapper.fields) carries model_name, tokens_per_hash, blocks_per_file, the parallel sizes, dtype, kv_cache_groups and inference_engine - and the P2P tier fingerprint is built from the same fields. There is no batch-invariance flag, no attention backend and no device capability in it. The NIXL compatibility hash does include attn_backend_name, cache_dtype and vllm_version, but not the invariance flag. The other connectors inspected (HF3FS, Mooncake, MoRIIO) have no model-level compatibility check at all. A grep for VLLM_BATCH_INVARIANT / batch_invariant returns nothing under vllm/distributed/kv_transfer, vllm/v1/kv_offload, vllm/v1/simple_kv_offload or vllm/v1/core, and there is no warning of the kind attention.py emits when it disables prefix caching for FlashInfer/Triton backends.",
+  "workaround": "Do not share a KV offload tier or a PD transfer between instances with different numerical configurations unless the connector validates it. If you need batch-invariant output, run a dedicated cache namespace per numerical configuration, and be aware that the same gap applies to attention-backend and GPU-architecture changes. This is recorded as a config gotcha with severity major rather than blocker precisely because it is unreproduced - the fix belongs upstream (bind the flag into the namespace and the compatibility hash) and until then the mitigation is operational.",
+  "severity": "major",
+  "notes": "This is the closest thing found to an explicit, upstream-acknowledged prefill/decode numerics-divergence risk, and it is the answer to 'can prefill and decode silently disagree on numerics': yes, by construction, whenever the two pools run different kernels or numerical modes and share a KV path. Read against main at v0.29.0 (98dff2a); open as a feature request at 2026-10-03. Related in the same family: vLLM #55524's Mamba2 exact-replay RFC, whose batch-invariant mode has to REJECT prefix caching, KV connectors, speculative decoding and micro-batching for Mamba2 - i.e. for recurrent models the incompatibility is already known and enforced, while for dense attention models the KV-path half of the problem is still open.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-gh-vllm-58263-batch-invariant-not-in-kv-namespace"
+  ]
+}

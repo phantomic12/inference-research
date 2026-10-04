@@ -1,0 +1,31 @@
+{
+  "id": "h200-8x-mlperf-v4-1-maxq-llama2-70b-offline-energy-per-token",
+  "type": "benchmark",
+  "name": "8xH200 SXM-141GB (MaxQ), MLPerf v4.1 llama2-70b Offline: 25262.1 output tok/s at 5806.9 W mean node draw = 0.2299 J/output token",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-spl",
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-summary",
+    "pwr-mlperf-v4-1-h200-maxq-system-json",
+    "pwr-mlperf-v4-1-nvidia-readme-maxq",
+    "pwr-mlperf-v4-1-nvidia-makefile-power"
+  ],
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-h200-sxm"
+  ],
+  "interconnect_ids": [
+    "nvlink-4"
+  ],
+  "model": "Llama 2 70B (MLPerf 'llama2-70b-99.9')",
+  "format_id": null,
+  "metric": "tps_aggregate",
+  "value": 25262.1,
+  "unit": "output tokens/s (MLPerf 'Tokens per second', aggregate) AT 5806.9 W MEAN WHOLE-NODE DRAW - i.e. 0.2299 J/output token; metric enum has no energy metric so the watts travel in the unit, see notes",
+  "methodology": "PRECISION: NOT STATED BY THE SOURCE AND DELIBERATELY NOT GUESSED. The paired measurements.json for this benchmark gives weight_data_types 'fp16', starting_weights_filename 'Original Hugginface model weights', weight_transformations 'quantization, affine fusion', input_data_types 'int32'. That says the weights began fp16 and were quantized, but it never names the served numeric format - not FP8, not INT8. format_id is therefore null rather than a guess. AGGREGATE. MLPerf Inference v4.1 Offline scenario, closed division, NVIDIA submission system H200-SXM-141GBx8_TRT_MaxQ. Exact provenance: closed/NVIDIA/results/H200-SXM-141GBx8_TRT_MaxQ/llama2-70b-99.9/Offline/performance/run_1/ - mlperf_log_summary.txt for throughput, spl.txt for power, measurements/.../Offline/H200-SXM-141GBx8_TRT_MaxQ_Offline.json for precision. LoadGen: 'Samples per second: 86.7369', 'Tokens per second: 25262.1', 'Result is : VALID', min_duration 2400000 ms, samples_per_query 253440, target_qps 96, ttft_latency 2000000000 ns, tpot_latency 200000000 ns, performance_sample_count 24576. HARDWARE: 8x NVIDIA H200-SXM-141GB on ONE node, 2x Intel Xeon Platinum 8480C (56 cores each), 2 TB host memory, 10x 400GbE InfiniBand, 18x 4th Gen NVLink at 900GB/s, AIR-COOLED, hw_notes 'H200 TGP 700W'. SOFTWARE: TensorRT 10.2.0, CUDA 12.4, cuDNN 8.9.7, Driver 550.54, Ubuntu 22.04.4. POWER METHODOLOGY, stated because it is not optional: NVIDIA's submission README defines the MLPerf power category as 'Perf per watt ... rather than comparing systems peak throughput, it compares the ratio between the peak throughput and the power usage of the machine during inference'. Measurement is an external Yokogawa WT333E (serial C2XL24034V, firmware F1.04) sampled at 1 Hz via SPEC PTDaemon 1.10.0, V3A3 three-phase wiring, channels 1 and 3. The tooling runs the harness TWICE: a 'ranging run' to establish the meter's voltage/current ranges, then the 'testing run' whose readings are scored. CLOCKS WERE LOCKED at 1000 MHz: Makefile.power sets GPUCLK?=1000 with the comment '# nsys and nvprof locked clock frequency' and the lock_clocks target runs 'sudo nvidia-smi -lgc 1000,1000'. MY DERIVATION, arithmetic shown so it can be re-checked: spl.txt is 3634 one-second samples. The first 5% (181 samples) are discarded because LoadGen is still filling its queue and the node sits near 2.4 kW; the mean of the remaining 3453 samples is 5806.93 W (min 2448.4, max 6219.0). J/token = mean_watts / tokens_per_second = 5806.93 / 25262.1 = 0.22987. Equivalently, and as a cross-check on the same window: 5806.93 W x 3453 s = 20.045 MJ over 25262.1 x 3453 = 87.23 M tokens = 0.22987 J/token. Total for the core window = 5.570 kWh. OMITTED BY THE SOURCE: input/output sequence lengths (fixed by the MLPerf reference implementation), max_num_seqs, tensor-parallel degree, and attention engine version.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "PRIMARY POWER DATAPOINT IN THE REPO. THE HEADLINE NUMBER IS NOT 25262.1 TOK/S - IT IS 0.2299 J/OUTPUT TOKEN AT 5806.9 W, and the watts are the part no other record in this repo carries. Derived from the FULL 1 Hz trace, not from TDP. DO NOT READ THIS AS A STOCK-BOOST RESULT: clocks were locked to 1000 MHz. A stock-boost run would draw more power AND go faster, and without the second run the efficiency direction is unknown - do not assume it improves. DO NOT COMPARE THE WATTS DIRECTLY AGAINST TDP IN THE ACCELERATOR RECORD: nameplate is 8 x 700 W = 5600 W for the GPUs alone, and the measured whole-node plateau is 5806.9 W, which also carries two Xeon Platinum 8480C hosts, 2 TB of DRAM, ten 400 GbE NICs, storage and PSU conversion losses. The whole-node figure is legitimately ABOVE the GPU-only nameplate sum - that is not a contradiction, it is the rest of the machine. CHANNEL SPLIT, from the same trace: mean Ch1 825.6 W, Ch2 794.6 W, Ch3 783.0 W in the steady core (approximately; three-phase imbalance of a few percent is normal and is not a per-GPU attribution - 8 GPUs share 3 phases). PER-GUARD: 5806.93 / 8 = 725.9 W per GPU at node level, versus 700 W nameplate, versus ~302.8 W per GPU at the node's idle floor. The idle-to-loaded ratio is the single most cost-relevant number here and it is a SEPARATE gotcha record. REPRODUCIBLE: FALSE, and honestly so. The traces are public and auditable, but the harness that produced them is not: NVIDIA's README states PTDaemon 'is located in a private repo' that submitters reach only by joining the MLCommons Power WG and signing the PTD EULA. Third parties can verify every watt in this record and cannot re-run the run that generated them. RECOMMENDED SCHEMA CHANGE: this record wants a first-class joules_per_token metric rather than watts smuggled into the unit string - see the parent report."
+}

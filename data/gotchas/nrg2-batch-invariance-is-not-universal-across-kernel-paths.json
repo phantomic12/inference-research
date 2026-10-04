@@ -1,0 +1,34 @@
+{
+  "id": "nrg2-batch-invariance-is-not-universal-across-kernel-paths",
+  "type": "gotcha",
+  "name": "Enabling vLLM's batch-invariance flag does not make the engine deterministic: it silently does not hold for fused-MoE experts, for AWQ on sm8x, and TF32 breaks the matmul invariant - all with no warning",
+  "class": "kernel",
+  "affects": [
+    "vllm"
+  ],
+  "concepts": [
+    "determinism",
+    "batch-invariance",
+    "numerics",
+    "moe",
+    "quantization",
+    "awq",
+    "tf32",
+    "testing"
+  ],
+  "symptom": "The failure mode is the dangerous one: not an error, not a crash, and no warning. With VLLM_BATCH_INVARIANT=1 set, vLLM documents that output is 'deterministic and independent of the batch size or the order of requests in a batch' - and on several real configurations it is not. Open issue #57016 (2026-09-15) reports the flag is not batch-invariant for fused-MoE experts, with no warning. Open issue #59086 (2026-09-28) reports the same for AWQ models on sm8x in the DEFAULT mode. Open issue #55131 (2026-09-03) reports the vendored batch-invariant matmul is not actually batch-invariant and that tl.dot uses TF32 by default for fp32 inputs on Ampere/Hopper (same as torch.mm), which is the wrong precision for sensitivity-critical modules such as the DeepSeek Sparse Attention Indexer and the MoE router. The user-visible consequence is that a deployment believed to be reproducible produces different text across runs, and the divergence is attributed to the workload rather than to the engine.",
+  "root_cause": "Not fully established, and the three issues are three distinct mechanisms rather than one. The structural cause is architectural: batch invariance is a property that must hold per kernel, and only kernels written to be invariant have it. Thinking Machines' analysis identifies exactly which strategies break it - split-K matmul, stream-K (which additionally breaks batch-POSITION invariance by splitting K differently per output tile), split-KV/FlashDecoding with a per-call split count, FlashInfer's 'balanced scheduling' that picks the largest split size saturating the cores, and small-batch split reductions in RMSNorm. A kernel library choosing any of those per call, based on load, is non-invariant by construction. The TF32 issue is separate and is about precision rather than ordering: tl.dot inheriting TF32 for fp32 inputs changes the arithmetic itself, so a kernel can be perfectly batch-invariant and still be inaccurate. The MoE and AWQ failures are open and unreproduced by maintainers as of 2026-10-03.",
+  "workaround": "Treat batch invariance as a per-(architecture, quantization, kernel-family) property to be MEASURED on the exact config you ship, never as a global guarantee implied by the flag. Concretely: run the upstream per-op suite at tests/v1/determinism/ (test_batch_invariance.py, test_cutlass_batch_invariant.py, test_nvfp4_batch_invariant.py, test_rms_norm_batch_invariant.py, test_xpu_batch_invariant_ut.py) rather than a single end-to-end check, and assert same-prompt/different-batch-size produces identical logits. On NVIDIA require compute capability 8.0+; on XPU require the Triton attention backend, not FlashInfer. If you need MoE or AWQ on an affected path, do not ship with the flag on and assume determinism - pin the kernels, disable the offending paths, or fall back to the cross-backend and cold-vs-warm-cache oracles in docs/10-testing-methodology.md. For precision-sensitive modules on Ampere/Hopper, explicitly control TF32 rather than inheriting the tl.dot default.",
+  "severity": "major",
+  "notes": "The direct answer to docs/05-known-traps.md gap #1 ('no systematic differential-test record - the absence of a record for (engine, hardware, format) means untested, not safe'). It also sharpens the repo's existing pd-batch-invariant-mode-absent-from-kv-namespace record: that one records that the invariance flag is missing from KV-offload namespace and connector compatibility metadata, so blocks written under different numerics can be silently shared. THIS record is the complementary and worse fact - even when the flag IS honoured, the guarantee does not cover every kernel path, and nothing tells you which ones. Two together mean batch-invariance mode is currently advisory rather than contractual. Support is also bounded upstream to NVIDIA cc8.0+ and Intel XPU with Triton (docs mark it beta, tracking issue #27433), so on the ROCm, Metal, Gaudi, TPU and Ascend records in this repo there is no flag to test against at all. Severity major rather than blocker because determinism is an opt-in property: a user who never sets the flag is not affected, and the reported impact is reproducibility loss rather than wrong-but-plausible output in a correctness-critical path - though the AWQ/MoE cases produce exactly that.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "nrg2-vllm-docs-batch-invariance",
+    "nrg2-gh-vllm-57016-fused-moe-not-invariant",
+    "nrg2-gh-vllm-59086-awq-not-invariant",
+    "nrg2-gh-vllm-55131-tf32-breaks-invariance",
+    "nrg2-thinkingmachines-defeating-nondeterminism"
+  ]
+}

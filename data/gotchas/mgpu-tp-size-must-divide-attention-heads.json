@@ -1,0 +1,28 @@
+{
+  "id": "mgpu-tp-size-must-divide-attention-heads",
+  "type": "gotcha",
+  "name": "A tensor-parallel size that does not divide the model's attention-head count fails at startup, and the message does not tell you what to use instead",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-vllm-4232-head-divisibility",
+    "mgpu-vllm-52535-divisibility-actionable"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "sglang"
+  ],
+  "concepts": [
+    "tensor-parallel",
+    "head-divisibility",
+    "gqa",
+    "pipeline-parallel"
+  ],
+  "symptom": "Serving a model with --tensor-parallel-size N raises at config validation. The vLLM string is: 'Total number of attention heads (40) must be divisible by tensor parallel size (6)' (reported verbatim on Qwen-1.5-32B with TP=6), and in current form: 'Value error, Total number of attention heads (64) must be divisible by tensor parallel size (3).' The engine never starts; there is no fallback and no automatic reshard.",
+  "root_cause": "Tensor parallelism shards the attention heads across ranks, so the head count must factor exactly into the TP size. This is a model-shape constraint, not a hardware or capacity one. PP is the escape hatch because it shards by layers and has no head-divisibility constraint. Reported failure mode: users read the error and assume the expert-count check is the real blocker (vLLM #52435), when in fact 64 heads simply cannot be split across 3 TP ranks.",
+  "workaround": "Pick a TP size that divides the head count (the divisors of the head count are the only valid values), or move the extra factor to --pipeline-parallel-size. If the head count itself is prime (e.g. 40 heads with a TP target of 6), the model needs PP for the non-dividing factor. Do not attempt to 'pad' heads - the constraint is checked before load.",
+  "severity": "blocker",
+  "notes": "Distinct from the expert-parallel divisibility assert (mgpu-ep-size-must-divide-physical-experts) - they are different code paths and both can fire for the same requested topology. GQA does not relax the constraint: it reduces num_kv_heads, but the sharded dimension is still the query-head count, so num_kv_heads must also stay divisible for KV sharding to be exact. Affects both vLLM (ModelConfig.verify_with_parallel_config) and SGLang's equivalent TP validation."
+}

@@ -1,0 +1,28 @@
+{
+  "id": "mgpu-pcie-cross-numa-tp-garbles-output",
+  "type": "gotcha",
+  "name": "On PCIe-only GPUs that sit across NUMA nodes, TP=2 produces garbled model output through the custom all-reduce path, and the corruption is silent",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-sglang-6651-cross-numa-allreduce"
+  ],
+  "class": "framework",
+  "affects": [
+    "sglang",
+    "nvidia-l40s"
+  ],
+  "concepts": [
+    "numa",
+    "pcie",
+    "custom-all-reduce",
+    "output-corruption",
+    "topology"
+  ],
+  "symptom": "2x NVIDIA L20 (compute capability 8.9, no NVLink) where nvidia-smi topo -m reports SYS between GPU0 and GPU1 (connection traversing PCIe plus the SMP interconnect between NUMA nodes): with '--tp 2', 'The model outputs garbled text. After I add --disable-custom-all-reduce, it outputs normally.' No error, no warning, no crash - and throughput looks entirely normal, so nothing distinguishes this from a healthy deployment short of reading the text.",
+  "root_cause": "The custom all-reduce path assumes peer access that holds within a coherent PCIe/NUMA domain. Across a SYS boundary the transfer crosses the CPU interconnect between sockets, and the custom kernel's synchronization assumptions do not hold there; correctness is lost while performance is unaffected. The reporter's framing is worth preserving: they state they do not know the root reason, and attribute it to instability in cross-NUMA PCIe communication specifically in custom all-reduce without full NVLink connectivity. The fix is a topology guard, not a kernel rewrite - the upstream change adds cross-NUMA detection for PCIe devices.",
+  "workaround": "Check nvidia-smi topo -m before trusting a multi-GPU config. If peer GPUs show SYS, pass --disable-custom-all-reduce (or use a topology-aware placement that keeps peers within a NUMA node). Note this is an output-correctness failure, so it is only detectable by inspecting generations or scoring them - throughput and error state are both clean.",
+  "severity": "major",
+  "notes": "Distinct from mgpu-rccl-heterogeneous-amd-gpu-archs-fail-first-collective (which aborts loudly) and from mgpu-pcie-only-multigpu-is-communication-bound (which is correct but capped): this one is silently wrong. The two PCIe-specific TP records are also distinguished by symptom - one is throughput, one is correctness - which is why they are not merged. Cross-reference the existing llama.cpp adjacent record on NUMA for the CPU-inference version of the same effect."
+}

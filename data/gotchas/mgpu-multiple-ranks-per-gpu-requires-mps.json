@@ -1,0 +1,28 @@
+{
+  "id": "mgpu-multiple-ranks-per-gpu-requires-mps",
+  "type": "gotcha",
+  "name": "Putting more than one rank on the same GPU is unsupported and produces either 'Duplicate GPU detected' with invalid usage, or a hang",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "mgpu-nccl-418-duplicate-device-mps",
+    "mgpu-nccl-231-duplicate-device"
+  ],
+  "class": "config",
+  "affects": [
+    "vllm",
+    "sglang"
+  ],
+  "concepts": [
+    "nccl",
+    "mps",
+    "ranks",
+    "world-size"
+  ],
+  "symptom": "Two ranks bound to the same CUDA device inside one communicator produce one of two signatures. With NCCL_CHECKS_DISABLE=1 the observed output is 'Failed, NCCL error a.cpp:106 \\'invalid usage\\'' from ncclCommInitRank. With checks enabled the warning appears first: 'NCCL WARN Duplicate GPU detected : rank 0 and rank 1 both on CUDA device 404000'. The vendor documentation states using the same CUDA device multiple times as different ranks of one communicator 'is not supported and may lead to hangs'. Both are documented on NCCL #231 as cases where NCCL should ideally return ncclInvalidUsage rather than proceeding.",
+  "root_cause": "A NCCL communicator assumes one distinct device per rank. The NVIDIA NCCL developer guide makes this explicit, and the maintainers opened #231 to get detection added precisely because the situation is undefined rather than merely unsupported - the ask was for ncclInvalidUsage, a WARN line, or an env-gated error. The hangs are attributed to collective kernels being unable to yield to each other in the same GPU when SMs are oversubscribed. Whether MPS makes the arrangement safe is unresolved upstream: #418 asked exactly that and noted the doc's 'may lead to hangs' language without resolving it for the MPS case.",
+  "workaround": "Never map two ranks of one communicator to one device. If you need several ranks co-located on one GPU, the supported path is CUDA MPS, and the MPS client ceiling applies (see mgpu-mps-max-clients-scale-down-on-mig). Enabling NCCL checks is worth doing on any cluster where rank-to-device mapping is not trivially obvious (Ray, Kubernetes device-plugin allocation, MIG), because the Duplicate GPU WARN is the only cheap detector.",
+  "severity": "blocker",
+  "notes": "Affects any executor that derives rank-to-device assignment indirectly. Ray's get_open_ports_list race (mgpu-dp-workers-race-for-the-same-zmq-ports) is a symptom of the same class - processes that each independently assume they own a resource. Also relevant when MIG makes several devices appear on one physical GPU: distinct MIG UUIDs are distinct devices, but two ranks resolving to the same slice are not."
+}

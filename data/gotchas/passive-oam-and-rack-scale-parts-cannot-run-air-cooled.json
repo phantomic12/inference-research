@@ -1,0 +1,38 @@
+{
+  "id": "passive-oam-and-rack-scale-parts-cannot-run-air-cooled",
+  "type": "gotcha",
+  "name": "Passive-OAM modules and rack-scale systems physically cannot run air-cooled: no heatsink means no air path, and the host must have a cold plate",
+  "class": "hardware",
+  "affects": [
+    "amd-instinct-mi325x",
+    "amd-instinct-mi350x",
+    "amd-instinct-mi355x",
+    "nvidia-gb200-nvl72",
+    "nvidia-b200",
+    "nvidia-b300"
+  ],
+  "concepts": [
+    "liquid-cooling",
+    "direct-to-chip",
+    "cold-plate",
+    "passive-oam",
+    "facility-constraint",
+    "rack-scale",
+    "54v-ubb"
+  ],
+  "symptom": "A server built for air cooling will not accept these parts at all, and the failure is a procurement/integration one rather than a runtime one: the chassis has no cold plates, no manifold inlets, no coolant fittings and no CDU, so there is nothing for a passive module to attach to. Symptoms at integration are mechanical - modules that cannot be seated, missing cold-plate brackets, firmware or management-tool complaints about absent coolant sensors - or a host vendor simply not offering the configuration.",
+  "root_cause": "'Passive OAM' means the module has no integrated heat sink and no fan; AMD's own MI325X and MI350X product pages list Cooling as 'Passive OAM' at 1000 W TBP. NVIDIA's GB200 NVL72 compute trays 'are cooled by liquid that runs up and down the rack through manifolds, then through the cold plates that are attached to the CPUs and the GPUs in the tray', with only networking and storage air-cooled, and the GB300 NVL72 is described as 'fully liquid-cooled'. Without a cold plate there is no heat path from a 1000-1400 W die to any coolant, so liquid is not an efficiency upgrade here - it is the only physical option.",
+  "workaround": "Make liquid capability a hard prerequisite in the host and facility selection, checked BEFORE any performance or pricing conversation: confirm the chassis has cold plates on every accelerator position, that coolant supply temperature and flow meet the vendor spec, that facility liquid (or a CDU) is actually present at that rack position, and that leak detection is in place. Do not accept 'Passive OAM' or 'OAM module' in a spec as compatible with an air-cooled host - it is the opposite. For a retrofit into an existing building, budget for the CDU as the gating item (see supply/liquid-cooling-retrofit-cdu-density-ceiling). Note both vendors converge on the same 50-51V-class rack distribution ('54V UBB' on AMD, 'nominal 50V-51V DC' from NVIDIA's power shelves), so the electrical side is closer to interchangeable than the mechanical side is.",
+  "severity": "blocker",
+  "notes": "Severity is blocker, not major, because there is no configuration workaround - this is the class of constraint that determines whether a given part can be deployed in a given building at all. The corollary is the error to avoid: asking whether a GPU 'needs liquid cooling'. The question is malformed at the part level. H100 PCIe at 350 W is explicitly 'PCIe dual-slot air-cooled' in NVIDIA's own datasheet and needs nothing; MI350X at 1000 W is 'Passive OAM' and cannot run without a cold plate; the GB200 NVL72 rack needs an in-rack manifold loop. Same vendor, same architecture generation, opposite facility requirements - see supply/h100-pcie-air-cooled-vs-sxm-liquid.",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-03",
+  "sources": [
+    "pwr2-amd-mi350x-product-page",
+    "pwr2-amd-mi325x-product-page",
+    "pwr2-nvidia-dgx-gb200-hardware",
+    "pwr2-nvidia-blackwell-ultra-datasheet",
+    "pwr2-nvidia-h100-datasheet"
+  ]
+}

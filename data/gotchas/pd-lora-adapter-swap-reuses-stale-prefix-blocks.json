@@ -1,0 +1,20 @@
+{
+  "id": "pd-lora-adapter-swap-reuses-stale-prefix-blocks",
+  "type": "gotcha",
+  "name": "Prefix cache blocks computed under one LoRA adapter are reused under another when the adapters share a name",
+  "class": "config",
+  "affects": [
+    "vllm"
+  ],
+  "symptom": "Prefix cache corruption when two LoRA adapters share a name but differ in lora_init_id: blocks computed under one adapter are served for requests targeting the other, producing wrong output with no error. Confirmed as offline/batch mode only - maintainer jeejeelee states it 'should only occur in offline mode, it shouldn't be a problem when online server', and the reporter confirms it was research/offline use.",
+  "root_cause": "The prefix-cache block hash does not discriminate between LoRA adapters that share a human-readable name. lora_init_id is the field that distinguishes them and it is not part of the key, so the cache cannot tell the two apart. The maintainer's proposed resolution is to stop exposing lora_init_id at all (PR #31489) so the ambiguity cannot arise, rather than adding it to every cache key.",
+  "workaround": "Give every distinct LoRA adapter a distinct name, and treat an adapter registry reload as invalidating the prefix cache. The upstream direction is to remove the ambiguity rather than key on the id, so do not build tooling that depends on being able to distinguish same-named adapters by id.",
+  "severity": "major",
+  "notes": "Scoped to offline mode by maintainer confirmation, which is why this is major and not blocker - it would be blocker if it reached the online server. Env: 4x A100-SXM4-80GB, PyTorch 2.9.0+cu128, vLLM around 0.11-era, Ubuntu 22.04. Open (auto-staled) at 2026-10-03. The general lesson is the same one as the packed-layout gotcha, one level up: the cache key must include every input that changes the produced KV, and an adapter identity is such an input. Also note the meta-pattern - the fix chosen upstream was to remove the ambiguous API surface rather than to widen the key, which is a signal about how many such fields there are.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-gh-vllm-30931-lora-prefix-cache-corruption"
+  ]
+}

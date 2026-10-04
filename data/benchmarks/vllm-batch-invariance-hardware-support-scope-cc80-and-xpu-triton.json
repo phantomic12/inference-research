@@ -1,0 +1,22 @@
+{
+  "id": "vllm-batch-invariance-hardware-support-scope-cc80-and-xpu-triton",
+  "type": "benchmark",
+  "name": "vLLM batch invariance is beta and its hardware support is bounded: NVIDIA compute capability 8.0+ and Intel XPU with Triton backend only - no ROCm/HIP, Metal, TPU or CPU claim",
+  "engine_id": "vllm",
+  "metric": "quality",
+  "value": 80.0,
+  "unit": "minimum NVIDIA compute capability (8.0) for which batch invariance is supported; the enum has no determinism-support metric so 'quality' is a placeholder",
+  "methodology": "Documentation fact, not a measurement - recorded because it bounds how far the batch-invariance oracle can be applied, which is the practical constraint on differential testing across this repo's hardware. The vLLM feature page is marked beta with 'some features are still under active development' and tracks progress at vllm-project/vllm#27433. Stated support: NVIDIA GPUs of compute capability 8.0 or higher, and Intel XPUs with Triton support, where the Triton Attention backend is REQUIRED (not the FlashInfer backend). No AMD ROCm/HIP, no Apple Metal, no TPU and no CPU support is claimed. Upstream implements the oracle as a per-op test suite under tests/v1/determinism/ - 10 files covering batch invariance for VLM, CUTLASS matmul, NVFP4, RMSNorm, XPU, plus an online end-to-end test.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "THE SCOPE LIMIT THAT DETERMINES THE WHOLE TEST STRATEGY ON NON-NVIDIA PARTS. The strongest available oracle for silent numeric corruption - same prompt, different batch size, identical logits - is implemented upstream for NVIDIA and Intel XPU ONLY. So on the AMD, Apple, Gaudi, TPU and Ascend records in this repo there is no supported batch-invariance mode to test against, and the repo's own ROCm and Metal gotchas therefore cannot be cleared by the vLLM flag. For those parts the cross-backend and cold-vs-warm-cache oracles in docs/10-testing-methodology.md are the only available instruments, which is precisely why they need to be written down. Also note the per-op structure of the upstream suite: invariance is asserted per kernel family (RMSNorm, matmul/CUTLASS, NVFP4, attention, MoE-adjacent paths), not once end-to-end - consistent with open issues #57016 (fused-MoE not invariant, silently) and #59086 (AWQ on sm8x not invariant in default mode), which show an end-to-end pass on one config is no evidence for another.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "nrg2-vllm-docs-batch-invariance",
+    "nrg2-gh-vllm-57016-fused-moe-not-invariant",
+    "nrg2-gh-vllm-59086-awq-not-invariant",
+    "nrg2-gh-vllm-55131-tf32-breaks-invariance"
+  ]
+}
