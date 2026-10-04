@@ -88,6 +88,14 @@ TEMPLATES = {
         "url": None, "publisher": None, "kind": None, "published": None,
         "accessed": TODAY, "archived_url": None, "notes": "",
     },
+    "compiler": {
+        "repo": None, "language": None, "license": None, "first_release_year": None,
+        "category": None, "target_backends": [], "input_languages": [],
+        "output_artifacts": [], "compilation_strategy": None, "autotuning": None,
+        "production_ready": None, "production_evidence": [],
+        "strengths": [], "weaknesses": [], "learning_curve": None,
+        "compile_time_seconds": None, "notes": "",
+    },
 }
 
 

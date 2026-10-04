@@ -77,6 +77,26 @@ class Harness(unittest.TestCase):
             "consumer": False, "notes": "",
         }
 
+    def good_interconnect(self, slug: str = "acme-nvlink") -> dict:
+        return {
+            "id": slug, "type": "interconnect", "name": "ACME NVLink",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "kind": "nvlink", "version": "4",
+            "bandwidth_gbps": 50.0, "bandwidth_basis": "per link, unidirectional",
+            "link_count": 18, "topology": "point-to-point", "scale_up": True,
+            "scale_out": False, "switching": None, "notes": "",
+        }
+
+    def good_flop(self, slug: str = "acme-decode-gemm") -> dict:
+        return {
+            "id": slug, "type": "flop", "name": "ACME Decode GEMM",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "class": "decode_gemm",
+            "arithmetic_intensity": "low at batch 1", "bound_by": "memory",
+            "scales_with": ["batch"], "affected_by_hardware": [],
+            "workarounds": [], "notes": "",
+        }
+
 
 class TestValidate(Harness):
     def test_empty_repo_is_valid(self):
@@ -546,6 +566,130 @@ class TestRegistry(Harness):
             schema = json.loads((ROOT / "schemas" / f"{t}.schema.json").read_text(encoding="utf-8"))
             self.assertEqual(schema["properties"]["type"]["const"], t)
             self.assertTrue((ROOT / "data" / DIRS[t]).is_dir(), DIRS[t])
+
+
+class TestDirectoryPlacement(Harness):
+    """Records must live in the directory matching their declared type.
+
+    This is a regression test for a real bug: agents wrote records into
+    data/interconnects/ (plural) and data/flop/ (singular) and validate.py
+    did not notice. The canonical directories are defined in registry.py
+    and must be enforced by validate.py.
+    """
+
+    def test_interconnect_in_interconnects_dir_is_error(self):
+        """A record with type='interconnect' in data/interconnects/ must fail."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/interconnects/acme-nvlink.json", self.good_interconnect())
+        r = self.validate()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("non-canonical directory", r.stdout)
+        self.assertIn("interconnects", r.stdout)
+
+    def test_flop_in_flop_dir_is_error(self):
+        """A record with type='flop' in data/flop/ (singular) must fail."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/flop/acme-decode-gemm.json", self.good_flop())
+        r = self.validate()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("non-canonical directory", r.stdout)
+        self.assertIn("flop", r.stdout)
+
+    def test_correctly_placed_interconnect_passes(self):
+        """A record with type='interconnect' in data/interconnect/ must pass."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/interconnect/acme-nvlink.json", self.good_interconnect())
+        r = self.validate()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_correctly_placed_flop_passes(self):
+        """A record with type='flop' in data/flops/ must pass."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/flops/acme-decode-gemm.json", self.good_flop())
+        r = self.validate()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_multiple_stray_dirs_all_reported(self):
+        """Multiple stray directories must each be reported."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/interconnects/acme-nvlink.json", self.good_interconnect())
+        self.write("data/flop/acme-decode-gemm.json", self.good_flop())
+        r = self.validate()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("interconnects", r.stdout)
+        self.assertIn("flop", r.stdout)
+
+    def test_stray_dir_without_json_is_not_error(self):
+        """An empty stray directory (no .json files) is not an error."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        (self.tmp / "data" / "interconnects").mkdir(parents=True)
+        r = self.validate()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
+class TestCanonicalDirectories(Harness):
+    """The canonical directory list must be explicit and complete.
+
+    If someone adds a new type or a stray directory appears, these tests
+    fail loudly rather than silently accommodating the change.
+    """
+
+    CANONICAL_DIRS = [
+        "accelerators", "benchmarks", "engines", "flops", "gotchas",
+        "interconnect", "models", "papers", "quantization", "sources", "supply",
+    ]
+
+    def test_canonical_dir_list_is_exact(self):
+        """The canonical directory list must match exactly."""
+        sys.path.insert(0, str(TOOLS))
+        from registry import DIRS
+        self.assertEqual(sorted(DIRS.values()), self.CANONICAL_DIRS)
+
+    def test_no_stray_directories_in_repo(self):
+        """No stray directories exist in the real data/ directory."""
+        data_dir = ROOT / "data"
+        if not data_dir.exists():
+            self.skipTest("data/ directory does not exist")
+        actual = {d.name for d in data_dir.iterdir() if d.is_dir()}
+        expected = set(self.CANONICAL_DIRS)
+        strays = actual - expected
+        self.assertEqual(strays, [], f"stray directories found: {strays}")
+
+    def test_no_flop_singular_dir(self):
+        """data/flop/ (singular) must not exist."""
+        self.assertFalse((ROOT / "data" / "flop").exists())
+
+    def test_no_interconnects_plural_dir(self):
+        """data/interconnects/ (plural) must not exist."""
+        self.assertFalse((ROOT / "data" / "interconnects").exists())
+
+
+class TestIdFilenameMatch(Harness):
+    """Every record's id must match its filename stem.
+
+    This is a cheap invariant that catches copy-paste and bulk-rename errors.
+    """
+
+    def test_id_matches_filename_stem(self):
+        """All records in the real repo have id == filename stem."""
+        sys.path.insert(0, str(TOOLS))
+        from registry import DIRS
+        data_dir = ROOT / "data"
+        if not data_dir.exists():
+            self.skipTest("data/ directory does not exist")
+        mismatches = []
+        for type_name, dir_name in DIRS.items():
+            type_dir = data_dir / dir_name
+            if not type_dir.exists():
+                continue
+            for f in sorted(type_dir.glob("*.json")):
+                try:
+                    rec = json.loads(f.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    continue  # invalid JSON is caught by other tests
+                if isinstance(rec, dict) and rec.get("id") != f.stem:
+                    mismatches.append(f"{dir_name}/{f.stem}: id={rec.get('id')!r}")
+        self.assertEqual(mismatches, [], f"id/filename mismatches: {mismatches}")
 
 
 if __name__ == "__main__":

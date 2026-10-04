@@ -172,6 +172,18 @@ def run(types: list[str], quiet: bool) -> tuple[Report, int]:
             # schema allows it because benchmarks predate the model type.
             pass
 
+    # Scan for records in non-canonical directories
+    all_canonical_dirs = set(DIRS.values())
+    data_dir = ROOT / "data"
+    if data_dir.exists():
+        for d in sorted(data_dir.iterdir()):
+            if d.is_dir() and d.name not in all_canonical_dirs:
+                for f in sorted(d.glob("*.json")):
+                    rep.errors.append(
+                        f"{d.name}/{f.stem}: record in non-canonical directory "
+                        f"'{d.name}' (expected one of: {', '.join(sorted(all_canonical_dirs))})"
+                    )
+
     del qualified
     return rep, len(records)
 

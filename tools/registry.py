@@ -18,6 +18,7 @@ DIRS = {
     "model": "models",
     "paper": "papers",
     "source": "sources",
+    "compiler": "compilers",
 }
 
 TYPES = list(DIRS)
@@ -34,4 +35,5 @@ TITLES = {
     "model": "Models",
     "paper": "Papers",
     "source": "Sources",
+    "compiler": "Compilers & kernel DSLs",
 }

@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "compiler",
+  "title": "compiler",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "name",
+    "status",
+    "confidence",
+    "updated",
+    "sources"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "type": {
+      "const": "compiler"
+    },
+    "name": {
+      "type": "string"
+    },
+    "repo": {
+      "type": ["string", "null"]
+    },
+    "language": {
+      "type": ["string", "null"],
+      "description": "Primary implementation language"
+    },
+    "license": {
+      "type": ["string", "null"]
+    },
+    "first_release_year": {
+      "type": ["integer", "null"]
+    },
+    "category": {
+      "type": "string",
+      "enum": ["dsl", "compiler-framework", "template-library", "graph-optimizer", "kernel-dsl", "runtime"],
+      "description": "dsl = Python/DSL for writing kernels; compiler-framework = full stack from graph to machine code; template-library = C++ templates for kernel composition; graph-optimizer = graph-level transformations only; kernel-dsl = low-level kernel DSL; runtime = execution runtime with built-in optimizations"
+    },
+    "target_backends": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "cuda | rocm | hip | metal | vulkan | cpu-avx512 | cpu-avx2 | opencl | tpu | xnnpack | spirv | webgpu"
+    },
+    "input_languages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "python | jax | pytorch | tensorflow | onnx | tflite | cutlass-cpp | triton | mlir | xla-hlo"
+    },
+    "output_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "ptx | amdgcn | spirv | air | metal | c | llvm-ir | triton-ir | cubin | plan"
+    },
+    "compilation_strategy": {
+      "type": "string",
+      "enum": ["jit", "aot", "template-instantiation", "graph-rewrite", "mixed"],
+      "description": "jit = just-in-time at runtime; aot = ahead-of-time; template-instantiation = C++ template expansion; graph-rewrite = graph-level transformations; mixed = multiple strategies"
+    },
+    "autotuning": {
+      "type": "boolean"
+    },
+    "production_ready": {
+      "type": "boolean",
+      "description": "True if used in production inference engines"
+    },
+    "production_evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Engine names or projects that use this in production"
+    },
+    "strengths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "weaknesses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "learning_curve": {
+      "type": "string",
+      "enum": ["low", "moderate", "high", "very-high"]
+    },
+    "compile_time_seconds": {
+      "type": ["number", "null"],
+      "description": "Typical compile time for a single kernel, if known"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "enum": ["verified", "draft", "contested", "deprecated"]
+    },
+    "confidence": {
+      "type": "number"
+    },
+    "updated": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "source ids; each must exist in data/sources/"
+    }
+  },
+  "additionalProperties": false
+}
