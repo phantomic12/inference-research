@@ -1,0 +1,65 @@
+{
+  "id": "nixl",
+  "type": "engine",
+  "name": "NVIDIA Inference Xfer Library (NIXL)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-nixl-repo",
+    "pd-vllm-nixl-connector-docs",
+    "pd-gh-dynamo-12463-rdma-failure-silent-garbage",
+    "pd-gh-trtllm-17665-nixl-notify-hang",
+    "pd-gh-vllm-58263-batch-invariant-not-in-kv-namespace"
+  ],
+  "repo": "ai-dynamo/nixl",
+  "languages": [
+    "C++",
+    "Python",
+    "Rust",
+    "CUDA"
+  ],
+  "license": "NOASSERTION - Apache-2.0 project, but the PyPI wheels bundle NVIDIA modules (libuct_ib_mlx5_ext.so, libuct_ib_mlx5_gda.so, libuct_ib_mlx5_gdp.so) under the NVIDIA Proprietary License (LicenseRef-Nvidia-Proprietary)",
+  "first_release_year": 2025,
+  "design_goal": [
+    "low-latency",
+    "minimal-deps",
+    "point-to-point data movement",
+    "transport abstraction"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm"
+  ],
+  "supported_formats": [],
+  "notable_features": [
+    "Abstraction over memory (CPU, GPU) and storage (file, block, object store) through a modular plug-in backend architecture",
+    "Targeted at point-to-point communication in inference frameworks such as Dynamo, which is the primary consumer",
+    "Fully asynchronous send/receive, which is what lets vLLM's NixlConnector keep the transfer off the critical path",
+    "Multiple transport backends selectable per deployment: UCX (default), LIBFABRIC, GDS, and others depending on build",
+    "Optional etcd-based metadata distribution and coordination for multi-node deployments",
+    "Ships two benchmark harnesses: nixlbench (transport) and kvbench (KV workloads)"
+  ],
+  "hardware_caveats": [
+    "Linux only - 'tested on Ubuntu (22.04/24.04) and Fedora. macOS and Windows are not currently supported'",
+    "Requires a C++20 compiler (GCC >= 11 or Clang >= 14) for source builds; PyPI wheels bundle UCX for both CUDA 12 and 13 and select at runtime",
+    "GDRCopy is 'necessary for maximum performance, but UCX and NIXL will work without it' - so a missing GDRCopy is a performance cliff, not a functional break",
+    "RDMA path depends on GPU/NIC PCIe topology and on IOMMU translation in the guest; the PIX-adjacent passthrough case fails GPUDirect RDMA outright and the failure is silent (see the Dynamo #12463 gotcha)",
+    "Completion notification is a separate message from the data transfer, so notification loss produces a hang rather than an error"
+  ],
+  "best_for": [
+    "Any disaggregated or KV-tiered inference deployment that needs to move KV blocks between processes, nodes or memory tiers with a pluggable transport",
+    "Deployments where the transport must be swappable (RDMA fabric vs libfabric vs GPUDirect Storage) without changing the engine",
+    "Multi-vendor CUDA shops that want one transfer library instead of per-vendor RDMA stacks"
+  ],
+  "avoid_for": [
+    "Windows or macOS hosts - unsupported outright",
+    "Small single-node deployments where a CUDA-IPC or shared-memory copy would do; NIXL's own abstraction and etcd coordination are overhead there",
+    "Anything needing hard delivery guarantees - the completion-notification path has no timeout or retry on the receiver"
+  ],
+  "docs_url": "https://github.com/ai-dynamo/nixl/blob/main/docs/nixl.md",
+  "notes": "KV transfer path: this IS the transfer path for most of the ecosystem. UCX is the primary default transport (configured via UCX_TLS / UCX_NET_DEVICES, not NCCL variables), which in turn selects rc/cuda_ipc/ud/sm transports and RDMA verbs underneath; LIBFABRIC and GDS are alternatives chosen per deployment. Practically this means: same host -> cuda_ipc or shared memory; same node across GPUs -> NVLink via UCX; across nodes -> RDMA verbs over the HCA with GPUDirect. The failure characteristics matter as much as the path. Two documented ones: (1) an RDMA failure surfaces as silent token corruption rather than an error, because the receiver treats a failed transfer as complete (Dynamo #12463); (2) a dropped completion notification hangs the receiver forever at 100% CPU with the GPU idle (TensorRT-LLM #17665, where the Mooncake backend shares the same AgentConnectionManager). Also note the namespace problem documented in vLLM #58263: NIXL's compatibility hash includes attn_backend_name, cache_dtype and vllm_version but NOT the batch-invariance flag, so a batch-invariant instance can accept blocks produced under a different numerical configuration with nothing to signal it."
+}

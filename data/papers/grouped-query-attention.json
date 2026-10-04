@@ -1,0 +1,39 @@
+{
+  "id": "grouped-query-attention",
+  "type": "paper",
+  "name": "GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-grouped-query-attention"
+  ],
+  "arxiv_id": "2305.13245",
+  "venue": "emnlp",
+  "year": 2023,
+  "category": "kv-cache",
+  "authors": [
+    "Ainslie, Joshua",
+    "Lee-Thorp, James",
+    "de Jong, Michiel",
+    "Zemlyanskiy, Yury"
+  ],
+  "affiliations": [
+    "Google Research",
+    "Google DeepMind"
+  ],
+  "problem": "Multi-query attention shrinks the decode-time KV cache to a single KV head but degrades quality, and it cannot be adopted after the fact because there is no cheap way to convert an already-trained multi-head checkpoint.",
+  "mechanism": "Grouped-query attention: use an intermediate number of KV heads (between 1 and the number of query heads) and assign each query head to a group that shares one KV head. The paper's real contribution is the UPTRAINING RECIPE: train an existing multi-head checkpoint for 5% of the original pre-training compute with the KV heads progressively grouped, producing a GQA model that was never trained from scratch.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-a30",
+    "nvidia-a10"
+  ],
+  "speedup_reported": "The paper's claims are about QUALITY AND COST, not a speedup: uptraining an MHA checkpoint uses 5% of the original pre-training compute, and uptrained GQA achieves quality close to multi-head attention with decoding speed comparable to MQA. The serving consequence - a KV cache smaller by the GQA ratio - follows arithmetically from num_kv_heads and is a model-config property, not a measured paper speedup.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/google-research/google-research/tree/master/using_gpt_to_improve_gnn",
+  "open_weights": null,
+  "notes": "arXiv ID 2305.13245 verified via abs-page meta tags on 2026-10-03; title matches. Venue confirmed by three independent routes: arXiv comment 'Accepted at EMNLP 2023', OpenReview venue='EMNLP 2023 Main', venueid='EMNLP/2023/Conference', and the DBLP mirror. adoption=in-upstream-engine: GQA is not a kernel or an API - it is a model architecture, and it is now the default in essentially every shipped open model (Llama 3, Qwen 3, Mistral, DeepSeek), which vLLM and SGLang both serve via the generic attention path with num_kv_heads in the config. The honest framing: this paper is in-production as an ARCHITECTURE CHOICE rather than as code that a serving engine had to adopt. code_url is the google-research repo path recorded by the authors but should be treated as indicative, not verified as the canonical GQA implementation - the actual legacy implementation was in the google-research tree under a different path."
+}

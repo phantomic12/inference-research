@@ -1,0 +1,39 @@
+{
+  "id": "h2o",
+  "type": "paper",
+  "name": "H2O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-h2o"
+  ],
+  "arxiv_id": "2306.14048",
+  "venue": "neurips",
+  "year": 2023,
+  "category": "kv-cache",
+  "authors": [
+    "Zhang, Zhenyu",
+    "Sheng, Ying",
+    "Zhou, Tianyi",
+    "Chen, Tianlong"
+  ],
+  "affiliations": [
+    "University of Waterloo",
+    "University of Toronto",
+    "Vector Institute"
+  ],
+  "problem": "For long-content generation the KV cache stored in GPU memory scales linearly with sequence length and batch size, adding a large transient-memory cost on top of model parameters.",
+  "mechanism": "The observation: a small subset of tokens (HEAVY HITTERS) contributes most of the attention value, and their emergence correlates with token co-occurrence in the text. H2O then maintains an accumulated-attention score per token and EVICTS the lowest-scoring entries whenever the cache is full, subject to a theoretical guarantee under mild assumptions. Locality is preserved by combining recent-window tokens with historical heavy hitters.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-a30"
+  ],
+  "speedup_reported": "Paper's own claims (abstract): with 20% heavy hitters, throughput improves over DeepSpeed Zero-Inference, HuggingFace Accelerate and FlexGen by up to 29x, 29x and 3x respectively on OPT-6.7B and OPT-30B; and at the SAME batch size, latency reduced by up to 1.9x. Read the three multipliers carefully - the 29x figures are against specific serving systems and reflect the memory freed for batching, while 1.9x is the same-batch-size latency comparison and is the more conservative number.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/FMInference/H2O",
+  "open_weights": null,
+  "notes": "arXiv ID 2306.14048 verified via abs-page citation_title/citation_date on 2026-10-03; the abs page renders the title with TeX as 'H$_2$O: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models' - same paper as the record name 'H2O: ...', no discrepancy. Venue CORRECTED from the source record's 'arXiv preprint; no journal_ref': OpenReview returns venue='NeurIPS 2023 poster', venueid='NeurIPS.cc/2023/Conference' for the exact title. venue=neurips, year=2023. adoption=research-only verified by absence: H2O's own repo FMInference/H2O was last pushed 2024-08-01 (534 stars) - not dead, but no H2O eviction policy appears in vLLM's v1 cache layer (checked vllm/v1/core/kv_cache_utils.py, vllm/config/cache.py, vllm/attention/selector.py and the v1 backends/utils.py), none in transformers cache_utils.py (which has no H2O layer among its 24 cache classes), and none in SGLang. The competing mechanisms in this repo that DID get an engine foothold - Quest, MInference, DuoAttention - are separate records. The eviction rule needs a hook in the attention kernel to score tokens as they are produced; no mainstream engine exposes that."
+}

@@ -1,0 +1,35 @@
+{
+  "id": "sbert",
+  "type": "paper",
+  "name": "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks",
+  "arxiv_id": "1908.10084",
+  "venue": "emnlp",
+  "year": 2019,
+  "category": "embedding",
+  "authors": [
+    "Nils Reimers",
+    "Iryna Gurevych"
+  ],
+  "affiliations": [
+    "University of Applied Sciences Darmstadt"
+  ],
+  "problem": "BERT must run both sentences through the network jointly, making similarity search over a corpus quadratically expensive.",
+  "mechanism": "Siamese/triplet structure with a SHARED encoder and a pooling layer producing one fixed-size vector per sentence; similarity is then a cosine or dot product over precomputed vectors. This makes the encoder independent per sentence, so corpus vectors are computed once and indexable.",
+  "hardware_relevance": [
+    "nvidia-l4",
+    "nvidia-a10",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Reduces the cost of finding the most similar pair in a 10,000-sentence collection from ~65 HOURS (about 50 million BERT inference computations) to about 5 SECONDS, while retaining BERT's accuracy. The 10,000-sentence corpus and the CPU-class baseline are both stated, which makes this the most concrete encoder-cost number in the embedding literature.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/UKPLab/sentence-transformers",
+  "open_weights": true,
+  "notes": "Venue EMNLP 2019, confirmed via crossref (ACL, 'Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing'). The single most consequential paper for embedding SERVING: it is the reason embedding workloads are a vector-database problem rather than an inference problem. THE COST INVERSION THIS REPO CARES ABOUT: a text encoder at batch 1 is COMPUTE-BOUND, the inverse of a batch-1 text decoder which is memory-bound. One SBERT forward is a few GFLOPs and reads all weights, so batching is not optional - unlike decode, where batching is opportunistic. Everything about encoder serving (batch it, sort by length, keep weights resident) follows from that.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-sbert"
+  ]
+}

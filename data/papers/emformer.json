@@ -1,0 +1,39 @@
+{
+  "id": "emformer",
+  "type": "paper",
+  "name": "Emformer: Efficient Memory Transformer Based Acoustic Model For Low Latency Streaming Speech Recognition",
+  "arxiv_id": "2010.10759",
+  "venue": "icassp",
+  "year": 2021,
+  "category": "speech",
+  "authors": [
+    "Yangyang Shi",
+    "Yongqiang Wang",
+    "Chunyang Wu",
+    "Ching-Feng Yeh",
+    "Julian Chan",
+    "Frank Zhang",
+    "Duc Le",
+    "Mike Seltzer"
+  ],
+  "affiliations": [
+    "Apple"
+  ],
+  "problem": "Streaming ASR with limited latency needs long-range context for accuracy but cannot afford full self-attention over unbounded history.",
+  "mechanism": "Splits the sequence into a limited hard-augmented memory bank, the left context, and the current block. The LEFT CONTEXT IS CACHED: K and V for left-context frames are computed once and reused across streaming steps, so attention cost is linear rather than quadratic in history length. Long-range history is additionally distilled into the memory bank so accuracy survives truncation.",
+  "hardware_relevance": [
+    "nvidia-a10",
+    "nvidia-l4"
+  ],
+  "speedup_reported": "At average latency 960 ms on Librispeech: 2.50% WER test-clean, 5.62% test-other, with 4.6x training speedup and 18% relative RTF reduction versus the augmented memory transformer (AM-TRF) baseline, plus 17%/9% relative WER reduction. At 80 ms average latency: 3.01%/7.09% WER, a 9%/16% relative WER reduction versus an LSTM baseline of the same latency and model size. Baselines and the latency setting are both stated; GPU hardware is not given.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/facebookresearch/emnformer",
+  "open_weights": false,
+  "notes": "ICASSP 2021, DOI 10.1109/ICASSP39728.2021.9414560 (confirmed via openalex). Two engineering lessons carried forward into every streaming encoder: (1) caching left-context K/V converts quadratic attention into linear cost and is the single biggest lever in a streaming ASR decoder; (2) the paper's own numbers show the latency/accuracy knob is first-class - the same model at 960 ms vs 80 ms trades roughly 0.5-1.5 WER points for a 12x latency cut, which is the tradeoff a serving engineer actually tunes.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-emformer"
+  ]
+}

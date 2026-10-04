@@ -1,0 +1,34 @@
+{
+  "id": "linformer",
+  "type": "paper",
+  "name": "Linformer: Self-Attention with Linear Complexity",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-linformer"
+  ],
+  "arxiv_id": "2006.04768",
+  "venue": "arxiv-preprint",
+  "year": 2020,
+  "category": "attention",
+  "authors": [
+    "Sinong Wang",
+    "Belinda Z. Li",
+    "Madian Khabsa",
+    "Han Fang",
+    "Hao Ma"
+  ],
+  "affiliations": [
+    "Facebook AI Research",
+    "Stanford University"
+  ],
+  "problem": "Standard self-attention uses O(n^2) time and space in sequence length, making long-sequence training and deployment prohibitively costly.",
+  "mechanism": "Exploit the empirical finding that the self-attention matrix can be APPROXIMATED BY A LOW-RANK matrix, then project keys and values onto a fixed number of learned sequence-length projections (k and v). The attention matrix therefore has rank at most k regardless of n, which reduces the complexity from O(n^2) to O(n) in both time and space. The projection length is a fixed hyperparameter, which is exactly the constraint that later work objects to.",
+  "hardware_relevance": [],
+  "speedup_reported": "NOT A QUANTIFIED SPEEDUP. The abstract's claim is the complexity reduction (O(n^2) to O(n) in both time and space) plus 'performs on par with standard Transformer models, while being much more memory- and time-efficient'. No wall-clock multiple, no baseline implementation, no hardware. The complexity reduction is the durable claim; the 'much more efficient' phrasing is unquantified in the source and should not be turned into a number.",
+  "adoption": "abandoned",
+  "code_url": "https://github.com/lucidrains/linformer",
+  "open_weights": null,
+  "notes": "arXiv ID 2006.04768 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. venue=arxiv-preprint, and this is a venue that should NOT be upgraded by assumption: the arXiv comment field is empty, no journal_ref exists, and OpenReview search for the exact title returns only unrelated later papers (including 'Interactive Multi-Head Self-Attention with Linear Complexity', CoRR 2024, and 'LinFormer: A Linear-Based Lightweight Transformer Architecture' on a public-article record - different works). Linformer was never published at a conference as far as any primary source available this session shows. adoption=abandoned, verified rather than assumed: the official repo lucidrains/linformer (307 stars) was last pushed 2024-01-05 - over two years stale; no linformer path exists in vLLM's 8562-file tree, SGLang's tree, or transformers' model and cache modules. The concrete reason for abandonment is worth recording because it generalises: Linformer compresses the SEQUENCE dimension with a FIXED learned projection, which means the model is locked to one maximum sequence length and the compressed keys must be recomputed whenever the input length changes - fatal for a serving engine where request lengths vary per request and for prefix-cache reuse. Every linear-attention method that DID ship (mamba, mamba-2, kimi-linear, simple-linear-attention) uses a recurrent state or content-dependent gate instead of a fixed sequence projection."
+}

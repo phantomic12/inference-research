@@ -1,0 +1,36 @@
+{
+  "id": "jamba-hybrid",
+  "type": "paper",
+  "name": "Jamba: A Hybrid Transformer-Mamba Language Model",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2403-19887"
+  ],
+  "arxiv_id": "2403.19887",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "ssm",
+  "authors": [
+    "Opher Lieber",
+    "Barak Lenz",
+    "Hofit Bata",
+    "Gal Cohen"
+  ],
+  "affiliations": [
+    "AI21 Labs"
+  ],
+  "problem": "Pure Mamba models lose the exact recall of attention; pure attention models pay a KV cache that grows with context and cannot fit long contexts in memory.",
+  "mechanism": "Interleaves blocks of Transformer and Mamba layers in a fixed repeating ratio (the 52B Jamba-v0.1 configuration uses roughly a 1:3 Mamba:Transformer block ratio) and adds MoE to some layers for capacity at controlled active parameters, so the released model fits on a single 80GB GPU. The layer structure is the practical contribution: enough Mamba layers that most of the model has constant-size state and no KV contribution, plus a minority of full-attention layers that restore exact recall. Load balancing in the MoE layers is the DeepSeekMoE-style fine-grained split with shared experts. Reported strong results to 256K context. Serving consequence: KV cache is proportional to the number of attention layers only, not to total layers, which is the whole economic argument for the hybrid, and this is also where batching gets hard because Mamba state must be copied in and out of the scheduler per request.",
+  "hardware_relevance": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a100-80gb-pcie"
+  ],
+  "speedup_reported": null,
+  "adoption": "in-upstream-engine",
+  "code_url": "https://huggingface.co/ai21labs/Jamba-v0.1",
+  "open_weights": true,
+  "notes": "arXiv preprint (v2 2024-07-03); no journal-ref on the abs page. The abstract states 'high throughput and small memory footprint compared to vanilla Transformers' with no ratio and no stated baseline configuration, so speedup_reported is null rather than reconstructed. Engine support is solidly verified: vLLM has a native JambaForCausalLM row (AI21-Jamba-1.5-Large, AI21-Jamba-1.5-Mini, Jamba-v0.1), and llama.cpp has LLM_ARCH_JAMBA inside llm_arch_is_hybrid() with a dedicated conversion/jamba.py. Successor paper is Jamba-1.5 (arXiv 2408.12570), recorded separately."
+}

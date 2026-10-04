@@ -1,0 +1,31 @@
+{
+  "id": "gist-tokens",
+  "type": "paper",
+  "name": "Learning to Compress Prompts with Gist Tokens",
+  "status": "verified",
+  "confidence": 0.83,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-gist-tokens"
+  ],
+  "arxiv_id": "2304.08467",
+  "venue": "neurips",
+  "year": 2023,
+  "category": "long-context",
+  "authors": [
+    "Jesse Mu",
+    "Xiang Lisa Li",
+    "Noah Goodman"
+  ],
+  "affiliations": [
+    "Stanford University"
+  ],
+  "problem": "Task-specific prompt optimisation normally means either re-prompting per task or retraining the model per task, so a reused system prompt is recomputed on every request and long prompts are expensive to re-encode.",
+  "mechanism": "GISTING. Train the LM to compress a prompt into a small set of GIST TOKENS, which can then be cached and reused. Trained by MODIFYING THE ATTENTION MASK so the prompt tokens attend only to the gist slots, forcing compression during ordinary instruction fine-tuning - so the capability comes at no additional cost over standard instruction tuning. The gist representation is decoder-only (no prompt text needed at reuse time), which matters because encoder-decoder reuse would need the encoder.",
+  "hardware_relevance": [],
+  "speedup_reported": "Paper's own claims (abstract): up to 26x COMPRESSION of prompts, resulting in up to 40% FLOPs reduction, 4.2% WALL TIME speedups and storage savings, all with minimal loss in output quality - on LLaMA-7B and FLAN-T5-XXL. The 40%-FLOPs vs 4.2%-wall-time gap is the honest, decision-relevant part: for a prefix-cached prompt the attention computation shrinks but the decode-time KV read of the prompt is not what dominates end-to-end latency, so wall time moves very little. Never quote the 40% as a serving speedup.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "arXiv ID 2304.08467 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. Venue confirmed twice: arXiv comment 'NeurIPS 2023, 26 pages' and OpenReview venue='NeurIPS 2023 poster', venueid='NeurIPS.cc/2023/Conference'. adoption=research-only verified by absence and with a specific caution: an early grep for 'gist' in vLLM's registry and utils returned hits, but they were all the substring 'registry' - there is no gist-token support. A full recursive listing of vllm-project/vllm@main (8562 paths) contains no gist path. SGLang has no gist cache layer either. Note the natural home for this idea - prefix caching - IS shipped (vLLM radix/prefix cache, and KVConnector classes), so the general capability exists in engines; what does not exist is model-level learned gist compression, which needs fine-tuned weights. Do not read this record as saying prompt-prefix caching is unimplemented."
+}

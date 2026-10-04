@@ -1,0 +1,33 @@
+{
+  "id": "paper-deepseek-v3",
+  "type": "paper",
+  "name": "DeepSeek-V3 Technical Report",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2412-19437"
+  ],
+  "arxiv_id": "2412.19437",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "moe",
+  "authors": [
+    "DeepSeek-AI"
+  ],
+  "affiliations": [
+    "DeepSeek"
+  ],
+  "problem": "Auxiliary-loss load balancing forces a quality-versus-balance trade-off and its loss term competes with the language-modelling objective; DeepSeek-V2 still needed a hand-tuned balancing coefficient.",
+  "mechanism": "671B total, 37B activated per token (about 5.5 percent), MLA for the KV latent, FP8 mixed-precision training throughout, 14.8T training tokens, plus two novel mechanisms. (1) Auxiliary-loss-free load balancing: instead of adding a balancing term to the loss, add a bias b_i to each expert's routing logit and update it each step by b_i <- b_i + u * sign(f_i - P_i). Overloaded experts are pushed down and underloaded pushed up, and because the bias sits outside the network it cannot corrupt the gradient of the language-modelling objective, so balance is achieved with nothing to tune. (2) Multi-token prediction: an auxiliary self-prediction head per depth predicts t future tokens jointly, which both improves the model and leaves the MTP branches available at inference for SELF-SPECULATIVE DECODING, where the model drafts its own future tokens and verifies them in a single pass, trading extra compute per step for fewer sequential decode steps.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm"
+  ],
+  "speedup_reported": "2.788M H800 GPU-hours for the full 14.8T-token pre-training run. The report compares training cost against DeepSeek-V2 and Llama-3.1-405B in GPU-hours and explicitly declines to publish a self-reported cost multiple. The auxiliary-loss-free balancing win is reported as a small but consistent downstream gain over the auxiliary-loss variant rather than as a headline number. The MTP self-speculative-decoding benefit is described qualitatively in the report.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/deepseek-ai/DeepSeek-V3",
+  "open_weights": true,
+  "notes": "SLUG RENAMED 2026-10-04 (parent agent): was 'deepseek-v3', colliding with the models record of the same id, which made every bare-slug cross-reference ambiguous. Inbound refs (['family']) all mean the models record, so none needed repointing; papers are cited via `sources`, never by bare slug. Two separable contributions that should not be conflated. The auxiliary-loss-free bias trick is a training-side answer to Switch and GShard. The MTP head is the serving-relevant one because it is what makes self-speculative decoding essentially free. With 37B of 671B active, all 671B of expert weights must still be resident and sharded across the serving cluster. FP8 weights plus FP8 KV cache via MLA is the best-evidenced open serving configuration for this family."
+}

@@ -1,0 +1,21 @@
+{
+  "id": "tenstorrent-warp100",
+  "type": "interconnect",
+  "name": "Tenstorrent Warp 100 Bridge (Wormhole in-card / adjacent-card link)",
+  "kind": "other",
+  "version": "Warp 100 Bridge, part TX-01002, Wormhole generation",
+  "bandwidth_gbps": null,
+  "bandwidth_basis": "NULL - deliberately, and this is the important caveat about this record. Tenstorrent's Warp 100 Bridge documentation publishes compatibility, part number and installation detail but NO bandwidth figure, no lane count and no data rate. The '100' in the product name is NOT documented as 100 GB/s, 100 Gb/s, or any other unit, and no Tenstorrent page states which it is. Treating the name as a bandwidth is the obvious and wrong inference, so every rate field is left null. The Wormhole per-card spec table lists the bridge only as a connectivity row ('2x Warp 100 Bridge') alongside the QSFP-DD ports and lists a separate 'Internal Chip-to-Chip 200G' row; that 200G internal row is a DIFFERENT path from the Warp 100 bridge and must not be read as the bridge's rate. To fill this record, find the Warp 100 Bridge datasheet or the Tenstorrent Wormhole architecture documentation that states the link's data rate and unit.",
+  "link_count": 2,
+  "topology": "Adjacent-card bridge, physical. The Warp 100 Bridge is a plug-in card that links two Wormhole cards installed next to each other in the same host, keyed to a specific orientation and typically pre-installed in Tenstorrent Galaxy systems. Each card supports up to two bridges. n300d and n300s cards use 2.5-slot coolers and can therefore only take the triple-slot bridge. This is a mechanically simple, low-port-count, same-chassis link - there is no switch part and no topology beyond 'the two cards this bridge spans'.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "None. Each bridge connects one card pair; multi-card scale-up is by chaining bridges and daisy-chaining the Ethernet ports into Galaxy racks, which is where the QSFP-DD path (see tenstorrent-qsfp-dd) takes over.",
+  "notes": "The Wormhole in-card / adjacent-card bridge, kept as a SEPARATE record from tenstorrent-qsfp-dd because the two are different mechanisms serving different roles and conflating them is the easy error. PUBLISHED (Tenstorrent Warp 100 Bridge documentation, first-party): the Warp 100 Bridge is part TX-01002, is compatible with the Wormhole n150d (active cooler TC-02002), n150s (passive TC-02001), n300d (active TC-02004) and n300s (passive TC-02003), each card supports up to TWO bridges, n300d/n300s have 2.5-slot coolers and so require the triple-slot bridge, and the bridge is keyed to one orientation - the Tenstorrent logo rotated 270 degrees - with an explicit warning not to install it reversed. THE THREE NUMBERS THAT ARE NOT NUMBERS: the product name contains '100', the per-card spec table contains an 'Internal Chip-to-Chip 200G' row, and neither is documented as this bridge's bandwidth. The 200G internal row is a separate in-card path. Do not transcribe either into bandwidth_gbps. INFERENCE RELEVANCE: for a developer evaluating whether a two-card Wormhole box is a viable TP target, the honest answer is that the fabric rate is not published and the decision has to be made on the local-memory figures instead - 288 GB/s of GDDR6 on n150, which makes the part decisively memory-bound at batch 1 regardless of what the bridge does. Because the part is bandwidth-limited locally, the bridge's rate is rarely the binding constraint on this part, which is part of why the vendor never had to publish it. Also note this record's slug normalises the vendor's 'Warp 100' capitalisation to lowercase to match the repo's slug convention; that is a deliberate normalisation, not a typo, and 'warp100' and 'Warp 100' refer to the same thing here.",
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-03",
+  "sources": [
+    "link2-tenstorrent-warp100-bridge"
+  ]
+}

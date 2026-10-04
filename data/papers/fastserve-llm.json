@@ -1,0 +1,36 @@
+{
+  "id": "fastserve-llm",
+  "type": "paper",
+  "name": "Fast Distributed Inference Serving for Large Language Models",
+  "arxiv_id": "2305.05920",
+  "venue": "arxiv-preprint",
+  "year": 2023,
+  "category": "scheduling",
+  "authors": [
+    "Bingyang Wu",
+    "Yinmin Zhong",
+    "Zili Zhang",
+    "Shengyu Liu",
+    "Fangyue Liu"
+  ],
+  "affiliations": [
+    "Peking University"
+  ],
+  "problem": "Run-to-completion processing of LLM requests causes head-of-line blocking: one long request stalls everything behind it, so latency is high even when aggregate throughput is fine.",
+  "mechanism": "FastServe exploits the autoregressive pattern to make preemption possible at the granularity of each output token, rather than only at request boundaries. Scheduling uses a skip-join multi-level feedback queue: in the paper's 'semi-information-agnostic' setting, only input length is known at arrival, so each arriving job is assigned an initial queue and higher-priority queues are SKIPPED rather than joined, cutting demotions. Adds GPU memory management that proactively offloads and uploads intermediate state to host memory.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-v100-sxm2-32gb"
+  ],
+  "speedup_reported": "Per the arXiv abstract, versus vLLM: up to 31.4x higher throughput and 17.9x higher throughput under the same average and tail latency requirements respectively. CRITICAL CAVEAT: the 31.4x figure is measured against vLLM under run-to-completion-style configurations and is a single-workload best case, not a general speedup — vLLM's own PagedAttention landed in the same period. Treat this number as 'the gap between two 2023 pre-PagedAttention-defaults engines under latency constraints', not as a durable 3-10x advantage over modern vLLM.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "Venue NOT verified — arXiv only, no venue in the comment field, and I did not find a proceedings page. Recorded as arxiv-preprint deliberately. Do not confuse with 'FastServe: Fast Multi-Model Inference with Anthropic', a different paper. Notably, this is the same group (Yinmin Zhong, Peking University) that later wrote DistServe; the two papers form a decade-scale thread from run-to-completion to phase disaggregation.",
+  "sources": [
+    "pap-sys-fastserve-arxiv"
+  ],
+  "status": "draft",
+  "confidence": 0.62,
+  "updated": "2026-10-03"
+}

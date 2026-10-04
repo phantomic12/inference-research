@@ -1,0 +1,37 @@
+{
+  "id": "scissorhands",
+  "type": "paper",
+  "name": "Scissorhands: Exploiting the Persistence of Importance Hypothesis for LLM KV Cache Compression at Test Time",
+  "status": "verified",
+  "confidence": 0.86,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-scissorhands"
+  ],
+  "arxiv_id": "2305.17118",
+  "venue": "neurips",
+  "year": 2023,
+  "category": "kv-cache",
+  "authors": [
+    "Liu, Zichang",
+    "Desai, Aditya",
+    "Liao, Fangshuo",
+    "Wang, Weitao"
+  ],
+  "affiliations": [
+    "University of California Santa Barbara",
+    "Meta AI"
+  ],
+  "problem": "The KV cache can exceed the model weights themselves and caps inference batch size; existing compression needed fine-tuning or degraded quality.",
+  "mechanism": "The PERSISTENCE OF IMPORTANCE hypothesis: a token that had substantial influence at one decoding step will continue to influence future generations, so influence is predictable from past attention scores. Scissorhands maintains a fixed KV memory budget WITHOUT finetuning by storing PIVOTAL tokens with a higher probability - a Metropolis-style stochastic retention rule rather than a hard top-k - so the budget is respected while pivotal tokens survive.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Paper's own claims (abstract): reduces inference KV-cache memory by UP TO 5x without compromising model quality; and when COMBINED WITH 4-bit quantization (which is for weights, not the cache) achieves up to 20x compression. The 5x is the standalone KV claim; the 20x only exists in combination with weight quantization, so quoting 20x as the KV-cache result would misrepresent the paper.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "arXiv ID 2305.17118 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. CORRECTION TO THE SOURCE RECORD: it says 'arXiv preprint; no journal_ref', but OpenReview returns venue='NeurIPS 2023 poster', venueid='NeurIPS.cc/2023/Conference' for the exact title. venue=neurips, year=2023. Watch for a title-collision trap: the same OpenReview search surfaces a DIFFERENT NeurIPS paper, 'Scissorhands: Scrub Data Influence via Connection Sensitivity' (data influence, DBLP CoRR 2024) - unrelated to KV-cache compression despite the identical name prefix. adoption=research-only verified by absence: no Scissorhands class or policy in transformers cache_utils.py, vLLM's v1 cache layer, or SGLang. The stochastic retention rule needs to run inside the decode attention path, and no mainstream engine exposes a per-token retention hook."
+}

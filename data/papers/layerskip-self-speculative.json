@@ -1,0 +1,41 @@
+{
+  "id": "layerskip-self-speculative",
+  "name": "LayerSkip: Enabling Early Exit Inference and Self-Speculative Decoding",
+  "arxiv_id": "2404.16710",
+  "venue": "acl",
+  "year": 2024,
+  "category": "speculative-decoding",
+  "authors": [
+    "Mostafa Elhoushi",
+    "Akshat Shrivastava",
+    "Diana Liskovich",
+    "Basil Hosmer",
+    "Bram Wasti",
+    "Liangzhen Lai",
+    "Anas Mahmoud",
+    "Bilge Acun",
+    "Saurabh Agarwal",
+    "Ahmed Roman",
+    "Ahmed A Aly",
+    "Beidi Chen",
+    "Carole-Jean Wu"
+  ],
+  "problem": "Speculative decoding needs a separate draft model, doubling model memory; and early-exit inference needs auxiliary exit heads, which cost accuracy and add modules.",
+  "mechanism": "TRAINING RECIPE, not an architecture. Applies LAYER DROPOUT during training with LOW rates for EARLY layers and HIGH rates for LATE layers, plus an EARLY EXIT LOSS in which all transformer layers share the SAME exit. At inference, exit early and use the REMAINING LAYERS of the same model to VERIFY AND CORRECT the early exit's draft - self-speculative decoding with the model as its own drafter and verifier. No auxiliary layers or modules are added, so memory footprint is lower than approaches needing a distinct draft model, and draft and verify stages SHARE activations and compute.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm"
+  ],
+  "speedup_reported": "Speedups of up to 2.16x on summarization of CNN/DM documents, 1.82x on coding, and 2.0x on TOPv2 semantic parsing, across different Llama sizes and across four training regimes (pretraining from scratch, continual pretraining, domain finetuning, task finetuning). Model pairs are same-model (early layers draft, later layers verify) with Llama checkpoints.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/facebookresearch/LayerSkip",
+  "open_weights": true,
+  "notes": "ADOPTION, precisely: code AND checkpoints are open (facebookresearch/LayerSkip) but the method is NOT in production engines as a default - llama.cpp has related self-speculative/early-exit paths and vLLM has no shipped LayerSkip path, so research-only with released artifacts is the accurate label. Its DISTINCTIVE claim versus all other self-speculative records here is the MEMORY one: draft and verify share weights, so there is no second model resident in HBM. That makes it the right technique when you are memory-bound rather than bandwidth-bound. VENUE: ACL 2024, corroborated twice - arXiv comment says 'ACL 2024' and there is a DOI 10.18653/v1/2024.acl-long.681 in the ACL Anthology namespace - so venue confidence is high. REPRODUCTION CAVEAT: this method REQUIRES a model trained (or continued-pretrained) with the layer-dropout schedule. It is not a post-hoc transform you can apply to an arbitrary checkpoint, so its speedups cannot be reproduced on models lacking that training - a different and stronger dependency than EAGLE or Medusa-1, which can be trained separately for any checkpoint.",
+  "confidence": 0.9,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-eff-layerskip"
+  ]
+}

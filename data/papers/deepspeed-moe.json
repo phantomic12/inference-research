@@ -1,0 +1,41 @@
+{
+  "id": "deepspeed-moe",
+  "type": "paper",
+  "name": "DeepSpeed-MoE: Advancing Mixture-of-Experts Inference and Training to Power Next-Generation AI Scale",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2201-05596"
+  ],
+  "arxiv_id": "2201.05596",
+  "venue": "arxiv-preprint",
+  "year": 2022,
+  "category": "moe",
+  "authors": [
+    "Samyam Rajbhandari",
+    "Conglong Li",
+    "Zhewei Yao",
+    "Minjia Zhang",
+    "Reza Yazdani Aminabadi",
+    "Ammar Ahmad Awan",
+    "Jeff Rasley",
+    "Yuxiong He"
+  ],
+  "affiliations": [
+    "Microsoft"
+  ],
+  "problem": "MoE's training cost saving did not carry over to serving, because inference keeps all experts resident and pays an all-to-all every layer, so a dense model can be cheaper per token to serve.",
+  "mechanism": "End-to-end MoE training and inference system inside DeepSpeed with three separable contributions. (a) MoE architecture variants, including a DeepSeekMoE-style fine-grained expert split plus a shared expert that every token passes through, absorbing common knowledge and reducing routed load. (b) Model compression shrinking MoE models by up to 3.7x using expert pruning of below-average-importance experts alongside distillation, so the resident expert set shrinks rather than only the per-token compute; this is the genuinely novel and rarely copied part. (c) An inference kernel path that groups tokens into fixed-size buffers before dispatch, so the all-to-all becomes a few large bursty transfers instead of many small ones. Load balancing is the auxiliary-loss kind typical of this period.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a100-80gb-pcie",
+    "nvidia-a10",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": "7.3x better latency and cost than existing MoE inference solutions (the comparison set is prior MoE serving systems, not a dense model); MoE model size reduced by up to 3.7x via expert pruning plus distillation; and, for serving up to massive MoE models, up to 4.5x faster and 9x cheaper inference than quality-equivalent dense models. Also restates a 5x training cost saving for autoregressive LMs versus quality-equivalent dense models, which the paper attributes to shared work with GShard and Switch rather than to DeepSpeed-MoE alone. Measured on V100 and A100-class GPUs.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/deepspeedai/DeepSpeed",
+  "open_weights": true,
+  "notes": "DeepSpeed ships the MoE layer and is a real upstream inference path, so the system is in-upstream-engine; the numbers themselves are DeepSpeed's own. Title text differs across arXiv versions: earlier versions read 'Advancing Mixture-of-Experts Inference and Training for Power-Scale Deep Learning'. The shared-expert idea from (a) became the standard recipe via DeepSeek; the expert-pruning-plus-distillation idea from (b) was largely not copied."
+}

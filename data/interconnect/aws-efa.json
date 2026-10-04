@@ -1,0 +1,22 @@
+{
+  "id": "aws-efa",
+  "type": "interconnect",
+  "name": "AWS Elastic Fabric Adapter (EFA) scale-out network",
+  "kind": "ethernet",
+  "version": "Elastic Fabric Adapter, as used on Inf2 and Trn2 instances",
+  "bandwidth_gbps": null,
+  "bandwidth_basis": "NULL - deliberately. AWS's published per-instance figures for these parts are AGGREGATES across the NICs in an instance (for Inf2, up to 12 chips with 384 GB HBM and 9.8 TB/s of total memory bandwidth; the networking row of the Inf2 page is likewise an instance-level figure), not a per-link or per-adapter rate, and the adapter's underlying link rate is set by the underlying network generation rather than by EFA itself. Any number recorded here would belong to an instance or NIC-generation record, and inventing a per-link rate would double-count - the same reasoning that leaves bandwidth_gbps null on ethernet-uec and on ufi-ultra-express-fabric.",
+  "link_count": null,
+  "topology": "Standard switched Ethernet data-centre network, with EFA adding the scale-out interface that carries collectives between instances and hosts. EFA is an adapter and its programming model (SRD, an OS-bypass path) is the distinguishing feature rather than any new physical layer - it presents RDMA-style verbs over commodity Ethernet.",
+  "scale_up": false,
+  "scale_out": true,
+  "switching": "Standard Ethernet switching plus the EFA OS-bypass and SRD (Scalable Reliable Datagram) path. As with ethernet-uec, the binding constraints on this tier are fabric-level rather than link-level: uplink-to-downlink ratio caps bisection bandwidth and tail latency under incast shows up as inter-token latency variance in decode.",
+  "notes": "The scale-out tier for the AWS Neuron parts in this repo, and the record that makes the NeuronLink/EFA distinction explicit: NeuronLink (see aws-neuronlink) is chip-to-chip scale-up inside one instance at 192 GB/s, while EFA is scale-out BETWEEN instances and hosts. Conflating the two is the standard error when reading AWS interconnect diagrams, and it inverts the design intent - the reason AWS splits them is that the two tiers have different bandwidth-per-dollar and different latency profiles, and a workload that needs more than one instance is by definition past the point where fabric bandwidth is the binding constraint. RECORDED DELIBERATELY SPARSE: no version number, no per-link rate and no link count, because AWS publishes per-instance aggregates rather than per-adapter figures for the Inf2/Trn2 pages retrieved here, and because no primary EFA datasheet page stating a per-link rate was reachable during this pass. The nulls are a to-do marker, not an oversight - to fill them, find the Elastic Fabric Adapter documentation for the specific adapter generation and record the per-link rate with its direction convention. KIND: filed as 'ethernet' because EFA is an RDMA over Ethernet interface and this repo's enum has no EFA-specific member; if a reader wants the RDMA-over-Ethernet protocol distinction rather than the physical layer, compare with the roce record instead.",
+  "status": "draft",
+  "confidence": 0.4,
+  "updated": "2026-10-03",
+  "sources": [
+    "asic-aws-inf2-instances",
+    "asic-aws-trainium-product"
+  ]
+}

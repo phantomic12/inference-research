@@ -1,0 +1,39 @@
+{
+  "id": "s1-budget-forcing",
+  "name": "s1: Simple test-time scaling",
+  "arxiv_id": "2501.19393",
+  "venue": "arxiv-preprint",
+  "year": 2025,
+  "category": "inference-time-compute",
+  "authors": [
+    "Niklas Muennighoff",
+    "Zitong Yang",
+    "Weijia Shi",
+    "Xiang Lisa Li",
+    "Li Fei-Fei",
+    "Hannaneh Hajishirzi",
+    "Luke Zettlemoyer",
+    "Percy Liang",
+    "Emmanuel Candès",
+    "Tatsunori Hashimoto"
+  ],
+  "problem": "OpenAI's o1 showed test-time scaling works but did not publish its methodology, and replication attempts were producing complicated systems.",
+  "mechanism": "Two parts. (1) CURATE s1K: 1,000 questions paired with reasoning traces, selected on three criteria validated by ablations - difficulty, diversity, and quality. (2) BUDGET FORCING, the transferable mechanism: control test-time compute by FORCEFULLY TERMINATING the model's thinking process when a budget is exhausted, or by LENGTHENING it by appending 'Wait' multiple times to the generation when the model tries to end - which induces it to double-check and often fix incorrect reasoning steps. Then plain SFT of Qwen2.5-32B-Instruct on s1K.",
+  "hardware_relevance": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-sxm"
+  ],
+  "speedup_reported": "s1-32B EXCEEDS o1-preview on competition math by up to 27% (MATH and AIME24). More important for this repo than the accuracy claim: scaling s1-32B WITH BUDGET FORCING allows EXTRAPOLATING BEYOND ITS PERFORMANCE WITHOUT TEST-TIME INTERVENTION, from 50% to 57% on AIME24. Budget forcing is thus a knob that moves the accuracy/OUTPUT-TOKEN frontier, and the operator sets the token budget explicitly.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/simplescaling/s1",
+  "open_weights": true,
+  "notes": "ADOPTION: research-only as a system - model, data, and code are open (s1-32B weights released, which is unusual for this sub-area and is recorded as open_weights = true), but budget forcing is not a feature in any production engine. It is trivially implementable though: append 'Wait' and cap the trace, which is why it belongs in this slice despite being research-only. THE OPERATING-POINT POINT, which is the durable contribution for anyone reasoning about serving cost: budget forcing makes the ACCURACY-vs-TOKEN-COUNT relationship a directly controllable dial, so a serving system can trade latency for accuracy at a known token price. The append-'Wait' trick is also why reasoning-token counts became a first-class serving metric rather than an implementation detail. VENUE NOTE: no peer-reviewed venue verifiable; arXiv comment carries only a page/figure/table count, so venue = arxiv-preprint, year = ArXiv v1 (Jan 2025). The '27% over o1-preview' comparison is against a specific dated snapshot of a closed product and will not age well - the s1K selection criteria and the budget-forcing mechanism are the reproducible parts.",
+  "confidence": 0.85,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-eff-s1-budget-forcing"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "slicegpt",
+  "type": "paper",
+  "name": "SliceGPT: Compress Large Language Models by Deleting Rows and Columns",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-quant-slicegpt"
+  ],
+  "arxiv_id": "2401.15024",
+  "venue": "iclr",
+  "year": 2024,
+  "category": "pruning",
+  "authors": [
+    "Frantar, Ashkboos, Hoefler, Alistarh"
+  ],
+  "affiliations": [
+    "IST Austria / IST-DASLab"
+  ],
+  "problem": "Post-hoc sparsification needs extra sparse data structures and gives constrained speedup on current hardware, because irregular sparsity is not what accelerators accelerate.",
+  "mechanism": "Uses the transformer's COMPUTATIONAL INVARIANCE - the model output does not depend on the choice of basis for the residual stream - to replace each weight matrix with a SMALLER DENSE matrix, literally deleting whole ROWS AND COLUMNS and thereby reducing the model's embedding dimension. No sparse data structures, no custom kernels, no irregular access: the result is an ordinary dense model that is simply narrower.",
+  "hardware_relevance": [
+    "nvidia-rtx-4090",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "speedup_reported": "Paper's own claim (abstract): removes up to 25% of model parameters INCLUDING EMBEDDINGS for LLAMA2-70B, OPT-66B and Phi-2 while maintaining 99%, 99% and 90% zero-shot performance of the dense model respectively. COMPRESSION RATIO: up to 25% parameter removal (1.33x); the asymmetry matters - Phi-2 retains only 90%, so this is NOT uniformly near-lossless across models. Speedup: 'run on fewer GPUs and run faster without any additional code optimization' - total inference compute for LLAMA2-70B reduced to 64% on 24GB consumer GPUs and 66% on 40GB A100s. Both reductions are ~1.5x, not 1.33x, because removing the embedding dimension also shrinks every matmul.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/IST-DASLab/SliceGPT",
+  "open_weights": null,
+  "notes": "arXiv ID 2401.15024 verified via /abs/; venue ICLR 2024 confirmed by the arXiv comment field ('accepted at ICLR24') and Semantic Scholar; year = venue year 2024. The '90% of dense zero-shot performance' figure for Phi-2 is the honest counterweight to the 99% figures and is recorded so the 99% does not read as universal. hardware_relevance names RTX 4090 as the 24GB consumer part matching the paper's stated class; the paper says '40GB A100' and the repo's A100 records are 80GB parts, which is noted rather than papered over. arXiv ID and title verified by fetching https://arxiv.org/abs/2401.15024 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2401.15024) unless the record's notes say otherwise."
+}

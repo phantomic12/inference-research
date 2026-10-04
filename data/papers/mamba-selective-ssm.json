@@ -1,0 +1,36 @@
+{
+  "id": "mamba-selective-ssm",
+  "type": "paper",
+  "name": "Mamba: Linear-Time Sequence Modeling with Selective State Spaces",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2312-00752"
+  ],
+  "arxiv_id": "2312.00752",
+  "venue": "arxiv-preprint",
+  "year": 2023,
+  "category": "ssm",
+  "authors": [
+    "Albert Gu",
+    "Tri Dao"
+  ],
+  "affiliations": [
+    "Carnegie Mellon University",
+    "Princeton University"
+  ],
+  "problem": "Subquadratic alternatives to attention (linear attention, gated convolution, recurrent models, SSMs) matched Transformers poorly on discrete data because they could not do content-based reasoning: their recurrence was input-independent, so the model could not choose what to keep.",
+  "mechanism": "Makes the SSM parameters functions of the input, which is the whole contribution. The layer is a selective SSM: input x is projected to (delta, B, C) where delta_t = softplus(W_delta x_t + bias) is data-dependent, B_t and C_t are data-dependent, and the state updates h_t = exp(delta_t * A) h_{t-1} + delta_t * B_t x_t^T followed by y_t = C_t h_t + D x_t. Because B, C and delta now depend on the token, the model can selectively propagate or forget along sequence length per input, which is what earlier fixed-parameter SSMs (S4) could not do. Selectivity rules out the fast causal convolution used before, so decoding uses a hardware-aware parallel scan rather than a naive sequential recurrence. The block is a single residual path with no attention and no MLP: essentially Mamba block = gated conv1d shortcut + selective SSM, pre-norm residual. The state is a fixed-size (batch, d_inner, d_state) tensor per layer, CONSTANT in sequence length, so there is NO KV cache at all: per-token decode cost is O(d_model * d_state) state bytes instead of O(2 * L * d_h * d_k) KV bytes. That is the defining serving consequence and the reason long-context SSM decoding does not degrade with context length.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a100-80gb-pcie",
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": "5x higher inference throughput than Transformers, against the paper's own GPT-3-style Transformer baselines at matched size; Mamba-3B matches Transformers twice its size in pretraining and downstream evaluation, and performance improves up to million-token sequences. The throughput figure is the authors' own reference implementation on A100 GPUs with their custom kernels and is not a tuned-engine number; published 5x claims for Mamba have consistently shrunk once engines run the model with generic PyTorch rather than the fused scan.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/state-spaces/mamba",
+  "open_weights": true,
+  "notes": "The single most consequential SSM paper: it made input-dependent recurrence work well enough to scale to billions of parameters, and everything downstream (Mamba-2, Jamba, Zamba, Falcon Mamba, Granite 4.0, Kimi Linear, Qwen3-Next) is either Mamba or a hybrid with it. CRITICAL serving caveat: the state is constant-size so the KV cache is eliminated, but the per-step update is a SEQUENTIAL scan in the time dimension that tensor cores do not accelerate, so decode becomes latency-bound on the scan kernel rather than bandwidth-bound on weights. This is why Mamba-style models need hand-written scan kernels to be fast and why naive implementations disappoint. Verified supported: vLLM has native MambaForCausalLM and Mamba2ForCausalLM rows; llama.cpp has LLM_ARCH_MAMBA and LLM_ARCH_MAMBA2 and lists mamba in llm_arch_is_recurrent(). Engine support is real but was late and the open issue trackers show continuing kernel work (llama.cpp 'metal: optimize Mamba-2 SSM scan decode' open; vLLM has multiple open Mamba kernel PRs)."
+}

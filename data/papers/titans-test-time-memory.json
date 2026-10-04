@@ -1,0 +1,34 @@
+{
+  "id": "titans-test-time-memory",
+  "type": "paper",
+  "name": "Titans: Learning to Memorize at Test Time",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2501-00663"
+  ],
+  "arxiv_id": "2501.00663",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "ssm",
+  "authors": [
+    "Ali Behrouz",
+    "Peilin Zhong",
+    "Vahab Mirrokni"
+  ],
+  "affiliations": [
+    "Google Research"
+  ],
+  "problem": "Recurrent models compress history into a fixed-size hidden state while attention can see the entire context at quadratic cost; neither gives a memory that is both large and cheap.",
+  "mechanism": "Proposes a neural long-term memory module, framed explicitly as learning to memorise at TEST TIME: a surprising-as-written design where memory is a persistent, weights-derived long-term memory rather than something computed by a forward pass over the sequence. As a recurrent/persistent module it maintains its own memory matrices across a very long window, using momentum-style updates to decide what to write and a surprise measure (a test-time loss) to decide what to retrieve, and it is combined with attention so attention handles the current local context while the module supplies long past information. The memory is a set of persistent matrices with a fixed, budgeted size (the paper explores different memory sizes as a scaling axis), so memory capacity is a design parameter independent of context length rather than growing with it.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": null,
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": false,
+  "notes": "arXiv preprint from Google; no journal-ref. 'Memory as a parameter' is the framing this paper contributes and it sits outside the SSM family proper: Titans is best read as persistent test-time memory plus attention, not as a constant-state recurrence in the Mamba lineage, which is why it is filed here as an adjacent memory-architecture datapoint rather than a Mamba successor. speedup_reported is null: the paper reports long-context accuracy on needle-in-a-haystack and other long-context benchmarks plus perplexity improvements with growing memory, but publishes no throughput speedup with baseline and settings. No Titans entry in llama.cpp's arch registry, no native row in the vLLM list, and no production model ships it: research-only in the strict sense. Highly cited as a concept, absent as an implementation."
+}

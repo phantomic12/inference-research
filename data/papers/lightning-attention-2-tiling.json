@@ -1,0 +1,38 @@
+{
+  "id": "lightning-attention-2-tiling",
+  "type": "paper",
+  "name": "Lightning Attention-2: A Free Lunch for Handling Unlimited Sequence Lengths in Large Language Models",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2401-04658"
+  ],
+  "arxiv_id": "2401.04658",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "attention",
+  "authors": [
+    "Zhen Qin",
+    "Weigao Sun",
+    "Dong Li",
+    "Xuyang Shen",
+    "Weixuan Sun",
+    "Yiran Zhong"
+  ],
+  "affiliations": [
+    "Tsinghua University",
+    "ModelBest"
+  ],
+  "problem": "Linear attention has O(L) compute and constant memory in theory, but in the causal setting the required cumulative summation made real implementations fail to realise that advantage, so measured speed did not scale with sequence length.",
+  "mechanism": "A training-and-inference algorithm, not a new layer definition: it applies a TILING decomposition that separates the INTRA-block component (computed with ordinary attention) from the INTER-block component (computed with linear-attention kernel tricks), and applies the same tiling in forward and backward so the GPU stays occupied. Implemented in Triton to be IO-aware. The result is that training and inference speed stays roughly CONSTANT as input sequence length grows, which is the property no prior causal linear attention had achieved. The linear-attention state is fixed-size and constant in sequence length, so decode memory does not grow with context. This is the algorithmic contribution MiniMax then built the 456B-parameter MiniMax-01 on.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Reports that Lightning Attention-2 retains consistent training and inference speed regardless of input sequence length and is significantly faster than other attention mechanisms, with experiments across different model sizes and sequence lengths. No single numeric speedup ratio is given in the abstract with baseline and settings, so the recorded claim is the length-invariance of throughput rather than a bare number.",
+  "adoption": "in-production",
+  "code_url": null,
+  "open_weights": true,
+  "notes": "arXiv preprint (v2 2024-01-15); no journal-ref. The abstract's 'significantly faster' carries no ratio, no baseline configuration and no hardware, so speedup_reported records only the defensible length-invariance claim. The mechanism did ship in production: MiniMax-01 (arXiv 2501.08313) and MiniMax-M1 build on lightning attention at 456B total parameters, and llama.cpp carries LLM_ARCH_MINIMAX_01 and LLM_ARCH_MINIMAX_M2/M3 with MINIMAX_01 inside llm_arch_is_hybrid(), so this lineage is genuinely in-production at model scale even though the mechanism is far less widely adopted than Mamba."
+}

@@ -1,0 +1,38 @@
+{
+  "id": "striped-attention",
+  "type": "paper",
+  "name": "Striped Attention: Faster Ring Attention for Causal Transformers",
+  "status": "verified",
+  "confidence": 0.84,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-striped-attention"
+  ],
+  "arxiv_id": "2311.09431",
+  "venue": "arxiv-preprint",
+  "year": 2023,
+  "category": "attention",
+  "authors": [
+    "Brandon, William",
+    "Nrusimha, Aniruddha",
+    "Qian, Kevin",
+    "Ankner, Zachary"
+  ],
+  "affiliations": [
+    "University of Minnesota",
+    "Princeton University",
+    "Stanford University"
+  ],
+  "problem": "Ring Attention's contiguous per-device sequence split creates LOAD IMBALANCE under causal masking: early devices own fewer live tokens than late devices, so the slowest device determines throughput and the whole cluster idles at the end of every step.",
+  "mechanism": "A simple extension to Ring Attention: instead of contiguous subsequences, each device holds a STRIPE - a subset of tokens distributed UNIFORMLY THROUGHOUT the sequence. Because every device then owns a similar share of every contiguous region, the causal work per device is roughly equal and the pipeline stays balanced.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "google-tpu-v4"
+  ],
+  "speedup_reported": "Paper's own claims (abstract): up to 1.45x END-TO-END THROUGHPUT improvement over the original Ring Attention on causal transformer TRAINING at sequence length 256K on A100 GPUs and TPUv4s; and 1.65x on 16 TPUv4 chips at sequence length 786K. Hardware and sequence lengths both named. Training-side again, not inference-serving.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "arXiv ID 2311.09431 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. venue=arxiv-preprint on evidence, with a specific trap documented: searching OpenReview for this title returns the RING ATTENTION paper's NeurIPS 2023 workshop entries ('Instruction Workshop @ NeurIPS 2023' and 'FMDM@NeurIPS2023', both titled 'Ring Attention with Blockwise Transformers') and NO record for Striped Attention itself - the shared authors make it easy to misattribute a venue. Striped Attention's arXiv comment says only 'Code: ...' and no venue was found. adoption=research-only: no ring or striped attention path in vLLM's 30-file v1 backend list, SGLang's attention directory, or transformers; and the same objection as for ring-attention applies - this addresses training-time causal load balance, which no inference engine needs because decode is KV-bandwidth-bound and served by paging."
+}

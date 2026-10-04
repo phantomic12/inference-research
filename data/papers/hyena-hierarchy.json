@@ -1,0 +1,40 @@
+{
+  "id": "hyena-hierarchy",
+  "type": "paper",
+  "name": "Hyena Hierarchy: Towards Larger Convolutional Language Models",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2302-10866"
+  ],
+  "arxiv_id": "2302.10866",
+  "venue": "icml",
+  "year": 2023,
+  "category": "attention",
+  "authors": [
+    "Michael Poli",
+    "Stefano Massaroli",
+    "Eric Nguyen",
+    "Daniel Y. Fu",
+    "Tri Dao",
+    "Stephen Baccus",
+    "Yoshua Bengio",
+    "Stefano Ermon"
+  ],
+  "affiliations": [
+    "Stanford University",
+    "NVIDIA"
+  ],
+  "problem": "Attention is quadratic in sequence length, and prior subquadratic approximations based on low-rank and sparse structure had to be mixed with dense attention layers to match Transformers, indicating a capability gap.",
+  "mechanism": "A subquadratic drop-in replacement for the attention operator built by interleaving implicitly parameterised long convolutions with data-controlled gating. The operator alternates projection, short convolution and a long implicit filter; the 'hierarchy' means applying this Hyena operator repeatedly, with increasing sequence lengths, in a pyramid so that early layers see short windows and later layers see the full sequence. The long convolution is computed in frequency space with an FFT rather than materialised as a matrix, giving O(L log L) instead of O(L^2), and the filter is implicitly parameterised (as an MLP over frequency) rather than stored per-length. The resulting state is a fixed-size convolution state, CONSTANT in sequence length, so there is no KV cache. What makes it relevant to this slice is that it is one of the clean demonstrations that a convolution-plus-gating operator can reach long-range recall without attention at all.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": null,
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": true,
+  "notes": "ICML 2023 per the arXiv comment field; no journal-ref on the abs page. Deliberately left speedup_reported null: the paper reports accuracy and perplexity at matched parameter count across recall and reasoning tasks on sequences of thousands of tokens, plus a wall-clock comparison against FlashAttention over increasing sequence lengths, but does not state a single speedup ratio with baseline and settings, and this knowledge base does not reconstruct numbers the paper does not give. No Hyena entry in llama.cpp's arch registry and no native row in the vLLM list, so there is no production path; the interest here is architectural precedent for constant-state sequence models."
+}

@@ -1,0 +1,35 @@
+{
+  "id": "leviathan-speculative-decoding",
+  "name": "Fast Inference from Transformers via Speculative Decoding",
+  "arxiv_id": "2211.17192",
+  "venue": "iclr",
+  "year": 2023,
+  "category": "speculative-decoding",
+  "authors": [
+    "Yaniv Leviathan",
+    "Matthieu Kalai",
+    "Mosh Levy",
+    "Ori Ragot",
+    "Gabriel Ilharco",
+    "Yossi Matias"
+  ],
+  "problem": "Autoregressive decoding is memory-bandwidth-bound: each new token requires a full pass over model weights, so decode FLOPs are wasted and accelerator compute sits idle.",
+  "mechanism": "Two-model draft-verify. A small draft model autoregressively proposes K tokens; the large target model scores all K+1 positions in ONE forward pass using custom attention masks (each position attends to its own prefix of draft tokens). A modified rejection-sampling acceptance rule (accept with min(1, p_target(x)/q_draft(x))) plus resampling from the target's residual distribution makes the output distribution provably identical to plain autoregressive decoding. Requires no target-model modification.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "2x-3x wall-clock speedup at temperature 0 and up to ~2.5x with temperature sampling, on T5-XXL / T5-XXL-Target (T5-11B) and LLaMA-65B, at batch size 1-64. Acceptance-rate-per-step (tau) is the number that makes the speedup meaningful; the paper reports mean acceptance length as a function of draft K and model pair. Baseline is unmodified autoregressive decoding of the same target model.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/google-research/t5x",
+  "open_weights": null,
+  "notes": "THE canonical speculative-decoding record: ICLR 2023, the origin of the draft-model-plus-modified-rejection-sampling formulation everything else (SpecInfer, Sequoia, EAGLE, Medusa) reuses. VENUE NOTE: venue/year are taken from the arXiv comment field ('ICLR 2023') cross-checked against Semantic Scholar; arXiv v1 is Nov 2022, ICLR 2023 is the venue year. Adoption is 'in-production' because the ALGORITHM (not the code) is shipped: TensorRT-LLM, vLLM (n-gram + model spec decode), llama.cpp (draft-model spec decode), and SGLang all implement draft-verify with modified rejection sampling. Hard caveat for anyone benchmarking this: at large batch size the verify pass becomes compute-bound rather than bandwidth-bound and the speedup collapses - this is exactly what MagicDec (pap-eff-magicdec) and FlashInfer-style batch-size-aware work attack. A speedup quoted without batch size and without the acceptance rate is meaningless for this technique.",
+  "confidence": 0.95,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-speculative-decoding"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "snapkv-paper",
+  "type": "paper",
+  "name": "SnapKV: LLM Knows What You are Looking for Before Generation",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-snapkv-paper"
+  ],
+  "arxiv_id": "2404.14469",
+  "venue": "neurips",
+  "year": 2024,
+  "category": "kv-cache",
+  "authors": [
+    "Li, Yuhong",
+    "Huang, Yingbing",
+    "Yang, Bowen",
+    "Venkitesh, Bharat"
+  ],
+  "affiliations": [
+    "Shanghai Jiao Tong University",
+    "Northeastern University",
+    "Georgia Institute of Technology"
+  ],
+  "problem": "The KV cache grows with input length, inflating both memory and per-token decode cost, and existing compression methods need fine-tuning or hurt quality on real prompts.",
+  "mechanism": "Fine-tuning-free prompt compression exploiting a regularity: each attention head consistently focuses on the same prompt attention features during generation, and that pattern is already visible in a small OBSERVATION WINDOW at the end of the prompt. SnapKV pools keys/values in that window, uses attention from the observation window to score all earlier positions, then keeps clustered high-importance KV positions per head plus the observation window itself, as a prompt-only prefix compression applied once before generation.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Paper's own claims (abstract): a 3.6x increase in GENERATION SPEED and 8.2x improvement in MEMORY EFFICIENCY vs the baseline when processing 16K-token inputs; and 380K context tokens processed on a single A100-80GB with the HuggingFace implementation, with a negligible accuracy drop on needle-in-a-haystack. Comparable performance to baselines across 16 long-sequence datasets.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/FasterDecoding/SnapKV",
+  "open_weights": null,
+  "notes": "arXiv ID 2404.14469 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. CORRECTION TO THE SOURCE RECORD: it says 'arXiv preprint; no journal_ref' with no venue evidence, but OpenReview returns venue='NeurIPS 2024 poster', venueid='NeurIPS.cc/2024/Conference' for the exact title. venue=neurips, year=2024. DEDUP CHECK: the source note says 'A separate verified quantization record also exists under the bare id snapkv (owned by another slice)'. I checked - there is NO data/papers/snapkv.json. What exists is data/quantization/snapkv.json, which is a DIFFERENT record type (a quantization scheme). No duplicate paper record exists, so nothing to delete; the -paper suffix on this slug is the correct disambiguation and should stay. adoption=research-only verified by absence: no SnapKV class among the 24 cache classes in transformers cache_utils.py, no snapkv reference in vLLM's v1 cache layer files, and no SGLang equivalent. Note SnapKV's mechanism is PREFIX compression applied once before decode, which is structurally different from H2O/Scissorhands eviction DURING decode - it survives as a benchmark (LongBench) method rather than a serving path, and that difference is why 'research-only' is right even though the paper is well known."
+}

@@ -1,0 +1,43 @@
+{
+  "id": "zipformer",
+  "type": "paper",
+  "name": "Zipformer: A faster and better encoder for automatic speech recognition",
+  "arxiv_id": "2310.11230",
+  "venue": "iclr",
+  "year": 2024,
+  "category": "speech",
+  "authors": [
+    "Zengwei Yao",
+    "Liyong Guo",
+    "Xiaoyu Yang",
+    "Wei Kang",
+    "Fangjun Kuang",
+    "Yifan Yang",
+    "Zengrui Jin",
+    "Long Lin",
+    "Daniel Povey"
+  ],
+  "affiliations": [
+    "K2 / Facebook AI"
+  ],
+  "problem": "Conformer encoders were accurate but too slow and too memory-hungry for on-device and high-concurrency streaming ASR.",
+  "mechanism": "Four changes over Conformer: (1) U-Net-like encoder where middle blocks operate at LOWER frame rate, so most compute runs on short sequences; (2) block reorganisation with many more modules per block but fewer blocks, and REUSE OF ATTENTION WEIGHTS between modules in a block; (3) BiasNorm, a LayerNorm variant that retains some length/positional information; (4) SwooshR/SwooshL activations. Ships with ScaledAdam, an Adam variant that scales updates by each tensor's current scale. Code is in the k2/icefall toolchain.",
+  "hardware_relevance": [
+    "nvidia-a10",
+    "nvidia-l4",
+    "nvidia-h100-sxm",
+    "nvidia-rtx-4090",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": "Reports faster convergence and better accuracy than Adam for ScaledAdam, and Zipformer outperforming other SOTA ASR encoders on LibriSpeech, AISHELL-1 and WenetSpeech. IMPORTANT: the paper does NOT state a wall-clock speedup against Conformer with named hardware, so speedup_reported is left null rather than paraphrasing 'faster' - the title's claim is not a number.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/k2-fsa/icefall",
+  "open_weights": true,
+  "notes": "TITLE CORRECTION worth carrying: the widely cited title 'Zipformer: A Zipper Architecture for Efficient Conformer-Based Speech Recognition' does not match the arXiv record. The arXiv entry 2310.11230 is titled 'Zipformer: A faster and better encoder for automatic speech recognition' and the venue is ICLR 2024 (conference paper, per the arXiv comment). Venue ICLR 2024 and the arXiv id were both verified. Zipformer is the default streaming encoder in the k2/icefall and WeNet stacks and is the encoder behind several production streaming ASR offerings; the frame-rate-reduction U-Net plus intra-block attention reuse is why it is cheaper than Conformer at equal WER.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-zipformer"
+  ]
+}

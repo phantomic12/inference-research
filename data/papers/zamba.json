@@ -1,0 +1,36 @@
+{
+  "id": "zamba",
+  "type": "paper",
+  "name": "Zamba: A Compact 7B SSM Hybrid Model",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2405-16712"
+  ],
+  "arxiv_id": "2405.16712",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "ssm",
+  "authors": [
+    "Paolo Glorioso",
+    "Quentin Anthony",
+    "Yury Tokpanov",
+    "James Whittington",
+    "Jonathan Pilault"
+  ],
+  "affiliations": [
+    "Zyphra"
+  ],
+  "problem": "Hybrid SSM-attention models of the Jamba style duplicate a separate attention module per layer group, so parameter cost and memory scale with the number of hybrids.",
+  "mechanism": "Combines a Mamba backbone with a SINGLE SHARED attention module whose outputs are fed into several transformer blocks, so attention parameters are paid for once and reused, obtaining attention benefits at minimal parameter cost. Concretely, the design interleaves Mamba layers with a small number of transformer blocks that consume the projected output of one shared attention/MLP module, and it is pretrained in two phases (base then mid-training) on 1T tokens. The paper's inference claims follow from the constant-size Mamba state: significantly faster at inference than comparable transformers and substantially less memory for long-sequence generation. Architecturally this is the most parameter-efficient hybrid of its generation and a direct answer to Jamba's per-layer attention cost.",
+  "hardware_relevance": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "speedup_reported": "Described qualitatively as significantly faster at inference than comparable transformer models and requiring substantially less memory for long-sequence generation, with no numeric speedup ratio, baseline model, or hardware configuration stated in the abstract. speedup_reported is therefore null rather than reconstructed.",
+  "adoption": "research-only",
+  "code_url": "https://huggingface.co/Zyphra/Zamba-7B-v1",
+  "open_weights": true,
+  "notes": "arXiv technical report from Zyphra; no journal-ref. ADOPTION CAVEAT worth recording because it contradicts the model's popularity: there is NO zamba entry in llama.cpp's LLM_ARCH registry as of this snapshot (checked 2026-10-03) and no native Zamba row in the vLLM supported-models list. The successor Zamba2 does appear in vLLM as Zamba2ForCausalLM (Zyphra/Zamba2-7B-instruct and siblings), and llama.cpp has an open issue requesting Zamba2 support, so support is partial and lagging. A popular 7B model with no first-class llama.cpp architecture is the clearest example in this slice of a hybrid that did not reach the edge engine."
+}

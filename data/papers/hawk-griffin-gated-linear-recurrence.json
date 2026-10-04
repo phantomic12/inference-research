@@ -1,0 +1,46 @@
+{
+  "id": "hawk-griffin-gated-linear-recurrence",
+  "name": "Griffin: Mixing Gated Linear Recurrences with Local Attention for Efficient Language Models",
+  "arxiv_id": "2402.19427",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "attention",
+  "authors": [
+    "Soham De",
+    "Samuel L. Smith",
+    "Anushan Fernando",
+    "Aleksandar Botev",
+    "George Cristian-Muraru",
+    "Albert Gu",
+    "Ruba Haroun",
+    "Leonard Berrada",
+    "Yutian Chen",
+    "Srivatsan Srinivasan",
+    "Guillaume Desjardins",
+    "Arnaud Doucet",
+    "David Budden",
+    "Yee Whye Teh",
+    "Razvan Pascanu",
+    "Nando De Freitas",
+    "Caglar Gulcehre"
+  ],
+  "problem": "RNNs have fast inference and scale efficiently on long sequences but are hard to train and hard to scale, while Transformers train well but decode slowly with cost that grows with context.",
+  "mechanism": "Two models. HAWK is an RNN with GATED LINEAR RECURRENCES, which exceeds Mamba's reported downstream-task performance. GRIFFIN is a HYBRID that MIXES those gated linear recurrences with LOCAL ATTENTION - the linear-recurrence path gives constant-cost long-range state and the local attention window restores exact local computation. Because the recurrent state is fixed-size, context length does not inflate the state, unlike a KV cache.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Hawk exceeds the REPORTED performance of Mamba on downstream tasks. Griffin MATCHES THE PERFORMANCE OF LLAMA-2 despite being trained on over 6 TIMES FEWER TOKENS. Models match hardware efficiency of Transformers during TRAINING, and during INFERENCE they have LOWER LATENCY and SIGNIFICANTLY HIGHER THROUGHPUT. Scaled to 14B parameters, with a described sharding scheme for distributed training. No numeric latency or throughput multiplier is given in the abstract - the claims are qualitative plus the 6x-tokens-trained and 14B-scale facts, so no multiplier is recorded.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": true,
+  "notes": "ADOPTION: research-only - weights are released (open_weights true) but no mainstream inference engine ships a Griffin mode, and the broader hybrid-RNN generation has not displaced attention in production engines. VENUE NOTE: no peer-reviewed venue verifiable via Semantic Scholar; arXiv comment carries only '25 pages, 11 figures', so venue = arxiv-preprint, year = ArXiv v1 (Feb 2024). INCLUDED AS THE ARCHITECTURAL ALTERNATIVE TO KV CACHES, and the distinction matters for anyone reading the long-context records: Infini-attention (pap-eff-infini-attention-infinite-context) bounds a compressive memory inside attention, Griffin replaces part of attention with a gated linear recurrence whose state is fixed-size. The reason it has NOT won in production despite better decode properties is recorded as an observation rather than a paper claim: the decode advantage is against Transformers' baseline latency, and production comparisons run against highly-optimised attention kernels, not paper baselines - so 'lower latency and significantly higher throughput' should not be read as a standing advantage over shipped engines.",
+  "confidence": 0.8,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-eff-hawk-griffin"
+  ]
+}

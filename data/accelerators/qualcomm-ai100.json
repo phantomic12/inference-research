@@ -1,0 +1,35 @@
+{
+  "id": "qualcomm-ai100",
+  "type": "accelerator",
+  "name": "Qualcomm Cloud AI 100 (family: HHHL-Pro / HHHL-Std / HHHL-Lite / Dual M.2 / Dual M.2e)",
+  "vendor": "qualcomm",
+  "architecture": "qualcomm ai core (scalar 4-way VLIW with vector/tensor units)",
+  "release_year": 2020,
+  "process_nm": 7,
+  "form_factors": [
+    "hhhl-pro",
+    "hhhl-std",
+    "hhhl-lite",
+    "dual-m2",
+    "dual-m2e",
+    "pcie"
+  ],
+  "vram_gb": 32,
+  "memory_type": "lpddr4x",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 137,
+  "memory_bandwidth_basis": "AMD-style caution does not apply here; the figure is Qualcomm's own. Qualcomm's Cloud AI 100 product brief (source acc2-qcom-cloud-ai100-product-brief) prints the On-Card DRAM cell as '32 GB LPR4x 137 GB/s' for the HHHL-Pro SKU - capacity and bandwidth in a single cell, with NO memory-bus width published anywhere in the brief. memory_bus_bit is therefore null and is NOT back-computed: 137 GB/s x 8 / 2.1 GHz (the 2.1GHz LPDDR4X speed grade in Qualcomm's announcement-deck architecture slide) = 522 bit, which is not a standard LPDDR4X width, which independently confirms the 137 GB/s is a system-level figure rather than bus x rate. The Dual M.2 / Dual M.2e SKUs print '8 GB LPR4x 68 GB/s', and every 16 GB SKU also prints 137 GB/s. vram_gb 32 is the HHHL-Pro maximum; the family spans 8-32 GB.",
+  "flops": [],
+  "tdp_w": 75,
+  "unified_memory": false,
+  "consumer": false,
+  "status": "draft",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "acc2-qcom-cloud-ai100-product-brief",
+    "acc2-qcom-cloud-ai100-announcement-deck",
+    "acc2-qcom-cloud-ai100-ultra-product-brief"
+  ],
+  "notes": "ADDED 2026-10-03 to close a real gap: the id 'qualcomm-ai100' was referenced by flops-custom-kernel-launch-overhead (affected_by_hardware) with no accelerator record in the repo. Qualcomm has since renamed and superseded this line (AI200, and then AI250), and its own product page for AI100 no longer serves content, so this record is built from the two official Qualcomm PDFs that remain live: the Cloud AI 100 product brief and the announcement deck. THE MOST IMPORTANT THING ABOUT THIS RECORD IS THE EMPTY flops ARRAY, and it is deliberately empty. Qualcomm publishes this family's throughput as 'ML Capacity (INT8)' in TOPS - up to 400 TOPS on the HHHL-Pro, 350 on HHHL-Std, 137 on HHHL-Lite, 200 on Dual M.2, 70 on Dual M.2e - and publishes NO TFLOPS or FP16 figure anywhere in the product brief, the announcement deck, or the current product page. The schema's flops array is TFLOPS-keyed, so there is no honest way to express 400 TOPS-INT8 in it, and converting TOPS-INT8 into an FP16 TFLOPS number would manufacture a figure no Qualcomm document endorses. Qualcomm's announcement-deck Hardware Architecture slide does prove the silicon supports FP16 and FP32 as execution precisions ('Precision - INT8, INT16, FP16, FP32', 'AI Core (AIC) - Up to 16 cores'), so this is a disclosure gap, not an architectural one - but the number itself remains unpublished and status is therefore draft rather than verified. If a future Qualcomm source publishes an FP16 rate, that row should be added with the source, not inferred. WHY THE INT8-NATIVE FRAMING IS THE PART THAT MATTERS: this is the one accelerator family in this repo whose vendor headline metric is INT8 TOPS rather than FP16 TFLOPS, and it is deliberate on Qualcomm's side - the AI core is 'a scalar 4-way VLIW architecture that includes vector/tensor units and lower precision to enable high-performance inference'. Qualcomm ran MLPerf Inference on this card (their own decks: MLPerf v3.0 and v3.1 Cloud AI 100 submissions, and a 2.0/2.1 inference-performance deck), so the claim is benchmarked rather than theoretical. The practical consequence for anyone comparing this to a GPU: a TOPS-INT8 number and a TFLOPS-FP16 number are not comparable, and the two large TOPS figures that circulate for Qualcomm parts are per-CARD, not per-system. Also unpublished, and left null for the same reason: process node appears on the announcement deck only as a narrative 'using 7nm' (process_nm 7 reflects that, and is also corroborated by the Hot Chips 33 presentation), no bus width, no clock, no ECC overhead figure (the deck does say '4x64 LPDDR4x (2.1GHz) with inline ECC' - inline ECC is a data-integrity feature here, not the workstation-style capacity-tax ECC found on the Radeon PRO parts). On-die SRAM is published and unusual for this class: up to 144 MB on the HHHL-Pro, which is a genuine differentiator for inference because it is fast on-package scratch rather than off-package DRAM. TDP is per-card and per-form-factor (15-25 W M.2, 35/45/55 W configurable HHHL-Lite, 75 W HHHL), which is the actual selling point - this is a power-capped inference part, not a training part, and Qualcomm positions it for cloud and edge inference rather than training. SOFTWARE, because it decides whether any of this is reachable: Qualcomm ships a parallelizing compiler and platform SDK, and the stack is available through Qualcomm AI Hub (aihub.qualcomm.com) with published ONNX and PyTorch workflows. A vLLM maintainer noted to ServeTheHome that NVIDIA likely has more software headcount, i.e. the ecosystem gap is the real adoption risk. Scale-out is over a PCIe switch with peer-to-peer capability (again per the Hot Chips 33 presentation) rather than a proprietary accelerator fabric - NVLink is explicitly not relevant here."
+}

@@ -1,0 +1,38 @@
+{
+  "id": "quest",
+  "type": "paper",
+  "name": "Quest: Query-Aware Sparsity for Efficient Long-Context LLM Inference",
+  "status": "verified",
+  "confidence": 0.89,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-quest"
+  ],
+  "arxiv_id": "2406.10774",
+  "venue": "icml",
+  "year": 2024,
+  "category": "kv-cache",
+  "authors": [
+    "Tang, Jiaming",
+    "Zhao, Yilong",
+    "Zhu, Kan",
+    "Xiao, Guangxuan"
+  ],
+  "affiliations": [
+    "MIT",
+    "NVIDIA"
+  ],
+  "problem": "Long-context decode is slow mainly because attention must read the whole KV cache from HBM, and prior KV-selection work assumed token criticality is query-INDEPENDENT, when in fact which tokens matter depends on the current query.",
+  "mechanism": "Query-Aware Sparsity for Efficient Long-Context LLM Inference. Partition the KV cache into fixed-size pages and track, per page, only the MINIMUM and MAXIMUM key values. At decode time, use the query vector to compute an UPPER BOUND on each page's criticality from those two extrema (the bound is exact-criticality-safe by construction) and load only the Top-K pages for attention. Selects pages, not tokens, so the loads stay aligned and coalesced.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm"
+  ],
+  "speedup_reported": "Paper's own claims (abstract): up to 2.23x SELF-ATTENTION speedup, which reduces INFERENCE LATENCY by up to 7.03x, with negligible accuracy loss on long-dependency tasks. The two numbers measure different things and the gap between them is the interesting part - the 7.03x end-to-end latency reduction exceeds the 2.23x kernel speedup because loading fewer pages also shrinks the memory-hierarchy pressure outside attention. Never quote the 7.03x without the 2.23x.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/mit-han-lab/Quest",
+  "open_weights": null,
+  "notes": "arXiv ID 2406.10774 verified via abs-page citation_title/citation_date on 2026-10-03; title matches (record name 'Quest', arXiv title 'QUEST'). Venue icml confirmed twice: arXiv comment 'ICML 2024' and OpenReview venue='ICML 2024 Poster', venueid='ICML.cc/2024/Conference'. adoption=research-only, with an explicit note about a FALSE POSITIVE I hit while checking: a grep for 'quest' across vLLM's v_cache.py, v_kv_cache_utils.py and v_utils.py returns hits, but they are all the word 'request' (Request class, 'Generate extra keys related to MultiModal request') - there is NO Quest implementation in vLLM. Verified absent from vLLM's v1 backends, SGLang's models and attention directories, and transformers cache_utils.py. repo mit-han-lab/Quest last pushed 2025-07-10 (408 stars), so live research code without engine integration. Note this repo also has a separate quantization record 'quest-kv-sparsity' owned by another slice - different type, different framing, no conflict."
+}

@@ -1,0 +1,33 @@
+{
+  "id": "eagle-feature-level-speculative",
+  "name": "EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty",
+  "arxiv_id": "2401.15077",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "speculative-decoding",
+  "authors": [
+    "Yuhui Li",
+    "Fangyun Wei",
+    "Chao Zhang",
+    "Hongyang Zhang"
+  ],
+  "problem": "Token-level speculative drafting has irreducible uncertainty that caps acceptance rate; the draft model is forced to guess the next token in the same way the target does.",
+  "mechanism": "Draft in FEATURE space instead of token space. An autoregressive feature-level draft model (a single transformer layer) predicts the target's SECOND-TO-TOP-LAYER hidden feature sequence. The predicted feature is then fed through the target's frozen lm_head to yield a draft token. The key move for handling feature-level uncertainty: shift the input sequence by one time step - feed [feat_1, ..., feat_t, embed_t] rather than [embed_1, ..., embed_t] - so the draft head sees the previous token's embedding and can resolve the uncertainty the authors identify. Draft head is tiny (~one decoder layer).",
+  "hardware_relevance": [
+    "nvidia-a100-sxm",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "For LLaMA2-Chat 70B, latency speedup 2.7x-3.5x AND doubled throughput, while maintaining the exact generated-text distribution. Evaluated across the Vicuna and LLaMA2-Chat series plus Mixtral 8x7B Instruct, on dialogue, code generation, math reasoning, and instruction following. The 70B figure is a 70B target with a one-layer draft head - the draft/target size ratio is extreme, which is the point of the paper.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/SafeAILab/EAGLE",
+  "open_weights": true,
+  "notes": "ADOPTION, precisely: this is the best-engine-supported of the recent draft-model variants. vLLM ships EAGLE and EAGLE-3 as speculative methods, SGLang ships EAGLE-3, and llama.cpp has an EAGLE path; the EAGLE-3 headline throughput number is measured inside SGLang, which is itself evidence of upstream support rather than a bespoke harness. Weights are released so it is deployable without retraining the target. VENUE NOTE: Semantic Scholar gives no venue for 2401.15077 and the arXiv comment field carries none, so venue = arxiv-preprint, year = arXiv v1 (Jan 2024). Note the distinction from Medusa, also a multi-head method: Medusa predicts TOKENS from the backbone hidden state, EAGLE autoregresses over FEATURES and reuses the target's lm_head - which is why EAGLE's acceptance rate is higher and why the two are not interchangeable in a benchmark table.",
+  "confidence": 0.9,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-eagle-paper"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "id": "dpr",
+  "type": "paper",
+  "name": "Dense Passage Retrieval for Open-Domain Question Answering",
+  "arxiv_id": "2004.04906",
+  "venue": "emnlp",
+  "year": 2020,
+  "category": "retrieval",
+  "authors": [
+    "Vladimir Karpukhin",
+    "Barlas Oguz",
+    "Sewon Min",
+    "Patrick Lewis",
+    "Ledell Wu",
+    "Sergey Yogan",
+    "Seyed Mehran",
+    "Wen-tau Yih"
+  ],
+  "affiliations": [
+    "Facebook AI Research",
+    "University of Washington"
+  ],
+  "problem": "Open-domain QA retrieval used TF-IDF/BM25, which fails on semantic paraphrase and requires hand-tuned sparse statistics.",
+  "mechanism": "A dual encoder (two independent BERT towers, no token-level interaction) maps a question and a passage to a single dense vector; retrieval is nearest-neighbour search over the passage index with a contrastive in-batch-negatives objective. Document embeddings are computed OFFLINE once per corpus; only the query needs an encoder pass at query time.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-v100-sxm2-32gb"
+  ],
+  "speedup_reported": "Outperforms a strong Lucene-BM25 system by 9%-19% absolute top-20 passage retrieval accuracy on a range of open-domain QA datasets, and lifts end-to-end QA to new state of the art on multiple benchmarks. Baseline (Lucene-BM25) and metric (top-20 accuracy) are both stated; no hardware or latency disclosed.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/facebookresearch/DPR",
+  "open_weights": true,
+  "notes": "Venue EMNLP 2020 (arXiv comment). DPR is the template for essentially every dense retriever since: separate encoders, in-batch negatives, offline document embedding. THE ARCHITECTURAL SERVING ARGUMENT: because documents are embedded OFFLINE, the serving cost of a dense index is (a) a one-time corpus embedding pass and (b) a query encoder forward plus an ANN scan - the expensive transformer never runs per document at query time. That asymmetry versus cross-encoders, which re-encode every candidate, is why dense retrieval won. The memory cost is the index, which is why dimensionality-reduction work (pap-mm-matryoshka) matters so much here.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-dpr"
+  ]
+}

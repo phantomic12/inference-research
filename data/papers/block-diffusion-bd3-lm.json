@@ -1,0 +1,40 @@
+{
+  "id": "block-diffusion-bd3-lm",
+  "type": "paper",
+  "name": "Block Diffusion: Interpolating Between Autoregressive and Diffusion Language Models (BD3-LM)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2503-09573"
+  ],
+  "arxiv_id": "2503.09573",
+  "venue": "icml",
+  "year": 2025,
+  "category": "other",
+  "authors": [
+    "Marianne Arriola",
+    "Aaron Gokaslan",
+    "Justin T. Chiu",
+    "Zhihan Yang",
+    "Zhixuan Qi",
+    "Jiaqi Han"
+  ],
+  "affiliations": [
+    "Cornell University",
+    "Stanford University"
+  ],
+  "problem": "Diffusion LMs permit parallel generation and controllability but lag in likelihood modelling and are locked to fixed-length generation, while autoregressive models cannot reuse compute across a parallel block.",
+  "mechanism": "Interpolates between discrete denoising diffusion and autoregression by making the AUTOREGRESSION GRANULARITY A HYPERPARAMETER. The sequence is split into blocks of a fixed size; within a block the model performs masked diffusion denoising over all positions in parallel, and blocks are produced left to right, so the model is autoregressive at block granularity and a diffusion model within each block. Block size is the dial: size 1 recovers an exact AR model, large blocks approach full-sequence diffusion. Because previously generated blocks form a prefix that does not change, their keys and values CAN be cached, so the denoising passes inside later blocks attend to a KV cache of the committed prefix rather than recomputing it. FLOP CONSEQUENCE: unlike full-sequence diffusion LMs, the KV cache is real and reused across denoising steps within a block, so total cost is closer to AR prefill over the full context plus a bounded per-block denoising cost, which is what makes block diffusion the first diffusion family with a plausible serving path. Supporting recipe: an efficient training algorithm, gradient-variance estimators, and data-driven noise schedules to minimise variance. Supports flexible and arbitrary-length generation.",
+  "hardware_relevance": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-b200",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": "Reports setting a new state of the art among diffusion models on language modelling benchmarks, plus enabling generation of arbitrary-length sequences and improving inference efficiency with KV caching and parallel token sampling. No numeric tok/s speedup with baseline and settings is stated in the abstract; the efficiency claim is architectural (KV caching plus parallel token sampling within blocks) rather than a measured ratio.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": true,
+  "notes": "ICML 2025 per the arXiv comment field; no journal-ref on the abs page. Method is abbreviated BD3-LM. This is the most serving-relevant diffusion paper in the slice precisely because it reintroduces a reusable KV cache over committed blocks, addressing the FLOP explosion that limits full-sequence diffusion LMs; block size becomes the single knob trading sequential depth against parallel width. Code, weights and a project page were released. As of this snapshot no block-diffusion entry exists in llama.cpp's arch registry and no native BD3-LM row appears in the vLLM list, so despite shipping code it has no first-class engine support, unlike LLaDA and Dream. Note vLLM's DiffusionGemmaForBlockDiffusion row shows block diffusion did reach vLLM for a later Google model even though the original BD3-LM weights are not natively listed."
+}

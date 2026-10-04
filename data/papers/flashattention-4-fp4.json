@@ -1,0 +1,32 @@
+{
+  "id": "flashattention-4-fp4",
+  "type": "paper",
+  "name": "Hardware-Aware FP4 FlashAttention-4",
+  "status": "verified",
+  "confidence": 0.72,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-flashattention-4-fp4"
+  ],
+  "arxiv_id": "2609.04105",
+  "venue": "arxiv-preprint",
+  "year": 2026,
+  "category": "quantization",
+  "authors": [
+    "Robert Hu"
+  ],
+  "affiliations": [
+    "Independent / unaffiliated (single-author preprint)"
+  ],
+  "problem": "Blackwell's native FP4 tensor cores do not translate into faster attention, because once the matrix products shrink the softmax conversion and the on-chip serial dependencies dominate the kernel.",
+  "mechanism": "Two paths. Direct-P (non-causal inference) maps scores directly to FP4 probabilities, skipping an intermediate high-precision representation. The causal path reconstructs probabilities from saved quantised queries and keys and feeds FP8 gradient operands into the backward pass. Matched distributed training deliberately retains FP8 for probabilities and values.",
+  "hardware_relevance": [
+    "nvidia-gb200-nvl72",
+    "nvidia-b200"
+  ],
+  "speedup_reported": "Paper's own claims (abstract): Direct-P reaches up to 2.13x the BF16 forward throughput on an NVIDIA GB200; the causal path accelerates a complete single-GPU 8-billion-parameter update by up to 1.14x. Baselines named (BF16 forward; the paper's own MXFP4 variants). The paper also reports a NEGATIVE result that belongs in the record: every tested MXFP4 probability/value training trajectory diverged, which is why the distributed path keeps FP8.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "arXiv ID 2609.04105 verified via abs-page citation_title/citation_date on 2026-10-03; title 'Hardware-Aware FP4 FlashAttention-4' matches the record name. Single author (Robert Hu), NOT co-authored by the FlashAttention team - the abs page lists one author, confirming the dead agent's source note. DEDUP DECISION: KEPT as a separate record from flashattention-4. Two independent checks support this: (a) different arXiv IDs (2609.04105 vs 2603.05451) and different v1 dates (2026-09-03 vs 2026-03-05); (b) different author lists - flashattention-4 is Zadouri/Hoehnerbach/Shah/Liu/Thakkar/Dao, this is one unaffiliated author. Same author team AND same title would have been grounds for merging; neither holds. Venue is arxiv-preprint because the only evidence is the absence of a venue claim on the abs page: an OpenReview search for this title returns no record for it. Adoption research-only: no engine or upstream repo ships it; the divergence result on MXFP4 is itself a reason for caution."
+}

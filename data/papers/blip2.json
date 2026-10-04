@@ -1,0 +1,36 @@
+{
+  "id": "blip2",
+  "type": "paper",
+  "name": "BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models",
+  "arxiv_id": "2301.12597",
+  "venue": "icml",
+  "year": 2023,
+  "category": "multimodal",
+  "authors": [
+    "Junnan Li",
+    "Dongxu Li",
+    "Silvio Savarese",
+    "Steven Hoi"
+  ],
+  "affiliations": [
+    "Salesforce AI Research"
+  ],
+  "problem": "End-to-end vision-language pretraining was prohibitively expensive because both towers had to be trained jointly.",
+  "mechanism": "Freezes a pretrained image encoder AND a frozen LLM, and bridges them with a lightweight QUERYING TRANSFORMER (Q-Former). Two stages: stage 1 bootstraps vision-language representation learning from the frozen image encoder (image-text contrastive, image-text matching, image-grounded text generation); stage 2 bootstraps vision-to-language generation from the frozen LM. Only the Q-Former is trained.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-l4"
+  ],
+  "speedup_reported": "Outperforms Flamingo-80B by 8.7% on zero-shot VQAv2 while using 54x fewer trainable parameters. This is a TRAINING-efficiency claim (fewer trainable parameters), not an inference throughput measurement.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/salesforce/LAVIS",
+  "open_weights": true,
+  "notes": "Venue ICML 2023, confirmed at proceedings.mlr.press v202/li23q. INFERENCE-ENABLING CONTRIBUTION: Q-Former is a learned bottleneck that emits 32 visual query tokens by default, regardless of image resolution. In a serving system the vision tower cost then splits cleanly into (a) one encoder pass at full resolution and (b) a tiny 32-token LM prefill. This is the production-friendly form of vision-token reduction - you reduce the LM's contribution to prefill to a constant and the cost floor becomes the encoder itself.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-blip2"
+  ]
+}

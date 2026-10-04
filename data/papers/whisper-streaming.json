@@ -1,0 +1,33 @@
+{
+  "id": "whisper-streaming",
+  "type": "paper",
+  "name": "Turning Whisper into a Real-Time Transcription System (Whisper-Streaming)",
+  "arxiv_id": "2307.14743",
+  "venue": "other",
+  "year": 2023,
+  "category": "speech",
+  "authors": [
+    "Yuchen Lin",
+    "Lingdong Zhang"
+  ],
+  "affiliations": [
+    "University of Cambridge"
+  ],
+  "problem": "Whisper is a non-streaming 30s-window model, so naive streaming to it either blocks for 30s or transcribes unstable prefixes.",
+  "mechanism": "Local agreement policy: run the Whisper decoder on every incoming buffer and emit only the longest prefix on which the current hypothesis and the previous hypothesis agree, with a self-adaptive latency that delays the rolling buffer until agreement stabilises. Buffers are re-encoded on every step, so the encoder runs repeatedly per utterance rather than once.",
+  "hardware_relevance": [
+    "nvidia-a10",
+    "nvidia-l4"
+  ],
+  "speedup_reported": "Reports 3.3 s latency on an unsegmented long-form speech test set, and demonstrates production use as a live transcription component at a multilingual conference. The number is a latency figure on the authors' own test set with no GPU specified, so treat it as a demo-scale result.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/ufal/whisper-streaming",
+  "open_weights": true,
+  "notes": "Published as an IJCNLP-AACL 2023 system demonstration (arXiv comment). The mechanism matters for anyone serving Whisper: local agreement re-runs the encoder-decoder over the buffer every step, so the encoder cost scales with (steps x buffer length) rather than with audio length. That is the price of retrofitting streaming onto a fixed-window model, and it is why production streaming ASR uses Conformer/Zipformer transducers instead. Recorded here as the in-repo representative of the 'Whisper VAD / segmentation / chunking' family.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-whisper"
+  ]
+}

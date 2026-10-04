@@ -1,0 +1,39 @@
+{
+  "id": "distflashattn",
+  "type": "paper",
+  "name": "DISTFLASHATTN: Distributed Memory-efficient Attention for Long-context LLMs Training",
+  "status": "verified",
+  "confidence": 0.86,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-distflashattn"
+  ],
+  "arxiv_id": "2310.03294",
+  "venue": "colm",
+  "year": 2024,
+  "category": "attention",
+  "authors": [
+    "Li, Dacheng",
+    "Shao, Rulin",
+    "Xie, Anze",
+    "Xing, Eric P."
+  ],
+  "affiliations": [
+    "Lehigh University",
+    "Rice University",
+    "Texas A&M University"
+  ],
+  "problem": "Training long-context LLMs needs the attention computation sharded across devices, and existing approaches pay for it either in sequence-length limits (attention must be exact per sequence) or in imbalance and redundant communication.",
+  "mechanism": "DISTFLASHATTN combines FlashAttention's tiling with sequence-level parallelism plus three named techniques: token-level workload balancing (so all devices finish together), overlapping key-value communication with compute, and a rematerialisation-aware gradient checkpointing algorithm. Same LightSeq codebase lineage as Sequence Level Parallelism.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Paper's own claims (abstract), each against a NAMED distributed baseline, on Llama-7B at sequence lengths 32K-512K: 4.45-5.64x vs Ring Self-Attention (also 8x longer sequences); 1.24-2.01x vs Megatron-LM with FlashAttention (2-8x longer sequences); 1.67x vs recent Ring Attention; and 1.26-1.88x vs DeepSpeed-Ulysses. This is the best-baselined attention record in the batch - four named competitors, a model and a length range.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/RulinShao/LightSeq",
+  "open_weights": null,
+  "notes": "arXiv ID 2310.03294 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. CORRECTION TO THE SOURCE RECORD: it says 'arXiv preprint; no journal_ref' with no venue evidence, but OpenReview returns venue='COLM 2024', venueid='colmweb.org/COLM/2024/Conference' for the exact title. venue=colm, year=2024. CATEGORY AND SCOPE NOTE, deliberately emphasised: this is a TRAINING-side paper, not an inference-serving result - the source record already flags this and it matters for how the record is read. Every speedup is a training-throughput number on Llama-7B, and no figure here should be quoted as a serving latency or decode-throughput claim. adoption=research-only: no distributed-attention integration in vLLM or SGLang; sequence-parallel attention for training lives in Megatron-LM and DeepSpeed-Ulysses instead, both of which this paper benchmarks against."
+}

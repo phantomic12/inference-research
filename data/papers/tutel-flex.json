@@ -1,0 +1,38 @@
+{
+  "id": "tutel-flex",
+  "type": "paper",
+  "name": "Tutel / Flex: Adaptive Mixture-of-Experts at Scale",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2206-03382"
+  ],
+  "arxiv_id": "2206.03382",
+  "venue": "mlsys",
+  "year": 2023,
+  "category": "moe",
+  "authors": [
+    "Changho Hwang",
+    "Wei Cui",
+    "Yifan Xiong",
+    "Ziyue Yang",
+    "Ze Liu",
+    "Han Hu"
+  ],
+  "affiliations": [
+    "Microsoft"
+  ],
+  "problem": "MoE execution was statically parallelised and pipelined even though the router makes expert load dynamic at run time, so every step paid for an average case that was never the actual case.",
+  "mechanism": "Two-part system. (1) Tutel is a flexible MoE library whose computational graph exposes parallelism and pipelining degrees as run-time-tunable knobs, and whose communication and dispatch groups are laid out so that any parallelism strategy maps onto the same layout without tensor migration, letting the user switch between Megatron-style dispatch and a one-shot all-to-all at run time. (2) Flex, the system described in the current arXiv v2 abstract, adds dynamically adaptive parallelism and pipelining that re-decide the strategy at every step from the router-produced load distribution; the key design is an identical layout for distributing MoE parameters and input data, which makes a parallelism-degree switch mathematically equivalent and migration-free. Routing is inherited from the model (token-choice top-k, auxiliary-loss balancing); the contribution is the system, not the gate.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a100-80gb-pcie",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "A single MoE layer sped up 4.96x over the previous state of the art on 16 A100 GPUs and 5.75x on 2,048 A100 GPUs, aggregating the adaptive parallelism/pipelining plus the other Flex techniques. End to end on SwinV2-MoE (a vision MoE on the Swin Transformer V2 backbone): up to 1.55x training and 2.11x inference speedup over Fairseq. The inference number is against Fairseq, a training-first framework, so it is weak evidence about production serving.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/microsoft/tutel",
+  "open_weights": false,
+  "notes": "NAMING TRAP: arXiv 2206.03382 v1 was titled 'Tutel: Adaptive Mixture-of-Experts at Scale' and appeared at MLSys 2023. The current v2 (2023-06-05) abstract describes a system called Flex, not Tutel, so this record is named for both and the arXiv ID covers the lineage. MLSys venue comes from the arXiv comment field; the abs page showed no journal-ref. Tutel was never upstreamed into vLLM or SGLang, and MegaBlocks treating it as the thing to beat is direct evidence of supersession."
+}

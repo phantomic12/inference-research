@@ -1,0 +1,29 @@
+{
+  "id": "zeroquant",
+  "type": "paper",
+  "name": "ZeroQuant: Efficient and Affordable Post-Training Quantization for Large-Scale Transformers",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-quant-zeroquant"
+  ],
+  "arxiv_id": "2206.01861",
+  "venue": "neurips",
+  "year": 2022,
+  "category": "quantization",
+  "authors": [
+    "Lin, Yang, Tang, Zheng, Li, Chen, Dai"
+  ],
+  "affiliations": [
+    "Microsoft Research Asia"
+  ],
+  "problem": "Quantization overhead (quantize/dequantize kernels) and calibration data cost made quantization of large models uneconomic in practice.",
+  "mechanism": "Three-component pipeline: (1) fine-grained hardware-friendly group-wise quantization with per-group scales and asymmetric quantization to halve scale overhead; (2) layer-by-layer knowledge distillation (LKD) that needs no original training data - the teacher is the unquantized layer and the calibration inputs are synthetic activations propagated forward from layer 0; (3) a custom quantization system backend that fuses quant/dequant into the matmul to remove the runtime overhead.",
+  "hardware_relevance": [],
+  "speedup_reported": "Paper's own claim (abstract): INT8 weights+activations at 'cost-free' accuracy impact with up to 5.19x (BERT) and 4.16x (GPT-3 style) speedup vs FP16 inference; adding LKD gives INT4 fully-connected + INT8 attention with 3x memory-footprint reduction vs FP16. COMPRESSION RATIO: 8x for the W8A8 config, ~4x for the mixed INT4/INT8 config. QUALITY COST: described as 'minimal accuracy impact' - not quantified in the abstract. Hardware in the paper is the authors' own custom INT8 kernels, which is precisely why this did not become a production default: no general-purpose kernel ships it.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/antgroup/zeroquant",
+  "open_weights": null,
+  "notes": "arXiv ID 2206.01861 verified via /abs/; single version. Venue NeurIPS 2022 from Semantic Scholar. Year = venue year 2022. adoption=research-only: the speedups depend on a bespoke quantization system backend (Triton INT8 kernels) that no upstream engine adopted; SmoothQuant/GPTQ achieved the same INT8 regime with hardware-native operators instead. arXiv ID and title verified by fetching https://arxiv.org/abs/2206.01861 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2206.01861) unless the record's notes say otherwise."
+}

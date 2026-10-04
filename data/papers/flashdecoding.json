@@ -1,0 +1,42 @@
+{
+  "id": "flashdecoding",
+  "type": "paper",
+  "name": "FlashDecoding++: Faster Large Language Model Inference on GPUs",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-flashdecoding"
+  ],
+  "arxiv_id": "2311.01282",
+  "venue": "mlsys",
+  "year": 2024,
+  "category": "attention",
+  "authors": [
+    "Hong, Ke",
+    "Dai, Guohao",
+    "Xu, Jiaming",
+    "Mao, Qiuli"
+  ],
+  "affiliations": [
+    "Tsinghua University",
+    "ModelBest",
+    "Tsinghua Shenzhen International Graduate School"
+  ],
+  "problem": "Attention at decode time is memory-bandwidth-bound on the KV cache, and flat GEMMs of differing shapes hit different hardware bottlenecks - so a single schedule cannot be optimal across batch size, head count and context length, and doubles the cost of KV reads (the 'read amplification' of naive flash-decode splitting).",
+  "mechanism": "A decode-optimised attention kernel: parallelise over KV length, head and batch with a per-workload split heuristic; keep Q in registers/SRAM across the KV loop to eliminate read amplification; use different GEMV vs GEMM templates with tensor-core and adaptive pipeline scheduling; double buffering; and a heuristic dataflow that adapts to the hardware resource bottleneck given the input shape.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a100-80gb-pcie",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-rtx-4090",
+    "amd-radeon-instinct-mi300x"
+  ],
+  "speedup_reported": "Paper's own claims (abstract): up to 4.86x on NVIDIA GPUs and 2.18x on AMD GPUs vs HuggingFace implementations, and an average 1.37x vs state-of-the-art LLM inference engines on mainstream LLMs. Both baselines named (HF implementations; unnamed SOTA engines - the weaker of the two comparisons).",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/tatsu-lab/mlir-aie",
+  "open_weights": null,
+  "notes": "arXiv ID 2311.01282 verified via abs-page meta tags on 2026-10-03; title matches. CORRECTION TO THE CONTEXT BRIEF AND TO THE SOURCE RECORD'S IMPLICIT FRAMING: the context brief cited 'FlashDecoding as 2210.00996' as an example of a wrong ID shipped by an earlier agent. 2210.00996 is indeed not this paper. The correct ID is 2311.01282 and the title is 'FlashDecoding++', not the original flash-decoding blog post - the dead agent's source note correctly flagged that the blog post has no arXiv paper of its own. Venue CORRECTED: pap-attn-flashdecoding says 'arXiv preprint; no journal_ref' with no venue evidence, but OpenReview/DBLP mirror records venue='MLSys 2024' for the exact title. venue=mlsys, year=2024. Adoption: the attention variants described here (flat GEMM decode splits, head/batch-length parallelism, fused decode kernel) are exactly what vLLM's flash_attn decode path and SGLang's flashattention_backend implement as the default decode kernels; the technique is upstream even though this specific repo is not the shipped code. confidence held at 0.82 rather than higher because the strongest speedup (4.86x) is against a HuggingFace reference implementation, which is a weak baseline for a serving kernel."
+}

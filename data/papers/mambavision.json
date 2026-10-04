@@ -1,0 +1,35 @@
+{
+  "id": "mambavision",
+  "type": "paper",
+  "name": "MambaVision: A Hybrid Mamba-Transformer Vision Backbone",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2407-08083"
+  ],
+  "arxiv_id": "2407.08083",
+  "venue": "cvpr",
+  "year": 2025,
+  "category": "ssm",
+  "authors": [
+    "Ali Hatamizadeh",
+    "Jan Kautz"
+  ],
+  "affiliations": [
+    "NVIDIA"
+  ],
+  "problem": "Pure Mamba backbones for vision underperformed ViT at high resolution, because vision needs precise local spatial detail that a global fixed-state recurrence discards.",
+  "mechanism": "Redesigns the Mamba formulation for visual features and, through ablation, establishes the actual layer structure: put Mamba-style selective-SSM blocks in the early stages and add self-attention blocks in the FINAL stages of each stage. The finding is that equipping Mamba with self-attention blocks in the last layers greatly improves its ability to capture long-range spatial dependencies. The resulting family is a hierarchical pyramid (patch embedding, then four stages of 2x downsampling) mixing Mamba blocks with a final self-attention block per stage. For serving this matters in the same way as every other hybrid: the attention layers reintroduce a KV cache for vision tokens, and because visual token counts are large, that cache is big. The state in the Mamba layers remains constant-size.",
+  "hardware_relevance": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": null,
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/NVIDIA/MambaVision",
+  "open_weights": true,
+  "notes": "CVPR 2025 per the arXiv comment field; no journal-ref on the abs page. Recorded primarily as a vision-architecture datapoint in an inference-focused knowledge base: the Mamba-first/self-attention-last rule it establishes is now the standard hybrid recipe and reappears in the text hybrids (Jamba, Granite 4.0, Qwen3-Next). The paper reports ImageNet classification and downstream detection/segmentation accuracy and throughput at matched parameter count rather than a speedup ratio, so speedup_reported is null rather than reconstructed. MambaVision ships in NVIDIA's own inference stacks (NeMo / TAO / Triton model zoo) rather than as a general LLM-engine architecture, which is why adoption is in-upstream-engine rather than in-production broadly."
+}

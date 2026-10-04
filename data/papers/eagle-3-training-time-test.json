@@ -1,0 +1,33 @@
+{
+  "id": "eagle-3-training-time-test",
+  "name": "EAGLE-3: Scaling up Inference Acceleration of Large Language Models via Training-Time Test",
+  "arxiv_id": "2503.01840",
+  "venue": "arxiv-preprint",
+  "year": 2025,
+  "category": "speculative-decoding",
+  "authors": [
+    "Yuhui Li",
+    "Fangyun Wei",
+    "Chao Zhang",
+    "Hongyang Zhang"
+  ],
+  "problem": "EAGLE and EAGLE-2 gain little from more draft-model training data, because feature prediction puts a ceiling on how much the draft model can learn.",
+  "mechanism": "Two changes. (1) Abandon feature prediction in favour of DIRECT token prediction, removing the feature-prediction constraint that capped data scaling. (2) Replace reliance on top-layer features with MULTI-LAYER feature fusion, obtained by a technique the authors call 'training-time test' - during training the model attends to its own future-derived representations so that at inference it has learned to combine features from several depths rather than only the last. Together these let the draft head benefit from training-data scaling.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Speedup ratio up to 6.5x, about 1.4x over EAGLE-2, evaluated on five tasks across chat models AND reasoning models. Separately and more usefully, 1.38x THROUGHPUT improvement at batch size 64 measured inside the SGLang framework. The batch-64 throughput figure is the one to trust for serving: it is the only one here that is not a batch-1 latency number.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/SafeAILab/EAGLE",
+  "open_weights": true,
+  "notes": "ADOPTION, precisely: EAGLE-3 is the CURRENT default in the EAGLE family for real engines - vLLM's EAGLE-3 support and SGLang's EAGLE-3 path both exist, and this paper's throughput claim is itself an SGLang measurement, so it is an upstream-engine number rather than a bespoke-harness number. VENUE NOTE: no peer-reviewed venue verifiable; arXiv comment has no venue, so venue = arxiv-preprint, year = arXiv v1 (Mar 2025). Headline-claim caveat to flag: the 'up to 6.5x' is a best-case batch-1 latency figure and the honest serving number in the same paper is 1.38x throughput at batch 64 - roughly a 4.5x gap between the marketing number and the production number, caused by nothing more than batch size. Read both, or the 6.5x will be quoted out of context. Also note the reasoning-model evaluations: acceptance rate on reasoning models is a different regime from chat, and the two are averaged in the headline.",
+  "confidence": 0.9,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-eff-eagle-3"
+  ]
+}

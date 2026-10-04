@@ -1,0 +1,44 @@
+{
+  "id": "horizon-journey-6p",
+  "type": "accelerator",
+  "name": "Horizon Robotics Journey 6P (Nash BPU automotive SoC)",
+  "vendor": "asic-other",
+  "architecture": "BPU 3.0 Nash",
+  "release_year": 2024,
+  "process_nm": 7,
+  "form_factors": [
+    "socs"
+  ],
+  "vram_gb": null,
+  "memory_type": "lpddr5x",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 204,
+  "memory_bandwidth_basis": "Secondary source citing Horizon's own launch material: 'uses LPDDR5x-8533 RAM for a total of 204 GB/s of bandwidth'. LPDDR5x-8533 is a pin rate, so the implied bus width is derivable: 204e9 / (8533e6/8) = 191 bits, i.e. a 192-bit bus. The 204 GB/s figure is therefore arithmetically self-consistent with the stated memory type and speed, which is a useful internal consistency check on the number, though it remains a secondary-source figure. Source cn-horizon-journey6.",
+  "flops": [
+    {
+      "precision": "int8",
+      "tflops": 560,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "cn-horizon-journey6"
+    },
+    {
+      "precision": "other",
+      "tflops": 560,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "cn-horizon-journey6"
+    }
+  ],
+  "tdp_w": null,
+  "interconnect": [],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "THE HIERARCHY POINT: RECORDED WITH AN EXPLICIT NEGATIVE FINDING, which is the point of including it at all: Horizon Robotics (地平线, HKEX 9660) is NOT a plausible source of LLM inference hardware, and the reasoning is quantitative rather than rhetorical. Journey 6P tops out its entire range at 560 TOPS INT8 from 4 Nash BPU cores (vendor claim, secondary-sourced), and that number is not comparable to the datacenter parts in this repo because it is INT8-only automotive inference throughput for a fixed perception workload, on 7 nm TSMC, with LPDDR5x at 204 GB/s and no HBM anywhere. Put plainly: 204 GB/s of LPDDR5x is the SAME memory bandwidth as a Huawei Ascend 310P inference card, and the 310P is a 2022 part. A device with this memory subsystem cannot serve a model whose weights exceed a few gigabytes at any useful batch size, because weights have to stream from LPDDR on every decode step. The whole product is designed around a bounded, mostly-static workload - perception, planning, and increasingly a small onboard transformer - which Horizon explicitly claims to optimise for ('designed to handle high-parameter transformer models, and is optimized to run end-to-end architectures'). THE DETAIL THAT MAKES IT WORTH RECORDING ANYWAY: Journey 6 is the first Horizon generation built for Transformers rather than CNNs - Journey 5 (128 TOPS BPU Bayesian, TSMC 16 nm) was the first transformer-optimised part and Journey 6 moves to out-of-order Cortex-A78AE CPU cores and Mali G78AE 3D graphics, integrating CPU, BPU, GPU and MCU into one SoC. So the architectural direction is toward transformers. But direction is not capacity. Horizon's own market position confirms the mismatch: it shipped on navigate-on-autopilot vehicles in China at a reported 49% share of the Chinese self-driving chip market in 2023, targeting over 10 million chips in 2025, with a Volkswagen JV (Carizon) and programs with SAIC, BYD, Li Auto, GAC, Chery and Bosch, Denso and Continental as interested Tier-1s. None of that is datacenter compute. THE ONE PART THAT IS ACTUALLY IN SCOPE IS THE ROADMAP, NOT THE SILICON: Horizon announced the Journey 7 family in March 2026 on a fourth-generation BPU called Riemann, arriving 2027, whose top part J7P is claimed to significantly surpass the 1000-TOPS Nvidia Thor-X and compete with Tesla's rumoured AI5 at 2000-2500 TOPS. Those are automotive TOPS figures and still would not make this an LLM serving part - a 2500 TOPS automotive NPU with LPDDR and a fixed small memory is still not a text-generation accelerator. If a domestic vendor ever ships a general-purpose Horizon part with HBM, that would be a new record; Journey 6P is not it. Design for context: 37 billion transistors, 18-core CPU at 410k DMIPS, ISP with 24 channels handling 4K video, 18MP cameras, mmWave radar and LiDAR, mass production expected Q3 2025.",
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-03",
+  "sources": [
+    "cn-horizon-journey6"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "cacheblend-rag-kv-fusion",
+  "name": "CacheBlend: Fast Large Language Model Serving for RAG with Cached Knowledge Fusion",
+  "arxiv_id": "2405.16444",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "kv-cache",
+  "authors": [
+    "Jiayi Yao",
+    "Hanchen Li",
+    "Yuhan Liu",
+    "Siddhant Ray",
+    "Yihua Cheng",
+    "Qizheng Zhang",
+    "Kuntai Du",
+    "Shan Lu",
+    "Junchen Jiang"
+  ],
+  "problem": "Precomputed KV caches can only be reused when the cached text is the input PREFIX. In RAG the retrieved chunks are scattered through the prompt and are not prefixes, so precomputed caches ignore each chunk's cross-attention with preceding text and the reuse benefit is largely unrealised.",
+  "mechanism": "Reuses precomputed KV caches REGARDLESS of prefix position, then SELECTIVELY RECOMPUTES the KV values of a SMALL SUBSET of tokens to partially update each reused cache - recomputing a fraction of tokens is enough to restore the cross-attention information the reused cache missed. The small extra delay for recomputation is PIPELINED with the RETRIEVAL of the KV caches within the same job, which is the detail that makes it practical: because the recompute is hidden behind a memory fetch, KV caches can be stored on SLOWER, LARGER devices without increasing inference delay. Implemented in LMCache.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "TTFT reduced 2.2x-3.3x and inference throughput increased 2.8x-5x versus FULL KV RECOMPUTE, without compromising generation quality. Baseline is explicitly full KV recomputation on three open-source LLMs of various sizes and four benchmark datasets. Because the baseline is KV recompute and the gain lands in TTFT, this is a prefill-side speedup and is NOT comparable to the decode-side speculative-decoding numbers elsewhere in this set.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/LMCache/LMCache",
+  "open_weights": false,
+  "notes": "ADOPTION: LMCache is a real, publicly available, widely used KV-cache layer that vLLM integrates with, and the tiering idea (fast GPU + slow large storage with pipelined fetch) is now standard practice - hence in-upstream-engine rather than research-only, though no engine ships CacheBlend's exact selective-recompute as a default. VENUE NOTE: no peer-reviewed venue verifiable via Semantic Scholar and no venue in the arXiv comment, so venue = arxiv-preprint, year = ArXiv v1 (May 2024). THE STRUCTURAL CONTRIBUTION FOR THIS SLICE is the non-prefix reuse case: prefix-cache reuse is what SGLang's RadixAttention does, and CacheBlend is the record for the harder, more common RAG case where retrieved chunks are interior to the prompt. Its pipelining insight - that recompute can hide behind a slow-device fetch - is also the general trick for offloading, which is why the tiering pattern outlived the paper.",
+  "confidence": 0.85,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-eff-cacheblend"
+  ]
+}

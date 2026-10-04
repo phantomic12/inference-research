@@ -1,0 +1,39 @@
+{
+  "id": "flexattention",
+  "type": "paper",
+  "name": "FlexAttention: A Programming Model for Generating Optimized Attention Kernels",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-flexattention"
+  ],
+  "arxiv_id": "2412.05496",
+  "venue": "mlsys",
+  "year": 2025,
+  "category": "attention",
+  "authors": [
+    "Dong, Juechu",
+    "Feng, Boyuan",
+    "Guessous, Driss",
+    "Liang, Yanbo"
+  ],
+  "affiliations": [
+    "Princeton University",
+    "Stanford University"
+  ],
+  "problem": "Attention variants beyond softmax attention (Alibi, document masking, sliding window, PagedAttention) are hard to implement fast because each needs a bespoke fused kernel, so the field suffers a 'software lottery' where a variant cannot be tried without writing a kernel.",
+  "mechanism": "A compiler-driven programming model inside PyTorch. The user writes a score_mod (an elementwise function of score index) and a block_mask (a sparse mask expressed as a nested-stride BlockMask) in a few lines of idiomatic PyTorch; torch.compile traces this into a Triton kernel that tiles Q/KV through SRAM like FlashAttention. Composable, so variants combine without a combinatorial explosion of hand-written kernels.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-rtx-4090"
+  ],
+  "speedup_reported": "PARTIAL - the paper's own claim (abstract) is QUALITATIVE, not a multiple: it demonstrates that existing attention variants (Alibi, document masking, PagedAttention) CAN be implemented via FlexAttention and achieves 'competitive performance compared to these handwritten kernels', plus a compositionality result. No single speedup figure with a named baseline appears in the abstract. The decision-relevant companion number is the next-paper delta: FlexAttention was superseded by torch.compile fusing it into the default path, which is why adoption is in-upstream-engine.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/pytorch/pytorch/tree/main/torch/nn/attention",
+  "open_weights": null,
+  "notes": "arXiv ID 2412.05496 verified via abs-page meta tags on 2026-10-03; the abs page's citation_title is 'FlexAttention: A Programming Model for Generating Fused Attention Kernels' while the record name says '...Optimized Attention Kernels' - same paper, the title was revised between versions, so the record name was left as the dead agent wrote it and the arXiv discrepancy is noted here rather than silently overwritten. CORRECTION TO THE SOURCE RECORD: it says 'arXiv preprint; no journal_ref', but OpenReview note 2QMYV4bA0R returns venue='MLSys 2025 withshepherding', venueid='MLSys.org/2025/Conference'. venue=mlsys, year=2025. IMPORTANT NAMING HAZARD, confirmed against the dead agent's own warning: there is a DIFFERENT paper, arXiv 2407.20228 'FlexAttention for Efficient High-Resolution Vision-Language Models' (ECCV 2024), which appears in OpenReview as a Public_Article and is unrelated. Do not conflate. Adoption=in-upstream-engine verified directly in source: torch/nn/attention/flex_attention.py is 104 KB in the main branch of pytorch/pytorch and defines flex_attention, create_block_mask and and_masks; vLLM also ships vllm/v1/attention/backends/flex_attention.py. This is the strongest adoption evidence of any attention record in this batch."
+}

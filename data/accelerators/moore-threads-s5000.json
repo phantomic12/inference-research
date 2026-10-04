@@ -1,0 +1,41 @@
+{
+  "id": "moore-threads-s5000",
+  "type": "accelerator",
+  "name": "Moore Threads MTT S5000 (PH100, Pinghu architecture)",
+  "vendor": "asic-other",
+  "architecture": "MUSA (4th gen) / Pinghu",
+  "release_year": 2026,
+  "process_nm": null,
+  "form_factors": [
+    "oam"
+  ],
+  "vram_gb": null,
+  "memory_type": null,
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": null,
+  "memory_bandwidth_basis": "None recorded: Moore Threads publishes no memory capacity or bandwidth for the S5000. This is a genuine gap, not an oversight here. However the page does footnot three unnamed 'international flagship' comparison baselines - dense FP16 989 TFLOPS at 3.35 TB/s; dense FP16 148 TFLOPS at 4.0 TB/s; dense FP16 312 TFLOPS at 2.0 TB/s - which are almost certainly B200, B300 and H200-class parts and which give the best available calibration of what 'flagship' means in Moore Threads' marketing. Source cn-mthreads-s5000.",
+  "flops": [
+    {
+      "precision": "fp8",
+      "tflops": 989,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "cn-mthreads-s5000"
+    }
+  ],
+  "tdp_w": null,
+  "interconnect": [
+    "moore-threads-mtlink",
+    "pcie-gen5"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "THE HIERARCHY POINT: this record carries no vendor compute or memory figure at all, and instead contributes the best-documented vendor-relative performance claims in the Chinese accelerator set - which is the honest reading of what Moore Threads actually says. WHAT THE VENDOR DOES PUBLISH IS THROUGHPUT, UNDER METHODOLOGY, which is more useful than a TFLOPS number for a serving study: >=4000 tok/s per-card prefill at ISL 4K with mean TTFT <=4 s, MTP on, native FP8, and >=1000 tok/s per-card decode at ISL/OSL 1K/2K with mean TPOT <=100 ms, MTP on, native FP8 - both from a PD-disaggregated 2P4D configuration across 6 x 8-card S5000 servers using a third-party high-performance inference engine (SiliconFlow's) plus Moore Threads' stack, under production-like load. An 800 TFLOPS-class number with 90% FP8 GEMM efficiency is consistent with those tok/s figures, and the 989 TFLOPS fp8 entry above is recorded as vendor_claim: false because it is Moore Threads' footnoted description of the UNNAMED COMPARISON TARGET, not of the S5000 - it is placed here deliberately so a future reader does not mistake a competitor's spec for this card's, and the note above restates the ambiguity. PRECISION STORY IS THE REAL DIFFERENTIATOR and it is unusually specific for a Chinese vendor: the Pinghu tensor compute engine introduces NATIVE FP8 with a 24-bit accumulation mantissa against the flagship's 14-bit, in both E4M3 and E5M2 formats with multiple scaling modes, plus hardware W4A16 and W8A16 weight dequantization, and claims ~30% training uplift from the FP8 engine (cn-mthreads-pinghu). For inference the interesting hardware claim is the Asynchronous Communication Engine, which offloads data movement from the compute cores entirely - the vendor's own framing is that conventional architectures spend 15-20% of SM resources on communication, and ACE recovers that, which would show up directly as decode throughput at high tensor-parallel degree. Vendor also claims FP8 GEMM efficiency >90% and FlashAttention efficiency ~95% (both ~15 points above the unnamed flagship), a 60 MB LLC, 7x bandwidth second-generation MTLink with 8-GPU full-node topology, 30% better training success rate in 10k-card RAS, >60% MFU on Llama3-70B and >40% on DeepSeek-236B, and 0.6% relative loss-curve error versus the flagship over 30k steps of a 10,000-card DeepSeek-236B run. SOFTWARE IS THE GENUINELY STRONG PART: fourth-generation MUSA natively targets PyTorch, Megatron-LM, vLLM and SGLang, with MUSIFY claiming to cut weeks of adaptation to hours. Form factor is OAM (air-cooled and liquid-cooled variants) on the MGX 8-GPU platform and the SGX5000 server. Do not compare the S5000's FP8 story to the Ascend 950DT's: 950DT has a 3.7x FP16-to-FP4 spread while Pinghu's headline is FP8 with a wide accumulator, which is a different bet.",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-03",
+  "sources": [
+    "cn-mthreads-s5000",
+    "cn-mthreads-pinghu"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "splitwise-prefill-decode-disaggregation",
+  "name": "Splitwise: Efficient generative LLM inference using phase splitting",
+  "arxiv_id": "2311.18677",
+  "venue": "arxiv-preprint",
+  "year": 2023,
+  "category": "serving-systems",
+  "authors": [
+    "Liyuan Yi",
+    "Siyuan Zhang",
+    "Haoqi Wang",
+    "Wenhao Yu",
+    "Xiangyu Zhang"
+  ],
+  "problem": "Despite state-of-the-art batching and scheduling, the TOKEN GENERATION phase underutilises compute resources - unlike compute-intensive prompt computation, generation does not need the newest GPUs' compute capability and can run at lower power and cost, but the two phases share hardware and cannot be provisioned independently.",
+  "mechanism": "Split the two phases of an inference request onto SEPARATE MACHINES so each runs on hardware suited to it, and provision resources independently per phase. The hard part is that splitting requires transferring the request STATE (the KV cache) from the prompt-computation machine to the token-generation machine, so state transfer is implemented and optimised over the FAST BACK-PLANE interconnect available in GPU clusters. Clusters are then designed with the same or different machine types for the two phases and optimised for throughput, cost, or power.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm",
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": "1.4x higher throughput at 20% LOWER COST than current designs, OR alternatively 2.35x more throughput at the SAME cost and power budgets. Both figures are against 'current designs' (the paper's characterisation of pre-splitting serving systems), and the two are alternative operating points rather than cumulative - a reader must not multiply them.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "ADOPTION, honestly: research-only as this paper's system. Prefill/decode DISAGGREGATION as a concept is very much in production and is what vLLM's disaggregated prefill, NVIDIA Dynamo, and the DistServe/Prefill-Decode-Disaggregation line all implement - but Splitwise's specific contribution (heterogeneous machine types + the back-plane state-transfer engineering) was not itself adopted, and later systems generally split phases across the SAME hardware generation while scaling replication instead. Recorded as research-only deliberately, because calling this in-production would credit the paper with an adoption it did not achieve even though the idea it popularised was. VENUE NOTE: no venue verifiable via Semantic Scholar; arXiv comment carries only '12 pages, 19 figures', so venue = arxiv-preprint, year = ArXiv v1 (Nov 2023). THE QUANTITATIVE POINT FOR THIS REPO: this is one of the few records in the whole set that reports COST and POWER as first-class axes alongside throughput, and its finding that generation does not need latest-generation compute silicon is the load-bearing observation behind carbon-aware hardware-tiered serving.",
+  "confidence": 0.85,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "flop2-splitwise"
+  ]
+}

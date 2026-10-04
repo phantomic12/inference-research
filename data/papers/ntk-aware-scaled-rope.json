@@ -1,0 +1,33 @@
+{
+  "id": "ntk-aware-scaled-rope",
+  "type": "paper",
+  "name": "A Length-Extrapolatable Transformer",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-ntk-aware-scaled-rope"
+  ],
+  "arxiv_id": "2212.10554",
+  "venue": "arxiv-preprint",
+  "year": 2022,
+  "category": "position-encoding",
+  "authors": [
+    "Sun, Yutao",
+    "Dong, Li",
+    "Patra, Barun",
+    "Ma, Shuming"
+  ],
+  "affiliations": [
+    "Microsoft Research",
+    "University of Illinois Urbana-Champaign"
+  ],
+  "problem": "A transformer trained on short texts degrades sharply when evaluated on longer ones, and the usual framing (interpolate vs extrapolate positions) does not explain WHY: it lacks a quantity that predicts which variant will survive length extrapolation.",
+  "mechanism": "Two changes, both about the frequency spectrum rather than about position indices. (1) Introduce a RELATIVE position embedding to explicitly maximise 'attention resolution', defined in the paper as a log-base exponential of the smallest discrete positional difference the model can distinguish. (2) Use blockwise causal attention at inference for better resolution. The widely used name 'NTK-aware scaled RoPE' for this work comes from the associated blog post, not from the paper's own title.",
+  "hardware_relevance": [],
+  "speedup_reported": "NOT RECORDED. The abstract's quantitative content is empirical language-modelling comparison across interpolation and extrapolation settings, with no speedup, throughput or context-length figure carrying a baseline. This paper is a diagnostic and a method, not a systems result - the durable contribution is the 'attention resolution' indicator.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/microsoft/LeX-Transformer",
+  "open_weights": null,
+  "notes": "arXiv ID 2212.10554 verified via abs-page meta tags on 2026-10-03; title 'A Length-Extrapolatable Transformer' matches the record name. venue=arxiv-preprint confirmed as the right call: the arXiv comment field reads only '9 pages', OpenReview returns no record for this title (an OpenReview search surfaces only later papers that CITE or reuse it, e.g. LEDiT at NeurIPS 2025), and Semantic Scholar was unavailable (429). Naming caution preserved from the source record and worth restating because it is a genuine trap: this paper is NOT the source of the 'NTK-aware scaled RoPE' technique as deployed - the deployed technique descends from the associated blog post, and the shipped engine code names it separately. adoption=in-upstream-engine therefore refers to the RELATIVE-PE / NTK-scaling family being present in shipped code (transformers ROPE_INIT_FUNCTIONS has 'dynamic' -> _compute_dynamic_ntk_parameters; vLLM ships DynamicNTKScalingRotaryEmbedding and DynamicNTKAlphaRotaryEmbedding), not to this specific paper being implemented. Deliberately flagged so the record is not read as saying 'this paper is what vLLM ships'."
+}

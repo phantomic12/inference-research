@@ -427,6 +427,107 @@ class TestIntakeOverlay(unittest.TestCase):
             shutil.rmtree(overlay, ignore_errors=True)
 
 
+class TestCostPerToken(Harness):
+    """tools/cost_per_token.py must refuse to print a number it cannot show is
+    in a record. The whole point of the join is that the price-basis and
+    GPU-count steps are auditable, so the tests attack exactly those."""
+
+    def cost_tool(self, *args: str) -> subprocess.CompletedProcess:
+        return run_tool("cost_per_token.py", *args, cwd=self.tmp)
+
+    def seed_joinable_pair(self) -> None:
+        """One priced supply record and one throughput benchmark that share an
+        accelerator id. Both price_basis and unit carry the literal substrings
+        the tool's evidence check requires."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/accelerators/acme-a100.json", self.good_accelerator())
+        self.write("data/supply/acme-cloud.json", {
+            "id": "acme-cloud", "type": "supply", "name": "ACME cloud",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "kind": "cloud", "vendor": "ACME",
+            "accelerator_ids": ["acme-a100"], "region": "us-test-1",
+            "channels": ["on-prem-cloud"], "price_usd": 2.0,
+            "price_basis": "per GPU-hour. acme.8xlarge = 8x A100 at $16.00/instance-hr / 8 = $2.00",
+            "availability": "in-stock", "lead_time_weeks": None,
+            "export_controlled": None, "notes": "",
+        })
+        self.write("data/engines/trtllm.json", {
+            "id": "trtllm", "type": "engine", "name": "TensorRT-LLM",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"],
+        })
+        self.write("data/benchmarks/acme-tps.json", {
+            "id": "acme-tps", "type": "benchmark", "name": "ACME run",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "engine_id": "trtllm",
+            "accelerator_ids": ["acme-a100"], "interconnect_ids": [],
+            "model": "acme-model-7b", "format_id": None,
+            "metric": "tps_aggregate", "value": 8000.0,
+            "unit": "output tokens/s (aggregate, 8 GPUs)",
+            "methodology": "Hardware: 8x NVIDIA A100 SXM 80GB on ONE node.",
+            "measured_by": "vendor", "reproducible": False, "notes": "",
+        })
+
+    def test_real_repo_join_is_fully_sourced(self):
+        """Against the real data/: not one quoted price basis or GPU count may
+        fail. This is the regression that stops a 8x price-basis error from
+        reaching a doc."""
+        r = run_tool("cost_per_token.py", cwd=ROOT)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertNotIn("UNSOURCED INPUT", r.stdout)
+
+    def test_real_repo_table_is_all_aggregate_or_labelled(self):
+        r = run_tool("cost_per_token.py", "--format", "json", cwd=ROOT)
+        rows = json.loads(r.stdout)
+        self.assertGreater(len(rows), 0)
+        for row in rows:
+            self.assertIn(row["concurrency"], ("aggregate", "single-user"))
+            self.assertTrue(row["supply_ref"].startswith("supply/"))
+            self.assertTrue(row["bench_ref"].startswith("benchmarks/"))
+            self.assertGreater(row["usd_per_mtok"], 0)
+
+    def test_contradicting_record_stops_the_table(self):
+        """If a real record's text no longer contains the figure the join
+        quotes, the tool must stop rather than print a stale number. Built by
+        copying a genuine priced record into the temp repo and corrupting the
+        price it quotes."""
+        for sub in ("supply", "benchmarks", "sources"):
+            shutil.copytree(ROOT / "data" / sub, self.tmp / "data" / sub,
+                            dirs_exist_ok=True)
+        p = self.tmp / "data" / "supply" / "aws-ec2-p5-h100.json"
+        rec = json.loads(p.read_text(encoding="utf-8"))
+        rec["price_basis"] = "per H100 GPU-hour, price redacted in this fixture."
+        p.write_text(json.dumps(rec, indent=2), encoding="utf-8")
+        r = self.cost_tool()
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("UNSOURCED INPUT", r.stdout)
+        self.assertIn("aws-ec2-p5-h100", r.stdout)
+        # ...and the override still refuses to be silent about it
+        forced = self.cost_tool("--force")
+        self.assertIn("UNSOURCED INPUT", forced.stdout)
+
+    def test_gaps_never_invents_a_price(self):
+        r = self.cost_tool("gaps")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("no record", r.stdout)
+
+    def test_evidence_check_flags_missing_substring(self):
+        sys.path.insert(0, str(TOOLS))
+        import cost_per_token
+        self.assertTrue(hasattr(cost_per_token, "check_evidence"))
+        # The real repo must be clean; assert the check is actually running by
+        # corrupting one in-memory quote.
+        self.assertEqual(cost_per_token.check_evidence(), [])
+        saved = cost_per_token.PRICE_QUOTES["aws-ec2-p5-h100"][0]
+        cost_per_token.PRICE_QUOTES["aws-ec2-p5-h100"][0] = dict(
+            saved, basis="a figure that appears in no record at all")
+        try:
+            self.assertNotEqual(cost_per_token.check_evidence(), [])
+        finally:
+            cost_per_token.PRICE_QUOTES["aws-ec2-p5-h100"][0] = saved
+        self.assertEqual(cost_per_token.check_evidence(), [])
+
+
 class TestRegistry(Harness):
     def test_dirs_exist_for_every_type(self):
         r = run_tool("validate.py", cwd=self.tmp)

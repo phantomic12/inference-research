@@ -1,0 +1,41 @@
+{
+  "id": "visionzip",
+  "type": "paper",
+  "name": "VisionZip: Longer is Better but Not Necessary in Vision Language Models",
+  "arxiv_id": "2412.04467",
+  "venue": "cvpr",
+  "year": 2025,
+  "category": "multimodal",
+  "authors": [
+    "Senqiao Yang",
+    "Yukang Chen",
+    "Zhuotao Tian",
+    "Chengyao Wang",
+    "Jingyao Li",
+    "Bei Yu",
+    "Jiaya Jia"
+  ],
+  "affiliations": [
+    "Shanghai Jiao Tong University",
+    "University of Adelaide"
+  ],
+  "problem": "VLM quality kept improving with longer visual token sequences, multiplying prefill cost - but visual tokens from CLIP/SigLIP encoders carry large redundancy.",
+  "mechanism": "Observes that vision-encoder tokens contain substantial redundancy, then selects an informative subset to pass to the LM using a dominance metric computed in the vision encoder's own feature space (retained tokens are those that dominate the attention distribution of the ones dropped), plus a balancing mechanism so dropped-token information is not lost entirely.",
+  "hardware_relevance": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": "8x improvement in PREFILL TIME versus the unpruned baseline, and at least 5% performance gain over the previous state-of-the-art pruning method across nearly all settings; the pruned LLaVA-NeXT 13B infers FASTER than the unpruned LLaVA-NeXT 7B while scoring better. Both the baseline and the direction are named - this is the headline vision-token number in the literature.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/dvlab-research/VisionZip",
+  "open_weights": true,
+  "notes": "Venue CVPR 2025 (crossref container '2025 IEEE/CVF Conference on Computer Vision and Pattern Recognition'). Read the 8x as a PREFILL number: that is the vision-encoder forward plus the LM's attention over the retained tokens, and it lands on the cost that dominates VLM TTFT. It also gives the crispest demonstration of the small-model-beats-large-model effect - pruning 13B below 7B's cost - which is the practical argument for why token budget, not parameter count, is the VLM serving lever. Post-VisionZip work has pushed on multi-stage dropping, token recycling and 2026-era training-free pruning variants.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-visionzip"
+  ]
+}

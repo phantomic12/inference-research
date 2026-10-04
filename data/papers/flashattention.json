@@ -1,0 +1,42 @@
+{
+  "id": "flashattention",
+  "type": "paper",
+  "name": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-flashattention"
+  ],
+  "arxiv_id": "2205.14135",
+  "venue": "neurips",
+  "year": 2022,
+  "category": "attention",
+  "authors": [
+    "Dao, Tri",
+    "Fu, Daniel Y.",
+    "Ermon, Stefano",
+    "Rudra, Atri"
+  ],
+  "affiliations": [
+    "Princeton University",
+    "Stanford University"
+  ],
+  "problem": "Standard attention is memory-bound: it materialises the full N x N attention matrix in HBM, so the cost of self-attention is dominated by HBM reads/writes rather than by FLOPs, and long sequences OOM.",
+  "mechanism": "An IO-aware exact attention algorithm that never writes the N x N matrix to HBM. Tiles the computation into blocks that fit in SRAM, within each thread block loops over key/value blocks in SRAM-resident order, and accumulates the running softmax rescaling (m, l) and output accumulator on-chip in registers. Backward recomputes S = Q K^T instead of storing it. Exact - no approximation, no sparsity.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a100-80gb-pcie",
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl",
+    "nvidia-h200-sxm",
+    "nvidia-h200-nvl",
+    "nvidia-a30"
+  ],
+  "speedup_reported": "Paper's own claims (abstract), all vs the authors' own optimized baselines: 4-6x wall-clock speedup on BERT-large at seq length 512 vs the MLPerf 1.1 training speed record; 3x on GPT-2 at seq length 1K; 2.4x on Long Range Arena at seq lengths 1K-4K. Also first Transformers above chance on Path-X (16K, 61.4% acc) and Path-256 (64K, 63.1% acc).",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/Dao-AILab/flash-attention",
+  "open_weights": null,
+  "notes": "arXiv ID 2205.14135 verified by fetching https://arxiv.org/abs/2205.14135 and reading citation_title/citation_date meta tags on 2026-10-03; title matches exactly. Venue neurips verified independently of the arXiv comment field: the title appears in the NeurIPS 2022 proceedings paper list (https://papers.nips.cc/paper_files/paper/2022). The source record's note claiming 'venue independently verified via Semantic Scholar' could not be re-verified this session because the Semantic Scholar graph API returned HTTP 429 on every request; the proceedings listing is the stronger evidence and replaces it. adoption=in-upstream-engine is not an inference: vLLM ships flash_attn.py and triton_flash_attn.py backends (vllm/v1/attention/backends/), SGLang ships flashattention_backend.py, and the reference repo Dao-AILab/flash-attention is actively pushed (2026-10-03, 25k stars). Hardware relevance names the Ampere/Hopper parts in this repo's accelerator set that have the async-copy and shared-memory behaviour the kernel is built on. The mechanism is the load-bearing content here: this paper's contribution is IO-awareness, and 'exact attention' is what distinguishes it from every sparse-attention record in this repo."
+}

@@ -1,0 +1,37 @@
+{
+  "id": "olmoe",
+  "type": "paper",
+  "name": "OLMoE: Open Mixture-of-Experts Language Models",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2409-02060"
+  ],
+  "arxiv_id": "2409.02060",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "moe",
+  "authors": [
+    "Niklas Muennighoff",
+    "Luca Soldaini",
+    "Dirk Groeneveld",
+    "Kyle Lo"
+  ],
+  "affiliations": [
+    "Allen Institute for AI",
+    "University of Washington"
+  ],
+  "problem": "MoE research was closed: without released weights, data and training logs, nobody could audit whether a sparse model's routing actually specialises.",
+  "mechanism": "Not a new MoE mechanism. It is the fully open instantiation of the Switch-style recipe at 7B total and 1B active per token (about 14.3 percent active, 7x sparse), pre-trained on 5T tokens. Routing is token-choice top-1 with an auxiliary load-balancing loss, the Switch/GShard family. The contribution is evidence: weights, code, training data (OLMo-mix-1124) and full training logs are all released, and the routing analysis shows high expert specialisation with low inter-expert similarity. That auditability is the point; it let the community see what token-choice top-1 actually converges to.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": "No speedup claim. The claim is quality per active parameter: OLMoE-1B-7B-0924 outperforms all available models with similar ACTIVE parameter counts and surpasses larger dense models including Llama-2-13B-Chat and DeepSeekMoE-16B. The 1B-active over 7B-total ratio is the architecture-relevant number for serving planning.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/allenai/OLMoE",
+  "open_weights": true,
+  "notes": "Fully open (code, data, weights, logs), which is unusual and is the reason this paper is in the knowledge base at all: it is the reference implementation against which closed MoE claims can be checked. Verified as OlmoeForCausalLM in vLLM's native supported-models list. Load balancing is auxiliary-loss, NOT auxiliary-loss-free."
+}

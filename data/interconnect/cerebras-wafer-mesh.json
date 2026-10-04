@@ -1,0 +1,23 @@
+{
+  "id": "cerebras-wafer-mesh",
+  "type": "interconnect",
+  "name": "Cerebras on-wafer fabric and wafer-to-wafer mesh",
+  "kind": "other",
+  "version": "WSE-3 / WSE-3 Turbo, CS-3 and CS-4 generations",
+  "bandwidth_gbps": null,
+  "bandwidth_basis": "NULL - deliberately, and the units are the reason. Cerebras publishes the on-wafer interconnect in BITS per second across the whole wafer, not in a per-link Gbps figure, and the schema's bandwidth_gbps field is a per-link unidirectional rate. Cerebras' CS-3 page states 214 Pb/s of on-wafer interconnect, which is an aggregate across the entire wafer-scale device (and note the unit, Pb/s, not Gb/s - the headline number is already in the thousands). Dividing 214 Pb/s across the fabric to manufacture a per-link figure would be inventing a link count and a direction convention that Cerebras never states. The published per-system figures - 1.2 Tb/s of system I/O, 21 PB/s of on-wafer memory bandwidth on CS-3 and 43.2 PB/s on CS-4 - are all-wafer aggregates and belong to the memory bandwidth and system I/O tiers, not to a per-link fabric rate. The one number that IS a link-level latency, and the one that actually matters for decode, is recorded in topology.",
+  "link_count": null,
+  "topology": "On-wafer fabric: a 2D mesh embedded in the wafer connecting the AI cores, plus HBM attached at the wafer edge - there is no off-package memory tier at all, which is the defining structural difference from every other part in this repo. SCALE-OUT IS BY ADDING WAFERS, and this is the mechanism worth understanding: CS-3 is a single WSE-3 wafer, CS-4 is three WSE-3 Turbo wafers in one system, and Cerebras' stated lever for keeping decode interactive at that size is LATENCY, not bandwidth - CS-4 reduces wafer-to-wafer interconnect latency to 2 microseconds, which the vendor credits with delivering over 1,000 tokens per second on models exceeding 50 trillion parameters. Two microseconds between wafers is the load-bearing figure for this record: a model far larger than any single wafer's SRAM is split across wafers, and every cross-wafer access pays that latency, so the sharding scheme has to be latency-aware in a way it would not be inside one package.",
+  "scale_up": false,
+  "scale_out": true,
+  "switching": "No switch part. Wafer-to-wafer connectivity is direct, and the system boundary is 'wafers in one enclosure' - CS-4's three wafers. There is no fabric to grow past that, so a larger deployment adds systems rather than extending a scale-up domain.",
+  "notes": "The interconnect story for the only wafer-scale accelerator in this repo, and the record that most needs the unit caveat stated up front: the famous '214 Pb/s on-wafer interconnect' is a WHOLE-WAFER aggregate in BITS per second, not a per-link rate in the schema's sense, which is exactly why bandwidth_gbps is null here and why the accelerator record carries the figure in its notes rather than in a typed field. DO NOT put 214 Pb/s in any comparison column against NVLink or xGMI - it is a different order of magnitude because it is aggregating an entire reticle-sized device, and doing so is the single easiest way to make Cerebras look like it has a 1000x better fabric than an H100 when it has nothing of the kind. PUBLISHED FIGURES CARRIED (all from Cerebras system pages): CS-3 - 900,000 AI cores, 44 GB on-chip SRAM, 21 PB/s memory bandwidth, 214 Pb/s on-wafer interconnect, 1.2 Tb/s system I/O; CS-4 / WSE-3 Turbo - 4 trillion transistors, 250 PFLOPS, 43.2 PB/s memory bandwidth, 2 microsecond wafer-to-wafer interconnect latency, three wafers per system. INFERENCE RELEVANCE, and the honest version: with no DRAM tier, weight streaming from off-package is impossible, so the roofline is set entirely by SRAM bandwidth against compute, and the arithmetic intensity ceiling sits at a few FLOP per byte. The practical consequence is that sharding across wafers is not optional for frontier models and therefore the 2 microsecond figure is a first-order design constraint rather than a footnote - unlike on a GPU part, where crossing the package boundary is usually avoidable by keeping the model on one device. KIND: filed as 'other' because Cerebras' on-wafer mesh is a proprietary in-package fabric with no entry in the schema's interconnect enum and no analogue in the named families.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "asic-cerebras-cs3",
+    "asic-cerebras-cs4",
+    "asic-cerebras-wikipedia"
+  ]
+}

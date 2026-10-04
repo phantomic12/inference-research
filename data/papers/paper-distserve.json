@@ -1,0 +1,43 @@
+{
+  "id": "paper-distserve",
+  "type": "paper",
+  "name": "DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving",
+  "arxiv_id": "2401.09670",
+  "venue": "osdi",
+  "year": 2024,
+  "category": "serving-systems",
+  "authors": [
+    "Yinmin Zhong",
+    "Shengyu Liu",
+    "Junda Chen",
+    "Jianbo Hu",
+    "Yibo Zhu",
+    "Xuanzhe Liu",
+    "Xin Jin",
+    "Hao Zhang"
+  ],
+  "affiliations": [
+    "Peking University",
+    "UC San Diego",
+    "StepFun"
+  ],
+  "problem": "Colocating prefill and decode in one batch couples their resource-allocation and parallelism plans, so a serving system must trade TTFT against inter-token latency instead of meeting both SLOs.",
+  "mechanism": "Place prefill workers and decode workers on disjoint GPUs so the two phases cannot preempt each other, then independently choose tensor/pipeline parallelism and worker count per phase to hit a TTFT target and a TPOT target separately. Phase placement is chosen against measured cluster bandwidth to keep the KV handoff cost low. Scheduling uses a parallelism-agnostic goodput-maximising policy that treats each request as a two-stage job.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a100-80gb-pcie",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Per the OSDI '24 proceedings abstract: 7.4x more requests served OR 12.6x tighter SLO versus state-of-the-art LLM serving systems, while staying within latency constraints for >90% of requests, across popular LLMs, applications and latency requirements. The metric is goodput — the maximum request rate served within BOTH TTFT and TPOT constraints on each GPU. The two figures are alternative operating points, not multiplicative.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "SLUG RENAMED 2026-10-04 (parent agent): was 'distserve', colliding with the engines record of the same id, which made every bare-slug cross-reference ambiguous. Inbound refs ([]) all mean the engines record, so none needed repointing; papers are cited via `sources`, never by bare slug. Venue verified twice (arXiv comment 'OSDI 2024' plus the OSDI '24 presentation page). Adoption is honestly research-only: DistServe's own prototype was never released as a usable system, and no production inference engine is built on it. Its IDEAS are in production — prefill/decode disaggregation is now a shipped vLLM feature — but vLLM's implementation is not DistServe's code. Cite this for the architectural argument, not as software you can install.",
+  "sources": [
+    "pap-sys-distserve-arxiv",
+    "pap-sys-distserve-usenix"
+  ],
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-03"
+}

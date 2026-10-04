@@ -1,0 +1,58 @@
+{
+  "id": "distserve",
+  "type": "engine",
+  "name": "DistServe (research prototype)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-distserve-osdi24-paper",
+    "pd-distserve-repo",
+    "pd-vllm-disagg-prefill-docs"
+  ],
+  "repo": "LLMServe/DistServe",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "design_goal": [
+    "goodput-under-TTFT-and-TPOT-SLOs",
+    "low-latency",
+    "per-phase resource allocation"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "disaggregated-prefill-decode",
+    "per-phase parallelism planning"
+  ],
+  "supported_backends": [
+    "cuda"
+  ],
+  "supported_formats": [],
+  "notable_features": [
+    "Prefill and decode assigned to different GPUs to eliminate prefill-decode interference, with resource allocation and parallelism strategy co-optimised per phase against TTFT and TPOT targets",
+    "Phase placement is bandwidth-aware: the paper places the two phases 'according to the serving cluster's bandwidth to minimize the communication caused by disaggregation', which is the first explicit treatment of placement as part of the algorithm",
+    "Automatic KV-cache communication and memory management between the two instances - the README says it 'works just like a single instance'",
+    "Built on a custom C++ execution backend (SwiftTransformer) with model/pipeline parallelism, FlashAttention, continuous batching and PagedAttention",
+    "Ray-based distributed workers"
+  ],
+  "hardware_caveats": [
+    "Research artifact, not maintained: repo created 2024-01-16, last push 2025-04-06, ~839 stars",
+    "Requires its own custom C++ backend (SwiftTransformer) plus a Ray cluster - it is not a drop-in on vLLM or SGLang",
+    "Model coverage is GPT-2, OPT and LLaMA2 only, per the README - no modern architectures, no MoE, no long-context variants",
+    "CUDA only"
+  ],
+  "best_for": [
+    "Studying the disaggregation cost model: the paper is the cleanest statement of why colocating the phases couples two different bottlenecks, and of why placement must be bandwidth-aware",
+    "Reading rather than deploying - the OSDI 2024 goodput framing (max request rate under joint TTFT and TPOT constraints) is the right way to evaluate any disaggregation claim"
+  ],
+  "avoid_for": [
+    "Production deployment - unmaintained since April 2025, narrow model support, custom backend required",
+    "Anything needing MoE, FP8/FP4 or long context",
+    "Comparing against a modern stack: its baseline is Orca/vLLM-0.4-era, so speedup ratios do not transfer"
+  ],
+  "docs_url": "https://github.com/LLMServe/DistServe",
+  "notes": "Research prototype (OSDI 2024), not a production system - recorded as the paper that named the problem. KV transfer path: inter-GPU KV-cache communication whose placement is explicitly a function of the cluster's interconnect bandwidth; the abstract states the placement step and the paper is the primary source for 'disaggregation cost is bytes x bandwidth'. Reported result: '7.4x more requests or 12.6x tighter SLO, compared to state-of-the-art systems, while staying within latency constraints for > 90% of requests'. Read this as a goodput metric under joint TTFT/TPOT SLOs, not a throughput multiplier - the two are routinely conflated and vLLM's own documentation takes the opposing position on throughput."
+}

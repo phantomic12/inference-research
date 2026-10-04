@@ -1,0 +1,32 @@
+{
+  "id": "yarn",
+  "type": "paper",
+  "name": "YaRN: Efficient Context Window Extension of Large Language Models",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-yarn"
+  ],
+  "arxiv_id": "2309.00071",
+  "venue": "iclr",
+  "year": 2024,
+  "category": "position-encoding",
+  "authors": [
+    "Bowen Peng",
+    "Jeffrey Quesnelle",
+    "Honglu Fan",
+    "Enrico Shippole"
+  ],
+  "affiliations": [
+    "Nous Research"
+  ],
+  "problem": "Extending a RoPE model's context window requires either a huge fine-tuning cost or a trick that degrades short-context quality, and existing methods need far too many training tokens and steps to be practical.",
+  "mechanism": "NTK-BY-INTERPOLATION inside a scaled-RoPE formulation: apply RoPE scaling by INTERPOLATING the RoPE frequencies (dividing them by a factor) rather than scaling the position indices, which preserves the high-frequency local structure while compressing the low-frequency long-range structure. The key refinement over vanilla NTK-aware scaling is a per-dimension attention-scale factor beta applied on top, chosen by grid search, so that the attention entropy after scaling matches the pretraining entropy - the objective is PRESERVING ATTENTION ENTROPY, not just the frequency spectrum. Effective context = original context times a temperature factor, with an NTK-by-parts option that rescales only some dimensions.",
+  "hardware_relevance": [],
+  "speedup_reported": "NOT A THROUGHPUT CLAIM. The paper's own claims are training-cost and context-length: requires 10x LESS TOKENS and 2.5x FEWER TRAINING STEPS than previous methods for context window extension, and lets LLaMA models extrapolate to context lengths much longer than pretraining allowed while surpassing previous state of the art; it also extrapolates beyond the fine-tuning dataset's context. No latency or throughput figure - the win is enabling a config, not a faster kernel.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/juesnelle/yarn",
+  "open_weights": false,
+  "notes": "arXiv ID 2309.00071 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. CORRECTION TO THE SOURCE RECORD: it says 'arXiv preprint; no journal_ref' with no venue evidence, which would have left venue null or arxiv-preprint. OpenReview returns venue='ICLR 2024 poster', venueid='ICLR.cc/2024/Conference' for the exact title and the Peng/Quesnelle/Fan/Shippole author list. venue=iclr, year=2024. adoption=in-upstream-engine verified in source - this is the most thoroughly integrated position-encoding method in the repo: transformers lists \"yarn\" in ROPE_INIT_FUNCTIONS (mapping to _compute_yarn_parameters), special-cases rope_type in ['llama3','yarn','longrope'], and documents the yarn-specific attention_factor and beta_fast/beta_slow config keys; vLLM ships vllm/model_executor/layers/rotary_embedding/yarn_scaling_rope.py (YaRNScalingRotaryEmbedding) and special-cases yarn in get_rope's rope_parameters_tuple. Any engine can therefore adopt a YaRN-extended checkpoint with a config change and no new kernel - the strongest possible form of adoption, which is why this is the reference position-encoding record for the repo. Also note the naming trap flagged on ntk-aware-scaled-rope applies in reverse: YaRN's mechanism IS built on the NTK-by-interpolation idea, but this paper's contribution is the attention-entropy-preserving per-dimension scale, and the two records must not be merged."
+}

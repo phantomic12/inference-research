@@ -1,0 +1,29 @@
+{
+  "id": "paper-atom",
+  "type": "paper",
+  "name": "Atom: Low-bit Quantization for Efficient and Accurate LLM Serving",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-quant-atom"
+  ],
+  "arxiv_id": "2310.19102",
+  "venue": "mlsys",
+  "year": 2024,
+  "category": "quantization",
+  "authors": [
+    "Zhao, Cai, Zhang, Liu, Zhang, Liao, Yang, Yu, Liu, Chen"
+  ],
+  "affiliations": [
+    "Tsinghua IIIS / ModelBest"
+  ],
+  "problem": "INT8 weight-activation schemes underuse modern GPUs (which have native 4-bit integer operators), and W4A4 breaks because of block outliers.",
+  "mechanism": "Mixed-precision block-outlier scheme with fine-grained group quantization: weights are grouped into small blocks and each block's outliers are captured by separate higher-precision channels, with per-group scales; activations get a dedicated outlier path. The design is explicitly aimed at the batched serving regime rather than single-sequence decode, and ships INT4 GEMM kernels that the authors implemented for it.",
+  "hardware_relevance": [],
+  "speedup_reported": "Paper's own claim (abstract): 4-bit weight-activation quantization improving END-TO-END serving throughput by up to 7.7x vs FP16 and 2.5x vs INT8 quantization, at the SAME latency target. COMPRESSION RATIO: 4-bit weights + activations (~16x combined vs FP16's 2x16bit). QUALITY COST: described as 'negligible accuracy loss' with no paired number in the abstract. The testbed is an A800 GPU; the speedup is a throughput-at-fixed-latency serving number, which is a much stricter claim than a decode tok/s figure.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/Aizip/atom",
+  "open_weights": null,
+  "notes": "SLUG RENAMED 2026-10-04 (parent agent): was 'atom', colliding with the quantization record of the same id, which made every bare-slug cross-reference ambiguous. Inbound refs (['scheme']) all mean the quantization record, so none needed repointing; papers are cited via `sources`, never by bare slug. arXiv ID 2310.19102 verified via /abs/. Venue MLSys 2024 from Semantic Scholar; year = venue year 2024 (v1 2023-10-29). Note the actual testbed GPU is an A800, which has NO record in this repo's accelerator set - so hardware_relevance names the Ampere-class parts that do exist (A100/A30) as the hardware class whose INT4 path the method needs, and says so in notes. adoption=research-only: requires the authors' own INT4 kernels. arXiv ID and title verified by fetching https://arxiv.org/abs/2310.19102 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2310.19102) unless the record's notes say otherwise."
+}

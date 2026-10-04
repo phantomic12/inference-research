@@ -1,0 +1,29 @@
+{
+  "id": "qserve",
+  "type": "paper",
+  "name": "QServe: W4A8KV4 Quantization and System Co-design for Efficient LLM Serving",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-quant-qserve"
+  ],
+  "arxiv_id": "2405.04532",
+  "venue": "mlsys",
+  "year": 2025,
+  "category": "quantization",
+  "authors": [
+    "Zhao, Lin, Zhang, Zhou, Gou, Chen, Zhang, Chen, Weng"
+  ],
+  "affiliations": [
+    "Shanghai Jiao Tong / NVIDIA"
+  ],
+  "problem": "State-of-the-art INT4 PTQ methods only speed up low-batch edge inference; in large-batch cloud serving the dequantization overhead eats the entire gain (measured at 20-90%).",
+  "mechanism": "Two halves. Algorithm (QoQ = W4A8KV4): progressive quantization - quantize weights progressively through intermediate bit widths so each step's dequantization is itself cheap, keeping dequant overhead inside the W4A8 GEMM instead of a separate pass; plus SmoothAttention, which smooths the 4-bit KV cache quantization error by shifting it out of the attention score computation. System: compute-aware weight REORDERING so each tile's dequant work is balanced against its GEMM work, and register-level parallelism to hide dequantization latency, dispatched on CUDA cores rather than SMs - the paper's core insight is that serving throughput is governed by low-throughput CUDA-core work, not SM throughput.",
+  "hardware_relevance": [],
+  "speedup_reported": "Paper's own claim (abstract): existing INT4 methods suffer 20-90% runtime overhead from dequantizing weights or partial sums; QServe achieves 'measured speedup' with the QoQ W4A8KV4 algorithm. COMPRESSION RATIO: 4-bit weights, 8-bit activations, 4-bit KV cache. QUALITY COST: SmoothAttention is what buys back the KV4 accuracy, but no paired accuracy delta appears in the abstract, so the number to carry is the 20-90% overhead figure - which is a NEGATIVE result about the field and the most useful thing in this paper.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/mit-han-lab/torchsparse",
+  "open_weights": null,
+  "notes": "arXiv ID 2405.04532 verified via /abs/; v3. Venue: arXiv comment field and Semantic Scholar both say MLSys 2025, and an OpenReview search independently returned MLSys.org/2025/Conference for the exact title. Year = venue year 2025 (v1 2024-05-07). The 20-90% dequantization-overhead measurement is the paper's most transferable claim in this KB. arXiv ID and title verified by fetching https://arxiv.org/abs/2405.04532 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2405.04532) unless the record's notes say otherwise."
+}

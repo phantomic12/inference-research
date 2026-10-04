@@ -1,0 +1,36 @@
+{
+  "id": "mamba",
+  "type": "paper",
+  "name": "Mamba: Linear-Time Sequence Modeling with Selective State Spaces",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-mamba"
+  ],
+  "arxiv_id": "2312.00752",
+  "venue": "colm",
+  "year": 2024,
+  "category": "ssm",
+  "authors": [
+    "Albert Gu",
+    "Tri Dao"
+  ],
+  "affiliations": [
+    "Carnegie Mellon University",
+    "Princeton University"
+  ],
+  "problem": "Subquadratic alternatives to attention - linear attention, gated convolution, recurrent models, structured state space models - had not matched attention on language, and the paper diagnoses why: they cannot perform CONTENT-BASED reasoning, because their state transition and output are input-independent functions of the sequence.",
+  "mechanism": "Selective state space models. Two changes to the SSM: (1) make the SSM parameters - the discretisation step size and the state matrix - FUNCTIONS OF THE INPUT, so the model selectively propagates or forgets information per token (this is the 'selectivity' and it is what enables content-based reasoning, but it also breaks the fast convolutional form); (2) to recover speed, design a hardware-aware parallel algorithm for the recurrent mode that scans the sequence in a memory-efficient layout. Mamba is then just these selective SSM blocks with no attention and no MLP.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm"
+  ],
+  "speedup_reported": "Paper's own claims (abstract): 5x higher inference throughput than Transformers, with linear scaling in sequence length; Mamba-3B outperforms same-size Transformers and matches Transformers twice its size on language modelling. The throughput claim's baseline class is 'Transformers' generally, not a named engine, so treat 5x as the paper's own generalisation rather than a reproducible decode-tok/s figure.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/state-spaces/mamba",
+  "open_weights": true,
+  "notes": "arXiv ID 2312.00752 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. VENUE CORRECTED - this is the most consequential venue fix in the batch. The dead agent's source note said 'The widely cited ICLR 2024 venue was not confirmed from the arXiv metadata, so venue is left as arxiv-preprint'. ICLR 2024 is NOT this paper's venue: OpenReview forum AL1fq05o7H (same two authors, same title) returns venueid='ICLR.cc/2024/Conference/Rejected_Submission'. The paper was REJECTED at ICLR 2024 and published at COLM 2024 - OpenReview forum tEYskw1VY2 returns venue='COLM', venueid='colmweb.org/COLM/2024/Conference'. venue=colm, year=2024. Anyone citing 'Mamba, ICLR 2024' is citing a rejection. adoption=in-upstream-engine verified in source: vLLM registry lists Mamba, Mamba2, Jamba and LFM2, with vllm/model_executor/models/mamba.py, mamba2.py, jamba.py and backends mamba1_attn.py / mamba2_attn.py / gdn_attn.py; SGLang ships mamba.py, mamba2.py and falcon_mamba.py; transformers ships models/mamba, mamba2, rwkv, falcon_mamba. Also note vLLM has a csrc/flashkda_registration.cpp, which is Kimi Delta Attention - the successor mechanism, recorded under kimi-linear. state-spaces/mamba is actively maintained (pushed 2026-07-22, 18.9k stars). open_weights=true."
+}

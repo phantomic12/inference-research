@@ -1,0 +1,37 @@
+{
+  "id": "recurrentgemma-griffin",
+  "type": "paper",
+  "name": "RecurrentGemma: Moving Past Transformers for Efficient Open Language Models",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2404-07839"
+  ],
+  "arxiv_id": "2404.07839",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "ssm",
+  "authors": [
+    "Aleksandar Botev",
+    "Soham De",
+    "Samuel L Smith",
+    "Anushan Fernando",
+    "George-Cristian Muraru"
+  ],
+  "affiliations": [
+    "Google DeepMind"
+  ],
+  "problem": "Attention-based decoding needs a KV cache that grows with context, which bounds long-sequence inference memory even for small models.",
+  "mechanism": "Google's Griffin architecture applied to language models at 2B and 9B parameters. Griffin combines LINEAR RECURRENCES with LOCAL ATTENTION in an alternating pattern: most layers are a gated linear recurrence (a diagonal linear recurrence in the RetNet/RWKV family rather than a selective Mamba scan) and one layer in four is local sliding-window attention, which supplies exact local recall. The defining property is the FIXED-SIZED STATE: the recurrence state does not grow with sequence length and the attention window is bounded, so total inference memory is constant in context length. That is the same serving property as Mamba, reached without a sequential selective scan and therefore without the same tensor-core-hostile scan. Trained on fewer tokens than Gemma baselines and reported to reach comparable performance to similarly sized Gemma models.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": null,
+  "adoption": "research-only",
+  "code_url": "https://ai.google.dev/gemma/docs/recurrentgemma",
+  "open_weights": true,
+  "notes": "arXiv preprint (v2 2024-08-28) from Google DeepMind; no journal-ref on the abs page. The paper reports comparable quality to similarly sized Gemma baselines despite fewer training tokens, plus memory and throughput comparisons at long sequence length, but no single speedup ratio with baseline and settings, so speedup_reported is null. Engine support is the weak point: there is NO recurrentgemma entry in llama.cpp's LLM_ARCH registry (checked 2026-10-03) and no native RecurrentGemma row in the vLLM supported-models list consulted. So despite being a Google model with a served API lineage, the open-weight recurrent variant is not first-class in open engines. Good example of a constant-state architecture that failed the ecosystem-support test that Mamba and Jamba passed."
+}

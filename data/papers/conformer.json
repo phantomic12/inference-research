@@ -1,0 +1,37 @@
+{
+  "id": "conformer",
+  "type": "paper",
+  "name": "Conformer: Convolution-augmented Transformer for Speech Recognition",
+  "arxiv_id": "2005.08100",
+  "venue": "interspeech",
+  "year": 2020,
+  "category": "speech",
+  "authors": [
+    "Anmol Gulati",
+    "James Qin",
+    "Chung-Cheng Chiu",
+    "Niki Parmar",
+    "Yu Zhang",
+    "Jiajun Wu"
+  ],
+  "affiliations": [
+    "Google Brain"
+  ],
+  "problem": "Transformers model global context but miss the local patterns of audio; CNNs do the opposite.",
+  "mechanism": "Macaron-style block: feed-forward half, multi-head self-attention half, and a CONVOLUTION MODULE sandwiched between them, with the convolution applied to the residual branch only. Depthwise separable convolution captures local structure at a fraction of the attention cost, so the sequence length can be lowered by strided downsampling between blocks.",
+  "hardware_relevance": [
+    "nvidia-a10",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "speedup_reported": "2.1%/4.3% WER on Librispeech test-clean/test-other without a language model, 1.9%/3.9% with an external LM; a 10M-parameter model still reaches 2.7%/6.3%. Quality-only: the paper reports no wall-clock latency or hardware throughput, so there is no measured serving speedup to record.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/locuslab/conv-tasnet",
+  "open_weights": false,
+  "notes": "Verified in the ISCA archive at interspeech_2020/gulati20_interspeech.html. Conformer is the encoder inside essentially every non-streaming ASR stack built since 2020 (NVIDIA NeMo, ESPnet, WeNet, sherpa-onnx) and is the direct ancestor of Zipformer. The stride pattern is the inference-relevant part: frame rate halves at each downsampling stage, so a 30s utterance produces a few hundred encoder frames rather than 3000, and every downstream layer is correspondingly cheaper.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-conformer"
+  ]
+}

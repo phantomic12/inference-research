@@ -1,0 +1,36 @@
+{
+  "id": "soundstream",
+  "type": "paper",
+  "name": "SoundStream: An End-to-End Neural Audio Codec",
+  "arxiv_id": "2107.03312",
+  "venue": "other",
+  "year": 2021,
+  "category": "speech",
+  "authors": [
+    "Neil Zeghidour",
+    "Alejandro Luebs",
+    "Ahmed Omran",
+    "Jan Skoglund",
+    "Marco Tagliasacchi"
+  ],
+  "affiliations": [
+    "Google Research"
+  ],
+  "problem": "Speech codecs are tuned for speech and waste bits on music and general audio; a fixed-bitrate model cannot trade quality against rate per deployment.",
+  "mechanism": "Fully convolutional encoder/decoder around a RESIDUAL VECTOR QUANTISER, trained end-to-end with adversarial plus reconstruction loss. Structured dropout on the quantiser layers lets ONE model cover 3-18 kbps, and the whole architecture is streaming and small enough to run real time on a smartphone CPU.",
+  "hardware_relevance": [
+    "nvidia-l4",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": "Subjective (MUSHRA) testing at 24 kHz: SoundStream at 3 kbps outperforms Opus at 12 kbps and approaches EVS at 9.6 kbps. Runs real time on a smartphone CPU at low latency. These are quality-per-bitrate and real-time-feasibility claims from MUSHRA listening tests, not a latency or throughput measurement.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/google-research/soundstream",
+  "open_weights": true,
+  "notes": "Venue is IEEE/ACM TASLP (2022), DOI 10.1109/TASLP.2021.3129994, confirmed via crossref; the schema has no TASLP entry so 'other' is the honest value. THE SERVING RELEVANCE IS THE BITRATE, NOT THE CODEC: SoundStream's 3 kbps operating point is what makes neural audio tokens viable as LLM input at all. At 50 Hz frame rate that is ~150 tokens per second of audio, versus ~7500 for 16 kHz log-Mel fed to a Whisper-style encoder - a 50x difference in sequence length, which propagates directly into encoder prefill cost. Any audio-LM design decision about token rate should be traced back here.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-soundstream"
+  ]
+}

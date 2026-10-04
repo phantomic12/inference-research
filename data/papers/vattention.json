@@ -1,0 +1,39 @@
+{
+  "id": "vattention",
+  "type": "paper",
+  "name": "vAttention: Dynamic Memory Management for Serving LLMs without PagedAttention",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-vattention"
+  ],
+  "arxiv_id": "2405.04437",
+  "venue": "asplos",
+  "year": 2025,
+  "category": "serving-systems",
+  "authors": [
+    "Prabhu, Ramya",
+    "Nayak, Ajay",
+    "Mohan, Jayashree",
+    "Ramjee, Ramachandran"
+  ],
+  "affiliations": [
+    "University of Virginia",
+    "Microsoft Research"
+  ],
+  "problem": "PagedAttention-style KV cache management demands that every attention kernel be rewritten to read block tables and masked pages, so it does not compose with existing hand-written kernels and creates ongoing maintenance burden.",
+  "mechanism": "Use CUDA VIRTUAL MEMORY MANAGEMENT instead of page tables. Allocate physical KV memory and map it into a contiguous VIRTUAL address range per request; contiguity in virtual memory makes the KV block look contiguous to any unmodified kernel, so physical fragmentation is handled by the virtual mapping and the attention kernel needs no changes. Additional LLM-specific optimisations address CUDA VMM's limitations (page-granular mapping, TLB pressure, per-request map churn).",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-a10"
+  ],
+  "speedup_reported": "Paper's own claim (abstract): improves LLM serving throughput by up to 1.23x COMPARED TO PagedAttention-BASED KERNELS OF FLASHATTENTION AND FLASHINFER - i.e. against vLLM's own two flagship attention kernels, on identical paged behaviour. Baseline named precisely; the gain is modest and that honesty is the point (the win is compatibility, not raw speed).",
+  "adoption": "research-only",
+  "code_url": "https://github.com/vllm-project/vAttention",
+  "open_weights": null,
+  "notes": "arXiv ID 2405.04437 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. VENUE upgraded from comment-field evidence to PUBLISHED-PROCEEDINGS evidence: the arXiv comment says 'To appear in ASPLOS 2025', and Crossref for DOI 10.1145/3669940.3707256 confirms publication - container-title 'Proceedings of the 30th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 1', event 'ASPLOS '25', publisher ACM, published 2025-03-30, pages 1133-1150. So venue=asplos, year=2025 with the strongest evidence class available. adoption=research-only verified by absence: no vmm/vattention path in vLLM's 8562-file tree, and vLLM ships paged attention (block tables in kv_cache_utils.py) rather than virtual-memory-backed KV. The two mechanisms are substitutes, and the incumbent won: PagedAttention's cost is kernel cooperation, but it is already fused into vLLM's FlashAttention and FlashInfer paths, whereas vAttention needs a CUDA VMM allocator in front. Also worth noting for a reader: vAttention is vLLM-ORGANISED (github.com/vllm-project/vAttention) yet not in vLLM, which is the clearest possible illustration of why adoption is a separate field from provenance."
+}

@@ -1,0 +1,29 @@
+{
+  "id": "kivi",
+  "type": "paper",
+  "name": "KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-quant-kivi"
+  ],
+  "arxiv_id": "2402.02750",
+  "venue": "icml",
+  "year": 2024,
+  "category": "kv-cache",
+  "authors": [
+    "Yuan, Lin, Chen, Cai"
+  ],
+  "affiliations": [
+    "LMSYS, UC Berkeley"
+  ],
+  "problem": "KV cache quantization is applied per-token to both keys and values, which is exactly wrong for keys and wastes most of the value cache's headroom.",
+  "mechanism": "A distribution study of KV elements on LLaMA / Falcon / Mistral establishes the asymmetry that drives everything: KEYS must be quantized PER-CHANNEL (group elements along the channel dimension) while VALUES must be quantized PER-TOKEN. Implementation matches: per-channel key quantization and per-token value quantization, each with its own group size, tuned-free. The channel/token split also happens to align with how the attention kernel reads memory, so it is hardware-coherent rather than merely statistically better.",
+  "hardware_relevance": [],
+  "speedup_reported": "Paper's own claim (abstract): LLaMA / Falcon / Mistral 'maintain almost the same quality while using 2.6x LESS PEAK MEMORY (including model weight)'. COMPRESSION RATIO: 2-bit KV cache vs FP16 = 8x on the cache itself; the 2.6x figure is whole-model peak memory INCLUDING weights, which is the more honest number and the one to quote. QUALITY COST: 'almost the same quality' - not a paired delta in the abstract.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/mit-han-lab/llm-awq",
+  "open_weights": null,
+  "notes": "arXiv ID 2402.02750 verified via /abs/; v2. Venue ICML 2024 confirmed by the arXiv comment field ('ICML2024') and Semantic Scholar; year = venue year 2024. IMPORTANT reading note: the headline 2.6x is whole-model peak memory including weights - quoting it as a '2.6x KV compression' would be wrong, the cache itself is ~8x. arXiv ID and title verified by fetching https://arxiv.org/abs/2402.02750 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2402.02750) unless the record's notes say otherwise."
+}

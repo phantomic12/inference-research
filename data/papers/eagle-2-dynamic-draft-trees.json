@@ -1,0 +1,33 @@
+{
+  "id": "eagle-2-dynamic-draft-trees",
+  "name": "EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees",
+  "arxiv_id": "2406.16858",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "speculative-decoding",
+  "authors": [
+    "Yuhui Li",
+    "Fangyun Wei",
+    "Chao Zhang",
+    "Hongyang Zhang"
+  ],
+  "problem": "Static draft trees (as in EAGLE-1, SpecInfer) implicitly assume a draft token's acceptance rate depends only on its POSITION in the tree, which is false.",
+  "mechanism": "Context-AWARE dynamic draft tree. Uses EAGLE's observation that the draft model's confidence scores approximate acceptance rates with small error (i.e. the draft model is well-calibrated) to expand the draft tree at each step according to the draft model's own confidences rather than a fixed topology: expand the highest-confidence node, allocate tree nodes by predicted acceptance rate, and prune low-value branches. Reranking of the verified candidates also uses the draft confidence. Output distribution provably unchanged - lossless.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "3.05x-4.26x speedup, which is 20%-40% faster than EAGLE-1, across three LLM series and six tasks. Model pairs follow EAGLE-1 (Vicuna/LLaMA2-Chat family, feature-level draft head). The 20-40% figure is the like-for-like delta against EAGLE-1 on the same backbone, which is the more honest comparison than the 3.05-4.26x against vanilla decoding.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/SafeAILab/EAGLE",
+  "open_weights": true,
+  "notes": "ADOPTION: EAGLE-2 is reachable in vLLM and SGLang, and the EAGLE-3 follow-up (pap-eff-eagle-3) is what engines actually default to, so EAGLE-2 is best described as shipped-but-superseded rather than actively preferred. VENUE NOTE: no venue verifiable via Semantic Scholar, arXiv comment empty, so venue = arxiv-preprint, year = arXiv v1 (Jun 2024). IMPORTANT REPRODUCTION CAVEAT, stated by the authors themselves: this paper's premise is that acceptance rate is context-dependent. Any reimplementation that reuses a static tree from EAGLE-1 while citing EAGLE-2's numbers has not implemented EAGLE-2. The claimed gain is a change of tree TOPOLOGY per input, not a cheaper verify kernel - so the speedup will not transfer across models whose confidence distributions differ from the tested ones.",
+  "confidence": 0.9,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-eff-eagle-2"
+  ]
+}

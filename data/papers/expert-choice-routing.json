@@ -1,0 +1,29 @@
+{
+  "id": "expert-choice-routing",
+  "type": "paper",
+  "name": "Mixture-of-Experts with Expert Choice Routing",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-quant-expert-choice-routing"
+  ],
+  "arxiv_id": "2202.09368",
+  "venue": "neurips",
+  "year": 2022,
+  "category": "routing",
+  "authors": [
+    "Zhou, Lepikhin, Klyushko, Dettmers, et al. (Google)"
+  ],
+  "affiliations": [
+    "Google Research"
+  ],
+  "problem": "Top-k gating gives every token the same number of experts regardless of how important the token is, and load imbalance leaves some experts under-trained and under-specialized.",
+  "mechanism": "INVERTS THE ROUTING DIRECTION: instead of each token selecting its top-k experts, each EXPERT selects its top-k tokens. Each expert therefore gets a FIXED BUCKET SIZE (a constant, known compute cost) while each token receives a VARIABLE number of experts - so an easy token can be handled by one expert and a hard token by eight. The fixed bucket is also what removes the load-imbalance problem that makes token-choice routing expensive to serve.",
+  "hardware_relevance": [],
+  "speedup_reported": "Paper's own claim (abstract): systematically studied against Switch Transformer top-1 and GShard top-2 gating AT THE SAME COMPUTATIONAL RESOURCES, and improves TRAINING CONVERGENCE TIME BY MORE THAN 2x; higher performance fine-tuning 11 selected GLUE/SuperGLUE tasks at the same computational cost; and at lower activation cost it beats the T5 dense model on 7 of 11 tasks. COMPRESSION RATIO: not applicable (a routing scheme). Note the caveat that matters for serving: fixed bucket size means the dispatch buffers are static and computationally predictable, which is precisely the property token-choice routing lacks.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/google-research/sparsemax",
+  "open_weights": null,
+  "notes": "arXiv ID 2202.09368 verified via /abs/; venue NeurIPS 2022 from Semantic Scholar; year = venue year 2022. The 2x figure is a TRAINING convergence-time claim against two named baselines at matched compute - not an inference latency claim, and the paper's own framing is about expert specialization and balance. arXiv ID and title verified by fetching https://arxiv.org/abs/2202.09368 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2202.09368) unless the record's notes say otherwise."
+}

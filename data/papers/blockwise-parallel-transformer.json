@@ -1,0 +1,35 @@
+{
+  "id": "blockwise-parallel-transformer",
+  "type": "paper",
+  "name": "Blockwise Parallel Transformer for Large Context Models",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-blockwise-parallel-transformer"
+  ],
+  "arxiv_id": "2305.19370",
+  "venue": "neurips",
+  "year": 2023,
+  "category": "attention",
+  "authors": [
+    "Liu, Hao",
+    "Abbeel, Pieter"
+  ],
+  "affiliations": [
+    "University of California Berkeley"
+  ],
+  "problem": "Self-attention memory and the feedforward layer's activation memory both limit the sequence length a single device can train on, so long-sequence tasks need awkward chunking or approximations.",
+  "mechanism": "Blockwise computation of self-attention combined with FUSION of the feedforward network into the attention block, so the activation memory for both is bounded by one block rather than by the full sequence. Attention within a block is computed exactly; the block decomposition changes memory, not the attention arithmetic. This is the single-device work whose device-level distribution became Ring Attention.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-v100-sxm2-32gb",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Paper's own claim (abstract): enables training sequences 32x LONGER than vanilla Transformers and up to 4x longer than previous memory-efficient methods. This is a CAPACITY claim (max trainable sequence length), not a throughput or latency speedup - the mechanism reduces memory, and the number expresses how much sequence that buys. Quoting '32x' as a speedup would misstate it.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "arXiv ID 2305.19370 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. VENUE CORRECTED from the source record's 'arXiv preprint; no journal_ref': the OpenReview record with this exact title and authors (Liu, Abbeel) returns venue='NeurIPS 2023 spotlight', venueid='NeurIPS.cc/2023/Conference'. Note a title nuance - OpenReview lists it as 'Blockwise Parallel Transformers for Large Context Models' (plural Transformers) and the arXiv title is singular; same paper. venue=neurips, year=2023. adoption=research-only: BPT is a training-memory technique; the single-device idea it embodies is now handled inside vLLM's paged KV block abstraction (recorded at pagedattention-vllm), but BPT as a training method is not in vLLM or SGLang. Pair with ring-attention (same group, distributed version) when reading the blockwise family."
+}

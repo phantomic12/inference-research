@@ -1,0 +1,38 @@
+{
+  "id": "rwkv",
+  "type": "paper",
+  "name": "RWKV: Reinventing RNNs for the Transformer Era",
+  "status": "verified",
+  "confidence": 0.87,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-rwkv"
+  ],
+  "arxiv_id": "2305.13048",
+  "venue": "emnlp",
+  "year": 2023,
+  "category": "ssm",
+  "authors": [
+    "Peng, Bo",
+    "Alcaide, Eric",
+    "Anthony, Quentin",
+    "Albalak, Alon"
+  ],
+  "affiliations": [
+    "University of Washington",
+    "EleutherAI",
+    "NVIDIA"
+  ],
+  "problem": "Transformers parallelise during training but are quadratic and memory-hungry at inference; RNNs are linear and constant-memory at inference but do not parallelise during training. Architecture families are usually a choice, not both.",
+  "mechanism": "RWKV is formulated so the SAME model is a Transformer during training and an RNN during inference: a linear-attention formulation with time-mixing (WKV) and channel-mixing blocks, plus a receptance-gated formulation that lets the recurrence be expressed in a numerically stable closed form with no time-step hyperparameter. Constant memory and constant compute per token at inference.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Paper's own claims (abstract): scaled to 14B parameters, 'by far the largest dense RNN ever trained', performing ON PAR with similarly sized Transformers. That is a quality claim, not a speedup: the abstract states constant computational and memory complexity during inference without attaching a multiplier or a baseline engine.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/BlinkDL/RWKV-LM",
+  "open_weights": true,
+  "notes": "arXiv ID 2305.13048 verified via abs-page meta tags on 2026-10-03; title matches. Venue verified via OpenReview with an explicit venueid, which is what makes this reliable: venue='EMNLP 2023 Findings', venueid='EMNLP/2023/Conference'. The important qualifier, which the dead agent's source note missed entirely: this is the FINDINGS track, not the main track - it is a real publication but a shorter one. Note also two ACL Anthology archive copies exist with venue=None (OpenReview.net/Archive), which is where the confusion with 'no venue' comes from; the Findings entry is the citable one. adoption=in-upstream-engine verified in source: transformers ships a models/rwkv/ directory. That is narrower than Mamba's support (no vLLM or SGLang model file, no dedicated backend), so the honest reading is that RWKV is servable in the reference library but has no first-class path in the major engines - recorded in-upstream-engine with that qualifier rather than in-production. open_weights=true: released RWKV models exist."
+}

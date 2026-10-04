@@ -1,0 +1,62 @@
+{
+  "id": "semi-pd",
+  "type": "engine",
+  "name": "Semi-PD (research prototype)",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-03",
+  "sources": [
+    "pd-semipd-repo",
+    "pd-splitwise-msr-paper",
+    "pd-distserve-osdi24-paper"
+  ],
+  "repo": "infinigence/Semi-PD",
+  "languages": [
+    "Python",
+    "CUDA",
+    "C++"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2025,
+  "design_goal": [
+    "throughput-first",
+    "fine-grained compute isolation",
+    "shared-GPU-memory disaggregation"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "disaggregated-prefill-decode",
+    "none (radix cache disabled in the documented setup)"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm"
+  ],
+  "supported_formats": [],
+  "notable_features": [
+    "Phase-wise disaggregated computation with UNIFIED storage - prefill and decode share GPU memory rather than transferring KV across a link, which removes the handoff bandwidth cost entirely",
+    "Fine-grained compute isolation via CUDA MPS rather than separate devices or processes: CUDA_MPS_ENABLE_PER_CTX_DEVICE_MULTIPROCESSOR_PARTITIONING=1 splits SMs between the prefill and decode contexts on one GPU",
+    "Enabled by a single flag (--enable-semi-pd) on a forked SGLang codebase",
+    "Dual NVIDIA/AMD build paths",
+    "Paper: arXiv:2504.19867"
+  ],
+  "hardware_caveats": [
+    "Research prototype, self-described as 'a research prototype' with 'no complete feature parity with open-source SGLang'; created 2025-04-07, last push 2025-12-25, ~136 stars",
+    "Requires CUDA MPS to be enabled manually on NVIDIA; on AMD MPS is on by default",
+    "Does not share activations between prefill and decode, so 'may result in slightly higher memory usage compared to the original SGLang' - the documented remedy is lowering --mem-fraction-static",
+    "The documented launch command includes --disable-radix-cache, so the prefix-reuse path is not exercised in the reference setup",
+    "MPS partitioning is a coarse isolation mechanism; it does not give the hard isolation a separate node or process would"
+  ],
+  "best_for": [
+    "Single-node disaggregation where the interconnect is too slow to make a KV handoff pay - the shared-memory design makes the transfer cost zero by construction",
+    "Studying the alternative to the copy: if you can avoid moving KV rather than move it faster, the cost model changes shape entirely",
+    "NVIDIA and AMD comparison work, since both build paths are documented"
+  ],
+  "avoid_for": [
+    "Production - it is a fork with reduced feature parity, and a fork of a fast-moving engine is a maintenance liability",
+    "Multi-node deployments, which is the regime every other system here targets",
+    "Workloads relying on prefix/radix caching, which the reference setup disables"
+  ],
+  "docs_url": "https://github.com/infinigence/Semi-PD",
+  "notes": "Research prototype (arXiv:2504.19867), explicitly self-described as such. KV transfer path: NONE, by design - this is the record's distinguishing claim. Semi-PD's premise is that the disaggregation tax is the KV copy, so if prefill and decode can address the same GPU memory, the tax is eliminated and the only cost is the compute partitioning. That is a genuinely different cost model from DistServe/Splitwise (which pay bytes x bandwidth) and from Mooncake (which pays bytes x fabric bandwidth), and it is why this record sits in the repo next to them rather than as a variant. The cost it pays instead: no hard isolation (MPS partitions SMs, not failures), higher memory use from not sharing activations, and reduced SGLang feature parity."
+}

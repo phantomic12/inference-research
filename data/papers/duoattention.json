@@ -1,0 +1,38 @@
+{
+  "id": "duoattention",
+  "type": "paper",
+  "name": "DuoAttention: Efficient Long-Context LLM Inference with Retrieval and Streaming Heads",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-duoattention"
+  ],
+  "arxiv_id": "2410.10819",
+  "venue": "iclr",
+  "year": 2025,
+  "category": "long-context",
+  "authors": [
+    "Xiao, Guangxuan",
+    "Tang, Jiaming",
+    "Zuo, Jingwei",
+    "Guo, Junxian"
+  ],
+  "affiliations": [
+    "MIT",
+    "NVIDIA"
+  ],
+  "problem": "Long-context inference holds a large KV cache and does full attention over it, even though many heads in a long-context model are not retrieval heads and do not need the full cache.",
+  "mechanism": "Split heads into RETRIEVAL heads (which must keep the full KV cache) and STREAMING heads (whose attention is effectively local and which need only a small cache). Head types are identified by a lightweight OPTIMISATION-based algorithm run on SYNTHETIC data - fit a simple objective so that the cache layout maximises the model's output fidelity - avoiding the need for real long-context calibration data, which is often unavailable. Streaming heads then use a small per-head budget while retrieval heads keep everything.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm"
+  ],
+  "speedup_reported": "Paper's own claims (abstract), reported separately for MHA and GQA models: long-context inference MEMORY reduced up to 2.55x (MHA) and 1.67x (GQA); DECODING sped up up to 2.18x (MHA) and 1.50x (GQA); PREFILL accelerated up to 1.73x (MHA) and 1.63x (GQA), with minimal accuracy loss. Combined with quantization, Llama-3-8B decodes at 3.3 MILLION context length on a single A100. Keep the MHA and GQA figures separate - the GQA numbers are uniformly lower and quoting the MHA figure for a modern GQA model would overstate the benefit.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/mit-han-lab/duo-attention",
+  "open_weights": null,
+  "notes": "arXiv ID 2410.10819 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. CORRECTION TO THE SOURCE RECORD: it says 'arXiv preprint; no journal_ref' with no venue evidence, but OpenReview returns venue='ICLR 2025 Poster', venueid='ICLR.cc/2025/Conference' for the exact title and author list. venue=iclr, year=2025. adoption=research-only verified by absence: a recursive listing of vllm-project/vllm@main contains no path matching 'duo', and SGLang's attention directory has no duoattention module. repo mit-han-lab/duo-attention last pushed 2025-02-10 (540 stars) - maintained research code, no engine integration. The nearest shipped analogue is SGLang's hybrid_linear_attn_backend.py, which serves the Mamba/GDN/Kimi-Linear split rather than this one."
+}

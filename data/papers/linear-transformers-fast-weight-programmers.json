@@ -1,0 +1,34 @@
+{
+  "id": "linear-transformers-fast-weight-programmers",
+  "type": "paper",
+  "name": "Linear Transformers Are Secretly Fast Weight Programmers",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2102-11174"
+  ],
+  "arxiv_id": "2102.11174",
+  "venue": "iclr",
+  "year": 2021,
+  "category": "attention",
+  "authors": [
+    "Imanol Schlag",
+    "Kazuki Irie",
+    "Jürgen Schmidhuber"
+  ],
+  "affiliations": [
+    "IDSIA"
+  ],
+  "problem": "Linearised softmax attention updates its state by a purely additive outer product k v^T, and the resulting fixed-size state has a memory capacity that cannot support precise recall.",
+  "mechanism": "Shows formally that linearised attention is equivalent to a fast weight programmer: a slow net learning by gradient descent to program the fast weights of another net through sequences of additive outer-product instructions. From that framing it derives the memory capacity limitation of additive-only linear attention and REPLACES the additive update with a delta-rule-like programming instruction, S_t = S_{t-1} + beta_t (v_t - S_{t-1}^T k_t) k_t^T, i.e. write the new value and correct the prediction by a learned step size beta_t rather than only accumulating. That correction step is what raises recall. The state is fixed-size and constant in sequence length, so no KV cache. This delta-rule state update is the direct ancestor of Gated DeltaNet, Kimi Delta Attention, and Qwen3-Next, and it is why 'delta rule' language appears throughout modern linear-attention work.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "No throughput number. The claim is a state size versus recall Pareto improvement from the delta rule, evaluated as associative-recall and language-modelling perplexity at fixed state size; the theoretical contribution is the fast-weight-programmer equivalence and the derived capacity limit.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/idiapathwarmers/softmax-expressiveness",
+  "open_weights": false,
+  "notes": "ICLR 2021 per the arXiv comment field; no journal-ref on the abs page. The paper is three years older than the wave it enabled: its delta rule is the mechanism now shipped in production inside Gated DeltaNet, Kimi Linear and Qwen3-Next, so 'in-upstream-engine' refers to the mechanism having shipped in shipped models, not to this 2021 code. Worth recording because it is the root citation for the delta rule and most downstream papers cite Gated DeltaNet instead."
+}

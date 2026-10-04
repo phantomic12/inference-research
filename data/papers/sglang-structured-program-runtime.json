@@ -1,0 +1,41 @@
+{
+  "id": "sglang-structured-program-runtime",
+  "name": "SGLang: Efficient Execution of Structured Language Model Programs",
+  "arxiv_id": "2312.07104",
+  "venue": "arxiv-preprint",
+  "year": 2023,
+  "category": "serving-systems",
+  "authors": [
+    "Lianmin Zheng",
+    "Liangsheng Yin",
+    "Zhiqiang Xie",
+    "Chuyue Sun",
+    "Jeff Huang",
+    "Cody Hao Yu",
+    "Shiyi Cao",
+    "Christos Kozyrakis",
+    "Ion Stoica",
+    "Joseph E. Gonzalez",
+    "Clark Barrett",
+    "Ying Sheng"
+  ],
+  "problem": "LLM applications increasingly need MULTIPLE generation calls, control flow, advanced prompting, and structured input/output - but efficient systems for programming and executing such programs did not exist. Naive multi-turn and multi-call patterns waste prefill on re-reading an unchanged prefix.",
+  "mechanism": "A frontend language plus a runtime. Frontend provides primitives for generation and explicit parallelism control, so programs are not implicitly sequential. Runtime contributes two optimisations that matter for this slice: RADIXATTENTION, which organises the KV cache in a radix tree over token sequences so a shared prefix across calls is matched and reused rather than recomputed (this is the prefix-reuse mechanism behind agentic multi-turn serving), and COMPRESSED FINITE STATE MACHINES for faster structured-output decoding, which collapses grammar/constraint automaton states into a compact representation so the per-token mask computation on the critical path is cheaper.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Up to 6.4x higher throughput than state-of-the-art inference systems, across various large language and multimodal models, on tasks INCLUDING agent control, logical reasoning, few-shot learning, JSON decoding, retrieval-augmented generation pipelines, and multi-turn chat. The headline is a THROUGHPUT number against a baseline serving system, on a program-level workload - not a batch-1 latency multiplier, which makes it directly relevant to this repo's benchmark records rather than only comparable to other systems papers.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/sgl-project/sglang",
+  "open_weights": true,
+  "notes": "ADOPTION: SGLang itself is a production-grade serving engine, publicly available and in real use - hence in-upstream-engine rather than in-production, since the repo is recording the METHOD's adoption and SGLang is an engine you deploy rather than a feature you enable. Its spec-decode support (EAGLE-3, Medusa) is why pap-eff-eagle-3's throughput claim is an SGLang measurement. TWO MECHANISMS IN ONE RECORD, both relevant to the structured-output and agentic slices: RadixAttention is the prefix-KV-reuse answer for multi-turn agent serving, and the compressed-FSM decoding path is a constrained-decoding implementation that belongs alongside Outlines/XGrammar - a useful third data point because it shows the constraint-mask optimisation is being solved INSIDE engines too, not only in standalone libraries. VENUE NOTE: no peer-reviewed venue verifiable; arXiv comment has no venue, so venue = arxiv-preprint, year = ArXiv v1 (Dec 2023). The 6.4x is against 'state-of-the-art inference systems' at the time of writing, which were vLLM/Orca-generation - a baseline that has since improved substantially, so the figure should not be quoted as a standing advantage.",
+  "confidence": 0.9,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "flop-sglang"
+  ]
+}

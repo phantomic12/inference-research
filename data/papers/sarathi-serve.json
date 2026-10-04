@@ -1,0 +1,40 @@
+{
+  "id": "sarathi-serve",
+  "type": "paper",
+  "name": "Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve",
+  "arxiv_id": "2403.02310",
+  "venue": "osdi",
+  "year": 2024,
+  "category": "scheduling",
+  "authors": [
+    "Amey Agrawal",
+    "Nitin Kedia",
+    "Ashish Panwar",
+    "Jayashree Mohan",
+    "Nipun Kwatra",
+    "Bhargav S. Gulavani",
+    "Alexey Tumanov",
+    "Ramachandran Ramjee"
+  ],
+  "affiliations": [
+    "Microsoft Research India"
+  ],
+  "problem": "Interleaving prefill iterations with batched decode iterations raises the tail of time-per-output-token because a long prefill blocks every decode in the batch, capping achievable throughput at any latency target.",
+  "mechanism": "Chunked prefill: split the prompt into near-equal-sized chunks and schedule those chunks with a chunk-level iteration budget alongside decodes, so no single iteration is monopolised by a long prefill. Adds stall-free scheduling, which admits new requests into a batch without pausing ongoing decodes, so large batch sizes raise throughput without paying the latency penalty. Uniform batches across chunked prefills reduce iteration imbalance, which minimises pipeline bubbles.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Sarathi-Serve vs vLLM under tail-latency constraints, per the arXiv abstract: 2.6x higher serving capacity for Mistral-7B on a single A100 GPU; up to 3.7x higher serving capacity for Yi-34B on two A100 GPUs; and up to 5.6x end-to-end serving capacity gain for Falcon-180B when used with pipeline parallelism. Metric is serving capacity under a tail-latency constraint, not raw throughput. NOTE: this is the v3 abstract; the paper's own comparison table is against vLLM, and earlier versions compared against Orca as well.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/microsoft/sarathi-serve",
+  "open_weights": null,
+  "notes": "Venue: the arXiv comment field is EMPTY, so anyone reading only arXiv metadata will call this a preprint. Venue is confirmed from the OSDI '24 program page. Adoption is the interesting part: chunked prefill is now the DEFAULT in vLLM and SGLang, so the mechanism ships — but the attribution is loose. vLLM's chunked prefill came from a separate in-house effort, not a code import; cite Sarathi-Serve as the paper that established the mechanism and the goodput metric, not as the source of the vLLM code.",
+  "sources": [
+    "pap-sys-sarathi-arxiv",
+    "pap-sys-osdi24-proceedings"
+  ],
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03"
+}

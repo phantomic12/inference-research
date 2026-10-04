@@ -1,0 +1,35 @@
+{
+  "id": "medusa-multiple-decoding-heads",
+  "name": "Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads",
+  "arxiv_id": "2401.10774",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "speculative-decoding",
+  "authors": [
+    "Tianle Cai",
+    "Yuhong Li",
+    "Zhengyang Geng",
+    "Hongwu Peng",
+    "Jason D. Lee",
+    "Deming Chen"
+  ],
+  "problem": "Speculative decoding needs a separate draft model, which is costly to acquire, train, and serve; maintaining a second model in memory also inflates memory footprint.",
+  "mechanism": "Add K lightweight decoding heads on top of the frozen backbone, each predicting token t+i directly from the backbone's last hidden state (no draft model, no separate draft weights). At each step the heads emit candidate continuations that are assembled into a tree; a tree-based attention mask lets the backbone verify all tree nodes in ONE forward pass, and a typical-acceptance scheme (bounded deviation from the target's own distribution, not strict argmax) decides which path survives. Medusa-1 fine-tunes heads on a frozen backbone (lossless); Medusa-2 fine-tunes heads jointly with the backbone for higher speedup at the cost of a special training recipe. A self-distillation variant covers the no-training-data case.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Medusa-1 over 2.2x, Medusa-2 2.3x-3.6x, on models of various sizes, versus plain autoregressive decoding. Model pairs are same-family draft heads (not a separate small model) with Vicuna/LLaMA-family backbones. The acceptance rate per step is the load-bearing number and is what should be reported alongside any speedup.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/FasterDecoding/Medusa",
+  "open_weights": true,
+  "notes": "ADOPTION, precisely: PARTIAL engine support, not just research. vLLM ships Medusa support (medusa heads as a speculative method), SGLang ships Medusa-1.1, and llama.cpp has a self-speculative / Medusa-style draft path. But 'in-upstream-engine' is weaker than 'in-production' for the original recipe because Medusa-2's joint fine-tuning is not how anyone serves a foundation checkpoint - serving engineers use Medusa-1 heads trained separately for their own checkpoint. VENUE NOTE: no peer-reviewed venue verifiable via Semantic Scholar; arXiv comment carries a code URL only, so venue = arxiv-preprint and year = arXiv v1 (Jan 2024). Terminology trap: Medusa-1 and Medusa-2 are DIFFERENT recipes (frozen vs joint backbone), not version 1 and 2 of the method, and their speedups are not comparable.",
+  "confidence": 0.85,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "niche-medusa-paper"
+  ]
+}

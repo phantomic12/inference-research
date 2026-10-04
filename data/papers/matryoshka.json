@@ -1,0 +1,38 @@
+{
+  "id": "matryoshka",
+  "type": "paper",
+  "name": "Matryoshka Representation Learning",
+  "arxiv_id": "2205.13147",
+  "venue": "neurips",
+  "year": 2022,
+  "category": "embedding",
+  "authors": [
+    "Shuoyang Zhang",
+    "Kaiming He",
+    "Bo Dai",
+    "Xinlei Chen"
+  ],
+  "affiliations": [
+    "University of Maryland",
+    "Meta AI"
+  ],
+  "problem": "A fixed-size embedding is either oversized for a cheap downstream task or too small for an accurate one, and the task is unknown at training time.",
+  "mechanism": "Trains a representation whose PREFIXES at different dimensionalities are each individually useful - an outer first layer for the largest size, with nested smaller representations inside. At inference you simply truncate the vector to the largest size the downstream budget tolerates, losing graceful accuracy. Zero additional inference cost: truncation is a slice.",
+  "hardware_relevance": [
+    "nvidia-l4",
+    "nvidia-a10",
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": "Up to 14x smaller embedding size at equal accuracy for ImageNet-1K classification, and up to 14x real-world retrieval speed-ups on ImageNet-1K and 4K; up to 2% accuracy improvement for long-tail few-shot classification. NOTE the baselines are independent low-dimensional representations of equal accuracy - the honest comparison, not a full-size model.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/RAIVNLab/MRL",
+  "open_weights": true,
+  "notes": "Venue NeurIPS 2022 (crossref via NeurIPS Foundation, 'Advances in Neural Information Processing Systems'). The most directly exploitable trick in this whole slice for serving: dimensionality is a runtime knob. A 1024-dim vector truncated to 256 is 4x less bytes moved per query and 4x less index memory, with no retraining and no extra compute - which matters because embedding serving at batch 1 is memory-bound on both the index scan and the vector read. Used in production by the Nomic embedder family and widely adopted in VLM systems (nomic-vlm) as a way to shrink vision-side embeddings.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-matryoshka"
+  ]
+}

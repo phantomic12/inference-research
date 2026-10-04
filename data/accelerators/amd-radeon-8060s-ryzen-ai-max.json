@@ -1,0 +1,33 @@
+{
+  "id": "amd-radeon-8060s-ryzen-ai-max",
+  "type": "accelerator",
+  "name": "AMD Radeon 8060S (Ryzen AI Max+ integrated GPU)",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-03",
+  "sources": [
+    "acc-fill-amd-ryzen-ai-max-plus-395-product-page",
+    "acc-fill-amd-ryzen-ai-max-395-8060s-blog"
+  ],
+  "vendor": "amd",
+  "architecture": "rdna3.5 (Strix Halo iGPU, gfx1151)",
+  "release_year": 2025,
+  "process_nm": 4,
+  "form_factors": [
+    "integrated",
+    "aptop"
+  ],
+  "vram_gb": null,
+  "memory_type": null,
+  "memory_bus_bit": 256,
+  "memory_bandwidth_gbps": 256,
+  "memory_bandwidth_basis": "PARTLY A PLATFORM FIGURE, SOURCED AS A VENDOR CLAIM, AND LABELLED AS SUCH. Two AMD sources. The product page gives the bus and the ceiling: 'System Memory Type 256-bit LPDDR5x', 'Max. Memory 128 GB', 'Max Memory Speed LPDDR5x-8000' - so the 256-bit width here is the SHARED system-memory interface, not a dedicated VRAM bus, and 128 GB is an APU-wide maximum across all SKUs, not this part's VRAM. The bandwidth number comes from AMD's blog, verbatim: 'the ASUS ROG Flow Z13 - powered by the integrated Radeon 8060S and taking full advantage of the 256 GB/s bandwidth' (acc-fill-amd-ryzen-ai-max-395-8060s-blog). That is AMD's own statement of the achievable LPDDR5x bandwidth on one shipping machine, so it is a real vendor figure - but it is the CPU's memory subsystem ceiling for one memory configuration, shared with the CPU and NPU, not a GPU-block property and not a figure AMD publishes as a spec. A reader comparing this to a discrete card's bandwidth must account for the fact that the CPU is simultaneously using the same bus. 256-bit LPDDR5x-8000 would imply a higher theoretical ceiling than 256 GB/s, so 256 GB/s is AMD's achieved figure for that laptop, not a derived maximum.",
+  "flops": [],
+  "tdp_w": null,
+  "interconnect": [
+    "pcie-gen4"
+  ],
+  "unified_memory": true,
+  "consumer": true,
+  "notes": "AN APU iGPU, NOT A DISCRETE CARD - every field below follows from that, including the honest nulls. The Radeon 8060S is the integrated GPU in AMD's Ryzen AI Max 300 series (codename Strix Halo). AMD's product page: 'Graphics Model Radeon 8060S Graphics', 'Graphics Core Count 40', 'Graphics Frequency 2900 MHz', plus 16x Zen 5 CPU cores / 32 threads, up to 5.1 GHz boost, 64 MB L3, TSMC 4nm FinFET on both CPU cores and I/O die, 3-die package, 256-bit LPDDR5x up to 128 GB at LPDDR5x-8000, PCIe 4.0 x16, default TDP 55 W with cTDP range 45-120 W, max 4 displays. AMD's blog supplies the architecture name and confirms the CU count: 'a truly massive integrated GPU driven by 40 AMD RDNA 3.5 CUs' - note AMD calls it RDNA 3.5, neither RDNA 3 nor RDNA 4, and this is the gfx1151 target that AMD's ROCm matrix lists as 'AMD Ryzen AI Max+ PRO 395 (Radeon 8060S) | gfx1151'. 256 GB/s achievable memory bandwidth per the blog.\n\nWHY flops IS EMPTY AND THAT IS CORRECT. AMD publishes NO GPU compute figure for the 8060S - not FP32, not FP16 matrix, not INT8. The product page's AI Engine rows are 'Overall TOPS Up to 126 TOPS' and 'NPU TOPS Up to 50 TOPS', and NEITHER IS A GPU FIGURE: one is a system total whose derivation AMD does not publish (and which is in any case smaller than the NPU's 50 TOPS plus any plausible GPU contribution, so it is not a simple sum), the other is the XDNA 2 NPU in the I/O die. Recording either as a GPU flops row would misattribute an NPU or system number to the graphics block, so neither is recorded. No TFLOPS is computed from clocks, CU count and vector width: that would manufacture a figure no vendor endorses, which AGENTS.md forbids.\n\nWHY vram_gb AND memory_type ARE NULL. An APU has no dedicated VRAM. Graphics memory is a carve-out of the shared LPDDR5x pool, so 'how much VRAM' is a configuration choice - AMD's page caps the WHOLE system at 128 GB and the benchmark record in this repo that cites this id ran a 20.5 GB model footprint on such a machine. Putting 128 in vram_gb would be wrong (that is the CPU+GPU+NPU ceiling for the top SKU, not this GPU's memory) and putting 16 or 32 in would be invented. unified_memory is true and is the field that actually carries this fact.\n\nWHY tdp_w IS NULL: the GPU shares a thermal envelope with 16 Zen 5 cores. The page gives CPU-package figures - 'Default TDP 55W', 'AMD Configurable TDP (cTDP) 45-120W' - and no separate GPU power figure. Recording 55 W as GPU TDP would misattribute a CPU-package budget to the iGPU.\n\nSTATUS draft, NOT verified, despite both sources being AMD pages: the part is unambiguously real and its core-count/clock/architecture facts are vendor-confirmed, but the fields that would make it useful for inference planning - VRAM, GPU compute, GPU power - are genuinely unpublished by AMD, so a reader cannot size a workload against this record. Confidence 0.6 reflects 'the part is real and partly specified'.\n\nINTERCONNECT: PCIe 4.0 with 16 native lanes (16/16 usable) is listed because it is the path for an external GPU or an eGPU chassis; note that as an iGPU it normally communicates to the host over the same fabric rather than over PCIe.\n\nWHY THIS PART IS WORTH A RECORD ANYWAY - it is the most decision-relevant non-CUDA consumer datapoint in this repo. benchmarks/ryzen-ai-max-8060s-qwen35-35b-a3b-decode-tok-s measures 42.04 tok/s for Qwen3.5 35B-A3B (MoE, 3B active) at 100% GPU offload under Ollama, with 154.52 tok/s prompt processing, on an APU using the CPU's unified memory as VRAM. Three things it establishes. (1) An APU iGPU sharing system memory can serve a 35B MoE entirely off the GPU at usable interactive speed. (2) The non-monotonicity is the interesting part and is preserved in that record: the 35B MoE is FASTER than a 9B dense (29.84 tok/s) despite being 3.5x larger, because MoE decode is bandwidth-bound on the ~3B active experts, not the full weight set - the same effect that makes Apple's 30B-A3B row fast, here on AMD silicon. (3) The limit is capacity, not compute: the sibling 122B-A10B MoE at 76 GB had to split 61% GPU / 39% CPU because it does not fit cleanly in the unified pool. Also note the memory-bus contention this record's 256 GB/s figure implies: that bandwidth is shared with the CPU, so a CPU-assisted offload and GPU decode compete for the same bus, which is a real penalty for the partially-offloaded 122B case."
+}

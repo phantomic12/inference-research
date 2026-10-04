@@ -1,0 +1,32 @@
+{
+  "id": "huawei-atlas-300i-duo",
+  "type": "accelerator",
+  "name": "Huawei Atlas 300I Duo inference card (dual 310-series, 48/96 GB)",
+  "vendor": "asic-other",
+  "architecture": "da-vinci (310-series, dual)",
+  "release_year": 2022,
+  "process_nm": 12,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 96,
+  "memory_type": "lpddr4x",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 408,
+  "memory_bandwidth_basis": "Primary source states the CARD-TOTAL figure: LPDDR4X, 48 GB or 96 GB, 'Total bandwidth (entire card): 408 GB/s', ECC. Per-processor bandwidth is not stated but follows as 408/2 = 204 GB/s, consistent with the single-processor cards' 204.8 GB/s. Source cn-huawei-atlas-300i-duo-spec. Note the schema records a single number per record, so the 48 GB bin is under-reported by this field and the per-card basis is stated here explicitly.",
+  "flops": [],
+  "tdp_w": 150,
+  "interconnect": [
+    "pcie-gen4"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "THE HIERARCHY POINT: this card is the one that shows what Huawei actually does when memory capacity and memory bandwidth come into conflict, and the answer is instructive for anyone modelling memory-bound inference: going from one 310-series processor to two on the same board exactly doubles capacity to 96 GB while leaving bandwidth essentially flat per die at ~204 GB/s. Arithmetic intensity therefore HALVES relative to the 24 GB single card. The 96 GB bin is the only way to hold a 70B-class model in FP16 on an Ascend inference card without sharding, and the price of that capacity is a worse roofline position, not a better one - the band gets wider and no more data arrives. Compare directly to a single HBM GPU part: 96 GB at 408 GB/s is roughly 4.7x less bandwidth per byte than a same-generation 80 GB HBM card. Form factor is FHFL single-slot 10.5 inches, 150 W, 910 g, PCIe Gen4 x16, same PCI ID base (0x19E5:0xD500) with a different subsystem device ID (0x0110 vs 0x0100 on the Pro), which is a useful confirmation that these are the same NPU in a different packaging. Codec: 256-channel 1080p30 decode (or 32x 4K60), 48-channel 1080p30 encode, 4K JPEG at 1024 FPS decode. Also splits into up to 7 virtual NPUs per processor, so 14 virtual instances on one card. A community-comparative Llama 3 measurement (~150 tok/s at 96 GB versus ~220 tok/s for an RTX 4090) is the only public throughput datapoint I could find for this silicon; it is a hobbyist report, not a benchmark, and is not recorded as a benchmark record.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "cn-huawei-atlas-300i-duo-spec",
+    "cn-huawei-atlas-300i-pro-spec"
+  ]
+}

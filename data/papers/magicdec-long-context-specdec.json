@@ -1,0 +1,40 @@
+{
+  "id": "magicdec-long-context-specdec",
+  "name": "MagicDec: Breaking the Latency-Throughput Tradeoff for Long Context Generation with Speculative Decoding",
+  "arxiv_id": "2408.11049",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "speculative-decoding",
+  "authors": [
+    "Ranajoy Sadhukhan",
+    "Jian Chen",
+    "Zhuoming Chen",
+    "Vashisth Tiwari",
+    "Ruihang Lai",
+    "Jinyuan Shi",
+    "Ian En-Hsu Yen",
+    "Avner May",
+    "Tianqi Chen",
+    "Beidi Chen"
+  ],
+  "problem": "Conventional wisdom says speculative decoding only helps at SMALL batch sizes, so it is useless in the high-throughput serving regime that production actually runs in.",
+  "mechanism": "Analyses how the bottleneck SHIFTS as batch size and sequence length grow: at small batch decode is bandwidth-bound (speculation helps), but at large batch and long context the KV CACHE becomes the binding constraint. Attacks the KV bottleneck directly by running the DRAFT MODEL with a SPARSE KV CACHE, which scales with sequence length and batch size while the target keeps a dense cache. Adds a theoretical model that selects the optimal drafting strategy for a given configuration rather than a fixed one.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm",
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": "Up to 2.51x speedup for Llama3.1-8B at batch sizes 32 to 256 for moderate-to-long sequences, on various hardware and task types. This is the record that makes the batch-size caveat falsifiable: the batch sizes 32-256 are stated, and the gain is claimed precisely in the regime where the field had assumed speculation would not help.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "ADOPTION: research-only - the sparse-KV draft-model idea is not in production engines. VENUE NOTE: no venue verifiable via Semantic Scholar, no arXiv comment venue, so venue = arxiv-preprint and year = ArXiv v1 (Aug 2024). This paper is the CORRECTIVE to every batch-1 speedup in this sub-area, and is the record to cite when someone quotes 2.7x-6.5x from Leviathan/EAGLE/EAGLE-3 without a batch size: at batch 1 that is real, and MagicDec shows a different and smaller gain mechanism is available at batch 32-256 where the batch-1 result does not transfer. The honest reading is that these are two different operating points, not competing claims. Also note 'various types of hardware' in the abstract - the per-hardware attribution is not recoverable from the abstract, so hardware_relevance lists accelerator families the class of work uses rather than a per-configuration attribution.",
+  "confidence": 0.85,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-eff-magicdec"
+  ]
+}

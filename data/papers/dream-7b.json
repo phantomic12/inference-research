@@ -1,0 +1,38 @@
+{
+  "id": "dream-7b",
+  "type": "paper",
+  "name": "Dream 7B: Diffusion Large Language Models",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-arch-2508-15487"
+  ],
+  "arxiv_id": "2508.15487",
+  "venue": "arxiv-preprint",
+  "year": 2025,
+  "category": "other",
+  "authors": [
+    "Jiacheng Ye",
+    "Zhihui Xie",
+    "Lin Zheng",
+    "Jiahui Gao",
+    "Zirui Wu"
+  ],
+  "affiliations": [
+    "Huawei Noah's Ark Lab",
+    "HKUST"
+  ],
+  "problem": "Autoregressive models generate strictly sequentially, so decoding cannot be parallelised and in-context infilling or arbitrary-order generation is awkward.",
+  "mechanism": "A 7B diffusion language model that refines sequences in parallel through iterative denoising instead of generating left to right, achieving its results through simple training techniques rather than a new architecture: autoregressive-based LLM INITIALISATION (start from an existing AR checkpoint rather than from scratch, which is the main practical difference from LLaDA), context-adaptive token-level noise scheduling, and a diffusion backbone built on an AR LLM. Generation: begin from a masked or noised sequence, iterate the denoiser, and unmask tokens under a confidence schedule. FLOP consequence as in all masked diffusion LMs: T full-sequence forward passes for an L-token output, so FLOPs are roughly T times one full-length prefill and are much higher than autoregressive decoding; the payoff is parallel generation of many positions per step plus the flexibility of arbitrary-order generation, infilling, and a tunable quality-versus-speed tradeoff via the step count and per-step token budget. Open weights are released.",
+  "hardware_relevance": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "speedup_reported": "Reports consistently outperforming existing diffusion language models on general, mathematical and coding tasks, plus superior planning ability and inference flexibility including arbitrary-order generation, infilling, and tunable quality-speed trade-offs. No tok/s speedup ratio with baseline and settings is published in the abstract, so the claim being recorded is the tunable quality-speed frontier via denoising-step count, not a speedup.",
+  "adoption": "in-upstream-engine",
+  "code_url": null,
+  "open_weights": true,
+  "notes": "arXiv preprint; no journal-ref. Engine support verified: llama.cpp carries LLM_ARCH_DREAM, lists it in llm_arch_is_diffusion(), and has a dedicated conversion/dream.py. No native Dream row appears in the vLLM supported-models list consulted. The AR-initialisation trick is the practically important detail because it means diffusion LMs no longer require the from-scratch budget LLaDA needed, which is why adoption among practitioners picked up in 2025. Model weights and code were released by the authors."
+}

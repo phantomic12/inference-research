@@ -1,0 +1,29 @@
+{
+  "id": "paper-flute",
+  "type": "paper",
+  "name": "Fast Matrix Multiplications for Lookup Table-Quantized LLMs",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-quant-flute"
+  ],
+  "arxiv_id": "2407.10960",
+  "venue": "emnlp",
+  "year": 2024,
+  "category": "quantization",
+  "authors": [
+    "Elhoushi, Shrivastava, Liskovich, Keutzer, Bhandari"
+  ],
+  "affiliations": [
+    "UC Berkeley / Amazon"
+  ],
+  "problem": "Non-uniform lookup-table quantization at awkward bit widths (e.g. 3 bits) makes the dequant and matmul kernel slow, which can eat the entire bandwidth saving.",
+  "mechanism": "FLUTE is a kernel, not a format: offline RESTRUCTURING of the quantized weight matrix to minimize bit-manipulation work during unpacking, plus vectorization and DUPLICATION of the lookup table so shared-memory bandwidth is not the bottleneck. Offline restructuring is the trick - the deployment-time kernel becomes cheaper because of work done once at quantization time.",
+  "hardware_relevance": [],
+  "speedup_reported": "Paper's own claim (abstract): at batch sizes < 32 and quantization group size 128 - the regime the paper correctly identifies as typical LLM inference - the FLUTE kernel is 2-4x FASTER THAN EXISTING GEMM KERNELS, because weight movement rather than arithmetic is the bottleneck. The compression ratio is whatever the underlying LUT format is (3-bit here); the quality cost belongs to the format, not to FLUTE. The honest reading: this is a single-sequence-decode kernel win, and the batch-size ceiling is explicit.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/keroro824/Flute",
+  "open_weights": null,
+  "notes": "SLUG RENAMED 2026-10-04 (parent agent): was 'flute', colliding with the quantization record of the same id, which made every bare-slug cross-reference ambiguous. Inbound refs (['scheme']) all mean the quantization record, so none needed repointing; papers are cited via `sources`, never by bare slug. arXiv ID 2407.10960 verified via /abs/. Venue EMNLP 2024 (Findings) from Semantic Scholar; year = venue year 2024. Repo already has source qlab-flute-paper and a quantization/flute record for the format. arXiv ID and title verified by fetching https://arxiv.org/abs/2407.10960 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2407.10960) unless the record's notes say otherwise."
+}

@@ -1,0 +1,31 @@
+{
+  "id": "qualcomm-ai200",
+  "type": "accelerator",
+  "name": "Qualcomm Cloud AI 100 Ultra (AI200 accelerator)",
+  "vendor": "qualcomm",
+  "architecture": "qualcomm ai core (successor to Cloud AI 100; AI200)",
+  "release_year": 2023,
+  "process_nm": null,
+  "form_factors": [
+    "dual-slot",
+    "full-height",
+    "pcie"
+  ],
+  "vram_gb": 128,
+  "memory_type": "lpddr4x",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 548,
+  "memory_bandwidth_basis": "Qualcomm's Cloud AI 100 Ultra product brief (source acc2-qcom-cloud-ai100-ultra-product-brief) prints the On-card DRAM cell as '128 GB LPR4x 548 GB/s' - capacity and bandwidth in ONE cell, with no memory-bus width published anywhere in the brief. memory_bus_bit is therefore null and is NOT back-computed. The 548 GB/s is Qualcomm's own system-level figure and is what is stored; it is 4x the Cloud AI 100 base part's 137 GB/s, tracking the 4x capacity (32 GB -> 128 GB) at the same LPDDR4X technology. Do not read 548 as bus x pin rate.",
+  "flops": [],
+  "tdp_w": 150,
+  "unified_memory": false,
+  "consumer": false,
+  "status": "draft",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "acc2-qcom-cloud-ai100-ultra-product-brief",
+    "acc2-qcom-cloud-ai200-ondq"
+  ],
+  "notes": "ADDED 2026-10-03 alongside qualcomm-ai100, because the two are one product line and separating them would misdescribe it. The part is the Qualcomm AI200 accelerator sold on a card Qualcomm still brands 'Cloud AI 100 Ultra' - a naming inconsistency in Qualcomm's own materials, so this record's name carries both labels deliberately. FLOPS IS EMPTY AND MUST STAY EMPTY unless a Qualcomm source publishes an FP16/FP32 rate. Qualcomm's Ultra brief states 'ML capacity (INT8): 870 TOPs' - the only throughput figure anywhere - and Qualcomm's own OnQ AI200 blog (source acc2-qcom-cloud-ai200-ondq) publishes no TOPS, no TFLOPS, no capacity and no TDP. 870 TOPS-INT8 cannot be honestly entered into a TFLOPS-keyed field, and halving or doubling it to manufacture an FP16 number is exactly the class of error this audit exists to eliminate. Note also that the base Cloud AI 100 brief tops out at 'Up to 400 TOPS' while the Ultra says '870 TOPs', a 2.2x step, whereas capacity goes 32 GB -> 128 GB (4x) and bandwidth 137 -> 548 GB/s (4x) - so the compute-per-byte ratio actually FALLS by roughly half on the Ultra relative to the base card, because the Ultra's growth is capacity-led for large-model residency rather than arithmetic-led. That is the strategically important fact about this part: 128 GB of ECC-adjacent off-package DRAM on a 150 W PCIe card is a capacity play for holding big models resident, not a throughput play. Fully published on the brief and stored above: Form factor 'PCIe FH3/4L'; TDP '150W'; ML capacity (INT8) '870 TOPs'; On-die SRAM '576 MB' (4x the base part's 144 MB - the fastest on-package memory this family has, and the number that actually helps decode); On-card DRAM '128 GB LPR4x 548 GB/s'; Host interface 'PCIe Gen 4, 16 Lanes'; 'Number of cores: 64 AI cores on single card' (vs 'up to 16 cores' on the base Cloud AI 100 - a 4x core-count step that is what drives the 400->870 TOPS gap rather than a precision change). Marketing on the sheet: 'Best Perf/TCO$', '100B Gen AI models on a single card', 'Software tools for frictionless porting of pre-trained models', '8x larger models within a single server'. Left null because it is not published: process node, memory bus width, per-pin data rate, any FP16/FP32/INT8-dense-versus-sparse distinction (Qualcomm makes no sparsity statement for this family, so nothing should be flagged dense:false), and clock speeds. A later generation, Qualcomm AI250, is announced on near-memory computing ('greater than 10x' efficiency claims) but has no published spec sheet and is deliberately not recorded here."
+}

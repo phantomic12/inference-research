@@ -1,0 +1,31 @@
+{
+  "id": "paper-shadowkv",
+  "type": "paper",
+  "name": "ShadowKV: KV Cache in Shadows for High-Throughput Long-Context LLM Inference",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-quant-shadowkv"
+  ],
+  "arxiv_id": "2410.21465",
+  "venue": "icml",
+  "year": 2025,
+  "category": "kv-cache",
+  "authors": [
+    "Li, Zhang, et al."
+  ],
+  "affiliations": [
+    "Tsinghua IIIS"
+  ],
+  "problem": "Dynamic sparse attention either does not cut GPU memory enough, or gets large decode latency by offloading the KV cache to CPU memory.",
+  "mechanism": "Split the KV cache by ASYMMETRY rather than recency: keep a LOW-RANK key cache resident on the GPU and offload the VALUE cache to CPU. Then, instead of streaming values back, reconstruct MINIMAL SPARSE KV pairs on the fly - select which tokens matter, reconstruct their keys from the low-rank GPU-resident representation, and fetch only those values. The selection strategy is accurate specifically so that the reconstruction error does not show up in the output.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "speedup_reported": "Paper's own claim (abstract): on RULER, LongBench and Needle-In-A-Haystack with Llama-3.1-8B, Llama-3-8B-1M, GLM-4-9B-1M, Yi-9B-200K, Phi-3-Mini-128K and Qwen2-7B-128K, supports up to 6x LARGER BATCH SIZES and boosts throughput by up to 3.04x ON AN A100 GPU, without sacrificing accuracy. COMPRESSION RATIO: low-rank key cache + CPU-offloaded value cache (not a bit-width scheme). QUALITY COST: 'without sacrificing accuracy' per the abstract - the batch-size increase (6x) is the more useful operating point than the throughput number.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "SLUG RENAMED 2026-10-04 (parent agent): was 'shadowkv', colliding with the quantization record of the same id, which made every bare-slug cross-reference ambiguous. Inbound refs ([]) all mean the quantization record, so none needed repointing; papers are cited via `sources`, never by bare slug. arXiv ID 2410.21465 verified via /abs/; v3. Venue ICML 2025 from Semantic Scholar; year = venue year 2025 (v1 2024-10-28). hardware_relevance names the A100-80GB because the 3.04x throughput claim is explicitly an A100 measurement. Repo already has source qlab-shadowkv-paper. arXiv ID and title verified by fetching https://arxiv.org/abs/2410.21465 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2410.21465) unless the record's notes say otherwise."
+}

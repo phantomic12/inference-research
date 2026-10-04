@@ -1,0 +1,31 @@
+{
+  "id": "infini-attention-infinite-context",
+  "name": "Leave No Context Behind: Efficient Infinite Context Transformers with Infini-attention",
+  "arxiv_id": "2404.07143",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "long-context",
+  "authors": [
+    "Tsendsuren Munkhdalai",
+    "Manaal Faruqui",
+    "Siddharth Gopal"
+  ],
+  "problem": "Scaling Transformers to infinitely long inputs requires memory and computation that grow without bound, and standard attention cannot.",
+  "mechanism": "Infini-attention incorporates a COMPRESSIVE MEMORY into vanilla attention and builds BOTH masked local attention AND long-term LINEAR attention mechanisms inside a SINGLE transformer block. The compressive memory keeps a bounded-size persistent state, so memory and compute per step are constant in sequence length rather than linear, while the local window preserves exact short-range behaviour. Enables fast STREAMING inference because no new parameters or state resizing are needed as the stream grows.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm"
+  ],
+  "speedup_reported": "Claims minimal bounded memory parameters and fast streaming inference, demonstrated on long-context language-modeling benchmarks, 1M-SEQUENCE-LENGTH passkey context-block retrieval, and 500K-LENGTH book summarisation, with 1B and 8B models. NO numeric throughput or latency multiplier is quoted in the abstract - the claim is bounded memory plus feasibility at 1M/500K lengths, so speedup_reported records the qualitative claim and the evaluation scale rather than inventing a multiplier.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "ADOPTION: research-only - no production engine ships Infini-attention as a default attention kernel, and there are no released long-context checkpoints built on it, so it remains a research attention variant. VENUE NOTE: no peer-reviewed venue verifiable via Semantic Scholar and the arXiv comment carries only a page/figure/table count, so venue = arxiv-preprint, year = ArXiv v1 (Apr 2024). INCLUDED AS THE ARCHITECTURAL END OF THE LONG-CONTEXT SLICE, and its selling point is precisely the property this repo cares about: memory and compute per decode step are BOUNDED and independent of context length, which is the structural alternative to KV-cache eviction and compression. It is the cleanest example of a different KIND of solution from pap-eff-cacheblend (reuse the KV) and pap-eff-splitwise (move the work) - here the state itself never grows. The passkey-retrieval result at 1M is an important caveat to carry: retrieving a planted string proves the memory is wired up, not that the model USES long context well - it does not establish anything about reasoning over long contexts.",
+  "confidence": 0.8,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-eff-infini-attention"
+  ]
+}

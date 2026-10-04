@@ -1,0 +1,36 @@
+{
+  "id": "splade",
+  "type": "paper",
+  "name": "SPLADE: Sparse Lexical and Expansion Model for First Stage Ranking",
+  "arxiv_id": "2107.05720",
+  "venue": "other",
+  "year": 2021,
+  "category": "retrieval",
+  "authors": [
+    "Thibault Formal",
+    "Benjamin Piwowarski",
+    "Stephane Clinchant"
+  ],
+  "affiliations": [
+    "Naver Labs Europe"
+  ],
+  "problem": "Dense retrievers lose the exact-match and interpretability properties of bag-of-words, while learned sparse retrievers had not matched their effectiveness.",
+  "mechanism": "A learned sparse first-stage ranker: an MLM-style encoder whose output layer produces term weights, trained end to end with EXPLICIT SPARSITY REGULARISATION and a log-saturation effect on weights, so representations are highly sparse and inherit inverted-index efficiency. Term weights are a learned version of BM25 expansion - they encode both importance and document frequency effects.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-l4",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": "Competitive with state-of-the-art dense and sparse methods while trained end to end in a single stage; the paper also explicitly studies the effectiveness/efficiency trade-off by varying the sparsity-regularisation weight. Baselines named, but no absolute latency or hardware throughput figures.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/naver/splade",
+  "open_weights": true,
+  "notes": "Venue SIGIR 2021 short paper (ACM DOI 10.1145/3404835.3463031; arXiv comment '5 pages, SIGIR'21 short paper'). WHY IT MATTERS FOR INFERENCE COST: a sparse embedding is a few hundred non-zero term weights rather than a dense 768/1024-dim vector, so the first-stage scan moves far fewer bytes and can run on an inverted index or a CPU - the SPLADE-MLP variant does exactly that. It is also the mechanism behind the sparse head of M3-Embedding (pap-mm-bge-m3), which serves both retrieval functions from one checkpoint. First-stage-only use is the normal deployment: sparse retrieval then dense/late-interaction rerank.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-splade"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "id": "self-consistency-marginalise-paths",
+  "name": "Self-Consistency Improves Chain of Thought Reasoning in Language Models",
+  "arxiv_id": "2203.11171",
+  "venue": "iclr",
+  "year": 2023,
+  "category": "inference-time-compute",
+  "authors": [
+    "Xuezhi Wang",
+    "Jason Wei",
+    "Dale Schuurmans",
+    "Quoc Le",
+    "Ed Chi",
+    "Sharan Narang",
+    "Aakanksha Chowdhery",
+    "Denny Zhou"
+  ],
+  "problem": "Chain-of-thought prompting still uses NAIVE GREEDY decoding, which commits to the first sampled reasoning path even when several paths would have reached the right answer.",
+  "mechanism": "DECODING STRATEGY, not a model change. Sample a diverse set of reasoning paths instead of only the greedy one, then select the most CONSISTENT answer by marginalising out the sampled reasoning paths - i.e. aggregate the final answers across sampled paths and take the majority. Exploits the intuition that a complex reasoning problem admits multiple ways of thinking leading to one correct answer.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Not a latency paper - it is a deliberate ACCURACY-FOR-COMPUTE TRADE, and the trade is the point. Accuracy gains: GSM8K +17.9%, SVAMP +11.0%, AQuA +12.2%, StrategyQA +6.4%, ARC-challenge +3.9% over greedy chain-of-thought. The compute side is unquantified in the abstract because it depends entirely on the number of sampled paths, which the operator chooses. COST IMPLICATION recorded explicitly: self-consistency multiplies output tokens by the sample count, and since decoding is bandwidth-bound the latency is close to LINEAR in sample count - so this is the cheapest-to-implement and most expensive-to-serve technique in this sub-area, with no engine-level mitigation.",
+  "adoption": "in-production",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "ADOPTION: in-production in the sense that self-consistency is a decoding parameter any server exposes (num_samples / n>1) and needs no code changes; whether a given deployment enables it is an application choice. VENUE: ICLR 2023 - corroborated by the arXiv comment field, which explicitly says 'Published at ICLR 2023 ... v4: camera ready version at ICLR 2023', so this venue claim rests on the primary source rather than secondary aggregation. THE STRUCTURAL POINT FOR THIS REPO: together with chain-of-thought (pap-eff-chain-of-thought-prompting) and budget forcing (pap-eff-s1-budget-forcing), this record is the clearest statement that inference-time compute is bought in OUTPUT TOKENS, which are the bandwidth-bound quantity. Any system-level speedup for reasoning models should therefore be reported against a stated token count, not against a stated wall-clock time alone.",
+  "confidence": 0.9,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-eff-self-consistency"
+  ]
+}

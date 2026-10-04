@@ -1,0 +1,36 @@
+{
+  "id": "shortgpt-layer-pruning",
+  "name": "ShortGPT: Layers in Large Language Models are More Redundant Than You Expect",
+  "arxiv_id": "2403.03853",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "pruning",
+  "authors": [
+    "Xin Men",
+    "Mingyu Xu",
+    "Qingyu Zhang",
+    "Bingning Wang",
+    "Hongyu Lin",
+    "Yaojie Lu",
+    "Xianpei Han",
+    "Weipeng Chen"
+  ],
+  "problem": "Deep LMs contain many near-duplicate layers and some layers that barely affect function, but pruning them requires complex machinery.",
+  "mechanism": "Defines BLOCK INFLUENCE (BI), a metric for a layer's significance in the LLM, computed from similarity between a layer's input and output hidden representations (cosine similarity: BI = 1 - max cos-sim means the layer changes the representation most). Pruning is then plain LAYER REMOVAL - delete the lowest-BI layers outright - rather than structured pruning with masks or low-rank approximations.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm"
+  ],
+  "speedup_reported": "Claims to significantly outperform prior state-of-the-art MODEL PRUNING methods, and is ORTHOGONAL to quantization-like methods, enabling further combined reduction in parameters and computation. NO numeric speedup multiplier is stated in the abstract, so speedup_reported deliberately records the qualitative claim and the orthogonality property rather than inventing a number. Pruning fraction and its effect on quality are in the paper body, not the abstract, and are not recorded here.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "ADOPTION: research-only - layer removal is trivially implementable and hence widely TRIED, but no production engine ships a ShortGPT-derived depth configuration for any mainline checkpoint, because the layers to drop are checkpoint- and task-specific. INCLUDED because it is the cheapest possible depth-pruning result and therefore the control case against LayerSkip (pap-eff-layerskip) and Mixture-of-Depths (pap-eff-mixture-of-depths): it shows how much of the 'LLMs have redundant depth' claim is obtainable with NO training and NO early-exit machinery at all. VENUE NOTE: no venue verifiable via Semantic Scholar and no venue in the arXiv comment, so venue = arxiv-preprint, year = ArXiv v1 (Mar 2024). CAVEAT: pruning-by-removal is not lossless - quality degradation is traded against layer count - so it should never be cited as a lossless inference speedup, unlike every speculative-decoding record in this set.",
+  "confidence": 0.8,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-eff-shortgpt"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "paper-cachegen",
+  "type": "paper",
+  "name": "CacheGen: KV Cache Compression and Streaming for Fast Large Language Model Serving",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-quant-cachegen"
+  ],
+  "arxiv_id": "2310.07240",
+  "venue": "other",
+  "year": 2024,
+  "category": "kv-cache",
+  "authors": [
+    "Shi, Yao, et al."
+  ],
+  "affiliations": [
+    "University of Chicago"
+  ],
+  "problem": "Reusing a cached KV context across requests saves prefill compute but the KV tensors are large, so fetching them over the network dominates context-loading delay.",
+  "mechanism": "A CONTEXT-TRANSPORT codec, not a compute optimization: a custom tensor encoder exploits the distributional properties of KV caches (heavy-tailed channels, known positional structure) to encode the cache into a compact bitstream with negligible decode overhead, and the compression level is ADAPTED PER REGION of the context to current available bandwidth - raising compression when bandwidth drops, and recomputing a region on the fly when compression would cost too much quality.",
+  "hardware_relevance": [],
+  "speedup_reported": "Paper's own claim (abstract): compared to recent systems that reuse the KV cache, CacheGen REDUCES THE KV CACHE SIZE BY 3.5-4.3x AND THE TOTAL DELAY in fetching and processing contexts by 3.2-3.7x, 'with negligible impact on the LLM response quality'. COMPRESSION RATIO: 3.5-4.3x on the encoded KV stream (an entropy/structured codec, so the on-disk ratio is not a bit width). QUALITY COST: 'negligible impact' - no paired delta in the abstract. This is a network-bandwidth paper: the win requires a serving system that fetches KV from remote or shared storage.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/University-of-Chicago-KSL/CacheGen",
+  "open_weights": null,
+  "notes": "SLUG RENAMED 2026-10-04 (parent agent): was 'cachegen', colliding with the quantization record of the same id, which made every bare-slug cross-reference ambiguous. Inbound refs ([]) all mean the quantization record, so none needed repointing; papers are cited via `sources`, never by bare slug. arXiv ID 2310.07240 verified via /abs/; v6. Venue SIGCOMM 2024 from Semantic Scholar and the arXiv comment field ('SIGCOMM'24'); SIGCOMM is NOT in this schema's venue enum, so venue='other' and the real venue is named in notes. Year = venue year 2024. Repo already has source qlab-cachegen-paper and a quantization/cachegen record. arXiv ID and title verified by fetching https://arxiv.org/abs/2310.07240 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2310.07240) unless the record's notes say otherwise."
+}

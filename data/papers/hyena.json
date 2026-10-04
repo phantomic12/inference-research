@@ -1,0 +1,37 @@
+{
+  "id": "hyena",
+  "type": "paper",
+  "name": "Hyena Hierarchy: Towards Larger Convolutional Language Models",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-hyena"
+  ],
+  "arxiv_id": "2302.10866",
+  "venue": "icml",
+  "year": 2023,
+  "category": "attention",
+  "authors": [
+    "Poli, Michael",
+    "Massaroli, Stefano",
+    "Nguyen, Eric",
+    "Fu, Daniel Y."
+  ],
+  "affiliations": [
+    "Stanford University",
+    "Princeton University",
+    "Carnegie Mellon University"
+  ],
+  "problem": "Existing subquadratic attention replacements - low-rank and sparse approximations - have to be mixed with dense attention layers to match Transformer quality, so there is no single subquadratic operator that stands alone.",
+  "mechanism": "A single implicit long-convolution operator, Hyena, built by interleaving implicitly parameterised long convolutions with data-controlled gating (multiplicative gates driven by the input). The implicit parameterisation (via an MLP generating the convolution kernel weights) is what allows a single operator to have the subquadratic structure while retaining the expressivity that previously forced the hybrid design.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "speedup_reported": "Paper's own claims (abstract): more than 50 points of accuracy improvement over state-space and other implicit/explicit methods on recall and reasoning at sequence lengths of thousands to hundreds of thousands of tokens; reaching Transformer quality on WikiText103 and The Pile with a 20% reduction in training compute at sequence length 2K; Hyena operators are 2x faster than highly optimised attention at sequence length 8K and 100x faster at sequence length 64K. The speedup figures are operator-level with explicit sequence lengths, which is the right kind of claim.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/HazyResearch/hyena",
+  "open_weights": null,
+  "notes": "arXiv ID 2302.10866 verified via abs-page meta tags on 2026-10-03; title matches. Venue CORRECTED from the source record's 'arXiv preprint; no journal_ref': OpenReview returns venue='ICML 2023 OralPoster', venueid='ICML.cc/2023/Conference' for the exact title. venue=icml, year=2023. adoption=research-only verified by absence: Hyena is in transformers' HYBRID_ATTENTION_MODELS_TO_HYBRID_CACHE_MAPPING-style model lists at most indirectly - no Hyena model file in vLLM's registry, none in SGLang's 248-file models directory, and no Hyena cache layer in transformers cache_utils.py (which has the linear-attention layers that serve the Mamba/RWKV/BASED family but no Hyena). The 100x-at-64K operator claim is real and worth keeping, but an operator speedup at 64K says nothing about decode throughput, where Hyena's recurrence would have to compete with SSM kernels that ARE shipped."
+}

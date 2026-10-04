@@ -1,0 +1,29 @@
+{
+  "id": "sparsegpt",
+  "type": "paper",
+  "name": "SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-quant-sparsegpt"
+  ],
+  "arxiv_id": "2301.00774",
+  "venue": "icml",
+  "year": 2023,
+  "category": "pruning",
+  "authors": [
+    "Frantar, Hoefler, Alistarh"
+  ],
+  "affiliations": [
+    "IST Austria / IST-DASLab"
+  ],
+  "problem": "One-shot pruning of 100B+ parameter LLMs to 50% sparsity was thought to require retraining or intractable second-order computation.",
+  "mechanism": "OBS-style layerwise pruning: for each linear layer compute the inverse second-moment matrix of the inputs (H = 2XX^T) from a small calibration set, Cholesky-factorize it, and prune weights in Cholesky order using the same layerwise error-compensation structure as GPTQ, choosing per-column which weights to zero so the layer-output error stays minimal. Because the pruning decision compensates for itself across columns, no weight reconstruction or iterative solver is needed - and it composes with quantization, so a model can be pruned AND quantized in the same pass.",
+  "hardware_relevance": [],
+  "speedup_reported": "Paper's own claim (abstract): first demonstration that GPT-family models can be pruned to at least 50% SPARSITY IN ONE SHOT with no retraining and minimal accuracy loss; 60% UNSTRUCTURED sparsity with 'negligible increase in perplexity' - more than 100 BILLION weights ignorable at inference; executes on OPT-175B and BLOOM-176B IN UNDER 4.5 HOURS. COMPRESSION RATIO: 2x at 50% sparsity, 2.5x at 60%. QUALITY COST: 'negligible increase in perplexity' at 60% unstructured - note that 60% UNSTRUCTORED has no hardware speedup at all on any shipping accelerator, so the compression ratio here is a memory number only. The method also generalizes to 2:4 and 4:8, which is where it becomes a speedup.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/IST-DASLab/sparsegpt",
+  "open_weights": null,
+  "notes": "arXiv ID 2301.00774 verified via /abs/; Semantic Scholar independently returns ICML 2023. Year = venue year 2023. The distinction between 50%/60% UNSTRUCTURED sparsity (memory only) and 2:4 SEMI-STRUCTURED sparsity (real Tensor Core speedup) is the single most mis-quoted thing about this paper and is recorded explicitly here. arXiv ID and title verified by fetching https://arxiv.org/abs/2301.00774 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2301.00774) unless the record's notes say otherwise."
+}

@@ -1,0 +1,36 @@
+{
+  "id": "mamba-2",
+  "type": "paper",
+  "name": "Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-mamba-2"
+  ],
+  "arxiv_id": "2405.21060",
+  "venue": "icml",
+  "year": 2024,
+  "category": "ssm",
+  "authors": [
+    "Tri Dao",
+    "Albert Gu"
+  ],
+  "affiliations": [
+    "Princeton University",
+    "Carnegie Mellon University"
+  ],
+  "problem": "Mamba and attention looked like different families of sequence models, and there was no principled account of when or why one should be preferred - which made it hard to tell whether the SSM's weaknesses were architectural or incidental.",
+  "mechanism": "State Space Duality (SSD). Show that SSMs and variants of attention are connected through decompositions of structured semiseparable matrices, which yields a single framework in which Mamba's selective SSM can be re-expressed and then refined. The refined Mamba-2 layer uses a structured scalar-descent formulation of the delta rule over an SSD representation, which maps onto matrix-multiplication shapes that tensor cores handle natively - the reason the speedup exists.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm"
+  ],
+  "speedup_reported": "Paper's own claim (abstract): the Mamba-2 core layer, a refinement of Mamba's selective SSM, is 2-8x FASTER than Mamba's layer while remaining competitive with Transformers on language modelling. The baseline is Mamba's own layer - this is a layer-level kernel claim, not an end-to-end serving claim, and should be recorded as such.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/state-spaces/mamba",
+  "open_weights": true,
+  "notes": "arXiv ID 2405.21060 verified via abs-page meta tags on 2026-10-03; title matches. Venue icml confirmed twice: arXiv comment 'ICML 2024' and OpenReview DBLP mirror with venue='ICML 2024'; a direct OpenReview search for the title returns a DBLP record rather than an ICML.cc venueid, so the comment field plus DBLP is the evidence chain. adoption=in-upstream-engine verified in source: vLLM has vllm/model_executor/models/mamba2.py AND a dedicated v1 attention backend vllm/v1/attention/backends/mamba2_attn.py, plus mamba/ops/replayssm_config.py; SGLang ships mamba2.py; transformers ships models/mamba2. A dedicated engine attention backend is stronger evidence than a model file alone, so the speedup claim is reflected in shipped scheduling code. Note the FA2 comparison in the mechanism: Mamba-2's 2-8x is against the Mamba layer, NOT against FlashAttention-2 - easy to misread and worth keeping explicit. open_weights=true."
+}

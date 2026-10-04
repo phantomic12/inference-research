@@ -1,0 +1,29 @@
+{
+  "id": "paper-gptq",
+  "type": "paper",
+  "name": "GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-quant-gptq"
+  ],
+  "arxiv_id": "2210.17323",
+  "venue": "arxiv-preprint",
+  "year": 2022,
+  "category": "quantization",
+  "authors": [
+    "Frantar, Ashkboos, Hoefler, Alistarh"
+  ],
+  "affiliations": [
+    "IST Austria / IST-DASLab"
+  ],
+  "problem": "Post-training quantization of 100B+ parameter generative models: existing one-shot quantizers lose too much accuracy at 3-4 bits and cannot finish on a feasible compute budget.",
+  "mechanism": "Layer-by-layer weight quantization that rounds each weight to a grid using approximate second-order (OBS) information: for each linear layer compute the inverse Hessian of the layer inputs H = 2XX^T from calibration activations, Cholesky-factorize it, then walk columns in Cholesky order and greedily pick the rounding of each weight that minimises the layer-output error proxy sum_h (w_h - q_h)^2 / [H^-1]_hh, updating the remaining weights after each choice (the error-compensation step). Sequential-column blocking makes it O(n^3) but GPU-parallel across rows.",
+  "hardware_relevance": [],
+  "speedup_reported": "Paper's own claim (abstract, no hardware named): 175B-parameter GPT models quantized to 3 or 4 bits per weight in ~4 GPU-hours, 'more than doubles the compression gains relative to previously-proposed one-shot quantization methods'; first time a 175B model runs generative inference inside a single GPU. QUALITY COST: described only as 'negligible accuracy degradation relative to the uncompressed baseline' in the abstract - the compression ratio is the load-bearing number, not a paired perplexity delta.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/IST-DASLab/gptq",
+  "open_weights": null,
+  "notes": "SLUG RENAMED 2026-10-04 (parent agent): was 'gptq', colliding with the quantization record of the same id, which made every bare-slug cross-reference ambiguous. Inbound refs (['affects', 'scheme', 'supported_formats']) all mean the quantization record, so none needed repointing; papers are cited via `sources`, never by bare slug. arXiv ID 2210.17323 verified by fetching the /abs/ page (title meta matches); v2 2023-03-22. Venue: Semantic Scholar returns arXiv.org only and an OpenReview search for the exact title found no accepted-venue record, so this is recorded as arxiv-preprint - GPTQ was not published at a conference. Year is the arXiv v1 year (2022). The compression ratio (3-4 bit) is stated but the paired quality delta is NOT quantified in the abstract; the repo's quantization/gptq record carries the per-model perplexity numbers. arXiv ID and title verified by fetching https://arxiv.org/abs/2210.17323 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2210.17323) unless the record's notes say otherwise."
+}

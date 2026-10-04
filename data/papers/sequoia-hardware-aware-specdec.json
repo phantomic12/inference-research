@@ -1,0 +1,36 @@
+{
+  "id": "sequoia-hardware-aware-specdec",
+  "name": "Sequoia: Scalable, Robust, and Hardware-aware Speculative Decoding",
+  "arxiv_id": "2402.12374",
+  "venue": "arxiv-preprint",
+  "year": 2024,
+  "category": "speculative-decoding",
+  "authors": [
+    "Zhuoming Chen",
+    "Avner May",
+    "Ruslan Svirschevski",
+    "Yuhsun Huang",
+    "Max Ryabinin",
+    "Zhihao Jia",
+    "Beidi Chen"
+  ],
+  "problem": "Existing speculative-decoding methods cannot scale to large speculation budgets and do not adapt to differing hyperparameters or to different hardware.",
+  "mechanism": "Three components. (1) A DYNAMIC PROGRAMMING algorithm finds the optimal token TREE STRUCTURE for a given speculation budget, making tree shape optimal rather than hand-designed. (2) A novel sampling-and-VERIFICATION method that is robust across decoding TEMPERATURES - most prior work is tuned for greedy/low temperature and degrades badly at high temperature, which is a genuine production gap. (3) A HARDWARE-AWARE tree OPTIMIZER that automatically selects tree size and depth for the specific hardware platform, by measuring hardware characteristics rather than assuming them.",
+  "hardware_relevance": [
+    "nvidia-a100-sxm",
+    "nvidia-l40s"
+  ],
+  "speedup_reported": "Decoding speedup up to 4.04x (Llama2-7B), 3.73x (Llama2-13B), and 2.27x (Vicuna-33B) on an A100. Separately, in the OFFLOADING setting on L40, 0.56 s/token for exact Llama2-70B inference, which the authors report as 9.96x over their own optimized offloading system (5.6 s/token), 9.7x over DeepSpeed-Zero-Inference, and 19.5x over HuggingFace Accelerate. The L40 offloading figure is the interesting one and is the reason this paper is in the repo: it is a per-token LATENCY figure in seconds, not a unitless multiplier, so it is directly comparable to the repo's benchmark records.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": false,
+  "notes": "ADOPTION: research-only - the hardware-aware tree optimiser is not in any production engine, and the temperature-robust verification algorithm is not adopted upstream. VENUE NOTE: no venue verifiable via Semantic Scholar; the arXiv comment field carries no venue claim, so venue = arxiv-preprint, year = ArXiv v1 (Feb 2024). CAVEATS A READER MUST CARRY: the 9.96x is against the AUTHORS' OWN optimized offloading system, so it measures their tree optimiser against their own stack, not against the absence of speculative decoding - exactly the trap the xwind record in this repo documents for a different paper. The 4.04x/3.73x/2.27x series also declines monotonically with model size, which is the honest shape of the result: bigger target models amortise the draft pass better. Sequoia is the only record here where hardware_relevance is load-bearing in the mechanism itself rather than merely in the evaluation.",
+  "confidence": 0.85,
+  "type": "paper",
+  "affiliations": [],
+  "status": "verified",
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-eff-sequoia"
+  ]
+}

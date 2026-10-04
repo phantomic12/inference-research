@@ -1,0 +1,38 @@
+{
+  "id": "dynamicvit",
+  "type": "paper",
+  "name": "DynamicViT: Efficient Vision Transformers with Dynamic Token Sparsification",
+  "arxiv_id": "2106.02034",
+  "venue": "neurips",
+  "year": 2021,
+  "category": "multimodal",
+  "authors": [
+    "Yongming Rao",
+    "Wenliang Zhao",
+    "Benlin Liu",
+    "Jiwen Lu",
+    "Jie Zhou",
+    "Cho-Jui Hsieh"
+  ],
+  "affiliations": [
+    "SenseTime Research"
+  ],
+  "problem": "Vision transformers compute attention over every patch even though the final prediction depends on only a subset of informative tokens.",
+  "mechanism": "A lightweight prediction module scores each token's importance from current features and hierarchically prunes low-scoring tokens at several depths. Trained end-to-end via an attention MASKING strategy that blocks a token's interactions, which makes pruning differentiable. Crucially, pruning is UNSTRUCTURED, so the surviving tokens stay contiguous in memory and remain hardware friendly.",
+  "hardware_relevance": [
+    "nvidia-v100-sxm2-32gb",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-rtx-4090"
+  ],
+  "speedup_reported": "Hierarchically pruning 66% of input tokens reduces FLOPs by 31%-37% and improves throughput by over 40% with an accuracy drop within 0.5% across several vision transformers. This is the rare vision paper with BOTH a FLOP reduction and a measured THROUGHPUT gain - and the accuracy threshold is stated.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/raoyongming/DynamicViT",
+  "open_weights": true,
+  "notes": "NeurIPS 2021 (arXiv comment; the NeurIPS 2021 proceedings index contains the title). Recorded as the origin of DATA-DEPENDENT token count: cost varies per input rather than per model, which is a scheduling problem for a serving system (batched requests now need padding to the batch's largest surviving token set). Its direct VLM successors - pap records visionzip and sparsevlm - keep the data-dependent idea and move the pruning decision to the vision-LM boundary where it actually saves LM prefill.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-dynamicvit"
+  ]
+}

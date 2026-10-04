@@ -1,0 +1,40 @@
+{
+  "id": "flashattention-4",
+  "type": "paper",
+  "name": "FlashAttention-4: Algorithm and Kernel Pipelining Co-Design for Asymmetric Hardware Scaling",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-flashattention-4"
+  ],
+  "arxiv_id": "2603.05451",
+  "venue": "mlsys",
+  "year": 2026,
+  "category": "attention",
+  "authors": [
+    "Zadouri, Ted",
+    "Hoehnerbach, Markus",
+    "Shah, Jay",
+    "Liu, Timmy"
+  ],
+  "affiliations": [
+    "Princeton University",
+    "NVIDIA"
+  ],
+  "problem": "FlashAttention-3's design assumed symmetric hardware scaling, but Blackwell moved the bottleneck: tensor core throughput doubles from H100 to B200 while shared-memory bandwidth, the exponential unit and other functional units scale far more slowly or not at all - so the softmax and rescaling work now dominates the non-MMA side.",
+  "mechanism": "Algorithm/kernel co-design for asymmetric scaling. (1) Redesigned pipelines that exploit fully asynchronous MMA operations and larger tile sizes. (2) Software-emulated exponential and conditional softmax rescaling that moves transcendental work off the slow hardware units. (3) Uses tensor memory plus Blackwell's 2-CTA MMA mode to cut shared-memory traffic and atomic adds in the backward pass. Implemented entirely in CuTe-DSL embedded in Python rather than C++ templates.",
+  "hardware_relevance": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "nvidia-rtx-pro-6000-blackwell",
+    "nvidia-rtx-5090",
+    "nvidia-rtx-5080"
+  ],
+  "speedup_reported": "Paper's own claim (abstract), measured on B200 with BF16: up to 1.3x speedup over cuDNN 9.13 and 2.7x over Triton, reaching up to 1613 TFLOPs/s (71% utilisation). Compile-time claim: 20-30x faster compilation than traditional C++ template approaches thanks to the CuTe-DSL-in-Python implementation. Baselines named explicitly (cuDNN 9.13, Triton), so the comparison is meaningful.",
+  "adoption": "in-upstream-engine",
+  "code_url": "https://github.com/Dao-AILab/flash-attention",
+  "open_weights": null,
+  "notes": "arXiv ID 2603.05451 verified via abs-page citation_title/citation_date on 2026-10-03; title matches exactly. CORRECTION TO THE SOURCE RECORD: pap-attn-flashattention-4 says 'arXiv preprint; no journal_ref' with no venue evidence. OpenReview returns TWO records for this exact title - MLSys.org/2026/Conference with venue='MLSys 2026' (authors Zadouri, Hoehnerbach, Shah, Thakkar, Dao) and an OpenReview.net/Archive duplicate with venue='MLSys26'. So venue=mlsys, year=2026, not arxiv-preprint. The same search for the title 'Hardware-Aware FP4 FlashAttention-4' returns only the FlashAttention-4 MLSys 2026 records and unrelated FP4 papers - no record for the fp4 paper itself - confirming the two slugs are genuinely different works. adoption=in-upstream-engine: this is upstream of the same Dao-AILab/flash-attention repo that vLLM and SGLang already depend on (repo pushed 2026-10-03). Blackwell-only hardware_relevance: the entire thesis is that Blackwell's asymmetric scaling invalidates the Hopper design, so naming Ampere here would be wrong."
+}

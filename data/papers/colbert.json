@@ -1,0 +1,35 @@
+{
+  "id": "colbert",
+  "type": "paper",
+  "name": "ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction over BERT",
+  "arxiv_id": "2004.12832",
+  "venue": "other",
+  "year": 2020,
+  "category": "retrieval",
+  "authors": [
+    "Omar Khattab",
+    "Matei Zaharia"
+  ],
+  "affiliations": [
+    "Stanford University"
+  ],
+  "problem": "BERT-based cross-encoder rerankers must feed every query-document pair through a large network, which scales with the number of candidates.",
+  "mechanism": "LATE INTERACTION: encode query and document INDEPENDENTLY but keep a vector PER TOKEN rather than one pooled vector, then score with a cheap MaxSim - sum over query tokens of the max inner product against that token's document vectors. Document token vectors are precomputed offline, so the expensive encoder runs once per document, not once per query-document pair.",
+  "hardware_relevance": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-v100-sxm2-32gb",
+    "nvidia-l4"
+  ],
+  "speedup_reported": "Executes two orders of magnitude faster and requires four orders of magnitude fewer FLOPs per query than BERT-based cross-encoder ranking, while remaining competitive with BERT-based models and outperforming every non-BERT baseline. Both the baseline class and the two metrics are named. Note the caveat in the mechanism text: the speed comes from precomputation, and the memory cost is paid in the index.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/stanford-futuredata/ColBERT",
+  "open_weights": true,
+  "notes": "Venue SIGIR 2020 (ACM); crossref confirms 'Proceedings of the 43rd International ACM SIGIR Conference on Research and Development in Information Retrieval'. THE CENTRAL SERVING TRADE-OF, which is easy to get backwards: ColBERT does NOT make the index cheaper. Each token gets its own 128-dim vector, so for a 180-token passage that is ~23k floats instead of one 128-dim vector - a roughly 180x index size increase, which the ColBERTv2 paper quantifies as 'an order of magnitude' after compression. What ColBERT buys is query-time compute: the query encoder runs once, and candidate scoring is a sparse matrix product over precomputed vectors. So late interaction moves cost from a compute-bound per-pair transformer to a memory-bound wide scan, and that is why PLAID (pap-mm-plaid) had to exist.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-colbert"
+  ]
+}

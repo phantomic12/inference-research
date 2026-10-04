@@ -1,0 +1,38 @@
+{
+  "id": "llava",
+  "type": "paper",
+  "name": "Visual Instruction Tuning (LLaVA)",
+  "arxiv_id": "2304.08485",
+  "venue": "neurips",
+  "year": 2023,
+  "category": "multimodal",
+  "authors": [
+    "Haotian Liu",
+    "Chunyuan Li",
+    "Qingyang Wu",
+    "Yong Jae Lee"
+  ],
+  "affiliations": [
+    "University of Wisconsin-Madison",
+    "Microsoft Research"
+  ],
+  "problem": "LLMs had strong zero-shot behaviour from instruction tuning but vision-language models had not been shown to benefit from the same recipe.",
+  "mechanism": "Uses a language-only GPT-4 to generate multimodal instruction-following data, then instruction-tunes an end-to-end LMM connecting a vision encoder to an LLM. The architectural contribution that matters here is deliberately minimal: the projector is a single linear layer mapping CLIP image features into the LM embedding space, so no resampler and no learned query tokens.",
+  "hardware_relevance": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-l4",
+    "amd-instinct-mi300x"
+  ],
+  "speedup_reported": "Yields an 85.1% relative score versus GPT-4 on a synthetic multimodal instruction-following dataset; LLaVA + GPT-4 synergy reaches 92.53% on ScienceQA. Quality-only metrics, no latency or throughput disclosure.",
+  "adoption": "in-production",
+  "code_url": "https://github.com/haotian-liu/LLaVA",
+  "open_weights": true,
+  "notes": "NeurIPS 2023 Oral (arXiv comment). LLaVA is the most-influenced open VLM architecture in production - its weights are the base of a large share of deployed VLMs and it is the reference implementation for vLLM/SGLang vision paths. INFERENCE NOTE: because the projector is linear and there is no resampler, LLaVA passes the vision encoder's FULL patch sequence to the LM, so its prefill cost is the highest in this family and scales with image resolution. That is exactly the gap LLaVA-NeXT's anyres tiling, and then VisionZip/SparseVLM pruning, close.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-mm-llava"
+  ]
+}

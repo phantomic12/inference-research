@@ -1,0 +1,37 @@
+{
+  "id": "pyramidkv-paper",
+  "type": "paper",
+  "name": "PyramidKV: Dynamic KV Cache Compression based on Pyramidal Information Funneling",
+  "status": "verified",
+  "confidence": 0.87,
+  "updated": "2026-10-03",
+  "sources": [
+    "pap-attn-pyramidkv-paper"
+  ],
+  "arxiv_id": "2406.02069",
+  "venue": "colm",
+  "year": 2025,
+  "category": "kv-cache",
+  "authors": [
+    "Cai, Zefan",
+    "Zhang, Yichi",
+    "Gao, Bofei",
+    "Liu, Yuliang"
+  ],
+  "affiliations": [
+    "UC Santa Barbara",
+    "Stanford University"
+  ],
+  "problem": "Every KV-cache compression method allocates the SAME budget to every layer, which contradicts how transformers actually route information through depth.",
+  "mechanism": "The observation is Pyramidal Information Funneling: attention is scattered and diffuse in LOWER layers, progressively consolidates into specific contexts in middle layers, and focuses on a few critical tokens (massive activations / attention sinks) in HIGHER layers. PyramidKV therefore allocates a PYRAMIDAL budget - more cache in lower layers, less in higher ones - rather than a uniform one.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "Paper's own claims (abstract), reported as quality-at-budget rather than as a speedup: matches full-KV-cache performance while retaining only 12% of the KV cache (LongBench); in memory-focused settings retaining 0.7% of the KV cache it beats other compression methods by up to 20.5 absolute accuracy points on TREC; and with just 128 retained KV entries LLAMA-3-70B reaches 100.0 accuracy on needle-in-a-haystack. The 12%-of-cache figure is a MEMORY reduction with a quality floor - the serving consequence is batch size, not tok/s.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/mit-han-lab/pyramidkv",
+  "open_weights": null,
+  "notes": "arXiv ID 2406.02069 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. VENUE CORRECTED - the dead agent was likely to record arxiv-preprint, and the arXiv comment field is indeed empty. OpenReview shows BOTH outcomes for this paper: forum with venue='Submitted to ICLR 2025', venueid='ICLR.cc/2025/Conference/Rejected_Submission', and a different forum with venue='COLM 2025', venueid='colmweb.org/COLM/2025/Conference'. The accepted venue is COLM 2025. venue=colm, year=2025. This is the third paper in this batch (after mamba and retnet) whose commonly-cited venue would have been wrong; the pattern is that arXiv comment fields are not a reliable venue source and OpenReview venueid is. DEDUP CHECK: the source note says a quantization record exists under the bare id 'pyramidkv' - verified, data/quantization/pyramidkv.json exists, different record type, no duplicate paper, nothing deleted. adoption=research-only: the paper's budget-allocation idea is a per-layer configuration choice that an engine could honour, but no engine implements a pyramidal KV budget (checked vLLM v1 cache layer, SGLang, transformers cache_utils.py - 24 cache classes, none per-layer-budget)."
+}
