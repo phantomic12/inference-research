@@ -1,0 +1,29 @@
+{
+  "id": "sent-llamacpp-not-the-apple-fast-path",
+  "type": "gotcha",
+  "name": "Counter-consensus worth keeping: on Apple Silicon the corpus does not treat llama.cpp as the default, and nominates MLX instead - so the strongest engine consensus in this slice is vendor-scoped",
+  "class": "toolchain",
+  "symptom": "The 'llama.cpp for single user' consensus is stated for CUDA and AMD hardware in every practitioner thread. On Apple Silicon it is contested, from two directions. In the r/LocalLLaMA engine thread a Mac-only user objects to the framing outright: 'Depends on your hardware! For Macs / Apple Silicon, MLX seems to be a bit ahead in speed.' On Hacker News, two commenters on a September 2026 engine launch independently make the same correction - 'On a Mac the baseline I'd want is MLX, not llama.cpp. llama.cpp isn't the fast path on Apple Silicon for most models people run locally, so a speedup over llama.cpp could still be slower than mlx_lm' - and a second adds that they measure llama.cpp roughly 2x faster than that launch product on an M5 Max, which is a report about the challenger rather than about llama.cpp. The launch's own author concedes the point: 'MLX is generally a better comparison point overall for Apple.' Against that, a third Hacker News commenter defends Metal kernels: 'llama.cpp's metal kernels already saturate memory bandwidth.'",
+  "root_cause": "The consensus and its exception are both about the same thing: llama.cpp's virtue is breadth, and breadth is not what wins when you have exactly one well-supported target with first-class kernel work behind it. On Apple hardware the breadth is not needed and the per-kernel optimisation of MLX is available, so the usual trade flips. Recorded as a vendor-scoped exception to sent-llamacpp-single-user-consensus rather than as a contradiction of it.",
+  "workaround": "On Apple Silicon, benchmark MLX-based engines against each other and treat llama.cpp as the reference baseline rather than as the fast path. Expect the two to be close and expect the ranking to depend on model and quantization.",
+  "severity": "minor",
+  "notes": "The disagreement inside the exception is itself unresolved - one commenter says Metal saturates bandwidth, another says there is 'very little reason not to use one of the more optimized engines' and lists three specific llama.cpp failure modes (not using the best available speculative decoding, using too much VRAM, and a third he does not complete). No measurement is offered by any of them. Read as: on Apple, ask which engine rather than assuming.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "sent-src-reddit-best-inference-engine-1kc4kv2",
+    "sent-src-hn-magnitude-launch-49911995"
+  ],
+  "affects": [
+    "llama-cpp",
+    "mlx-lm"
+  ],
+  "concepts": [
+    "apple-silicon",
+    "mlx",
+    "metal",
+    "kernel-optimisation",
+    "vendor-scoped-consensus"
+  ]
+}

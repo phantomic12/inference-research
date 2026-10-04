@@ -1,0 +1,28 @@
+{
+  "id": "bench-mlperf-v6-1-amd-mi355x-llama2-70b-offline",
+  "type": "benchmark",
+  "name": "AMD 8xMI355X, MLPerf Inference v6.1 Offline: Llama 2 70B on AMD's own node, aggregate output throughput",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-v6-1-amd-mi355x-llama2-offline-log",
+    "bench-mlperf-llama2-70b-interactive-latency-rule"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi355x"
+  ],
+  "interconnect_ids": [],
+  "model": "Llama 2 70B (MLPerf v6.1 submission, FP4 weights)",
+  "format_id": "mxfp4",
+  "metric": "tps_aggregate",
+  "value": 106517,
+  "unit": "output tokens/s (aggregate, harness 'Tokens per second')",
+  "methodology": "AGGREGATE. MLPerf Inference v6.1 Closed division, Datacenter suite, Offline scenario, submitted by AMD itself on Supermicro AS-4126GS-NMR-LCC, 1 node, 8x AMD Instinct MI355X 288GB HBM3e. LOADS: batch size not a fixed published number (closed-loop Offline queue, submitter-chosen scheduler batching); binding conditions are min_duration 600000 ms, min_query_count 2000, early stopping satisfied: Yes. Model shape TOKENS_PER_SAMPLE 267.0. Framework per summary.csv: 'PyTorch 2.10.0+git8514f05, ROCm 7.2.2'; the LLM serving path for this submission is vLLM (the repo's other AMD v6.0/v6.1 records attribute MI355X Llama 2 70B runs to vLLM with matching vLLM version strings), so engine_id is recorded as vllm while noting the row itself names only PyTorch/ROCm. Samples per second 375.84. POWER: has_power=False, design_power_watts=null, no declared cap, no cooling configuration declared. OMITTED BY SOURCE: TP size, KV-cache dtype, concurrency, clock state.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "power_cap": null,
+  "notes": "AMD's own v6.1 MI355X number lands within 2.6% of NVIDIA's DGX B300 on the same model and the same scenario (106517 vs 109277), despite B300 having 270GB against MI355X's 288GB. That near-tie is the most useful single fact in the v6.1 LLM set: on this model at FP4, an 8-GPU AMD node and an 8-GPU NVIDIA node are the same product. Do not upgrade this into a 'MI355X beats B300' claim - the 2.6% is well inside the spread between OEM implementations of the same GPU (Supermicro's MI355X node gives 102243, HPE's gives 102991, Oracle's gives 101553 for this exact scenario, a 1.4% band), and the FP4 formats are not even the same scheme (AMD mxfp4 vs NVIDIA nvfp4)."
+}

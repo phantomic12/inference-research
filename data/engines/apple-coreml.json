@@ -1,0 +1,69 @@
+{
+  "id": "apple-coreml",
+  "type": "engine",
+  "name": "Core ML and coremltools (Apple's on-device model format and converter)",
+  "repo": "apple/coremltools",
+  "languages": [
+    "Python",
+    "C++",
+    "Swift"
+  ],
+  "license": "no machine-detectable license (NOASSERTION on the GitHub API)",
+  "first_release_year": 2024,
+  "design_goal": [
+    "on-device-deployment",
+    "whole-silicon-partition",
+    "app-integration"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "metal",
+    "cpu-avx512",
+    "cpu-avx2",
+    "npu"
+  ],
+  "supported_formats": [
+    "coreml"
+  ],
+  "notable_features": [
+    "A FORMAT AND CONVERTER, not a serving stack, and that distinction is the whole point. coremltools converts a trained model into Core ML, reads/writes and optimizes Core ML models, and lets you verify the conversion on macOS by making predictions with Core ML. Then Xcode integrates it into an app. There is no scheduler, no batching, no KV cache and no HTTP surface here",
+    "THE EXECUTION MODEL IS THE CONSTRAINT. Core ML's own description, quoted from the coremltools README: it 'optimizes on-device performance by leveraging the CPU, GPU, and Neural Engine while minimizing its memory footprint and power consumption'. That is a whole-silicon partition dispatcher, not a GPU kernel library - Core ML decides which of Apple's three engines runs an op, and you do not get to choose. This is the structural opposite of a CUDA or Metal backend, where you name your device",
+    "The Neural Engine is a claim and a constraint together. ANE is a distinct low-power accelerator with no CUDA analogue, and it is why Core ML's pitch is 'on-device' rather than 'on-GPU'. For LLM decode that is mostly a wrong fit - a transformer decode step is bandwidth-bound GEMV work, which is GPU-shaped, and the repo's own Apple LLM path is Metal-based ([[apple-mlx]], [[mlx-lm]], [[vllm-metal]]) rather than Core ML-based. Recording Core ML here is therefore partly an honest negative",
+    "The converter's accepted SOURCES are broader than the serving story suggests: TensorFlow 1.x, TensorFlow 2.x and PyTorch, plus non-neural-network frameworks including scikit-learn, XGBoost and LibSVM. The breadth is evidence of Core ML's real audience - app-embedded classical ML - rather than frontier-model serving",
+    "POWER AND FOOTPRINT ARE FIRST-CLASS OBJECTIVES, which is a hardware-shaped goal rather than a throughput-shaped one. That is coherent for a phone and odd for a datacenter, and it explains why no record in this repo benchmarks an LLM through Core ML",
+    "Optimization is part of the tool, not an afterthought - coremltools can read, write AND optimize an existing Core ML model, so there is a post-conversion tuning step in Apple's path that the Metal and MLX paths do not have",
+    "7,005 stars, 540 forks, 17 open issues, created 2024-04-18, last push 2026-09-25. Note the development-location oddity: the README's build badge points at gitlab.com/coremltools1/coremltools, so the project is developed on GitLab and mirrored to GitHub, and the GitHub API reports primary language Jupyter Notebook"
+  ],
+  "hardware_caveats": [
+    "NOT AN INFERENCE ENGINE AND NOT A SERVER. There is no OpenAI-compatible API, no continuous batching, no paged KV and no scheduler in this stack. If you need serving semantics on a Mac, the paths are [[vllm-metal]] or [[mlx-lm]]",
+    "Core ML decides the compute partition. You cannot pin an op to the GPU the way you can with a Metal or CUDA backend, so for LLM decode - which wants the GPU - you have less control than any of the other stacks in this slice, not more",
+    "The Neural Engine's low-power specialisation is a liability for transformer decode, which is memory-bandwidth-bound GEMV. The hardware-first story here is genuinely good for small always-on models and genuinely poor for LLM serving",
+    "Power and memory-footprint optimisation are the stated objectives, so the framework's tuning direction is away from the throughput-and-latency objective an LLM server needs",
+    "Apple-platform-only, like every stack in this slice",
+    "Convert-then-verify is a manual workflow: no indication in the converter that Core ML output is suitable for LLM serving, and the LLM-specific formats in this repo (GGUF, MLX quantized 4-bit and 8-bit, AWQ, GPTQ) are not Core ML formats",
+    "The cross-partition execution model means you cannot reason about where your FLOPs go. That is fine for a photo-classification app and a problem for anything where you need to know why decode is slow",
+    "Developed on GitLab and mirrored to GitHub, with no machine-detectable license - an unusual posture for a first-party framework and one to check before depending on it in a shipped product"
+  ],
+  "best_for": [
+    "Deploying small or medium models into an Apple app where CPU, GPU and Neural Engine can be mixed and power matters more than throughput",
+    "Classical and traditional ML on-device - the scikit-learn, XGBoost and LibSVM support is the honest signal of Core ML's centre of gravity",
+    "Understanding the whole-silicon-partition execution model as an alternative design point to a named-device backend",
+    "The on-device answer when you want power and memory footprint minimised as primary objectives"
+  ],
+  "avoid_for": [
+    "LLM serving of any size - the partition dispatch and the power-first objective are both wrong for bandwidth-bound decode",
+    "Anything needing throughput predictability or a known execution engine per op",
+    "Reading Core ML's popularity as evidence of a first-party LLM story; Apple's actual LLM path in this repo is MLX and Metal"
+  ],
+  "docs_url": "https://apple.github.io/coremltools/docs-guides/source/overview-coremltools.html",
+  "notes": "The repo's existing Apple coverage is strong on the Metal and MLX side ([[mlx-lm]], [[vllm-metal]], [[apple-mlx]]) and thin on the Core ML side, which is recorded here as the honest counterweight: Core ML is the bigger repo by community attention (7k stars vs MLX's 28.6k, though Core ML predates it as a format) and is aimed at app embedding rather than LLM serving. METAL VERSUS COREML VERSUS MLX, stated plainly: Metal is the compute language and the only one where you choose the device; MLX is a framework ON Metal whose unified memory and dynamic graphs are Apple-silicon consequences, and it is the LLM path; Core ML is a serialised format plus converter whose execution spans Metal, CPU and the Neural Engine and whose objectives are power and footprint. For LLM serving the ranking is MLX or vLLM-Metal, with Core ML last. The three are not substitutes at the layer level. Metadata from the GitHub API on 2026-10-04; the CPU/GPU/Neural-Engine and unified-memory claims are quoted from Apple's own READMEs.",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-04",
+  "sources": [
+    "apple-coremltools-readme",
+    "niche-github-rest-api-repo-metadata"
+  ]
+}

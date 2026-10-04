@@ -1,0 +1,31 @@
+{
+  "id": "comm-gfx906-docker-shm-size-and-base-image",
+  "type": "gotcha",
+  "name": "On gfx906, vLLM containers die with a bare 'Bus error (core dumped)' unless --shm-size is set large, and a corrupted local Docker BASE layer can make every ROCm 6.3.3 image fail identically - neither failure is a hardware fault",
+  "class": "config",
+  "affects": [
+    "vllm",
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "gfx906",
+    "docker",
+    "shm-size",
+    "ipc",
+    "bus-error",
+    "base-image",
+    "apparmor",
+    "seccomp"
+  ],
+  "symptom": "'mixa3607/vllm-gfx906:0.10.2-rocm-6.3.3 always dies instantly without --shm-size with Bus error; with --shm-size tries to start'. Running `vllm` inside a correctly-started container yields 'Bus error (core dumped)' with no further diagnostics. The same member chased this across images and ROCm versions and eventually found: 'i've found the root cause of my bus error on all 6.3.3 rocm images: the BASE image, used to build and run your docker images, was somewhat corrupted on my docker local cache. This was blocking me to run any 6.3.3 based image and also compile them!' The invocation flags the community converges on are --shm-size 16g or 32G plus --ipc=host, --cap-add=SYS_PTRACE, --security-opt seccomp=unconfined, --device=/dev/kfd --device=/dev/dri, --group-add video.",
+  "root_cause": "Two distinct causes producing one indistinguishable symptom. (1) Genuinely insufficient POSIX shared memory: the engine's multiprocess frontend needs /dev/shm far larger than Docker's 64 MB default for large contexts. (2) A corrupted cached base layer, which is not a ROCm or gfx906 problem at all - but because it produces a bare bus error with no message, it is indistinguishable from a driver or hardware fault and can burn days. A third reported variant is the Dockerfile failing inside the image during build: './install.sh: line 401: 24 Bus error (core dumped) ${cmake_executable} ...' - here the bus error is in cmake running the ROCm installer script.",
+  "workaround": "Always pass --shm-size 16g or larger plus --ipc=host, --cap-add=SYS_PTRACE and --security-opt seccomp=unconfined. On the host, AppArmor is implicated: a member running bare metal on Debian 13 disabled apparmor to get things working. If a bus error appears across multiple images and ROCm versions simultaneously, suspect the local Docker cache before suspecting hardware: docker system prune, then re-pull and retry. Reproduce on bare metal to separate container problems from driver problems - one member got the same model running on a bare Ubuntu 24.04 install where the container would not.",
+  "severity": "blocker",
+  "notes": "COMMUNITY-REPORTED across 188 messages naming docker/container, 43 messages naming HSA_OVERRIDE/ROCm env, with the flag set that recurs across at least a dozen independent posted commands (beefbonecapone, tronedor, qcodec, puppinoo, .woool, shakespear4631, majestic_wolf_82170, likeabozz123). The corrupted-base-layer story is a SINGLE report and is recorded as such - it is included because the diagnostic advice it yields (prune and re-pull before blaming the hardware) is cheap and the failure mode is genuinely indistinguishable from a hardware fault. Note the flags are also a security posture decision: seccomp=unconfined and SYS_PTRACE on a service that accepts arbitrary prompts is a real tradeoff a reader should make knowingly.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

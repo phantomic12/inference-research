@@ -1,0 +1,26 @@
+{
+  "id": "bench-mlperf-v6-0-dell-mangoboost-mi355x-powercap-1000w-offline",
+  "type": "benchmark",
+  "name": "Dell PowerEdge XE9785 8xMI355X at a 1000W PER-GPU POWER CAP, MLPerf Inference v6.0 Offline: Llama 2 70B, and its uncapped twin",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-0-summary-json"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi355x"
+  ],
+  "interconnect_ids": [],
+  "model": "Llama 2 70B (MLPerf v6.0 submission, -99.9 accuracy track, FP8 weights)",
+  "format_id": "fp8-e4m3",
+  "metric": "tps_aggregate",
+  "value": 81870.5,
+  "unit": "output tokens/s (aggregate under a 1000W per-GPU cap; v6.0 result ID 6.0-0033)",
+  "methodology": "AGGREGATE. MLPerf Inference v6.0 Closed division, Datacenter suite, Offline scenario. THIS IS THE ONLY GENUINE POWER-CAPPED LLM SUBMISSION PAIR IN THE ENTIRE MLPerf RESULT DATABASE, and it exists because the submitter ran the same chassis twice under two different declared limits. LOADS: batch size not a fixed published number; llama2-70b/user.conf min_duration 600000 ms, min_query_count 2000. Hardware: 1 node, 8x AMD Instinct MI355X 288GB HBM3e, Dell PowerEdge XE9785. POWER CONFIGURATION: the v6.0 system name for this result is literally 'PowerEdge XE9785 (MI355X Power Cap 1000W)' and its Platform id is '8xMI355X_2xEPYC_9965_Power_Cap_1000W' - a declared 1000W cap per GPU, enforced by the submitter via amdgpu/rocm-smi, NOT an MLPerf power measurement (has_power=false). UNCAPED CONTROL: the identical submission on the identical chassis, v6.0 result ID 6.0-0032 'PowerEdge XE9785', gives 97535.1 tok/s Offline and 93272.4 tok/s Server. CAPPED: 81870.5 Offline and 76359.5 Server. Framework listed as 'ROCm' with no version. OMITTED BY SOURCE: how the cap was set (rocm-smi vs amdgpu), whether clocks were also locked, KV dtype, concurrency, TP size, cooling configuration.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "power_cap": null,
+  "notes": "THE MOST USEFUL SINGLE MLPerf LLM DATAPOINT IN THIS REPO, and it exists only because a partner submitted a duplicate. Capping each MI355X at 1000W costs 16.1% of Offline throughput (97535.1 -> 81870.5) and 18.1% of Server throughput (93272.4 -> 76359.5). That is the real shape of the power-versus-throughput trade-off for this part - roughly a fifth of throughput for the cap - and it is nowhere in MLCommons' structured data, because MLPerf publishes watts only for the non-LLM benchmarks and a declared cap only as free text. Crucially this is a THROUGHPUT-AT-A-CAP measurement, not an efficiency measurement: no joules are reported, so this record cannot tell you whether 1000W is a good operating point, only what it costs in tokens. Anyone claiming to know the efficiency curve for MI355X from MLPerf alone does not have it. It is also the cleanest available rebuttal to the repo's existing MaxQ gotcha: here a real, explicit watt cap moves throughput by a known and plausible amount, whereas the H200 MaxQ submission's 19% gap is a clock-lock and possible-NVLink-disable artifact."
+}

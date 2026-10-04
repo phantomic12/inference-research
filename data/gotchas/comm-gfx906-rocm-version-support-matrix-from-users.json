@@ -1,0 +1,32 @@
+{
+  "id": "comm-gfx906-rocm-version-support-matrix-from-users",
+  "type": "gotcha",
+  "name": "The gfx906 community's own supported-ROCm matrix, assembled from failures: 6.3.3 is the newest version that works unmodified, 5.7.1 is the last fully stable one, and 7.x works only after the rocBLAS workaround",
+  "class": "config",
+  "affects": [
+    "amd-radeon-instinct-mi50x",
+    "vllm",
+    "llama-cpp"
+  ],
+  "concepts": [
+    "gfx906",
+    "rocm-6.3",
+    "rocm-7",
+    "pytorch",
+    "triton",
+    "amdgpu-install",
+    "docker"
+  ],
+  "symptom": "The community FAQ, written by its own members, states: 'Last official working rocm without modification is rocm 6.3.3. Last fully supported stable is rocm 5.7.1.' Specific version-by-version failures reported: ROCm 7.0.0 - cannot build any torch; ROCm 6.4.4 + torch 2.7.1 - text works, multimodal requests error; ROCm 6.4.4 + torch 2.8.0 - text requests error, multimodal errors; ROCm 6.3.3 + torch 2.7.1 and + torch 2.8.0 - both text and multimodal work. Compilation: ROCm 6.3.3 fails to build with a bus error, 6.3.4 will not compile, 7.0.2 compiles but vLLM then will not run. Base-image trap: a member chasing a week of 'Bus error (core dumped)' on every 6.3.3 container traced it to a corrupted ROCm BASE layer in his local Docker cache - not to the hardware, not to ROCm. ROCm 7.0 on Ubuntu 24.04 needs amdgpu-dkms from amdgpu-install 7.0.2 plus backfilled gfx906 rocBLAS files.",
+  "root_cause": "gfx906 is outside the shipped target matrix, so each ROCm release is a fresh packaging lottery for it (see comm-gfx906-rocblas-tensile-missing-from-6-4). Compounding it, the gfx906 vLLM forks pin a specific ROCm/PyTorch/Triton triple: one fork maintainer states the working combination is rocm 6.3.4 or 6.3.3 with pytorch 2.9.0, 2.9.1 or 2.10.0 and triton-gfx906 3.5.0, 3.5.1 or 3.6.0, and that pytorch 2.10 with Triton 3.6.0 must be built from source against the stable rocm 6.3.4 backend.",
+  "workaround": "Install with `amdgpu-install --usecase=rocm`, NOT `--usecase=graphics,rocm` - one member credits that switch alone for a working 6.4.3. For the 6.3.3 offline installer on Ubuntu 24.04, select all optional components but do NOT select 'Install amdgpu Driver', or the installer build fails. Before first run, clear or verify the base image: `docker system prune`, then re-pull, because a silently corrupted base layer produces bus errors that look like driver or hardware faults. For ROCm 7.x on Ubuntu 24.04, install amdgpu-dkms from amdgpu-install 7.0.2 and backfill the gfx906 rocBLAS/Tensile files (legitsplit's FAQ recipe, tested on 24.04 LTS).",
+  "severity": "blocker",
+  "notes": "COMMUNITY-REPORTED matrix with 52 messages naming 6.3.3/6.3.4 across 23 authors, plus 77 messages naming any ROCm version across more. Corroborated in part by the AMD issue tracker: #4625 confirms 6.4.0's rocBLAS is the break point, matching '6.3.3 works, 6.4.x needs a workaround'. The docker-base-corruption story is a single report but it is unusually instructive: it is a failure mode that mimics a hardware problem and can burn days. The version-pair matrix (6.4.4 vs 6.3.3 crossed with torch 2.7.1 vs 2.8.0) is one member's, presented as a list of combinations he tested, and is reported as such.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log",
+    "comm-rocm-issue-4625-tensile-gfx906"
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "id": "niche-torchserve",
+  "type": "engine",
+  "name": "TorchServe (PyTorch Serve)",
+  "status": "deprecated",
+  "confidence": 0.86,
+  "updated": "2026-10-04",
+  "sources": [
+    "niche-torchserve-repo",
+    "niche-github-rest-api-repo-metadata"
+  ],
+  "repo": "pytorch/serve",
+  "languages": [
+    "Java",
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2019,
+  "design_goal": [
+    "general-model-serving",
+    "model-archiving",
+    "k8s-kserve-integration",
+    "framework-agnostic-http"
+  ],
+  "scheduling": [
+    "none",
+    "batching (per-model worker)"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm",
+    "cpu",
+    "mps (via torch)"
+  ],
+  "supported_formats": [
+    "torchscript",
+    "pytorch (via torch-model-archiver)",
+    "onnx (via torch-model-archiver)"
+  ],
+  "notable_features": [
+    "THE MOST CANDID ABANDONMENT NOTICE IN THIS SLICE, AND THEREFORE THE MOST USEFUL RECORD. The README does not merely say archived: it states 'This project is no longer actively maintained. While existing releases remain available, there are no planned updates, bug fixes, new features, or security patches. Users should be aware that vulnerabilities may not be addressed.' That last clause is the lesson - this is not a dormant project, it is one that has formally declined to patch vulnerabilities",
+    "THE SECURITY POSTURE IS THE ACTUAL STORY. TorchServe dynamically loads model archives and exposes model-management APIs, which means a serving layer with arbitrary code loading behind an HTTP interface. The project responded by enforcing token authorization ON and model API control OFF by default, explicitly to address unauthorized API calls and malicious code introduction. A serving engine that loads code at runtime has an attack surface no GPU kernel has, and this record makes that concrete",
+    "GENERAL MODEL SERVING, NOT LLM INFERENCE. TorchServe serves any TorchScript or archived PyTorch model - vision, speech, tabular, recsys - over a simple HTTP prediction endpoint. It predates the LLM serving era and its scheduling features (batching, workers) are the generic kind, not continuous batching over a KV cache",
+    "THE MODEL ARCHIVER IS THE UNDERAPPRECIATED ARTIFACT. torch-model-archiver packages a model plus its dependencies into a .mar, and torch-workflow-archiver chains multiple models into one handler. That packaging idea is durable and unrelated to LLM serving; the durable part outlived the engine",
+    "IT WAS KUBERNETES-FIRST. The CI badges are the clearest evidence of the real design: KServe regression tests and Kubernetes regression tests alongside docker and benchmark nightlies. TorchServe was built to run as a KServe inference service, which is why its successor story is [[niche-kserve]] rather than an LLM engine",
+    "Java-based control plane (GitHub's primary language is Java) with a Python handler model - a split that reflects its 2019 design era",
+    "Apache-2.0, created 2019-10-03, last push 2025-08-06, 4343 stars, 879 forks, 443 open issues, ARCHIVED"
+  ],
+  "hardware_caveats": [
+    "ARCHIVED AND FORMALLY DECLINING SECURITY PATCHES. The GitHub API reports archived: true. The README states there are no planned security patches and that vulnerabilities may not be addressed. Running TorchServe on untrusted input in 2026 is a security decision, not just a maintenance one",
+    "THE 443 OPEN ISSUES ARE UNANSWERABLE BY DESIGN. The maintainers have stated there are no planned bug fixes, so an open issue is a bug that will never be fixed. 443 of them on 4343 stars is a clear signal",
+    "NO LLM CAPABILITIES WORTH SPEAKING OF. No continuous batching over a KV cache, no paged attention, no paged KV, no prefix caching, no chunked prefill, no speculative decoding, no quantisation support in the AWQ/GPTQ/EXL2 sense. The batching it has is per-model worker batching for generic predictions",
+    "NOTHING TO MEASURE AND NOBODY MEASURING IT. TorchServe never published a tok/s or TTFT figure because it was not trying to be an LLM engine. The 'benchmark nightly' CI badge exists for regression detection, not for published performance. Do not expect or invent a throughput number for this record",
+    "NO RELEVANT BACKENDS IN THE MODERN SENSE: no ROCm story worth the name, no FP8, no NVFP4, no MXFP4, no DeepSpeed-MoE. It inherits whatever PyTorch provides",
+    "ITS RELEVANCE HAS MOVED DOWN THE STACK. Where TorchServe served models directly, KServe ([[niche-kserve]]) now orchestrates and other engines serve; TorchServe became an implementation detail behind a Kubernetes abstraction. The successor record is [[niche-kserve]], and the general-model-serving problem it addressed is now largely handled by Triton ([[niche-triton-inference-server]]), KServe and BentoML rather than by an archived Java control plane",
+    "Requires Python >= 3.8 and an archived dependency stack, so even installation on a current Python carries friction"
+  ],
+  "best_for": [
+    "Understanding how general (non-LLM) model serving was done in the pre-LLM era, and why the Kubernetes-first design led to KServe",
+    "Learning the model-archiving pattern (.mar files, torch-model-archiver, chained handlers), which is durable and independent of LLM serving",
+    "Reading a real, explicitly stated abandonment - including a maintainer declining to patch vulnerabilities - as a template for how to end a project honestly",
+    "A historical reference for the security implications of a serving layer that loads model code at runtime"
+  ],
+  "avoid_for": [
+    "ANY new deployment. This is the clearest 'do not adopt' record in the repo: archived, no bug fixes, no security patches, vulnerabilities explicitly not addressed",
+    "Any untrusted or multi-tenant input path, given the arbitrary-code-loading surface and the absence of security patches",
+    "LLM serving of any kind - use [[vllm]], [[sglang]] or [[tensorrt-llm]]",
+    "Anyone hoping to file an issue and get a fix, in a project that has stated it will not fix bugs"
+  ],
+  "docs_url": "https://pytorch.org/serve/",
+  "notes": "The most valuable abandonment record in this slice because the maintainers said the uncomfortable thing plainly. Verified 2026-10-04: README states 'This project is no longer actively maintained... there are no planned updates, bug fixes, new features, or security patches. Users should be aware that vulnerabilities may not be addressed.' Combined with archived: true, last push 2025-08-06 and 443 open issues, this is a project that has not merely gone quiet but has formally declined to patch. The security dimension is the transferable lesson: TorchServe loads model archives and exposes model-management APIs, so it had arbitrary code loading behind an HTTP interface, and its mitigation was to enforce token authorization on and model API control off by default. Two lessons for a general reader: (1) a serving engine that loads code at runtime has an attack surface entirely absent from a GPU kernel library, and abandoned serving engines become security liabilities rather than merely stale; (2) the model-archiver idea (.mar packaging) outlived the engine, and TorchServe's real successor is [[niche-kserve]], which it was built to serve as a KServe inference service - visible directly in its CI badge set. Deliberately NOT in the 'historic engines' list by accident: it is here because its stated reason for ending is unusually explicit. NO PUBLISHED THROUGHPUT - it was never an LLM engine and published none. All metadata from the GitHub API on 2026-10-04."
+}

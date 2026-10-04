@@ -1,0 +1,43 @@
+{
+  "id": "bench-mlperf-offline-is-not-always-faster-than-server",
+  "type": "gotcha",
+  "name": "Offline is NOT reliably faster than Server: on identical MLPerf LLM hardware the ordering reverses sign across scale, from -6% on one node to +1.9% on a 72-GPU rack",
+  "class": "measurement",
+  "affects": [
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "amd-instinct-mi355x"
+  ],
+  "concepts": [
+    "mlperf",
+    "offline",
+    "server",
+    "scenario",
+    "loadgen",
+    "closed-loop",
+    "scheduling",
+    "benchmark-methodology",
+    "controlled-comparison"
+  ],
+  "symptom": "The rule 'the Offline scenario produces higher throughput than Server, so quote Offline' is repeated constantly in vendor comparison posts and it is false as a general statement. Measured Offline-minus-Server on identical hardware, identical model, identical quantization, within the same MLPerf round: AMD 8xMI355X Llama 2 70B v6.1, Offline 106517 vs Server 103274.69, Server -3.0%. Dell 8xMI355X Llama 3.1 8B v6.1, Offline 158458 vs Server 148563.48, Server -6.2%. HPE 8xMI355X Llama 3.1 8B v6.1, Offline 157694 vs Server 148118, Server -6.1%. NVIDIA 8xB300 Llama 2 70B v6.1, Offline 109277 vs Server 106949.36, Server -2.2%. NVIDIA 8xGB300-288GB Llama 2 70B v6.1, Offline 131464 vs Server 127911.34, Server -2.7%. Oracle 8xMI355X Llama 3.1 8B v6.1, Offline 144321 vs Server 148594, Server +3.0%. CoreWeave 72xGB200 Llama 2 70B v6.1, Offline 894002 vs Server 910621.36, Server +1.9%. CoreWeave 72xGB300 Llama 2 70B v6.1, Offline 1136100 vs Server 944902.14, Server -16.8%. Nine systems, five negative and two positive differences of up to +3.0%, one -16.8%.",
+  "root_cause": "The two scenarios differ in load shape, not in hardware. Offline feeds a closed-loop queue that the SUT drains as fast as it can, so it rewards the largest workable batch and punishes any scheduling gap - the batch's ramp and its tail are both charged to the throughput number. Server replays a Poisson arrival process at target_qps 0.5 against per-query TTFT/TPOT bounds, which forces the scheduler to interleave and hold a tail-latency guarantee. Which one wins is set by whether the system is starved (Server wins: arrivals keep the pipeline full while Offline's own ramp and tail are dead time) or saturated (Offline wins: an unbounded batch has strictly more work available than the arrival rate provides). At 8-GPU scale, Llama 2 70B FP4 saturates, so Offline wins by 2-3%. At 72-GPU rack scale the closed-loop Server pattern keeps 18 nodes' schedulers busier than one enormous Offline batch does, so Server can win - and how badly depends on the implementation, which is where the 16.8% GB300 rack figure comes from.",
+  "workaround": "Never compare two MLPerf LLM throughput numbers without naming the scenario, and never present a single hardware's Offline number as its Server number or vice versa. When you must pick one figure for a capacity plan, Server is the defensible choice because it is the only one published with a latency guarantee satisfied ('Performance constraints satisfied : Yes' plus explicit TTFT and TPOT early-stopping results); Offline is the right choice only when you are sizing a batch pipeline and have confirmed your own workload is saturating rather than arrival-bound. When a vendor supplies only an Offline number, ask for the Server partner result and for the achieved p99, because the scenario discount on that specific system can be anywhere between -7% and +3% and you cannot predict which.",
+  "severity": "major",
+  "notes": "The -16.8% GB300 rack figure deserves separate attention because it is the outlier in both directions at once: same submitters, same harness, adjacent hardware generations to GB200, and the discount goes from +1.9% to -16.8%. Anything claiming a stable 'MLPerf scenario tax' is describing a single-node observation. THE PRACTICAL CONSEQUENCE FOR THIS REPOSITORY: since the scenario discount is implementation-specific and can be positive, any efficiency or cost-per-token argument built on an MLPerf Offline number is optimistic by an unknown and sometimes negative amount - it is not even guaranteed to be in the pessimistic direction.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-v6-1-nvidia-b300-llama2-offline-log",
+    "bench-mlperf-v6-1-nvidia-b300-llama2-server-log",
+    "bench-mlperf-v6-1-amd-mi355x-llama2-offline-log",
+    "bench-mlperf-v6-1-amd-mi355x-llama2-server-log",
+    "bench-mlperf-v6-1-dell-mi355x-llama3-8b-offline-log",
+    "bench-mlperf-v6-1-dell-mi355x-llama3-8b-server-log",
+    "bench-mlperf-v6-1-coreweave-gb200-nvl72-llama2-offline-log",
+    "bench-mlperf-v6-1-coreweave-gb200-nvl72-llama2-server-log",
+    "bench-mlperf-v6-1-coreweave-gb300-nvl72-llama2-offline-log",
+    "bench-mlperf-v6-1-coreweave-gb300-nvl72-llama2-server-log"
+  ]
+}

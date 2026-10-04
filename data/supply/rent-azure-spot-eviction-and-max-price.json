@@ -1,0 +1,29 @@
+{
+  "id": "rent-azure-spot-eviction-and-max-price",
+  "type": "supply",
+  "name": "Azure Spot VM: 30-second eviction notice, mandatory USD max price, and disk billing that follows the eviction policy",
+  "kind": "cloud",
+  "vendor": null,
+  "accelerator_ids": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "region": "all Azure regions except Azure operated by 21Vianet",
+  "channels": [
+    "spot",
+    "interruptible"
+  ],
+  "price_usd": 30.0,
+  "price_basis": "SECONDS OF WARNING, not a price. Azure's documentation: 'Azure will evict Azure Spot Virtual Machines with 30-seconds notice' and these are 'delivered on a best effort basis up to 30 seconds prior to the eviction'. price_usd carries the 30 (seconds). The concrete anchor is the existing eastus ND96isr H100 v5 record at $2.2712 per H100-hour spot against $12.29 on-demand - about 82% off, the deepest hyperscaler spot discount on Hopper in this slice.",
+  "availability": "unknown",
+  "lead_time_weeks": null,
+  "export_controlled": null,
+  "notes": "Azure's spot mechanism has three properties that change a cost model rather than just discounting it. (1) YOU MUST SET A MAX PRICE, in US dollars, 'using up to five decimal places' (e.g. 0.98765 means $0.98765/hour). If your max price is below the current spot price the VM is not deployed at all; if spot rises above your max, the VM is evicted and will NOT automatically restart even after the price falls back. A max price of -1 means never evict for price, and you are then charged the lesser of spot or the standard on-demand price - so -1 is a useful floor-setting trick, not an unlimited bid. (2) EVICTION POLICY IS A BILLING DECISION: Deallocate (default) keeps the disks and you keep paying for them; Delete removes the VM 'together with their underlying disks, so you'll not continue to be charged for the storage'. For an inference box with a 28,000 GiB temp store this is a material ongoing charge, not a rounding error. (3) NO SLA and NO HIGH AVAILABILITY GUARANTEE, stated plainly: 'there's no SLA for these VMs'. Azure is also the only major cloud publishing per-SKU spot EVICTION RATES - 'Eviction rates are quoted per hour. For example, an eviction rate of 10% means a VM has a 10% chance of being evicted within the next hour, based on historical eviction data of the last 7 days' - queryable for the last 28 trailing days via Azure Resource Graph's SpotResources table along with 90 days of spot price history. That is the best interruption data any of the three clouds publishes, and it means an Azure spot buyer can actually measure their own risk instead of guessing. Note also: the Spot flag is only settable at creation and Spot VMs cannot be converted to Standard, so there is no downgrade path.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "rent-src-azure-spot-vm-doc"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "comm-gfx906-vulkan-20pct-over-hip-short-ctx",
+  "type": "gotcha",
+  "name": "llama.cpp on the Vulkan backend beats HIP by ~20% on gfx906 at fa=0 and short context, and the reported cause is AMD's aggressive Vulkan power management idling cards between layers in a layer-split",
+  "class": "driver",
+  "affects": [
+    "llama-cpp",
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "gfx906",
+    "vulkan",
+    "radv",
+    "hip",
+    "power-management",
+    "context-length",
+    "layer-split"
+  ],
+  "symptom": "One member builds llama.cpp from ROCm 7.14 and separately from the Vulkan backend and reports: 'the PP and TG is roughly 20 pc faster than rocm 7.14 when fa=0. note that my card is capped at 175 w. but rocm still performs better with -fa 1 when context is longer.' The Vulkan device string confirms the arch and its limits: 'AMD Radeon Graphics (RADV VEGA20) | uma: 0 | fp16: 1 | bf16: 0 | warp size: 64 | shared memory: 65536 | int dot: 1 | matrix cores: none' - note fp16 supported, bf16 NOT, and no matrix cores.",
+  "root_cause": "Hypothesised by the member reporting it: 'On Vulkan, AMD GPUs aggressively power down when not used, and in layer split they're used consecutively, so they power down while waiting for the others. ROCm keeps them at high frequency anyways.' Note the argument is slightly self-contradictory as stated (idle-down on Vulkan should hurt Vulkan), and the 175 W cap and single-card scope limit how far it generalises. The bf16: 0 field is a separate, more solid observation: the Vulkan path on VEGA20 has no bf16, so models or configs that assume bf16 are not portable between the two backends on this hardware.",
+  "workaround": "Benchmark both backends on gfx906 before assuming HIP is the faster one - the export shows the comparison is context-length-dependent rather than absolute, with Vulkan ahead at short context with fa off and ROCm ahead at long context with fa on. Note that the Vulkan backend does NOT give you multi-GPU: one member reports being unable to get GPU-to-GPU P2P in Vulkan because all his GPUs sit in singleton device groups, and that gfx906 hardware reports 'matrix cores: none' on both paths.",
+  "severity": "minor",
+  "notes": "COMMUNITY-REPORTED, essentially one experiment by one member (r.sarwar87, Nov 2025, single card capped at 175 W, gpt-oss-20B F16 at p=512/8096/16384, -fa 0 and 1). Recorded because it inverts a default assumption - most people reach for HIP first - and because it ships a concrete device-capability string for VEGA20 under Vulkan. Do not treat the 20% as general; it is a card-capped single-GPU number whose direction is stated to reverse with context length. The bf16: 0 observation is the more durable fact.",
+  "status": "draft",
+  "confidence": 0.35,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

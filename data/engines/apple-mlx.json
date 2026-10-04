@@ -1,0 +1,66 @@
+{
+  "id": "apple-mlx",
+  "type": "engine",
+  "name": "MLX (Apple's array framework for Apple silicon)",
+  "repo": "ml-explore/mlx",
+  "languages": [
+    "C++",
+    "C",
+    "Python",
+    "Swift"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "apple-silicon-only",
+    "unified-memory",
+    "developer-familiarity"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "metal",
+    "unified-memory"
+  ],
+  "supported_formats": [],
+  "notable_features": [
+    "THE FRAMEWORK UNDER [[mlx-lm]], not an inference engine itself. MLX is the array framework; mlx-lm is the LLM package and the server; vLLM-Metal ([[vllm-metal]]) is the path for vLLM's serving semantics. Reading MLX as an engine would be a category error, and it is recorded here because the framework's design choices are what make the Apple path cheap",
+    "UNIFIED MEMORY IS THE HEADLINE AND THE ARCHITECTURAL CLAIM. MLX's own words: 'Arrays in MLX live in shared memory. Operations on MLX arrays can be performed on any of the supported device types without transferring data.' That is a direct consequence of the hardware - Apple silicon's CPU and GPU share one memory pool - and it is why there is no host/device copy anywhere in the stack. The README flags it as 'A notable difference from MLX and other frameworks'",
+    "DYNAMIC GRAPH CONSTRUCTION IS THE UNUSUAL CHOICE, and it is the opposite of the TPU and Groq constraint story. MLX states that computation graphs are constructed dynamically and that changing argument shapes does NOT trigger slow compilations. On a Mac the bottleneck is bandwidth and unified memory makes shapes cheap; on a TPU, XLA's static-shape requirement is central. Same problem, opposite hardware, opposite answer",
+    "Lazy computation - arrays are materialized only when needed - combined with composable function transformations for autodiff, automatic vectorization and graph optimization",
+    "Four language surfaces that mirror each other: Python closely following NumPy, plus C++, C and Swift APIs, with mlx.nn and mlx.optimizers modelled closely on PyTorch. That API mirroring is deliberate: it lowers the cost of arriving on Apple silicon from any of those backgrounds",
+    "Designed to be extended: the stated intent is 'to make it easy for researchers to extend and improve MLX with the goal of quickly exploring new ideas', and the design is explicitly inspired by NumPy, PyTorch, JAX and ArrayFire. Only CPU and GPU are supported devices today",
+    "No serving in this repo. It is a framework: no scheduler, no OpenAI API, no KV management. What it contributes to inference is lazy evaluation, unified memory and quantization-friendly array dtypes",
+    "MIT, created 2023-11-28, last push 2026-10-04, 28,649 stars, 2,308 forks, 123 open issues. The star count is roughly 1.7x vLLM's 93,169 and about 79 percent of PyTorch's 103,755, which is the scale signal for Apple's first-party ML story"
+  ],
+  "hardware_caveats": [
+    "APPLE SILICON ONLY, and the README's very first line scopes it: 'an array framework for machine learning on Apple silicon'. There is no CUDA, ROCm, Linux or Windows path, and no path to any non-Apple accelerator",
+    "Unified memory is a double-edged property, and the repo records the debit side honestly. There is no separate VRAM pool to fit a model into, so the ceiling is system RAM - see [[mlx-lm]] for the macOS 15+ wired-memory behaviour and sysctl iogpu.wired_limit_mb that large models need, and the [WARNING] path when it is absent. And unified-memory bandwidth is what it is: it does not compete with HBM, which is exactly why [[vllm-metal]]'s record advises against multi-tenant datacenter serving on this hardware",
+    "The Apple-silicon-only scope is a maintenance cost for everyone, not just Apple: 123 open issues against 28.6k users is a very low support ratio, and there is no ecosystem of vendors to absorb issues",
+    "Two devices only (CPU and GPU). No NPU or Neural Engine path exists in MLX, which is a genuine difference from the Core ML route below",
+    "The framework-level flexibility cuts both ways: dynamic graph construction means no static-graph fast path, so on a hardware that does not need one you also do not get the benefits of a compiled graph, and per-op dispatch overhead is a real share of Mac decode time",
+    "Quantization formats are MLX-specific and live in the mlx-community HF org. A checkpoint that was not converted for MLX will not hit MLX's tuned paths - the tuning story is downstream in [[mlx-lm]], but the format coupling starts here",
+    "Two MLX gotchas in this repo are MLX-LM-level but MLX-caused: [[local-mlx-kv-bits-disables-batching]] and [[mlx-kv-bits-crashes-on-first-request-for-hybrid-attention]]. Read them before assuming the framework is a clean substrate"
+  ],
+  "best_for": [
+    "The framework layer for anything on Apple silicon, and the substrate for [[mlx-lm]] and [[vllm-metal]]",
+    "Learning what unified memory buys and costs: no copies anywhere in the stack, at the price of a RAM-sized model ceiling and HBM-class bandwidth being unavailable",
+    "Comparing against the hardware-first constraint stories: MLX chose dynamic graphs because the hardware did not force static ones, which is a useful counterexample to the TPU and Groq records",
+    "PyTorch-shaped model code on a Mac without a JAX rewrite"
+  ],
+  "avoid_for": [
+    "Any non-Apple-silicon target",
+    "Multi-tenant or datacenter serving on bandwidth grounds - see [[vllm-metal]] for the serving-semantics alternative and its own caveats",
+    "Treating MLX as an engine. It has no scheduler, no serving API and no model formats"
+  ],
+  "docs_url": "https://ml-explore.github.io/mlx/",
+  "notes": "Split from [[mlx-lm]] and [[vllm-metal]], which are recorded as engines; this record covers the framework they share and is deliberately explicit that it is not a serving stack. Compared against [[apple-coreml]] in the notes there: MLX is a framework with Metal as its compute path, Core ML is a format plus converter whose execution model spans CPU, GPU and Neural Engine - they are not interchangeable layers. Metadata from the GitHub API on 2026-10-04; the unified-memory and dynamic-graph claims are quoted from the project's own README.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "src5-mlx-github",
+    "niche-github-rest-api-repo-metadata"
+  ]
+}

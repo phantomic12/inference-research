@@ -1,0 +1,26 @@
+{
+  "id": "comm-mi50-4x-qwen38-pleshard-shard-vs-host",
+  "type": "benchmark",
+  "name": "Sharding model weights across cards instead of keeping them host-resident more than doubles both prefill and decode on 4x MI50, at ~7 GB extra VRAM per card",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "amd-radeon-instinct-mi50x"
+  ],
+  "interconnect_ids": [],
+  "model": "Qwen3.8-Flash-Next UD-Q4_K_XL",
+  "format_id": null,
+  "metric": "prefill_tok_s",
+  "value": 501.2,
+  "unit": "tok/s",
+  "methodology": "llama-bench on 4x MI50 32GB, ROCm 7.2.1, -sm tensor -ngl 99 -nr 1, -p 512 and -p 4096, -n 64 and -n 512, -b 512 -ub 512 -r 2, -lm dio, prompt cache off. Env: GGML_ENABLE_CUSTOM_AR=1 HSA_FORCE_FINE_GRAIN_PCIE=1 GPU_MAX_HW_QUEUES=8 LLAMA_ENABLE_MTP_OPT=1 HIP_VISIBLE_DEVICES=0,1,2,3 LLAMA_PLE_SHARD=0 vs =1. Paired results, same session: pp4096 227.5 +/- 13.1 host-resident -> 501.2 +/- 1.7 sharded (+120%); tg512 23.5 +/- 0.3 -> 37.1 +/- 0.9 (+58%); tg64 20.4 +/- 2.5 -> 31.8 +/- 1.8 (+56%). VRAM per card ~21.7 GB -> 28.6 GB (+6.9 GB). Perplexity 2.3108 +/- 0.059 -> 2.3052 +/- 0.059.",
+  "measured_by": "third_party",
+  "reproducible": null,
+  "notes": "COMMUNITY-REPORTED MEASUREMENT with a rare and valuable property: the reporter included a PERPLEXITY CHECK alongside the throughput, so this is not just a speed win that quietly broke the model - accuracy is unchanged within the reported error bars. That makes this the best-evidenced community performance claim in this slice. The mechanism is pipeline-parallel-expert (PLE) shard mode, an out-of-tree feature of the gfx906 llama.cpp fork, so it is NOT available in stock llama.cpp on any hardware. Clock and power state not stated.",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log",
+    "comm-mx-llama-cpp-repo"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "bench-mlperf-v6-1-coreweave-gb200-nvl72-llama2-70b-server",
+  "type": "benchmark",
+  "name": "CoreWeave GB200 NVL72, MLPerf Inference v6.1 Server: Llama 2 70B across a full 72-GPU rack (18 nodes) under the Server latency constraint",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-v6-1-coreweave-gb200-nvl72-llama2-server-log",
+    "bench-mlperf-llama2-70b-interactive-latency-rule"
+  ],
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-gb200-nvl72"
+  ],
+  "interconnect_ids": [],
+  "model": "Llama 2 70B (MLPerf v6.1 submission, FP4 weights)",
+  "format_id": "nvfp4",
+  "metric": "tps_aggregate",
+  "value": 910621.36,
+  "unit": "output tokens/s (aggregate across all 72 GPUs, harness 'Completed tokens per second')",
+  "methodology": "AGGREGATE. MLPerf Inference v6.1 Closed division, Datacenter suite, SERVER scenario at RACK scale. LOADS: target_qps 0.5 Poisson arrivals, min_duration 120000 ms, min_query_count 100, compiled-in per-query TTFT/TPOT 99th-percentile bounds, 'Performance constraints satisfied : Yes'. Batch size not a fixed published number. Completed samples per second 3353.29. Model shape TOKENS_PER_SAMPLE 267.0. POWER: has_power=False, design_power_watts=null, no declared cap, no cooling configuration. OMITTED BY SOURCE: replica/TP layout, fabric, KV dtype, concurrency, clock state.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "power_cap": null,
+  "notes": "SERVER EXCEEDS OFFLINE ON THE SAME HARDWARE: 910621.36 Server versus 894002 Offline, +1.9%. This is the cleanest refutation of the folk rule that Offline is always the faster scenario. At 72-GPU scale the Server harness's closed-loop arrival pattern keeps all 18 nodes' schedulers saturated, whereas the Offline run amortises one enormous batch and pays its ramp and tail. The inversion is a fact about load shape, not about the hardware, and it means the scenario a vendor chooses to publish can flatter or penalise its own number by a couple of percent depending on scale. Any cross-vendor comparison must therefore name the scenario explicitly - see data/gotchas/bench-mlperf-offline-is-not-always-faster-than-server.json."
+}

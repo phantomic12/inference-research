@@ -1,0 +1,32 @@
+{
+  "id": "sent-qa-ollama-vs-real-engine-migration",
+  "type": "gotcha",
+  "name": "Q: 'Should I move off Ollama to vLLM/SGLang?' - A: the corpus gives a numeric trigger of about five concurrent users, and names the two situations where you should not move at all",
+  "class": "toolchain",
+  "symptom": "The 'Best LLM Inference engine for today?' thread is literally this question - a user migrating off Ollama for a personal assistant - and the corpus answer is engine-by-situation rather than migrate. The concrete trigger appears in a real deployment writeup: 'Ollama is good enough for 5 active concurrent users but I wouldn't go futher than that.' The two do-not-move situations come from the top answers. If the machine is partially CPU-offloaded, a top answer says outright: 'Probably llama.cpp then, assuming you mean partial offload.' And the community converges on the honest version of the migration question: 'Llamacpp is the engine under the covers of many of the other products mentioned' - Ollama, LM Studio and several others are wrappers over llama.cpp, so choosing a wrapper is not choosing a different engine.",
+  "root_cause": "Ollama's simplicity is a packaging decision over a single-user assumption, and that assumption breaks at a specific point rather than degrading gradually. Once more than a handful of clients share a server, the missing scheduler is what hurts, not throughput. Where the wrapper and its backend diverge - partial offload, unusual quant formats, AMD, non-datacenter hardware - the wrapper hides the engine that actually runs, which is why the corpus keeps recommending the backend by name.",
+  "workaround": "Stay on a single-process stack for one user. Above roughly five concurrent users, move to an engine with continuous batching and keep the wrapper only if it exposes the backend you need. If you rely on CPU offload, on a non-NVIDIA GPU, or on a quant format that only llama.cpp reads, do not migrate to vLLM at all.",
+  "severity": "minor",
+  "notes": "Number caveat, per sent-vote-counts-are-a-popularity-proxy-not-a-measurement: five is one practitioner's stated ceiling for one deployment on one L40S, not a benchmark, and the corpus gives a different number elsewhere - a 54-upvote answer puts the switchover at 'more than four concurrent users with high access rate' and elsewhere says 'more than 4-5 users'. The two agree to within one user, which is the strongest agreement available here, and both are rules of thumb. The corroborating detail is that the person reporting the ceiling is running a real organization on it, which is the reason to trust the shape of the number rather than the number.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "sent-src-reddit-ollama-concurrency-ceiling-1led23c",
+    "sent-src-reddit-best-inference-engine-1kc4kv2",
+    "sent-src-reddit-llamacpp-vs-vllm-1qexkwb"
+  ],
+  "affects": [
+    "ollama",
+    "llama-cpp",
+    "vllm",
+    "sglang"
+  ],
+  "concepts": [
+    "continuous-batching",
+    "concurrent-users",
+    "cpu-offload",
+    "wrapper",
+    "single-user"
+  ]
+}

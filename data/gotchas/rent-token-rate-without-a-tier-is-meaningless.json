@@ -1,0 +1,28 @@
+{
+  "id": "rent-token-rate-without-a-tier-is-meaningless",
+  "type": "gotcha",
+  "name": "Quoting a per-token API price without naming the tier and the context band is meaningless - the same model and the same tokens differ by up to 8x on one provider's own page",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "serverless-inference",
+    "kv-cache",
+    "cost-per-token",
+    "prompt-caching",
+    "batch"
+  ],
+  "symptom": "You build a cost comparison of hosted inference APIs from per-million-token prices and get a stable-looking ranking. It is an artefact of which page section you scraped. On OpenAI's page the SAME model gpt-6.1-sol short-context input reads $2.00 Standard, $1.00 Batch, $1.00 Flex, $4.00 Fast and $8.00 Ultrafast. On Anthropic's page Opus 5.5 reads $4/$20 standard and $2/$10 batch and $8/$40 fast mode. On xAI's page grok-4.7 short-context input is $2.00 and the long-context row for the same model is $4.00 - and the rule is that the long rate applies to ALL tokens in the request once the prompt crosses 200k, not just the excess. DeepSeek's off-peak rate is exactly half its peak rate and peak is a wall-clock window (01:00-04:00 and 06:00-10:00 UTC on weekdays). So a 'DeepSeek is cheapest' conclusion may be comparing your off-peak batch against someone's peak interactive traffic, and a 'Gemini 3.8 Flash is $0.75 in' conclusion expires on 2027-01-01 when it becomes $1.50.",
+  "root_cause": "Every major API provider now prices the same model on at least three independent axes and publishes them adjacently in tables that extract identically: service tier (Standard/Batch/Flex/Priority/Fast/Ultrafast), context band (short vs long, with an all-or-nothing threshold), time of day (DeepSeek peak/off-peak), and cache state (cache hit/miss/read/write/storage). A single scalar extracted from one table cell carries none of that provenance, so it silently means something different from the identical scalar on the next provider's page. The rate spread within one model is up to 8x (OpenAI Flex to Ultrafast) and the long-context rule can double a whole bill on one token of overflow.",
+  "workaround": "Record six fields for every token price you store: provider, model AND version, tier, context band, cache state, and observation date. Prefer a record that quotes the whole tier ladder over one that quotes a single number, because the ladder is the part that goes stale fastest and the part a reader cannot reconstruct. When comparing providers, state the tier you assumed on both sides and refuse to mix a long-context input rate with a short-context output rate - that single mix-up is an easy 4x error. Treat any date-bounded promotional rate as a liability: Google's Flash tier is explicitly half price through 2026-12-31 and doubles on 2027-01-01, so any comparison written today silently expires. And when a provider's cheapest headline model is old (Cohere's Command-light at $0.30/$0.60 versus current Command at $1.00/$2.00), check that you quoted the row you meant rather than the family.",
+  "severity": "major",
+  "notes": "All figures transcribed 2026-10-04 from: platform.openai.com/docs/pricing, platform.claude.com/docs/en/about-claude/pricing, ai.google.dev/gemini-api/docs/pricing (page last updated 2026-10-01 UTC), docs.x.ai/developers/pricing, api-docs.deepseek.com/quick_start/pricing, cohere.com/pricing, console.groq.com/docs/models. Two related traps worth keeping in mind: DeepSeek cache-hit input at $0.003 per 1M is 50x its cache-miss $0.15, the widest cache lever of any provider here, so a DeepSeek bill that does not report cache-hit share is hiding the main cost driver; and Groq's own Llama 3.1 8B and Llama 3.3 70B rows read 'ContactSales' rather than a price, so the cheapest widely-circulated Groq number is stale. Records: [[supply/rent-openai-api-token-pricing]], [[supply/rent-anthropic-api-token-pricing]], [[supply/rent-gemini-api-token-pricing]], [[supply/rent-xai-api-token-pricing]], [[supply/rent-deepseek-api-token-pricing]], [[supply/rent-cohere-api-token-pricing]].",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "rent-src-openai-api-pricing",
+    "rent-src-xai-pricing",
+    "rent-src-gemini-api-pricing",
+    "rent-src-deepseek-api-pricing"
+  ]
+}

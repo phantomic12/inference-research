@@ -1,0 +1,27 @@
+{
+  "id": "bench-mlperf-v6-1-oracle-mi355x-llama3-1-8b-server",
+  "type": "benchmark",
+  "name": "Oracle 8xMI355X, MLPerf Inference v6.1 Server: Llama 3.1 8B - a case where Server throughput EXCEEDS Offline on one node",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-llama2-70b-interactive-latency-rule"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi355x"
+  ],
+  "interconnect_ids": [],
+  "model": "Llama 3.1 8B (MLPerf v6.1 submission, FP8 weights)",
+  "format_id": "fp8-e4m3",
+  "metric": "tps_aggregate",
+  "value": 148594,
+  "unit": "output tokens/s (aggregate; summary.csv value, raw log not independently re-read for this record)",
+  "methodology": "AGGREGATE. MLPerf Inference v6.1 Closed division, Datacenter suite, SERVER scenario on Oracle's 8xMI355X_2xEPYC_9575F node. LOADS: target_qps 0.5 Poisson arrivals, min_duration 120000 ms, compiled-in per-query TTFT/TPOT 99th-percentile bounds; the row is marked compliance=closed with errors=0, i.e. it passed the submission checker, which does verify the Server latency constraints. Batch size not a fixed published number. Framework per summary.csv: 'vLLM 0.22.0, PyTorch 2.10.0, ROCm 7.2.2'. POWER: has_power=False, design_power_watts=null, no declared cap. OMITTED BY SOURCE: TP size, KV dtype, concurrency, clock state, cooling, and the raw harness log was not fetched for this record so the harness-precision value is not confirmed.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "power_cap": null,
+  "notes": "RECORDED FOR AN ANOMALY, NOT FOR ITS VALUE. On this one node the Server figure (148594) is HIGHER than the Offline figure (144321) for the same model, the same 8 GPUs and the same quantization - a +3.0% inversion, whereas Dell's and HPE's MI355X nodes show Server below Offline by 6.2% and 6.1% respectively. Three near-identical AMD nodes, three different signs on the Offline-vs-Server relationship. This is the strongest available evidence that the Offline/Server ordering is an artifact of load shape and scheduling rather than a property of the hardware, and it is why this repository refuses to compare MLPerf numbers without the scenario named. Confidence is capped at 0.8 because the raw harness log was not independently re-read for this row, unlike every other benchmark record in this slice."
+}

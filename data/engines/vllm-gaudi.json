@@ -1,0 +1,76 @@
+{
+  "id": "vllm-gaudi",
+  "type": "engine",
+  "name": "vLLM Hardware Plugin for Intel Gaudi (vllm-gaudi)",
+  "repo": "vllm-project/vllm-gaudi",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2025,
+  "design_goal": [
+    "Gaudi-only-serving",
+    "serve-vLLM-semantics-on-HPU",
+    "hardware-constraint-adapted-throughput"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache",
+    "chunked-prefill",
+    "graph-capture-bucketing"
+  ],
+  "supported_backends": [
+    "intel-gaudi-hpu"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "fp8",
+    "awq",
+    "gptq",
+    "inc-quantization",
+    "mxfp4"
+  ],
+  "notable_features": [
+    "A PLUGIN, not a fork. The README states it follows the upstream vLLM 'Hardware pluggable' RFC and 'Enhancing vLLM Plugin Architecture' RFC, and upstream vLLM supplies the scheduler, paged block manager and API server. This is the whole point of the record: on Gaudi the portable engine's serving semantics survive intact while everything underneath them is rewritten for the hardware",
+    "Explicit Gaudi-native custom ops registered by the plugin, named in the README: hpu_fused_moe, hpu_grouped_topk_router, hpu_layernorm, hpu_lora, hpu_mamba_mixer2, hpu_rotary_embedding, hpu_compressed_tensors, hpu_fp8, hpu_gptq, hpu_awq, hpu_mm_encoder_attention, hpu_rejection_sampler. Every one of these is a TPC or HCL kernel that could not be expressed as a portable kernel",
+    "Static-shape bucketing as a first-class serving feature. Because Gaudi's compiler wants fixed shapes (see [[xpu-gaudi-static-shapes]]), the plugin groups requests into fixed-size buckets so each bucket has one compiled graph. This is the clearest single example in this repo of a hardware shape constraint propagating all the way up into the server's request admission policy",
+    "Custom graph caching for fast warm-up, plus HPU graph capture - the Gaudi analogue of CUDA graphs ([[xpu-gaudi-hpu-graphs]])",
+    "Multi-card serving runs on vLLM's multiprocessing executor ('mp') whenever world_size > 1, i.e. TP*PP*DP > 1; the in-process 'uni' backend is used only at world_size == 1",
+    "Version-locked to the Gaudi software stack: plugin 0.26.0 is built on vLLM 0.26.0 and is 'fully compatible with Intel Gaudi v1.24.1 with PyTorch 2.11'. You do not get to pick a vLLM version independently of the Gaudi release",
+    "The plugin pins and publishes a verified vLLM commit (branch vllm/last-good-commit-for-vllm-gaudi, file VLLM_STABLE_COMMIT) because, in its own words, 'upstream API updates may introduce compatibility issues' - the hardware lag is managed by shipping a known-good commit rather than tracking main",
+    "Install path builds vLLM itself with VLLM_TARGET_DEVICE=empty, i.e. no GPU backend is compiled at all. A hardware-specific stack is visible in what it removes, not just what it adds",
+    "60 stars, 157 forks, 69 open issues, Apache-2.0, created 2025-06-25, last push 2026-10-02. The fork count exceeding the star count roughly 2.6:1 is the signature of a vendor-driven corporate fork network rather than organic community uptake",
+    "Release cadence is tied to upstream vLLM: 0.17.1 (2026-04), 0.19.0 (2026-04), 0.24.0 (2026-07), 0.26.0 (2026-08). Most release notes are about adapting to UPSTREAM API DRIFT - the FusedMoE/MoERunner inversion, KV-connector and offloading refactors, the Mamba/GDN rewrite - which is the honest cost of tracking a fast-moving portable engine from a hardware-specific position"
+  ],
+  "hardware_caveats": [
+    "HARDWARE-CLOSED. Gaudi only. There is no CUDA, ROCm, Metal or CPU path out of this plugin, and unlike [[vllm-gaudi]]'s own upstream, it does not degrade gracefully - it does not run anywhere else at all",
+    "The plugin REQUIRES a matching Gaudi software stack AND a matching PyTorch. Every release names both (0.26.0 = Gaudi v1.24.1 + PyTorch 2.11). This is the sharpest hardware-first coupling in this repo: three version numbers must agree",
+    "FORKING AFTER HPU DRIVER INIT HANGS. The plugin overrides vLLM's default fork worker start method to spawn on HPU because 'forking after HPU driver initialization leaves driver state in child processes and can cause hangs on exit'. The override logs a warning and can be opted out of with VLLM_WORKER_MULTIPROC_METHOD=fork, but the project calls that 'not recommended'. This is recorded separately as [[xpu-gaudi-fork-after-driver-init]] and is the single most Gaudi-specific operational fact here - an ordinary Linux process-model assumption is false on this hardware",
+    "install_torch_fork and the Habana bridge write into /usr/lib/habanalabs, so the setup is not a clean pip install and needs sudo. The 'minimal code changes' claim in the bridge README is about model code, not about the install",
+    "torchaudio must be installed from the CPU wheel with --no-deps to avoid dragging in a conflicting CUDA torch - a small detail that shows how much CUDA-shaped the surrounding tooling still is",
+    "Model coverage lags vLLM. The 0.26.0 notes name MiniMax-M3, the Gemma-4 family, the Kimi-K2.5 vision tower and Qwen3-Coder-Next as NEW in that release, which is an implicit admission that they were missing before. There is no supported-models matrix comparable to the TPU plugin's",
+    "Warm-up is not free: the notes repeatedly cite reduced graph compilation and warmup overhead as improvements, i.e. compile time is a standing cost. Compare [[alt-tpu-inference-vllm-plugin]] where compile cost is the dominant TPU concern too - it is the same class of problem",
+    "Small user base (60 stars) means self-help documentation is thin and the issue tracker is the main support channel"
+  ],
+  "best_for": [
+    "Serving on Gaudi 2 or Gaudi 3 where vLLM's scheduler and paged KV semantics are wanted but CUDA kernels are unavailable",
+    "Intel shops that already standardised on vLLM's OpenAI-compatible API and want to keep that surface while changing hardware",
+    "Reading a worked example of how far a hardware constraint propagates: static-shape bucketing visible in request admission, fork-vs-spawn visible in process startup, driver version visible in the release matrix"
+  ],
+  "avoid_for": [
+    "Any non-Gaudi hardware",
+    "Production deployments that need a model on day 0 of its release - Gaudi model support trails upstream vLLM by at least one plugin release",
+    "Reading its throughput characteristics as representative of vLLM generally; they are Gaudi's, and the repo's own Gaudi MLPerf record [[benchmarks/gaudi2-mlperf-v4-0-llama2-70b-offline-tokens]] is the number to use instead"
+  ],
+  "docs_url": "https://vllm-gaudi.readthedocs.io/en/latest/index.html",
+  "notes": "Replaces the former HabanaAI/vllm-fork lineage as the supported Gaudi path; see [[xpu-gaudi-fork-eol]] for the fork's termination. IMPORTANT SCOPE NOTE: this repo already holds three Gaudi flops records ([[xpu-gaudi-static-shapes]], [[xpu-gaudi-hpu-graphs]], [[xpu-gaudi-fusion-pass]]) and four Gaudi gotchas, so this engine record deliberately does NOT restate the static-shape or graph-capture mechanics in full - it records the SERVING consequences of them and points at those records. Sources for the constraint claims are the plugin README plus the Gaudi optimization guide already in the repo; repo metadata from the GitHub API on 2026-10-04.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "xpu-vllm-gaudi-readme",
+    "xpu-gaudi-pytorch-bridge-readme",
+    "niche-github-rest-api-repo-metadata"
+  ]
+}

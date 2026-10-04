@@ -1,0 +1,29 @@
+{
+  "id": "tgi-retired-not-merged-into-vllm",
+  "type": "gotcha",
+  "name": "Hugging Face TGI was retired, not merged into vLLM - the codebase was never absorbed and no TGI code is in vLLM",
+  "class":"framework",
+  "affects": [
+    "text-generation-inference",
+    "vllm",
+    "sglang"
+  ],
+  "concepts": [
+    "maintenance-status",
+    "deprecation",
+    "migration",
+    "hf-ecosystem"
+  ],
+  "symptom": "People describe TGI as having been 'merged into vLLM' or 'absorbed into vLLM' when Hugging Face retired it. Acting on that belief produces two wrong conclusions: that vLLM contains TGI code (it does not), and that TGI was kept alive by vLLM (it was not). The repository is ARCHIVED and read-only - GitHub API archived: true, last push 2026-03-21, final release v3.3.7 published 2025-12-19 - so it is a dead end for new work regardless of the misconception.",
+  "root_cause": "Conflation of two separate things. What Hugging Face actually did per the TGI README was donate a DESIGN PATTERN: 'TGI has initiated the movement for optimized inference engines to rely on a transformers model architectures. This approach is now adopted by downstream inference engines, which we contribute to and recommend using going forward: vLLM, SGLang, as well as local engines with inter-compatibility such as llama.cpp or MLX.' So optimised transformers model architectures and a recommended migration path moved downstream; the TGI codebase itself did not. The README's own status wording is 'text-generation-inference is now in maintenance mode... we will accept pull requests for minor bug fixes, documentation improvements and lightweight maintenance tasks' - maintenance-only, which is what archiving then formalised.",
+  "workaround": "Treat [[text-generation-inference]] as deprecated-and-archived: migration targets are vLLM or SGLang, and no TGI feature will be added or fixed. If you are choosing between 'TGI' and 'vLLM' as if they were a lineage, pick vLLM on its own merits - there is no TGI implementation inside it to inherit. Separately, note that TGI is STILL RUNNING IN PRODUCTION at Hugging Face powering Hugging Chat and the Inference API/Endpoints, so 'deprecated' means retired by maintainers, not unused; if you are debugging a TGI deployment in the field, the deprecation does not mean the running stack is already patched.",
+  "severity": "minor",
+  "notes": "Recorded as a gotcha rather than only in the engine notes because the misconception is widespread and self-reinforcing - once people say 'merged into vLLM' the archive status becomes invisible, and the archive status is the actionable fact. Both parts verified 2026-10-04 against the TGI README and the GitHub repositories API (archived flag, push date, latest release tag and date). The adjacent honest nuance worth keeping separate from the misconception: the deprecation is about upstream maintenance, not about Hugging Face's own production use.",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "sources": [
+    "engine-tgi-github",
+    "niche-github-rest-api-repo-metadata"
+  ]
+}

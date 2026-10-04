@@ -1,0 +1,61 @@
+{
+  "id": "xpu-gaudi-pytorch-bridge",
+  "type": "engine",
+  "name": "Habana Gaudi PyTorch Bridge and the Gaudi torch fork (torch-hpu)",
+  "repo": "HabanaAI/gaudi-pytorch-bridge",
+  "languages": [
+    "Python",
+    "C++",
+    "Shell"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "design_goal": [
+    "run-pytorch-on-Gaudi",
+    "hardware-constraint-absorbed",
+    "vendor-fork-of-upstream"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "intel-gaudi-hpu"
+  ],
+  "supported_formats": [],
+  "notable_features": [
+    "This IS the Gaudi PyTorch. The Gaudi fork does not live in a PyTorch mirror you can pick from - it is assembled by this bridge repo's scripts/install_torch_fork.sh, which downloads a prebuilt torch wheel whose version is dictated by the Habana installer",
+    "The version-locking is the design. install_torch_fork.sh takes two arguments, VERSION and BUILD, and the documented way to obtain them is to parse the output of habanalabs-installer.sh -v. So the PyTorch you run is a function of which Gaudi software stack release you installed, not of what PyTorch you want",
+    "'Several Python packages enabling Intel Gaudi functionality in PyTorch with minimal code changes' - the bridge's own framing, and the 'minimal code changes' refers to model code: the framework-level difference is what this record is about",
+    "Same release also provides habana-media-loader, pinned to the identical VERSION.BUILD string, so the dataloader cannot be versioned separately from the framework either",
+    "Ships a GAUDI-OPTIMIZATION layer rather than leaving it to the user: the repo's own optimization guide ([[xpu-habana-optimization-guide]]) documents MPI CPU binding (--bind-to core --map-by socket:PE=6, six cores per Gaudi on an HLS-1 with 96 CPUs and 8 devices), setting the CPU governor to performance, and Gaudi-3-specific BIOS and MSR work (Energy Perf BIAS, HWP core frequency, disabling SubNUMA and C6, Latency Optimized Mode). This is a genuine hardware-first obligation: on Gaudi you tune the host CPU, which no portable engine asks you to do",
+    "19 stars, 9 forks, 5 open issues, Apache-2.0, created 2024-09-29, last push 2026-07-13, NOT archived"
+  ],
+  "hardware_caveats": [
+    "Not actually a portable PyTorch. torch-hpu is a fork pinned to a Gaudi software stack release, so 'what PyTorch version is this' has no independent answer - it is (Gaudi release, PyTorch release) as a pair, and the vLLM plugin compounds this with a third number (vLLM version). See [[vllm-gaudi]]",
+    "The build writes into SYSTEM directories: it requires sudo chmod +xw /usr/lib/habanalabs and a manual symlink of hl_logger headers into /usr/include/habanalabs. This breaks clean-install and container immutability assumptions in a way that no pip-installable portable framework does",
+    "Assumed build host is Ubuntu 22.04; the README says other operating systems require adjusting the package steps",
+    "Underlying compiler is closed. The bridge is the open shell; the actual Gaudi compiler is SynapseAI, which is only partially open - see [[xpu-synapseai]] for exactly how little of it is",
+    "Star count of 19 with 9 forks signals a vendor-internal repo published for reference rather than a community-maintained one; expect low community support volume",
+    "Because torch-hpu is a fork, upstream PyTorch fixes arrive only when the Gaudi team rebases. There is no mechanism in the bridge README that would make that fast"
+  ],
+  "best_for": [
+    "Running existing PyTorch inference code on Gaudi with minimal model-code edits",
+    "Understanding what a hardware-first framework fork actually costs in version coupling and system-level install steps",
+    "Anyone tuning Gaudi throughput, since the host-CPU and BIOS prerequisites in the linked optimization guide are mandatory rather than optional"
+  ],
+  "avoid_for": [
+    "Any hardware other than Gaudi",
+    "Environments where the system has to be reproducible from a lockfile alone - the version triple cannot be derived without running the Habana installer",
+    "Assuming upstream PyTorch behaviour. Fork lag is invisible until it bites"
+  ],
+  "docs_url": "https://docs.habana.ai/en/latest/PyTorch/Model_Optimization_PyTorch/Optimization_in_Training_Platform.html",
+  "notes": "The repo already documents the Gaudi compiler's static-shape and graph-capture behaviour as flops records ([[xpu-gaudi-static-shapes]], [[xpu-gaudi-hpu-graphs]], [[xpu-gaudi-fusion-pass]]) and the Gaudi serving path as [[vllm-gaudi]]; this record covers the layer in between - the framework fork itself - so it does not duplicate the constraint mechanics. Repo metadata from the GitHub API on 2026-10-04.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "xpu-gaudi-pytorch-bridge-readme",
+    "xpu-habana-optimization-guide",
+    "niche-github-rest-api-repo-metadata"
+  ]
+}

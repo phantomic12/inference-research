@@ -1,0 +1,30 @@
+{
+  "id": "comm-gfx906-awq-tensor-parallel-breaks-gptq-works",
+  "type": "gotcha",
+  "name": "On gfx906 vLLM, AWQ quants fail under tensor parallelism while GPTQ works, and the cause is structural: AWQ packs group scales in a way that cannot be split across TP ranks",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "gfx906",
+    "awq",
+    "gptq",
+    "tensor-parallel",
+    "expert-parallel",
+    "moe",
+    "triton"
+  ],
+  "symptom": "Early on the nzly fork, 'AWQ quants dont seem to work with -tp 4. I think it has to do with how the model is split across cards, and quants groups value together for compression, so they are less flexible when it comes to splitting up the underlying matrix.' The same member later reports the opposite ranking for MoE: 'In my experience, the gptq model is a little bit faster in MoE model.' Since resolved by the mobydick fork: official Qwen3.5 AWQ quants now run, but only with VLLM_USE_TRITON_AWQ=1, FLASH_ATTENTION_TRITON_AMD_ENABLE=TRUE and --dtype float16, and official GPTQ quants require fp32 activation compute with fp16 KV cache because the fp16-activation build produced '!!!!'.",
+  "root_cause": "Quantisation-group granularity versus TP shard boundaries - a general structural issue, not gfx906-specific, but it bites on MI50 because TP is how you get a model onto 4-16 cards. Related TP constraint reported independently: whether attention heads divide the tensor degree decides whether TP works at all - 'Some models like qwen3 moe aren't', which is why expert parallelism is used to segment by experts instead, and Nemotron 49B runs at tp=2 or 8 but not 4.",
+  "workaround": "Prefer GPTQ when you intend to tensor-parallel a quantised model. If using AWQ on gfx906 vLLM, set VLLM_USE_TRITON_AWQ=1 and use --dtype float16; for MoE models use --enable-expert-parallel to segment by experts rather than sharding tensors. Check head-count divisibility against your TP degree before choosing a TP size. A member also reports building MoE config generators from source and gaining 'at least +25% in pp and pg ... a3b's pp+25%, pg+50%' - worth doing, but note it is one report.",
+  "severity": "major",
+  "notes": "COMMUNITY-REPORTED across a long thread (early Aug 2025 through 2026), which is the useful part: the community's position FLIPPED as fork work landed. In Aug 2025 AWQ was broken under TP and GPTQ was the stable choice; by March 2026 official AWQ quants work with the Triton AWQ path and specific dtype rules. A reader should take the current state, not the early reports. The head-divisibility rule is reported by two independent members and is genuinely useful when picking TP size.",
+  "status": "verified",
+  "confidence": 0.65,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

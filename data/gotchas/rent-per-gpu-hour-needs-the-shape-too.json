@@ -1,0 +1,27 @@
+{
+  "id": "rent-per-gpu-hour-needs-the-shape-too",
+  "type": "gotcha",
+  "name": "A per-GPU-hour rate is not a comparable number until you also know which instance shape it came from - the same GPU differs 2x per-GPU between an 8-GPU and a 1-GPU shape",
+  "class": "measurement",
+  "affects": [
+    "nvidia-l40s",
+    "nvidia-h100-sxm"
+  ],
+  "concepts": [
+    "cloud-pricing",
+    "spot",
+    "cost-per-token",
+    "gbm"
+  ],
+  "symptom": "You collect per-GPU-hour figures from several providers to compare cost, divide each node price by its GPU count, and produce a clean table. The table looks fine and it is wrong in a specific way: AWS charges $6.88 per H100-hour for p5.48xlarge (8x H100, $55.04/instance-hr) AND exactly $6.88 per H100-hour for p5.4xlarge (1x H100, $6.88/instance-hr) - the same number, so you conclude per-GPU pricing is shape-independent and stop checking. It is not. For L40S the 8-GPU shape g6e.48xlarge is $30.13118/instance-hr = $3.7664 per L40S-hour, while the 1-GPU shape g6e.xlarge is $1.861/instance-hr = $1.861 per L40S-hour. The same physical GPU, the same region, the same on-demand basis, a 2.02x difference in per-GPU price purely from the shape you picked.",
+  "root_cause": "Per-GPU pricing is not a property of the GPU; it is an output of the provider's shape-level pricing divided by a GPU count that the provider chose. Large shapes bundle more vCPU, more RAM, more local NVMe and NVSwitch domain; small shapes bundle less. When the bundle premium is superlinear in GPU count, the per-GPU price rises with shape size; when the instance itself carries most of the fixed cost, per-GPU price FALLS with shape size. H100 is the case where the premium is absent (same rate at 1 and 8 GPUs), L40S is the case where it is 2x. Nothing in the price itself tells you which regime you are in, so you cannot infer it from a single data point - you have to read two shapes of the same GPU.",
+  "workaround": "Record THREE fields for every GPU rental price, not two: the per-GPU-hour, the GPU count of the shape, and the node-level hourly it was derived from. Then cross-check at least one provider against a second shape of the same GPU before believing the comparison. When comparing an 8-GPU shape against a single-GPU rental like Runpod or a Vast 1-GPU offer, compare like with like or state the shape mismatch in the note - an 8-GPU node gives you NVSwitch and 8x the memory bandwidth pool for aggregate inference throughput, so the honest comparison is per-GPU price PLUS what the node shape buys you, not per-GPU price alone. Never compare a node hourly rate to a per-GPU rate; the unit error is 8x and always in the direction of making the hyperscaler look cheap. This is the mechanical complement to the per-GPU-vs-per-node discipline recorded on the supply records themselves.",
+  "severity": "major",
+  "notes": "Evidence: AWS EC2 Price List API us-east-1, publicationDate 2026-09-25, read 2026-10-04. p5.48xlarge $55.04/hr for 8x H100 SXM, p5.4xlarge $6.88/hr for 1x H100 SXM (identical per GPU); g6e.48xlarge $30.13118/hr for 8x L40S, g6e.xlarge $1.861/hr for 1x L40S (2.02x per GPU). Also visible in the same file: g6.48xlarge returned four distinct hourly rates ($13.3504, $16.5952, $36.3904, $85.3504) because the raw attributes share the shape name across g6/g6f/g6e families and reservation variants - so even within one provider, one shape name is not one price, and the extraction filter matters. Full record: [[supply/rent-aws-ec2-gpu-hourly-2026-10-04]]. Related: [[supply/rent-commitment-discounts-change-the-effective-rate]] for the other way a headline rate stops being the rate you pay.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "rent-src-aws-ec2-price-list-use1"
+  ]
+}

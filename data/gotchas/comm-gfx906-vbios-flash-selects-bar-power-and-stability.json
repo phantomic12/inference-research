@@ -1,0 +1,30 @@
+{
+  "id": "comm-gfx906-vbios-flash-selects-bar-power-and-stability",
+  "type": "gotcha",
+  "name": "On MI50 the choice of VBIOS - not the driver - decides whether you get a 32 GB BAR, ReBAR, P2P, the 225 W or 178 W power cap, and whether your cards hang; a Dell T7820 will not even allocate more than 1 GB BAR without a flash",
+  "class": "hardware",
+  "affects": [
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "gfx906",
+    "vbios",
+    "rebar",
+    "large-bar",
+    "p2p",
+    "power-cap",
+    "pcie-gen4",
+    "ecc"
+  ],
+  "symptom": "Distinct named MI50 VBIOSes behave differently in ways that matter for inference. Reported: (a) BAR size - a user with 3x MI50 in a Dell T7820 could not make room for more than 1 GB BAR until flashing the V420 BIOS with ReBAR support; another confirms the post-flash state as 'Memory at 380000000000 (64-bit, prefetchable) [size=32G]'. (b) Power cap - V420 caps at 178 W; the 113-D1631700-111 image (274474.rom) gives the default 225 W and no display output. (c) Clocks and bandwidth - V420 reports 1800 MHz SCLK versus 1725 MHz, and rocm-bandwidth-test throughput 5-10% higher across the board. (d) Stability - on one setup V420.rom hangs during the P2P test while 274474.rom and 32G_UEFI.rom are OK, suspected to be unstable boost frequency. (e) Hardware error - a 274474-flashed card crashed with a HW error under --enable-expert-parallel on 2x MI50. (f) POST failure - 'atombios stuck in loop for more than 20secs aborting ... gpu post error! Fatal error during GPU init ... probe with driver amdgpu failed' on a flashed card.",
+  "root_cause": "The MI50 shipped with multiple VBIOS variants, and the used-market supply is a mix of them, so identical-looking cards are not configurationally identical. Also a supply-chain issue rather than a driver issue: members report Alibaba sellers shipping cards with corrupted EEPROM, VRM faults, and dead-on-arrival parts, plus one dead card whose red fault LED stayed lit through PSU and slot swaps.",
+  "workaround": "Pick the VBIOS deliberately and record which one is on each card by serial number. Use V420 (113-D1640200-043) when you need ReBAR and a 32 GB BAR, accepting the 178 W cap; use 113-D1631700-111 (274474.rom) when you want the default 225 W and no display output. Check the BAR size after flashing with `lspci -v -d 1002: | grep -i 'Memory at'` and look for [size=32G]. Flash tooling and a card-by-card VBIOS table are maintained in a community gist (evilJazz, linked 4+ times in the export). On firmware: bisect, do not jump - one member tested ~8 versions rather than 19 and stopped at 7C35vAN1 as the last known-good.",
+  "severity": "major",
+  "notes": "COMMUNITY-REPORTED, multiple independent contributors (c9h13no3dev, legitsplit, beny4088, eviljazzkatastrophos, raspbfox, littlestone0970, majestic_wolf_82170, frankn.steroids, ____jal____ - 34 messages naming VBIOS across 24 authors). This is the highest-value category in the whole slice because it is entirely undocumented by AMD for the second-hand market and it silently changes performance, power, and stability. Contested within the community on the 178 W vs 225 W reading: one member reports the V420 BIOS LIMITING BAR size and asks how to diagnose it, which contradicts the T7820 report where flashing V420 is what ENABLED the 32 GB BAR. Read the two together: V420 changes BAR behaviour, and in which direction depends on the motherboard's firmware.",
+  "status": "contested",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

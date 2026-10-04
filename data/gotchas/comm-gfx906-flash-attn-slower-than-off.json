@@ -1,0 +1,30 @@
+{
+  "id": "comm-gfx906-flash-attn-slower-than-off",
+  "type": "gotcha",
+  "name": "On gfx906 llama.cpp, Flash Attention is often SLOWER than leaving it off - the community FAQ says do not enable -fa 1 if you can avoid it, while vLLM users on the same cards insist on the Triton FA path",
+  "class": "kernel",
+  "affects": [
+    "llama-cpp",
+    "vllm",
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "gfx906",
+    "flash-attention",
+    "rocwmma",
+    "triton",
+    "vulkan",
+    "radna"
+  ],
+  "symptom": "llama.cpp, Llama-3-8B Q6_K, 1 MI50: with -fa 1, PP512 = 332 t/s and TG128 = 54 t/s; with -fa 0, PP512 = 576 t/s and TG128 = 58 t/s. In diffusion the same inversion: quad-cross-attention 7.2 s, split-cross-attention 7.3 s, pytorch-cross-attention 7.6 s, but flash-attention 10.4 s and triton_splitk+flash 13.3 s for SDXL-base VAE, 512x512, 20 steps, batch 1. Against that, a Vulkan-side comparison found the Vulkan backend roughly 20% faster than ROCm 7.14 with -fa 0, but noted ROCm still wins with -fa 1 once context is long (p up to 16384). vLLM users run the opposite way: nearly every posted gfx906 vLLM launch command sets FLASH_ATTENTION_TRITON_AMD_ENABLE=TRUE, usually with FLASH_ATTENTION_TRITON_AMD_REF=TRUE.",
+  "root_cause": "Flash Attention on gfx906 has to be built from the WMMA/Triton path rather than matrix cores (see comm-gfx906-mfma-absent-no-matrix-cores), so it buys nothing in raw capability while paying for the non-FMA memory-access pattern. Upstream llama.cpp ships GGML_HIP_ROCWMMA_FATTN (and a gfx12-specific variant of it) as opt-in CMake flags; a gfx906-specific build is compiled with -DAMDGPU_TARGETS=gfx906 -DGGML_HIP_ROCWMMA_FATTN=ON. One community member asks outright whether the popular prebuilt gfx906 images even use gfx906-optimised Flash Attention code, or whether -fa 1 there just silently falls back - a question the thread never settles.",
+  "workaround": "For llama.cpp on gfx906: benchmark both settings at your actual context length and do not assume the flag helps. For vLLM on gfx906: the Triton AMD FA path is effectively mandatory - the fork exists to provide it. If you are on a stock ROCm 6.x/7.x build, note one member's belief that flash attention is unsupported on gfx906 there and -fa 1 would fall back to something slower than -fa 0; this is UNVERIFIED in the export.",
+  "severity": "major",
+  "notes": "COMMUNITY-REPORTED and CONTESTED within the community itself. The FAQ-channel numbers are a single reporter's (dkingalpha, 2025-09-08, one MI50, one model, one quant) but the direction is independently corroborated by r.sarwar87's larger sweep across -fa 0,1 at p=512/8096/16384, which also shows the crossover depends on context length rather than being absolute. The llama.cpp-vs-vLLM disagreement is real and unresolved: 'DO NOT enable FA2 if possible' and 'every launch command sets FLASH_ATTENTION_TRITON_AMD_ENABLE=TRUE' are both things the same community says. Recorded contested on purpose. Practical consequence for a general reader: the flag's effect on gfx906 is model-, context-, and engine-dependent, and llama.cpp's stock ROCm FA path is not the same code as what the gfx906 forks ship.",
+  "status": "contested",
+  "confidence": 0.45,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

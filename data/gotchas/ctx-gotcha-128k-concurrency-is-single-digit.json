@@ -1,0 +1,34 @@
+{
+  "id": "ctx-gotcha-128k-concurrency-is-single-digit",
+  "type": "gotcha",
+  "name": "128K context capacity numbers are quoted without concurrency, and one 8-GPU node holds single-digit 128K sequences for most production models",
+  "class": "hardware",
+  "affects": [],
+  "concepts": [
+    "kv-cache",
+    "long-context",
+    "concurrency",
+    "h100",
+    "h200",
+    "tensor-parallel",
+    "gpu-memory-utilization",
+    "fp8-kv-cache",
+    "capacity-planning"
+  ],
+  "symptom": "A capacity plan reads '128K context, 8x H100' and concludes a healthy batch size. The arithmetic disagrees: on an 8xH100 80GB node with bf16 KV, Llama-3.1-70B at TP4 holds 3.8 concurrent 128K sequences, Qwen2.5-72B 3.7, Mistral-Large-2411 1.2, Command-R-plus-0824 2.7. With fp8 KV the same configurations reach 7.5, 7.3, 2.4 and 5.5. The second request at full length is already the third concurrent user, and a single H100 cannot hold Llama-3.1-70B at all (141.2 GB of bf16 weights against 80 GB of HBM) - so the honest statement is not 'how long is the context' but 'how many full-length sequences at once'. Worse, a 34B with a 200K claim is a trap: Yi-34B-200K's weights are 69.6 GB, leaving 5.6 GiB on an 80 GB H100 against a 30 GiB 128K sequence, i.e. 0.19 concurrent 128K sequences - it cannot serve one full-length request from a single card.",
+  "root_cause": "KV cache bytes scale linearly with context length and the card's HBM is finite, so concurrency at a fixed context is a pure division - (HBM * reserve - weights) / (bytes_per_token * context). Nothing on the latency side of a benchmark reveals it, because latency is measured at concurrency 1, where the cache always fits by definition. The second cause is reporting convention: context length is a single number in every model card and every latency table, and concurrency is a second number that nobody puts next to it.",
+  "workaround": "Quote capacity as (context, concurrent sequences, KV dtype, TP degree, reserve fraction) or it is not a capacity claim. Size the reserve explicitly rather than assuming it - the 12 percent used in the referenced record is an assumption, and vLLM's own lever is gpu_memory_utilization with attention to the KV block budget. Cap the served context at the model's MEASURED effective length; on Llama-3.1-70B that is 64K, which doubles concurrency for free and costs nothing the model could reliably do. Take the fp8 or int8 KV 2x, the single largest concurrency lever on current hardware. Prefer architectures with a small cache: MLA (68.6 KiB/token, about 66 concurrent 128K sequences per 8xH100 node at bf16, 131 at fp8, 263 at fp4) or a hybrid linear-attention interval (Qwen3-Next at 44 concurrent 128K sequences on 8xH100 at TP4).",
+  "severity": "major",
+  "notes": "The arithmetic and its inputs are in [[ctx-kv-cache-gib-at-claimed-context]]; this record is the reporting-convention problem that lets the gap stay invisible. Three things make the numbers above conservative rather than optimistic: the 12 percent reserve ignores paged-KV fragmentation on a fragmented-length workload, weight bytes assume an unquantized bf16 checkpoint at the vendor's stated parameter count, and no allowance is made for the activation working set at a 128K chunked-prefill chunk size or for preemption headroom. The mirror-image error is worth naming too: at the RULER-measured effective length rather than the claim, the same node holds twice as many sequences, so a deployment that advertises the claimed length and serves the effective one is quietly running at double its stated utilization. Cross-references: [[ctx-claimed-vs-effective-context-table]], [[ctx-fp8-kv-cache-long-context-accuracy]], [[vllm-kv-cache-block-budget]], [[serve-kv-cache-utilization-not-gpu-utilization]].",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "ctx-src-hf-configs-longctx-models",
+    "flop-nvidia-h100-specs",
+    "pwr2-nvidia-hgx-h100-h200-datasheet",
+    "attn-deepseek-v3-paper",
+    "kern-flashmla-github",
+    "model-cn-qwen3-report"
+  ]
+}

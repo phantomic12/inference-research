@@ -1,0 +1,23 @@
+{
+  "id": "comm-5090-wsl2-qwen3-14b-awq-decode-tok-s",
+  "name": "Community-reported vLLM decode throughput on RTX 5090 (sm_120) under WSL2 with CUDA graphs working, Qwen3-14B AWQ",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-rtx-5090"
+  ],
+  "model": "Qwen/Qwen3-14B-AWQ (awq_marlin quantization)",
+  "metric": "decode_tok_s",
+  "value": 140,
+  "unit": "tok/s",
+  "methodology": "SINGLE REPORTER, PARTIALLY SPECIFIED. Hardware and software as stated: RTX 5090 32GB GDDR7 (sm_120 Blackwell), Windows 11 + WSL2 2.7.0 pre-release, Ubuntu 22.04, kernel 6.6.114.1-microsoft-standard-WSL2, CUDA 12.8, driver 581.80, vLLM 0.17.1, model Qwen/Qwen3-14B-AWQ via awq_marlin. CUDA graphs enabled (that is the point of the report). Batch size, prompt length, output length, concurrency and whether the figure is per-request or aggregate are NOT stated in the report - the surrounding benchmark table was not captured. The reporter's own comparisons, same post: ~26% faster than Ollama, and 8x faster than --enforce-eager on the same setup. Treat the figure as an order-of-magnitude datapoint, not a benchmark.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "SINGLE REPORT by Kyzcreig (vLLM issue #37242). The number's value is mainly as evidence that the configuration WORKS, not as a throughput claim: the community consensus was that CUDA graph capture on consumer Blackwell under WSL2 was permanently broken because the dxgkrnl Hyper-V GPU virtualization layer did not support it, and the reporter demonstrated it does - after removing the causes of a boot-time race, not by changing anything GPU-specific. His three fixes are all WSL2/driver-service ordering: remove Tailscale (it intercepts the network at boot and interferes with CUDA init), hard-mask nvidia-cdi-refresh (it probes CUDA devices at boot ~11s and races driver init on Blackwell), and delay any CUDA-using service (e.g. Ollama, ComfyUI) by 45s after boot. INDEPENDENT CORROBORATION of the works-claim: commenter SoloRyuken confirms CUDA graph capture working on an RTX 5090 under WSL2 2.6.3 stable with ComfyUI 0.19.x in a CUDA 13.0 container - a different stack, same conclusion. The 8x-vs-eager figure is the operationally important one, since --enforce-eager is the reflex workaround most people settle for. Note the issue was auto-closed by GitHub's stale bot, not by a fix.",
+  "status": "draft",
+  "confidence": 0.4,
+  "sources": [
+    "comm-github-vllm-37242-5090-wsl2-cudagraphs"
+  ],
+  "type": "benchmark",
+  "updated": "2026-10-04"
+}

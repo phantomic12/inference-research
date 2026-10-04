@@ -1,0 +1,28 @@
+{
+  "id": "bench-mlperf-v6-1-nvidia-b300-llama2-70b-server",
+  "type": "benchmark",
+  "name": "NVIDIA DGX B300, MLPerf Inference v6.1 Server: Llama 2 70B on 8x B300-SXM-270GB, aggregate output throughput under the Server latency constraint",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-v6-1-nvidia-b300-llama2-server-log",
+    "bench-mlperf-llama2-70b-interactive-latency-rule"
+  ],
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-b300"
+  ],
+  "interconnect_ids": [],
+  "model": "Llama 2 70B (MLPerf v6.1 submission, FP4 weights)",
+  "format_id": "nvfp4",
+  "metric": "tps_aggregate",
+  "value": 106949.36,
+  "unit": "output tokens/s (aggregate, harness 'Completed tokens per second')",
+  "methodology": "AGGREGATE. MLPerf Inference v6.1 Closed division, Datacenter suite, SERVER scenario, which is a materially different measurement from Offline on identical hardware. LOADS: target_qps 0.5 (llama2-70b/user.conf '*.Server.target_qps = 0.5', Poisson arrivals), min_duration 120000 ms, min_query_count 100, plus the compiled-in per-query TTFT and TPOT 99th-percentile bounds which the log reports as 'Performance constraints satisfied : Yes' and 'TTFT/TPOT Early Stopping Result: Run successful'. Batch size is not a fixed published number - the submitter's scheduler adapts it - but it is bounded by what the latency constraint permits, which is exactly why Server lands below Offline. Completed samples per second 391.79. Model shape TOKENS_PER_SAMPLE 267.0. POWER: has_power=False, design_power_watts=null, no declared cap. OMITTED BY SOURCE: the numeric TTFT/TPOT bounds applied (they are compiled into the harness for this model/scenario and are not written into user.conf or the log), TP size, KV dtype, concurrency.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "power_cap": null,
+  "notes": "This is the number to use when someone asks 'how fast can this node serve Llama 2 70B', because it is the only one carrying a latency guarantee. The 2.2% discount versus Offline (109277) is the measured price of holding a tail-latency bound. Note the direction of the claim: this is an AGGREGATE throughput with a per-query latency bound satisfied, NOT a per-user tok/s figure - the harness does not expose a tok/s-per-user metric for the Server scenario in these logs."
+}

@@ -1,0 +1,26 @@
+{
+  "id": "comm-mi50-8x-gpt-oss-120b-mxfp4-decode-collapse",
+  "type": "benchmark",
+  "name": "Adding MI50s over PCIe makes decode WORSE, not better: gpt-oss-120B MXFP4 tg8192 falls 71.2 -> 33.9 -> 21.3 -> 14.3 tok/s from 2 to 4 to 6 to 8 cards under -sm tensor",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "amd-radeon-instinct-mi50x"
+  ],
+  "interconnect_ids": [],
+  "model": "gpt-oss-120b MXFP4 MoE (59.02 GiB)",
+  "format_id": null,
+  "metric": "decode_tok_s",
+  "value": 14.32,
+  "unit": "tok/s",
+  "methodology": "Same command and session as comm-mi50-2x-gpt-oss-120b-mxfp4-tensor-split-decode (-p 16384 -n 8192 -b 2048 -ub 1024 -ngl 99 -mmp 0 -dio 1 -fa 1 -o md -r 3 -sm tensor), scaled by HIP_VISIBLE_DEVICES. Series: 2 GPU tg8192 71.22 +/- 2.78 (pp16384 882.18), 4 GPU tg8192 33.89 +/- 1.53 (pp16384 1079.23), 6 GPU tg8192 21.32 +/- 0.29 (pp16384 1140.89), 8 GPU tg8192 14.32 +/- 0.36 (pp16384 1006.68). MI50 has no GPU-to-GPU interconnect; these are PCIe-attached. Clock/power state not stated by the reporter.",
+  "measured_by": "third_party",
+  "reproducible": null,
+  "notes": "COMMUNITY-REPORTED. This is the most decision-relevant number in this slice for anyone planning an MI50 cluster, and it runs against the intuition that more cards means more throughput. Prefill rises 882 -> 1079 -> 1141 then FALLS to 1007 at 8 cards while decode falls monotonically and roughly by half per doubling - the signature of a PCIe all-reduce sitting in the critical path of a memory-bound decode step. Because all four points come from one session on one machine, the shape of the curve is much more trustworthy than any single point. Pair with the fork maintainer's counter-measure in comm-gfx906-tensor-split-garbage-and-pcie-degradation (-tps N, PLE shard), which recovers most of the loss at 8 GPUs (TG 26.9 at -tps 4 vs 20.9 for -sm layer).",
+  "status": "draft",
+  "confidence": 0.55,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log",
+    "comm-mx-llama-cpp-repo"
+  ]
+}

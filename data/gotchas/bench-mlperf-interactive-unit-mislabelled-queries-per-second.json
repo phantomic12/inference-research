@@ -1,0 +1,34 @@
+{
+  "id": "bench-mlperf-interactive-unit-mislabelled-queries-per-second",
+  "type": "gotcha",
+  "name": "Eight MLPerf v5.1 Llama 3.1 8B Interactive results are published with unit 'Queries/s' while the underlying harness log prints tokens/s - a silent 129x unit error in the official database",
+  "class": "measurement",
+  "affects": [
+    "nvidia-b200",
+    "nvidia-h200-sxm",
+    "nvidia-h200-nvl",
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "concepts": [
+    "mlperf",
+    "units",
+    "tokens-per-second",
+    "queries-per-second",
+    "interactive",
+    "llama3.1-8b",
+    "leaderboard",
+    "data-quality"
+  ],
+  "symptom": "A Llama 3.1 8B Interactive result is read out of the MLCommons v5.1 results database and the Performance_Units column says 'Queries/s'. It is treated as a queries-per-second number, or as a token number, or quietly dropped because the unit does not match the rest of the table. The correct unit is tokens per second, and the database says so wrongly. Eight rows carry the defect: 5.1-0024 Dell 102907.0 on 8x B200-SXM-180GB, 5.1-0046 GigaComputing 102829.0 on 8x B200, 5.1-0049 HPE 53475.2 on 8x H200-SXM, 5.1-0051 HPE 36052.3 on RTX PRO 6000 Blackwell, 5.1-0069 NVIDIA 102903.0 on 8x B200, 5.1-0079 Quanta_Cloud_Technology 54117.6 on 8x H200-SXM, 5.1-0080 Quanta_Cloud_Technology 21944.1 on 4x H200-NVL, 5.1-0086 Supermicro 122269.0 on 8x B200. The proof is in the raw log for the Supermicro run: the harness prints 'Completed samples per second : 947.90' and 'Completed tokens per second: 122268.73', and 122268.73 divided by 947.90 is 129.0 - so 122269.0 is tokens per second, and 'Queries/s' is simply the wrong label. Every neighbouring Offline and Server row for the same model in the same round is correctly labelled 'Tokens/s', so the error is specific to the Interactive rows of this model.",
+  "root_cause": "The unit label for llama3.1-8b Interactive rows appears to have been assigned from a per-model or per-scenario default rather than derived from the metric the harness actually produced, and it disagrees with both the harness output and the adjacent rows for the same submission. The error is undetectable from the results database alone, because 122269.0 'Queries/s' is a plausible-looking queries-per-second figure for an 8-GPU node and nothing in the row raises a flag - errors=0 and compliance=closed, i.e. the submission checker passed it. It is only caught by dividing the published value by the samples-per-second figure printed in the raw log and noticing the quotient is an integer token count (129) rather than 1.",
+  "workaround": "For any llama3.1-8b Interactive number taken from v5.1, ignore the Performance_Units column and read the raw harness log's 'Completed tokens per second' line instead; the two agree to the published precision. More generally, when importing an MLPerf LLM figure, verify the unit by checking that value divided by the log's samples-per-second equals a plausible integer token count for that model and scenario. Do not attempt to repair these numbers by multiplying or dividing by 129 - the published value is already the token count, so the fix is to relabel, not rescale. When citing one of these eight results, say explicitly that the official unit label is wrong, because a reader checking the source will see 'Queries/s' and reasonably doubt the citation.",
+  "severity": "major",
+  "notes": "This is the strongest available evidence for a point this repository cares about generally: an MLPerf number copied out of the official database can carry a unit that changes its meaning by two orders of magnitude, with no error anywhere. Note the contrast with the repo's existing gotcha on throughput numbers omitting load conditions - this is the same failure mode one level up. MLPerf's own audit does not catch it because unit labelling is a reporting-layer concern, not a compliance-run concern: the compliance runs and the submission checker both passed. It also means any cross-round Llama 3.1 8B Interactive comparison built from v5.1 database rows without reading the logs is comparing numbers whose units are not what the table claims.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v5-1-summary-json",
+    "bench-mlperf-v5-1-supermicro-b200-llama3-8b-interactive-log"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "bench-mlperf-token-count-is-not-fixed-across-submitters",
+  "type": "gotcha",
+  "name": "MLPerf LLM 'tokens per second' is generation-length times samples per second, and generation length varies ~9% between submitters at the same accuracy target, so tok/s figures are not directly comparable even within one round and scenario",
+  "class": "measurement",
+  "affects": [
+    "nvidia-b300",
+    "amd-instinct-mi355x",
+    "intel-arc-pro-b70"
+  ],
+  "concepts": [
+    "mlperf",
+    "tokens-per-second",
+    "samples-per-second",
+    "rouge",
+    "accuracy-target",
+    "generation-length",
+    "benchmark-methodology",
+    "normalization"
+  ],
+  "symptom": "Two MLPerf results for the same model, same scenario, same round and even the same GPU are compared directly and the comparison is quietly wrong by several percent. The reason is that MLPerf's Tokens-per-second for LLM benchmarks is not an instrumented decode rate - it is samples-per-second multiplied by a per-sample generation length that each submitter's run happens to produce, and that length is a free outcome of the submission subject only to a ROUGE accuracy floor. In v6.1 llama2-70b-99.9 the per-row accuracy block reports TOKENS_PER_SAMPLE and it is not constant: the AMD 8xMI355X, NVIDIA 8xB300, CoreWeave 72xGB200 and CoreWeave 72xGB300 rows all report TOKENS_PER_SAMPLE 267.0, while Intel's Arc Pro B70 row reports 290.8 and Supermicro's Arc Pro B70 row also reports 290.8. That is a 8.9% spread in the multiplier. The same effect shows up inside the MI355X fleet: several rows sit at 272-275 and others at 283-287, and one row in the round reports 267.3 against a sibling at 272.9. The harness log makes the multiplication explicit - for the AMD 8xMI355X Offline run, 'Samples per second: 375.84' with 'Tokens per second: 106517', and 106517/375.84 = 283.4, matching the generation length rather than any decode rate.",
+  "root_cause": "The score is computed as total generated tokens divided by elapsed time, and the token count comes from the accuracy run's own generated lengths rather than from a pinned constant. MLPerf pins the model, the dataset and the accuracy threshold; it does not pin the output length, because the length is a property of the model's summarization behaviour and the accuracy metric (ROUGE against the CNN/DailyMail reference) tolerates variation within a band. A submitter that produces slightly longer generations while staying above the ROUGE bar is therefore credited with a proportionally higher tok/s for identical hardware work. The one place the effect is neutralised is when a submitter's accuracy block pins the same TOKENS_PER_SAMPLE as everyone else - which is true of the dominant fp4 rows at 267.0 - so the contamination is concentrated in the submissions that deviate.",
+  "workaround": "When comparing two MLPerf LLM tok/s figures, divide both by their own reported TOKENS_PER_SAMPLE to get samples/s and compare THAT, then state the generation length alongside. samples/s is the hardware-and-stack quantity; tok/s is the hardware quantity multiplied by a per-submission constant that is not part of the benchmark definition. This matters most exactly where it is least expected: Intel's Arc Pro B70 llama2-70b-99.9 result (2464.98 tok/s at TOKENS_PER_SAMPLE 290.8) versus the fp4 datacenter rows at 267.0 - about 8.9% of the smaller number is generation length, not hardware. When recording a figure in this repository, carry the generation length in the methodology field; the existing Intel Arc Pro B70 record already flags its harness label as '(inferred)', which is the same concern seen from the other direction.",
+  "severity": "major",
+  "notes": "This is a normalisation gotcha rather than a misconfiguration: no submission is invalid, and every number is a genuine measurement of that submission's own system under its own accuracy result. The error is treating tok/s as a normalised, cross-submitter-comparable quantity when the definition includes a per-submission free variable. It is also a good illustration of why the benchmark's own companion metric - samples per second - is the right one to compare and why it is so rarely quoted: 375.84 samples/s on the AMD node is directly comparable to 481.461 samples/s on NVIDIA's 8xGB300 slice, while 106517 and 131464 tok/s are not. The same arithmetic shows the per-GPU picture cleanly: 16433 tok/s/GPU on the 8-GPU GB300 slice versus 15779 tok/s/GPU on the 72-GPU GB300 rack, both at 267.0.",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-v6-1-amd-mi355x-llama2-offline-log",
+    "bench-mlperf-v6-1-nvidia-gb300-8gpu-llama2-offline-log"
+  ]
+}

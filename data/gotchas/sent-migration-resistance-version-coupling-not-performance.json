@@ -1,0 +1,35 @@
+{
+  "id": "sent-migration-resistance-version-coupling-not-performance",
+  "type": "gotcha",
+  "name": "The migration resistance: people stay on old hardware and old stacks because the cost is toolchain churn, not because the new part is not faster",
+  "class": "toolchain",
+  "symptom": "The blocker to upgrading is consistently described as version coupling across the inference stack, never as the performance delta. A practitioner who benchmarks vLLM on MI300X reports that configuration changes alone produced '2-3X differences in perf numbers', and that the same is true of the driver: 'one thing often overlooked is actualy just how often specific versions of your kernel, drivers, libs, and system setup will affect benchmarks... a lot of results are going to vary, so it's best to test for your own setup' - and that on their own p5d nodes 'even with CUDA 12.6 in the env... vLLM is crashier than SGLang'. The saturation point for that way of working, 393 upvotes on the parent post: 'There's like 32 different schemas with variable support on a GPU card by card basis with a constant question of what was supported in what version and what breaking change breaks what you need and if you should downgrade your transformers or upgrade your vllm, check your torch, oh shoot what about Triton?' That last line - saturate a stack until you cannot change any component without revalidating everything - is the migration-resistance mechanism.",
+  "root_cause": "The inference stack is a resolution over transformers, torch, Triton, CUDA, the driver and the engine, and the binding is not transitive and not always declared. A hardware move is therefore not a driver bump; it is a change to a component every other component was pinned against. The asymmetry that keeps people still is that the existing pin is known-good and the new one is not, and the cost of discovering that is borne at the migration, not at purchase.",
+  "workaround": "Pin deliberately and document the working set. The corpus's own operational practice is the mitigation: 'I'd recommend having envs w/ both SGLang and vLLM (stable and nightlies) to be able off as necessary' - i.e. keep the known-good configuration runnable alongside the candidate, so a migration failure is a config change rather than an outage. Budget validation time for a hardware move that the specs suggest needs none.",
+  "severity": "major",
+  "notes": "One real-world data point from a working deployment where the stack was NOT migrated: a 2026 user reports a 768GB-DDR5 dual-EPYC CPU-only build that cost roughly $10,000, and nine months later has a single RTX 5090 on it running better - 'A single 5090 will speed things up drastically if you use ik_llama.cpp and stick to MoE models.' Note the engine named: ik_llama.cpp, i.e. llama.cpp with CPU offload, not a datacenter engine. Also relevant to datacenter migration resistance: on non-CUDA hardware the engine choice collapses, as one owner of both products puts it - 'With Strix Halo, the only viable option for inference right now is llama.cpp. vLLM still doesn't work well - very limited model support.' That is a software-maturity blocker that keeps a whole class of users on one engine.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "sent-src-reddit-vllm-vs-sglang-1jjl45h",
+    "sent-src-reddit-vllm-quant-mess-1oia8fi",
+    "sent-src-reddit-under-10k-200b-1otdr19",
+    "sent-src-reddit-spark-vs-strix-halo-1qb2p26"
+  ],
+  "affects": [
+    "vllm",
+    "sglang",
+    "ik-llama-cpp"
+  ],
+  "concepts": [
+    "version-pinning",
+    "driver",
+    "cuda",
+    "toolchain",
+    "ray",
+    "migration",
+    "transformers",
+    "triton"
+  ]
+}

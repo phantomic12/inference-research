@@ -1,0 +1,32 @@
+{
+  "id": "comm-gfx906-numa-topology-and-pcie-lane-count",
+  "type": "gotcha",
+  "name": "On MI50 the PCIe slot topology dominates: cards split across two NUMA nodes get 0 in the P2P bandwidth matrix, and PCIe 3.0 x8 links cost 50-100% of pipeline-parallel throughput versus PCIe 4.0 x16",
+  "class": "config",
+  "affects": [
+    "amd-radeon-instinct-mi50x",
+    "vllm",
+    "llama-cpp"
+  ],
+  "concepts": [
+    "gfx906",
+    "numa",
+    "pcie",
+    "p2p",
+    "pipeline-parallel",
+    "riser",
+    "slim-sas",
+    "bandwidth-test"
+  ],
+  "symptom": "A member with 2 cards on cpu0 and 2 on cpu1 on an X99 board reports rocm-bandwidth-test Inter-Device Access with 'some 0s in the matrix' - and explicitly that neither a 32 GB BAR under the V420 BIOS nor the full mitigation kernel line ('no iommu OR iommu=pt mitigations=off pcie_acs_override=downstream,multifunction amdgpu.pcie_p2p=1 pci=nocrs pci=realloc=on') changes it. Separately on the throughput side: 'inside the TP, i've got pcie3.0 X4 (3.5GB/s) but after doing some tests, from pcie 3.0 x4 to pcie4.0 (28GB/S), it won't be much more better... maybe +50/100% speed in PP'. And on hardware advice: 'pcie 3 is still a bit painful' when choosing a board, with the mitigation that once models are loaded PCIe generation 'isnt a big deal ... But splitting a model between cards for inference, it can have a significant impact if card communication is relying on pcie'.",
+  "root_cause": "Cross-socket / cross-NUMA PCIe traffic on GCN5 without Infinity Fabric to fall back on, plus lane-width starvation from risers and dense slot layouts. The two-zero entries are the diagnostic signature: the link does not exist at the topology level, so no BIOS, kernel or VBIOS setting can create it. Members report that hardware topology choices matter more than software - one prefers SlimSAS SFF-8654 over PCIe risers because 'p2p bandwidth is waaay better via slimsas than using a riser setup'.",
+  "workaround": "Before buying or rebuilding: map the topology first with `rocm-smi --showtopotype --showtopoaccess` and rocm-bandwidth-test, and accept only a matrix with no zeros. Keep all GPUs under one NUMA node. Prefer native x16 slots or SlimSAS over risers, and prefer PCIe 4.0 x16 over PCIe 3.0 x8. Check `lspci -v -d 1002: | grep -i 'Memory at'` for a [size=32G] BAR, which is a prerequisite for P2P anyway (one member asks outright whether RCCL P2P depends on Resize BAR on a board that lacks it - that question is unanswered in the thread).",
+  "severity": "major",
+  "notes": "COMMUNITY-REPORTED. The zeros-in-the-matrix observation is the valuable, transferable part: it gives a buyer a concrete precondition (one NUMA node, no zeroed P2P links) that is cheap to verify before committing to a multi-GPU build, and it explains why software-level P2P mitigation sometimes appears to do nothing. The PCIe 3.0 x4 -> PCIe 4.0 figure is one member's estimate rather than a measurement ('maybe +50/100%'), and is recorded as such. The claim that PCIe generation stops mattering once weights are loaded is correct for decode but wrong for split-model serving, and the record states both halves because the community itself does.",
+  "status": "verified",
+  "confidence": 0.65,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

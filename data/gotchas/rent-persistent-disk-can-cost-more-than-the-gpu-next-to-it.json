@@ -1,0 +1,30 @@
+{
+  "id": "rent-persistent-disk-can-cost-more-than-the-gpu-next-to-it",
+  "type": "gotcha",
+  "name": "An Azure Ultra managed disk at 28,000 GiB costs about $4.59/hour - 37% of the $12.29 H100-hour it is attached to, so a durable-disk inference node is never priced by its GPU rate",
+  "class": "config",
+  "affects": [
+    "nvidia-h100-sxm"
+  ],
+  "concepts": [
+    "managed-disks",
+    "cold-start",
+    "model-loading",
+    "egress",
+    "cost-per-token",
+    "ephemeral-storage"
+  ],
+  "symptom": "You pick a GPU instance by its per-GPU-hour rate, ship to production, and the bill is 30-40% higher than the estimate with no obvious line item. On Azure ND96isr H100 v5 - 8x H100 at $12.29 per GPU-hour on-demand, and a 28,000 GiB temp storage field on the instance - the durable-storage options price at $0.000164 per GiB-hour (Ultra) or $0.00011 (Premium SSD v2). 28,000 GiB x $0.000164 = about $4.59 per hour attached, and 28,000 GiB x $0.00011 = about $3.08 per hour. That is 37% and 25% of the GPU spend respectively, for storage. The equivalent trap on the model side: storing a 70B checkpoint at FP8 (roughly 70 GB) in Google Cloud Coldline at $0.000005479 per GiB-hour costs about $0.0038 per hour to sit there - essentially free - so the natural conclusion 'keep weights in cold storage, it is cheap' is true of the resting cost and completely silent about the RESTORE and the egress, which are where the money actually is.",
+  "root_cause": "Instance-local NVMe inside the hourly rate and durable MANAGED disk outside it are billed by different meters on different schedules, and the headline GPU rate covers only the first. The asymmetry is deliberate on the provider's side - persistence is a separate product - and it is invisible unless you multiply the disk size by the per-GiB-hour rate, which no pricing page does for you. The model-loading trap is the same shape: storage CLASS determines resting price, but the cost of GETTING the weights back is a restore-request charge plus egress, and neither appears in the storage line. The two together mean a headline 'GPU-hour' number and a headline 'storage is cheap' number can both be true while the deployment costs 1.4x more than either suggests.",
+  "workaround": "Before booking any GPU instance, list its durable storage requirement and multiply size by the per-GiB-hour rate for the class you actually need, then add it to the GPU rate explicitly - an inference node that does not need to survive a reboot should use instance-local NVMe and never provision durable disks. For weights, separate three costs explicitly: cold STORAGE (usually negligible), RESTORE or retrieval (real, and class-dependent - Glacier Flexible Retrieval and Deep Archive charge real retrieval fees while S3 Intelligent-Tiering has none), and EGRESS on the way to the GPU node (dominant). At an AWS-class $0.09/GB outbound rate, moving 140 GB of BF16 weights once costs about $12.60, which is more than two H100-hours on Lambda - so a design that reloads weights per cold start or per tenant pays a networking bill no GPU-hour estimate predicts. Treat egress as an architecture decision. Watch the per-SKU request fees too: S3 GET at $0.0004 per 1,000 requests and PUT at $0.005 per 1,000 add up against checkpoint-heavy training loops, and OpenAI's file search storage at $0.10 per GB-day and Cerebras's $5 promotional credit both move effective rates in ways a token-price table does not show.",
+  "severity": "major",
+  "notes": "Rates transcribed 2026-10-04 from azure.microsoft.com/en-us/pricing/details/storage/disks/ (Ultra $0.000164 and Premium SSD v2 $0.00011 per GiB-hour; Premium SSD LRS from $0.01825 and Standard SSD LRS from $0.01533 per GiB-month; snapshot storage on Standard $0.05/GB-month, on Premium SSD $0.12/GB-month), cloud.google.com/storage/pricing (us-west4: Standard $0.000027397, Nearline $0.000013699, Coldline $0.000005479, Archive $0.000001644, Rapid Cache $0.0001233 per GiB-hour; storage 'prorated to the sub-second for each object'), and aws.amazon.com/s3/pricing/ (GET $0.0004 per 1,000 requests, PUT $0.005 per 1,000, 100 GB/month free outbound aggregated across all AWS services). Records: [[supply/rent-hidden-costs-egress-storage-coldload-2026-10]], [[supply/azure-nd-h100-v5]], [[supply/ppl-sup-aws-egress-negative]] for the AWS egress-table limitation.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "rent-src-azure-managed-disks",
+    "rent-src-gcp-cloud-storage-pricing",
+    "rent-src-aws-s3-pricing"
+  ]
+}

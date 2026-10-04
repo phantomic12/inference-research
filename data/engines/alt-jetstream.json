@@ -1,0 +1,64 @@
+{
+  "id": "alt-jetstream",
+  "type": "engine",
+  "name": "JetStream (Google's XLA/TPU inference engine, archived)",
+  "repo": "AI-Hypercomputer/JetStream",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "design_goal": [
+    "tpu-only-serving",
+    "xla-device-throughput",
+    "google-owned-serving"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-attention-prompt-cache",
+    "chunked-prefill"
+  ],
+  "supported_backends": [
+    "tpu"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "This WAS Google's own TPU serving engine, and it is the honest answer to 'does a TPU-native server exist outside JAX': yes, and it was JetStream - but Google has now retired it into the vLLM TPU plugin ([[alt-tpu-inference-vllm-plugin]])",
+    "Its own repo description is the design statement: 'JetStream is a throughput and memory optimized engine for LLM inference on XLA devices, starting with TPUs (and GPUs in future -- PRs welcome)'. Note the parenthetical: GPU support was aspirational from the start and the optimisation target was XLA, not TPU specifically - the engine was written against the compiler, which is the opposite discipline to Gaudi's or Groq's hardware-first stacks",
+    "ARCHIVED, with a stated reason and a stated date. The README's notice: core functionality was migrated into tpu-inference to 'streamline TPU inference efforts in open source', and the repo would be archived on 2026-02-01. It also explicitly says archival does not mean deletion - the repo stays forkable and read-only",
+    "Two reference engine implementations, which is the structural lesson: JAX via google/maxtext and PyTorch via google/jetstream-pytorch. Google's own TPU serving stack needed two codebases, and consolidating them is exactly what the vLLM plugin's unified JAX-and-PyTorch lowering path claims to replace",
+    "Real production integration documented: online inference with MaxText on v5e Cloud TPU VMs, with jetstream-pytorch, and serving Gemma on TPUs on GKE with JetStream. So it was deployed, not merely demoed",
+    "Operational tooling was part of the product: Prometheus metrics for observability, JAX profiler and TensorBoard integration for profiling, and a server benchmark harness",
+    "Published to PyPI as google-jetstream, so it was installable rather than repo-only",
+    "464 stars, 26 open issues, Apache-2.0, created 2024-03-01, LAST PUSH 2026-01-05 - consistent with the 2026-02-01 archival date. The GitHub API does not report archived=true, so the archival was applied as read-only plus a README notice rather than the API flag; that discrepancy is worth knowing if you audit this repo programmatically"
+  ],
+  "hardware_caveats": [
+    "DEAD. Retired in favour of the vLLM TPU plugin, no commits since 2026-01-05. Treat as a historical reference and a source of the operational lessons, not as a dependency. Google's reasoning - consolidate rather than maintain a parallel TPU engine - is itself the most informative fact for anyone choosing a TPU serving path today",
+    "Written against XLA rather than against TPU silicon, which is the key architectural difference from the stacks in this slice. That made it portable to GPUs in principle but left it without hardware-specific kernels, and it is why the successor is a plugin that compiles through XLA rather than something with TPC-style custom kernels of its own",
+    "All of its XLA constraints apply and are not its own: static shapes, padding to MXU tiles, recompilation per shape class - see [[alt-tpu-xla-static-shapes]]. JetStream's memory and throughput optimisation work was pushing against those constraints rather than removing them",
+    "Two engine implementations meant two sets of bugs, two sets of model support and two sets of performance characteristics; a reader comparing JetStream and jetstream-pytorch numbers was comparing different systems",
+    "TPU-only in practice. The 'GPUs in future' parenthetical was never delivered, so the promised portability did not arrive before the project ended"
+  ],
+  "best_for": [
+    "Understanding what a first-generation TPU serving stack looked like, and specifically that it was built on the compiler rather than the chip",
+    "Studying the TPU operational tooling that still matters: Prometheus metrics and JAX profiler integration were the mature part of this project",
+    "An honest negative on ecosystem consolidation: one vendor, one compiler, one hardware family, and the dedicated serving engine still got folded into a third-party project's plugin"
+  ],
+  "avoid_for": [
+    "Any new deployment",
+    "Reading JetStream throughput as a TPU hardware characteristic - it is an engine measurement on an XLA-compiled graph, and the constraint floor is in [[alt-tpu-xla-static-shapes]]",
+    "Assuming GPU support, which was promised in the repo description and never shipped"
+  ],
+  "docs_url": "https://github.com/AI-Hypercomputer/JetStream",
+  "notes": "The repo already has [[xla]], [[pallas]] and [[iree]] as compiler records and [[alt-tpu-inference-vllm-plugin]] as the live serving path; JetStream is recorded because its retirement is the answer to the 'is there a TPU-native server outside JAX' question and because the XLA-first-versus-chip-first contrast is the most useful thing in this slice. Its JAX engine implementation is MaxText (cited as source alt-maxtext-readme), which is primarily a TRAINING library, so this repo deliberately does not claim it as an inference engine record. Metadata from the GitHub API on 2026-10-04.",
+  "status": "deprecated",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-jetstream-readme",
+    "alt-maxtext-readme",
+    "niche-github-rest-api-repo-metadata"
+  ]
+}

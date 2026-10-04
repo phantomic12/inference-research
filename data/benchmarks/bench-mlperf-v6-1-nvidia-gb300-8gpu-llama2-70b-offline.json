@@ -1,0 +1,27 @@
+{
+  "id": "bench-mlperf-v6-1-nvidia-gb300-8gpu-llama2-70b-offline",
+  "type": "benchmark",
+  "name": "NVIDIA GB300 NVL72 8-GPU slice (2 nodes), MLPerf Inference v6.1 Offline: Llama 2 70B - the per-GPU-efficient end of the same rack platform",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-v6-1-nvidia-gb300-8gpu-llama2-offline-log"
+  ],
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-b300"
+  ],
+  "interconnect_ids": [],
+  "model": "Llama 2 70B (MLPerf v6.1 submission, FP4 weights)",
+  "format_id": "nvfp4",
+  "metric": "tps_aggregate",
+  "value": 131464,
+  "unit": "output tokens/s (aggregate across 8 GPUs on 2 nodes, harness 'Tokens per second')",
+  "methodology": "AGGREGATE. MLPerf Inference v6.1 Closed division, Datacenter suite, Offline scenario on an 8-GPU SLICE of a GB300 NVL72 (72 GPUs total on the NVL72), taken across 2 nodes with 4 accelerators per node. LOADS: batch size not a fixed published number; min_duration 600000 ms, min_query_count 2000, early stopping satisfied: Yes. Model shape TOKENS_PER_SAMPLE 267.0. Framework per summary.csv: 'TensorRT 10.14, CUDA 13.1, cuDNN 9.17, TensorRT-LLM feat/1.2-mlpinf, NVIDIA Dynamo mlperf-v6.0-dynamo-v0.8.0, vLLM CentML:mlperf-inf-mm-q3vl-v6.1'. Samples per second 481.461. POWER: has_power=False, design_power_watts=null, no declared cap, no cooling configuration. OMITTED BY SOURCE: TP size, KV dtype, concurrency, clock state.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "power_cap": null,
+  "notes": "THE DECISION-RELEVANT NUMBER IN THE v6.1 SET, AND IT POINTS THE OPPOSITE WAY FROM THE HEADLINE. NVIDIA's own 8-GPU slice of a GB300 NVL72 delivers 16433 tok/s per GPU; CoreWeave's full 72-GPU rack of the same platform delivers 15779 tok/s per GPU. Nine times the GPUs for 8.6x the throughput. The NVL72's scale-up fabric buys almost nothing at Llama 2 70B FP4 because a single 8-GPU node already holds the entire quantized model and is not bandwidth-starved on weights. Note also that this 8-GPU slice is 20% FASTER per GPU than the 8-GPU B300 SXM node (13660/GPU, 109277 tok/s) despite both having 270GB and the same TensorRT-LLM 10.14 stack - GB300's 288GB and newer memory are worth having, but a rack of them is not worth having for this workload."
+}

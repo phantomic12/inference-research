@@ -1,0 +1,20 @@
+{
+  "id": "ctx-gotcha-config-context-length-differs-from-claim",
+  "type": "gotcha",
+  "name": "config.json's declared context length disagrees with the vendor's advertised one, sometimes by 3x, and it can be a different key entirely",
+  "class": "config",
+  "affects": [],
+  "concepts": ["long-context", "rope-scaling", "max_position_embeddings", "config.json", "huggingface", "serving-router", "qwen3", "glm-4"],
+  "symptom": "A server sized from config.json rejects prompts the vendor's API and model card accept, or a service advertises a context length its own weights were never trained for. Three concrete instances found 2026-10-04: (1) Qwen3-235B-A22B and Qwen3-8B both ship max_position_embeddings = 40960 while every RULER result row, model card and API listing calls them 128K models - a 3.1x disagreement, with config.json the SHORTER of the two. (2) GLM-4-9B-chat-1M uses the legacy ChatGLM key seq_length = 1048576 and has no max_position_embeddings at all, so any tooling that reads only max_position_embeddings sees no declared limit and happily allocates a 1M-token cache budget; ChatGLM3-6B-128K does the same with seq_length 131072. (3) Qwen2.5-7B-Instruct-1M ships max_position_embeddings 1010000 - not 1048576, not 1,000,000 - a non-power-of-two figure that will not match an off-the-shelf rounding assumption.",
+  "root_cause": "The advertised context length is a product decision about what the vendor will serve, while max_position_embeddings is a config value that the training and rope-scaling code wrote. They are produced by different processes and nothing forces them to agree. Qwen3 is the clearest case: raising RoPE theta to 1e6 (and 1e7 for Qwen3-Next) and pre-training at length let the vendor claim 128K without any interpolation, so the config was never edited upward to match the claim. ChatGLM's key divergence is an artifact of that architecture's config format predating the Llama-style convention every other family adopted.",
+  "workaround": "Read max_position_embeddings AND seq_length AND the model card, and take the MINIMUM as the safe serving limit. For a model where the two disagree in the vendor's favour (Qwen3), decide deliberately whether to accept the risk of serving past config.json - note that RULER's own README tells users to raise max_position_embeddings in config.json to evaluate beyond a model's declared length, which is why the benchmark's own numbers can exceed the shipped config. For ChatGLM, map seq_length explicitly.",
+  "severity": "major",
+  "notes": "Distinct from [[ctx-gotcha-claimed-vs-effective-context-gap]]: that record is about the gap between a claim and a MEASURED behavioural limit, this one is about a claim that disagrees with the machine-readable config the server actually reads. Both gaps can be present at once and they compound - Qwen3 clears 128K on RULER (so there is no behavioural gap) while its config says 40,960 (so a config-driven server will still truncate). Cross-reference: [[ctx-claimed-vs-effective-context-table]], [[ctx-rope-scaling-method-per-model]]. Numbers read verbatim from raw config.json on the HF CDN 2026-10-04 ([[ctx-src-hf-configs-longctx-models]]).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "ctx-src-hf-configs-longctx-models",
+    "ctx-src-ruler-github-results-table"
+  ]
+}

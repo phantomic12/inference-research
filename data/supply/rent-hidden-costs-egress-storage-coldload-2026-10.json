@@ -1,0 +1,28 @@
+{
+  "id": "rent-hidden-costs-egress-storage-coldload-2026-10",
+  "type": "supply",
+  "name": "Hidden inference costs: egress, persistent storage, and cold-storage retrieval are not in any headline GPU or token rate",
+  "kind": "cloud",
+  "vendor": null,
+  "accelerator_ids": [],
+  "region": "multi-cloud (AWS us-east-1, Google Cloud us-west4, Azure) - the rates are per-cloud and per-region",
+  "channels": [
+    "hidden-cost",
+    "egress",
+    "storage"
+  ],
+  "price_usd": 2.7397e-05,
+  "price_basis": "MIXED UNITS - the price_usd field carries ONE number, the Google Cloud Storage Standard rate, and the rest of the record carries the others with their units stated. (a) Google Cloud Storage per-GiB-per-HOUR, us-west4, observed 2026-10-04: Standard $0.000027397, Nearline $0.000013699, Coldline $0.000005479, Archive $0.000001644, Rapid Cache $0.0001233. Storage is 'prorated to the sub-second for each object'. (b) Azure Managed Disk per-GiB-per-HOUR: Premium SSD v2 $0.00011, Ultra $0.000164; the same page's monthly table gives Premium SSD LRS from $0.01825/GiB-month and Standard SSD LRS from $0.01533/GiB-month, and snapshot storage on Standard at $0.05/GB-month, on Premium SSD at $0.12/GB-month. (c) Amazon S3 per GB-MONTH: the page's worked examples use $0.06/GB-month for Standard storage and $0.20/GB for a full upload; GET $0.0004 per 1,000 requests and PUT $0.005 per 1,000 requests on S3 Tables, $0.10/GB/day file-search storage is on the OpenAI page not here. (d) AWS Data Transfer Out to the internet: 100 GB free per month aggregated across all AWS services and regions (except China and GovCloud), then rate-tiered.",
+  "availability": "unknown",
+  "lead_time_weeks": null,
+  "export_controlled": null,
+  "notes": "The reason this record exists is that none of the headline rates in this slice include any of these, and each one can exceed the compute. THREE ARITHMETIC RESULTS A READER SHOULD BE ABLE TO REPRODUCE. (1) THE MODEL-LOAD COST. Loading one 70B checkpoint at BF16 is roughly 140 GB, at FP8 roughly 70 GB. From Google Coldline at $0.000005479/GiB-hour, 70 GB costs about $0.0038 per HOUR to sit in cold storage - so you can leave a model in Coldline essentially free and still pay real money to pull it: what you cannot avoid is the RESTORE, not the resting, and the cost lands as restore-request charges or as egress, not as the storage line. Put differently, storing weights is nearly free and MOVING them is not, which is why 'we keep our weights in cheap cold storage' is a networking-cost claim wearing a storage-cost disguise. (2) THE STORAGE-FEE-THAT-BITES list price. Azure's Ultra disk at $0.000164/GiB-hour means a 28,000 GiB temp store - the ND H100 v5 node in this repo - costs 28000 x 0.000164 = about $4.59 per HOUR while attached, which is 37% of the $12.29 on-demand H100-hour it serves. Attach a Premium SSD v2 at 28000 GiB and it is $3.08/hour, still 25% of the GPU. That ratio is the answer to 'why is my inference node more expensive than its GPU rate': local NVMe inside the instance is cheap, durable MANAGED disk is not, and an inference deployment that does not need to survive a reboot is being charged for persistence it never uses. (3) EGRESS DOMINATES ONCE THERE ARE MANY USERS. At an AWS-style $0.09/GB-class outbound rate, moving 140 GB of weights once costs about $12.60 - more than two H100-hours on Lambda - so a model-reload-per-tenant or per-cold-start design pays a networking bill that no GPU-hour estimate predicts. Treat egress as part of the architecture decision, not as an afterthought. Caveat on this record's own numbers: only the GCS and Azure figures above were transcribed verbatim from their pages on 2026-10-04. The S3 and AWS egress numbers come from worked examples and general statements on those pages, and the AWS tiered outbound table itself is JS-rendered and was NOT captured - see the pre-existing ppl-sup-aws-egress-negative record for that limitation. price_usd therefore carries the GCS Standard per-GiB-hour rate as the single most defensible number on the page.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "rent-src-gcp-cloud-storage-pricing",
+    "rent-src-azure-managed-disks",
+    "rent-src-aws-s3-pricing"
+  ]
+}

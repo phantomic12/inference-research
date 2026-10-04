@@ -1,0 +1,38 @@
+{
+  "id": "comm-community-standard-rpc-sharding-for-multi-gpu",
+  "name": "The community-standard way to pool VRAM across consumer NVIDIA cards is layer sharding over llama.cpp's RPC backend, not NCCL tensor parallelism - because it sidesteps the P2P ban entirely",
+  "class": "config",
+  "affects": [
+    "llama-cpp",
+    "vllm",
+    "exllamav2",
+    "nvidia-rtx-4090",
+    "nvidia-rtx-5090",
+    "nvidia-rtx-3090"
+  ],
+  "concepts": [
+    "rpc",
+    "layer-sharding",
+    "pipeline-parallelism",
+    "tensor-split",
+    "p2p",
+    "exllama-rpc",
+    "multi-host",
+    "vram-pooling"
+  ],
+  "symptom": "Run `ggml-rpc-server` on each machine (each exposing its own CUDA device over TCP), then point llama-server at the workers with `--rpc host:port[,host:port...]` plus `--split-mode layer -ngl 999 --tensor-split`. What you get is one model whose weights are spread across cards in different boxes, with no NVLink and no P2P anywhere in the path. It works, and people use it in anger - but it is not free: one r/LocalLLaMA OP running an RTX 4090 plus two 4060 Ti across three machines (56GB VRAM total) serving Llama 3.3 70B Q4_K_M at n_ctx 8192 reported 145.97 tok/s then 37.47 tok/s prefill, and 4.38 tok/s then 3.98 tok/s decode.",
+  "root_cause": "The design point is that RPC moves activations and weights over ordinary TCP rather than through NCCL, so the consumer-card P2P restriction is simply not on the critical path. Upstream llama.cpp documents mixed-backend workers in the README's own diagram - CUDA, Metal and CPU devices on three different hosts serving one model. The cost is that the interconnect becomes general Ethernet rather than PCIe, and it is a fully synchronising remote-call protocol, so decode latency is dominated by the round trip. Note the OP's own framing: 'I haven't found much online as I was trying to set this up' - this was a first attempt, and the network topology between the three machines is not stated.",
+  "workaround": "Use it as a capacity hack, not a speed hack: it exists to run a model that does not fit on one card. ExLlamaV2's RPC server is the other community-named variant, and one NVIDIA-adjacent practitioner (aikitoria, TensorRT-LLM thread) reports ExLlamaV2 TP over PCIe P2P is 'much faster than mp/pp' for a variety of models - i.e. where P2P does work, tensor parallelism still beats the pipeline approach; RPC is what you reach for when it does not. If you need interactive decode rather than capacity, this is the wrong tool.",
+  "severity": "major",
+  "notes": "REPORTER COUNT: the mechanism (llama.cpp RPC across multiple hosts/cards) is documented upstream in the README and independently practised and reported by at least three people - RazzmatazzReal4129 on Reddit (3 machines, measured tok/s with full server logs posted), stew675 in llama.cpp #21006 (2 remote rpc-servers, Qwen3.5-397B-A17B), and ClosedLadder in llama.cpp #26529 (3-node coordinator + 2 workers, one over ConnectX-7 and one over gigabit LAN, Qwen3-235B-A22B Q6_K). Treat 'RPC layer sharding is a real, practised, multi-user pattern' as verified. Do NOT treat the 4-5 tok/s figure as an RPC ceiling - it is one OP, one untopologied 3-machine setup, at 8192 context. Upstream's own warning matters more than any of these numbers: the README states the RPC backend is 'currently in a proof-of-concept development stage. As such, the functionality is fragile and insecure. Never run the RPC server on an open network or in a sensitive environment!'",
+  "status": "verified",
+  "confidence": 0.8,
+  "sources": [
+    "comm-llamacpp-rpc-upstream-readme",
+    "comm-reddit-localllama-1hapq7e-llamacpp-rpc-perf",
+    "comm-github-llamacpp-21006-rpc-tensor-split-regression",
+    "comm-github-llamacpp-26529-rpc-prompt-cache-abort"
+  ],
+  "type": "gotcha",
+  "updated": "2026-10-04"
+}

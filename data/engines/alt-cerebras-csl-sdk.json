@@ -1,0 +1,64 @@
+{
+  "id": "alt-cerebras-csl-sdk",
+  "type": "engine",
+  "name": "Cerebras CSL SDK and fabric simulator (Cerebras' own software stack)",
+  "repo": "Cerebras/sdk-examples",
+  "languages": [
+    "C"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2022,
+  "design_goal": [
+    "wse-native-programming",
+    "explicit-data-placement",
+    "simulator-first-development"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cerebras-wse"
+  ],
+  "supported_formats": [],
+  "notable_features": [
+    "The most alien software stack in this slice, and the clearest case of the hardware dictating the language. The Cerebras SDK's native language is CSL (Cerebras Software Language), not Python - the public examples repo contains .csl source files compiled by the CSL compiler. A wafer-scale engine is a mesh of individually addressable processing elements, and CSL is the language in which you place data and move it between those PEs explicitly",
+    "FABRIC SIMULATOR IS A FIRST-CLASS DEVELOPMENT TARGET. Every example compiles and can be run either on the simulator or on Cerebras hardware, with no stated code difference. That is the single most useful thing about this stack for a general reader: it is the one hardware-first stack in this repo where you can develop without owning the hardware - and it is possible precisely because the hardware is a regular mesh, which is the same regularity that makes CSL expressible at all",
+    "Per-example verification is enforced by structure, not by convention. Each example ships run.py that creates input data, runs the simulation, and COMPARES the result against an expected result computed in Python in the same file, plus commands.sh containing the exact compile-then-simulate commands. Correctness is part of the example's definition rather than an optional test",
+    "THE BENCHMARK SUITE IS HPC, NOT LLM. Reading the benchmark list is the fastest way to understand who this stack is for: GEMV and GEMM via a collectives library, 25-point and 7-point stencils, spmv-hypersparse, conjugate gradient, preconditioned conjugate gradient, BiCGSTAB, Cholesky, 1D and 2D FFT, the power method. Alongside those, explicit hardware probes: bandwidth-test, row-col-broadcast using memcpy_h2d_rowbcast and memcpy_h2d_colbcast, and demonstrations like histogram-torus, mandelbrot on a 16x16 grid of PEs, single-tile-matvec, and Conway's Game of Life with each PE as one cell",
+    "Those demos are the constraint in miniature. 'Each PE is a single cell' and 'a 16x16 grid of PEs' and 'each PE performs the same matrix-vector computation' are descriptions of programs whose parallelism IS the hardware topology. A GPU kernel describes threads; these examples describe the wafer",
+    "SdkLayout, the API for specifying program LAYOUT, is the piece that generalises the idea - where tensors sit in the mesh, not just what arithmetic to perform - and it is explicitly IN BETA with five tutorials devoted to it. Layout specification is only necessary when your hardware is addressable at that granularity",
+    "Tutorial structure is a single GEMM problem built up over 10 progressively harder tutorials, plus 15 language-feature tutorials and 3 pipelined-computation tutorials. Building up to one operation is the correct pedagogy for a language that controls placement",
+    "Release discipline: a branch is cut per SDK release so each tag matches an SDK version, which is the same version-locking discipline as Gaudi's torch fork ([[xpu-gaudi-pytorch-bridge]]) and Groq's GroqWare ([[alt-groq-groqflow]])",
+    "GATED. SDK access requires registration at cerebras.ai/developers/sdk-request - the compiler and the simulator are not open-download, so the simulator advantage still requires approval. 55 stars, 15 forks, 2 open issues, created 2022-03-31, last push 2026-04-27, Apache-2.0"
+  ],
+  "hardware_caveats": [
+    "NOT AN LLM INFERENCE STACK, and the repo does not pretend otherwise. There is no vLLM, no PyTorch path, no LLM serving example, no OpenAI-compatible API and no scheduler in this record. The repo's LLM story is the separate hosted Cerebras Inference API demos repo, which is a client of Cerebras's cloud service rather than an SDK for running a model on a WSE yourself. The repo's existing flop record [[alt-cerebras-limitations]] already states this and also records that Cerebras publishes no per-chip throughput figure and no MLPerf result",
+    "CSL is a proprietary language and the compiler is gated, so this is not a portable skill. What you learn does not transfer to serving an LLM anywhere else",
+    "Layout is part of the program, which means performance work is placement work. Unlike a GPU kernel where a compiler schedules across SMs, you are reasoning about a mesh you address directly - more control, and much more to get wrong",
+    "SdkLayout is in beta, so the generalisation of the placement model is not yet a stable API",
+    "The public repo has been quiet since 2026-04-27 with 2 open issues and 55 stars; it is a reference and tutorial corpus, not an active community",
+    "HPC-shaped coverage means the stack's maturity is in dense linear algebra and PDE solvers. If your interest is transformer inference specifically, the honest conclusion is that Cerebras's inference story is the hosted API, not the SDK",
+    "Registration gate means even the simulator path is not frictionless, which undercuts the 'develop without the hardware' advantage for most readers"
+  ],
+  "best_for": [
+    "Understanding what wafer-scale programming demands: a language where layout and data movement are explicit, because the machine is an addressable mesh rather than a set of schedulable SMs",
+    "Studying the simulator-first development pattern - compile-then-run on a fabric simulator with a Python-computed expected result in the same file - which is the most reusable engineering idea in this record",
+    "Reading a benchmark corpus that reveals a hardware vendor's actual target market: stencils, CG, Cholesky and FFT rather than transformers",
+    "An honest negative on the LLM question: this is the stack to look at if you want to understand Cerebras, and it is not the stack you use to serve a model"
+  ],
+  "avoid_for": [
+    "Serving an LLM - there is no path here",
+    "Assuming the simulator's timing tells you anything about hardware performance. The repo offers no simulator-derived performance claim, and any such inference would be unsupported",
+    "Portability of the skill or the language",
+    "Production use of SdkLayout while it is in beta"
+  ],
+  "docs_url": "https://sdk.cerebras.net",
+  "notes": "The repo already has [[cerebras-wse-3]] and [[cerebras-wafer-mesh]] as hardware records, [[alt-cerebras-wafer-sram]] and [[alt-cerebras-limitations]] as flop records, and [[alt-cerebras-ultrafast]] plus [[alt-cerebras-gpt56-ultrafast-tps]] as benchmark/vendor-claim records. This record fills the missing software layer and is deliberately an honest negative on LLM inference, which the existing limitations record already flags. No throughput figure is asserted here. Metadata from the GitHub API on 2026-10-04.",
+  "status": "draft",
+  "confidence": 0.72,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-cerebras-sdk-examples",
+    "niche-github-rest-api-repo-metadata"
+  ]
+}

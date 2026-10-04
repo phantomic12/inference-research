@@ -1,0 +1,47 @@
+{
+ "id": "ctx-128k-prefill-compute-cost",
+ "type": "flop",
+ "name": "What a 128K prefill actually costs: flops, wall-clock, energy and dollars",
+ "class": "prefill_attention",
+ "arithmetic_intensity": "Prefill flops are 2*N_active*L for the weight GEMMs plus 2*n_q*d_h*L^2 for causal attention, and at 128K the FIRST term dominates for every current dense model - which is the counter-intuitive result and the one worth internalizing. Using active (not total) parameters so MoE models are priced correctly, at L = 131,072 on one H100 SXM (dense bf16 989.5 TFLOP/s from [[flop-nvidia-h100-specs]]): Qwen3-Next-80B-A3B, 3B active, 786.4 TFLOP GEMM + 140.7 TFLOP attention = 15.2 percent attention, 937 ms at 100 percent of peak / 1,874 ms at 50 percent / 3,123 ms at 30 percent. Llama-3.1-8B, 8.03B active, 2,105.0 + 140.7 = 2,245.7 TFLOP, 6.3 percent attention, 2,270 / 4,539 / 7,565 ms. DeepSeek-V3, 37B active, 9,699.3 + 844.4 = 10,543.7 TFLOP, 8.0 percent attention, 10,656 / 21,311 / 35,519 ms. Qwen3-235B-A22B, 22B active, 5,767.2 + 281.5 = 6,048.7 TFLOP, 4.7 percent attention, 6,113 / 12,226 / 20,376 ms. GLM-4.5, 32B active, 8,388.6 + 422.2 = 8,810.8 TFLOP, 4.8 percent attention, 8,904 / 17,809 / 29,681 ms. Mistral-Large-2411, 123B active, 32,243.7 + 422.2 = 32,665.9 TFLOP, 1.3 percent attention, 33,013 / 66,025 / 110,042 ms. Qwen2.5-72B, 72.7B active, 19,057.9 + 281.5 = 19,339.4 TFLOP, 1.5 percent attention, 19,545 / 39,089 / 65,149 ms. Llama-3.1-70B, 70.6B active, 18,507.4 + 281.5 = 18,788.9 TFLOP, 1.5 percent attention, 18,988 / 37,976 / 63,294 ms. Llama-3.1-405B, 405.9B active, 106,404.2 + 562.9 = 106,967.1 TFLOP, 0.5 percent attention, 108,102 / 216,205 / 360,341 ms - 108 seconds of pure prefill for one prompt on one card, before any decode. THE ATTENTION SHARE ONLY LOOKS SMALL BECAUSE L IS STILL BELOW THE CROSSOVER for these geometries, and the crossover is per-model, not universal: Llama-3.1-70B's attention share is 0.04 percent at 4K, 0.4 percent at 32K, 1.5 percent at 128K and 3.0 percent at 256K, doubling per doubling of L, so a model with a narrow MLP per layer crosses much later than a wide one. DeepSeek-V3 is already past its crossover at 128K (8.0 percent attention, and its 844.4 TFLOP attention term is 6x Llama-3.1-70B's because n_q*d_h = 128*192 = 24,576 against 8,192). The load-bearing point: at 128K the O(L^2) term is NOT what makes prefill expensive - the O(L) weight-GEMM term is, and it is enormous. Prefill at long context is a tensor-core GEMM problem that happens to also run an attention kernel, which is the same conclusion the repo's [[long-context-rag-prefill]] reaches at 32K and takes further here.",
+ "bound_by": "compute",
+ "scales_with": [
+  "context length (linearly in total flops - so 4x the context is 4x the prefill bill, unlike the quadratic attention term which is still the minority)",
+  "active parameters per token (the linear term; this is why a 22B-active 235B MoE prefills 2.8x cheaper than a dense 70B at the same context)",
+  "attention geometry n_q*d_h (the quadratic term's coefficient, and the reason MLA-style narrow heads keep the quadratic term small)",
+  "achieved MFU (the 50 percent column is the realistic planning figure; 30 percent is a busy multi-tenant card)",
+  "tensor-parallel degree and interconnect (all flops divided, but each added card adds an all-reduce per layer)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-b200",
+  "nvidia-b300"
+ ],
+ "workarounds": [
+  "Price prefill by active parameters, not total parameters - it is the difference between Qwen3-235B-A22B and Llama-3.1-70B at identical context",
+  "Disaggregate prefill from decode: the repo's SGLang measurement shows PP4+TP8 beating TP8 alone by 3.31x on ultra-long-context prefill with up to 67.9 percent TTFT reduction, because TP alone hits communication bottlenecks (all-reduce after every layer) while PP communicates only at pipeline boundaries",
+  "Chunked prefill to bound TTFT: on GB300 with DeepSeek-R1, chunked prefill cut TTFT 30-45 percent versus unchunked (which exceeded 15 s) and dynamic chunking added a further 8-17 percent",
+  "Serve the measured effective length, not the claimed one - the same Llama-3.1-70B prompt costs 4x the prefill at 128K as at 32K and per [[ctx-claimed-vs-effective-context-table]] the 128K version of a 64K-effective model is 4x the price for degraded output",
+  "Prefix caching is the only real lever when the long prefix repeats: a cached 128K prefix turns the request into a short GEMM plus one linear-in-L attention pass"
+ ],
+ "notes": "MEASURED CROSS-CHECKS, because the numbers above are arithmetic and these are measurements, and they disagree in an informative way. GeneralCompute's 128K-input TTFT leaderboard (batch 1, cold cache, 512 output tokens, three runs median, hardware not stated) gives Qwen2.5 7B 2.1 s, Llama 4 Scout 4.2 s, Gemma 3 27B 8.7 s, DeepSeek V3 9.8 s, Qwen2.5 72B 12.4 s, Mistral Large 14.1 s. Those are 5-10x FASTER per token than the single-H100 arithmetic predicts for the larger models, which means the leaderboard is running tensor-parallel across several cards with high MFU - a reminder that a single-card flops figure is a floor, not a prediction. vLLM on 2xH100 with a 218B-total/25B-active W4A4 Command A gives the cleanest single measurement of the L-dependence because it sweeps context on one system: TTFT 512 tokens 78 ms, 2K 216 ms, 8K 785 ms, 32K 3,390 ms, 64K 7,290 ms, 128K 16,800 ms - i.e. 4x the tokens from 32K to 128K costs 5.0x the time, slightly superlinear, consistent with the quadratic term starting to matter in a 32-layer model with only 24 full-attention layers. Saturated prefill throughput on the same system falls with length: 11,587 tok/s at 512 (B=85), 10,084 at 32K (B=4), 8,080 at 128K (B=3), and the record's own reading is that per-token cost is about 35 percent above its 8K best by 128K. On GB300 with DeepSeek-R1 and FP8 KV, 128K input / 8K output under PD disaggregation and chunked PP gives TTFT 8,600 ms - versus over 15,000 ms unchunked. ENERGY AND DOLLARS, which is where an operator actually feels it. At 50 percent MFU on one 700 W H100, converting GPU seconds to facility kWh with the LBNL 2024 national-average PUE for AI-serving facilities of 1.145: a 128K prefill is 1.0 Wh for Llama-3.1-8B (4.54 s), 4.7 Wh for DeepSeek-V3 (21.31 s), 8.5 Wh for Llama-3.1-70B (37.98 s), 14.7 Wh for Mistral-Large-2411 (66.03 s). Priced at Azure's on-demand ND96isr rate of $98.32 per 8xH100 instance-hour, i.e. $12.29 per H100-hour, the COMPUTE COST OF ONE 128K PREFILL is roughly $0.0023 (8B), $0.011 (DeepSeek-V3), $0.019 (70B) and $0.034 (Mistral-Large), and at the H100 SXM market floor of $6.16/hour it is under a tenth of a cent in every case. THE DOLLAR FIGURES ARE THE MOST IMPORTANT NEGATIVE RESULT IN THIS RECORD: prefill compute is essentially free next to the memory cost of HOLDING the resulting cache. One 128K sequence of Llama-3.1-70B KV is 40 GiB and, on an 8xH100 node at TP4, costs about 5.1 GPU-hours of amortization per hour of holding at 3.8 concurrent sequences - three orders of magnitude more than the prefill that created it. An operator who optimizes prefill MFU is optimizing the cheap term. THE TTFT-vs-THROUGHPUT TRADE IS ALSO NOT SYMMETRIC: TTFT grows quadratically in input length (fitted as a*L^2 + b*L + c) while ITL grows linearly (slope*input_len + intercept), so chunked prefill and PD disaggregation buy TTFT at the cost of scheduling complexity, and the repo's own Kairos TTFT breakdown record exists because TTFT at long context decomposes into prefill compute, queueing and KV transfer, only the first of which this record prices. CAVEATS: MFU assumptions of 30-50 percent are engineering estimates for a large batch of long prompts, not measurements from this repo; the LBNL figure is a national average PUE for facilities serving AI equipment, not a specific data center; the Azure price is on-demand Linux/consumption in eastus, with spot at $2.27 per H100-hour and reservation around 36 percent cheaper; and none of these include the decode phase that follows, which at typical output lengths is orders of magnitude cheaper again but which occupies the sequence's KV cache for its entire duration.",
+ "status": "verified",
+ "confidence": 0.78,
+ "updated": "2026-10-04",
+ "sources": [
+  "ctx-src-hf-configs-longctx-models",
+  "flop-nvidia-h100-specs",
+  "nrg2-lbnl-2025-us-dc-energy-report",
+  "pwr2-nvidia-h100-datasheet",
+  "sup-cloud-azure-retail-prices-h100",
+  "ppl-bench-gpu-ai-price-benchmark",
+  "bench-generalcompute-128k-ttft",
+  "bench-capp-vllm-longctx-ttft",
+  "bench-lmsys-gb300-longctx-ttft",
+  "bench-lmsys-chunked-pipeline-ttft",
+  "flop2-sarathi",
+  "flop2-llama2-7b-config",
+  "pap-sys-vllm-disagg-prefill"
+ ]
+}

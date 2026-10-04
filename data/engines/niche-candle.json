@@ -1,0 +1,71 @@
+{
+  "id": "niche-candle",
+  "type": "engine",
+  "name": "Candle (Hugging Face Rust ML framework)",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-04",
+  "sources": [
+    "niche-candle-repo",
+    "niche-github-rest-api-repo-metadata"
+  ],
+  "repo": "huggingface/candle",
+  "languages": [
+    "Rust"
+  ],
+  "license": "MIT OR Apache-2.0",
+  "first_release_year": 2023,
+  "design_goal": [
+    "embedded-inference",
+    "library-not-server",
+    "minimal-deps",
+    "cross-platform",
+    "wasm"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "metal",
+    "mkl",
+    "accelerate",
+    "amd-hip/rocm",
+    "wasm",
+    "cpu"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "ggml/gguf"
+  ],
+  "notable_features": [
+    "Candle IS A LIBRARY, NOT A SERVER. There is no HTTP endpoint, no OpenAI-compatible API, no scheduler. It is a Rust tensor/nn crate you embed in your own binary. That is the entire point and the reason it never appears in serving comparisons - it is below the layer where engines are compared",
+    "The framework behind several Hugging Face browser demos shipped as Spaces: whisper speech recognition, LLaMA2, T5 generation, yolo pose estimation and object recognition, and Segment Anything, all running entirely in the browser via WASM. Those demos are the project's most concrete public artifact and its best argument for why the framework exists",
+    "Dual MIT OR Apache-2.0 licensing - the permissive path is deliberate, because the audience includes commercial embedded vendors",
+    "Crates.io distributed as candle-core rather than GitHub releases, so versioning lives on crates.io and the GitHub releases list is empty. Worth knowing if you are tracking release cadence",
+    "No GitHub releases at all (API returns an empty releases list as of 2026-10-04); the crates.io version is the release signal",
+    "Apache-2.0, 21140 stars, 1784 forks, 913 open issues, created 2023-06-19, last push 2026-10-02, not archived"
+  ],
+  "hardware_caveats": [
+    "NO PUBLISHED THROUGHPUT. Candle publishes no tok/s, no TTFT, no benchmark table comparing against llama.cpp, vLLM or SGLang. The Spaces demos demonstrate that models run, not how fast. Treat any Candle speed number you encounter as third-party and unverified",
+    "NO SCHEDULER, so all the techniques this repo is about are absent: no continuous batching, no paged KV, no prefix caching, no chunked prefill. Single-stream only. Candle is strictly a batch-1 embedded runtime and it does not claim to be anything else",
+    "NO OPTIMIZED SERIALIZATION PATH COMPARABLE TO GGUF. It reads safetensors natively and has a ggml/gguf reader, but candle is not the place to get the wide quant-format coverage (AWQ, GPTQ, EXL2) that llama.cpp provides. Quantised-model breadth lives in llama.cpp, not here",
+    "Kernel coverage is the honest limit. Candle implements a working but partial set of matmul and fused ops compared to what CUDA, cuBLAS or Metal ship. Expect to be slower than a specialised runtime on the same model and hardware, and expect occasional unsupported op to send you to writing a custom kernel",
+    "913 open issues on 21140 stars is a high absolute count - a large surface with real gaps, and a signal that issue response is not fast",
+    "CPU path depends on MKL or Accelerate being present; both are separate native dependencies and the plain-build experience is not as zero-friction as the README's minimalism claim suggests"
+  ],
+  "best_for": [
+    "Embedding a model in a Rust product that must not ship a Python runtime or a C++ dependency - the single clearest reason to use it",
+    "WASM and browser inference, which is where its public demos actually live and where almost nothing else in this repo competes",
+    "A small Whisper or LLaMA-class model inside an existing Rust binary, where throughput per second matters less than a single dependency and a static build",
+    "Hugging Face ecosystem projects that want to prototype a model quickly in Rust without leaving the HF hub"
+  ],
+  "avoid_for": [
+    "Any multi-user or server deployment - there is no server to deploy",
+    "Throughput work. If you care about tokens per second under concurrency, use an engine from data/engines/ that has a scheduler",
+    "Maximum speed on a single model: candle is a general framework, and a runtime specialised for one architecture will beat it",
+    "Anyone who needs a quantisation zoo; that is llama.cpp's job"
+  ],
+  "docs_url": "https://huggingface.github.io/candle/",
+  "notes": "The Rust counterpart to the Rust story in this slice, and the one with the most visible public artifacts (the HF browser Spaces). Recorded as a library rather than an engine because calling it an engine would overstate it: the honest framing is that candle occupies the layer underneath engines and is chosen for integration cost, not throughput. NO PUBLISHED THROUGHPUT FIGURES - explicitly recorded rather than filled with an invented number. Related: [[triton-inference-server]] and [[text-generation-inference]] are Rust servers if you actually need a server; candle is the case where you do not. All metadata from the GitHub API on 2026-10-04."
+}

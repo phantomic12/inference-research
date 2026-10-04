@@ -1,0 +1,29 @@
+{
+  "id": "sent-onnx-and-openvino-for-constrained-deployment",
+  "type": "gotcha",
+  "name": "Narrow but consistent: ONNX Runtime and OpenVINO are chosen for constrained and non-CUDA deployment, but the corpus treats them as frameworks you build against rather than engines you adopt",
+  "class": "toolchain",
+  "symptom": "ONNX is recommended in the situational map with an explicit downgrade: 'ONNX is also technically an option if you're willing to setup an inference script for a specific model, and you need to support weird hardware (like a Rockchip NPU), but that's not really an LLM engine so much as a framework that lets you make your own.' The same map routes vendor accelerators to vendor backends instead - a dedicated backend for Tenstorrent, one for AMD NPUs on Windows, one for Intel. OpenVINO appears in the corpus mainly as a CPU integer path: a 1.2K-upvote post running a 16B MoE on a 2018 i3, and a 197-upvote post doing Flappy Bird inference on CPU with OpenVINO INT8. The pattern is that these are selected when the constraint is the hardware, not when the constraint is throughput.",
+  "root_cause": "The selection driver is deployment target heterogeneity. When the target is an NPU, a CPU, or a device where a CUDA binary will not exist, the mainstream engines are not options and a graph framework is. The cost is stated accurately in the corpus: you write and maintain the inference script yourself, per model.",
+  "workaround": "Choose ONNX Runtime or OpenVINO when the target is a CPU or an NPU and the model is fixed. Do not expect the ecosystem, quant-format coverage, or feature parity of vLLM or llama.cpp there; the corpus's own recommendation is that these are for a specific model on specific hardware.",
+  "severity": "minor",
+  "notes": "Low evidence density by construction - this is the thinnest of the six engine cells, because a subgraph of the community that this corpus draws from does not use these stacks. Recorded as narrow-and-consistent rather than weak; a reader should not read absence of contrary evidence here as broad endorsement.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "sent-src-reddit-best-inference-engine-1kc4kv2"
+  ],
+  "affects": [
+    "onnxruntime-genai",
+    "openvino-genai"
+  ],
+  "concepts": [
+    "engine-selection",
+    "constrained-deployment",
+    "npu",
+    "onnx",
+    "openvino",
+    "cpu-inference"
+  ]
+}

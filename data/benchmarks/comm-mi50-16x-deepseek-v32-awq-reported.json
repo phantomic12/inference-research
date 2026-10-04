@@ -1,0 +1,27 @@
+{
+  "id": "comm-mi50-16x-deepseek-v32-awq-reported",
+  "type": "benchmark",
+  "name": "REPORTED (unverified, Reddit): 16x MI50 32GB serving DeepSeek-V3.2 AWQ 4-bit at 10 tok/s decode and 2000 tok/s prefill at 69k context",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-radeon-instinct-mi50x"
+  ],
+  "interconnect_ids": [],
+  "model": "DeepSeek-V3.2 AWQ 4-bit",
+  "format_id": null,
+  "metric": "decode_tok_s",
+  "value": 10.0,
+  "unit": "tok/s",
+  "methodology": "AS REPORTED, NOT DOCUMENTED: 'Deepseek 3.2 AWQ 4bit @ 10 tok/s (output) // 2000 tok/s (input of 23k tok) on vllm-gfx906-deepseek with 69000 context length.' Power draw 550 W idle / 2400 W peak inference. 16 x MI50 32GB. No batch size, no TP/PP split, no concurrency, no quant group size, no ROCm or vLLM version, no clock state, no prompt/output length beyond '23k tok' input. Setup guide referenced at github.com/ai-infos/guidances-setup-16-mi50-deepseek-v32.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "COMMUNITY-REPORTED AND NOT REPRODUCIBLE - recorded for the shape of the result, not the digits. The author states outright: 'it might be a good alternative to CPU hardwares as RAM price increases and the prompt processing speed will be much better with 16 TB/s bandwidth + tensor parallelism', and describes himself as 'a random guy with average software dev background using LLMs to make it run'. What IS worth taking from this: it demonstrates that a ~700B-class MoE served in AWQ 4-bit is achievable on 512 GB of used-market HBM2, and the idle-versus-peak power spread (550 W to 2400 W) is a useful reminder that a 16-card node is not idle-draw. Do NOT compare the 10 tok/s against any measured vLLM figure in this repo - the methodology fields that would make it comparable (parallelism configuration, concurrency, context depth, precision policy) are all absent, and the same reporter's own Discord posts on the same system describe wildly different figures depending on precision settings, including that fp32 compute was added specifically to avoid garbage output. Related Discord figures from the same author on related setups, all equally unmethodologised: 4.3 tok/s at TP2/PP16, and 'around 14 tok/s TG 135 tok/s PP (16k tok prompt / 140k ctx max on 16 MI50s)' for a different model and quant.",
+  "status": "draft",
+  "confidence": 0.3,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-reddit-mi50-deepseek-v32",
+    "comm-gfx906-discord-server-log",
+    "comm-vllm-gfx906-mobydick-repo"
+  ]
+}

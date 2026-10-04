@@ -1,0 +1,77 @@
+{
+  "id": "niche-mediapipe",
+  "type": "engine",
+  "name": "MediaPipe (Google on-device ML framework)",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "niche-mediapipe-repo",
+    "niche-github-rest-api-repo-metadata"
+  ],
+  "repo": "google-ai-edge/mediapipe",
+  "languages": [
+    "C++",
+    "Java",
+    "Swift",
+    "Python",
+    "Objective-C",
+    "JS"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2019,
+  "design_goal": [
+    "on-device",
+    "live-and-streaming-media",
+    "multiplatform-consistency",
+    "packaged-turnkey-solutions"
+  ],
+  "scheduling": [
+    "none",
+    "streaming-graph (frame-by-frame, not request scheduling)"
+  ],
+  "supported_backends": [
+    "cpu",
+    "gpu",
+    "tflite-delegate"
+  ],
+  "supported_formats": [
+    "tflite",
+    "task-bundles (.task)",
+    "pytorch (via converter)"
+  ],
+  "notable_features": [
+    "THE LARGEST ADOPTION NUMBERS IN THE ENTIRE ON-DEVICE NICHE BY A WIDE MARGIN: 37162 stars and 6183 forks. Compare [[niche-mnn]] at roughly 16k, [[local-ncnn]] and [[local-litert]] in the same range. MediaPipe is the on-device engine people actually ship, and the star count is the honest evidence for that rather than any benchmark",
+    "THE FOCUS IS STREAMING MEDIA, WHICH IS A DIFFERENT PROBLEM FROM LLM SERVING. Self-described as 'cross-platform, customizable ML solutions for live and streaming media', with video-processing, audio-processing and stream-processing among its topics. The pipeline is a frame-by-frame graph, which is why the scheduling field here is a streaming graph rather than request-level batching",
+    "SOLUTIONS, NOT KERNELS: turnkey task APIs for VISION (object detector), TEXT (text classifier) and AUDIO (audio classifier) with setup guides for Android, web and Python. The value proposition is that the model and its pre/post-processing arrive packaged, which is the opposite trade-off from llama.cpp's do-it-yourself quantisation catalogue",
+    "CROSS-PLATFORM CONSISTENCY IS THE REAL PRODUCT: Android, iOS, web, desktop, edge and IoT from one codebase, which is a wider target surface than the mobile-only engines in this niche",
+    "BUILT ON A GRAPH EXECUTION MODEL - the topics list graph-framework and graph-based, inherited from the original 2019 MediaPipe design. Per-graph execution is why the streaming focus and the graph engine are the same decision",
+    "TWO DOCUMENTED CAVEATS IN THE README ITSELF, worth recording because they are unusual for a Google project to publish: primary developer documentation moved off GitHub to developers.google.com/mediapipe as of 2023-04-03, and 'MediaPipe Solutions Preview is an early release'. The word Preview next to the successor's stable branding is informative",
+    "Apache-2.0, created 2019-06-13, and critically still pushing on 2026-10-04 - the same day as this record, which is the strongest maintenance signal in this slice",
+    "Related but distinct: google-ai-edge/LiteRT is the successor to TensorFlow Lite ([[local-litert]]), itself active (last push 2026-10-04, latest release v2.2.0 on 2026-08-13, 3468 stars). MediaPipe consumes that runtime rather than replacing it"
+  ],
+  "hardware_caveats": [
+    "NO LLM SUPPORT WORTH THE NAME, AND THAT IS THE POINT. The documented task categories are vision, text classification and audio classification. There is no generative-LLM serving story here: no autoregressive decode loop, no KV cache management, no continuous batching, no paged attention, no prefix caching, no speculative decoding, no GGUF. For LLM work this is the wrong project and [[niche-mnn]] or [[llama-cpp]] are the relevant records",
+    "THE TEXT SOLUTION IS A CLASSIFIER, NOT A LANGUAGE MODEL. 'text classifier' is the documented capability; do not read 'text' in the solution list as LLM support",
+    "NO PUBLISHED THROUGHPUT OR LATENCY BENCHMARKS THAT I COULD VERIFY. The README links to interactive demos rather than presenting a numbers table. MediaPipe's evidence of quality is adoption and demo availability, not published measurements. Any latency figure attributed to MediaPipe is third-party and device-specific",
+    "PERFORMANCE IS HARDWARE- AND OEM-SPECIFIC, and this is where the NNAPI story bites. MediaPipe's acceleration runs through TFLite delegates, and the on-device LLM records in this slice show why the delegate landscape matters: Google Play Services LiteRT exposes only GPU and XNNPACK delegates now that NNAPI is deprecated in Android 15. So MediaPipe's GPU/CPU path is the current one and its NPU story is inherited from a platform layer being retired",
+    "The 'early release' framing of MediaPipe Solutions suggests API instability in the solution layer, even with an active repository. Pin versions",
+    "DOCUMENTATION LIVES OFF-GITHUB as of 2023-04-03, which is a small but real friction for readers auditing capabilities",
+    "430 open issues on 37162 stars is a very low ratio - about 1% - the healthiest issue-to-star ratio in this niche, consistent with genuinely active maintenance"
+  ],
+  "best_for": [
+    "Vision, audio and text-classification on Android or iOS where you want packaged turnkey tasks rather than assembling a runtime yourself",
+    "Live camera and microphone pipelines - MediaPipe's actual reason to exist, and where its streaming graph model beats a request-oriented engine",
+    "Multiplatform on-device work spanning mobile, web, desktop and IoT from one codebase",
+    "A team that wants the model plus pre- and post-processing delivered as a supported task rather than five separate components",
+    "Anyone wanting evidence that on-device inference is a real shipping category rather than a research interest - the 37162 stars and 6183 forks are the argument"
+  ],
+  "avoid_for": [
+    "LLM inference of any kind. No decode loop, no KV cache, no serving scheduler. This is the most important caveat",
+    "Assuming 'text' means language models - the text solution is a classifier",
+    "Anyone needing published benchmark numbers to justify a choice; the public evidence is demos and adoption",
+    "Working on the LLM path inside MediaPipe even if tempted - [[niche-mnn]], [[llama-cpp]] and [[local-litert]] are the records for that"
+  ],
+  "docs_url": "https://ai.google.dev/edge/mediapipe",
+  "notes": "The on-device counterpart to [[niche-mnn]] and the honest answer to 'which on-device engine is actually deployed': at 37162 stars and 6183 forks, MediaPipe is deployed at a scale none of the other on-device records here can claim, and it was still pushing to the repository on 2026-10-04, the same day this record was written. The tradeoff is equally clear and equally worth stating: it is a VISION/AUDIO/CLASSIFICATION framework, not an LLM engine. The documented text solution is a classifier, and there is no decode loop, KV cache or serving scheduler anywhere in it. Its acceleration story ties directly to [[niche-android-nnapi]] - MediaPipe runs through TFLite delegates, and with NNAPI deprecated in Android 15 the surviving Google path is GPU plus XNNPACK, which is why this record pairs with that one. Recorded at confidence 0.8 rather than higher because the README still labels MediaPipe Solutions a 'Preview' and points to off-GitHub docs, both mild instability signals, and because I could verify no published throughput or latency table - the public evidence is demos and adoption. NO PUBLISHED THROUGHPUT - explicit negative. All metadata from the GitHub API on 2026-10-04."
+}

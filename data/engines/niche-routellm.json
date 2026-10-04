@@ -1,0 +1,65 @@
+{
+  "id": "niche-routellm",
+  "type": "engine",
+  "name": "RouteLLM (LMSYS LLM router)",
+  "status": "contested",
+  "confidence": 0.72,
+  "updated": "2026-10-04",
+  "sources": [
+    "niche-routellm-repo",
+    "niche-github-rest-api-repo-metadata"
+  ],
+  "repo": "lm-sys/RouteLLM",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "design_goal": [
+    "cost-routing-not-scheduling",
+    "quality-cost-tradeoff",
+    "drop-in-openai-proxy",
+    "router-benchmarking"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "api-only (proxies to external providers)"
+  ],
+  "supported_formats": [
+    "not-applicable (no weights loaded)"
+  ],
+  "notable_features": [
+    "IT DOES NOT RUN ANY MODEL. This is the defining fact and the reason it belongs in a knowledge base about inference engines: RouteLLM is a DECISION LAYER that sits in front of two or more existing endpoints and picks which one should answer a given query. It loads no weights and touches no GPU. The 'hardware it needs' answer is: whatever your upstream providers already need",
+    "The routing problem it solves is COST, not speed. Most requests do not need the strongest model; a router that recognises the easy ones and sends them to a cheaper model cuts spend without a quality collapse. That is a different optimisation target from every continuous-batching engine in this repo",
+    "Two deployment shapes, both genuinely useful: a drop-in replacement for an OpenAI client (you change your client construction and requests start routing), or an OpenAI-compatible server other clients can point at. The proxy mode is what makes it adoptable without touching application code",
+    "Ships TRAINED ROUTERS OUT OF THE BOX - the 'mf' router is the default and the README's quickstart uses it - plus a framework for training and comparing your own across multiple benchmarks. Being both a usable default and a research platform is unusual for a niche tool",
+    "Accompanies a real paper (arXiv 2406.18665) and an LMSYS blog post, so the approach is documented rather than folklore",
+    "5568 stars and 441 forks - substantial adoption for a router, which tells you how much the cost-optimisation problem is felt. Only 44 open issues",
+    "Apache-2.0, created 2024-06-03"
+  ],
+  "hardware_caveats": [
+    "NO INDEPENDENTLY VERIFIED PERFORMANCE. Every number in this record is a VENDOR CLAIM from the project's own README: 'reduce costs by up to 85% while maintaining 95% GPT-4 performance on MT Bench' and '>40% cheaper' than commercial routers. These are self-reported, measured against the authors' choice of benchmark, with a strong model baseline (gpt-4-1106-preview) and weak model (Mixtral-8x7B) chosen by the authors. Treat as an upper bound on the achievable saving, not an expectation. I found no third-party reproduction",
+    "THE REPO IS EFFECTIVELY DORMANT. Last push was 2024-08-10 - roughly two years before this record's date of 2026-10-04. It is NOT archived (so not formally deprecated) and has only 44 open issues, so it is not visibly rotting either. The accurate description is UNMAINTAINED-BUT-NOT-ABANDONED, which is a different and more ambiguous status than either extreme",
+    "DORMANCY IS THE REAL RISK, NOT CODE QUALITY. The router is a small model reading prompts; nothing about it decays. What decays is provider compatibility: OpenAI model names and API surfaces move, the strong-model baseline moves, and a router trained against a 2024 distribution of queries may misroute on 2026 traffic. There is no evidence of retraining",
+    "IT IS A ROUTER, NOT A SERVER, so no scheduler capability exists: no continuous batching, no paged KV, no prefix caching. It adds a network hop and a classification step to every request, which is a LATENCY TAX on top of whatever your upstream does. The cost saving can be real while the latency regression is certain",
+    "Cost figures are entangled with pricing changes. An 85% saving against gpt-4-1106-preview and Mixtral-8x7B is partly a statement about 2024 model pricing, and those two endpoints have since been superseded. The experiment is not reproducible as stated",
+    "No GPU requirement at all, which is unusual for this knowledge base. Hardware cost is zero on the router itself and everything is in the upstreams"
+  ],
+  "best_for": [
+    "A workload with a long tail of easy prompts where a router can send most traffic to a small model - this is the canonical use case and the reason the project has 5568 stars",
+    "Cutting inference spend without a quality collapse you can measure against your own eval set",
+    "Teams wanting to A/B router strategies across multiple benchmarks rather than trusting a vendor's routing claim",
+    "Retrofitting cost control onto an existing app via OpenAI-compatible proxy mode, with minimal code change"
+  ],
+  "avoid_for": [
+    "Anything latency-sensitive: it is an extra network hop and a classifier call in front of every request",
+    "Trusting the headline percentages - they are the authors' own numbers with their own baseline and their own benchmark, and no independent reproduction is cited",
+    "Starting a new project on it in 2026 without checking upstream provider compatibility, given no code changes since 2024-08-10",
+    "Single-model deployments - there is nothing to route between",
+    "Workloads where quality variance is unacceptable: a misrouted hard prompt is a user-visible quality failure, and the 95%-of-GPT-4 framing is an average, not a worst case"
+  ],
+  "docs_url": "https://github.com/lm-sys/RouteLLM",
+  "notes": "The clearest example in the repo of an inference-adjacent tool that does not infer: a cost-optimisation decision layer with no weights, no GPU and no scheduler. Recorded with status contested specifically because the compelling numbers are all self-reported. The README's 85% cost reduction at 95% of GPT-4 quality, and >40% cheaper than commercial routers, are recorded as VENDOR CLAIMS in the source, and I found no independent benchmark reproducing them. Second honest caveat: the last push was 2024-08-10, so this is dormant-but-not-deprecated rather than abandoned - a status worth distinguishing from [[text-generation-inference]] and [[niche-deepspeed-mii]], which are unambiguously finished. The transferable idea (route the easy 80% of traffic to a weak model, learn the boundary with a classifier) has been implemented inside several serving stacks, which is why the standalone repo went quiet. All metadata from the GitHub API on 2026-10-04."
+}

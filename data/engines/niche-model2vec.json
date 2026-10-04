@@ -1,0 +1,71 @@
+{
+  "id": "niche-model2vec",
+  "type": "engine",
+  "name": "Model2Vec (static embeddings) and model2vec-rs",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "niche-model2vec-repo",
+    "niche-model2vec-rs-repo",
+    "niche-github-rest-api-repo-metadata"
+  ],
+  "repo": "MinishLab/model2vec",
+  "languages": [
+    "Python",
+    "Rust"
+  ],
+  "license": "MIT",
+  "first_release_year": 2024,
+  "design_goal": [
+    "static-not-contextual",
+    "embedding-only",
+    "tiny-models",
+    "cpu-or-embedded",
+    "rust-first"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cpu",
+    "rust-native"
+  ],
+  "supported_formats": [
+    "model2vec (static embedding artefact)",
+    "safetensors"
+  ],
+  "notable_features": [
+    "THE STRUCTURAL BREAK WITH EVERY OTHER ENCODER IN THIS REPO. Model2Vec distils a sentence-transformer into a STATIC embedding table: no transformer forward pass at inference, so embedding a sentence is a lookup plus a weighted average. That removes the O(L^2) bidirectional attention entirely, and the arithmetic-intensity analysis that dominates [[sentence-transformers]], [[niche-text-embeddings-inference]] and [[qdrant-fastembed]] simply does not apply",
+    "The result is a model measured in megabytes rather than hundreds of them, which is the whole point: on-device and edge retrieval where shipping a BERT-scale encoder is the blocker",
+    "THE RUST IMPLEMENTATION IS THE INTERESTING ARTIFACT, NOT AN AFTERTHOUGHT. model2vec-rs is described as the OFFICIAL Rust implementation, published on crates.io, usable as a library or a standalone CLI, with an explicit 'Relation to Python Model2Vec' section documenting parity. Most Python ML projects bolt on an unofficial binding years later; this one shipped a first-class Rust crate within about ten months of the Python repo (created 2025-05-09 vs 2024-07-18)",
+    "Quality evidence is published in-repo: MTEB, MMTEB, retrieval, training and ablation result tables under results/, rather than asserted in a blog post. That is the AGENTS.md standard applied to a research project",
+    "Software citation is provided (minishlab2024model2vec), the correct practice for a research tool that is also a library",
+    "Python repo: 2222 stars, 128 forks, and only 2 OPEN ISSUES - the cleanest issue tracker of any record in this slice. Rust repo: 217 stars, 27 forks, 1 open issue. Both created recently, both actively pushed (2026-10-02 and 2026-09-21), neither archived",
+    "MIT licensed throughout"
+  ],
+  "hardware_caveats": [
+    "NO PUBLISHED THROUGHPUT NUMBER IN EITHER REPO. The READMEs claim 'significant reductions in model size and inference speed' qualitatively and publish MTEB quality tables, but neither states a sentences-per-second, documents-per-second or latency figure. The speed claim is structurally sound and therefore plausible, but it is NOT quantified anywhere I could verify. Do not put a number on this record from inference",
+    "The quality ceiling is a real trade: static embeddings cannot match a full contextual encoder on semantic tasks requiring composition. MTEB numbers are published so you can check where the line falls for YOUR task, but a static model will lose on anything needing true sentence understanding",
+    "It is EMBEDDING-ONLY. No reranking, no generation, no cross-encoder mode. If your pipeline needs a reranker, that is [[niche-flagembedding]]'s BGE-reranker family or [[niche-text-embeddings-inference]]'s reranker endpoint",
+    "No GPU path and no accelerator story - which is a feature here. CPU-only by design means it also cannot exploit the hardware this knowledge base mostly covers",
+    "Small ecosystem: 2222 and 217 stars respectively. Young project, small maintainer base, and the quality of the distilled artefacts depends on which teacher sentence-transformer was used",
+    "Not a server. No HTTP endpoint, no batching, no concurrency story. It is a library plus a CLI",
+    "Being static means no tokenizer-level subword dynamics in the model itself - unusual vocabulary and misspellings are the classic failure mode, and the published MTEB tables will understate that for your domain"
+  ],
+  "best_for": [
+    "On-device, edge or embedded semantic search where a 400MB BERT encoder is simply not shippable - this is the case that no other record in this niche covers",
+    "High-throughput CPU embedding over a large corpus, where the transformer forward pass is the bottleneck",
+    "Rust applications needing retrieval without a Python runtime, where model2vec-rs is a genuine first-class citizen rather than a community binding",
+    "Cheap first-stage retrieval in a two-stage pipeline, with a full reranker doing the precise work on a short candidate list",
+    "Replacing a static-embedding baseline like GloVe or word2vec where the quality gap is currently large and the operational cost of closing it is a GPU"
+  ],
+  "avoid_for": [
+    "Applications needing state-of-the-art retrieval quality as the primary objective - a full encoder will beat it and the MTEB tables will show you by how much",
+    "Reranking or generation of any kind",
+    "Anyone who needs a measured throughput figure to justify the choice - none is published in either repo",
+    "GPU-bound embedding workloads, where CPU-only static lookup leaves most of the hardware idle"
+  ],
+  "docs_url": "https://minish.ai/packages/model2vec/introduction",
+  "notes": "The most structurally interesting record in the embedding niche and the only one where the COMPUTE MODEL differs rather than the implementation. Every other encoder here runs a bidirectional transformer; model2vec runs a table lookup, which changes the arithmetic-intensity analysis, the memory ceiling, the on-device story and the quality ceiling all at once. Also the cleanest maintenance signal in the slice (2 and 1 open issues, both actively pushed, neither archived). Paired record: the Python repo plus its official Rust crate, recorded together because the Rust crate is the deployable artifact. NO PUBLISHED THROUGHPUT - explicit negative, recorded rather than estimated. All metadata from the GitHub API on 2026-10-04."
+}

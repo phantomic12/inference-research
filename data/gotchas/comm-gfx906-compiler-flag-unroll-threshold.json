@@ -1,0 +1,30 @@
+{
+  "id": "comm-gfx906-compiler-flag-unroll-threshold",
+  "type": "gotcha",
+  "name": "The ROCm LLVM loop-unroller miscompiles gfx906 kernels - fixing it takes -mllvm --amdgpu-unroll-threshold-local=600, and the real fix belongs upstream in rocm-libraries",
+  "class": "build",
+  "affects": [
+    "llama-cpp",
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "gfx906",
+    "llvm",
+    "amdgpu-unroll-threshold",
+    "amdgpu-sched-strategy",
+    "max-ilp",
+    "compiler-miscompile",
+    "therock"
+  ],
+  "symptom": "Two community members hit the same compiler defect independently and resolved it the same way. legitsplit: 'This looks like the same problem I had. Compiled with -DCMAKE_HIP_FLAGS=\"-mllvm --amdgpu-unroll-threshold-local=600\" flag fixes arch bug', with before/after llama-bench tables on gpt-oss-20B MXFP4 MoE. dolalin, after profiling with rocprofv3, found the compiler had been 'fighting a lot of my optimisation attempts - Serialising loads/stores, exploding VGPR by aggressively unrolling loops when it wasn't expected' and had to go hunting for inline-asm patterns and intrinsics in the ComposableKernel source to force the behaviour he wanted.",
+  "root_cause": "Not identified at source level. The reported mechanism is the LLVM AMDGPU backend's local unroll heuristic producing bad code on gfx906 - over-unrolling (VGPR explosion) and unnecessary load/store serialisation - so the wrong instruction-level shape comes from the compiler, not from the kernel author. A related long-standing AMD issue, 'Loop unrolling leads to terrible optimization' (ROCm/legacy-rocm-build #4202), is open against the same area.",
+  "workaround": "Pass -DCMAKE_HIP_FLAGS=\"-mllvm --amdgpu-unroll-threshold-local=600\" at configure time. A different community member takes the opposite lever on the same axis, -e CMAKE_HIP_FLAGS='-mllvm -amdgpu-sched-strategy=max-ilp'. If you build ROCm yourself, building from ROCm/TheRock with -DTHEROCK_AMDGPU_TARGETS=gfx906 is reported to give compatibility that the packaged installer does not. For kernel authoring, expect to hand-tune register pressure: the reported technique is to 'reduce register pressure by periodically flushing accumulators during long unrolls (trades register pressure for LDS bandwidth use)'.",
+  "severity": "major",
+  "notes": "COMMUNITY-REPORTED, two independent reporters converging on one flag, which is what makes it worth recording. Two further compiler-adjacent details from the same thread: gfx906 decode kernels are occupancy-limited in practice - one developer measures his main decode kernel at occupancy 5 against an MI50 maximum of 10 and reasons that decode kernels 'should be very light kernels cause they process 1 token', so occupancy is the lever; and repack-vs-baseline parity normally holds but 'repack collapses with MTP'. A concrete win in the same area: merging the q8 repack PR into mx-llama.cpp took 2x MI50 Qwen3.8-27B Q8_0 PP4096 at depth 16384 from 381.1 to 497.4 t/s (+30.5%) with no decode change.",
+  "status": "verified",
+  "confidence": 0.6,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "rent-vendor-pricing-tables-are-js-but-their-apis-are-not",
+  "type": "gotcha",
+  "name": "The provider's marketing page is static HTML but its actual rate table is JavaScript-rendered or JSON-only - the API is the only reproducible surface, and the table is the only one that goes stale silently",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "pricing-data",
+    "reproducibility",
+    "price-index",
+    "marketplace",
+    "cost-per-token"
+  ],
+  "symptom": "You scrape a provider's pricing page and either get nothing or get a headline. openai.com/api/pricing/ renders the Business/Enterprise seat tiers, not the API rate card - the token prices are on platform.openai.com/docs/pricing. groq.com/pricing is a marketing page with no rate table at all; console.groq.com/docs/models has one. vast.ai's Live GPU Prices grid 'renders client-side from an API' and carried no numbers in the extracted HTML. AWS's per-AZ spot table is documented as 'updated every 5 minutes' but spotprice.s3.amazonaws.com/spotprice.js returned HTTP 403 on a static fetch, so the authoritative route is the describe-spot-price-history API. AWS's tiered Data Transfer Out table is likewise JS-rendered. Cerebras publishes its tier STRUCTURE on cerebras.ai/pricing but the per-model per-token numbers did not appear in the static extraction at all. Mistral's page states the pricing RULES and exactly one numeric example. Meanwhile the AWS EC2 Price List API - a 481 MB JSON file at pricing.us-east-1.amazonaws.com - returns cleanly and yields every GPU rate in this repo with an explicit publicationDate.",
+  "root_cause": "Providers treat the rate table as a live, frequently-refreshed data product and render it client-side, while their SEO/marketing surface stays static and cached. That inversion means static extraction - the obvious method - systematically fails on exactly the pages that matter and succeeds on the pages that do not contain numbers. The consequence is worse than an empty scrape: a stale cached copy of a rate table looks exactly like a fresh one, so a price recorded from one of these pages carries no indication of its own currency. In this repo that has already produced at least one record that had to be written as a NEGATIVE with no price at all (aws-ec2-spot-gpu-general, vast-ai-marketplace, ppl-sup-aws-egress-negative, rent-cerebras-api-token-pricing-negative, rent-mistral-api-token-pricing) precisely because the honest answer was unavailable.",
+  "workaround": "Go to the API or the machine-readable file first and the HTML second. For AWS that means the EC2 Price List API (publicationDate tells you the currency of the number, which the HTML never does) and describe-spot-price-history for spot. For Azure use the Retail Prices API, which is also how the existing azure-nd-h100-v5 record derives its spot, Low Priority and normalised reservation meters from one SKU. Always record the observation date AND the source's own publication or last-updated date when it has one - Google states 'Last updated 2026-10-01 UTC' at the foot of the Gemini pricing page, which is the difference between a dated price and a dated guess. When a table genuinely will not yield a number, write the record as an explicit NEGATIVE with price_usd null and a price_basis that says what IS published - that is more useful to a reader than a remembered figure, and it is what this repo's contract requires. Never substitute an aggregator 'cloud price index' for a first-party rate: the index is a copy with unknown currency and the repo already forbids citing aggregator comparison sites.",
+  "severity": "major",
+  "notes": "Every fetch in this slice was attempted 2026-10-04 and the outcomes are recorded per-record. Positive results: pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/us-east-1/index.json (HTTP 200, 481,532,363 bytes, publicationDate 2026-09-25T17:45:21Z) is the single most reproducible GPU price source available; platform.openai.com/docs/pricing, platform.claude.com/docs/en/about-claude/pricing, ai.google.dev/gemini-api/docs/pricing, docs.x.ai/developers/pricing, api-docs.deepseek.com/quick_start/pricing, console.groq.com/docs/models, fireworks.ai/pricing and together.ai/pricing all returned their rate tables as static HTML. Negative results: openai.com/api/pricing/ serves seat pricing not API pricing; groq.com/pricing has no rate table; spotprice.s3.amazonaws.com/spotprice.js HTTP 403; AWS tiered outbound table JS-rendered; inference-docs.cerebras.ai/support/pricing returned no per-model token rates; docs.mistral.ai models overview returned no per-model rates. Records: [[supply/rent-pricing-not-public-negatives-2026-10]], [[supply/rent-aws-ec2-gpu-hourly-2026-10-04]], [[supply/vast-ai-marketplace]], [[supply/aws-ec2-spot-gpu-general]], [[supply/ppl-sup-aws-egress-negative]], [[supply/rent-cerebras-api-token-pricing-negative]], [[supply/rent-mistral-api-token-pricing]].",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "rent-src-aws-ec2-price-list-use1",
+    "rent-src-aws-spot-pricing-page",
+    "rent-src-cerebras-pricing"
+  ]
+}

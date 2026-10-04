@@ -1,0 +1,29 @@
+{
+  "id": "comm-4090-24gb-can-run-less-than-used-a100-80gb",
+  "name": "A 24GB consumer card can be the harder card to run a given model on than an 80GB datacenter card - capacity is not the only axis, and no source in this mining pass documents the comparison",
+  "class": "hardware",
+  "affects": [
+    "nvidia-rtx-4090",
+    "nvidia-rtx-5090",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a100-80gb-pcie"
+  ],
+  "concepts": [
+    "vram-capacity",
+    "consumer-vs-datacenter",
+    "quantization-choice",
+    "model-fitting"
+  ],
+  "symptom": "The awkward case practitioners keep describing: a 24GB RTX 4090 cannot run a model that a used A100 80GB runs comfortably. Nothing here is a mystery of driver behaviour - it is the arithmetic of 24GB versus 80GB forcing the consumer owner down the quantization ladder until quality degrades or context shrinks. The reverse case also holds and matters for buying decisions: an RTX 6000 PRO with 96GB was described in the TensorRT-LLM thread as having 'VRAM capacity is better than A100' while lacking the NVLink and the FP8 block-scaled kernels to use it well.",
+  "root_cause": "Two independent constraints, and the second is what people miss. Capacity: 80GB of FP8 weights plus a real KV cache is simply not reachable in 24GB, so the only options are heavier quantization, CPU offload, or a smaller context. Capability: the datacenter card also gets NVLink, FP8 block-scaled GEMM on SM90, and kernels that actually exist. A 4090 has native FP8 tensor cores and vLLM will still refuse block-scaled FP8 on SM89 (see the SM89/SM120 records), so owning FP8 hardware does not mean being able to serve an FP8 checkpoint efficiently. Capacity and capability have to be checked separately.",
+  "workaround": "When choosing between a large consumer card and a smaller-but-supported datacenter card, compare the model you actually want to serve, not the memory number. Compute weights-plus-KV at the quantization you would accept, then check that quantization is one the card's kernels support. The RTX 6000 PRO case is the clearest community illustration of the trap: 96GB of VRAM on a card whose FP8 block-scaled GEMM is refused and which has no NVLink - a user running 8 of them reports the FP8 model will not load at all and the FP4 fallback manages only 27 tok/s at batch 1.",
+  "severity": "major",
+  "notes": "NOT A REPORTED MEASUREMENT - THIS RECORD IS A GAP MARKER, NOT A FINDING. No source found in this mining pass reports a controlled comparison of the same model on an RTX 4090 and on an A100 80GB. The specific practitioner claim that 'a 4090 with 24GB often cannot run a model a used A100 can' was supplied as a thesis for this slice and is consistent with the arithmetic, but it is NOT attested here by a named report, and this record deliberately does not fabricate one. What IS attested and citable: grimulkan in the TensorRT-LLM thread, reporting 8x RTX 6000 PRO with 768GB total, states plainly 'VRAM capacity is better than A100' while the same card cannot load the FP8 model at all ('Unsupported SM version for FP8 block scaling GEMM') and runs the FP4 variant at 27 tok/s for batch 1. That is a documented instance of capacity outrunning capability. Treat this record as marking an open question with a known illustrative case, and note that the sibling record local-vram-capacity-wall covers the capacity arithmetic itself from vendor sources. Anyone wanting to close the gap should look for a community post running one model, one engine and one quantization on both a 4090 and an A100.",
+  "status": "draft",
+  "confidence": 0.3,
+  "sources": [
+    "comm-github-trtllm-5581-8x-rtx6000pro-deepseek"
+  ],
+  "type": "gotcha",
+  "updated": "2026-10-04"
+}

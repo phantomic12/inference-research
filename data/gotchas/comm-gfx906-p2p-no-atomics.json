@@ -1,0 +1,33 @@
+{
+  "id": "comm-gfx906-p2p-no-atomics",
+  "type": "gotcha",
+  "name": "gfx906 PCIe peer-to-peer links work but are non-coherent and carry NO 32-bit or 64-bit atomics, which is the root cause behind gfx906 multi-GPU hangs and RCCL/VLLM_SKIP_P2P_CHECK workarounds",
+  "class": "driver",
+  "affects": [
+    "amd-radeon-instinct-mi50x",
+    "llama-cpp",
+    "vllm"
+  ],
+  "concepts": [
+    "gfx906",
+    "p2p",
+    "atomics",
+    "rccl",
+    "nccl",
+    "fine-grain-pcie",
+    "acs",
+    "iommu",
+    "rebar"
+  ],
+  "symptom": "A user dumping KFD p2p_links on a 3-GPU gfx906 box with 32 GB BAR each reports every direction as:\n  ROCm0 -> ROCm1 | 15 (0b1111) | ENABLED | NON_COHERENT | NO_ATOMICS_32_BIT | NO_ATOMICS_64_BIT\nand the same for ROCm0->ROCm2 and ROCm1->ROCm2. So P2P is nominally enabled and bandwidth exists, yet any collective that relies on fine-grained remote atomics cannot be satisfied. Downstream symptoms reported around this: vLLM hanging at startup on TP2 with a fork-based custom all-reduce; crashes at ~4% during CUDA graph capture; hangs 15 minutes after a request is sent unless --enforce-eager is used; RCCL watchdog exceptions of the form 'HIP error: operation not permitted when stream is capturing'; and V420.rom VBIOS hanging specifically during the p2p test while 274474.rom and 32G_UEFI.rom pass. Kernel messages accompany some of it: 'amdgpu: [gfxhub0] no-retry page fault (src_id:0 ring:24 vmid:8 pasid:32778)' and 'svm_range_deferred_list_work [amdgpu] hogged CPU for >10000us'.",
+  "root_cause": "Not established in first-party documentation. The observable is unambiguous - gfx906 P2P is enabled and non-coherent, with atomics absent in both widths - and it is consistent with the architecture: gfx906 predates the fine-grained-atomic P2P support and has no matrix cores or Infinity Fabric (MI50 is PCIe-attached with no interconnect). Confounders reported and NOT separated by the community: ACS and IOMMU configuration, Resize BAR support, PCIe generation and lane width, and which VBIOS is flashed.",
+  "workaround": "The env-var set that recurs across working multi-GPU gfx906 vLLM commands: VLLM_SKIP_P2P_CHECK=1, HSA_FORCE_FINE_GRAIN_PCIE=1, RCCL_P2P_DISABLE=0, and --disable-custom-all-reduce. For llama.cpp: HSA_FORCE_FINE_GRAIN_PCIE=1, GGML_ENABLE_CUSTOM_AR=1, GPU_MAX_HW_QUEUES=8, and either NCCL_P2P_LEVEL or RCCL_P2P_LEVEL set to PIX (active PCI switch), PXB, or SYS. One member reports that switching from P2P-disable to level 'sys' cut time-to-first-token noticeably, and that NCCL_P2P_LEVEL=PIX is the right choice with an active PCI switch. Enabling P2P itself needs amdgpu.pcie_p2p=true plus iommu=pt on the kernel command line, and in one report required pcie_acs_override=downstream,multifunction with mitigations=off and pci=realloc=on.",
+  "severity": "major",
+  "notes": "COMMUNITY-REPORTED, and the most-reproduced theme in the export by message count: 278 messages naming P2P/PCIe/NCCL/RCCL across 70 distinct authors - the single largest thread. Both the mechanism (the p2p_links dump) and the workarounds come from multiple independent members, and the -tps / PLE-shard answers to the scaling problem are the maintainer's own. CAVEAT ON THE PERF NUMBERS: the ACS-disable tables that circulate in this community (christopherlin, 4x MI50, Qwen3-30B-A3B-Thinking-2507-GPTQ-Int8, BIOS-only ACS disable giving PP512 1340.31 t/s and TG 25.29 t/s) are ONE person's A/B on ONE configuration; a reader should not treat 'disable ACS' as a general multi-GPU AMD recommendation. Note also that AMD's own MI100 hardware-verification page exists and was cited, so parts of this are first-party-documented - but the atomics-in-P2P table is not.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

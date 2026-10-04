@@ -1,0 +1,31 @@
+{
+  "id": "comm-gfx906-spec-deprecation-vs-working",
+  "type": "gotcha",
+  "name": "gfx906 is officially 'deprecated' in ROCm's support matrix yet still works in practice - the gap between the two states is where every workaround in this slice lives, and AMD has been asked to reverse it",
+  "class": "config",
+  "affects": [
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "gfx906",
+    "rocm",
+    "deprecation",
+    "support-matrix",
+    "radeon-vii",
+    "used-market"
+  ],
+  "symptom": "The upstream issue that established the state of play states it plainly: 'However, Radeon VII gfx906 still listed as deprecated instead of unsupported', alongside the rocBLAS break - i.e. the documentation promise and the packaging do not agree. In the other direction, a community member asking 'Why has AMD dropped ROCm support for GCN5.1 gfx906?' found a separate open issue titled exactly that, and a feature request to re-add MI50/MI60 whose author writes: 'Dropping support for a server grade GPU after 5 years is not a good sign for people looking to get into AMD's ecosystem. This card has great potential to be an entry point into Machine Learning for people with small budgets but the software support is killing that opportunity. I was looking at buying a pair of MI210 but I can't commit to something that might have its support dropped within the next 2 years.'",
+  "root_cause": "A support-policy decision, not a technical impossibility. gfx906 is GCN5.1 from 2018 and predates CDNA; AMD's shipped component targets no longer include it, so 'deprecated' is accurate about the guarantees and misleading about the capability.",
+  "workaround": "Decide on the evidence in this slice rather than the support-matrix label: the hardware runs large models (a documented 16x MI50 32GB DeepSeek-V3.2 4-bit setup, 8-card DeepSeek-V4-Flash), at 1 TB/s per card, on used-market hardware that the ecosystem can no longer buy new. The cost is maintenance: community forks, hand-copied rocBLAS files, chosen VBIOSes, and periodic revalidation of upstream merges. A member prices the used market explicitly - MI50 around EUR 500 shipped versus RTX 3090 at 1200, 7900 XTX at 900, 4090 at 2000, 5090 at 4000 - while noting the MI50's own failure rate on arrival.",
+  "severity": "minor",
+  "notes": "COMMUNITY-REPORTED and cross-checked against two primary AMD issue-tracker threads (ROCm/legacy-rocm-build #4625, #5215, and a third asking why gfx906 support was dropped), all still open. This record exists because it is the frame a general reader needs: 'deprecated' does not mean 'does not work', and it also does not mean 'will keep working'. Both directions are documented with dates.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log",
+    "comm-rocm-issue-4625-tensile-gfx906",
+    "comm-rocm-issue-5215-mi50-support",
+    "comm-reddit-mi50-deepseek-v32"
+  ]
+}

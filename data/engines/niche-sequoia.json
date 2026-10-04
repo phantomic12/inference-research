@@ -1,0 +1,68 @@
+{
+  "id": "niche-sequoia",
+  "type": "engine",
+  "name": "Sequoia (tree-based speculative decoding) and UMbreLLa successor",
+  "status": "draft",
+  "confidence": 0.72,
+  "updated": "2026-10-04",
+  "sources": [
+    "niche-sequoia-repo",
+    "niche-github-rest-api-repo-metadata"
+  ],
+  "repo": "Infini-AI-Lab/Sequoia",
+  "languages": [
+    "Python"
+  ],
+  "license": null,
+  "first_release_year": 2024,
+  "design_goal": [
+    "speculative-decoding",
+    "tree-structured-draft-trees",
+    "hardware-aware-optimisation",
+    "lossless-output"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda"
+  ],
+  "supported_formats": [
+    "pytorch",
+    "huggingface safetensors"
+  ],
+  "notable_features": [
+    "SEQUOIA'S DISTINCTION IS TREE-SHAPED DRAFTS PLUS HARDWARE-AWARE TREE OPTIMISATION. Rather than a linear draft chain, it builds a draft TREE and then optimises that tree's topology against the target hardware - which is why the repo ships per-hardware 'growmaps' with prepared trees for A100 and L40. The tree topology is treated as a tunable that depends on the accelerator, which is the genuinely novel idea",
+    "THE TREE TOPOLOGY IS TUNED OFFLINE AND THEN APPLIED, which is why reproduction is awkward: growmaps are prepared artefacts, not something the code derives at startup. You pick a hardware class and load its tree",
+    "The README EXPLICITLY DEFERS TO A SUCCESSOR. It points users to UMbreLLa, described as the refactored repo, for up-to-date models (Llama3, Qwen, DeepSeek), AWQ support, and Gradio/API/CLI chatbots. Sequoia itself is a frozen research snapshot. UMbreLLa (Infini-AI-Lab/UMbreLLa) is Apache-2.0, described as 'LLM Inference on consumer devices', 131 stars, last push 2025-03-17, not archived",
+    "Accompanies a real paper (arXiv 2402.12374) and the separation into testbed.py / testbed_greedy.py / test_specinfer.py / test_accept.py scripts shows the different decoding regimes were treated as first-class experimental conditions",
+    "Reproducibility is a genuine strength here and unusual among research code: the seed is FIXED AT 17 BY DEFAULT for exact reproduction, and the CLI is parameterised over temperature, top-p, dataset, example range and tree size, with a stated minimum for --M ('at least #tree + 256')",
+    "376 stars, 36 forks, 10 open issues, created 2024-02-29, last push 2025-01-28, not archived",
+    "Positioned in this repo alongside the other speculative-decoding records: [[niche-eagle]] and [[niche-medusa]] (both recorded), which are single-head/parallel-head approaches, versus Sequoia's tree topology optimisation. The three attack different parts of the problem"
+  ],
+  "hardware_caveats": [
+    "NO LICENSE DETECTED. The GitHub API returns a null license for Infini-AI-Lab/Sequoia as of 2026-10-04. For a research repo that may be permissive in practice, the absence of a licence file is a genuine blocker for commercial use - do not assume MIT. The successor UMbreLLa IS Apache-2.0, so if you need a licence, use that instead",
+    "THE PINNED ENVIRONMENT IS TWO YEARS STALE AND IS THE REAL FRICTION. torch 2.1.2, transformers 4.36.2, accelerate 0.26.1, datasets 2.16.1, CUDA 12.1 wheels. Reproducing in this environment on current hardware is not guaranteed to match, and these versions predate several hardware generations recorded elsewhere in this repo",
+    "HARDWARE-SPECIFIC PRECOMPUTED ARTEFACTS ARE REQUIRED. Growmaps exist for A100 and L40 only as prepared trees. On any other accelerator - including Blackwell parts central to the accelerators directory - you have no tree, and the tree topology is the entire contribution, so the work does not transfer automatically",
+    "Llama family ONLY: Llama2, Sheared-LLaMA, Vicuna, TinyLlama. No Qwen, no DeepSeek, no modern MoE architectures in this repo (the successor adds them)",
+    "Datasets restricted to cnn, openwebtext, c4. No long-context or retrieval-style evaluation",
+    "NO PUBLISHED THROUGHPUT EXTRACTED HERE. The paper reports acceptance rates and speedups, and the repo includes a script for preparing an accepting-rate vector, but I have not verified any figure independently and this record carries no number. The paper's speedups are paper-reported",
+    "It is a testbed, not a server. No HTTP endpoint, no OpenAI-compatible API, no scheduler. The 'hardware it needs' answer is two GPUs of a supported class and the ability to build a working torch environment",
+    "Mixed maintenance: this repo last pushed 2025-01-28 (dormant ~1.7 years), successor last pushed 2025-03-17 (dormant ~1.5 years). Neither archived. UMbreLLa's 131 stars versus Sequoia's 376 suggests the project continued but under a smaller banner"
+  ],
+  "best_for": [
+    "Understanding tree-structured speculative decoding and hardware-aware draft-tree optimisation - the per-hardware growmap concept is the idea worth taking, and it is unusual enough that the codebase remains a useful reference",
+    "Reproducing the paper's acceptance-rate measurements, which the seeded and parameterised testbed scripts support unusually well",
+    "Learning from the successor UMbreLLa if you need current models or a real permissive licence",
+    "Anyone implementing speculative decoding who wants a contrast to the single-head approaches in [[niche-eagle]] and [[niche-medusa]]"
+  ],
+  "avoid_for": [
+    "Production serving. There is no server here, only testbed scripts",
+    "Commercial use of THIS repo, because no licence is declared. Use the Apache-2.0 successor UMbreLLa instead",
+    "Any hardware other than A100 or L40 without doing the growmap optimisation work yourself - which is the contribution, not a configuration detail",
+    "Current model architectures (Llama3, Qwen, DeepSeek) - those live in the successor",
+    "Reproducing on a modern stack without expecting environment friction: the pins are torch 2.1.2 and transformers 4.36.2"
+  ],
+  "docs_url": "https://arxiv.org/abs/2402.12374",
+  "notes": "The speculative-decoding record that adds something the other two in this slice do not: hardware-aware DRAFT-TREE topology optimisation, with per-accelerator growmaps prepared for A100 and L40. Recorded as draft with the licence caveat front and centre - the GitHub API returns NO license for this repo, which the successor UMbreLLa (Apache-2.0) fixes, and that alone is a reason to prefer the successor. Two transferable strengths worth noting against the usual research-code weaknesses: the fixed default seed of 17 for exact reproduction and a parameterised testbed CLI. Weaknesses are the usual and should be stated plainly - 2024-era version pins, A100/L40-only prepared artefacts, Llama-family-only models, cnn/openwebtext/c4-only evaluation, and testbed scripts rather than a server. NO THROUGHPUT VERIFIED HERE; the paper's speedups are paper-reported and deliberately not transcribed into this record. Read with [[niche-eagle]] and [[niche-medusa]]. All metadata from the GitHub API on 2026-10-04."
+}

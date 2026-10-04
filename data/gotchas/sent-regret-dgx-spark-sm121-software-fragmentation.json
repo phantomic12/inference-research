@@ -1,0 +1,31 @@
+{
+  "id": "sent-regret-dgx-spark-sm121-software-fragmentation",
+  "type": "gotcha",
+  "name": "What people regret buying: NVIDIA's own sm121 silicon variant, because the thing you paid the CUDA tax for is not available on it",
+  "class": "hardware",
+  "symptom": "The clearest regret record in the corpus is about a $3,000+ NVIDIA-branded box where the complaint is not performance and not price but that the advertised software platform is absent. u/goldcakes spent a week with a DGX Spark and was returning it: 'Just be careful when buying a DGX Spark. You are not really getting a modern CUDA experience. Yes, everything works fine if you pretend you only have an Ampere, but attempting to use any Blackwell features is an exercise in futility.' The specific blocker: the Hadamard transform integral to NVFP4 training stability 'not being available on sm120/sm121'. A commenter supplies the mechanism at 62 upvotes: 'The sm120 arch also doesn't support tcgen05. Major difference between Blackwell server and their workstation edition cards.' The self-aware version of the same point, 17 upvotes: 'The sm121 and nvfp4 support is \"On the way\" for the past 6 months... NVidia expects us to do the heavy lifting.' A commenter frames the structural cause: 'NVIDIA's accelerator lineup now has enough architecture variants that your CUDA code isn't portable across their own product stack.'",
+  "root_cause": "Two causes, one architectural and one commercial. (1) Architecture: sm121 is a distinct compute capability, so libraries need per-arch kernels and fall back - the thread documents Triton patched to run an 'sm80 - Ampere, 6 years old!' code path, which forgoes every Blackwell optimization. sm120/sm121 lack tcgen05 entirely, which is what datacenter Blackwell kernels are built around. (2) Commercial: the same 'NVIDIA Blackwell GPU with fifth-gen Tensor Core technology' marketing line covers datacenter Blackwell, workstation sm120 and sm121, so the software gap is not visible in the spec sheet. This is the 'you are paying the CUDA tax and still not getting CUDA's flagship features' failure, which is why it reads as a betrayal rather than a limitation.",
+  "workaround": "Treat sm121 as an Ampere-class target until NVIDIA validates it. Buy for the unified memory and the small-footprint cluster property, not for Blackwell features. If you need tcgen05 or native NVFP4, verify support in the specific library and version rather than by architecture family name. One owner's practical workaround, 23 upvotes: 'update to latest kernel (6.17 finally actually released a few days ago) for monitor issues... sm121 support is on the way along with nvfp4 fixes.'",
+  "severity": "blocker",
+  "notes": "Important counterweight, recorded so this is not read as a false consensus. Owners in the same thread are largely positive - 52 upvotes on 'Was rough when I unboxed the first one... a couple hours later off to the races. Turnkey? No. But also not Slackware Linux', 34 upvotes on 'it's got much better' and 'still a great little device, especially if you have a cluster', 17 upvotes on 'CUDA works just fine for the most part now.' The split is temporal, not partisan: the same product was widely disliked at launch and is widely defended now. The durable lesson is the architecture-fragmentation one, and the fact that anyone running sm121 workloads should expect to wait on upstream kernels. A later, separate thread on buying a third unit (82 upvotes, 84 comments) shows active cluster operators, and its real blocker is sizing rather than software: 'the tensors (usually powers of 2) won't divide cleanly among 3 sparks.'",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "sent-src-reddit-dgx-spark-psa-1r569eb",
+    "sent-src-reddit-spark-vs-strix-halo-1qb2p26",
+    "sent-src-reddit-3rd-spark-tensor-divisibility-1wfefc4"
+  ],
+  "affects": [
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "concepts": [
+    "sm121",
+    "sm120",
+    "tcgen05",
+    "nvfp4",
+    "cuda",
+    "arch-fragmentation",
+    "cluster"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "sent-llamacpp-single-user-consensus",
+  "type": "gotcha",
+  "name": "Consensus: llama.cpp is the default recommendation for one user, especially on consumer or non-NVIDIA hardware, and the reasons given are dependency count and quant coverage rather than speed",
+  "class": "toolchain",
+  "symptom": "In a thread asking for the fastest engine for a single personal assistant, the top answer is the bare name: '\"llama-server\" from \"llama.cpp\"' (24 upvotes). The second, at 17 upvotes, gives the reason: 'llama.cpp is the way to go if you don't want to mess with lots of Python dependencies, especially on Windows.' A third explicitly names the vendor effect: 'All of this assumes Nvidia cards. With AMD Consumer cards Llama.cpp is going to be your best bet unless you really need high concurrency or multiple cards. vLLM on Navi cards basically only supports BF16, GPTQ, and GGUF and this varies from model to model.' Note what nobody claims: nobody in these threads recommends llama.cpp because it is fastest. The 54-upvote answer says the opposite about multi-card, and one engineer notes llama.cpp is 'not the fast path on Apple Silicon for most models people run locally'.",
+  "root_cause": "Three cited reasons, in descending order of how often they appear. (1) Dependency count: a single binary versus a Python environment with torch, transformers and a resolver. (2) Quantization coverage: GGUF is the format community finetunes actually ship, and llama.cpp is the engine that consumes it; the competing formats AWQ/GPTQ are described as available mainly for 'large, important model releases' and having to be self-quantized for smaller finetunes. (3) Breadth of target hardware - Vulkan, ROCm, Metal, CUDA, plain CPU - which is what makes it the default when the vendor is not NVIDIA. (4) Early patches for new models, attributed to maintainer momentum.",
+  "workaround": "If you are one user on NVIDIA with the model fully in VRAM and need speed, the corpus does not say llama.cpp is the answer - see the split in sent-community-split-strix-halo-owners-versus-buyers. If you are on AMD, on Windows, on CPU offload, or want a quant format nobody else ships, it is.",
+  "severity": "minor",
+  "notes": "Directly contradicted on Apple Silicon: two Hacker News commenters on the Magnitude launch (2026-09-30) independently nominate MLX rather than llama.cpp as the correct baseline for Apple hardware, and the launch's own author concedes 'MLX is generally a better comparison point overall for Apple'. Recorded as a vendor-scoped split, not a contradiction.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "sent-src-reddit-best-inference-engine-1kc4kv2",
+    "sent-src-reddit-llamacpp-vs-vllm-1qexkwb",
+    "sent-src-hn-magnitude-launch-49911995"
+  ],
+  "affects": [
+    "llama-cpp",
+    "mlx-lm",
+    "vllm"
+  ],
+  "concepts": [
+    "engine-selection",
+    "gguf",
+    "exl2",
+    "amd",
+    "rocm",
+    "vulkan",
+    "apple-silicon",
+    "mlx"
+  ]
+}

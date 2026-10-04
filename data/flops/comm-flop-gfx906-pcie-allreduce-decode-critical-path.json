@@ -1,0 +1,32 @@
+{
+  "id": "comm-flop-gfx906-pcie-allreduce-decode-critical-path",
+  "type": "flop",
+  "name": "On PCIe-attached gfx906, the cross-GPU all-reduce in decode is interconnect-bound and makes decode throughput decline as GPUs are added",
+  "class": "decode_gemm",
+  "arithmetic_intensity": "Extremely low at batch 1 decode: each added GPU adds a full activation all-reduce over PCIe while contributing only its share of a weight-streaming GEMV. MI50 moves ~1 TB/s of weights per card, so per-GPU weight traffic is the term that shrinks with added GPUs while the all-reduce term does not.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "num_gpus",
+    "tensor_parallel_size",
+    "context_length",
+    "expert_parallel_groups"
+  ],
+  "affected_by_hardware": [
+    "amd-radeon-instinct-mi50x"
+  ],
+  "workarounds": [
+    "Limit tensor-parallel group size: the mx-llama.cpp -tps N flag splits GPUs into groups of N, tensor-splitting within a group and pipelining across groups, because 'smaller groups mean smaller cross-GPU all-reduces, so it scales better over PCIe'",
+    "Shard weights across cards rather than host-resident (PLE shard, LLAMA_PLE_SHARD): +120% pp4096 and +58% tg512 on 4x MI50 with unchanged perplexity",
+    "Two-shot all-reduce for decode, auto-selected and bit-exact in mx-llama.cpp (+18.6% TP8, +20.8% TP10 on Qwen3.6-27B Q8)",
+    "Prefer layer split (-sm layer) over tensor split when the model fits: 81.72 vs 71.22 tok/s on 2 cards for gpt-oss-120B MXFP4",
+    "Set HSA_FORCE_FINE_GRAIN_PCIE=1, GGML_ENABLE_CUSTOM_AR=1, GPU_MAX_HW_QUEUES=8 and the RCCL/NCCL P2P level appropriate to the topology (PIX with an active PCI switch)"
+  ],
+  "notes": "COMMUNITY-REPORTED PATTERN, derived from four independent observations rather than a first-party roofline. The measured shape is the evidence: for gpt-oss-120B MXFP4 at pp16384/tg8192 on a PCIe-attached MI50 node, decode falls 71.22 -> 33.89 -> 21.32 -> 14.32 tok/s across 2/4/6/8 cards while prefill rises 882 -> 1079 -> 1141 and then falls to 1007. A working -tps or PLE-shard configuration is what turns this from a collapse into a plateau, and PLE shard also raises prefill rather than trading against it. Two structural multipliers specific to MI50: it has NO GPU-to-GPU interconnect at all (PCIe only, no Infinity Fabric - a member notes Infinity link bridges 'exist in documentation, but not as actual Part/Spare part numbers'), and its P2P links are non-coherent with no 32- or 64-bit atomics, so the collective has no fine-grained fast path even when P2P bandwidth is present. This is the clearest example in the slice of a cost that AMD's spec sheets do not show: adding a card to a PCIe-attached GCN5 node is not free.",
+  "status": "verified",
+  "confidence": 0.6,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log",
+    "comm-mx-llama-cpp-repo"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "comm-gfx906-rocblas-tensile-missing-from-6-4",
+  "type": "gotcha",
+  "name": "ROCm 6.4.0+ ships no rocBLAS TensileLibrary data file for gfx906, so every BLAS GEMM fails with 'Illegal seek for GPU arch' until a 6.4 rocBLAS file is copied in by hand",
+  "class": "build",
+  "affects": [
+    "vllm",
+    "llama-cpp",
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "rocm",
+    "gfx906",
+    "rocblas",
+    "tensile",
+    "blas"
+  ],
+  "symptom": "After installing ROCm 6.4.x or 7.x on gfx906 hardware (MI50/MI60/Radeon VII/Pro VII), the first BLAS call raises:\n  rocBLAS error: Cannot read /opt/rocm-6.4.0/lib/rocblas/library/TensileLibrary.dat: No such file or directory for GPU arch : gfx906\n  List of available TensileLibrary Files :\n    TensileLibrary_lazy_gfx1101.dat ... _lazy_gfx1102.dat ... _lazy_gfx1200.dat ... _lazy_gfx1030.dat ... _lazy_gfx1100.dat ... _lazy_gfx1201.dat ... _lazy_gfx942.dat ... _lazy_gfx90a.dat ... _lazy_gfx908.dat\nThe listed set contains gfx908 and gfx90a but nothing for gfx906. Under PyTorch/vLLM the same missing-arch condition shows up as 'Illegal seek for GPU arch : gfx906' against the torch-shipped copy at site-packages/torch/lib/rocblas/library/TensileLibrary.dat.",
+  "root_cause": "Packaging regression: the 6.4.0 rocBLAS release dropped the gfx906 TensileLibrary data file while AMD's own system-requirements page still listed Radeon VII (gfx906) as deprecated rather than unsupported. Confirmed upstream in ROCm issue #4625 (opened 2025-04-14, still open, labelled 'Under Investigation').",
+  "workaround": "Fetch the rocBLAS package from an older line (the community recipe uses the Arch package rocblas 6.4.3-3) and copy every file whose name contains 'gfx906' from its .../rocblas/library directory into both /opt/rocm-X/lib/rocblas/library AND the torch wheel's site-packages/torch/lib/rocblas/library inside the venv - the torch copy is separate and both must be fixed. Alternatively build rocBLAS/Tensile from rocm-libraries develop with gfx906 in the target list.",
+  "severity": "blocker",
+  "notes": "COMMUNITY-REPORTED PATTERN, and the strongest-sourced record in this set: independently confirmed by the upstream AMD issue tracker AND by at least four separate Discord participants (legitsplit, kamal965, ____jal____, aceshigh555) plus a written FAQ recipe. The Discord FAQ recipe was tested on Ubuntu 24.04 LTS with ROCm 7.0.0 by legitsplit, who confirmed the 6.4.3 rocBLAS files still satisfy a 7.0.0 install. Two people independently hit the failure at DIFFERENT locations (system /opt/rocm and the torch wheel), which is why fixing only one does not work. aceshigh555 reported swapping prebuilt rocBLAS libs into an existing container to fix it. Do not read this as a general ROCm 6.4 breakage: gfx908 and gfx90a libraries ship normally.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log",
+    "comm-rocm-issue-4625-tensile-gfx906"
+  ]
+}

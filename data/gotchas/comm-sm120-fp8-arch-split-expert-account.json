@@ -1,0 +1,42 @@
+{
+  "id": "comm-sm120-fp8-arch-split-expert-account",
+  "name": "Newer NVIDIA consumer architectures are not supersets: SM100 supports FP8 block-scaled GEMM and SM120 does not, because SM90/100/120 have entirely different FP8 instruction sets",
+  "class": "hardware",
+  "affects": [
+    "nvidia-rtx-5090",
+    "nvidia-rtx-5080",
+    "nvidia-rtx-pro-6000-blackwell",
+    "nvidia-rtx-4090",
+    "nvidia-rtx-4080",
+    "nvidia-rtx-6000-ada",
+    "nvidia-l4",
+    "nvidia-l40s",
+    "tensorrt-llm"
+  ],
+  "concepts": [
+    "sm120",
+    "sm100",
+    "sm90",
+    "sm89",
+    "fp8",
+    "nvfp4",
+    "block-scaling",
+    "cutlass",
+    "arch-gating"
+  ],
+  "symptom": "A user with 8x RTX 6000 PRO (768GB VRAM total) trying to serve original FP8 weights gets the flat refusal `Unsupported SM version for FP8 block scaling GEMM`. The FP4 checkpoint does load, but at 27 tok/s for batch 1 with ~37B active parameters - the reporter expected an order of magnitude more. The generalisation practitioners keep rediscovering: you cannot infer FP8 capability from the generation number, and a card can have FP8 tensor cores and still be refused.",
+  "root_cause": "An engineer in the TensorRT-LLM thread (VALLIS-NERIA) gives the mechanism directly: SM100 supports FP8 block-scaled GEMM but SM120 does not, and across SM90, SM100 and SM120 the FP8 instruction sets are completely different, so a newer architecture is not a superset of an older one and the block-scaled kernel cannot be transplanted. This has a close sibling on the vLLM side, and there the gate is vLLM's own rather than CUTLASS's: `cutlass_scaled_mm_supports_block_fp8()` returns False for compute capabilities 80, 86 and 89 and True only from 90 up - so on an Ada card (RTX 6000 Ada, L40S, RTX 4090) block-quantised FP8 checkpoints fall all the way through the kernel priority list to Marlin's weight-only dequant path, silently using neither CUTLASS nor the card's native FP8 compute. The same reporter shows non-block `cutlass_fp8_supported()` is True on that card, so the exclusion is specific to block scaling. A second, nastier failure mode: on GPUs with no native FP4 the Marlin dequant path produced completely garbled output for NVFP4 checkpoints under `--dtype bfloat16` - 54.7% of output values zero, cosine similarity 0.22 against an FP32 reference, GSM8K 5-shot garbled - because the FP8 E4M3 scale exponent was widened into BF16 by shifting only, never re-biased 7 to 127, so every scale collapsed to about 2^-112 and the dequantised weights underflowed to zero. The FP16 path was unaffected because its 5-bit exponent lines up after the shift.",
+  "workaround": "Match the quantization to the arch rather than the other way round. On SM120: bf16, int8 and int4 (GGUF, AWQ) are verified working; skip FP8-scaled checkpoints until CUTLASS gains SM120 support. On SM89 with block FP8 checkpoints: expect the Marlin fallback and measure accordingly, or use a non-block FP8 checkpoint since the non-block CUTLASS path does work there. For the NVFP4-on-non-native-FP4 garbling: --dtype float16 rather than bfloat16 avoids it, and the underlying scale underflow was fixed host-side upstream.",
+  "severity": "major",
+  "notes": "REPORTER COUNT, split by claim. (a) 'Newer is not a superset; SM120 lacks FP8 block-scaled GEMM': reported by one TRT-LLM user (grimulkan) and explained by one NVIDIA engineer (VALLIS-NERIA), independently corroborated on the vLLM side by a separate capability bisect (RTX 6000 Ada, SM89) and by daanno2 in the vLLM thread independently reaching 'cutlass still doesn't support arch=120a'. Treat as verified. (b) The SM89 block-FP8 exclusion: ONE reporter for the capability result (issue #58241, 3 comments), corroborated in substance by upstream shipping RTX 4090 tuned block-FP8 and fused-MoE configs (PRs #56085 and #54372) - i.e. the project itself treats SM89 as a card needing its own tables. (c) NVFP4 BF16 garbling: the reporter supplied the quantified evidence, and at least two users reproduced garbage output on DIFFERENT hardware - naroam1 on an NVIDIA L4 (SM 8.9) and drew-chen on an RTX 4080 - so the symptom is multi-reporter. But be careful about the cause: linjiapro reproduced garbage output on SM120 and root-caused it to a different defect entirely (the modelopt->MARLIN quant-config bridge dropping swiglu_alpha/swiglu_beta), and drew-chen concluded his case was an incomplete asymmetric INT4 checkpoint, not a kernel bug. So 'garbled output' is multi-reporter and 'one single kernel bug' is not.",
+  "status": "verified",
+  "confidence": 0.85,
+  "sources": [
+    "comm-github-trtllm-5581-8x-rtx6000pro-deepseek",
+    "comm-github-vllm-58241-sm89-block-fp8-excluded",
+    "comm-github-vllm-34694-nvfp4-marlin-garbled",
+    "comm-github-vllm-56085-4090-block-fp8-configs"
+  ],
+  "type": "gotcha",
+  "updated": "2026-10-04"
+}

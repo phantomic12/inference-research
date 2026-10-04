@@ -1,0 +1,63 @@
+{
+  "id": "alt-groq-groqflow",
+  "type": "engine",
+  "name": "GroqFlow and the GroqWare Suite (Groq's compile-and-run tool flow)",
+  "repo": "groq/groqflow",
+  "languages": [
+    "Python"
+  ],
+  "license": "MIT",
+  "first_release_year": 2022,
+  "design_goal": [
+    "lpu-only-execution",
+    "static-compilation",
+    "deterministic-scheduling"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "groq-lpu"
+  ],
+  "supported_formats": [],
+  "notable_features": [
+    "THE most hardware-forced software stack in this repo, and its own requirements section is the proof. Stated system requirements: Ubuntu 22.04 or Rocky 8.4, '32GB RAM (or more) to build models', '8 LPUs (especially for larger models) to run models', and GroqWare Suite >= 0.9.2.1. This is a compiler-and-runtime package split - groq-devtools to build and compile, groq-runtime to run compiled models - which is the software shape of a fully static compilation model. You cannot install Groq's software without Groq's hardware",
+    "The compiler and the runtime being separate products is itself the constraint. On a GPU you install one runtime and kernels compile at launch; here compilation is a build step against a specific toolchain version, and the compiled artefact is what groq-runtime executes",
+    "GATED TOOLCHAIN. GroqWare is installed from support.groq.com behind an account, and the compiler plus the fabric-accurate runtime are not open-download. This is a materially stronger gate than a public pip index and it is a maintenance fact as much as an access fact",
+    "Determinism is the payoff the constraint buys. The compiler is model-independent - it accepts workloads from multiple frameworks and schedules them across one or more LPUs without model-specific kernel coding - and because all data movement is statically scheduled, execution is perfectly predictable with zero variance. The repo's own flop record [[alt-groq-compiler-constraints]] has the exact rule set: all shapes static, entire data flow graph known at compile time, no data-dependent control flow, static memory allocation. The consequence for serving is stated there plainly: no dynamic batching, no variable-length sequences without padding, no runtime reconfiguration",
+    "The 'easiest way to get started' framing is notable given the constraints - it suggests the tool flow smooths a genuinely gated path rather than that the path is simple",
+    "Candid about maintenance in a way most vendor repos are not: 'GroqFlow development is primarily conducted within Groq's internal repo and is periodically synced to GitHub', with the note that this means developer contributions are not immediately obvious in the commit log. So the public history is a periodic snapshot, not the development record",
+    "121 stars, 19 forks, 5 open issues, MIT, created 2022-08-08, LAST PUSH 2025-07-31 - over a year stale as of 2026-10-04, which is consistent with the disclosed internal-repo development model"
+  ],
+  "hardware_caveats": [
+    "There is no portable path. Groq's software runs on LPUs and nowhere else, and unlike a CUDA backend it does not degrade or recompile for other hardware",
+    "Gated end to end: hardware from Groq, toolchain from support.groq.com behind an account. This is the highest-friction acquisition path among the stacks in this slice, and it is a supply-chain fact as much as a software one",
+    "The public repo is stale (2025-07-31) and is disclosed to be a sync from an internal repository, so you cannot use its commit history to judge whether a bug is fixed. Groq's user-facing SDK is the separate groq/groq-python client, which is not this stack",
+    "STATIC SHAPES ARE NON-NEGOTIABLE. No dynamic batching means any workload whose batch size varies per step needs bucketing or padding, which is a worse position than Gaudi (which has a bucketing mechanism inside vLLM) and worse than TPU (which pads but recompiles). This is the single hardest serving constraint in this slice and it is why the Groq record carries no aggregate-throughput figure ([[alt-groq-no-throughput-figure]]) rather than a favourable one",
+    "8 LPUs recommended to run models, and 32 GB of host RAM to BUILD them. Both scale with model size, so the software has a size-dependent hardware floor that a GPU engine does not",
+    "Determinism cuts both ways: zero variance is genuinely valuable for latency-sensitive interactive serving and for anyone debugging, but the price is that you cannot use data-dependent control flow, which is exactly what continuous batching, speculative verification and dynamic routing need",
+    "No throughput figure is published by this repo, and Groq's own public claims in this database are vendor figures ([[alt-groq-deterministic-architecture]], [[groq-lpu]]). Do not infer performance from the compiler's elegance"
+  ],
+  "best_for": [
+    "Understanding what a fully static compilation model does to a serving stack when the constraint is taken seriously - compile and runtime as separate products, static allocation, no dynamic batching",
+    "Single-stream low-latency decode where determinism and predictable variance matter more than aggregate throughput",
+    "Studying the honest maintenance-disclosure pattern: a vendor repo that states plainly that its public history is not its development history",
+    "Reading [[alt-groq-compiler-constraints]] alongside a real toolchain rather than only as an architectural claim"
+  ],
+  "avoid_for": [
+    "High-throughput batched serving, where the absence of dynamic batching is disqualifying",
+    "Workloads needing data-dependent control flow - continuous batching, speculative decoding, MoE routing",
+    "Anyone without Groq hardware AND a GroqWare account; there is no evaluation path",
+    "Judging current Groq software quality from this repo - it has been stale since 2025-07-31 and is a partial mirror"
+  ],
+  "docs_url": "https://github.com/groq/groqflow",
+  "notes": "The repo already records the Groq hardware ([[groq-lpu]]), the deterministic-architecture argument ([[alt-groq-deterministic-architecture]]), the compiler constraint set ([[alt-groq-compiler-constraints]]) and the absence of a throughput figure ([[alt-groq-no-throughput-figure]]). This record adds the missing piece: the actual toolchain, and what its requirements reveal about the constraint. Compare the other three hardware-first stacks in this slice - vllm-gaudi has a bucketing mechanism inside a plugin, the TPU path pads and recompiles under XLA, and Cerebras has a separate CSL language and simulator; Groq is the strictest of the four. Metadata from the GitHub API on 2026-10-04.",
+  "status": "draft",
+  "confidence": 0.72,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-groqflow-readme",
+    "alt-groq-lpu-arch",
+    "niche-github-rest-api-repo-metadata"
+  ]
+}

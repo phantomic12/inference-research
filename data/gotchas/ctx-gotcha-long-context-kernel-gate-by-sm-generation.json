@@ -1,0 +1,25 @@
+{
+  "id": "ctx-gotcha-long-context-kernel-gate-by-sm-generation",
+  "type": "gotcha",
+  "name": "Long context is not servable on older hardware - the attention kernel is gated by SM generation, and one family hits two head_dim-256 walls",
+  "class": "kernel",
+  "affects": [],
+  "concepts": ["long-context", "flash-attention", "flashmla", "flashinfer", "head-dim-256", "hopper-sm90", "blackwell-sm100", "sm80", "split-kv", "mla", "sliding-window"],
+  "symptom": "Two failures that look like anything but what they are. (1) A context length that works on one node fails on another with the same models, because the attention backend is chosen by SM generation: SM80 (A100, A10, L40S, 4090) has FlashAttention-1/2 only and no validated fp8 attention path; SM90 (H100, H200) has FA-3 but current FlashMLA has removed Hopper support so an older pinned checkout is required; SM100/103 (B200, B300, GB200/GB300) has FA-4 and FlashMLA, but FlashMLA decode supports FP8 and FP4 KV ONLY - bf16 KV is not supported, so the cheapest cache and the only MLA kernel are the same decision. (2) Forcing the FlashInfer backend on a model with head_dim 256 or 512 aborts at engine init with 'ValueError: Selected backend AttentionBackendEnum.FLASHINFER is not valid for this configuration. Reason: [head_size not supported]' - the CLI override is accepted and only fails at startup, reproduced for bf16, FP8 and NVFP4 checkpoints of gemma-4-31b-it. Qwen3-Next ships head_dim 256, so it sits on both walls: the backend may refuse to start, and fp8 KV at head_dim 256 makes prefill about 1.6x SLOWER than bf16 because two-level accumulation raises register pressure.",
+  "root_cause": "Each FlashAttention generation is built on primitives that exist on exactly one architecture - FA-3 needs wgmma and TMA, FA-4 needs tcgen05 UMMA and TMEM - so kernel availability tracks SM generation with no portable fallback. FlashInfer's coverage gap is a template-instantiation limit that vLLM checks at init rather than at kernel launch. And the head_dim-256 prefill penalty is not a kernel bug but the register-pressure cost of the very fix that makes fp8 KV accurate above 100K tokens, which is why it hits long-context models specifically.",
+  "workaround": "Check the kernel gate before sizing the deployment: SM80 is FA-1/FA-2 with no validated fp8 KV attention path, SM90 is FA-3 plus a pinned FlashMLA, SM100/103 is FA-4 plus current FlashMLA with fp8/fp4 KV mandatory. On Hopper with MLA models pin an older FlashMLA checkout (the repo records commit ba89a34). On Blackwell plan for fp8 or fp4 KV from the start rather than assuming bf16 is an option. For head_dim 256 models let the engine select the backend rather than forcing FlashInfer, and on Hopper accept the ~1.6x prefill or validate accuracy before disabling two-level accumulation. Independently, use --kv-cache-dtype-skip-layers to leave small sliding-window layers in bf16 - for gpt-oss-20b (window 128) that is the best variant on both latency and throughput.",
+  "severity": "major",
+  "notes": "The head_dim-256 interaction is the sharpest finding: Qwen3-Next has the CHEAPEST KV cache in the whole comparison at 24.0 KiB/token (12 attention layers out of 48 via full_attention_interval 4, 2 KV heads, head_dim 256, so 44 concurrent 128K sequences on 8xH100 at TP4 - by far the best long-context capacity number available) AND it is the family most exposed to both head_dim penalties, because its large head dimension is simultaneously what FlashInfer refuses and what makes fp8 prefill slower than bf16. Its linear-attention layers also mean a FlashInfer-head-dim-256 failure is about the global layers only - the model may still run. The FlashMLA KV FORMAT constraint compounds this in a PD-disaggregated deployment: FlashMLA hard-codes 528 bytes/token for FP8 (512 bytes of float8_e4m3 covering all 512 dims, so the 64 RoPE dims are quantized too, plus 16 bytes of float8_e8m0 scales, one per 32 consecutive values) and 288 bytes/token for FP4 (256 bytes of float8_e4m3 scales, one per 16 e2m1, valid only for extra_k_cache when k_cache is in the V4.1 format), so a kernel that hard-codes the layout will not accept another engine's cache and a KV handoff between them is not a byte copy. PREREQUISITE: all of this presumes the cache fits at all - see [[ctx-kv-cache-gib-at-claimed-context]], which fails first for anything above about 35B on a single card. Cross-references: [[ctx-long-context-attention-kernel-matrix]], [[flashinfer-rejects-large-head-dim]], [[attn-mla-kernel-support-matrix]], [[ctx-fp8-kv-cache-long-context-accuracy]].",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-04",
+  "sources": [
+    "ctx-src-vllm-fp8-kvcache-2026-04",
+    "kern-flashmla-github",
+    "gotcha-vllm-issue-40677-flashinfer-head-size",
+    "attn-flashinfer-paper",
+    "arch-hf-config-qwen3-next",
+    "attn-flashattention-3-paper",
+    "attn-flashattention-4-paper"
+  ]
+}

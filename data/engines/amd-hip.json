@@ -1,0 +1,65 @@
+{
+  "id": "amd-hip",
+  "type": "engine",
+  "name": "HIP and HIPIFY: the ROCm-native source and runtime layer",
+  "repo": "ROCm/HIP",
+  "languages": [
+    "C++"
+  ],
+  "license": "MIT",
+  "first_release_year": 2016,
+  "design_goal": [
+    "amd-gpu-first-runtime",
+    "cuda-source-portability",
+    "engineering-tooling"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "rocm",
+    "hip"
+  ],
+  "supported_formats": [],
+  "notable_features": [
+    "HIP is the runtime and kernel language under everything else in ROCm, and its own one-line definition is the design statement of the whole AMD stack: 'a C++ runtime API and kernel language for AMD GPUs... a programming interface that is SIMILAR TO NVIDIA CUDA, making it straightforward to port existing NVIDIA CUDA code'. The important nuance is 'similar to': HIP's API shape is inherited from CUDA, not from AMD hardware. ROCm-first here means the target is AMD silicon, not that the interface was designed for it",
+    "HIPIFY is the mechanical expression of that shape - an automatic CUDA-to-HIP source translator. AMD published its COVERAGE as a generated document: the supported-API table is produced by running hipify-clang --md --doc-format=full --doc-roc=joint against the tool itself, so the compatibility matrix cannot drift from the tool",
+    "That coverage table is honest in a way most porting claims are not, because it splits per API family and per target vocabulary: CUDA Runtime, CUDA Driver, CUComplex, CUDA Device, CUDA RTC, CUFile, CUBLAS, CUSPARSE and more each get separate columns for CUDA, HIP, ROC, and HIP&ROC. So a reader can see that some APIs land on a HIP equivalent, some only on a ROC-specific equivalent, and some on both. A CUDA kernel that hipify-clang mechanically rewrites cleanly is therefore NOT evidence the kernel will be fast or correct on AMD - translation coverage is a different question from numerical or performance parity",
+    "Not a CUDA backend on AMD. HIP compiles to AMD code for AMD hardware; the CUDA-shaped surface is a deliberate developer-portability choice, and that is exactly why this record is worth separating from vLLM's ROCm backend path ([[vllm]]) where CUDA remains the primary language",
+    "AMD's own ROCm examples repo (cited as source amd-rocm-examples) documents the layer stack in its directory structure: HIP-Basic with no dependencies, HIP-Doc holding the code shown in the HIP documentation, Libraries, Applications, Systems for hipFile GPU-direct storage I/O, AI, and Tutorials",
+    "ROCm's toolchain has required platform-specific remediation work that is part of the HIP story: the Windows path needs Visual Studio 2019/2022 with the Desktop Development with C++ workload, the HIP SDK for Windows, the Visual Studio ROCm extension, and Perl for 'hipify related scripts'",
+    "Metadata via GitHub API 2026-10-04: HIP created 2016-01-07, pushed 2026-10-01, 4406 stars, 592 forks, 44 open issues, MIT, default branch develop. HIPIFY created 2020-03-02, pushed 2026-10-04, 729 stars, 107 forks, 36 open issues, license NOASSERTION, default branch amd-develop",
+    "Both layers are being consolidated rather than expanded. hipBLAS and rocWMMA both now carry '[DEPRECATED] Moved to ROCm/rocm-libraries repo' in their descriptions, and composable_kernel likewise says moved with its develop branch 'maintained as a read-only mirror' - so the ROCm library surface is being reorganised under a single rocm-libraries super-repo while HIP itself stays the stable base"
+  ],
+  "hardware_caveats": [
+    "'Similar to CUDA' is not 'equivalent to CUDA'. The API similarity is the reason porting is easy and also the reason silent behavioural differences exist: HIP is its own language and its own compiler, with its own numerics, its own memory model and its own performance characteristics. This repo already records several concrete failure modes that follow from exactly this - [[hip-rocm-corrupt-output-vulkan-is-reference]], [[hip-wrong-logits-when-prompt-exceeds-ubatch]], [[llamacpp-rocm-ppl-explosion-silent-corrupt]] and [[windows-hip-multi-gpu-silent-output-corruption]]",
+    "HIPIFY coverage is not correctness. A clean translation proves an API has an equivalent, not that the translated kernel produces the same numerics or the same speed on CDNA or RDNA. Treat mechanical translation as a starting point that needs review, exactly as the repo's ROCm gotchas instruct",
+    "AMD publishes no per-API performance guidance as part of the porting story, so there is no supported way to answer 'how much slower is my kernel after porting' from the tooling",
+    "The runtime is AMD-only by construction. There is no HIP backend that runs on NVIDIA hardware, which is the mirror image of [[amd-hip]]'s central limitation on the CUDA side: the two ecosystems are language-compatible but not hardware-compatible",
+    "Windows ROCm remains a second-class path requiring Visual Studio plus Perl for build scripts; most inference work on AMD happens on Linux",
+    "Library churn is real and user-visible: several ROCm libraries were marked deprecated and relocated into rocm-libraries in 2025-2026, so a build pinned to an individual library repo can break on a move rather than on a change",
+    "HIP is not an inference engine and this record does not pretend to be one - it has no scheduler, no serving API and no model formats. It is the substrate under [[vllm]]'s ROCm path and under AMD's own kernel library [[amd-rocm-aiter-kernels]]"
+  ],
+  "best_for": [
+    "Porting CUDA kernels to AMD and understanding, from AMD's own generated table, exactly how far the translation goes per API family",
+    "Reading the clearest statement in this repo of what 'ROCm-native' does and does not mean - AMD hardware target, NVIDIA-shaped interface",
+    "Diagnosing whether a ROCm problem originates in the port or in the hardware, using the HIP/HIPIFY boundary as the dividing line",
+    "Understanding AMD's own example-suite structure as a map of the ROCm stack"
+  ],
+  "avoid_for": [
+    "Assuming a successful hipify-clang run means the ported kernel is numerically safe or performance-competitive - the repo's own ROCm gotchas are the counter-evidence",
+    "Treating HIP as a CUDA compatibility layer you can run on NVIDIA",
+    "Benchmarking from the porting documentation; there is no performance guidance there to benchmark from"
+  ],
+  "docs_url": "https://rocm.docs.amd.com/projects/HIP/en/latest/",
+  "notes": "The repo records AITER as a flop ([[amd-rocm-aiter-kernels]]) and vLLM's ROCm flags as flops ([[amd-vllm-rocm-flags]], [[amd-sglang-rocm-flags]]); what was missing is the substrate record - the language and the porting tool that make those ROCm paths possible and that define the CUDA-compatibility assumption every ROCm gotcha in this repo ultimately rests on. Sources are the three repos' own READMEs plus the HIPIFY generated supported-API page; metadata from the GitHub API on 2026-10-04.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "amd-hip-readme",
+    "amd-hipify-readme",
+    "amd-rocm-examples-readme",
+    "niche-github-rest-api-repo-metadata"
+  ]
+}

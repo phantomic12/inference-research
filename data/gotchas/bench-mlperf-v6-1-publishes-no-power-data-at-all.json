@@ -1,0 +1,36 @@
+{
+  "id": "bench-mlperf-v6-1-publishes-no-power-data-at-all",
+  "type": "gotcha",
+  "name": "MLPerf Inference v6.1 publishes zero watts and zero declared power limits for every benchmark: has_power is false on all 492 result rows and design_power_watts is null on all 492",
+  "class": "measurement",
+  "affects": [
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "amd-instinct-mi355x",
+    "nvidia-h200-sxm"
+  ],
+  "concepts": [
+    "mlperf",
+    "power-cap",
+    "tdp",
+    "cooling",
+    "watts",
+    "joules-per-token",
+    "maxq",
+    "efficiency",
+    "benchmark-methodology"
+  ],
+  "symptom": "Anyone who wants an MLPerf figure they can divide by watts to get cost per token discovers that in the current round there is nothing to divide by. Reading every row of the v6.1 official summary.csv: the has_power column is False for all 492 rows and the design_power_watts column is null for all 492 rows. Not one of v6.1's 492 results - datacenter, edge, open division, preview and rdi alike - carries a power measurement, and no LLM row carries a declared TGP. The same is true of v6.0 (0 of 520 rows has_power=true). The only rounds with any LLM power information are v5.0 and v5.1, and there the information is free text in a Notes column ('B200 TGP 1000W', 'H200 TGP 700W', 'H200-NVL TGP 600W'), not a structured field, and in v5.1 all 24 power-measured rows are stable-diffusion, retinanet and dlrm - none is a Llama. The practical effect: the most-quoted current-round numbers (109277 tok/s on 8xB300, 1136100 tok/s on a 72xGB300 rack) are throughput with no energy content whatsoever, and are being circulated as if they were.",
+  "root_cause": "Two separate mechanisms, and they have different causes. has_power is MLPerf's structured power-measurement flag, and the LLM benchmarks simply do not draw power submissions in these rounds - a submitter has to run the benchmark through an external power meter under the SPEC PTD rules and none chose to for Llama in v6.0 or v6.1 (the v6.1 repo README does still instruct submitters to use SPEC PTD 1.11.1 for power submissions, so the capability exists and went unused). design_power_watts is a structured field that MLCommons populates from the system description, and it is populated as null for LLM rows while being populated elsewhere. The declared-TGP free text in v5.0/v5.1 Notes columns is a submitter convention with no schema behind it, and it was not carried into v6.1 at all - v6.1's Notes column reads 'N/A' on the LLM rows. So the trend across rounds is a DECLINE in power metadata on LLM benchmarks, not an increase, despite hardware power density rising.",
+  "workaround": "Do not derive efficiency, cost per token, or TCO from any v6.0 or v6.1 MLPerf LLM throughput number - there is no watts in the dataset to derive it from, and the absence is silent (null columns, no warning, no footnote). If a vendor pairs an MLPerf v6.1 tok/s figure with a TGP or a dollar figure, that pairing is vendor-supplied and must be recorded as vendor_claim with its own source, not as an MLPerf result. For a genuinely controlled power-versus-throughput point on LLM hardware, the only such pair published anywhere in MLPerf is Dell_MangoBoost's v6.0 MI355X 1000W-capped submission against its uncapped twin (81870.5 vs 97535.1 tok/s Offline, -16.1%); that record is the honest starting point, and even it reports no joules. Note also the cooling question is entirely unaddressed: no v6.1 row declares air versus direct-liquid cooling, so an air-cooled RTX PRO 6000 result and a direct-liquid GB300 rack result are published with no thermal-configuration metadata whatsoever.",
+  "severity": "major",
+  "notes": "This is the single biggest gap between what MLPerf is credited with and what it currently delivers for LLM serving. The benchmark is genuinely the only independently audited throughput source in the field, and for energy it delivers nothing at the current round boundary - which is why this repository's joules_per_token records all trace to v4.1 NVIDIA MaxQ submissions and external instruments, not to the current round. Read this before using the repo's MaxQ gotcha too: that gotcha correctly establishes that the MaxQ label does not mean a watt cap on H100-SXM, and this record establishes the broader fact that there is no current-round power data to fall back on.",
+  "status": "verified",
+  "confidence": 0.97,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-v6-0-summary-json",
+    "bench-mlperf-v5-1-summary-json"
+  ]
+}

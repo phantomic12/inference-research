@@ -1,0 +1,65 @@
+{
+  "id": "niche-android-nnapi",
+  "type": "engine",
+  "name": "Android NNAPI (vendor-neutral on-device acceleration API)",
+  "status": "deprecated",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "niche-android-nnapi-deprecation",
+    "niche-ort-nnapi-ep-doc",
+    "niche-github-rest-api-repo-metadata"
+  ],
+  "repo": null,
+  "languages": [
+    "C++",
+    "Java"
+  ],
+  "license": "AOSP Apache-2.0 (platform API)",
+  "first_release_year": 2017,
+  "design_goal": [
+    "vendor-neutral-accelerator-abstraction",
+    "on-device",
+    "battery-and-thermal-constrained"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "nnapi (cpu/gpu/npu via vendor drivers)"
+  ],
+  "supported_formats": [
+    "model-format-agnostic (HAL consumes vendor-native graphs)"
+  ],
+  "notable_features": [
+    "NNAPI is not an engine in the usual sense - it is the ANDROID PLATFORM ABI that lets any framework ask a vendor to run a neural network graph on whatever accelerator the SoC has. It is the substrate under [[local-litert]]'s NNAPI delegate and [[local-onnxruntime-mobile]]'s NNAPI execution provider, so it belongs in this knowledge base even though it serves nothing itself",
+    "IT IS DEPRECATED IN ANDROID 15. This is the headline fact and it is the reason this record exists. AOSP states plainly: 'Deprecated: Starting in Android 15, the NNAPI (NDK API) is deprecated.' The NDK migration guide gives the same notice and directs developers to TensorFlow Lite in Play Services (LiteRT Play Services) and AICore",
+    "CRUCIALLY, THE DEPRECATION IS NARROWER THAN IT LOOKS. The NDK API is deprecated but the Neural Networks HAL INTERFACE CONTINUES TO BE SUPPORTED - the vendor-driver contract underneath is alive. What is ending is the framework-facing convenience API, not the acceleration capability",
+    "Google's own replacement does not use NNAPI. In the LiteRT repository (google-ai-edge/LiteRT issue 3936) the maintainers state that LiteRT in Google Play Services C/C++ 'only provides the GPU and XNNPACK delegates at the moment. NNAPI has been deprecated as of Android 15.' So the successor path is GPU plus XNNPACK CPU kernels, not an NPU vendor graph",
+    "ONNX RUNTIME'S NNAPI EXECUTION PROVIDER REQUIRES ANDROID 8.1+, with Android 9+ recommended for optimal performance - a narrow floor for a capability that was never uniformly available across OEMs in the first place",
+    "The vendor-specific reality underneath: NNAPI was always uneven. Different OEMs shipped different driver quality and different op coverage, so a graph that hit NNAPI on one phone could fall back on another. That inconsistency is a plausible reason Google could retire the abstraction, and it is the practical lesson of this record",
+    "Documentation lag is itself informative: the ONNX Runtime NNAPI Execution Provider page still describes NNAPI as a current acceleration option with no mention of the Android 15 deprecation"
+  ],
+  "hardware_caveats": [
+    "DEPRECATED AT THE API LEVEL FROM ANDROID 15. Building a new product on NNAPI means building on an API with a published end-of-life path. That is a strategic risk independent of whether today's code works",
+    "OP COVERAGE WAS ALWAYS OEM-DEPENDENT. NNAPI is a HAL interface, so acceleration depends entirely on the vendor driver on the device. The same model can be NPU-accelerated on one handset and CPU-fallback on another, and the fallback path may be slower than running the model directly on CPU via XNNPACK. You cannot reason about NNAPI performance without testing on the exact OEM build",
+    "NO PUBLISHED PERFORMANCE DATA OF ANY KIND. No throughput, no latency, no acceleration factor versus CPU baseline. The ONNX Runtime docs give requirements, configuration and a supported-ops list, not measurements. Any NNAPI speedup figure is vendor marketing or third-party and unverified",
+    "THE SUCCESSOR IS NOT HARDWARE-NEUTRAL, WHICH IS THE POINT. Migrating off NNAPI means moving to Play Services LiteRT delegates (GPU and XNNPACK) or AICore. Both are Google-controlled; AICore in particular is only available on certified devices with Google's models. A vendor-neutral abstraction was replaced by a Google-specific one, so a genuinely multi-OEM hardware story is harder now than when NNAPI existed",
+    "The NDK API being deprecated while the HAL continues means framework authors can still reach the HAL directly, but that is a private path with no compatibility guarantee and much more integration work",
+    "This record covers the ACCELERATION API, not a serving engine. There is no scheduler, no batching, no KV cache, no HTTP surface, and no model format of its own"
+  ],
+  "best_for": [
+    "Understanding WHY the on-device Android ecosystem looks the way it does - NNAPI's retirement is the reason GPU and XNNPACK delegates are the current story",
+    "Reading the historical path from a vendor-neutral abstraction to Google-specific delegates, which is a genuine lesson about platform-layer dependencies",
+    "Maintaining an existing NNAPI-based product on Android 14 and earlier, where it still works",
+    "Knowing what to migrate an NNAPI implementation to, as recorded in the NDK migration guide"
+  ],
+  "avoid_for": [
+    "ANY new Android on-device inference project. The NDK API is deprecated from Android 15 and the migration destinations are narrower than what it replaced",
+    "Anyone needing a hardware story that works identically across OEMs - that was never true and is now less achievable",
+    "Assuming NPU acceleration is available. Google Play Services LiteRT currently provides GPU and XNNPACK delegates, so the NPU path most people associate with NNAPI is exactly what is missing from the successor",
+    "Any claim about NNAPI performance - no measurements are published by AOSP, Google or Microsoft"
+  ],
+  "docs_url": "https://developer.android.com/ndk/guides/neuralnetworks/migration-guide",
+  "notes": "Recorded as a DEPRECATED substrate rather than an engine, because that is what it is: the vendor-neutral Android acceleration ABI that [[local-litert]] and [[local-onnxruntime-mobile]] sit on top of. Its deprecation is the single most consequential honest negative in the on-device niche - the platform retired its one hardware-neutral acceleration interface in favour of Google-specific Play Services delegates and AICore, and the LiteRT maintainers confirm Play Services exposes only GPU and XNNPACK today. Two useful lessons for a general reader: (1) a HAL abstraction is only as good as its least-good vendor driver, which is likely why it was retired; (2) vendor neutrality in on-device ML is rarer in 2026 than it was in 2020. NOTE the NDK API is deprecated while the Neural Networks HAL continues to be supported - the acceleration capability survives, the convenience API does not. NO PUBLISHED THROUGHPUT - explicit negative. Status deprecated and confidence set from primary AOSP and ONNX Runtime documentation accessed 2026-10-04."
+}

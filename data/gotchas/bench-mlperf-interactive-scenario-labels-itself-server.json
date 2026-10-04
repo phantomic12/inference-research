@@ -1,0 +1,37 @@
+{
+  "id": "bench-mlperf-interactive-scenario-labels-itself-server",
+  "type": "gotcha",
+  "name": "MLPerf Interactive results are stored and published as Interactive but the harness log labels them 'Scenario : Server', so raw-log auditing silently misclassifies them",
+  "class": "measurement",
+  "affects": [
+    "amd-instinct-mi355x",
+    "nvidia-h200-sxm",
+    "nvidia-b300"
+  ],
+  "concepts": [
+    "mlperf",
+    "interactive",
+    "server",
+    "offline",
+    "scenario",
+    "ttft",
+    "tpot",
+    "loadgen",
+    "benchmark-methodology",
+    "audit"
+  ],
+  "symptom": "An auditor reads every raw harness log in a submission, as the most defensible way to check MLPerf numbers, and concludes that every Interactive result is really a Server result. The evidence is in the logs themselves: for AMD's 8xMI355X Llama 2 70B Interactive run the log at closed/AMD/results/8xMI355X_2xEPYC_9575F/llama2-70b-99.9/Interactive/performance/run_1/mlperf_log_summary.txt reports 'Scenario : Server', 'Completed tokens per second: 73191.51', 'Performance constraints satisfied : Yes'. For Dell's 8xMI355X Llama 3.1 8B Interactive run the log at closed/Dell/results/XE9785L_8xMI355X/llama3.1-8b/Interactive/performance/run_1/mlperf_log_summary.txt reports 'Scenario : Server', 'Completed tokens per second: 130539.57'. Identical in every respect to a Server log. Meanwhile summary.csv lists both under a Scenario column value of 'Interactive', and the results repository stores them under directories named Interactive. Downstream consequences: Interactive throughput gets quoted as if it were Server throughput (it is 12-29% lower), and a Server result gets quoted as an interactive-UX result (it is not one).",
+  "root_cause": "LoadGen reports the scenario it was configured with, and the Interactive category is implemented by configuring LoadGen as a Server run with a stricter, compiled-in per-query latency bound. The MLCommons reference repo states that contract for llama2-70b as: 'the interactive category requires loadgen to enforce ttft <= 450ms and tpot <= 40ms'. Those bounds are baked into the harness build for the model/scenario pair - they are NOT in the benchmark's user.conf (which contains only min_duration, min_query_count and target_qps), NOT in the log, and NOT in summary_results.json. So the one property that makes an Interactive run different from a Server run is the one property absent from every artifact an auditor would normally read. The Interactive identity survives only as a directory name and a CSV column value.",
+  "workaround": "Treat the directory name or the summary.csv Scenario column as the authoritative scenario label and never infer it from the log's own 'Scenario :' line - that line is always Server for both Server and Interactive. When a number's scenario matters, cite the summary.csv row and the log together, as every benchmark record in this slice does. If you need the achieved TTFT and TPOT for an Interactive run, they are not published in these logs at all: you must re-run it, because the bound is enforced silently and its margin is never reported. When comparing an Interactive number to anything else, state the ttft<=450ms / tpot<=40ms contract inline, or the reader has no way to know the number was produced under a 40ms inter-token cap.",
+  "severity": "major",
+  "notes": "This is the single most under-appreciated structural defect in the MLPerf result set, and it is not a rounding or labelling nit: Interactive is a genuinely different performance regime (a hard inter-token cap that bounds concurrency), it is routinely confused with Server in secondary write-ups, and the confusion is undetectable from the raw artifacts. It also explains why the scenario cannot be reconstructed from a submission log, which in turn is why this repository's benchmark records state the scenario from summary.csv and treat the log as confirmation of validity only.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-amd-mi355x-llama2-interactive-log",
+    "bench-mlperf-v6-1-dell-mi355x-llama3-8b-interactive-log",
+    "bench-mlperf-llama2-70b-interactive-latency-rule",
+    "bench-mlperf-v6-1-summary-csv"
+  ]
+}

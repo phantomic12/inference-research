@@ -1,0 +1,30 @@
+{
+  "id": "sent-migration-resistance-concurrency-ceiling-caps-ollama",
+  "type": "gotcha",
+  "name": "The migration resistance has a concrete number: Ollama is treated as finished at about five concurrent users, which is what pushes teams onto vLLM or SGLang",
+  "class": "toolchain",
+  "symptom": "The most operationally useful sentiment datum in the corpus is an explicit concurrency ceiling given by someone running a real organization on it. A single-firm deployment (Threadripper Pro 7965WX, 256GB DDR5-6000, one L40S, roughly EUR 14k, Docker on native Ubuntu, OpenWebUI for colleagues) states: 'For engine go with your flavour, Ollama is good enough for 5 active concurrent users but I wouldn't go futher than that. Simply vllm or sglang or aphrodite or llamacpp is all you need.' The same commenter independently validates the engine-selection split from the deployment side: 'For engine go with your flavour' - i.e. no strong preference at that scale. Note this is a preference statement carrying a number, not a benchmark of that number; the number is a practitioner rule of thumb.",
+  "root_cause": "Ollama optimizes for a single developer's machine - one model, one user, automatic configuration - and has no continuous-batching server behind it. Past a handful of concurrent clients the choice is not 'which is faster' but 'which has a scheduler'. This is the single most common named trigger for moving off a simple local stack, and it is why the migration in this corpus is usually Ollama to vLLM rather than engine to engine.",
+  "workaround": "Below roughly five concurrent users and a single model, a simple single-process stack is the corpus's recommendation and no datacenter engine is warranted. Above it, move to an engine with continuous batching. Treat the number five as a practitioner rule of thumb to be measured on your own traffic, not a benchmark result.",
+  "severity": "minor",
+  "notes": "Same deployment, one further preference worth recording because it is about the frontend rather than the engine: OpenWebUI was chosen for colleagues 'due to how simple it is for the end user, not to complicated and such like other front ends yet having a lot of features.' And one responder to 'which GPU should I use to caption ~50k images/day' territory is worth noting as a general shape: batch-oriented, latency-insensitive work attracts different engine advice than interactive work. Recorded as a caveat on the ceiling's scope, not as a benchmark.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "sent-src-reddit-ollama-concurrency-ceiling-1led23c",
+    "sent-src-reddit-best-inference-engine-1kc4kv2"
+  ],
+  "affects": [
+    "ollama",
+    "vllm",
+    "sglang"
+  ],
+  "concepts": [
+    "continuous-batching",
+    "concurrency",
+    "scheduler",
+    "openwebui",
+    "single-user"
+  ]
+}

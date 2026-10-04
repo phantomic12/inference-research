@@ -1,0 +1,41 @@
+{
+  "id": "bench-mlperf-fixed-shape-is-not-production-traffic",
+  "type": "gotcha",
+  "name": "MLPerf Inference LLM numbers are measured on fixed-shape, closed-loop, single-model traffic with a submitter-chosen scheduler, so an MLPerf lead is not a production lead",
+  "class": "measurement",
+  "affects": [
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "amd-instinct-mi355x",
+    "nvidia-h200-sxm"
+  ],
+  "concepts": [
+    "mlperf",
+    "production",
+    "workload-realism",
+    "fixed-shape",
+    "closed-loop",
+    "ttft",
+    "tpot",
+    "kv-cache",
+    "prefix-caching",
+    "continuous-batching",
+    "time-to-first-token",
+    "cost-model",
+    "capacity-planning"
+  ],
+  "symptom": "A vendor wins MLPerf Inference on a model and a deployment blog quotes the win as evidence that its platform will serve a production traffic mix faster. The inference does not hold, and the gap is structural rather than a matter of degree. Concretely, what MLPerf fixes and what it frees: the model is one model, so there is no inter-request KV-cache reuse across a real conversation mix and no mixture of short and long generations; the shape is fixed per benchmark (llama2-70b reports TOKENS_PER_SAMPLE around 267-291 depending on the submission, and llama3.1-8b's reference SUT sets max_tokens 128), so a production mix of 200-token and 8000-token generations is not represented; the input side is a summarization dataset with a fixed input length distribution, so prompt-length variance and its effect on prefill is absent; the arrival process is either a closed-loop drain (Offline) or Poisson at target_qps 0.5 (Server/Interactive), never a bursty diurnal real-world pattern; there is exactly one replica configuration per row and the submitter chooses it, so the number reflects one tuning point found by the team that owns the hardware; there is no speculative decoding, no assistant prefetch, no prefix caching, no disaggregated prefill/decode, and no multi-model routing unless the submitter built them and disclosed them in the framework string. And the accuracy target is a fixed ROUGE threshold on the 99 or 99.9 track, which means a submission may legally be slower if it is more accurate - the v6.1 llama2-70b-99.9 rows span TOKENS_PER_SAMPLE 267.0 to 290.8 across submitters, a 9% spread in generation length that alone moves the tok/s figure.",
+  "root_cause": "MLPerf is a conformance-and-comparability harness, not a workload model. Its design goal is that two unrelated organizations running the same reference model, dataset, shape and load generator produce comparable numbers - which requires fixing everything, and fixed is the opposite of production. The scenarios encode latency behaviour (Offline unbounded, Server with a per-query bound, Interactive with a 40ms inter-token cap) but not request behaviour. The consequence is that MLPerf answers 'can this system sustain rate R on model M under shape S' and cannot answer 'what will my p95 TTFT be on Tuesday'. This is a known and accepted limitation of the benchmark, not a defect in any submission - and it is precisely why the results are still the most credible throughput numbers available: nobody else publishes a fixed, audited, cross-vendor protocol at all.",
+  "workaround": "Use MLPerf numbers for what they are: a floor-setting, apples-to-apples hardware and stack comparison under stated conditions, and the best available sanity check that a configuration is not pathologically slow. Do not use them for SLO planning, capacity modelling, or cost per million tokens without a load test on your own traffic - and if you must estimate before you can load test, state the MLPerf shape alongside the estimate so the reader can see the assumption, because a 267-token generation and a 4000-token generation differ in throughput by more than most hardware differences in the whole table. When a vendor's MLPerf lead is the basis of a purchase, ask for a replay of your own traffic distribution; the fact that the benchmark could not tell you the answer is not a reason to skip the test. Finally, never mix shapes when building a comparison table: llama2-70b's ~267-291 tokens per sample and llama3.1-8b's 128 max_tokens mean a llama3.1-8b tok/s figure and a llama2-70b tok/s figure differ in what one 'token' costs, and the 8B model's much higher tok/s says almost nothing about its advantage on a 70B workload.",
+  "severity": "major",
+  "notes": "This is the caveat that must travel with every MLPerf number in this repository, and it is the reason this repo insists on stating scenario, shape and load conditions next to every throughput figure rather than storing a bare rate. THE HONEST VERSION OF THE ARGUMENT FOR MLPerf, which should not be lost when stating the caveat: in a field where the overwhelming majority of published LLM throughput numbers are vendor self-reports with no shape, no scenario, no warmup and no third party, MLPerf results are fixed-shape, single-model and closed-loop - and that is still a large and non-obvious improvement, because it makes cross-vendor comparison possible at all. The error is not treating MLPerf as production-faithful; it is treating MLPerf as production-faithful WHILE ALSO dropping the conditions, which is what happens when a single tok/s number is lifted out of this database into a slide. The other practical consequence: the 9% spread in llama2-70b generation length across v6.1 submitters (267.0 to 290.8 tokens per sample) means two v6.1 'llama2-70b Offline' numbers can differ by several percent purely because their submitters hit different generation lengths under the same ROUGE bar - so even a scenario-matched, same-round, same-hardware comparison carries a few percent of irreducible shape slack.",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-llama2-70b-interactive-latency-rule",
+    "bench-mlperf-v6-1-dell-mi355x-llama3-8b-server-log",
+    "bench-mlperf-v6-0-summary-json"
+  ]
+}

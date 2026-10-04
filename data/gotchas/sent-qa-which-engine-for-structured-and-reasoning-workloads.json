@@ -1,0 +1,32 @@
+{
+  "id": "sent-qa-which-engine-for-structured-and-reasoning-workloads",
+  "type": "gotcha",
+  "name": "Q: 'Which engine for structured output / agentic / multi-turn workloads?' - A: SGLang and vLLM, with the reason stated as prefix reuse, and llama.cpp kept for the local-model reference path",
+  "class": "toolchain",
+  "symptom": "For prefix-heavy and structured work the corpus names vLLM's prefix caching as the specific asset: 'Prefix caching is amazing for best-of-n style generative tasks.' For large-context single-box work on current NVIDIA hardware the advice is to leave a simple local stack for a served engine, 126 upvotes: 'You need to be using sglang or vLLM with that 6000. It's significantly faster due to MTP support and significantly better with large context.' Multi-turn and agentic traffic is where the two engines are said to differ, with multinode setup - not throughput - as the deciding factor for SGLang. Against that, llama.cpp holds the local-model and consumer slots on the strength of quant coverage and hardware breadth, and one commenter calls llama.cpp 'by far the best' for a single user on a single card while conceding 'If more than four concurrent users with high access rate then vLLM starts to make more sense.'",
+  "root_cause": "Prefix reuse is the mechanism the community actually names, and it is the property that structured and multi-turn traffic monetises: a long system prompt, tool schemas and prior turns are identical across requests, so a prefix cache converts them from per-request prefill into a cache hit. That is why the recommendation is tied to workload shape rather than to model size. The counterweight is that this advantage requires the engine to be holding a KV cache across requests, which is precisely what the single-process local stacks are not built for.",
+  "workaround": "For repeated system prompts, tool schemas, best-of-n sampling, or long multi-turn sessions, choose an engine with prefix caching and measure cache hit rate on your own traffic. Keep llama.cpp as the reference path for local models and unusual quant formats; the corpus recommends running both rather than committing.",
+  "severity": "minor",
+  "notes": "Recorded honestly as a soft consensus. The corpus contains no practitioner claim that SGLang's RadixAttention specifically is why to prefer it for prefix workloads - that argument comes from vendor-adjacent sources, and the practitioner threads here justify the choice by prefix caching generically, multinode setup simplicity, and MTP support. Also note the engine-agnostic variant of the same advice from a startup launch thread: 'It's resending the same system prompt plus tool schemas every turn', which a commenter identifies as the real cost, above decode speed.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "sent-src-reddit-best-inference-engine-1kc4kv2",
+    "sent-src-reddit-vllm-vs-sglang-1jjl45h",
+    "sent-src-hn-magnitude-launch-49911995"
+  ],
+  "affects": [
+    "sglang",
+    "vllm",
+    "llama-cpp"
+  ],
+  "concepts": [
+    "prefix-caching",
+    "radixattention",
+    "structured-output",
+    "agentic",
+    "best-of-n",
+    "multi-token-prediction"
+  ]
+}

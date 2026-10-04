@@ -1,0 +1,33 @@
+{
+  "id": "comm-gfx906-mfma-absent-no-matrix-cores",
+  "type": "gotcha",
+  "name": "gfx906 has no MFMA matrix-core instructions: every fp8/int8 matrix path that assumes matrix cores is unavailable or must be emulated, and it is the architectural reason gfx906 decode lags newer AMD parts",
+  "class": "hardware",
+  "affects": [
+    "amd-radeon-instinct-mi50x",
+    "llama-cpp",
+    "vllm"
+  ],
+  "concepts": [
+    "gfx906",
+    "gfx908",
+    "mfma",
+    "matrix-core",
+    "fp8",
+    "int8",
+    "dot2",
+    "sdot",
+    "udot"
+  ],
+  "symptom": "Not a crash - a ceiling. Anything requiring matrix cores simply cannot be used. Three concrete community reports: (1) a proposed fp8 kernel 'is not really compatible with gfx906 as it used the power of matrix cores (tensor engines) not supported by gfx906', forcing a fallback that stores weights as fp8/uint8 and dequantises on the fly to fp16 during the dot product, yielding 24 tok/s prefill on TP4 for Qwen3.6-27B fp8 with MTP 5; (2) a dspark/flash draft model 'will likely not work on the mi50 because they miss matrix cores'; (3) when asked to review an upstream INT8 optimisation effort, a fork maintainer reported the author's own assessment that it 'doesn't apply to MI50 because we're already compute bound and don't have the MFMA instructions that MI100 has'. Related observable: the Vulkan backend reports 'matrix cores: none' for VEGA20.",
+  "root_cause": "gfx906 is GCN5.1 (Vega20), one generation before the CDNA parts that introduced MFMA. No first-party AMD document is cited in the export for this; it is architecture-level and corroborated by the absence of any gfx906 MFMA path in rocBLAS/Tensile.",
+  "workaround": "Design around it rather than patching it. Keep weights de-quantised to fp16 and use fp16 dot2 (the community's stated mental model for why dequant-to-fp16 is the right default on this part). Use dot4/sdot for int8 KV-cache where registers allow - one developer notes Q8 KV 'needs more registers for intermediate results and that size is simply impossible to do' at tile sizes large enough to match the fp16 path. Split the draft model onto a separate card if you want a matrix-core-capable drafter. Expect gfx908 to be materially faster for gfx906-gated kernels, because gfx908 does have MFMA - a maintainer left the note that enabling the gfx906-gated kernels on gfx908 'should be good'.",
+  "severity": "major",
+  "notes": "COMMUNITY-REPORTED pattern, 4 independent contributors (unverbraucht, dreadbyte, rjakobolivaw0065, beny4088) plus the Vulkan driver itself reporting 'matrix cores: none' for VEGA20. This is the single most useful architectural fact for a reader choosing between AMD generations on a budget: gfx906's used-market price advantage is partly offset by having no matrix cores at all. Note the fp8 figure (24 tok/s PP, TP4) is a single report on a specific model and quant, recorded here for the mechanism rather than as a comparable benchmark.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

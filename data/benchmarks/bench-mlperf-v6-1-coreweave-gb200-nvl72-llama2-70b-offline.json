@@ -1,0 +1,27 @@
+{
+  "id": "bench-mlperf-v6-1-coreweave-gb200-nvl72-llama2-70b-offline",
+  "type": "benchmark",
+  "name": "CoreWeave GB200 NVL72, MLPerf Inference v6.1 Offline: Llama 2 70B across a full 72-GPU rack (18 nodes)",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-v6-1-coreweave-gb200-nvl72-llama2-offline-log"
+  ],
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-gb200-nvl72"
+  ],
+  "interconnect_ids": [],
+  "model": "Llama 2 70B (MLPerf v6.1 submission, FP4 weights)",
+  "format_id": "nvfp4",
+  "metric": "tps_aggregate",
+  "value": 894002,
+  "unit": "output tokens/s (aggregate across all 72 GPUs, harness 'Tokens per second')",
+  "methodology": "AGGREGATE. MLPerf Inference v6.1 Closed division, Datacenter suite, Offline scenario at RACK scale. LOADS: batch size not a fixed published number; min_duration 600000 ms, min_query_count 2000, early stopping satisfied: Yes. Model shape TOKENS_PER_SAMPLE 267.0. Hardware: 72x NVIDIA GB200-186GB aarch64, 18 nodes, 4 accelerators per node - one whole GB200 NVL72. Framework per summary.csv: 'TensorRT-LLM feat/1.2-mlpinf, NVIDIA Dynamo mlperf-v6.0-dynamo-v0.8.0'. Samples per second 3292.1. POWER: has_power=False, design_power_watts=null - a full NVL72 rack result with no watts anywhere in the row, which is remarkable given the rack's power draw is a primary argument for the platform. OMITTED BY SOURCE: replica count vs TP/EP layout, network fabric and topology, KV dtype, concurrency, clock state, cooling (an NVL72 is direct-liquid in practice but the row does not say so).",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "power_cap": null,
+  "notes": "Per-GPU this is 12417 tok/s, well below NVIDIA's own 8-GPU slice of the same-generation GB300 (16433/GPU, see bench-mlperf-v6-1-nvidia-gb300-8gpu-llama2-70b-offline) and below the single-node B300 (13660/GPU). Cross-referentially: AMD's own 11-node 88xMI355X v6.0 run reached 1042110 tok/s Offline, i.e. 11842/GPU. Neither rack result is evidence that scale-up fabric pays off at this model size - both are per-GPU losses relative to an 8-GPU node, because Llama 2 70B in FP4 is small enough that a single node already holds the whole model and the extra machines add communication and scheduling rather than removing a bottleneck."
+}

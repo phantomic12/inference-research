@@ -1,0 +1,30 @@
+{
+  "id": "sent-sglang-multinode-and-prefix-consensus",
+  "type": "gotcha",
+  "name": "Consensus with a real justification: SGLang is preferred over vLLM specifically for multinode setup and for prefix-heavy structured workloads, and its simpler deployment path is the cited reason",
+  "class": "toolchain",
+  "symptom": "The multinode case is stated bluntly by a practitioner who has run both at tp=16: 'For multinode, I much prefer SGLang's simple setup vs Ray - the docs for vLLM are barely adequate for setting up Ray w/ slurm. I would probably have burnt days on this without the help of Claude and o1-Pro and even then, it's just ugly.' The prefix/structured case is stated by a commenter with 126 upvotes advising someone on an RTX PRO 6000 to move off their current stack: 'You need to be using sglang or vLLM with that 6000. It's significantly faster due to MTP support and significantly better with large context.' A second answer in the same thread credits prefix caching directly: 'Prefix caching is amazing for best-of-n style generative tasks.' The community-level claim for SGLang - RadixAttention and prefix reuse for multi-turn and agentic traffic - appears in vendor-adjacent sources rather than in these practitioner threads, so it is recorded here as practitioner-preferred-for-the-shape-of-the-workload, not as an independently verified mechanism.",
+  "root_cause": "The differentiator is operational, not architectural. SGLang's multinode story is a single config surface where vLLM's is Ray plus Slurm plus a configuration the corpus describes as under-documented. For prefix-heavy or MTP-shaped traffic the win is attributed to features that are simply switched on in SGLang and more involved in vLLM. Both reasons are about the operator's time, which is consistent with the pattern across this whole slice: people choose on integration cost far more than on throughput.",
+  "workaround": "For a multi-node deployment, evaluate SGLang against vLLM on setup complexity before benchmarking either. For agentic or multi-turn traffic with a shared system prompt, treat prefix-cache behaviour as a selection criterion and measure it on your own prompt distribution.",
+  "severity": "minor",
+  "notes": "Not a consensus: the same 107-upvote answer reports vLLM 'has more mature speculative decoding' while SGLang's EAGLE2/EAGLE3 support requires training draft models first, and reports better P99 TTFT from SGLang but slightly higher throughput from vLLM on a single older-generation GPU. Recorded as split, not resolved. Also note a direct real-world failure of SGLang on non-datacenter NVIDIA: on 4x RTX PRO 6000 with Qwen3.5-397B NVFP4 the reporter got 'Literally NaN' from SGLang 0.5.8 where vLLM with forced Marlin reached 50.5 tok/s (242 upvotes).",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "sent-src-reddit-vllm-vs-sglang-1jjl45h",
+    "sent-src-reddit-sm120-moe-backends-1rrfqlu"
+  ],
+  "affects": [
+    "sglang",
+    "vllm"
+  ],
+  "concepts": [
+    "engine-selection",
+    "prefix-caching",
+    "radixattention",
+    "multi-token-prediction",
+    "multinode",
+    "ray"
+  ]
+}

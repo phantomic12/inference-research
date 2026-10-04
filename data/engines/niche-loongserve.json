@@ -1,0 +1,67 @@
+{
+  "id": "niche-loongserve",
+  "type": "engine",
+  "name": "LoongServe (elastic sequence parallelism for long-context LLM serving)",
+  "status": "deprecated",
+  "confidence": 0.74,
+  "updated": "2026-10-04",
+  "sources": [
+    "niche-loongserve-repo",
+    "niche-github-rest-api-repo-metadata"
+  ],
+  "repo": "LoongServe/LoongServe",
+  "languages": [
+    "Python",
+    "C++",
+    "CUDA",
+    "Jupyter Notebook"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "design_goal": [
+    "long-context-serving",
+    "elastic-sequence-parallelism",
+    "heterogeneous-workload-mixing",
+    "artifact-reproducibility"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "pytorch"
+  ],
+  "notable_features": [
+    "AN ARTIFACT-EVALUATION SUBMISSION, NOT A PRODUCT. This is the single most useful thing about the record. The repository's entire README is three lines pointing at an artifact-evaluation folder, and the AE guide is written for reviewers: log into the AUTHORS' cluster via a jump server, activate the environment, reserve compute nodes. That is an unusually candid signal about who the intended user is - the Artifact Evaluation committee, not operators",
+    "The technical contribution is ELASTIC SEQUENCE PARALLELISM for long-context serving: splitting prefill and decode across a variable number of GPUs as sequence length and load change, which is the part tensor parallelism cannot flex. Elastic matters because long-context requests have wildly different costs",
+    "The AE guide scripts the comparison against the field's canonical baselines explicitly: vLLM, LightLLM with SplitFuse, DeepSpeed-MII with Dynamic SplitFuse, and DistServe with prefill-decode disaggregation, each across ShareGPT, LEval, LV-Eval and a Mixed workload. That makes it a better map of the disaggregation design space than any single result would be",
+    "IT SHIPS A MODIFIED NCCL. The repository contains an 'rnccl' directory alongside 'longserve_cuda_kernels', which is the practical blocker: reproducing this requires building a custom collective-communication library, not just pip-installing a package",
+    "Apache-2.0, created 2024-08-21, last push 2024-11-11, 137 stars, 16 forks, 5 open issues, no GitHub releases"
+  ],
+  "hardware_caveats": [
+    "HARDWARE REUSE BARRIER, AND IT IS THE BINDING ONE. The system requires custom CUDA kernels (longserve_cuda_kernels) AND a modified NCCL (rnccl), plus multi-node launch (run_multi_nodes.sh). This is not a pip install. You are building a communication stack, which means the artifact only reproduces for people willing to do cluster work",
+    "THE DOCUMENTED PATH ASSUMES THE AUTHORS' CLUSTER. The artifact-evaluation guide's primary instructions are to log in via a jump server and reserve nodes on hardware the team controls, with non-AE-reviewer instructions relegated to a secondary section. Even a diligent outsider is reproducing on unfamiliar infrastructure",
+    "DORMANT. Last push 2024-11-11, roughly two years before this record's date of 2026-10-04, with 5 open issues and no releases. Not archived, so not formally deprecated - the same dormant-not-abandoned ambiguity as [[niche-routellm]] - but with no commits for two years it is not being maintained",
+    "I PUBLISH NO INDEPENDENT THROUGHPUT NUMBER HERE. The paper reports results (the AE guide refers to Figures 2, 3, 10, 11, 13, 14) but I have not extracted or independently verified any figure, and the repo publishes no standalone benchmark table. Any LoongServe speedup figure you see attributed to this record is paper-reported, not verified here",
+    "SMALL AND NARROW: 137 stars, 16 forks. This is a research artifact from a paper team, not a project with a user community",
+    "CUDA ONLY, no ROCm, no CPU, no Metal. The custom kernels and modified NCCL make portability close to zero",
+    "BUILT ON TOP OF A MOVING TARGET. Baseline comparisons were run against vLLM, LightLLM and DeepSpeed-MII as they existed in 2024. DeepSpeed-MII is now recorded as deprecated ([[niche-deepspeed-mii]]) and LightLLM is not a project most people deploy today ([[niche-lightllm]]), so the comparison set has aged badly even though the ideas have not"
+  ],
+  "best_for": [
+    "Studying elastic sequence parallelism as a technique - the code and the AE comparison matrix against DistServe, SplitFuse and vLLM make this the most useful artefact in this corner of the field",
+    "Reading how prefill-decode disaggregation was approached in 2024, alongside [[distserve]] and [[semi-pd]], which are the two records already in the repo",
+    "A research group willing to build custom CUDA and NCCL code and reproduce on their own multi-node cluster",
+    "Anyone surveying the disaggregation design space, since the AE guide is effectively a survey with runnable scripts"
+  ],
+  "avoid_for": [
+    "Production deployment of any kind. This is an artifact-evaluation submission and the documentation says so",
+    "Anyone who does not have multi-node GPU infrastructure and a willingness to build a modified NCCL",
+    "Expecting current model support, current kernels, or community maintenance - there have been no commits since 2024-11-11",
+    "Teams that need a vLLM-class serving system with support behind it - the ideas migrated into production stacks, the repo did not"
+  ],
+  "docs_url": "https://github.com/LoongServe/LoongServe",
+  "notes": "One of the paper-code releases people in disaggregated serving actually read, recorded for its artifact-evaluation guide rather than its performance: the scripted baseline matrix against DistServe, SplitFuse and vLLM across ShareGPT/LEval/LV-Eval is the most compact map of the 2024 disaggregation design space in this repo. The honest negatives dominate the positives: dormant since 2024-11-11, requires custom CUDA kernels plus a modified NCCL, and its primary documented reproduction path targets the authors' own cluster. Notably the baseline set has aged - DeepSpeed-MII is now itself a deprecated record. NO INDEPENDENT THROUGHPUT VERIFIED - the paper's figures are not extracted here and any number attributed to this record is paper-reported. Read together with [[distserve]] and [[semi-pd]] for the same problem space. All metadata from the GitHub API on 2026-10-04."
+}

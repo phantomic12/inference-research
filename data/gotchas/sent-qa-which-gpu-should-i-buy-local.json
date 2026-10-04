@@ -1,0 +1,31 @@
+{
+  "id": "sent-qa-which-gpu-should-i-buy-local",
+  "type": "gotcha",
+  "name": "Q: 'Which GPU should I buy for local LLMs?' - A: stack used RTX 3090s, the consensus answer, on VRAM per dollar rather than on benchmark rank",
+  "class": "hardware",
+  "symptom": "Asked directly in a thread about getting above 200B parameters on a $10k budget (79 upvotes, 185 comments), the highest-scoring answer in the entire corpus (85 upvotes) is a used-3090 recommendation with the reasoning attached: 'Stack 3090s, 4090s, however cheap you can get them. thats how you run big models fast and \"cheap\" (relatively speaking). RAM Prices are skyrocketing and it is entirely unfeasable imo to buy (64gb 6000mhz is $360+++). 3090s for 700-800 are way higher performance. Rule of thumb i use: DDR5 6000Mhz is 10x slower than a 4070's VRAM. If u can get 10x more RAM than VRAM for the same price, speeds *can* be compared.' That last sentence is the answer's actual thesis: system RAM is not a substitute for VRAM at price parity. The same shape appears two years earlier on Hacker News (348 points, 148 comments) - 'RTX 3090/3080 are great value for ML/DL especially at used prices' and 'You can score 3090 for 800-900 used, with 24GB VRAM it's superb value' - with the regional caveat stated up front: 'Depends on your market. I just checked in Montreal, Canada and you can't get anything used for less than 1600 CAD.' The same thread carries the dissent on used-card risk: 'how many of those used 3090s have been run 24/7 by crypto farms?' and the reply arguing survival is the real filter - 'any surviving used card is pretty firmly in \"escaped infant mortality\" territory.'",
+  "root_cause": "The binding constraint for consumer inference is memory capacity per dollar, and the 24GB tier is where used Ampere sits. Two second-order effects keep the recommendation stable: system DRAM prices have risen enough that a large-RAM CPU build is now a worse use of the same money than more VRAM, and the memory-bandwidth gap between DDR5-6000 and GDDR6 is large enough that CPU offload is not a substitute at parity - it is a downgrade. The mining-card objection is answered by survivorship rather than by screening, which is why the corpus treats used 3090s as safe and the objection as unresolvable.",
+  "workaround": "Buy the used 24GB card, and buy several rather than one. Size the chassis and PCIe lanes before the card, and check used-market prices in your own market before planning - the Montreal comment is the warning that the used-3090 thesis is region-dependent.",
+  "severity": "minor",
+  "notes": "Explicitly scoped to the self-hosted community, per sent-vote-counts-are-a-popularity-proxy-not-a-measurement. Two credible alternatives in the corpus that a general reader should not miss: used datacenter parts (MI210 64GB at about $4.4k, RTX 8000 48GB with an NVLINK bridge for under $4k, both named as considered alternatives in the RTX Pro 6000 thread), and the unified-memory route (Strix Halo, or a 96GB Apple Studio). The second thread shows the same advice failing for 200B+ scale, where one commenter answers 'Wait for the m5 ultra or get 7 more rtx 3090s to run q6 qwen 235b' at 24 upvotes - so the 3090-stack answer is a 70B-to-100B-class answer, not a frontier answer.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "sent-src-reddit-under-10k-200b-1otdr19",
+    "sent-src-hn-which-gpu-34431056",
+    "sent-src-reddit-rtx-pro-6000-talk-me-down-1ql9b7m"
+  ],
+  "affects": [
+    "nvidia-rtx-3090",
+    "nvidia-rtx-4090",
+    "amd-instinct-mi210"
+  ],
+  "concepts": [
+    "vram-per-dollar",
+    "used-market",
+    "system-ram",
+    "mining-cards",
+    "survivorship-bias"
+  ]
+}

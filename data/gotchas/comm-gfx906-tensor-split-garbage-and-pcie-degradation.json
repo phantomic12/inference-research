@@ -1,0 +1,29 @@
+{
+  "id": "comm-gfx906-tensor-split-garbage-and-pcie-degradation",
+  "type": "gotcha",
+  "name": "llama.cpp -sm tensor on multiple gfx906 cards produces pure garbage text, and scaling past 2 GPUs over PCIe collapses decode tok/s by ~2.5x per doubling even though prefill keeps rising",
+  "class": "config",
+  "affects": [
+    "llama-cpp",
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "gfx906",
+    "tensor-split",
+    "p2p",
+    "all-reduce",
+    "pcie",
+    "multi-gpu"
+  ],
+  "symptom": "Two separate failure shapes. (1) CORRECTNESS: --split-mode tensor on 2 MI50s emitted continuous word-salvage: 'l own same aCB l’aC-// own-B l’CCS-al ly’-s’B l own same own sameS ...' - no error, no crash, just destroyed text. (2) SCALING: with gpt-oss-120b MXFP4 MoE, -b 2048 -ub 1024 -ngl 99 -mmp 0 -dio 1 -fa 1, at fixed 2 GPU with -sm tensor: PP16384 = 882.18 t/s, TG8192 = 71.22 t/s; the same run in default (layer) split: PP = 914.81 t/s, TG = 81.72 t/s. Then scaling -sm tensor across GPUs: 2 GPU TG 71.22, 4 GPU TG 33.89, 6 GPU TG 21.32, 8 GPU TG 14.32, while PP16384 rose 882 -> 1079 -> 1141 then fell to 1007. Decode gets worse monotonically; prefill improves then plateaus and reverses.",
+  "root_cause": "Not established for (1) - the garbage is consistent with the all-reduce path (RCCL over PCIe P2P) corrupting tensors, and with the absence of atomics in gfx906 P2P (see comm-gfx906-p2p-no-atomics). For (2), the community diagnosis is that every added GPU inserts another PCIe all-reduce into the critical path of a memory-bound decode step that was already bandwidth-satisfied on two cards, and MI50 multi-GPU nodes are PCIe-attached with no interconnect of any kind. On one reported node the TP fabric is PCIe 3.0 x8 (3.5 GB/s); moving to PCIe 4.0 was reported to be worth maybe +50-100% on pipeline-parallel.",
+  "workaround": "Two answers. For correctness: stay on layer split (-sm layer), or use the gfx906 forks' PLE shard mode (LLAMA_PLE_SHARD=0/1) which the maintainer reports lifts 4-GPU PP4096 from 227.5 to 501.2 t/s with a measured perplexity delta of 2.3108 -> 2.3052. For scaling: keep tensor-parallel groups small - the mx-llama.cpp maintainer's -tps N flag splits GPUs into groups of N, tensor-splitting within a group and pipelining across groups, explicitly because 'smaller groups mean smaller cross-GPU all-reduces, so it scales better over PCIe'. At 8 GPUs, -tps 4 gives TG 26.9 versus 20.9 for pure -sm layer. Also note -sm tensor cannot be constrained to one card: the maintainer states 'it is impossible to have only one card active on -sm tensor'.",
+  "severity": "blocker",
+  "notes": "COMMUNITY-REPORTED. The scaling table is a single well-documented run pasted in full (mxxm3679, 2026-04-22, 2/4/6/8 x MI50 32 GB, ROCm build, model and all flags shown, build hash ff5ef82), so it is reproducible in principle and recorded as a report rather than a benchmark. Corroborating data point on the same hardware from a different member: gpt-oss-120B MXFP4 on 2 GPUs, -ngl 99 --mmap 0 -fa 1, -ts 0.25 across 4 cards, runs ~32 t/s. Do not generalise the -sm tensor garbage to all multi-GPU gfx906 - stefan02817 reports -sm tensor working and roughly doubling decode on a non-MoE model with 2 cards, and another member reports -sm tensor garbage on a different setup. It is a real and reproducible hazard on at least one configuration.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

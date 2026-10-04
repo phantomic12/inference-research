@@ -1,0 +1,38 @@
+{
+  "id": "comm-consumer-p2p-disabled-driver-not-hardware",
+  "name": "Consumer NVIDIA cards report no peer access because the driver disables P2P, not because the hardware lacks DMA paths - and NCCL_P2P_DISABLE=1 does not restore it",
+  "class": "driver",
+  "affects": [
+    "nvidia-rtx-5090",
+    "nvidia-rtx-4090",
+    "nvidia-rtx-3090",
+    "vllm",
+    "sglang",
+    "llama-cpp"
+  ],
+  "concepts": [
+    "p2p",
+    "gpu-direct",
+    "nccl",
+    "tensor-parallel",
+    "driver-patching",
+    "iommu",
+    "bar1"
+  ],
+  "symptom": "On two RTX 5090s the reporter could not run any multi-GPU inference in either vLLM or SGLang; on 4x RTX 3090 the same wall appeared. The community diagnostic is `nvidia-smi topo -p2p r` returning NS (Not supported) between the cards. The trap that costs people days: setting NCCL_P2P_DISABLE=1 does NOT fix it - the reporter tried it explicitly and it failed, and a second commenter independently confirmed the same on their own pair. Building NCCL from source also did not fix it for the reporter.",
+  "root_cause": "NVIDIA gates GPUDirect P2P on GeForce parts in the driver, so every inter-GPU transfer is staged through host memory. It is a product-segmentation switch, not an absent DMA path - one practitioner patched the open GPU kernel modules to force BAR1 P2P mode on consumer cards and got working direct DMA (verification: `nvidia-smi topo -p2p r` flips from NS to OK between the pair). NCCL's generic host-staging fallback is what makes NCCL_P2P_DISABLE=1 useless here; it is already the de-facto mode. The real fix came from NVIDIA NCCL shipping a Blackwell-specific commit (f44ac759fee12ecb3cc6891e9e739a000f66fd70) that makes TP=2 work over shared memory on RTX 50-series - the reporter confirmed TP=2 functioning after taking it.",
+  "workaround": "Three tiers, in increasing order of pain. (1) Install the NCCL release containing commit f44ac759f - this is what the reporter verified for 2x 5090, and a second user reports TP=2 working on 2x 5090D with NCCL 2.26.2. (2) If you need more than that, patch the open kernel driver (the community fork aikitoria/open-gpu-kernel-modules forces BAR1 P2P) and set the IOMMU to passthrough mode, e.g. amd_iommu=on iommu=pt; the practitioner doing this states plainly that passthrough weakens IOMMU isolation, so do not do it on a shared or untrusted host. (3) Avoid the collective entirely: shard by layer and drive the workers over llama.cpp's RPC backend, which does not use NCCL peer transfers at all.",
+  "severity": "blocker",
+  "notes": "REPORTER COUNT: the driver-gating claim is reported by at least four independent practitioners across four sources - shahizat (2x 5090, vLLM with NCCL built from source), xycjscs (2x 5090D, QwQ-32B), aikitoria in the TensorRT-LLM thread (4x 3090 with the patched driver running Mistral Large), and OP u/hedonihilistic on a dedicated r/LocalLLaMA thread with 4x 3090s that drew ~83 comments and ~308 votes. That is enough independent reports to treat 'consumer cards have no usable P2P out of the box' as a verified behaviour. The PERFORMANCE GAIN is NOT verified: only one practitioner (smcleod.net) reports a gain, and its throughput table leaves the vLLM and llama.cpp version fields blank, so the 10-30% figure is not reproducible as stated and should not be quoted as a headline number. Also note what is officially unsupported rather than merely broken: aikitoria states in the TensorRT-LLM thread that ExLlamaV2 - not vLLM - is what people find 'much faster than mp/pp' on PCIe P2P. TensorRT-LLM's own maintainers are separately aware: grimulkan notes in that same thread that multi-GPU on the RTX 6000 PRO has a known issue even on the latest release with no tracked issue or PR.",
+  "status": "verified",
+  "confidence": 0.85,
+  "sources": [
+    "comm-github-vllm-14628-2x5090-tp-p2p",
+    "comm-github-vllm-14452-rtx50xx-support-thread",
+    "comm-github-trtllm-5581-8x-rtx6000pro-deepseek",
+    "comm-reddit-localllama-1c4gakl-p2p-4x3090",
+    "comm-blog-smcleod-p2p-patched-driver"
+  ],
+  "type": "gotcha",
+  "updated": "2026-10-04"
+}

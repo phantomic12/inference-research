@@ -1,0 +1,33 @@
+{
+  "id": "sent-regret-non-blackwell-engine-support-lags",
+  "type": "gotcha",
+  "name": "What people regret buying: parts whose inference engines are years behind the vendor's marketing, and the regret is measured in missing features not in tokens per second",
+  "class": "framework",
+  "symptom": "The most valuable sentiment record here is a 242-upvote benchmark post whose conclusion is not about throughput at all. Asked on 4x RTX PRO 6000 (SM120), 397B NVFP4, the reporter's practical verdict is: reaching 50.5 tok/s - 'which should be 2-3x faster' - required '12 patches across FlashInfer and vLLM', and the reason is 'NVIDIA's own kernel library that they haven't acknowledged'. The device has FP4 tensor cores. NVIDIA ships NVFP4-quantized models designed to use them. All 80 CUTLASS TMA warp-specialised grouped GEMM tactics 'fail at initialization' on SM120, so the only working path dequantizes FP4 weights to FP16 and runs standard GEMM - roughly half the theoretical throughput left on the table. TensorRT-LLM is listed simply as 'N/A - Doesn't support the arch'. Open issues with no vendor response are listed by number. That is what regret looks like: a $20K+ professional AI GPU whose designed inference path does not run on it.",
+  "root_cause": "The gap is between the architecture a vendor markets and the architectures its kernel libraries actually enumerate. CUTLASS restricts FP4 to one family, DeepGEMM does not support SM120 at all, and vLLM's MoE backend selection lacks a device-capability check for the 120 family - so the engine silently picks a CUTLASS path that either fails to initialize or, worse, produces garbage output rather than an error. The reporter records 'Garbage output' at ~5-6 tok/s for default TP=4 and CUTLASS configs, which is the more dangerous shape: a wrong answer rather than a crash.",
+  "workaround": "Force the working backend and treat SM120 as an unsupported target: export VLLM_MOE_FORCE_MARLIN=1, do not enable MTP, do not attempt expert parallel over PCIe, and do not trust default backend selection. On SM120, MTP is a measured regression rather than a win - 50.5 tok/s without it, 39-6 tok/s with it - because Marlin's W4A16 dequantization produces different activations than the draft heads were trained on, cutting acceptance from the expected 89% to 61-85%.",
+  "severity": "major",
+  "notes": "Two broader signals in the same post, both worth more than the tok/s. First, a methodology warning this repo cares about: community claims of 130-150 tok/s on identical hardware came from forks with 'Zero kernel-level changes' and the most likely explanation is 'counting speculative tokens (proposed + rejected) rather than actual output tokens delivered'. Second, a naming lesson - 'it's not datacentre Blackwell, it's not even gaming Blackwell, it has its own special snowflake sm121 architecture'. Nothing here is a measurement claim by this repo; it is one practitioner's audit, cited as sentiment and as a pointer to the underlying GitHub issues.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "sent-src-reddit-sm120-moe-backends-1rrfqlu"
+  ],
+  "affects": [
+    "nvidia-rtx-pro-6000-blackwell",
+    "vllm",
+    "sglang",
+    "tensorrt-llm"
+  ],
+  "concepts": [
+    "sm120",
+    "cutlass",
+    "moe",
+    "nvfp4",
+    "marlin",
+    "mtp",
+    "flashinfer",
+    "triton"
+  ]
+}

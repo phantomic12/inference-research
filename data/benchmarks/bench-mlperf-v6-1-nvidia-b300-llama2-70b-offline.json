@@ -1,0 +1,28 @@
+{
+  "id": "bench-mlperf-v6-1-nvidia-b300-llama2-70b-offline",
+  "type": "benchmark",
+  "name": "NVIDIA DGX B300, MLPerf Inference v6.1 Offline: Llama 2 70B on 8x B300-SXM-270GB, aggregate output throughput",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-v6-1-nvidia-b300-llama2-offline-log",
+    "bench-mlperf-llama2-70b-interactive-latency-rule"
+  ],
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-b300"
+  ],
+  "interconnect_ids": [],
+  "model": "Llama 2 70B (MLPerf v6.1 submission, FP4 weights)",
+  "format_id": "nvfp4",
+  "metric": "tps_aggregate",
+  "value": 109277,
+  "unit": "output tokens/s (aggregate, harness 'Tokens per second')",
+  "methodology": "AGGREGATE. MLPerf Inference v6.1 Closed division, Datacenter suite, Offline scenario. LOADS: batch size NOT a fixed number and NOT PUBLISHED - the harness runs a closed-loop Offline queue and the submitter chooses the scheduler's internal batching, so there is no single batch size to state; the binding load conditions are instead (a) the benchmark's fixed input/output shape, (b) min_duration 600000 ms enforced by llama2-70b/user.conf, (c) min_query_count 2000, and (d) early stopping satisfied: Yes. Model shape: TOKENS_PER_SAMPLE 267.0 for this submission, so the figure is 267 x samples/s. Hardware: 8x NVIDIA B300-SXM-270GB, 1 node, aarch64 not stated for this entry but the DGX B300 platform is SXM; framework per summary.csv is 'TensorRT 10.14, CUDA 13.1, cuDNN 9.17, TensorRT-LLM feat/1.2-mlpinf, NVIDIA Dynamo mlperf-v6.0-dynamo-v0.8.0, vLLM CentML:mlperf-inf-mm-q3vl-v6.1'. POWER: has_power=False and design_power_watts=null - NO power measurement exists for this run and NO power limit is declared anywhere in the row. Samples per second 400.205. OMITTED BY SOURCE: TP size, KV-cache dtype, concurrency, clock state, cooling configuration.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "power_cap": null,
+  "notes": "Read this together with bench-mlperf-v6-1-nvidia-b300-llama2-70b-server (106949.36 on the same node): the 2.2% gap is the ONLY thing separating them, and it is a scenario constraint, not a tuning difference. Two things a reader should NOT conclude from this number: it is not a per-GPU figure in any meaningful sense because the 8 GPUs are joined by NVLink and act as one 2.16TB memory domain, and it carries no watts, so it cannot be turned into a cost-per-token without an external measurement. vLLM appears in the framework string for this submission, but the LLM path is TensorRT-LLM 10.14 - do not read the vLLM string as the engine that produced the tokens."
+}

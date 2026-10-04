@@ -1,0 +1,31 @@
+{
+  "id": "comm-gfx906-fp16-garbage-bang-output",
+  "type": "gotcha",
+  "name": "On gfx906, float16 activations overflow to inf and vLLM emits runs of '!!!!' instead of tokens; bf16 weights are rejected for MXFP4 and fp32 activation compute is the only reported fix, at a large throughput cost",
+  "class": "kernel",
+  "affects": [
+    "vllm",
+    "llama-cpp",
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "gfx906",
+    "fp16",
+    "bf16",
+    "fp32",
+    "overflow",
+    "mxfp4",
+    "kv-cache"
+  ],
+  "symptom": "Generation degrades into runs of the literal character '!' - described in the community as output that 'spits !!!!' - rather than a crash or a clean error. Reported on: Qwen3.5 (AWQ, on 4x MI50) where 'using dtype fp16 generated garbage \"!!!!\"' until fp32 activations with fp16 KV cache were used; Qwen3.6 on llama.cpp where 'on prefill it gets corrupt and start spitting !!!!... and it's not deterministic'; and DeepSeek-V3.2 MLA sparse at 60k+ context on 16 MI50, which 'worked fine during the whole context (60k+ tok) without garbage output' only after the same fp32-compute change. A related silent-corruption variant produces fluent but wrong text that loops or drops content rather than exclamation marks.",
+  "root_cause": "Not established from first-party sources. The community working hypothesis is fp16 dynamic-range overflow in the attention/MLP activation path; gfx906 has no bf16 hardware path in the same way CDNA does, and one member noted that weights are de-quantised back to fp16 for essentially every quant, then consumed with fp16 dot2 instructions. Working against this: one member with NVIDIA cards reports seeing the same non-deterministic prefill '!!!!' on vLLM + Qwen3.6, and argues it is NOT gfx906-specific.",
+  "workaround": "Run fp32 compute with fp16 KV cache for long-context serving, at a documented cost: the reporter attributes lost throughput specifically to 'some FP32 computations I have to set to avoid garbage output at high context'. For MXFP4 quantisation, vLLM refuses float16 outright with 'float16 cant be used with mxfp4 quantization, only bfloat16 can'. For Gemma-family models on fp16, a community patch clamps hidden states to [-65504, 65504] in the decoder layer (mirroring a transformers upstream fix) to stop gemma3 returning empty responses. The gfx906 fork maintainers also report an independent dtype rule: official GPTQ quants need fp32 compute plus fp16 KV cache, where the fp16-activation build produced garbage.",
+  "severity": "blocker",
+  "notes": "MIXED EVIDENCE, deliberately not marked verified. FOR: five independent people in the export hit fp16 corruption of some kind on gfx906 (beny4088, tipolosko_, droptablefoxes, aceshigh555, mixa3607), and two of them found a specific mitigation. AGAINST: droptablefoxes explicitly reports the same '!!!!' on NVIDIA cards and says it is not gfx906 specific, and aceshigh555's llama.cpp build had to be MODIFIED in a container to make Qwen3-class models pass a benchmark at all. So this record establishes that the failure is real, recurrent, and expensive on gfx906, and that the fp32 mitigation works - it does NOT establish that gfx906 is the cause. Confidence is set accordingly. A genuinely reliable detector is reported by blivioniag: check that the drafting acceptance rate and the output text are both sane, because 'sometimes you see the drafting going at 100% acceptance and it's all garbage output'.",
+  "status": "contested",
+  "confidence": 0.5,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

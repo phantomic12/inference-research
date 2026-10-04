@@ -1,0 +1,68 @@
+{
+  "id": "alt-tpu-inference-vllm-plugin",
+  "type": "engine",
+  "name": "vLLM TPU inference plugin (tpu-inference)",
+  "repo": "vllm-project/tpu-inference",
+  "languages": [
+    "Python"
+  ],
+  "license": "Apache-2.0",
+  "first_release_year": 2025,
+  "design_goal": [
+    "tpu-only-serving",
+    "unify-jax-and-pytorch",
+    "serve-vLLM-semantics-on-XLA"
+  ],
+  "scheduling": [
+    "continuous-batching",
+    "paged-kv",
+    "prefix-cache",
+    "chunked-prefill"
+  ],
+  "supported_backends": [
+    "tpu"
+  ],
+  "supported_formats": [
+    "safetensors"
+  ],
+  "notable_features": [
+    "THE ANSWER TO 'how do you actually serve on TPU'. Google's own JetStream server was retired into this plugin (see [[alt-jetstream]]), so there is one supported TPU serving path and it lives inside vLLM rather than beside it",
+    "One lowering path for two frameworks. The README's stated contribution is 'an expressive and powerful new hardware plugin unifying JAX and PyTorch under a single lowering path', so a PyTorch model definition runs on TPU with no code changes, while native JAX support is retained. Announced 2025/10",
+    "Publishes an honest support matrix instead of claiming parity. There is a public dashboard of per-model Unit Test / Correctness Test / Performance Test status, auto-generated from the in-repo support_matrices directory and stamped with a last-updated time (2026-08-27 when read). Rolling performance-tested status up across hardware generations is published with explicit rules: a feature is Failing if it fails on EITHER v6e or v7x, and Untested if either generation is untested - so the matrix never flatters itself by testing only the newest chip",
+    "The same honesty about incompleteness: the README states that while the unified backend makes out-of-the-box high performance possible for any vLLM-supported model, 'the reality is that we're still in the process of implementing a few core components', and points to Recommended Models and Recommended Features pages as the validated set. That is a vendor-family project (Google is funding vLLM here) choosing not to overstate coverage",
+    "Explicit generation split that shows the constraint is generational, not generational-universal: recommended v7x (Ironwood), v5e, v6e (Trillium); experimental v3, v4, v5p. Older and larger parts (v4, v5p) are experimental while the smaller inference parts are recommended, which is the opposite of the datacenter-part pattern",
+    "Recipe-driven deployment: published v7x (Ironwood) and v6e (Trillium) recipes under AI-Hypercomputer/tpu-recipes/inference, so the supported path is a pinned recipe rather than free assembly",
+    "The XLA cost is moved, not removed. Serving on TPU means the graph is compiled ahead of the request, which is why the repo's TPU throughput numbers elsewhere in this database ([[alt-tpu-v5e-bf16-tps]], [[alt-tpu-v6e-bf16-tps]]) carry different prefill/decode economics than a GPU engine. The plugin's own reporting (unit/correctness/performance test columns) is how it discloses that cost rather than hiding it",
+    "453 stars, 329 forks, 531 open issues, Apache-2.0, created 2025-05-06, last push 2026-10-04. The open-issue count exceeds the star count, which for a hardware-first plugin means the support burden is carried by a small user base with a large upstream to track"
+  ],
+  "hardware_caveats": [
+    "TPU-only. No CUDA, ROCm, Metal or CPU fallback exists in this plugin, and unlike a CUDA backend it cannot even be compiled for another target - the lowering path goes through XLA",
+    "TPU-only means Cloud TPU or a TPU appliance with the matching generation. The generation split above is not cosmetic: experimental on v3/v4/v5p means you are on an unsupported path there",
+    "The XLA compilation model is the dominant cost. Static shapes are mandatory, tensors are padded to the MXU tile size, and every new shape class triggers recompilation - see [[alt-tpu-xla-static-shapes]] for the tile arithmetic. On a TPU this is not a tuning detail, it is the price of the hardware and it shows up as warm-up latency and as wasted compute on padding",
+    "Model coverage is explicitly partial and the project says so, unlike most plugin claims. Check the support matrix for your exact checkpoint before planning around it",
+    "531 open issues is a large queue for a plugin with 453 stars. Some is upstream-tracking friction, some is genuine TPU-specific work, and it is a fair signal of how much of the XLA model surface still needs hardware-specific handling",
+    "Very young: created 2025-05-06, so it is absorbing the serving responsibilities of a system (JetStream) that itself only existed from 2024. The TPU serving path in open source is roughly two years old and has changed owner once"
+  ],
+  "best_for": [
+    "Serving on TPU v5e, v6e or v7x with real vLLM semantics - paged KV, continuous batching, prefix caching - which is what JetStream never quite had",
+    "Teams with PyTorch model code that need to move to TPU without a JAX rewrite, which is the plugin's headline claim",
+    "Anyone deciding whether TPU serving is ready, because the support matrix with per-model correctness AND performance test status is the best public evidence available on that question",
+    "Reading a vendor-funded hardware plugin that publishes its own failures - the status legend explicitly includes Failing, Unplanned and Untested"
+  ],
+  "avoid_for": [
+    "Any non-TPU hardware",
+    "v3, v4 or v5p deployments without accepting that you are on the experimental path",
+    "Assuming 'supported by vLLM' means 'performance-tested on TPU' - the plugin goes out of its way to separate those two columns, and so should you",
+    "Any workload needing a model or feature absent from the support matrix, since the project itself says the core components are still being implemented"
+  ],
+  "docs_url": "https://docs.vllm.ai/projects/tpu/en/latest/",
+  "notes": "This is the serving-path record for TPU; the compiler-side records are [[xla]], [[pallas]] and [[iree]] and the constraint mechanics are in [[alt-tpu-xla-static-shapes]]. Google's own answer to 'does a TPU-native server exist outside JAX' is now a qualified no: JetStream was retired into this plugin, which does support PyTorch natively but is still XLA underneath. Cloud TPU's own inference guidance is in [[alt-tpu-inference]] and its capacity story in [[supply/gcp-cloud-tpu-v4-v5e-v5p]]. Metadata from the GitHub API on 2026-10-04.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-tpu-vllm-inference-readme",
+    "alt-tpu-inference",
+    "niche-github-rest-api-repo-metadata"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "comm-turboquant-kv-ampere-arch-gate",
+  "name": "TurboQuant KV cache (k8v4) is unusable on Ampere consumer/prosumer cards with hybrid MoE models: a Triton FP8 path reports supported below SM 89, gets selected, then fails at runtime",
+  "class": "driver",
+  "affects": [
+    "vllm",
+    "nvidia-a100-40gb-sxm4",
+    "nvidia-rtx-3090"
+  ],
+  "concepts": [
+    "turboquant",
+    "kv-cache-quantization",
+    "block-fp8",
+    "hybrid-moe",
+    "arch-gating",
+    "mamba",
+    "triton"
+  ],
+  "symptom": "A user on 2x NVIDIA RTX A5000 24GB (SM86) running Qwen/Qwen3-35B-A3B-FP8 with kv_cache_dtype=turboquant_k8v4 and max_model_len=163840 hit a chain of failures, starting with the model refusing to start at all: 'NotImplementedError: TurboQuant KV cache is not supported for hybrid (attention + Mamba) models. Boundary layer protection requires uniform attention layers.' Past that, the FP8 GEMMs fail with 'ValueError: type fp8e4nv not supported in this architecture', and the reporter ultimately packaged 13 runtime monkey-patches to get it running.",
+  "root_cause": "Two layers. First, TritonBlockFP8ScaledMM uses the fp8e4nv dtype, which requires compute capability >= 89, but its is_supported() has no guard for that - so on SM 80-86 it reports 'supported', wins kernel selection, and only fails when it runs. The companion bug is that the kernel selector picks Triton for block FP8 on Ampere instead of falling back to Marlin. Second, and specific to hybrid models: TurboQuant expects uniform attention geometry and hybrid MoE models do not have it. Qwen3.6-35B-A3B is 30 MoE layers plus 10 dense attention-only layers with E=256, top_k=8, block_shape=[128,128], so MoE and dense layers produce different block sizes, page allocation mismatches, and layers excluded from TurboQuant are still routed through the TurboQuant dispatch. Separately, max_num_kv_tokens includes Mamba state in hybrid models, inflating the advertised capacity, and NaN/Inf in MoE router logits crashes FlashInfer's topk sort.",
+  "workaround": "The reporter's answer is 13 runtime monkey-patches applied at container startup, published at github.com/Sandermage/genesis-vllm-patches. The individual fixes worth copying: guard TritonBlockFP8ScaledMM.is_supported() on SM >= 89 so the Marlin fallback is actually taken; make the kernel selector prefer Marlin for block FP8 on Ampere; and make the TurboQuant dispatch and KV-cache interface respect per-layer block sizes for skipped layers. Environment for the record: vLLM 0.19.1rc1 nightly, driver 570.211.01, CUDA 12.8, gpu_memory_utilization 0.905.",
+  "severity": "major",
+  "notes": "REPORTER COUNT: ONE for the 13-patch diagnosis (Sandermage), with 16 comments in-thread. Treat as a single report, but a well-evidenced one - each patch is mapped to a specific error message and some to a related upstream PR (#39988, #39931, #39391, #35687). Independent in-thread corroboration of patch 1's substance: TCR020 asked whether upstream PR #40105 already fixed it, and the reporter checked the actual diff and answered no - #40105 only adds Marlin as an additional candidate in _POSSIBLE_FP8_BLOCK_KERNELS and does not touch the is_supported() guard, so the Triton kernel is still selected on SM < 89 and still crashes. The resulting visibility is confirmed from a second direction: upstream shipped PR #54279 '[MoE] Gate Triton FP8 MoE kernel to CUDA compute capability >= 8.9' and PR #37036 to correct a misleading FP8 error message about CUDA version versus compute capability - i.e. the project acknowledges it has been gating these kernels too late and telling users the wrong reason. Practical reading: on SM 80-86, treat FP8-based KV quantization on hybrid MoE models as unsupported until an explicit capability check passes, rather than trusting the kernel's own self-report. NOTE ON AFFECTS: the RTX A5000 the reporter used has no record in this database, so nvidia-rtx-3090 is listed as the nearest Ampere consumer-class id and nvidia-a100-40gb-sxm4 as the SM80 stand-in; neither is the actual card.",
+  "status": "draft",
+  "confidence": 0.6,
+  "sources": [
+    "comm-github-vllm-40124-turboquant-ampere"
+  ],
+  "type": "gotcha",
+  "updated": "2026-10-04"
+}

@@ -1,0 +1,45 @@
+{
+ "id": "ctx-long-context-attention-kernel-matrix",
+ "type": "flop",
+ "name": "Which attention kernels can run long-context attention on which hardware: the SM-level gate on whether long context is servable at all",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "Kernel availability at long context is a gate, not a tax: it decides whether a context length is servable on a given card, before any efficiency question is asked. The gate is the streaming-multiprocessor generation, because each FlashAttention generation needs a specific tensor-core and memory primitive that only exists on one architecture. FA-1 requires Ampere or newer (SM80 and up). FA-2 adds better Ampere and Ada scheduling but is still SM80+. FA-3 REQUIRES Hopper (SM90) - it is built on wgmma plus TMA, warp specialization and asynchronous copy, and there is no SM80 fallback path. FA-4 REQUIRES Blackwell (SM100/SM103) - it is built on tcgen05 UMMA, TMEM and 2-CTA MMA. FlashMLA is NARROWER STILL: the 2026.09.30 release requires SM100/SM103 with CUDA >= 13.1 and REMOVED Hopper support plus the V3/V3.2/V4.0 model support, so on an H100 a working FlashMLA requires an older pinned checkout. The practical consequence is that a hardware fleet is stratified by which context lengths it can serve at all: an SM80 fleet (A100, A10, L40S, RTX 4090) has FA-1/FA-2 and no fp8 tensor-core attention path with online softmax; an SM90 fleet (H100, H200) has FA-3, the best-tested fp8 KV path, but no current FlashMLA; an SM100/SM103 fleet (B200, B300, GB200/GB300 NVL72) has FA-4 and FlashMLA but the FlashMLA KV format is FP8 or FP4 ONLY - unquantized bf16 KV is explicitly not supported by FlashMLA decode. So on Blackwell the cheapest KV format and the only MLA kernel are the same choice. FlashInfer is the cross-architecture JIT path: it is used as an attention backend by both SGLang and vLLM, and on B200 it is the backend that makes fp8 KV safe without Hopper's two-level accumulation workaround - but its template instantiations do not cover every head size, and vLLM validates head_size at engine init, so forcing the FlashInfer backend on a model with head_dim 256 or 512 aborts with 'Selected backend AttentionBackendEnum.FLASHINFER is not valid for this configuration. Reason: [head_size not supported]' even though the CLI override was accepted. That last point is not cosmetic for this record: Qwen3-Next ships head_dim 256, and FP8 KV on head_dim 256 costs about 1.6x prefill from two-level accumulation - so the one architecture family whose KV cache is 21x cheaper than Llama-3.1-405B's is also the one whose flagship attention backend may refuse to start and whose fp8 prefill is slower than bf16.",
+ "bound_by": "compute",
+ "scales_with": [
+  "SM generation (SM80 / SM90 / SM100-103 - the gate itself)",
+  "context length (above 32K, split-KV and paged attention become essential for SM utilization; above 128K the repo's regime map says only MLA with fp8/fp4 KV is practical)",
+  "head_dim (a hard filter in FlashInfer template selection, and the multiplier on fp8 two-level-accumulation prefill cost)",
+  "kv_cache_dtype (on FlashMLA, fp8 or fp4 only; on FA-3, fp8 needs two-level accumulation on Hopper)",
+  "batch size (at batch 1 decode attention has low SM utilization and split-KV is mandatory; at batch 32+ the GEMM saturates SMs and split-KV stops paying)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-b200",
+  "nvidia-b300",
+  "nvidia-gb200-nvl72"
+ ],
+ "workarounds": [
+  "On Hopper, pin an older FlashMLA checkout (the repo's record names commit ba89a34) if you must serve MLA models on H100/H200",
+  "On Hopper with FA-3 and fp8 KV at >=100K context, keep the two-level accumulation fix enabled or you get 13 percent instead of 89 percent on 128K needle-in-a-haystack - the failure is silent",
+  "On Blackwell with FlashMLA, plan for fp8 or fp4 KV from the start: bf16 KV is not a supported decode format",
+  "For head_dim 256 models (Qwen3-Next, gemma-4, gpt-oss global layers), do not force the FlashInfer backend; let the engine pick, or use FA-3/FA-4",
+  "On A100-class (SM80) hardware, fp8 KV with online-softmax attention is not the validated path - measure before assuming the 2x capacity win is available"
+ ],
+ "notes": "WHAT THIS RECORD ADDS TO THE REPO'S EXISTING KERNEL RECORDS. [[attn-regime-map-context-batch]] already maps which kernel wins by context length and batch size and already records the measured throughput per FA generation (FA-2 50-73 percent of peak on A100, FA-3 740 TFLOP/s FP16 and about 1.2 PFLOP/s FP8 on H100, FA-4 1605 TFLOP/s BF16 on B200, FlashInfer 28-30 percent latency reduction for long context, FlashMLA 1024 TFlops decode and 1350 TFlops sparse prefill on B200). [[attn-mla-kernel-support-matrix]] already records that FlashMLA is SM100/SM103 with CUDA >= 13.1, that the 2026.09.30 release removed Hopper support, and that FlashMLA's decode supports only FP8 and FP4 KV. What was missing is the per-hardware ANSWER to 'can I serve long context on this card at all', stated as a fleet-level constraint rather than as per-kernel notes: SM80 has FA-1/FA-2 only; SM90 has FA-3 and a pinned FlashMLA; SM100/103 has FA-4 and current FlashMLA with fp8/fp4 KV mandatory. THE FORMAT CONSTRAINT IS THE PART THAT BITES. FlashMLA hard-codes its KV cache layout - 528 bytes/token for FP8 (512 bytes of float8_e4m3 covering all 512 dims, so the 64 RoPE dims are quantized too, plus 16 bytes of float8_e8m0 scales, one per 32 consecutive e4m3 values) and 288 bytes/token for FP4 (256 bytes of e2m1, two per byte, plus 32 bytes of float8_e4m3 scales, one per 16 e2m1, valid only for extra_k_cache when k_cache is in the V4.1 format). A kernel that hard-codes the KV format will not accept another engine's cache, so swapping attention backends across a PD-disaggregated deployment means the KV handoff is not a byte copy. And because bf16 is excluded from FlashMLA decode, an operator who wants MLA on Blackwell cannot keep an unquantized cache even if capacity would allow it. THE HEAD_DIM AXIS IS THE ONE MOST DEPLOYMENTS HIT. Two independent head_dim-256 penalties exist and they compound: FlashInfer will not start for head_dim 256/512, and fp8 KV at head_dim 256 raises the TTFT quadratic coefficient 6.93e-07 -> 1.12e-06 ms/token^2, about 1.6x slower prefill. Meanwhile vLLM's --kv-cache-dtype-skip-layers is the lever for hybrid architectures: models like gpt-oss-20b (sliding window 128) and gemma-4-E2B (sliding window 512) have bounded KV in those layers, so quantizing them pays overhead for no long-context saving, and skipping them is measurably better on both accuracy-preserving and throughput grounds. WHY SPLIT-KV IS THE OTHER HALF OF THE ANSWER, and it is what makes 128K decode tolerable at all: at batch 1, decode attention over a large KV cache has too little work to fill the SMs, so the kernel splits the KV dimension across SMs; the repo's regime map calls split-KV essential for long context with small batch and unnecessary above batch 32, and FlashInfer's load-balanced scheduling adjusts the split to dynamic batch size. PREREQUISITE CAVEAT: all of this assumes the KV cache fits. A kernel gate is irrelevant if the card cannot hold the cache - see [[ctx-kv-cache-gib-at-claimed-context]] for the memory precondition, which fails first for any model above about 35B on a single H100.",
+ "status": "verified",
+ "confidence": 0.82,
+ "updated": "2026-10-04",
+ "sources": [
+  "ctx-src-vllm-fp8-kvcache-2026-04",
+  "kern-flashmla-github",
+  "attn-flashinfer-paper",
+  "attn-flashattention-paper",
+  "attn-flashattention-2-paper",
+  "attn-flashattention-3-paper",
+  "attn-flashattention-4-paper",
+  "pap-attn-sageattention2",
+  "kern-flashattention-github",
+  "arch-hf-config-qwen3-next"
+ ]
+}

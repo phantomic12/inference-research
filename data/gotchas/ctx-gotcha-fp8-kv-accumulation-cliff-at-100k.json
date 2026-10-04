@@ -1,0 +1,22 @@
+{
+  "id": "ctx-gotcha-fp8-kv-accumulation-cliff-at-100k",
+  "type": "gotcha",
+  "name": "FP8 KV cache silently loses long-context accuracy above ~100K tokens on Hopper, with no error and no latency change",
+  "class": "kernel",
+  "affects": [],
+  "concepts": ["fp8-kv-cache", "flash-attention-3", "hopper-sm90", "kv-cache", "long-context", "needle-in-a-haystack", "tensor-core", "accumulation-precision", "vllm", "two-level-accumulation"],
+  "symptom": "With --kv-cache-dtype fp8 on Hopper, a 128k needle-in-a-haystack task scored 13 percent against a 91 percent BF16 baseline on the same model and hardware. There is no exception, no warning, and no change in the latency histogram - the request is fast, the answer is fluent, and it is wrong. The failure is invisible on any short-context test: it turns on when the matmul CONTRACTION DIMENSION reaches 100K or more, and in the Softmax(AttnScore)*V matmul during long-context inference that dimension is the context length. So the same configuration scores near-baseline at 8K and 32K and collapses at 128K, which is why this escapes the short-prompt benchmark that a quantization change would normally be validated against.",
+  "root_cause": "Hopper's FP8 tensor cores are documented as accumulating into FP32 registers, but the intermediate accumulation loses precision when the contraction dimension is large - a hardware-level issue that vLLM's engineering writeup notes was also hit during DeepSeek-V3 training. It is an arithmetic property of the matmul, not a scale-calibration problem, which is why calibrating the scales does not fix it and why INT8/fp8 KV looks free in every short-context evaluation.",
+  "workaround": "Enable two-level accumulation (flash-attention PR #104, following SageAttention2 arXiv 2411.10958), which writes partially accumulated results into a real FP32 register; vLLM ships this enabled by default after the fix and it restores 128k NIAH from 13 percent to 89 percent. The cost lands on PREFILL, not decode, via register pressure - and on head_dim 256 models the TTFT quadratic coefficient rises from 6.93e-07 to 1.12e-06 ms/token^2, about 1.6x slower prefill, so those models need either an N-step-accumulation variant or an explicit accuracy test before disabling the fix. On Blackwell (B200) with FlashInfer the accumulation issue does not occur at all and no workaround is needed - this is a generation difference, not a version pin. Verify on your own workload at your own longest length before trusting any FP8 KV configuration.",
+  "severity": "blocker",
+  "notes": "THE DISTINGUISHING FACT: this is the one KV-quantization failure whose trigger IS the context length, so it is invisible to every short-context quality check - including the perplexity-based numbers the repo's [[kivi-kv2]] and [[kvquant]] records carry ('<0.1 perplexity degradation with 3-bit quantization on both Wikitext-2 and C4'). Neither can see it. After the fix the measured accuracy picture is good rather than alarming: uncalibrated fp8 KV plus fp8 attention recovers 97-98 percent of BF16 AUC on openai/mrcr for Llama-3.3-70B at 128K, about 94-98 percent for Qwen3-30B-A3B at 256K, and full aggregate AUC for Qwen3.5-27B at 1M; reasoning benchmarks move by at most 1-2 points. The one case where calibration is called for is Kimi-K2.5 on the FlashMLA backend on H200, which shows a systematically negative shift across context buckets. Second gotcha in the same area: small sliding-window layers should be SKIPPED rather than quantized - for gpt-oss-20b (window 128) skipping them gives 6.34e-06 vs 7.14e-06 ms/token and 871.8 vs 831.6 output tok/s at concurrency 8, because those layers have bounded KV and pay quantization overhead for no long-context saving. Cross-references: [[ctx-fp8-kv-cache-long-context-accuracy]], [[ctx-long-context-attention-kernel-matrix]], [[vllm-kv-cache-block-budget]], [[fp8-kv-cache-cudagraph-python-scatter-corruption]] (a different silent FP8 KV failure mode, in the CUDA-graph scatter rather than the matmul).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "ctx-src-vllm-fp8-kvcache-2026-04",
+    "pap-attn-sageattention2",
+    "attn-deepseek-v3-paper",
+    "qhw-fp8-kv-cache"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "comm-gfx906-upstream-regression-risk-no-amd-review",
+  "type": "gotcha",
+  "name": "llama.cpp upstream regressions on gfx906 ship undetected because AMD maintainers hold NVIDIA hardware - the community has to run its own pre/post-merge A/B on every merge",
+  "class": "framework",
+  "affects": [
+    "llama-cpp",
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "gfx906",
+    "upstream-regression",
+    "merge",
+    "pipeline-parallelism",
+    "test-coverage",
+    "ci"
+  ],
+  "symptom": "A concrete instance: the fork maintainer reports that upstream PR ggml-org/llama.cpp#20793 'got merged... and by my testing the original PR broke pipeline parallelism at least on my MI50 system.' Models affected in his test: gemma-4-26B-A4B q8, gpt-oss-120B MXFP4 MoE, gemma-4-31B Q8_0. He then posted the diagnosis and a reproducible A/B command asking other multi-MI50 owners to test latest upstream against pre-merge:\n  llama-bench -m /models/model.gguf -ngl 99 -fa 1 -sm layer -mmp 0 -dio 1 -p 512,2048,4096 -n 128,1024 -r 5 -o md\nand stated why it was not caught: 'The maintainers all have mainly Nvidia GPUs and cant confirm AMD side. This guy who is author of this PR is working at Nvidia.'",
+  "root_cause": "Structural: no upstream CI covers gfx906, and the maintainers who could review AMD behaviour are not running AMD hardware. This is an ongoing exposure, not a one-time bug - the export contains a parallel, similar history of gfx906-specific load fixes ('DeepSeek-V4 load fixes: would not load with -fit on after the b10589 base bump, and could not load under -sm tensor on 3, 5, 6 or 7 GPUs') and of upstream features that needed porting because they were CDNA-only.",
+  "workaround": "Treat upstream llama.cpp bumps on gfx906 as untested until measured locally. Use the command above to A/B, prefer -sm layer over -sm tensor for gpt-oss-120B / gemma-4 / DeepSeek-V4-Flash class models until a specific merge is cleared, and note the fork's own mitigation pattern: OOM-robustness work that makes MMQ, top-k, repack, expert, BLAS, flash-attn and custom all-reduce workspaces split or fall back under pressure instead of aborting. Two other stale-build hazards from the same thread: a member could not reproduce published docker-image numbers when compiling the same branch from source ('compiling this branch, and benchmarking did not give me same results as binaries in docker'), and two of the three 'good' vs 'bad' fork builds in one comparison differ by nearly 2x in prefill - so record which image or commit a number came from, or it is not a measurement.",
+  "severity": "major",
+  "notes": "COMMUNITY-REPORTED and one of the most transferable findings in this slice, because it generalises beyond gfx906 to any AMD architecture without upstream CI. It also reframes how the whole corpus of gfx906 numbers should be read: they are fork-build-specific and time-stamped in a way vendor benchmarks are not. Note this is also why the fork numbers in this slice carry commit or image identifiers where the reporter gave them, and why several records here are marked draft or reproducible: null rather than true.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log",
+    "comm-mx-llama-cpp-repo"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "comm-engine-choice-consumer-vs-datacenter-practice",
+  "name": "Practitioners' engine choice tracks the hardware axis, not the feature axis: llama.cpp by default, vLLM when MoE tensor parallelism or throughput matters, TensorRT-LLM only where its FP8 block-scaled kernels actually exist",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "llama-cpp",
+    "tensorrt-llm",
+    "sglang",
+    "exllamav2"
+  ],
+  "concepts": [
+    "engine-selection",
+    "moe",
+    "tensor-parallel",
+    "fused-moe",
+    "topology",
+    "consumer-vs-datacenter"
+  ],
+  "symptom": "A practitioner running dual RTX 3090s states the split plainly: 'My daily LLM inference server is llama.cpp, which is far more user friendly and flexible than vLLM, however vLLM's performance is usually superior as such for especially heavy or performance sensitive workloads I sometimes switch to spinning up vLLM.' The reason given for vLLM specifically is architectural: 'vLLM has a very efficient implementation of tensor parallelism especially for MoE models, so for workloads that need those features it's often the best choice if you can wear the pain points.' The listed vLLM costs are: harder to set up, every model requires its own set of configuration parameters, and topology constraints that can be sub-optimal for setups with an uneven number of GPUs. A second independent view from the TensorRT-LLM side: aikitoria reports ExLlamaV2 TP over PCIe P2P is 'much faster than mp/pp' for a variety of models.",
+  "root_cause": "The axis is what each engine optimises. llama.cpp trades throughput for breadth: it loads almost any GGUF, needs no per-model tuning, and its split modes work over any interconnect including plain TCP, which is exactly what a card without P2P needs. vLLM's advantage is concentrated in the fused-MoE tensor-parallel path, where expert routing creates heavy cross-GPU traffic on every generated token - the same practitioner notes MoE architectures benefit particularly well. TensorRT-LLM's position is narrower than its branding suggests: its FP8 block-scaled GEMM kernels exist for SM90 and SM100 but not SM120, so a consumer Blackwell owner is not choosing between engines on merit, they are choosing between the ones whose kernels compile for their card.",
+  "workaround": "Pick by workload, and check kernel availability before you pick. Default to llama.cpp unless you specifically need MoE tensor parallelism or high-concurrency throughput, in which case use vLLM and accept the per-model configuration cost. On consumer Blackwell, verify your quantization format against the SM120 kernel list first. Where tensor parallelism is available at all, prefer it over pipeline/model parallelism - but note that on cards without P2P the choice is between a slow TP and an RPC-sharded split, not between two good options.",
+  "severity": "minor",
+  "notes": "REPORTER COUNT: LOW, and this record is deliberately the weakest of the set - it is an opinion record, not a measurement. The engine-ranking claims come from essentially two practitioners: smcleod.net on dual RTX 3090s, and aikitoria in the TensorRT-LLM thread. Neither ran a controlled engine comparison on the same model and hardware. The multi-GPU MoE reason for preferring vLLM is corroborated indirectly and strongly by upstream behaviour: vLLM ships no tuned fused-MoE Triton config for RTX 4090 by default (PR #54372 had to add E=30,N=1408 EP and E=60,N=704 TP configs specifically for that card), and similarly had to add RTX 4090 W8A8 block-FP8 configs in PR #56085 - i.e. consumer cards are absent from vLLM's tuning tables, which is a structural version of the same complaint. Anyone tempted to quote this as a measured engine ranking should not; it is a practitioner's revealed preference with a plausible mechanism behind it.",
+  "status": "draft",
+  "confidence": 0.5,
+  "sources": [
+    "comm-blog-smcleod-p2p-patched-driver",
+    "comm-github-trtllm-5581-8x-rtx6000pro-deepseek",
+    "comm-github-vllm-56085-4090-block-fp8-configs"
+  ],
+  "type": "gotcha",
+  "updated": "2026-10-04"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "comm-gfx906-vllm-fork-locked-to-single-node-ipc",
+  "type": "gotcha",
+  "name": "The gfx906 vLLM forks are architecturally single-node: MultiprocExecutor forces master_addr back to 127.0.0.1 and requires local_world_size == world_size, so a 16-node InfiniBand cluster deadlocks",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "gfx906",
+    "multi-node",
+    "infini-band",
+    "ipc",
+    "shared-memory",
+    "ray",
+    "mpi",
+    "torchrun"
+  ],
+  "symptom": "Documented first-hand on a 16-node InfiniBand cluster with 1 MI50 per node, running branch gfx906/v0.19.1rc0.x of vllm-gfx906-mobydick via torchrun. EngineCore init prints:\n  (EngineCore) INFO [multiproc_executor.py:137] DP group leader: master_addr=127.0.0.1, world_size=16, local_world_size=16\nworld_size=16 with local_world_size=16 means each node believes it owns all 16 GPUs. The engine expects all ranks under one kernel space communicating over /dev/shm; shared memory cannot cross InfiniBand without MPI or Ray, so each node searches for 16 GPUs on its own motherboard and the cluster 'freeze[s] into a permanent network deadlock or fail[s] during device initialization'.",
+  "root_cause": "The fork's MultiprocExecutor is restructured around the IPC (shared-memory) execution backend for the gfx906 kernels. This is a design property of the fork, not a ROCm limitation - stock vLLM supports multi-node via Ray.",
+  "workaround": "None reported. The reporter asks whether an MPI or Ray executor branch compatible with the custom gfx906 Triton kernels can be provided and had received no answer; the issue is open with zero replies. In practice, budget for single-node only: scale by filling one machine with MI50s, which the community has done up to 16 cards, or use tinygrad, which one member notes is the only other project doing cross-vendor P2P all-reduce and reprograms the GPU MMUs to map each other's BARs via DMA-BUF.",
+  "severity": "blocker",
+  "notes": "COMMUNITY-REPORTED against a public repo, and unusually well specified: the reporter names the exact branch, cluster topology, the log line that proves the fault, and the mechanism. Worth flagging as UNANSWERED - open with 0 comments as of access - rather than as a fixed limitation, and note the reporter's own caveat that they would like their suggested fix verified. Do not read this as 'MI50 cannot scale past one node': the hardware can, and a 16-card single-node system is a documented configuration; the constraint is in this fork's executor.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log",
+    "comm-ai-infos-issue-1-ipc-multinode",
+    "comm-vllm-gfx906-mobydick-repo"
+  ]
+}

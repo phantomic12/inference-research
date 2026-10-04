@@ -1,0 +1,33 @@
+{
+  "id": "bench-mlperf-invalidation-is-always-preview-not-fraud",
+  "type": "gotcha",
+  "name": "Every MLPerf Inference invalidation on record has the same cause - preview results that were never converted to 'available' - so an invalidated number is an unfinished submission, not a rule violation",
+  "class": "config",
+  "affects": [
+    "nvidia-b200",
+    "amd-instinct-mi300x",
+    "nvidia-h200-sxm"
+  ],
+  "concepts": [
+    "mlperf",
+    "invalidation",
+    "preview",
+    "available",
+    "rdi",
+    "change-log",
+    "audit",
+    "compliance"
+  ],
+  "symptom": "A vendor number is quoted from an MLPerf round, and later the MLCommons results change log shows that submission was invalidated. The reflexive conclusion is that the submitter cheated or mismeasured. Reading the actual change log, that conclusion is wrong every time. The complete list of invalidations for MLPerf Inference Datacenter: Round 5.0 (9/9/25), result IDs 5.0-0078 Google, 5.0-5667 NVIDIA, 5.0-5668 NVIDIA. Round 4.0 (8/28/24), IDs 4.0-0038 Dell, 4.0-0050 HPE, 4.0-0059 Lenovo, 4.0-0074 Qualcomm, 4.0-0075 Qualcomm. Round 4.1 (4/2/25), IDs 4.1-0070 AMD, 4.1-0075 through 4.1-0078 UntetherAI (four results). MLPerf Inference Edge Round 4.0 (8/28/24), IDs 4.0-0076 and 4.0-0077 Qualcomm. MLPerf Training Round 4.1 (6/4/25), ID 4.1-0073 FlexAI. Every single one of these carries the same reason, verbatim: 'Submitted as \"preview,\" but validation results were not submitted to \"available\" in the subsequent round.' (One row, 4.1-0078, contains the typo 'submiited'; 4.1-0073 uses a comma instead of a period after \"preview\" - both are cosmetic.) Not one invalidation in the entire published change log cites a latency-constraint violation, undisclosed hardware, a compliance-run failure, or an accuracy shortfall. The repository's existing source note data/sources/meth-mlperf-invalidation-context.json asserts the opposite - that the Google/NVIDIA 5.0 and AMD/UntetherAI 4.1 cases were invalidated 'for violating benchmark rules (e.g., using different hardware than disclosed, or violating latency constraints)' - and that assertion is not supported by the change log.",
+  "root_cause": "MLPerf lets submitters publish a result as 'preview' in one round with the expectation of promoting it to 'available' once validation completes, and invalidates the preview if that validation never lands in the following round. It is a lifecycle mechanism, not an enforcement action. The other recorded change type in the same log is 'Benchmark name adjusted' - 11 results in Training Round 4.0 and 17 in Training Round 4.1, all renamed from 'gnn' to 'RGAT' 'to better reflect the specific scenario tested' - which is a naming correction, again not a validity challenge. The practical taxonomy is therefore: preview-not-promoted (the only invalidation cause on record), and benchmark-renamed. Neither is evidence of mismeasurement.",
+  "workaround": "Two rules. First, when checking whether a specific result ID is valid, look it up in the change log by Result ID and check the Type of Change column - do not reason from the fact that a submitter appears in the log, and do not assume the worst reason. Second, and this is the real hazard: an invalidated result is not 'a number that turned out to be wrong', it is 'a number that was never finished', and it is still sitting in caches, blog posts, aggregator leaderboards and slide decks. When you cite a preview-era MLPerf number, check both that the Result ID is absent from the change log AND that the Availability column in that round's summary.csv reads 'available'. The v6.1 round shows the three-state Availability field doing exactly this work: 480 available, 8 preview, 4 rdi, and the 8 preview rows are exactly the class most likely to be invalidated in the next change-log update.",
+  "severity": "major",
+  "notes": "This corrects a factual error already in the repository: data/sources/meth-mlperf-invalidation-context.json states the 5.0 and 4.1 invalidations were for rule violations (different hardware than disclosed, violating latency constraints). No such reason appears anywhere in the change log. That source record is in another agent's slice and has not been edited here, but any doc or gotcha that leans on its 'violating benchmark rules' framing is leaning on a claim the primary source does not support. The honest framing - which is also the more alarming one for a database - is that MLPerf has never publicly retracted an MLPerf Inference result for mismeasurement, while routinely retracting unfinished ones. That means MLPerf's audit guarantees are about protocol conformance, not about catching inflated numbers, and a vendor cannot produce a too-high MLPerf number by cheating its way past the auditors: it can only produce a wrong-looking one by misconfiguring its own harness, which is exactly the failure mode this repository's other MLPerf gotchas (Interactive-labelled-as-Server, Interactive unit mislabelled Queries/s) document happening in practice.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "ev-mlperf-results-change-log",
+    "bench-mlperf-v6-1-summary-csv"
+  ]
+}

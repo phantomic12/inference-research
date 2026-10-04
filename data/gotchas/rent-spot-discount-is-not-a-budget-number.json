@@ -1,0 +1,30 @@
+{
+  "id": "rent-spot-discount-is-not-a-budget-number",
+  "type": "gotcha",
+  "name": "'Up to 90-91% off' is a ceiling across all SKUs, the published grid is a regional floor, and spot is explicitly excluded from committed-use discounts - so no blended spot rate exists",
+  "class": "config",
+  "affects": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm"
+  ],
+  "concepts": [
+    "spot",
+    "preemptible",
+    "committed-use-discounts",
+    "capacity-blocks",
+    "checkpointing"
+  ],
+  "symptom": "You cost an inference deployment at the advertised spot discount and get a number 40-80% below on-demand, then discover three separate reasons the number is wrong. (1) The discount is a CEILING over all EC2 SKUs, not an H100 figure - nobody has paid 90% off for p5, and the concrete anchors are Azure ND96isr H100 v5 spot at $2.2712/GPU-hour against $12.29 on-demand (~82% off) and AWS Capacity Blocks at $5.191 per H100 against $6.88 on-demand (25% off, i.e. a commitment not a spot discount). (2) AWS's own rendered spot table states 'The prices displayed below are the lowest prices per instance type in the region' - so the published grid is a FLOOR per instance type, not the rate you pay in your Availability Zone, and GPUs have the widest per-AZ spread of any instance family because capacity is lumpy. (3) You then multiply the spot rate by a committed-use discount. On GCP this is impossible: the Spot VM documentation states 'credits for Compute Engine don't apply to Spot VMs', and the pricing page states explicitly that Spot and preemptible VMs cannot receive CUDs or SUDs. The blended rate you just computed is a number that no provider will sell you.",
+  "root_cause": "Spot price is a function of (instance type, Availability Zone, time) and is published at different granularity by each provider, while the advertised discount is computed over a population that has nothing to do with GPU supply. AWS publishes a regional per-instance-type minimum and hides the per-AZ rate behind the describe-spot-price-history API; GCP publishes the discount percentage up front but still splits pricing by zone; Azure publishes per-SKU rates through the Retail Prices API. The commitment instruments are a separate product family with their own eligibility rules, and the eligibility rules are mutually exclusive with spot. Separately the interruption mechanism is not a footnote: AWS gives a two-minute warning, Azure gives 30 seconds best-effort and DEALLOCATE (default) or DELETES the VM with its disks, and GCP either stops or deletes per your termination action, cannot live-migrate, and carries no SLA at all.",
+  "workaround": "Pick ONE instrument and price it honestly. Spot for fault-tolerant work with checkpoint resume - never for an interactive inference endpoint, because Azure's 30-second notice and GCP's no-SLA-no-live-migration combination means a preempted serving node does not come back. If the pool must still exist tomorrow, buy Capacity Blocks or a reservation instead, which is what the p5 allocation problem is actually for. Reserve your steady baseline and spot the burst above it; never reserve the burst, and never reserve capacity you might stop using, because the repo's own pwr-idle-node-draw-defeats-naive-cost-per-token record shows an idle 8xH200 node still draws 41.7% of its loaded watts, so an under-used reservation pays twice - once for the GPU and once for the power on GPUs that are paid for and idle. Azure is the one cloud that publishes per-SKU hourly eviction RATES (10% means a 10% chance of eviction within the hour, from 7 days of history, queryable for 28 trailing days via Azure Resource Graph SpotResources along with 90 days of spot price history) - if you are on Azure, measure your own risk instead of assuming a discount. On any cloud, set Azure's max price in USD up to five decimal places, remember a max price below the current price means the VM never deploys and an eviction is NOT auto-reverted, and remember that the Spot flag is only settable at creation.",
+  "severity": "major",
+  "notes": "Sources transcribed 2026-10-04: aws.amazon.com/ec2/spot/pricing, docs.cloud.google.com/compute/docs/instances/spot, learn.microsoft.com/en-us/azure/virtual-machines/spot-vms, plus the EC2 Price List API us-east-1 (publicationDate 2026-09-25) for the on-demand anchors. The Azure 30-second eviction wording is verbatim: 'Azure will evict Azure Spot Virtual Machines with 30-seconds notice', delivered 'on a best effort basis'. GCP's verbatim exclusions: 'credits for Compute Engine don't apply to Spot VMs'; Spot VMs 'are not covered by any Service Level Agreement and are excluded from the Compute Engine SLA'; 'Spot VMs can't live migrate'. Records: [[supply/rent-aws-spot-gpu-reality-2026-10]], [[supply/rent-gcp-spot-vm-discount-and-exclusions]], [[supply/rent-azure-spot-eviction-and-max-price]], [[supply/rent-commitment-discounts-change-the-effective-rate]], [[supply/aws-ec2-spot-gpu-general]], [[gotchas/pwr-idle-node-draw-defeats-naive-cost-per-token]].",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "rent-src-aws-spot-pricing-page",
+    "rent-src-gcp-spot-vm-doc",
+    "rent-src-azure-spot-vm-doc"
+  ]
+}

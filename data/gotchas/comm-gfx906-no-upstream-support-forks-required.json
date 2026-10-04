@@ -1,0 +1,33 @@
+{
+  "id": "comm-gfx906-no-upstream-support-forks-required",
+  "type": "gotcha",
+  "name": "gfx906 has no upstream vLLM or Triton support: MI50/MI60 inference requires a community fork of vLLM, a fork of Triton, or a fork of llama.cpp",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "llama-cpp",
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "rocm",
+    "gfx906",
+    "triton",
+    "flash-attention",
+    "v1-engine"
+  ],
+  "symptom": "Stock vLLM on ROCm does not bring up an LLM on MI50/MI60. Observed and reported failure modes, each by different users: (a) vLLM V1 engine aborts at init with 'HIP error: invalid argument at torch.cuda.mem_get_info()' in spawned workers because HSA_OVERRIDE_GFX_VERSION does not propagate to them; (b) Triton kernels fail to compile - 'error: Failures have been detected while processing an MLIR pass pipeline ... Pipeline failed while executing [ConvertTritonAMDGPUToLLVM]'; (c) the log line 'rocm is experimental on VLLM_USE_V1=1. Falling back to V0 Engine'; (d) upstream Triton AMD backend simply has no gfx906 kernels.",
+  "root_cause": "gfx906 (GCN5/Vega20) was moved to 'deprecated' in AMD's ROCm support matrix and is not a target any AMD-shipped component builds code objects for. The Triton AMD Flash Attention path is CDNA- and RDNA-oriented and has no gfx906 support, so vLLM has no attention kernel for these cards out of the box.",
+  "workaround": "Run one of the community forks. The Discord #faq channel (maintained 2026-07-28) names the current set: ML-gfx906 (prebuilt images for llama.cpp, vLLM, ComfyUI), mx-llama.cpp (llama.cpp fork), llaminar (a greenfield inference engine), and iacopPBK/llama.cpp-gfx906. For vLLM the lineage is nlzy/vllm-gfx906 (now ARCHIVED - the author stopped in Feb 2026 citing model growth and MI50 price increases, and invited forks) -> ai-infos/vllm-gfx906-mobydick, which additionally carries GPTQ, AWQ, moe_wna16 and exllama support via upstream vLLM commit 92d3e6219fce. Pin ROCm 6.3.3/6.3.4 and a gfx906 Triton fork; one fork maintainer states the expected combination is rocm 6.3.3 or 6.3.4 with pytorch 2.9.0/2.9.1/2.10.0 and triton-gfx906 3.5.0/3.5.1/3.6.0.",
+  "severity": "blocker",
+  "notes": "COMMUNITY-REPORTED, high frequency: the fork/support question is the single most-discussed topic in the export (127 messages naming forks or unsupported status, 44 distinct authors; 343 messages naming a gfx target). It is also confirmed by a primary upstream source: ROCm issue #5215 '[Feature]: Add support for Instinct MI50/MI60 (gfx906)' (Aug 2025, open, 14 reactions), whose author states plainly that 'the software support is killing that opportunity' and that he would not buy MI210 because he cannot commit to hardware whose support may be dropped. Practically: budget for maintenance, because the most capable fork has already been abandoned once. A successor maintainer noted the PLE (pipeline-parallel-expert) CPU-offload path in upstream vLLM is CDNA-only, so even recent upstream features need porting.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log",
+    "comm-rocm-issue-5215-mi50-support",
+    "comm-mx-llama-cpp-repo",
+    "comm-vllm-gfx906-mobydick-repo",
+    "comm-nlzy-vllm-gfx906-archived"
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "id": "niche-flagembedding",
+  "type": "engine",
+  "name": "FlagEmbedding (BAAI BGE retrieval toolkit)",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "niche-flagembedding-repo",
+    "niche-github-rest-api-repo-metadata"
+  ],
+  "repo": "FlagOpen/FlagEmbedding",
+  "languages": [
+    "Python"
+  ],
+  "license": "MIT",
+  "first_release_year": 2023,
+  "design_goal": [
+    "retrieval-only",
+    "embedding-and-reranking",
+    "research-benchmarking",
+    "chinese-first-multilingual"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "cpu"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "pytorch"
+  ],
+  "notable_features": [
+    "THE MODEL FACTORY, NOT A SERVER. FlagEmbedding is primarily a training, fine-tuning and evaluation toolkit plus a model zoo - it produces the BGE embedding and reranker models that other engines then serve. It ships a lightweight API wrapper for convenience, but the artifact that matters is the weights. Recorded here because the model families it defines are the most widely served retrieval models in existence",
+    "It is the only project in this niche that covers BOTH halves of retrieval in one codebase: bi-encoder embedding AND cross-encoder reranking, with matched families. Most serving projects handle one or the other",
+    "BGE-M3 is the notable capability: a single model covering multilingual, multi-functionality (dense/sparse/multi-vector) retrieval in one artefact, which collapses a multi-model pipeline into one forward pass",
+    "The associated papers are real research, not marketing - LLM-Embedder (arXiv 2310.07554, 'Retrieve Anything To Augment Large Language Models'), BGEmbedding (arXiv 2309.07597, C-Pack packaged Chinese embedding resources), and the bge_embedding paper (arXiv 2311.13534). This is a lab that publishes, and the C-MTEB benchmark is part of the ecosystem",
+    "12212 stars and 927 forks make it the largest retrieval toolkit in this slice by adoption, and the BGE models are served by essentially every general-purpose engine here including [[vllm-pooling-models]] and [[niche-text-embeddings-inference]]",
+    "The org moved from BAAI to FlagOpen - the historic BAAI/FlagEmbedding path now 404s on the GitHub API, which will break older docs and CI references",
+    "MIT licensed, created 2023-08-02, last push 2026-08-24, 918 open issues, no GitHub releases"
+  ],
+  "hardware_caveats": [
+    "NO PUBLISHED SERVING THROUGHPUT. The repo publishes quality benchmarks (C-MTEB, MTEB) and training guidance; it does not publish tok/s, TTFT or any serving performance number. Do not mistake retrieval quality leaderboards for serving performance",
+    "918 open issues on 12212 stars is a very high absolute count for a repo of this age, and reflects a large research surface rather than a serving product",
+    "Training/fine-tuning code assumes a researcher's single-node-to-few-node budget, not a serving fleet",
+    "The convenience API wrapper is not a production serving path: no batching policy, no scheduler, no continuous batching, no paged KV. It exists for demos and evaluation",
+    "It does not serve what it defines - that division of labour is the single most important caveat for a reader deciding whether to adopt it. Adopt the WEIGHTS and serve them elsewhere",
+    "Chinese-first heritage: excellent on C-MTEB and strong multilingual via bge-m3, but English retrieval leaderboards are where the strongest Western alternatives are most competitive"
+  ],
+  "best_for": [
+    "Producing or fine-tuning the embedding and reranker models your retrieval stack will actually serve - it is a model factory first",
+    "BGE-M3 when you want one multilingual dense+sparse+multi-vector model instead of a three-model pipeline",
+    "Reproducing C-MTEB / MTEB retrieval quality work, since the benchmarks and the models live in the same ecosystem",
+    "A team that wants both embedding and reranking models under one licence (MIT) and one training codebase"
+  ],
+  "avoid_for": [
+    "Serving. Serve BGE weights with [[niche-text-embeddings-inference]], [[niche-infinity]], [[vllm-pooling-models]] or [[qdrant-fastembed]] - this repo is not the serving layer",
+    "Anyone needing throughput numbers - there are none published here",
+    "Small-team model development where a 918-open-issue research repo is more surface than you want to track"
+  ],
+  "docs_url": "https://bge-model.com/",
+  "notes": "The model-side anchor of the embedding niche, deliberately recorded to contrast with the serving-side records: FlagEmbedding defines the weights, [[niche-text-embeddings-inference]] and [[niche-infinity]] serve them, [[qdrant-fastembed]] embeds them in-process, and [[niche-colbert]] covers the late-interaction alternative. The BGE-M3 single-model-multiple-retrieval-modes design is the most consequential idea in this slice. NO PUBLISHED SERVING THROUGHPUT - explicit negative. All metadata from the GitHub API on 2026-10-04."
+}

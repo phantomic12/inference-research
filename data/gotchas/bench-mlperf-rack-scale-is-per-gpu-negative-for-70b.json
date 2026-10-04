@@ -1,0 +1,38 @@
+{
+  "id": "bench-mlperf-rack-scale-is-per-gpu-negative-for-70b",
+  "type": "gotcha",
+  "name": "For FP4 Llama 2 70B a full 72-GPU NVL72 rack is measurably worse per GPU than an 8-GPU node: scale-up fabric buys nothing at this model size",
+  "class": "hardware",
+  "affects": [
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "amd-instinct-mi355x"
+  ],
+  "concepts": [
+    "mlperf",
+    "scale-up",
+    "nvlink-nvl72",
+    "tensor-parallel",
+    "replica",
+    "kv-cache",
+    "roofline",
+    "cost-model",
+    "capacity-planning",
+    "fp4"
+  ],
+  "symptom": "A whole NVL72 rack is specified for a throughput-bound Llama 2 70B serving workload, on the reasoning that a 72-GPU NVLink domain will serve it faster than a node will. The audited MLPerf numbers say the opposite, per GPU. NVIDIA's own 8-GPU slice of a GB300 NVL72 (2 nodes, 4 accelerators each) delivers 131464 tok/s Offline and 127911.34 tok/s Server for llama2-70b-99.9 - 16433 tok/s per GPU. CoreWeave's full 72-GPU GB300 NVL72 (18 nodes) delivers 1136100 tok/s Offline and 944902.14 tok/s Server - 15779 tok/s per GPU. Nine times the GPUs for 8.6x the throughput. The same pattern holds one generation down: CoreWeave's 72xGB200 rack gives 894002 tok/s Offline, 12417 per GPU, against 13660 per GPU for a plain 8xB300 SXM node (109277 tok/s). And AMD's own v6.0 11-node 88xMI355X cluster reached 1042110 tok/s Offline, 11842 per GPU, against AMD's own single 8xMI355X node at 103480 tok/s Offline, 12935 per GPU - so even AMD's scale-out submission loses 8.5% per GPU against its own node.",
+  "root_cause": "Llama 2 70B quantized to FP4 is roughly 35-40GB of weights plus a KV cache, and an 8-GPU node with 270-288GB per accelerator holds the entire model resident many times over. At that size the workload is not interconnect-bound: a single node can already keep every GPU fed from local HBM, so the additional GPUs in a rack are not removing a bottleneck - they are adding collective-communication overhead per replica and forcing a choice between one enormous tensor-parallel group spanning more machines or many independent replicas across machines. Neither recovers the per-GPU efficiency lost to coordination. The NVL72's scale-up fabric is genuinely valuable for models that do NOT fit comfortably in one node's memory, which is the workload its marketing addresses - Llama 3.1 405B or DeepSeek-R1 - and that value is simply absent at 70B. The multi-node submissions are not misconfigured; they are answering a question about capacity, not efficiency, and they are perfectly legitimate ways to buy aggregate throughput.",
+  "workaround": "Size the deployment by model, not by the platform's headline domain size. For Llama 2 70B FP4, prefer many 8-GPU nodes over one rack: the audited per-GPU throughput is 4-30% better, the nodes are independently replaceable, the failure domain is 8 GPUs instead of 72, and power and cooling are air-capable at node scale rather than requiring a liquid-cooled hall. Reach for a 72-GPU NVL72 only when the model does not fit in one node's aggregate memory at the quality and context length you need - and then verify with Llama 3.1 405B or DeepSeek-R1 submissions rather than by extrapolating from Llama 2 70B, because the 70B numbers are the one case where the fabric demonstrably does not pay. When a vendor quotes a rack-scale tok/s figure, always divide by the GPU count before treating it as a performance claim, and check whether a smaller-slice result for the same platform exists in the same round: for GB300 in v6.1 it does, and it wins per GPU.",
+  "severity": "major",
+  "notes": "This is the most actionable finding in the v6.1 LLM data and it cuts against the direction of hardware marketing, so it is worth being precise about its limits. IT APPLIES AT 70B AND BELOW IN FP4, WHERE THE MODEL IS NODE-RESIDENT. It says nothing about 405B-class models, where the whole argument is that the model does not fit in one node and the NVLink domain is what makes the thing possible at all - the v6.1 GB300 NVL72 x72 directory contains deepseek-r1 and qwen3-vl-235b-a22b precisely because those are the workloads the rack is for, and NVIDIA did not submit llama2-70b on the full 72-GPU rack at all, only on 8 GPUs. Two caveats a reader should carry: the per-GPU spread here is 4-9% between adjacent points, which is within the OEM-implementation band this round shows for the same silicon (1.4% across three MI355X chassis for the same scenario), so the rack-versus-node conclusion is robust in direction but the precise percentage is not; and rack-scale numbers do buy something the per-GPU figure hides - a single fabric domain with one failure domain and one power envelope, which matters for operations and for very high absolute rates. The claim being made is narrow and defensible: at 70B, do not pay a rack premium for scale-up fabric you will not use.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-v6-1-nvidia-gb300-8gpu-llama2-offline-log",
+    "bench-mlperf-v6-1-coreweave-gb300-nvl72-llama2-offline-log",
+    "bench-mlperf-v6-1-coreweave-gb200-nvl72-llama2-offline-log",
+    "bench-mlperf-v6-0-summary-json"
+  ]
+}

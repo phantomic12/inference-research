@@ -1,0 +1,71 @@
+{
+  "id": "niche-burn",
+  "type": "engine",
+  "name": "Burn (Tracel Rust deep learning framework)",
+  "status": "verified",
+  "confidence": 0.76,
+  "updated": "2026-10-04",
+  "sources": [
+    "niche-burn-repo",
+    "niche-github-rest-api-repo-metadata"
+  ],
+  "repo": "tracel-ai/burn",
+  "languages": [
+    "Rust"
+  ],
+  "license": "MIT OR Apache-2.0",
+  "first_release_year": 2022,
+  "design_goal": [
+    "train-and-serve-same-codebase",
+    "portability",
+    "kernel-fusion",
+    "embedded",
+    "research-product-parity"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda",
+    "rocm/hip",
+    "metal",
+    "vulkan",
+    "wasm",
+    "webgpu",
+    "cpu"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "onnx (import)"
+  ],
+  "notable_features": [
+    "The pitch is not speed, it is ELIMINATING THE EXPORT STEP. The README's argument is that the standard pipeline (train in Python, export to ONNX or optimise for vLLM/ONNX Runtime/TensorRT) is 'often brittle and lossy, ruling out complex architectures', so Burn lets the training code itself be the inference code. That is a genuinely different goal from every other framework in this repo and it is the reason to know about Burn",
+    "JIT kernel fusion with dynamic shapes: PyTorch-like dynamic graphs and eager ergonomics, but tensor-op streams are compiled so adjacent ops fuse. The stated benefit is flexibility without the usual dynamic-graph performance cliff",
+    "Incremental compilation is the research-usability argument: the README claims sub-5-second recompiles even in release mode, aimed squarely at the 'long Rust compile times killed my edit-compile-run loop' objection",
+    "Explicitly aimed at on-device personalization and federated learning, where the train/serve code-identity property actually pays off and where ONNX export is genuinely lossy",
+    "Broadest declared backend spread in this niche - topics name cuda, rocm, metal, vulkan, wasm and webgpu in one project",
+    "MIT OR Apache-2.0, 16020 stars, 1075 forks, only 216 open issues, created 2022-07-18, last push 2026-10-02, not archived, homepage burn.dev"
+  ],
+  "hardware_caveats": [
+    "NO PUBLISHED INFERENCE THROUGHPUT. No tok/s, no TTFT, no comparison against llama.cpp, vLLM or SGLang appears in the README or the project pages. Burn is a framework and its published numbers, where they exist, are training-side. Any inference throughput attributed to Burn is third-party and should be treated as unverified",
+    "NO SCHEDULER. No continuous batching, no paged KV, no prefix caching, no chunked prefill - same structural position as candle. It is a batch-1 tensor library with a training story, not a serving system",
+    "NO GGUF AND NO QUANTISATION ZOO. safetensors natively, ONNX for import. Nothing in the AWQ/GPTQ/EXL2/Marlin family. If quantised inference is the requirement this is the wrong project",
+    "The JIT fusion story is the performance bet and it is unproven against hand-tuned kernels for LLM decode specifically. Fusing elementwise and normalisation ops around GEMMs is exactly the case llama.cpp and TensorRT-LLM already handle with hand-written kernels",
+    "It is not an LLM serving engine: no tokenizer pipeline, no OpenAI-compatible server, no request scheduling. Anything the README calls 'inference' is a forward pass you call from your own program",
+    "JIT compilation introduces a warm-up and a compile surface that is awkward for a serverless or FaaS deployment model where cold start is already the dominant latency term"
+  ],
+  "best_for": [
+    "A team that trains a model in Rust and wants to ship that exact model, particularly on-device personalization or federated learning where an export round-trip is unacceptable",
+    "Portability across CPU/CUDA/ROCm/Metal/Vulkan/WASM/WebGPU from one codebase, including a web target",
+    "Anyone blocked by a lossy ONNX export of an architecture the mainstream exporters do not support",
+    "A research loop where recompile time is the bottleneck - the sub-5-second claim is specifically for that"
+  ],
+  "avoid_for": [
+    "Serving LLMs to multiple concurrent users - no scheduler exists",
+    "Anyone optimising for tokens per second: no published inference numbers and a JIT fusion bet that has not been shown to beat purpose-built kernels",
+    "Reusing GGUF or existing quantised weights - the formats are not supported",
+    "Teams wanting a drop-in OpenAI-compatible endpoint - it is a library"
+  ],
+  "docs_url": "https://burn.dev",
+  "notes": "The second Rust framework in this slice and the more interesting of the two, because its stated reason to exist is a property - train-and-serve code identity - that no CUDA-shaped serving engine offers. Included to make the point that the Rust answer to inference splits into three different layers: [[niche-candle]] as a minimal library, burn as a full train-and-deploy framework, and the Rust SERVER layer ([[text-generation-inference]], [[triton-inference-server]]). NO PUBLISHED INFERENCE THROUGHPUT - recorded as an explicit negative rather than filled with an estimate. All metadata from the GitHub API on 2026-10-04."
+}

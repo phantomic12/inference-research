@@ -1,0 +1,31 @@
+{
+  "id": "comm-mi50-uncorrectable-ecc-corrupts-kv-cache",
+  "type": "gotcha",
+  "name": "Used MI50 cards accumulate correctable then uncorrectable HBM errors that pass ECC and silently corrupt the KV cache, so the model degenerates into repeating non-existent tokens with no error raised",
+  "class": "hardware",
+  "affects": [
+    "amd-radeon-instinct-mi50x",
+    "vllm",
+    "llama-cpp"
+  ],
+  "concepts": [
+    "gfx906",
+    "ecc",
+    "athub",
+    "hbm",
+    "kv-cache",
+    "silent-corruption",
+    "used-market"
+  ],
+  "symptom": "A member running four used MI50s reports one card accumulating correctable ECC errors that 'should be fine but they are not - sometimes errors slip past ECC and corrupt the models KV cache and break the model into repeating non existing tokens'. Same member, four cards total: one dead on arrival, one with a mysterious throttle fault finally traced to a wrong temperature reading or an overheating power supply, one with ECC/memory corruption, plus two more now failed (one VRM, one memory corruption). Separately, a llama-server card dies with the kernel log 'amdgpu: sq_intr: error, se 1, data 0x0 ... Send SIGBUS to process llama-server ... {2}uncorrectable hardware error(ERREVENT_ATHUB_INTERRUPT) detected! ... {1}correctable hardware errors detected in pcie_bif block', followed by 'poison is consumed by client 11, kick off gpu reset flow' and the card vanishing from the system.",
+  "root_cause": "Ageing HBM on fanless-server-card designs bought used at volume. MI50 is a passively cooled server part; the export's #cooling channel (188 messages) is largely about the thermal side of this. The failure mode is dangerous specifically because it is silent at the application layer: ECC is present and reports, but the residual uncorrectable rate is enough to corrupt attention state without ever producing an inference error.",
+  "workaround": "Monitor ECC and ATHUB interrupts rather than trusting the model output: watch for 'correctable hardware errors detected in pcie_bif block', 'uncorrectable hardware error(ERREVENT_ATHUB_INTERRUPT)', 'sq_intr: error' and 'SIGBUS to process llama-server' in dmesg, and treat a card that starts emitting them as needing replacement. Independent verification of output quality is the practical backstop. Two members also report cards that will not resume from suspend - 'some of the cards will not wake up properly and GPU reset fails' - which means those cards must be power-cycled rather than suspended.",
+  "severity": "blocker",
+  "notes": "COMMUNITY-REPORTED. Two independent contributors report the same failure with kernel-level evidence (____jal____ with full dmesg paste; eviljazzkatastrophos on suspend/resume failure), and ____jal____ separately documents the used-supply failure rate across four purchases. Recorded as verified because the mechanism is documented with kernel log evidence rather than inferred from flaky behaviour - but note the CORRUPTION-TO-KV-CACHE link is the member's own diagnosis, not something anyone instrumented. Consequence for a buyer: on used gfx906 the dominant hardware risk is not throughput, it is silent numerical corruption, and the only reliable detector is checking output coherence.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "comm-mi50-conditional-slowdown-under-load",
+  "type": "gotcha",
+  "name": "MI50 will hang or crash under sustained inference load at default clock settings; lowering the SCLK level or capping power avoids the failure and drops temperature from 100C to 82C, so cards that 'mysteriously throttle' are usually thermally or power-supply limited",
+  "class": "hardware",
+  "affects": [
+    "amd-radeon-instinct-mi50x",
+    "llama-cpp",
+    "vllm"
+  ],
+  "concepts": [
+    "gfx906",
+    "thermal",
+    "throttling",
+    "sclk",
+    "mclk",
+    "power-cap",
+    "rocm-smi",
+    "cooling"
+  ],
+  "symptom": "Sustained-load failures: 'when i send requests to vllm, sometimes pc hangs. Lowering power level helps with the hang issue but reveals another problem: when you do two simultaneous requests, vllm crashes.' The fix that also survives: `rocm-smi --setsclk 4` drops the core frequency to the 4th level and 'the temperature drops from 100-C [ComfyUI qwen-edit run] to 82-C'. Automatic frequency scaling is called out as actively harmful - 'The auto-frequency-scaling is pure garbage ... downclocking after a few milliseconds. Running \"high\" all the time adds 12 Watts per GPU.' A separate member tracing a mysterious throttle ended up at 'either wrong temp reading or overheating power supply', not the GPU die. MI50 is a passively cooled server card; the export's #cooling channel (188 messages) is almost entirely about this.",
+  "root_cause": "Not established. The recurring mechanism is thermal/power delivery rather than silicon: fanless MI50 in dense multi-card boxes, plus two-PSU rigs where the member consensus is emphatic that grounds must be tied but positive rails must never be tied across consumer PSUs ('NEVER tie the positive rails together on consumer PSUs, those often aren't designed to be safely biased on their outputs'). Also plausible and unresolved: the VBIOS boost-frequency instability documented in comm-gfx906-vbios-flash-selects-bar-power-and-stability, since a member attributes hang-vs-no-hang differences between VBIOSes to 'higher frequency not really steady'.",
+  "workaround": "Lock clocks rather than trusting auto-scaling: `rocm-smi --setperflevel high` (+12 W/GPU, reported) or `rocm-smi --setsclk 4` to stay under ~82 C. Monitor with `rocm-smi --showclocks` and `rocm-smi --showpower` - though `--showpower` returns 'get_power_avg, Not supported on the given system' on at least one MI50 setup, so do not assume power telemetry exists. Use 40 mm fans stacked against the card (a reported fit for the shroud's 3 mm inserts) at 6-7k RPM, and note members use the `upp` tool to overwrite pp_table directly (kernel-independent but reset at reboot). Any inference benchmark on MI50 should state the clock and power cap, because leaving them on auto makes the number unreproducible.",
+  "severity": "major",
+  "notes": "COMMUNITY-REPORTED, 121 messages naming thermal/throttle/overheat across the export with a dedicated 188-message #cooling channel, 14 authors naming perflevel/clock/power directly. The clock-and-power caveat matters beyond MI50: several throughput figures circulating in this community were taken on a 175 W-capped card or at a fixed SCLK, so any benchmark record derived from them must carry the clock state or be downgraded.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

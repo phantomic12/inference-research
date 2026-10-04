@@ -1,0 +1,29 @@
+{
+  "id": "rent-gcp-spot-vm-discount-and-exclusions",
+  "type": "supply",
+  "name": "Google Cloud Spot VMs: up to 91% off, no SLA, and explicitly excluded from committed-use discounts",
+  "kind": "cloud",
+  "vendor": null,
+  "accelerator_ids": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "region": "all GCP regions; per-zone availability",
+  "channels": [
+    "spot",
+    "interruptible"
+  ],
+  "price_usd": 91.0,
+  "price_basis": "PERCENT DISCOUNT CEILING, not a price. The Spot VM documentation states Spot VMs 'are available at much lower prices - up to 91% discounts' and, in the same paragraph, that 'Compute Engine might preempt Spot VMs at any time to reclaim resources'. price_usd carries the 91 (percent), which is the only number the page publishes.",
+  "availability": "unknown",
+  "lead_time_weeks": null,
+  "export_controlled": null,
+  "notes": "The GCP spot documentation is unusually explicit about four limitations that together make the headline discount unbankable, and each is quoted from the page. (1) NO SLA: Spot VMs 'are not covered by any Service Level Agreement and are excluded from the Compute Engine SLA'. (2) NO LIVE MIGRATION: 'Spot VMs can't live migrate' - so a spot instance cannot be evacuated onto on-demand capacity when it is preempted. (3) NO COMMITMENT DISCOUNT: the page states that 'credits for Compute Engine don't apply to Spot VMs', which is the same mutual-exclusion that the pricing page states explicitly for both Spot and preemptible VMs against CUDs and SUDs. This is the single most common error in spot cost models - multiplying a spot rate by a commitment discount. (4) FINITE AND ZONE-LOCAL: 'Spot VMs are finite Compute Engine resources, so they might not always be available', and availability 'varies based on Compute Engine usage'. On interruption mechanism: Compute Engine either STOPS (default) or DELETES the VM depending on the termination action you set, and 'The probability that Compute Engine preempts Spot VMs is generally low, but might vary from day to day and from zone to zone depending on current conditions'. GCP publishes spot pricing per instance type in its VM pricing table and, unlike AWS, states the discount percentage up front - which makes GCP the easier of the two to reason about and the easier to overestimate.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "rent-src-gcp-spot-vm-doc"
+  ]
+}

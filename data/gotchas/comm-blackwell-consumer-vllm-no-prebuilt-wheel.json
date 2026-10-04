@@ -1,0 +1,35 @@
+{
+  "id": "comm-blackwell-consumer-vllm-no-prebuilt-wheel",
+  "name": "On consumer Blackwell (RTX 50-series) vLLM had no prebuilt wheel, and the community recipe is build-from-source against the NGC PyTorch container - with FlashAttention 3 disabled and FP8 unavailable",
+  "class": "build",
+  "affects": [
+    "vllm",
+    "nvidia-rtx-5090",
+    "nvidia-rtx-5080",
+    "nvidia-rtx-5070-ti"
+  ],
+  "concepts": [
+    "blackwell",
+    "sm120",
+    "sm121",
+    "fa3",
+    "flash-attention",
+    "build-from-source",
+    "cutlass",
+    "fp8",
+    "nightly"
+  ],
+  "symptom": "The community answer to 'how do I run vLLM on my 5090' was not a flag. It was: clone vLLM at or above commit ed6ea06577ec06f0b3a9ac921b55ef254f19d923, start nvcr.io/nvidia/pytorch:25.02-py3, run `python use_existing_torch.py`, `pip install -r requirements/build.txt`, then `python setup.py develop` with CCACHE_DIR and MAX_JOBS set. The reason no wheel worked: the published wheels had not yet moved to the torch/CUDA versions needed to compile for Blackwell. Two separate walls follow from the build succeeding.",
+  "root_cause": "Two independent arch gaps, both reported. (1) FlashAttention 3 does not work on Blackwell - the pinned note in the recipe is 'Flash Attention 3 backend doesn't work with Blackwell yet, please use VLLM_FLASH_ATTN_VERSION=2'. A user hit the raw form of it on dual 5090 with 'FlashAttention requires building with sm version sm80-sm90, but was built for < 8.0!' repeated across the terminal, and a second user re-stated the same requirement. (2) CUTLASS does not support FP8 on SM120, so NeuralMagic-style FP8-scaled checkpoints fail while bf16 and int8/int4 (GGUF, AWQ) are fine - a user verified that on a 5090D and explained why: CUTLASS supplies fp32/fp16 math on the 50-series by compiling for SM80, because sm120 currently behaves like sm80. A vLLM maintainer confirmed the FP8 gap explicitly: 'CUTLASS (and hence vLLM) doesn't support FP8 on SM120 (RTX50*) yet, we'll add support for FP8 scaled_mm on SM120 as the cutlass support is added.' Separately a user reported that mixing a 5090 with any other card fails at TP even though 4090+4090 and 4090+A6000 both work.",
+  "workaround": "Use the NGC Triton Server vLLM container (nvcr.io/nvidia/tritonserver:25.01-vllm-python-py3, later 25.02) as the fast path - one user confirmed it works on a 5090 out of the box, though another notes it does not carry public/nightly vLLM. Set VLLM_FLASH_ATTN_VERSION=2. For FP8 checkpoints on SM120, either rebuild CUTLASS, or serve bf16/int8/int4 instead; the FlashAttention 3 gap can also be closed by compiling FA from source, which one user did and then confirmed vLLM v1 working on a 5090. Note the recipe has real footguns of its own: Docker's NVIDIA runtime config needs `no-cgroups = false` or the container appears to have no GPU, and pip package paths in the recipe have drifted (requirements-build.txt vs requirements/build.txt).",
+  "severity": "major",
+  "notes": "REPORTER COUNT: high, and the most heavily corroborated record in this set. Distinct independent users in the thread: pavanimajety, shahizat, rubertorresbonet, SmileIsThinking, Dayrker, dinhanhx, jayavanth, xycjscs, daanno2, ctdavi, fflyree, Panchovix, plus kushanam credited for the Blackwell support PRs - on 5070 Ti, 5080, 5090 and 5090D. The FA3-unavailable and SM120-FP8-unavailable claims are each stated by multiple independent users AND confirmed by a maintainer, so they are verified behaviours, not folklore. Engine versions in reports span vLLM 0.7.0 through 0.7.4+ (the recipe's own output) on the NGC 25.01/25.02 containers, plus one much later vLLM 0.17.1 on native Windows+WSL. The mixed-5090-with-other-GPU TP failure is ONE report (Panchovix, 5090 + 2x 4090 + A6000) and should be treated as unconfirmed. This record supersedes the general 'just use a wheel' assumption for consumer Blackwell.",
+  "status": "verified",
+  "confidence": 0.9,
+  "sources": [
+    "comm-github-vllm-14452-rtx50xx-support-thread",
+    "comm-github-trtllm-5581-8x-rtx6000pro-deepseek"
+  ],
+  "type": "gotcha",
+  "updated": "2026-10-04"
+}

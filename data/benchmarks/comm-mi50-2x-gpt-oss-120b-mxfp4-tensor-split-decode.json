@@ -1,0 +1,26 @@
+{
+  "id": "comm-mi50-2x-gpt-oss-120b-mxfp4-tensor-split-decode",
+  "type": "benchmark",
+  "name": "llama.cpp decode on 2x MI50 with -sm tensor: 71.2 tok/s for gpt-oss-120B MXFP4 (and layer split is FASTER at 81.7)",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "amd-radeon-instinct-mi50x"
+  ],
+  "interconnect_ids": [],
+  "model": "gpt-oss-120b MXFP4 MoE (59.02 GiB)",
+  "format_id": null,
+  "metric": "decode_tok_s",
+  "value": 71.22,
+  "unit": "tok/s",
+  "methodology": "llama-bench, -p 16384 -n 8192 -b 2048 -ub 1024 -ngl 99 -mmp 0 -dio 1 -fa 1 -o md -r 3 -sm tensor, 2 GPUs via HIP_VISIBLE_DEVICES=0,1 (2x32752 MiB, gfx906:sramecc+:xnack-, wave size 64). Decode figure is tg8192 = 8192 generated tokens, so it is steady-state decode at a long context, not TTFT or a short-context number. Same run with default (layer) split: pp16384 914.81 +/- 0.52, tg8192 81.72 +/- 0.44 - i.e. tensor split is WORSE for decode on this 2-card PCIe node. Not stated by the reporter and therefore NOT recorded: ROCm version, clock/power state, PCIe generation and lane width, host CPU. build hash ff5ef82.",
+  "measured_by": "third_party",
+  "reproducible": null,
+  "notes": "COMMUNITY-REPORTED MEASUREMENT, not a verified benchmark. Pasted in full by the mx-llama.cpp maintainer (mxxm3679) in the gfx906 Discord #llama-cpp channel on 2026-04-22, including the exact command line, device enumeration, and stddev over 3 repeats. Treat as a self-reported practitioner run. Reproducible is null rather than false because essential methodology is missing: without the ROCm version, the SCLK state and the PCIe topology, a re-run is not a like-for-like comparison - and this community's own reporting shows clock and topology move these numbers by tens of percent. The headline finding worth keeping is the layer-vs-tensor comparison, which was run back-to-back on the same machine in the same session and is therefore a fair A/B despite the missing metadata.",
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log",
+    "comm-mx-llama-cpp-repo"
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "id": "fct-batch1-step-cost-formula",
+  "type": "flop",
+  "name": "The cost of one forward pass with no batching: the batch-1 decode-step formula, and the batch at which it stops being memory-bound",
+  "class": "decode_gemm",
+  "arithmetic_intensity": "BATCH 1 IS A REGIME, NOT A SCALE. At batch 1 a decode step streams the whole weight set once and does one multiply-accumulate per weight, so AI = 2*P_flops/(w_b*P_bytes) = 2/w_b, where w_b is bytes per stored weight: exactly 1.0 flop/byte for bf16 (w_b=2), 2.0 for fp8/int8 (w_b=1), 4.0 for int4 (w_b=0.5). That is one to four flop/byte against ridge points of 150-810 flop/byte for every part in this repo, so batch-1 decode is memory-bound by a factor of 75-400x in bandwidth terms. THE FORMULA, with every input named: bytes_step = w_b*P_eff + 2*d*V*w_b (LM head, untied) + kv_b*tok * L (KV read) + kv_b*tok (KV write, one token) + activation/overhead bytes (see fct-overhead-flop-ledger). t_step = max(bytes_step/BW_eff, flops_step/PEAK_eff). flops_step = 2*P_eff + 2*d*V + attention and overhead terms. tok/s = 1/t_step. The batch-1 step is memory-bound iff bytes_step/BW > flops_step/PEAK, and since bytes_step and flops_step are both proportional to P_eff at batch 1, that inequality reduces to 1/AI < 1/AI_ridge, i.e. AI < AI_ridge, which is decided entirely by w_b and the machine. Worked: Llama-3-8B on one H100 SXM, bf16, L=1024, batch 1. P_eff (attention + MLP weights, excluding embeddings) = 32 layers x [(q: 4096x4096) + (k,v: 2 x 4096x1024) + (o: 4096x4096) + (mlp: 3 x 4096x14336)] = 32 x [16.78M + 8.39M + 16.78M + 176.16M] = 32 x 218.10M = 6.979e9. Weight bytes = 2 x 6.979e9 = 13.957e9 = 12.999 GiB. LM head untied = 2 x 4096 x 128256 = 1.051e9 = 0.979 GiB. KV read at L=1024 = 128 KiB/token x 1024 = 128 MiB = 0.125 GiB. Total 14.103 GiB = 1.514e10 bytes. t_mem = 1.514e10 / 3.350e12 = 4.520 ms. flops_step = 2 x 6.979e9 + 2 x 4096 x 128256 = 1.396e10 + 1.051e9 = 1.501e10; t_math = 1.501e10 / 989.5e12 = 15.2 us. Memory-bound by 298x. Predicted 221.2 tok/s at batch 1, L=1024, bf16, H100 SXM. THE CROSSOVER IS NOT A CONSTANT - it is B* = (PEAK/BW) x w_b/2, derived by setting AI(B) = AI_ridge where AI(B) = B/w_b for a weight GEMM (B tokens amortize each weight byte): H100 SXM (PEAK_bf16 989.5 TFLOPS, BW 3350 GB/s) gives AI_ridge = 295.4 flop/byte and therefore B* = 147.7 for bf16 (w_b=2), 295.4 for fp8 (w_b=1), 590.7 for int4 via dequant-to-bf16 (w_b=0.5), 73.8 for int4 with bf16 math only if the dequantized activation re-read dominates. Full table, all parts, all formats (each row is PEAK for the format actually EXECUTING divided by that part's own bandwidth, times w_b/2): H100 SXM 295.4 bf16 / 295.4 fp8 / 73.8 int4-dequant-to-bf16 / 147.7 int4-native; H200 SXM 206.1 / 206.1 / 51.5; MI300X 246.7 / 246.7 / 61.7; B200 312.5 / 312.5 / 312.5 (fp4 is native at 2x fp8, so w_b halves and PEAK doubles - the two cancel exactly, which is the cleanest possible demonstration that B* is a property of the memory system and not of the arithmetic); A100-80GB 153.0 / 153.0 / 38.3; RTX 4090 163.9 bf16 / 327.7 int4-native; L4 403.3 / 404.2; TPU v5e 240.5. The invariance is the finding: B* depends on PEAK/BW and w_b, so a part that gains bandwidth and FLOPS in the same proportion gains nothing, and quantization that raises PEAK in the same proportion as it cuts bytes gains nothing either. What moves B* is only a RATIO change between arithmetic and bandwidth. CONSEQUENCES THAT FALL OUT OF THE TABLE. (1) An L4 needs batch 403 to leave the memory wall on bf16, so a latency-serving L4 that never exceeds batch ~256 has never run a compute-bound decode step and every optimization aimed at tensor-core utilization was aimed at the wrong thing. (2) An RTX 4090 crosses at 164 (bf16), so the popular '4090 is a good local-inference part' claim is false for anything under batch ~164 but true above it, and the crossover is 2.5x sooner than an H100's - a bandwidth-rich FLOPS-poor part reaches the wall earlier and then has 6x less compute to do the work with. (3) Nothing crosses before batch ~50 on any part in this repo in a format that does not dequantize, so the entire low-batch serving regime is bandwidth-priced and every FLOP-side optimization is invisible there. The second crossover that matters at batch 1 is not arithmetic but bytes: KV bytes displace weight bytes in the step's byte budget as context grows, and the batch at which KV read equals the weight stream is B_kv = P_eff / (L * kv_b*tok) where kv_b*tok = 2*n_kv*head_dim*layers*kv_dtype_bytes. Numerically with Llama-2-70B geometry (P_eff = 68.98e9, kv_b*tok = 320 KiB): B_kv = 411 at L=1k, 51 at L=8k, 13 at L=32k, 3 at L=128k. Llama-3-8B (P_eff 8.03e9, 128 KiB/token): 120 at L=1k, 15 at L=8k, 3.7 at L=32k. Llama-2-7B with MHA (P_eff 6.74e9, 512 KiB/token): 25 at L=1k, 3.1 at L=8k, 0.8 at L=32k - i.e. at 32k context a single Llama-2-7B sequence reads MORE KV than it reads weights, and from batch 1 the step is KV-bound, which is a different bottleneck with a different fix (cache compression, sliding window, GQA) than the weight-stream wall.",
+  "bound_by": "memory",
+  "scales_with": [
+    "batch_size (the crossover knob: AI = B/w_b, so B* = (PEAK/BW)*w_b/2)",
+    "weight_bytes_per_param w_b (2 bf16, 1 fp8/int8, 0.5 int4 - scales B* linearly, and cancels against PEAK if PEAK scales with it too)",
+    "context_length (KV bytes displace weight bytes in the step's byte budget; the B_kv crossover above)",
+    "hidden_width and intermediate_size (both enter P_eff and, via the KV term, B_kv)",
+    "num_kv_heads and head_dim (set kv_b/token; MHA vs GQA-8 is a 4x or 8x swing in B_kv)",
+    "vocab_size (the LM head is a second full weight matrix when embeddings are untied)",
+    "tying (a tied LM head removes d*V bytes from every single step)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-b200",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-rtx-4090",
+    "nvidia-l4",
+    "google-tpu-v5e"
+  ],
+  "workarounds": [
+    "Weight-only quantization: cuts w_b, which directly cuts bytes_step in the memory-bound regime - the whole reason W4A16 wins at batch 1 (see quantized-decode-high-batch)",
+    "KV cache quantization: does not touch B* at all (no weight bytes change), only halves the KV term of bytes_step, so it is the fix for the B_kv crossover and not for the B* one",
+    "MQA/GQA: cuts kv_b/token by the group ratio, pushing B_kv out; costs nothing in flops",
+    "Tied embeddings: removes d*V bytes from every step, worth 0.979 GiB per step on Llama-3-8B",
+    "Fused norm/activation/rope epilogues: cuts the overhead term of bytes_step, which is 75-82% of the step's bytes if left unfused (see fct-overhead-flop-ledger)",
+    "CUDA Graphs to remove per-kernel launch cost, which is a real fraction of a 4.5 ms step at batch 1 only if the step is microseconds - see custom-kernel-launch-overhead for the regime where it matters"
+  ],
+  "notes": "Design consequence: batch 1 is not 'a small batch', it is the regime in which a token's cost is set by how many bytes of weights it must touch, and the number that decides whether a step is bandwidth or compute priced is a ratio (PEAK/BW), which is why hardware generations that improve both in lockstep do not change the batch-1 experience at all. For a reader predicting cost: t_step is a bytes/BW division until B exceeds B*, and B* is between 50 and 410 for every part and format in this repo, so any interactive or single-stream deployment is bandwidth-priced and a 3x FLOPS increase in the accelerator moves it by 0%. Hardware: what matters for the batch-1 regime is BW and w_b, not PEAK - a part with half the FLOPS and twice the bandwidth wins at batch 1 and loses above B*. Engine: the levers that matter at batch 1 are byte-reducing (quantization, tying, fusion, KV compression) and none are compute-side. WHERE THE DERIVATION BREAKS DOWN, four places, stated rather than hidden. (1) AI = B/w_b assumes each weight byte is read from HBM EXACTLY ONCE per step and that the L2 cache captures no reuse across layers. At batch 1 on large models that is close to true for weights, but it is false for the embedding table and false for small models that fit largely in L2, where the effective B is higher than 1 and the real crossover is at a smaller batch than the table says. (2) B* is derived from PEAK, which is a boost-bin vendor number; real sustained PEAK under a memory-bound access pattern is lower, and the repo's own H100 node measurement (76% of a 10.2 kW rating under compute-intensive TRAINING) shows the gap between nameplate and sustained is real. Lower sustained PEAK means the TRUE crossover batch is HIGHER than the table's number, not lower - the table is optimistic. (3) bytes_step omits every activation and intermediate tensor. If weights, activations and KV are all in HBM with no fusion, add the overhead bytes from fct-overhead-flop-ledger (75-82% on top of the weight stream for the three families computed there) and the step gets several times slower; with full fusion the table above is close to right. (4) The model assumes a single monolithic step with perfect overlap. Real engines overlap weight streaming of layer i+1 against compute of layer i, which can hide up to a full stage of the memory time but cannot exceed it, so the table is a lower bound on t_step and an upper bound on tok/s. Two further cautions: B* is per-step and depends on KV bytes growing with L, so a long-context service crosses the compute wall at a different batch than a short one even on identical hardware; and at batch 1 the step time is often NOT dominated by any of these terms but by CPU-side launch and scheduler overhead, which this formula cannot see at all (see custom-kernel-launch-overhead: a vLLM scheduler was measured at 11.7% of wall at 256 concurrent sequences, and CUDA Graph capture fails under FlashInfer spec decode, costing ~16% decode throughput - see spec-decode-silently-downgrades-cudagraphs).",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "flop-roofline-williams-2008",
+    "flop-llm-inference-roofline-survey",
+    "flop-nvidia-h100-specs",
+    "nv-h100-datasheet",
+    "nv-h200-product-page",
+    "amd-mi300x-product-page",
+    "nv-blackwell-datasheet",
+    "nv-a100-datasheet",
+    "nv-l4-product-page",
+    "consumer-nvidia-ada-gpu-architecture-whitepaper",
+    "asic-tpu-v5e-specs",
+    "flop2-llama3-8b-config",
+    "flop2-llama2-70b-config",
+    "flop2-llama2-7b-config",
+    "model-fr-hf-config-mixtral-8x7b"
+  ]
+}

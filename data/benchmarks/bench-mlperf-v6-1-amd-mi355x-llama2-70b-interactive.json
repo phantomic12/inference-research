@@ -1,0 +1,28 @@
+{
+  "id": "bench-mlperf-v6-1-amd-mi355x-llama2-70b-interactive",
+  "type": "benchmark",
+  "name": "AMD 8xMI355X, MLPerf Inference v6.1 INTERACTIVE: Llama 2 70B aggregate output throughput while holding ttft<=450ms and tpot<=40ms",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-mlperf-v6-1-summary-csv",
+    "bench-mlperf-v6-1-amd-mi355x-llama2-interactive-log",
+    "bench-mlperf-llama2-70b-interactive-latency-rule"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi355x"
+  ],
+  "interconnect_ids": [],
+  "model": "Llama 2 70B (MLPerf v6.1 submission, FP4 weights)",
+  "format_id": "mxfp4",
+  "metric": "tps_aggregate",
+  "value": 73191.51,
+  "unit": "output tokens/s (aggregate, harness 'Completed tokens per second')",
+  "methodology": "AGGREGATE. MLPerf Inference v6.1 Closed division, Datacenter suite, INTERACTIVE scenario - a Server-scenario run with a much harder latency contract, and the third distinct performance regime on the same node. LOADS: the Interactive category requires loadgen to enforce ttft <= 450ms and tpot <= 40ms (MLCommons inference repo, language/llama2-70b/README.md, verbatim); on top of that it carries the Server arrival model, target_qps 0.5, min_duration 120000 ms, min_query_count 100. Batch size is not a fixed published number but is now bounded from above by the 40ms inter-token budget, which is what actually caps concurrency. Completed samples per second 258.22. Model shape TOKENS_PER_SAMPLE 267.0. POWER: has_power=False, design_power_watts=null, no declared cap. OMITTED BY SOURCE: TP size, KV dtype, achieved concurrency, clock state, cooling.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "power_cap": null,
+  "notes": "READ THE SOURCE LOG BEFORE TRUSTING THE LABEL: the artifact at this path prints 'Scenario : Server' in its own header. The Interactive identity exists only in the directory name and the summary.csv Scenario column; the harness log gives no way to distinguish it from a Server run. THAT IS THE CENTRAL AUDITING TRAP IN MLPERF AND IT IS RECORDED AS data/gotchas/bench-mlperf-interactive-scenario-labels-itself-server.json. The substantive number: a 40ms inter-token cap costs 29% of throughput versus Offline on this node (106517 -> 73191.51). Anyone quoting an 'Interactive MLPerf number' as an achievable serving rate is quoting a number achieved while guaranteeing no user waits more than 40ms between tokens - which is a chatbot/voice interaction target, not a batch-serving target."
+}

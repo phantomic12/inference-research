@@ -1,0 +1,30 @@
+{
+  "id": "comm-gfx906-triton-jit-cold-start-ttft",
+  "type": "gotcha",
+  "name": "Triton JIT compilation on gfx906 makes first-token latency enormous and it recurs on every restart unless the compile cache is persisted; on MI50 it silently switches to the V0 engine",
+  "class": "framework",
+  "affects": [
+    "vllm",
+    "amd-radeon-instinct-mi50x"
+  ],
+  "concepts": [
+    "gfx906",
+    "triton",
+    "jit",
+    "ttft",
+    "cold-start",
+    "v0-engine",
+    "warmup"
+  ],
+  "symptom": "Multi-minute time-to-first-token attributed directly to Triton JIT compilation, recurring on every service restart and machine reboot. Compounding it, vLLM logs 'rocm is experimental on VLLM_USE_V1=1. Falling back to V0 Engine.' Another user reports large-context startups stuck for 30+ minutes with GPUs at 100% and VRAM loaded, on 'some kind of calculation'. And a startup that looked like a hang is actually graph capture: 'Capturing CUDA graph shapes: 0% ... 35/35 [01:04<00:00]' takes 64 seconds and 0.05 GiB, with 'init engine (profile, create kv cache, warmup model) took 83.71 seconds'.",
+  "root_cause": "gfx906 has no prebuilt Triton kernel cache from AMD (see comm-gfx906-no-upstream-support-forks-required), so every Triton kernel is compiled on the target machine at startup. The V0-engine fallback is a separate upstream policy: ROCm on V1 is flagged experimental.",
+  "workaround": "Persist the Triton compile cache so it survives restarts and reboots - this is the fix a member identified and intended to upstream. Pass --enforce-eager to skip CUDA graph capture entirely, at a throughput cost, if startup latency matters more than steady-state tok/s. Expect ~85 s of engine init even on the warm path, and budget for it when sizing health checks.",
+  "severity": "minor",
+  "notes": "COMMUNITY-REPORTED. The Triton-JIT cause is one member's post-reboot diagnosis and is corroborated by a second report of 30+ minute stalls on large-context startup. Two adjacent traps in the same area worth knowing: (a) the V0 fallback is silent, so anyone benchmarking a V0-engine run against a V1-engine figure elsewhere is comparing different schedulers without being told; (b) --max-model-len far above what the cards can hold does not error usefully - one reply is the blunt 'this won't work with a single mi50.. check logs to see what it calculates you can fit for KV', and vLLM_SKIP_CUDAGRAPH-related compilation-level assertions ('Compilation level should be CompilationLevel.PIECEWISE when cudagraph_mode piecewise cudagraphs is used') surface as a config error rather than an OOM.",
+  "status": "verified",
+  "confidence": 0.6,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-gfx906-discord-server-log"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "comm-gfx906-w8a8-int8-slower-than-gptq",
+  "type": "benchmark",
+  "name": "W8A8 int8 quantization on MI50 is 4-6x SLOWER than fp16/GPTQ, not faster, because it falls to a TritonScaledMMLinearKernel path and never engages the hardware INT8 path",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-radeon-instinct-mi50x"
+  ],
+  "interconnect_ids": [],
+  "model": "Qwen3-0.6B.w8a8",
+  "format_id": null,
+  "metric": "tps_aggregate",
+  "value": 10.81,
+  "unit": "tok/s (total token throughput)",
+  "methodology": "vLLM benchmark_serving.py, --dataset-name sharegpt, --num-prompt 32, --sonnet-input-len 512 --sonnet-output-len 128, --max-concurrency 1. vLLM 0.8.5 with V1 disabled ('rocm is experimental on VLLM_USE_V1=1. Falling back to V0 Engine'), PyTorch 2.7.0+rocm6.3, HIP 6.3.42131, MIOpen 3.3.0, gfx906:sramecc+:xnack-, Ubuntu 24.04.2, python 3.12.3, kernel 6.11. 32/32 requests succeeded. Output token throughput 5.26 tok/s; total token throughput 10.81 tok/s; mean TTFT 1727.72 ms; mean TPOT 183.26 ms; mean ITL 183.39 ms. Served tp1 with --max_model_len 8192 --gpu_memory_utilization 0.95, quantization=compressed-tensors, scheme CompressedTensorsW8A8Int8, kernel TritonScaledMMLinearKernel, attention via Triton FA in ROCmBackend, KV cache fp8 with Q and prob scale 1.0. Launch: vllm serve <model> --max_model_len 8192 -tp 1 --gpu_memory_utilization 0.95 --disable-log-requests --port 8040.",
+  "measured_by": "third_party",
+  "reproducible": null,
+  "notes": "COMMUNITY-REPORTED MEASUREMENT, and the strongest-sourced benchmark in this slice because it is a public GitHub issue carrying the full benchmark_serving.py output, the full startup log, and the exact environment. Two things make it more useful than the raw 10.81 tok/s: (1) the reporter's diagnostic observation that 'during the benchmark the GPU hasn't ever pulled more than 110W, and has mostly hanged around 80-100W, while with GPTQ models it easily pulls up to 190-200W' - a power-draw signature that distinguishes a path that is not engaging the hardware from one that is; (2) the explicit contrast in the issue title, that W8A8 'should in theory make use of the mi50's support for INT8 and thus actually improve pp and tg'. It does not, because compressed-tensors W8A8 routes to TritonScaledMMLinearKernel and gfx906 has no MFMA. The comparison point is 3.6-3.7 tok/s decode on 1x MI50 for Llama-2-7B w8a8 from the same fork's Discord benchmark tables (christopherlin, 2025-09-15, vllm 0.10.1_update1, --max-model-len 4096, output length 128) - the same order of magnitude, so this is a persistent property of the format on this hardware, not one bad run. Issue is locked and still open.",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-04",
+  "sources": [
+    "comm-nlzy-vllm-gfx906-issue-4-w8a8",
+    "comm-gfx906-discord-server-log"
+  ]
+}

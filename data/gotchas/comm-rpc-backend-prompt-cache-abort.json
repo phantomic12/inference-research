@@ -1,0 +1,28 @@
+{
+  "id": "comm-rpc-backend-prompt-cache-abort",
+  "name": "llama-server's prompt-cache save path aborts the whole process when the RPC backend is active, and it presents as a random crash under load",
+  "class": "framework",
+  "affects": [
+    "llama-cpp"
+  ],
+  "concepts": [
+    "rpc",
+    "prompt-cache",
+    "cache-ram",
+    "abort",
+    "split-mode"
+  ],
+  "symptom": "With `--rpc` set, the server starts fine, answers a short first request, then aborts the entire process on the first request large enough to make the slot's prompt eligible for prompt-cache save. The stack goes through `rpc_buffer_get_tensor`, which hits an abort inside the RPC backend. This is the worst kind of bug to diagnose because the crash is on request N+1, not at startup, so it reads as a load-dependent random crash.",
+  "root_cause": "The prompt-cache save path is enabled by default via `--cache-ram` and calls into `rpc_buffer_get_tensor`, which aborts rather than returning an error when the tensor is not retrievable over the RPC transport. Nothing gates the cache-save feature on backend capability, so the server does not decline to enable it or log that it cannot be used.",
+  "workaround": "Launch with `--cache-ram 0`. The reporter states the same 3-node setup then served multi-hour sessions without a crash. The reporter's own suggested upstream fix is better than the workaround: gate cache-save on backend capability, or make `rpc_buffer_get_tensor` failures non-fatal for the cache path specifically, so the server logs and continues rather than aborting mid-service.",
+  "severity": "major",
+  "notes": "REPORTER COUNT: ONE - ClosedLadder, and the thread has a single comment. Labelled a single report. It is credible because it is deterministic and reproducible on demand with a full command line and build hash (build 11924d4c1, GNU 13.3.0, Linux aarch64, 3x NVIDIA GB10 DGX Spark, Qwen3-235B-A22B-Instruct-2507 Q6_K split across 4 shards, --tensor-split 45,40,15 -ngl 999 --split-mode layer -fit off, -c 65536). The reporter offers to attach the abort log. Worth recording anyway because RPC is the standard workaround for the P2P ban and this is a landmine on that path. Related RPC fragility from a different reporter: stew675 (llama.cpp #21006, 11 comments) found that after PR #20908, `--tensor-split` across two remote rpc-servers loads the model only on the workers and nothing on the local machine, and the workers answer 'Remote RPC server crashed or returned malformed response' without actually having crashed; b8487 worked, b8492 onward did not. So: verify what landed where before blaming your network.",
+  "status": "draft",
+  "confidence": 0.65,
+  "sources": [
+    "comm-github-llamacpp-26529-rpc-prompt-cache-abort",
+    "comm-github-llamacpp-21006-rpc-tensor-split-regression"
+  ],
+  "type": "gotcha",
+  "updated": "2026-10-04"
+}
