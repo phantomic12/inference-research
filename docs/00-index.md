@@ -262,7 +262,7 @@
 - **llama.cpp MMQ: INT8 activation quantization with per-arch tile configs, no tensor cores** (`flops/llamacpp-mmq-int8-dp4a-gemm`) — memory bound · A different answer to the same problem, and the reason llama.cpp's quantized numbers are not comparable to Marlin's or Machete's. MMQ quantizes the ACTIVATIONS to q8_1 blocks of 32 elements and performs the dot product in INT8 accumulating to INT32, using DP4A where available. So the multiply-accumulates are integer SIMT instructions, not tensor-core MMAs - the FLOP:byte ratio the tensor cores exploit is not available at all. It buys portability: per-arch config headers exist for Ampere, Blackwell, CDNA, GCN, RDNA2/3/4/5 and Pascal (DP4A), the block size is a fixed 32 with three different scale/data layouts, MMQ_ITER_K is 256 (512 for FP4) and MMQ_NWARPS is 8. Notably, DP4A is used only while fp16 tensor cores are unavailable or the batch is small (MMQ_DP4A_MAX_BATCH_SIZE 64), which is itself a tensor-core-adjacent threshold.
 - **oneDNN Graph API and IPEX Fusion for Transformer Inference** (`flops/xpu-onednn-graph-fusion`) — memory bound
 
-## Inference engines (103)
+## Inference engines (113)
 
 - **AirLLM** (`engines/niche-airllm`) — cuda, cpu, metal · Answering 'can this model run on this GPU' when the answer is technically yes but practically miserable - a 70B on a 4GB card is a real capability that no other engine in this repo offers; Demonstrati
 - **Android NNAPI (vendor-neutral on-device acceleration API)** (`engines/niche-android-nnapi`) — nnapi (cpu/gpu/npu via vendor drivers) · Understanding WHY the on-device Android ecosystem looks the way it does - NNAPI's retirement is the reason GPU and XNNPACK delegates are the current story; Reading the historical path from a vendor-ne
@@ -277,6 +277,7 @@
 - **DistServe (research prototype)** (`engines/distserve`) — cuda · Studying the disaggregation cost model: the paper is the cleanest statement of why colocating the phases couples two different bottlenecks, and of why placement must be bandwidth-aware; Reading rather
 - **EAGLE (EAGLE-1/2/3 speculative decoding)** (`engines/niche-eagle`) — cuda · Reading the reference implementation of the speculative-decoding technique that the field actually standardised on; Understanding why feature-level drafting beats token-level drafting, and what traini
 - **EleutherAI lm-evaluation-harness** (`engines/lm-eval-harness`) — none · comparable downstream accuracy numbers across quantization formats
+- **Envoy AI Gateway (now Agent Router)** (`engines/envoy-ai-gateway`) — none (gateway layer - L7 proxy plus an external-processing extension; does not load weights) · Kubernetes-native serving wanting model-aware routing, per-token quota and observability in one hop; Clusters already running Gateway API, Envoy Gateway, kgateway or GKE Gateway - the ext-proc integra
 - **ExLlamaV2** (`engines/exllamav2`) — cuda · Getting a very large model into a single consumer NVIDIA GPU card — EXL2's variable-bpwinth trick is the whole point.; Single-user local interactive use where decode tok/s on one card is what matters.
 - **ExLlamaV3** (`engines/exllamav3`) — cuda, cpu-avx512, cpu-avx2 · Current-generation NVIDIA consumer cards: best-quality low-bit quants plus explicit MoE expert/tensor parallelism for machines that are not a datacenter.; Fitting a large MoE model into a single card 
 - **ExecuTorch** (`engines/local-executorch`) — cpu, coreml, nnapi, qnn, vulkan, xnnpack · PyTorch users who want to deploy models on-device without leaving the PyTorch ecosystem; Android apps using NNAPI or QNN for hardware acceleration; iOS apps using CoreML for Neural Engine acceleration
@@ -299,6 +300,7 @@
 - **KoboldCpp** (`engines/koboldcpp`) — cuda, rocm, hip, vulkan, metal, cpu-avx512, cpu-avx2, arm64-neon · Roleplay, creative writing, and story workflows — the bundled KoboldAI Lite UI is built for it and nothing else is this complete.; A single-user home box that should do text, images, speech, and music
 - **LMCache** (`engines/lmcache`) — cuda, rocm, npu · Long-context agentic, multi-turn and RAG workloads where TTFT is dominated by repeated prefill of a shared prefix; Fleets serving the same corpus across multiple engines or replicas, where a shared KV
 - **LMDeploy (TurboMind)** (`engines/niche-lmdeploy-turbomind`) — cuda, cpu · Deployment if you are in the InternLM/Qwen ecosystem, where this is the best-tuned option and the model support is first-class; Compression-forward serving: AWQ, MXFP4 and KV-cache quantization are su
+- **LMDeploy (observability surface: near-copy of vLLM's metric set, no preemption metric, no OTel)** (`engines/obs-lmdeploy-observability`) — cuda, rocm, camb, maca, ascend · A Turbomind or PyTorch deployment where you want vLLM-shaped metrics without running vLLM, including the shipped Grafana dashboard; Prefix-cache analysis: the per-request cached-token histogram and ca
 - **Lemonade** (`engines/lemonade`) — cpu-avx512, cpu-avx2, cuda, rocm, hip, vulkan, metal, npu · AMD Ryzen AI / Strix Halo machines, where it is the most complete story available for NPU plus iGPU plus dGPU in one server.; One server for text, images, video, speech-to-text, TTS, audio and even 3D
 - **LightLLM** (`engines/niche-lightllm`) — cuda, rocm · Reading how a serving framework is built when the whole thing is Python and the kernels are Triton - the fastest way to understand paged KV, continuous batching and prefix caching as readable code; St
 - **LiteLLM** (`engines/litellm`) — none (proxy layer - no local compute backend of its own) · One API key and one billing surface across many cloud providers.; Fallback and load balancing across heterogeneous deployments — including a local llama.cpp or vLLM box as one target among cloud provi
@@ -318,13 +320,16 @@
 - **ONNX Runtime GenAI** (`engines/onnxruntime-genai`) — cpu-avx512, cpu-avx2, cuda, directml, openvino, qnn, webgpu, amd-gpu, tensorrt-rtx, arm64-neon · ONNX-first teams and Windows/Foundry Local users who want a supported, vendor-backed path rather than a hobby project.; NPUs and other accelerators that only ONNX Runtime targets: QNN for Qualcomm, Di
 - **ONNX Runtime Mobile** (`engines/local-onnxruntime-mobile`) — cpu, nnapi, coreml, xnnpack, qnn · Deploying ONNX models to Android and iOS apps with a single runtime; Cross-platform mobile inference where ONNX is the interchange format; Qualcomm devices with QNN backend for NPU acceleration; iOS d
 - **Ollama** (`engines/ollama`) — cuda, rocm, hip, metal, vulkan, cpu-avx512, cpu-avx2, arm64-neon · Getting from 'I want to run this model' to a working API in one command — nothing else in this list is this easy.; Single-user laptop and desktop chat across mixed hardware, including machines with no
+- **Ollama (observability surface: none - no /metrics endpoint, no tracing, per-response timing only)** (`engines/obs-ollama-observability`) — cuda, rocm, metal, vulkan, cpu-avx512, cpu-avx2 · Local and laptop use, where 'ollama ps' answering 'what is loaded and how much VRAM' is the entire operational question; A deployment where an external sidecar does the instrumentation - the third-par
 - **OpenAI Whisper (reference implementation)** (`engines/openai-whisper`) — cuda, cpu-avx512, cpu-avx2 · Research and accuracy comparisons; Understanding the reference algorithm; Fine-tuning and experimentation
 - **OpenVINO GenAI** (`engines/openvino-genai`) — cpu-avx512, cpu-avx2, intel-gpu, npu · Intel Xeon, Core Ultra and Arc hardware where you want a vendor-supported engine rather than a community fork.; Intel NPU deployment — this is one of the few engines with a first-class NPU story along
 - **Outlines** (`engines/niche-outlines`) — cuda, rocm, metal, cpu · Rapid prototyping of schema-constrained generation, especially when you want to iterate on the constraint in Python without touching a C++ build; Local model work where you control the host process an
+- **Portkey AI Gateway** (`engines/portkey-ai-gateway`) — none (gateway layer - forwards to any OpenAI-compatible or native provider endpoint) · Multi-provider fleets where the routing decision is commercial rather than technical - cost split, canary rollout, or spreading across per-account provider rate limits; Teams wanting one endpoint and 
 - **Qdrant FastEmbed** (`engines/qdrant-fastembed`) — onnxruntime, cuda · Ingest pipelines and one-off batch embedding where there is no server to run - CI, notebooks, ETL, Lambda.; CPU-only or constrained environments where pulling in PyTorch is unacceptable; the dependenc
 - **Ray Serve** (`engines/niche-ray-serve`) — none (orchestration layer - drives any Python callable) · Multi-model serving with complex composition (e.g., LLM + reranker + guardrail); Teams already using Ray for training who want to use the same framework for serving; Python-heavy inference pipelines t
 - **RouteLLM (LMSYS LLM router)** (`engines/niche-routellm`) — api-only (proxies to external providers) · A workload with a long tail of easy prompts where a router can send most traffic to a small model - this is the canonical use case and the reason the project has 5568 stars; Cutting inference spend wi
 - **SGLang** (`engines/sglang`) — cuda, rocm, metal, xpu, tpu, cpu-avx512 · Agentic and RL workloads where many requests share long, branching context - the radix cache reuses partial prefixes, not just exact ones; Serving latency-sensitive multi-turn conversation, because pr
+- **SGLang (observability surface: Prometheus metrics + OpenTelemetry with per-stage slices)** (`engines/obs-sglang-observability`) — cuda, rocm, metal, xpu, tpu, cpu-avx512 · Reading a disaggregated prefill/decode deployment: `sglang:kv_transfer_speed_gb_s`, `sglang:kv_transfer_latency_ms`, `sglang:kv_transfer_bootstrap_ms`, `sglang:kv_transfer_alloc_ms`, `sglang:kv_transf
 - **SGLang Router (sgl-router)** (`engines/sglang-router`) — none (routing layer - drives SGLang engine instances) · Multi-model SGLang serving where requests should route to the model with the best cache hit; Data parallel SGLang deployments needing load balancing across workers; Agentic workloads with long shared 
 - **Semi-PD (research prototype)** (`engines/semi-pd`) — cuda, rocm · Single-node disaggregation where the interconnect is too slow to make a KV handoff pay - the shared-memory design makes the transfer cost zero by construction; Studying the alternative to the copy: if
 - **Sentence Transformers** (`engines/sentence-transformers`) — cuda, rocm, cpu, onnx, openvino · The correctness baseline: if you want to know what a model's real embedding quality is, this is the implementation the leaderboards measure.; Training and fine-tuning embedding, reranker, sparse or mu
@@ -335,12 +340,15 @@
 - **SynapseAI / SynapseAI Core (Habana's Gaudi compiler and runtime)** (`engines/xpu-synapseai`) — intel-gaudi-hpu, first-gen-gaudi, gaudi2 · Understanding what Gaudi's graph-based execution model actually consists of, from the layer names down (driver, hl-thunk, TPC LLVM, Synapse Backend) rather than from marketing; Learning the TPC/MME en
 - **TT-Metal / TT-NN (Tenstorrent)** (`engines/niche-tt-metal`) — tenstorrent-wormhole, tenstorrent-blackhole, tenstorrent-grayskull · Deploying on Tenstorrent Wormhole or Blackhole, where this plus the vLLM plugin is the only real path; Learning a non-CUDA kernel programming model - TT-Metalium is the clearest existing example of a 
 - **TensorRT-LLM** (`engines/tensorrt-llm`) — cuda · Maximum throughput on a fixed NVIDIA fleet, especially MoE models where expert parallelism and load balancing are the bottleneck; Deployments that can afford a build-time/version-lock step in exchange
+- **TensorRT-LLM (observability surface: Prometheus metrics + OpenTelemetry)** (`engines/obs-tensorrt-llm-observability`) — cuda · An NVIDIA-only fleet where you want vLLM-compatible metric semantics with TensorRT-LLM's extra inflight-batching and multi-tier KV counters; Measuring multi-tier KV offload (GPU/host/disk), where `trt
 - **Text Embeddings Inference (TEI)** (`engines/niche-text-embeddings-inference`) — cuda, rocm, cpu, metal · Serving embeddings and rerankers in production, especially where the vector DB is the bottleneck and embedding throughput is the real constraint; Serverless or autoscaling deployments, because no grap
 - **Text Generation Inference** (`engines/text-generation-inference`) — cuda, rocm, xpu, npu-gaudi, cpu-avx512 · Reading how a production HF serving stack was put together, as a historical reference; Existing deployments that have not yet migrated off it
+- **Text Generation Inference (observability surface: no TTFT, no KV cache usage, no tracing spans of its own)** (`engines/obs-tgi-observability`) — cuda, rocm, neuron · Comparing prefill and decode batch cost directly, because the batch histograms carry a method label no other engine provides at that granularity; Existing TGI deployments where you accept queue time +
 - **TinyChat (AWQ on-device runtime)** (`engines/tinychat-awq`) — cuda · single-stream on-device generation on consumer GPUs and ARM CPUs
 - **TorchServe (PyTorch Serve)** (`engines/niche-torchserve`) — cuda, rocm, cpu, mps (via torch) · Understanding how general (non-LLM) model serving was done in the pre-LLM era, and why the Kubernetes-first design led to KServe; Learning the model-archiving pattern (.mar files, torch-model-archiver
 - **Triton Inference Server** (`engines/niche-triton-inference-server`) — cuda, tensorrt, onnx, openvino, python, cpu, inferentia · Serving a portfolio of many different models from many different frameworks behind one HTTP/gRPC contract - Triton's actual design target; Non-LLM workloads at scale: vision, speech, recommendation, c
 - **Triton Inference Server** (`engines/triton-inference-server`) — cuda, tensorrt, onnxruntime, openvino, pytorch, rapids-fil, inferentia, cpu · Organisations already standardised on Triton who need embedding and rerank served alongside everything else, with one operational surface and one observability stack.; Full RAG serving pipelines: embe
+- **Triton Inference Server (observability surface: request-shaped core metrics, LLM metrics only if a backend registers them)** (`engines/obs-triton-observability`) — cuda, rocm, cpu, inferentia · Serving many different model types behind one endpoint where a uniform request-level metric set matters more than LLM-specific insight; Tracing an ensemble or BLS request end to end, since each compos
 - **WebAssembly (WASM) inference** (`engines/local-wasm`) — wasm-simd, wasm-threads · Cross-platform inference in browsers and standalone runtimes; Server-side inference with WASM sandboxing (Wasmtime, WasmEdge); Applications requiring near-native performance without native compilation
 - **WebGPU (in-browser inference)** (`engines/local-webgpu`) — webgpu, wasm-simd · Zero-install LLM inference in the browser; Web applications that need local inference without server dependency; Cross-platform deployment (Windows, macOS, Linux, ChromeOS) via browser; Small models (
 - **WebLLM** (`engines/niche-webllm`) — webgpu, wasm, cpu · Client-side inference where the data must not leave the device - the actual reason this exists and the one thing nothing else does; Zero-ops prototypes and demos: no API key, no server, no cost, works
@@ -352,6 +360,7 @@
 - **ik_llama.cpp** (`engines/ik-llama-cpp`) — cpu-avx512, cpu-avx2, cuda, arm64-neon · Maximum decode speed on a modern x86 CPU, especially AVX-512 parts (Zen4, Sapphire Rapids+) built with the documented flags.; Sub-4-bit quality-preserving quants on consumer hardware — the reason to p
 - **llama.cpp** (`engines/llama-cpp`) — cuda, hip, metal, vulkan, opencl, cpu-avx512, cpu-avx2, webgpu, openvino · Running a quantized GGUF on whatever GPU you happen to own, including GPUs with no vendor compute SDK; Single-user or small-group local serving where install simplicity and low memory use matter more 
 - **llama.cpp embedding and rerank server paths** (`engines/llama-cpp-embedding-server`) — cuda, metal, vulkan, cpu, hip, sycl · Serving an embedding model in GGUF alongside LLMs in one binary, one API surface and one deployment.; Edge, desktop and Apple Silicon retrieval where GGUF weights and a single static binary are the co
+- **llama.cpp server (observability surface: 14 hand-built Prometheus metrics, off by default, no OTel)** (`engines/obs-llama-cpp-observability`) — cpu-avx2, cpu-avx512, cuda, metal, vulkan, hip, rpc · A local or edge deployment where you want to know it is doing work at all: tokens processed, decode calls made, slots busy; Single-process monitoring without a Prometheus dependency - the output is pl
 - **llamafile** (`engines/llamafile`) — cpu-avx512, cpu-avx2, cuda, rocm, hip, metal, vulkan, arm64-neon · Handing someone a model with zero install friction: email one file, they double-click it.; Air-gapped, edge, kiosk, or locked-down machines where you cannot install a Python or CUDA stack.; Ship a com
 - **llm-d** (`engines/llm-d`) — cuda, rocm · Kubernetes production serving where PD disaggregation and tiered KV need to be operated rather than hand-rolled; Shops that want disaggregation without betting on a single vendor's stack, given the CN
 - **llm.c** (`engines/niche-llm-c`) — cuda, cpu-avx2 · Understanding exactly what a transformer forward and backward pass costs, line by line, with nothing hidden behind a framework; Learning CUDA GEMM and attention kernel structure by reading a complete,
@@ -359,6 +368,7 @@
 - **mistral.rs** (`engines/mistral-rs`) — cuda, metal, cpu-avx512, cpu-avx2 · A single Rust binary with OpenAI plus Anthropic API parity and a built-in web UI; Mixed text/vision/video/audio workloads in one process; Embedders that want an inference engine as a library with both
 - **ncnn (Tencent)** (`engines/local-ncnn`) — cpu, vulkan, opencl · Android apps requiring Vulkan GPU acceleration with minimal dependencies; Mobile vision models (detection, segmentation, face recognition); Embedded Linux devices with Vulkan support; Applications whe
 - **vLLM** (`engines/vllm`) — cuda, rocm, xpu, metal, cpu-avx512 · Multi-user servers with high request concurrency, where continuous batching plus paged KV is what actually buys throughput; Workloads with heavy shared prefixes (long documents queried repeatedly, mul
+- **vLLM (observability surface: Prometheus metrics + OpenTelemetry)** (`engines/obs-vllm-observability`) — cuda, rocm, xpu, metal, cpu-avx512 · Anyone who needs to build an SLO on TTFT or TPOT and defend it, because the histogram buckets, the definitions and the deprecation story are all documented; Capacity planning and autoscaling: running/
 - **vLLM Ascend (Huawei Ascend NPU hardware plugin)** (`engines/niche-vllm-ascend`) — npu, ascend-cann · Running vLLM on Huawei Ascend NPUs, full stop - there is no realistic alternative at this feature level; Studying how a hardware vendor's ecosystem gets supported without forking the serving framework
 - **vLLM Hardware Plugin for Intel Gaudi (vllm-gaudi)** (`engines/vllm-gaudi`) — intel-gaudi-hpu · Serving on Gaudi 2 or Gaudi 3 where vLLM's scheduler and paged KV semantics are wanted but CUDA kernels are unavailable; Intel shops that already standardised on vLLM's OpenAI-compatible API and want 
 - **vLLM Production Stack** (`engines/niche-vllm-production-stack`) — cuda, rocm · Deploying vLLM to Kubernetes in a way that survives contact with a real traffic pattern - this is the maintained reference and it beats hand-rolled manifests; Multi-model serving where requests should
@@ -524,7 +534,7 @@
 - **AMD Infinity Fabric scale-up link (CDNA4: 153.6 GB/s per direction, 20% faster)** (`interconnect/amd-infinity-fabric-link-cdna4`) — 153.6 GB/s · Fully connected 8-GPU mesh (each GPU connects to 7 others). No switch. 7 links per GPU for GPU-to-GPU communication. Identical topology to CDNA3. The MI355X product page lists 'Infinity Fabric Links: 7' and 'Peak Infinity Fabric Link Bandwidth: 153 GB/s' (rounded). Scale-out link: 128 GB/s (unchanged from CDNA3).
 - **AMD xGMI (Socket/Inter-Chip Global Memory Interconnect)** (`interconnect/amd-xgmi`) — 50 GB/s · Point-to-point, no switch part. TWO distinct roles, and this is the part that is routinely misread: (1) DIE-TO-DIE, inside one package - on MI250X the two GCDs of one OAM module are joined by FOUR xGMI/Infinity Fabric links, which AMD gives as 4 x 25 GT/sec = 200 GB/sec peak transfer between the two GCDs, or 400 GB/sec bidirectional for the same; (2) DIE-TO-DEVICE, between accelerators - on MI210 (PCIe cards) xGMI is exposed through direct-connect xGMI BRIDGE CARDS in adjacent PCIe slots, giving dual and quad GPU hives, whereas the MI250X/MI250 OAM modules carry 8 links natively. On a multi-OAM MI300X node AMD's own architecture reference states the accelerator-side count is SEVEN Infinity Fabric links, used 'to form a fully connected 8-GPU system' - but the MI300X product page board table says 'Infinity Fabric Links: 8'. That is a real disagreement between two first-party AMD sources, not a typo: seven links is the minimum needed to make 8 nodes fully connected (each node needs a link to each of the other 7), so the board-table 8 is most likely counting an extra link of a different role (host or scale-out) rather than a mesh edge. Both figures are retained here; the typed link_count field carries the die-to-die value of 4 for MI250X, which is where this record's per-link rate is sourced. On CDNA3/MI300 the die-to-die topology is also a full mesh over up to 8 vertically stacked XCDs plus 4 I/O dies, so an MI300X is internally a single 8-way domain, not two halves.
 
-## Benchmarks (143)
+## Benchmarks (150)
 
 - **16GB VRAM: Llama 3.1 8B Q8_0 decode tokens/sec** (`benchmarks/local-16gb-13b-q4-decode`) — 40.0 tokens/sec · Llama 3.1 8B on ? via llama-cpp
 - **24GB VRAM: Llama 3.1 8B Q8_0 decode tokens/sec** (`benchmarks/local-24gb-13b-q8-decode`) — 50.0 tokens/sec · Llama 3.1 8B on ? via llama-cpp
@@ -633,7 +643,11 @@
 - **RTX 5090: Qwen3 32B Q4_K_M decode tokens/sec** (`benchmarks/local-rtx-5090-32b-q4-decode`) — 85.0 tokens/sec · Qwen3 32B on nvidia-rtx-5090 via llama-cpp
 - **RTX PRO 6000 Blackwell (96GB): Llama 3.3 70B Q8_0 decode tokens/sec** (`benchmarks/local-rtx-pro-6000-70b-q8-decode`) — 55.0 tokens/sec · Llama 3.3 70B on nvidia-rtx-pro-6000-blackwell via llama-cpp
 - **SGLang Chunked PP: DeepSeek-V3.1 prefill throughput 3.31x with PP4 TP8 vs TP8 on H20** (`benchmarks/sglang-pp-deepseek-v31-prefill-throughput-128k`) — 3.31 x speedup (prefill throughput ratio, PP4 TP8 vs TP8, batch size 1) · DeepSeek-V3.1 on nvidia-h20 via sglang
+- **SGLang DSPARK speculative decoding A/B on DeepSeek-V4.1-Flash, 8x RTX PRO 6000: 76.5-78.9 vs 36.4-36.5 tok/s on prose at block_size=2** (`benchmarks/ev-sglang-dspark-spec-decoding-2x-decode-ab`) — 77.7 tok/s decode, single stream, DSPARK block_size=2, prose prompts, mid-point of the 76.5-78.9 range the source reports · DeepSeek-V4.1-Flash on nvidia-rtx-pro-6000-blackwell via sglang
+- **SGLang on 8x RTX PRO 6000: prefix-cache hit on a 112K-token shared prefix serves in 0.34 s, ~39x the cold prefill rate** (`benchmarks/ev-sglang-dsv41-prefix-cache-hit-prefill-speedup`) — 325000.0 tok/s prefill equivalent on a cache HIT (112,000-token prefix served from cache in 0.34 s) · DeepSeek-V4.1-Flash on nvidia-rtx-pro-6000-blackwell via sglang
 - **SGLang on GB300 NVL72: DeepSeek-R1-NVFP4 TTFT 8.6s at 128K/8K ISL/OSL with dynamic chunking** (`benchmarks/sglang-gb300-deepseek-r1-ttft-128k`) — 8600 ms (TTFT, 128K input, 8K output, PD disaggregation, chunked PP, dynamic chunking) · DeepSeek-R1 (NVFP4) on nvidia-b300 via sglang
+- **SGLang serving DeepSeek-V4.1-Flash in production on 8x RTX PRO 6000: 128K cold prefill throughput at chunked_prefill_size=2048** (`benchmarks/ev-sglang-dsv41-production-128k-prefill-tps`) — 6853.0 tok/s prefill (single stream, tokens counted from the response `usage` field, not SSE chunk counts) · DeepSeek-V4.1-Flash (V4.1 vision path, MXFP4 experts) on nvidia-rtx-pro-6000-blackwell via sglang
+- **SGLang serving DeepSeek-V4.1-Flash in production on 8x RTX PRO 6000: single-stream decode throughput, prose vs structured output** (`benchmarks/ev-sglang-dsv41-production-decode-tok-s-per-user`) — 93.9 tok/s decode, single stream (one user at a time) · DeepSeek-V4.1-Flash on nvidia-rtx-pro-6000-blackwell via sglang
 - **SGLang: DeepSeek 671B PD-disaggregated + large-scale EP on GB200 NVL72, 7583 decode tokens/s per GPU** (`benchmarks/sglang-deepseek-v3-gb200-nvl72-decode-tps-per-gpu`) — 7583 decode tokens/s per GPU (aggregate decode throughput per GPU across the rack) · DeepSeek-V3 (671B MoE, FP8) on nvidia-gb200-nvl72 via sglang
 - **SGLang: DeepSeek-V3 671B FP8 on 96x H100 with PD disaggregation + large-scale EP, 22300 output tokens/s per node** (`benchmarks/sglang-deepseek-v3-96xh100-output-tps-per-node`) — 22300 output (decode) tokens/s per 8-GPU node (aggregate) · DeepSeek-V3 (671B MoE, FP8) on nvidia-h100-sxm via sglang
 - **Sharding model weights across cards instead of keeping them host-resident more than doubles both prefill and decode on 4x MI50, at ~7 GB extra VRAM per card** (`benchmarks/comm-mi50-4x-qwen38-pleshard-shard-vs-host`) — 501.2 tok/s · Qwen3.8-Flash-Next UD-Q4_K_XL on amd-radeon-instinct-mi50x via llama-cpp
@@ -659,28 +673,37 @@
 - **llama.cpp on 8xMI300X: DeepSeek-V3 671B Q4_K_M decode throughput at batch 1, 256 generated tokens** (`benchmarks/llama-cpp-mi300x-deepseek-v3-671b-q4-decode-tok-s`) — 36.53 tok/s (tg256, per-request, batch 1, all layers on GPU) · DeepSeek-V3 671B (Q4_K_M, 376.65 GiB) on amd-instinct-mi300x via llama-cpp
 - **llama.cpp on 8xMI300X: DeepSeek-V3 671B Q4_K_M prompt processing at 512-token prompts** (`benchmarks/llama-cpp-mi300x-deepseek-v3-671b-q4-prefill-tok-s`) — 439.14 tok/s (pp512, aggregate prompt processing) · DeepSeek-V3 671B (Q4_K_M, 376.65 GiB) on amd-instinct-mi300x via llama-cpp
 - **llama.cpp on Radeon AI PRO R9700 (gfx1201, RDNA4): Bonsai-27B Q1_0 decode throughput, batch 1** (`benchmarks/llamacpp-radeon-r9700-gfx1201-q1-0-decode-tok-s`) — 61.66 tok/s (tg64, mean of two interleaved runs: 61.97 and 61.34) · Bonsai-27B (Q1_0, 3.53 GiB) on amd-radeon-ai-pro-r9700 via llama-cpp
+- **llama.cpp speculative decoding: a repeated-prompt benchmark protocol reads 9.5x-16.9x HIGH tok/s versus varied-prompt traffic on identical settings** (`benchmarks/ev-llamacpp-spec-bench-replay-inflates`) — 13.4 x MULTIPLE of the true steady-state tok/s, from repeating the SAME prompt instead of varied prompts (range 9.5x-16.9x; 13.4 recorded as the approximate midpoint of the reported range) · Qwen3-8B Q4_K_M + Qwen3-0.6B Q8_0 draft model on ? via llama-cpp
 - **llama.cpp under ROCm on 2x RX 7900 XTX (gfx1100): Qwen3.8-27B Q4_K_XL batch-1 tensor-split decode throughput** (`benchmarks/llamacpp-rx7900xtx-gfx1100-qwen3-27b-q4-batch1-decode-tok-s`) — 47.06 tok/s (batch-1 tensor-split decode across 2 cards) · Qwen3.8-27B (Q4_K_XL, 17.545 GB) on amd-radeon-rx-7900-xtx via llama-cpp
 - **vLLM 0.20 TTFT for Qwen3.5-9B at 32K-256K context (dense FA2, chunk 4K)** (`benchmarks/vllm-qwen35-9b-ttft-32k-256k`) — 2944 ms (TTFT, dense, 32K context, cold cache) · Qwen3.5-9B (distilled indexer) on ? via vllm
 - **vLLM 0.26.0 TTFT for Command A W4A4 (218B MoE) at 512-128K context on 2xH100** (`benchmarks/vllm-command-a-w4a4-ttft-512-128k`) — 16800 ms (TTFT p50, single-request, 128K context, cold cache) · CohereLabs/command-a-plus-05-2026-w4a4 (218B total / 25B active MoE, NVFP4 experts) on nvidia-h100-sxm via vllm
 - **vLLM 0.26.0 prefill throughput for Command A W4A4 at 512-128K context on 2xH100** (`benchmarks/vllm-command-a-w4a4-prefill-tok-s-512-128k`) — 8080 tok/s (saturated prefill, 128K context, B=3, cold cache) · CohereLabs/command-a-plus-05-2026-w4a4 (218B total / 25B active MoE, NVFP4 experts) on nvidia-h100-sxm via vllm
 - **vLLM batch invariance is beta and its hardware support is bounded: NVIDIA compute capability 8.0+ and Intel XPU with Triton backend only - no ROCm/HIP, Metal, TPU or CPU claim** (`benchmarks/vllm-batch-invariance-hardware-support-scope-cc80-and-xpu-triton`) — 80.0 minimum NVIDIA compute capability (8.0) for which batch invariance is supported; the enum has no determinism-support metric so 'quality' is a placeholder · None on ? via vllm
+- **vLLM bring-up of DeepSeek-V4.1-Flash on 8x RTX PRO 6000: 4584 tok/s prefill on the pure-torch eager fallback path at 1M context** (`benchmarks/ev-vllm-dsv41-production-128k-prefill-tps-eager`) — 4584.0 tok/s prefill, eager mode, pure-torch logits path (NOT the optimized CUDA-graph production path) · DeepSeek-V4.1-Flash (769B total, MXFP4 experts, Engram memory) on nvidia-rtx-pro-6000-blackwell via vllm
 - **vLLM disaggregated PD serving: Qwen3.5-397B-A17B-NVFP4 on GB200 NVL72, 25K total TPS per GPU** (`benchmarks/vllm-qwen35-nvfp4-gb200-nvl72-tps-per-gpu`) — 25000 total tokens/s per GPU (aggregate across the rack) · Qwen3.5-397B-A17B-NVFP4 on nvidia-gb200-nvl72 via vllm
 - **vLLM disaggregated PD serving: Qwen3.8-2.4T-A95B NVFP4 on GB300 NVL72, 180 generated tokens/s per user** (`benchmarks/vllm-qwen38-nvfp4-gb300-nvl72-interactivity`) — 180 generated tokens/s per user · Qwen3.8-2.4T-A95B-NVFP4 on nvidia-b300 via vllm
 - **vLLM disaggregated PD serving: Qwen3.8-2.4T-A95B NVFP4 on GB300 NVL72, 5000 total TPS per GPU** (`benchmarks/vllm-qwen38-nvfp4-gb300-nvl72-tps-per-gpu`) — 5000 total tokens/s per GPU (aggregate across the cluster) · Qwen3.8-2.4T-A95B-NVFP4 on nvidia-b300 via vllm
 - **vLLM on single MI300X: Meta-Llama-3-8B-Instruct FP16 end-to-end latency, 512 input / 512 output, ROCm 6.2 untuned baseline** (`benchmarks/vllm-mi300x-llama3-8b-fp16-latency-512in-512out`) — 4600 ms (average end-to-end latency; source says 'over 4.60 seconds') · Meta-Llama-3-8B-Instruct on amd-instinct-mi300x via vllm
+- **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (231)
+## Gotchas (310)
 
+- **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] config · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
 - **A cache hit produces different output than a cold run, with no error anywhere in the stack** (`gotchas/pd-cache-hit-silently-differs-from-cold-run`) — [blocker] framework · The disaggregated deployment looks completely healthy and still returns wrong text. Both vLLM servers start, return HTTP 200, stay healthy after the requests, report that LMCache P/D mode is enabled, 
 - **A dropped KV-transfer completion notification hangs the receiver forever at 100% CPU instead of erroring** (`gotchas/pd-completion-notification-drop-hangs-receiver`) — [blocker] framework · The decode (GEN) worker goes silent after model init with no error and no crash. The stack sits in check_gen_transfer_status, the GPU is idle, and the process spins at 100% CPU. Reproduced 100% of the
 - **A failed RDMA KV transfer is reported as success: HTTP 200, valid envelope, garbage tokens** (`gotchas/pd-rdma-transfer-failure-returns-http-200-garbage`) — [blocker] hardware · On a disaggregated vLLM deployment over InfiniBand, the served model returns garbage tokens with no error at all: 'The request returns HTTP 200 with a well-formed OpenAI response envelope, populated u
 - **A model's advertised context window is a license, not a capability: the gap runs 2x to 256x and nobody publishes the ratio** (`gotchas/ctx-gotcha-claimed-vs-effective-context-gap`) — [blocker] measurement · A model loads, accepts a long prompt, and returns fluent text that is wrong. No error, no truncation warning, no OOM - just a confidently incorrect answer about something that was in the prompt. The s
 - **A persistent per-pod /dev/shm converts one scheduler crash into a permanent crashloop, because a container restart does not reclaim leaked segments** (`gotchas/mgpu-devshm-leak-wedges-pod-permanently`) — [blocker] framework · Measured fleet-wide on ~700 H20 GPUs with TP4 pods: a single traffic burst produced scheduler crashes, and affected pods went from 4 to 101 in about 30 minutes with none recovering without pod deletio
 - **A tensor-parallel size that does not divide the model's attention-head count fails at startup, and the message does not tell you what to use instead** (`gotchas/mgpu-tp-size-must-divide-attention-heads`) — [blocker] config · Serving a model with --tensor-parallel-size N raises at config validation. The vLLM string is: 'Total number of attention heads (40) must be divisible by tensor parallel size (6)' (reported verbatim o
+- **A vLLM SIGTERM aborts every in-flight request by default — a rolling update fails requests that were seconds from completing, with no error unless you set --shutdown-timeout** (`gotchas/ops-restart-aborts-in-flight-by-default`) — [blocker] config · Every rolling update or scale-down fails a batch of in-flight requests. The failures land as error-status responses to clients mid-generation, typically on the pods being replaced, and cluster-level e
 - **An FP8 KV cache write path in Python is graph-unsafe and silently corrupts attention under CUDA graphs while --enforce-eager looks fine** (`gotchas/fp8-kv-cache-cudagraph-python-scatter-corruption`) — [blocker] framework · 8x A800-80GB (SM80, no native FP8 tensor cores), TP=8, MiniMax-M3-AWQ-INT4 (weight-only int4), launched with --kv-cache-dtype fp8_e5m2 --max-model-len 1048576 --attention-backend TRITON_ATTN --block-s
+- **An engine-core worker death loses every in-flight request — there is no retry, no replication and no request log; the client gets a bare error with no indication the work was partially done** (`gotchas/ops-inflight-requests-are-lost-not-retried`) — [blocker] config · A worker dies and every request it was serving fails at once, with no retry and no failover: the client receives a connection or 5xx error even though other healthy replicas exist, and the work alread
 - **An engine-side KV layout change silently invalidates every external KV cache written by the previous layout** (`gotchas/pd-packed-kv-layout-change-silently-breaks-external-caches`) — [blocker] framework · After upgrading vLLM to 0.26.0 with LMCache 0.5.2, a request served from the LMCache CPU tier produces different output than the same request computed from scratch, with no exception and no warning - 
+- **Automatic prefix caching turns KV-cache reuse into an API-visible timing oracle, and prefix hit/miss alone can reconstruct another user's prompt** (`gotchas/sec-kv-cache-timing-side-channel-reconstructs-private-prefixes`) — [blocker] framework · A cache hit is measurably faster than a cache miss. On a shared multi-tenant endpoint that latency difference is client-visible, and an attacker who controls their own queries can walk a victim's priv
 - **Benchmark contamination: if a model has seen the test set in training, the result is meaningless** (`gotchas/meth-benchmark-contamination-invalidates-results`) — [blocker] measurement · A model reports a benchmark score that looks impressive but is actually measuring memorization, not capability. The model's perplexity on the test set is artificially low because it has seen the exact
+- **Between two tenants sharing one vLLM process there is no isolation primitive at all - the granularity that exists is MIG, a container, or a process** (`gotchas/sec-tenant-isolation-granularity-is-process-or-mig-not-request`) — [blocker] hardware · A deployment describes itself as isolated between tenants. It authenticates every request and scopes every KV block correctly, and both statements are true, and neither means tenants are isolated from
+- **CPU- and GPU-utilisation-based autoscaling cannot see LLM serving load: an HPA on CPU never fires, and an HPA on GPU utilisation fires on a lightly loaded server** (`gotchas/ops-cpu-hpa-blind-to-llm-load`) — [blocker] config · A CPU-based HPA on a GPU inference Deployment sits pinned at its minimum replica count while requests queue and latency climbs, because the serving process is not CPU-bound — the frontend is idle wait
 - **CPU-based HPA autoscaling fails for LLM serving because load is not visible in request count** (`gotchas/serve-hpa-cpu-autoscaling-fails-llm`) — [blocker] config · HPA scales on CPU utilization, but LLM inference is GPU-bound and CPU utilization stays low even when the GPU is saturated. A single request can hold a GPU for minutes during decode, so request count 
 - **Cold start cost of loading a model makes reactive autoscaling structurally late** (`gotchas/serve-cold-start-model-loading-blocks-autoscaling`) — [blocker] config · New replicas take 2-10 minutes to start because multi-gigabyte weights must load from storage. By the time the new replica is ready, the traffic spike has passed. The fleet is always either over-provi
 - **Configuring llama.cpp's SYCL backend after installing oneAPI fails with 'unrecognized command-line option -fsycl'** (`gotchas/sycl-build-unrecognized-fsycl`) — [blocker] build · After installing intel-oneapi-base-toolkit from Intel's apt repository (2025.2/2025.3 packages, including intel-oneapi-compiler-dpcpp-cpp), a GGML_SYCL=ON configure/build aborts with: c++: error: unre
@@ -689,6 +712,7 @@
 - **Dynamic resolution makes serving cost unpredictable** (`gotchas/dynamic-resolution-makes-serving-cost-unpredictable`) — [blocker] config · Serving cost is unpredictable because the token count depends on the input image size, which is attacker-controlled. A malicious user can send a 4096x4096 image to cause a 65,536-token prefill, exhaus
 - **Enabling MTP speculative decoding together with prefix caching silently costs ~20% accuracy** (`gotchas/mtp-plus-prefix-caching-accuracy-loss`) — [blocker] config · On a finetuned Qwen3.6 35B-A3B (MoE) served with MTP (num_speculative_tokens=2) plus --enable-prefix-caching, internal classification accuracy drops ~20% versus the identical setup without prefix cach
 - **FP8 KV cache silently loses long-context accuracy above ~100K tokens on Hopper, with no error and no latency change** (`gotchas/ctx-gotcha-fp8-kv-accumulation-cliff-at-100k`) — [blocker] kernel · With --kv-cache-dtype fp8 on Hopper, a 128k needle-in-a-haystack task scored 13 percent against a 91 percent BF16 baseline on the same model and hardware. There is no exception, no warning, and no cha
+- **Input guardrails on the user turn do not cover the retrieved turn, because indirect injection arrives as data the app itself fetched** (`gotchas/sec-guardrail-on-user-turn-misses-the-retrieved-turn`) — [blocker] config · You put a classifier on the user's prompt. The tests pass against hand-written direct jailbreaks. Then the application retrieves a document the attacker controls - a web page, a wiki page, an email, a
 - **MIG slices cannot participate in NCCL tensor-parallel groups** (`gotchas/serve-mig-blocks-nccl-tensor-parallel`) — [blocker] hardware · A MIG slice cannot join a tensor-parallel group. NCCL initialization fails or hangs.
 - **Multi-GPU HIP on Windows 11 produces fluent gibberish at full speed, and benchmarks do not detect it** (`gotchas/windows-hip-multi-gpu-silent-output-corruption`) — [blocker] driver · On Windows 11 with a gfx1100 + gfx1201 pair, the HIP backend splits a model across both cards and returns fluent-but-nonsensical word salad instead of an answer, with no error, no warning and healthy-
 - **NCCL is not supported with MIG, so a MIG slice cannot participate in a tensor-parallel group - MIG and TP are mutually exclusive as shipped** (`gotchas/mgpu-mig-blocks-nccl-tensor-parallel`) — [blocker] hardware · Planning error rather than a runtime crash: an operator who partitions an H100 into MIG instances and then tries to run TP=2 inside them gets NCCL unsupported-with-MIG rather than a working deployment
@@ -699,13 +723,18 @@
 - **On gfx906, float16 activations overflow to inf and vLLM emits runs of '!!!!' instead of tokens; bf16 weights are rejected for MXFP4 and fp32 activation compute is the only reported fix, at a large throughput cost** (`gotchas/comm-gfx906-fp16-garbage-bang-output`) — [blocker] kernel · Generation degrades into runs of the literal character '!' - described in the community as output that 'spits !!!!' - rather than a crash or a clean error. Reported on: Qwen3.5 (AWQ, on 4x MI50) where
 - **On gfx906, vLLM containers die with a bare 'Bus error (core dumped)' unless --shm-size is set large, and a corrupted local Docker BASE layer can make every ROCm 6.3.3 image fail identically - neither failure is a hardware fault** (`gotchas/comm-gfx906-docker-shm-size-and-base-image`) — [blocker] config · 'mixa3607/vllm-gfx906:0.10.2-rocm-6.3.3 always dies instantly without --shm-size with Bus error; with --shm-size tries to start'. Running `vllm` inside a correctly-started container yields 'Bus error 
 - **On some AMD boards Vulkan dies with ErrorDeviceLost only when SAM/ReBAR is enabled** (`gotchas/vulkan-rebar-on-causes-amd-device-lost`) — [blocker] driver · The opposite failure of the previous record, and it is a hard crash rather than a slowdown: with SAM/ReBAR enabled, every decode on an AMD Radeon AI PRO R9700 fails with vk::Queue::submit: ErrorDevice
+- **One tenant's long context evicts every other tenant's KV cache: a single request can consume more KV than hundreds of short ones, so a quota on request count does not protect anyone** (`gotchas/ops-noisy-neighbor-long-context-evicts-kv`) — [blocker] config · A small number of users sending long-context requests degrades the service for everyone: their p50 latency is fine while other tenants' p50 and p99 climb sharply, and the other tenants' requests are t
 - **Passive-OAM modules and rack-scale systems physically cannot run air-cooled: no heatsink means no air path, and the host must have a cold plate** (`gotchas/passive-oam-and-rack-scale-parts-cannot-run-air-cooled`) — [blocker] hardware · A server built for air cooling will not accept these parts at all, and the failure is a procurement/integration one rather than a runtime one: the chassis has no cold plates, no manifold inlets, no co
+- **Prefix caching leaks other tenants' prompts: prefix reuse across tenants is a timing side channel distinguishable at AUC 0.99 from only 8 tokens of guessed prefix** (`gotchas/ops-prefix-cache-is-a-cross-tenant-side-channel`) — [blocker] config · An attacker sharing a backend can determine whether another tenant's prompt prefix is resident in the KV cache purely by measuring time-to-first-token. The signal is strong enough to be usable as an o
 - **Putting more than one rank on the same GPU is unsupported and produces either 'Duplicate GPU detected' with invalid usage, or a hang** (`gotchas/mgpu-multiple-ranks-per-gpu-requires-mps`) — [blocker] config · Two ranks bound to the same CUDA device inside one communicator produce one of two signatures. With NCCL_CHECKS_DISABLE=1 the observed output is 'Failed, NCCL error a.cpp:106 \'invalid usage\'' from n
 - **ROCm 6.4.0+ ships no rocBLAS TensileLibrary data file for gfx906, so every BLAS GEMM fails with 'Illegal seek for GPU arch' until a 6.4 rocBLAS file is copied in by hand** (`gotchas/comm-gfx906-rocblas-tensile-missing-from-6-4`) — [blocker] build · After installing ROCm 6.4.x or 7.x on gfx906 hardware (MI50/MI60/Radeon VII/Pro VII), the first BLAS call raises:
   rocBLAS error: Cannot read /opt/rocm-6.4.0/lib/rocblas/library/TensileLibrary.dat: N
 - **Rack power limits (32kW air-cooled, 48kW liquid-cooled) determine whether a big die can be deployed at all: GB200 NVL72 draws ~120kW and GB300 NVL72 up to 140kW, requiring liquid cooling and a facility retrofit with 12-24 month lead times** (`gotchas/liquid-cooling-retrofit-lead-time-and-rack-power-limits`) — [blocker] hardware · A procurement plan assumes a new GPU rack can be dropped into an existing colocation facility. The plan fails at the facility integration stage: the rack draws 120-140 kW, the facility delivers 8-32 k
+- **Request-count rate limiting is the wrong unit for LLM serving: one 8192-token prompt is 16x the prefill work of a 512-token one, and a request counter rates them identically** (`gotchas/ops-ratelimit-token-vs-request-count`) — [blocker] config · A per-tenant RPS quota that looks correctly sized lets one tenant saturate the fleet with a modest request rate of very long prompts, while a tenant sending many short requests never approaches its qu
+- **Returning logprobs turns your endpoint into a training-data oracle: top-k logits from under 10,000 queries are enough to reconstruct the output projection and distil a clone** (`gotchas/sec-logprobs-on-your-api-are-an-extraction-surface`) — [blocker] framework · An open-weights model is served with logprobs enabled because a product feature needs them, behind an API key with rate limits. The rate limit bounds requests per minute. It does not bound what is lea
 - **RoCEv2 PFC-based lossless Ethernet suffers incast collapse at GPU scale** (`gotchas/nic-roce-pfc-incast-collapse`) — [blocker] hardware · RoCEv2 networks using PFC (Priority-based Flow Control) for lossless operation experience throughput collapse and latency spikes when GPU count exceeds a threshold, typically around 1000-2000 GPUs in 
 - **SM120 FlashInfer sparse-MLA only instantiates page_block_size=64, so mixed-compress-ratio DeepSeek checkpoints cannot start** (`gotchas/sm120-sparse-mla-block-size`) — [blocker] kernel · On 8x RTX PRO 6000 Blackwell (SM120) with TP8, deepseek-ai/DeepSeek-V4.1-Flash fails to start with: ValueError: SM120 sparse-MLA has no decode kernel for this shape: num_tokens=8, num_heads=8, topk=12
+- **Scale-down is bounded by pod warmup, not by demand: a loaded model takes minutes to become ready, so the load signal stays high after traffic is gone and the fleet cannot shrink** (`gotchas/ops-scale-down-never-reaches-idle`) — [blocker] config · Traffic drops to near zero, the demand signal falls, and the replica count does not come down — or comes down and immediately goes back up, and the newly added replicas are not serving for minutes. Th
 - **Setting VLLM_MARLIN_INPUT_DTYPE=fp8 enables Marlin W4A8-FP8 on sm_121a where it silently produces garbage** (`gotchas/marlin-w4a8-fp8-silent-corrupt-sm121a`) — [blocker] kernel · On NVIDIA GB10 (DGX Spark, sm_121a) serving a WNA16 INT4 MoE (Qwen3.5-122B-A10B, AutoRound/GPTQ-style, group_size 128) with VLLM_MARLIN_INPUT_DTYPE=fp8, the server starts normally, no crash and no NaN
 - **Stacking a KV-tier connector under the PD transfer connector silently corrupts output, while either alone is clean** (`gotchas/pd-multi-connector-stack-silent-corruption`) — [blocker] framework · Intermittent silent output corruption / garbled generation in a two-node 1P1D disaggregated deployment: long runs of nonsensical mixed-language and repeated tokens (for example repeated 'Effective/eff
 - **Tensor parallelism spanning nodes without a multi-node NVLink fabric hangs during communicator initialization, and the logs show partial success rather than failure** (`gotchas/mgpu-multinode-tp-across-fabrics-hangs-in-comm-init`) — [blocker] config · Two distinct reports, same failure shape. (a) 2 nodes x 4 H200 NVL, TP=8: hangs in ncclCommInitRank during startup - and the diagnostic trap is that even local_rank ranks complete Init COMPLETE while 
@@ -714,37 +743,59 @@
 - **The gfx906 community's own supported-ROCm matrix, assembled from failures: 6.3.3 is the newest version that works unmodified, 5.7.1 is the last fully stable one, and 7.x works only after the rocBLAS workaround** (`gotchas/comm-gfx906-rocm-version-support-matrix-from-users`) — [blocker] config · The community FAQ, written by its own members, states: 'Last official working rocm without modification is rocm 6.3.3. Last fully supported stable is rocm 5.7.1.' Specific version-by-version failures 
 - **The gfx906 vLLM forks are architecturally single-node: MultiprocExecutor forces master_addr back to 127.0.0.1 and requires local_world_size == world_size, so a 16-node InfiniBand cluster deadlocks** (`gotchas/comm-gfx906-vllm-fork-locked-to-single-node-ipc`) — [blocker] framework · Documented first-hand on a 16-node InfiniBand cluster with 1 MI50 per node, running branch gfx906/v0.19.1rc0.x of vllm-gfx906-mobydick via torchrun. EngineCore init prints:
   (EngineCore) INFO [multip
+- **The injection defences with provable guarantees work by removing the LLM's control over control flow - and cost measured task completion** (`gotchas/sec-architectural-injection-defense-is-capability-scoping`) — [blocker] framework · Every input filter and output filter fails to some published attack, and the literature's own conclusion is that filtering is not where the guarantee comes from. The designs that do provide a guarante
+- **The queue in front of an LLM engine is the wrong place to queue — engine-local queues are invisible, ungovernable and lost on restart** (`gotchas/ops-queue-belongs-at-the-gateway`) — [blocker] config · Requests sit in a model server's local queue where the operator cannot see them, cannot prioritise them, and cannot move them. Priority inversion is invisible: a latency-critical interactive request w
 - **Used MI50 cards accumulate correctable then uncorrectable HBM errors that pass ECC and silently corrupt the KV cache, so the model degenerates into repeating non-existent tokens with no error raised** (`gotchas/comm-mi50-uncorrectable-ecc-corrupts-kv-cache`) — [blocker] hardware · A member running four used MI50s reports one card accumulating correctable ECC errors that 'should be fine but they are not - sometimes errors slip past ECC and corrupt the models KV cache and break t
 - **VRAM capacity is the hard wall for local inference: models either fit or they don't** (`gotchas/local-vram-capacity-wall`) — [blocker] hardware · A model that fits in VRAM runs at full speed. A model that doesn't fit either fails to load or falls back to CPU inference, which is 10-100x slower. There is no middle ground.
+- **What happens when a queue fills is not one behaviour but three, and which one you get is a deployment choice: shed with a status code, block until the client times out, or OOM the box** (`gotchas/ops-queue-fill-modes-are-engine-specific`) — [blocker] framework · Three different failure signatures for the same underlying condition of excess demand. (a) Explicit shed: immediate 429 or 503, visible in the client's error rate. (b) Silent unbounded growth: no erro
 - **What people regret buying: NVIDIA's own sm121 silicon variant, because the thing you paid the CUDA tax for is not available on it** (`gotchas/sent-regret-dgx-spark-sm121-software-fragmentation`) — [blocker] hardware · The clearest regret record in the corpus is about a $3,000+ NVIDIA-branded box where the complaint is not performance and not price but that the advertised software platform is absent. u/goldcakes spe
 - **gfx906 has no upstream vLLM or Triton support: MI50/MI60 inference requires a community fork of vLLM, a fork of Triton, or a fork of llama.cpp** (`gotchas/comm-gfx906-no-upstream-support-forks-required`) — [blocker] framework · Stock vLLM on ROCm does not bring up an LLM on MI50/MI60. Observed and reported failure modes, each by different users: (a) vLLM V1 engine aborts at init with 'HIP error: invalid argument at torch.cud
 - **llama.cpp -sm tensor on multiple gfx906 cards produces pure garbage text, and scaling past 2 GPUs over PCIe collapses decode tok/s by ~2.5x per doubling even though prefill keeps rising** (`gotchas/comm-gfx906-tensor-split-garbage-and-pcie-degradation`) — [blocker] config · Two separate failure shapes. (1) CORRECTNESS: --split-mode tensor on 2 MI50s emitted continuous word-salvage: 'l own same aCB l’aC-// own-B l’CCS-al ly’-s’B l own same own sameS ...' - no error, no cr
 - **torch.load with pickle is a remote code execution vector: loading a malicious model file can execute arbitrary code** (`gotchas/meth-pickle-code-execution-vector`) — [blocker] format · You download a .pt or .bin model file from an untrusted source and load it with torch.load(). The file contains malicious pickle opcodes that execute arbitrary code on your machine.
 - **trust_remote_code=True in HuggingFace transformers executes arbitrary Python code from the model repository** (`gotchas/meth-trust-remote-code-execution`) — [blocker] framework · You call AutoModel.from_pretrained() with trust_remote_code=True on a malicious model repository. The repository's custom modeling code executes arbitrary Python code on your machine with your privile
+- **vLLM's --api-key leaves /invocations and a dozen control endpoints unauthenticated, including /pause, /abort_requests and /update_weights** (`gotchas/ops-api-key-covers-only-v1-prefixes`) — [blocker] config · An authenticated deployment is bypassable by anyone who can reach the HTTP server: an unauthenticated POST to /invocations runs inference at full capability, an unauthenticated POST to /pause takes th
 - **vLLM's compiled extension fails to import against a source-built PyTorch with a different CXX11 ABI setting** (`gotchas/torch-source-build-abi-mismatch`) — [blocker] toolchain · import vllm raises ImportError: /workspace/vllm-abo/vllm/_C.abi3.so: undefined symbol: _ZN5torch3jit17parseSchemaOrNameERKSsb. The .so file exists and vllm is installed; nothing about the version pins
+- **vLLM's own security doc: all inter-node traffic is insecure by default - PyTorch Distributed has no authorization, sends unencrypted, and accepts connections from anywhere** (`gotchas/sec-serving-open-weights-internode-network-is-unprotected-by-default`) — [blocker] config · A multi-node tensor-parallel or KV-transfer deployment is network-reachable in ways the operator did not intend, and the traffic carrying prompts, KV cache contents and logits between nodes is neither
+- **vLLM's request logger writes full prompt bodies and token ids into the application log stream at DEBUG, with no field-level redaction anywhere in the engine** (`gotchas/sec-engine-request-logging-puts-full-prompts-in-logs-with-no-redaction`) — [blocker] config · A deployment is found to have retained a year of prompt text and token ids in its log aggregator. Nobody enabled PII capture: --enable-log-requests plus a DEBUG log level does it, and the engine offer
 - **'Up to 90-91% off' is a ceiling across all SKUs, the published grid is a regional floor, and spot is explicitly excluded from committed-use discounts - so no blended spot rate exists** (`gotchas/rent-spot-discount-is-not-a-budget-number`) — [major] config · You cost an inference deployment at the advertised spot discount and get a number 40-80% below on-demand, then discover three separate reasons the number is wrong. (1) The discount is a CEILING over a
 - **128K context capacity numbers are quoted without concurrency, and one 8-GPU node holds single-digit 128K sequences for most production models** (`gotchas/ctx-gotcha-128k-concurrency-is-single-digit`) — [major] hardware · A capacity plan reads '128K context, 8x H100' and concludes a healthy batch size. The arithmetic disagrees: on an 8xH100 80GB node with bf16 KV, Llama-3.1-70B at TP4 holds 3.8 concurrent 128K sequence
 - **A 24GB consumer card can be the harder card to run a given model on than an 80GB datacenter card - capacity is not the only axis, and no source in this mining pass documents the comparison** (`gotchas/comm-4090-24gb-can-run-less-than-used-a100-80gb`) — [major] hardware · The awkward case practitioners keep describing: a 24GB RTX 4090 cannot run a model that a used A100 80GB runs comfortably. Nothing here is a mystery of driver behaviour - it is the arithmetic of 24GB 
 - **A DGX H100/H200 node continues to run at REDUCED performance with half its PSUs depopulated - the degradation is silent, not an alert** (`gotchas/dgx-psu-depop-silent-degraded-throughput`) — [major] hardware · After a data centre power-distribution or PSU failure takes three of the six PSUs offline, the system 'continues to function, but at a reduced performance level'. There is no crash, no error and no de
+- **A GPU pod is bound to its device, so any reschedule onto another node loses the weights, the KV cache, the compiled graphs and the page cache together - and re-warming costs the full measured cold start on a node that has never run the image** (`gotchas/dep-gpu-pod-rescheduling-destroys-all-warm-state`) — [major] hardware · An LLM serving replica is not a stateless app, so the ordinary Kubernetes failure response - delete the pod, let the scheduler place a new one - is a multi-minute cold start, and there is no schedulin
+- **A JIT cache keyed on more than the kernel shape recompiles inside a single process: FlashInfer's micro-kernel cache key includes batch size AND workspace size, so cache growth invalidates entries it already paid for** (`gotchas/ev-jit-cache-key-invalidation`) — [major] config · Within one running server process, a kernel that compiled successfully at startup recompiles later, several times, as real traffic arrives. FlashInfer issue #4317 documents the mechanism in a single s
+- **A KGW-style watermark is designed for stochastic sampling - under temperature 0 the signal it relies on is not produced** (`gotchas/sec-watermark-greedy-decoding-defeats-the-signal`) — [major] config · The same watermarked model returns detectable text at temperature 1.0 and undetectable text at temperature 0. Any batch that goes all-greedy contributes no watermark signal at all, which also corrupts
 - **A PCIe-only multi-GPU box serving a large MoE saturates interconnect rather than compute, so adding GPUs or SMs does not scale and utilization can look healthy while throughput is capped** (`gotchas/mgpu-pcie-only-multigpu-is-communication-bound`) — [major] measurement · Measured on 8x RTX PRO 6000 Blackwell Max-Q (SM120, 96 GB, PCIe-only, no NVLink) serving DeepSeek-V4.1-Flash: 128K cold prefill 6,853 tok/s (re-run 6,765, -1.3%), 32K prompt ~7,196 tok/s, at ~87% GPU 
 - **A benchmark shorter than the queue ramp measures the idle-to-loaded transition, not the steady state - the MLPerf traces show ~15 minutes of sub-3 kW ramp before the plateau** (`gotchas/pwr-short-run-measures-ramp-not-steady-state`) — [major] measurement · Two runs of the identical configuration on the identical node report different tokens/s, and the shorter run reports the HIGHER number. Mean power and joules per token come out too low in the same run
+- **A closed-loop autoscaler on scraped telemetry overshoots because the signal is stale by the time the decision is made — several replicas are added for a burst that one replica would have absorbed** (`gotchas/ops-autoscaler-telemetry-lag-thundering-herd`) — [major] config · A traffic burst triggers a scale-up to several replicas, then a scale-down, then another scale-up — the classic flapping pattern — while the burst itself was short enough that the original replica cou
 - **A fleet at low utilisation can cost MORE in power than the same fleet at high utilisation - the fixed power floor makes naive cost-per-token arithmetic wrong** (`gotchas/idle-and-underbatched-fleet-can-cost-more-than-busy-fleet`) — [major] measurement · Energy per unit of work is U-shaped in the operating point rather than monotonic, so the cheapest-to-run configuration is not the one that runs hardest. Measured: continuous batching improves system-l
+- **A high KV cache usage percentage does not mean you are close to the wall, and a low one does not mean you have room - the same number means different things on different engines** (`gotchas/obs-kv-cache-usage-percentage-is-not-a-headroom-signal`) — [major] measurement · The classic 80% KV-usage alert fires constantly on a healthy server, or a server sits at 60% 'utilization' while rejecting requests. Two replicas of the same deployment on different backends need diff
+- **A kernel JIT compile that runs on a request path stops the world: FlashInfer's own issue documents ~17.5 s stop-the-world stalls with every in-flight request frozen, including mid-decode** (`gotchas/ev-jit-compile-freezes-the-engine-mid-request`) — [major] kernel · A serving engine that has been warm for days suddenly freezes for 15-40 seconds in the middle of traffic. FlashInfer issue #4317 measured the mechanism rather than inferring it: the Blackwell sm12x fu
 - **A llama.cpp ROCm commit raised WikiText-2 perplexity from 7.72 to 3024 on a Q4_0 model with no error, and only llama-per perplexity caught it** (`gotchas/llamacpp-rocm-ppl-explosion-silent-corrupt`) — [major] measurement · On Ryzen AI Max+ 395 (iGPU Radeon 8060S, gfx1151), ROCm 7.2.4, Llama-3.2-3B-Instruct Q4_0, wikitext-2-raw/wiki.test.raw, -c 32768 -ngl 999 --chunks 1: llama-perplexity returns PPL = 7.7241 at b10038 a
+- **A logits processor that reports is_argmax_invariant() is never called under greedy decoding - the sampler returns before that stage** (`gotchas/sec-logit-mask-argmax-invariant-skipped-under-greedy`) — [major] framework · You ship a safety logits processor on a model served with temperature 0. It passes tests on sampled traffic. Callers who use greedy decoding get unfiltered output, and the only symptom is that the fil
 - **A mixed-arch AMD GPU box initialises its RCCL communicator fine over P2P and then aborts on the first collective with 'invalid device function' on the older card** (`gotchas/mgpu-rccl-heterogeneous-amd-gpu-archs-fail-first-collective`) — [major] driver · RCCL 2.30.4 in a process spanning one gfx1201 and one gfx1200 device: communicator init succeeds - channels connect via 'P2P/direct' - and then the first ncclAllReduce raises '[FATAL ERROR]: HIP failu
 - **A multi-tier KV existence query can report a prefix as available when no tier can actually serve it** (`gotchas/pd-kv-tier-existence-query-over-reports-prefix`) — [major] framework · HiCacheFile.batch_exists_v2() reports a hybrid prefix as a cache hit even when a required auxiliary pool cannot restore that prefix. With SWA valid endpoints {3} and Mamba valid endpoints {2}, the rep
 - **A per-GPU-hour rate is not a comparable number until you also know which instance shape it came from - the same GPU differs 2x per-GPU between an 8-GPU and a 1-GPU shape** (`gotchas/rent-per-gpu-hour-needs-the-shape-too`) — [major] measurement · You collect per-GPU-hour figures from several providers to compare cost, divide each node price by its GPU count, and produce a clean table. The table looks fine and it is wrong in a specific way: AWS
+- **A pre-set PROMETHEUS_MULTIPROC_DIR makes vLLM's metrics wrong across restarts — and autoscaling reads them** (`gotchas/ops-stale-multiprocess-metrics-dir`) — [major] config · After a pod restart the vLLM gauges that should reset to zero instead carry the previous process's values: vllm:num_requests_running, vllm:num_requests_waiting and vllm:kv_cache_usage_perc all read hi
+- **A right-to-erasure request has to reach logs, traces and caches, not just the primary store - and 164.316 wants the audit documentation kept for 6 years** (`gotchas/sec-right-to-erasure-has-to-reach-derived-artefacts`) — [major] config · A deletion request is honoured in the application database. The same prompt is still in the log aggregator, in a trace span, in object storage, and in a multi-turn conversation's cached prefix, and th
+- **A router scrape that recognizes zero metric names returns an all-zero stats object that is truthy, so load-aware routing silently degrades to a random pick with no warning anywhere** (`gotchas/dep-router-metric-name-parse-miss-looks-healthy`) — [major] framework · The deployment looks correct from every signal it exposes. Every backend reports healthy, get_health() stays true, the router logs a normal scrape, dashboard gauges render, and traffic keeps flowing. 
+- **A separate guard model is a second LLM in the request path, and its cost is bounded below by seconds - not by the size of the flag you set** (`gotchas/sec-guard-model-is-a-second-llm-in-the-path`) — [major] framework · Expectation is that 'add Llama Guard' is a policy toggle. Reality is a model forward pass on every request, and even the smallest published guard (Llama Guard 3-1B-INT4, 440 MB, about 7x smaller than 
 - **A short benchmark is not representative of a 24-hour serving run: the same probe spans ~4.8x depending on thermal/clock state, and GPU-only telemetry hides 41-45% of system energy** (`gotchas/short-benchmark-not-representative-of-sustained-serving`) — [major] measurement · Two failures compound. First, short probes measure a cold or parked machine, not the steady state a 24-hour serving run reaches - the same bf16 canary read 25.0 TFLOPS idle and 119.3 TFLOPS after a he
 - **A throughput number without batch size, concurrency, input/output length, and warmup is meaningless** (`gotchas/meth-throughput-number-omits-load-bearing-details`) — [major] measurement · A vendor claims '1000 tokens/sec' but doesn't specify whether that's at batch 1 or batch 128, with 128-token or 8192-token inputs, with or without warmup. The actual serving throughput at your workloa
+- **A translating gateway drops output-affecting request fields and returns 200: a pinned JSON-schema const arrives as type:object, stop sequences never arrive at all, and nothing in any log says so** (`gotchas/dep-gateway-silently-drops-params-with-http-200`) — [major] framework · The request succeeds, the response looks right, and the constraint you set is not in force. Six concrete cases reported against LiteLLM v1.101.0 against real provider APIs: a JSON-schema const is forw
+- **An API key on an open-weights endpoint protects your serving capacity and quota - it never protected the model, and the weights are the thing worth stealing** (`gotchas/sec-api-key-protects-capacity-not-the-weights`) — [major] framework · A team serves open weights behind vLLM with an API key and considers the model protected. An API key on your endpoint limits who can reach YOUR capacity. It does not limit what an attacker learns from
 - **An Azure Ultra managed disk at 28,000 GiB costs about $4.59/hour - 37% of the $12.29 H100-hour it is attached to, so a durable-disk inference node is never priced by its GPU rate** (`gotchas/rent-persistent-disk-can-cost-more-than-the-gpu-next-to-it`) — [major] config · You pick a GPU instance by its per-GPU-hour rate, ship to production, and the bill is 30-40% higher than the estimate with no obvious line item. On Azure ND96isr H100 v5 - 8x H100 at $12.29 per GPU-ho
 - **An SW power cap silently reduces clocks below requested with no error, so a capped fleet looks like a slow model** (`gotchas/sw-power-cap-silent-clock-reduction`) — [major] config · With nvidia-smi --power-limit set below the card's Max TDP, the GPU runs below its requested clocks and every workload gets slower, with nothing in the application, the engine logs, or a benchmark run
 - **An idle 8xH200 node still draws 41.7% of its loaded watts, so per-token energy RISES as utilisation falls and naive cost-per-token arithmetic understates cost without bound** (`gotchas/pwr-idle-node-draw-defeats-naive-cost-per-token`) — [major] measurement · Cost per token improves when the fleet gets BUSIER, which is backwards from the intuition that sparser workloads are cheaper per request. A utilisation-based cost model built as (power_at_full_load x 
+- **Average tokens/sec is not an SLO for LLM serving and will not detect the failure users actually report; the two that matter are TTFT and TPOT** (`gotchas/obs-serving-slos-ttft-tpot-not-tok-s`) — [major] measurement · A dashboard is green because output throughput meets target while users report the service 'feels stuck'. Raising concurrency to hit the throughput target makes TTFT worse without moving the throughpu
 - **Batch-invariant mode is not part of any KV-offload namespace or connector compatibility check, so a numerics-mode mismatch across prefill and decode is undetectable** (`gotchas/pd-batch-invariant-mode-absent-from-kv-namespace`) — [major] config · No observed failure yet - this is the mechanism, documented from the code by the reporter, who is explicit: 'I have not reproduced a divergence.' The risk is that an instance running with VLLM_BATCH_I
 - **Bi-encoder encodes corpus once; cross-encoder costs O(corpus) per query** (`gotchas/emb-bi-encoder-vs-cross-encoder-cost`) — [major] config · Reranking the full corpus with a cross-encoder is prohibitively expensive; the standard pattern is to retrieve 100 candidates with a cheap bi-encoder and rerank only those 100 with an expensive cross-
 - **CUDA MPS provides no error isolation - one client crash kills all clients on the GPU** (`gotchas/serve-mps-no-error-isolation`) — [major] hardware · One inference engine crashes, and all other engines on the same GPU crash with it. The failure is not contained.
 - **CUDA enumerates at most one Compute Instance per GPU Instance, at most 64 MIG devices total, and needs ulimit -n raised - so a MIG layout reports fewer usable devices than the profile table implies** (`gotchas/mgpu-mig-driver-enumeration-limits-cut-ci-count`) — [major] config · A MIG layout created to expose many instances does not present that many usable CUDA devices. Driver >= R570 enumerates a single Compute Instance per GPU Instance, and CUDA 'supports at most 64 MIG in
+- **Canarying an inference service is harder than canarying a web service because a request's cost is not knowable in advance and the comparison is non-deterministic, so there is no clean 'new version is worse' signal** (`gotchas/ops-canary-on-inference-is-harder-than-web`) — [major] config · A canary at 5% traffic produces no usable verdict. Error-rate comparison is meaningless because both versions return 200; latency comparison is confounded because a different replica mix behind the ca
 - **Colocation PUE is ~1.9, not the 1.2 often quoted: the 1.2 figure is hyperscale-only, and most third-party inference runs in colocation where the LBNL 2014 baseline shows midtier at 1.9 with cooling alone contributing 0.63** (`gotchas/pue-colocation-1-9-not-1-2`) — [major] measurement · A carbon or energy calculation for an inference deployment uses PUE = 1.2, producing an emissions estimate that is 35-40% too low for a colocation facility. The 1.2 figure is real — it is the LBNL 201
 - **Concurrent collectives on 2-3 RCCL communicators deadlock 50-100% of runs on gfx90a, which is the exact shape FSDP2+tensor-parallel produces** (`gotchas/mgpu-rccl-multiple-communicators-deadlock-gfx90a`) — [major] kernel · RCCL 2.30.4 (HIP 7.14) on 4x gfx90a GCD of an MI250 system deadlocks 50-100% of runs when a process uses 2-3 NCCL communicators concurrently. Upstream PyTorch tests reproduce it directly: TestFullySha
 - **Consumer GPUs have no NVLink: multi-GPU inference requires PCIe or model sharding** (`gotchas/local-consumer-gpu-no-nvlink`) — [major] hardware · Multi-GPU inference on consumer GPUs is limited by PCIe bandwidth, not NVLink. Two RTX 4090s connected via PCIe 4.0 x16 have ~64 GB/s of interconnect bandwidth, compared to 900 GB/s on NVLink. This ma
+- **Continuous batching makes the engine look permanently busy, so queue time disappears into per-request TTFT while throughput stays high — the queue is not empty, it has been absorbed into the batch** (`gotchas/ops-continuous-batching-hides-queue-time`) — [major] framework · Utilisation and throughput look healthy — GPU busy, batch full, output tokens/second at its best — while a large and growing number of requests wait. Nothing in the resource metrics rises. Time-to-fir
 - **Converting an NVFP4 checkpoint to GGUF silently drops most per-tensor scales, and the model then emits one repeated token for every prompt** (`gotchas/nvfp4-gguf-conversion-drops-block-scales`) — [major] toolchain · RedHatAI/Muse-Glimmer-30B-NVFP4 converted with convert_hf_to_gguf.py --outtype q8_0 produces a GGUF that does not load: 'check_tensor_dims: tensor blk.0.attn_q_norm.weight not found' / 'llama_model_lo
 - **Cost attribution per model/tenant is a known gap - no standard solution exists** (`gotchas/serve-cost-attribution-gap`) — [major] measurement · The finance team asks how much each model/tenant costs to serve, and there is no answer. GPU utilization is known, but per-request cost is not.
 - **Custom all-reduce works over PCIe at TP=2 but is silently disabled above TP=2 without full one-hop NVLink, so a PCIe box quietly falls back to the slower NCCL path** (`gotchas/mgpu-custom-allreduce-needs-nvlink-above-tp2`) — [major] config · No error. The observable is a throughput cliff with no diagnostic. The eligibility rule, stated explicitly in upstream: 'At TP=2, custom all-reduce can operate over PCIe when functional GPU P2P is ava
@@ -759,26 +810,34 @@
 - **Enabling vLLM's batch-invariance flag does not make the engine deterministic: it silently does not hold for fused-MoE experts, for AWQ on sm8x, and TF32 breaks the matmul invariant - all with no warning** (`gotchas/nrg2-batch-invariance-is-not-universal-across-kernel-paths`) — [major] kernel · The failure mode is the dangerous one: not an error, not a crash, and no warning. With VLLM_BATCH_INVARIANT=1 set, vLLM documents that output is 'deterministic and independent of the batch size or the
 - **Engine crash loses all in-flight requests - no graceful degradation** (`gotchas/serve-engine-crash-in-flight-requests-lost`) — [major] framework · An inference engine crashes (OOM, CUDA error, segfault), and all requests being processed are lost. Clients receive connection errors and must retry.
 - **Every MLPerf Inference invalidation on record has the same cause - preview results that were never converted to 'available' - so an invalidated number is an unfinished submission, not a rule violation** (`gotchas/bench-mlperf-invalidation-is-always-preview-not-fraud`) — [major] config · A vendor number is quoted from an MLPerf round, and later the MLCommons results change log shows that submission was invalidated. The reflexive conclusion is that the submitter cheated or mismeasured.
+- **Every serious engine has THREE different build steps with three different durations, and conflating them is the reason 'how long does it take to build' has no single answer** (`gotchas/ev-build-cost-is-three-separate-builds`) — [major] build · A reader asks how long it takes to build TensorRT-LLM, or vLLM, or FlashInfer, and gets an answer that is wrong for their situation because three distinct costs share the name 'the build'. COST 1, the
 - **Expert-parallel size that does not divide the physical expert count fails with a bare AssertionError naming num_redundant_experts** (`gotchas/mgpu-ep-size-must-divide-physical-experts`) — [major] config · On a 3x A100-SXM4-80GB with --ep-size 3 and a MoE model with 256 physical experts: 'AssertionError: n_physical_experts=256 must be divisible by ep_size=3. Adjust num_redundant_experts.' The engine abo
 - **FP8 on RDNA3 blows the 600 s engine-ready timeout on first start even though weights load in seconds** (`gotchas/vllm-rocm-fp8-cold-start-timeout`) — [major] config · vLLM serve of an FP8 checkpoint on a gfx1100 Radeon aborts during startup with an engine-ready timeout after waiting VLLM_ENGINE_READY_TIMEOUT_S (default 600 s); measured first init was 1474.26 s. The
 - **FlashInfer's b12x MoE backend silently defaults quant_mode to W4A4, so a weight-only NVFP4 checkpoint is computed at the wrong activation precision** (`gotchas/flashinfer-b12x-moe-runs-w4a16-as-w4a4`) — [major] config · Qwen3.6-35B-A3B-NVFP4 (quant_algo W4A16_NVFP4 for mlp.experts) served with --moe-backend flashinfer_b12x runs the FP4xFP4 micro-kernel (MoEMicroKernel in blackwell_sm12x.moe_micro_kernel, BF16 activat
 - **For FP4 Llama 2 70B a full 72-GPU NVL72 rack is measurably worse per GPU than an 8-GPU node: scale-up fabric buys nothing at this model size** (`gotchas/bench-mlperf-rack-scale-is-per-gpu-negative-for-70b`) — [major] hardware · A whole NVL72 rack is specified for a throughput-bound Llama 2 70B serving workload, on the reasoning that a 72-GPU NVLink domain will serve it faster than a node will. The audited MLPerf numbers say 
 - **Forcing the FlashInfer attention backend fails on head_dim 256/512 models** (`gotchas/flashinfer-rejects-large-head-dim`) — [major] kernel · Engine init aborts with: ValueError: Selected backend AttentionBackendEnum.FLASHINFER is not valid for this configuration. Reason: ['head_size not supported']. Reproduces for the bf16 base model, an F
 - **Forking after HPU driver initialization causes hangs on exit; vLLM auto-overrides to spawn** (`gotchas/xpu-gaudi-fork-after-driver-init`) — [major] config · On HPU, if vLLM's worker start method is set to 'fork' (the upstream default), forking after HPU driver initialization leaves driver state in child processes and can cause hangs on exit. vLLM logs a w
+- **GDPR Article 30 obliges a PROCESSOR to keep a record of processing including third-country transfers and safeguards - and an inference deployment is a processor with both** (`gotchas/sec-gdpr-art30-record-of-processing-is-a-per-deployment-obligation`) — [major] config · An organisation treats GDPR compliance as a web-form exercise done once by legal. The engineering reality is that every place a prompt can land - logs, traces, object storage, caches, the inference ve
 - **GPU board power is 55-59% of system power: CPU, DRAM, NICs, PSU losses and cooling add 41-45% on top, so a joules-per-token figure without its measurement boundary is meaningless** (`gotchas/board-power-vs-system-power-measurement-boundary`) — [major] measurement · A joules-per-token figure is quoted in a paper or vendor deck without stating whether it is measured at the GPU package, the accelerator board, the node, or the rack. The number is then compared again
 - **GPU utilization is a poor proxy for LLM load - KV cache utilization is the metric that matters** (`gotchas/serve-kv-cache-utilization-not-gpu-utilization`) — [major] measurement · GPU utilization is high but throughput is low, or GPU utilization is low but the service is degraded. The metric does not correlate with user experience.
 - **Generic container metrics (CPU, memory, request count) are actively misleading for LLM serving** (`gotchas/serve-observability-generic-container-metrics-misleading`) — [major] measurement · Dashboard shows healthy CPU/memory/request metrics while users experience high latency. The monitoring stack reports green while the LLM service is degraded.
 - **Grid carbon intensity varies 10-50x by region, so a token generated in Quebec (~20 gCO2/kWh) is not the same as one generated in West Virginia (~900 gCO2/kWh) — and almost nobody accounts for it** (`gotchas/grid-carbon-intensity-by-region-inference-emissions`) — [major] measurement · An emissions claim for an inference deployment is computed as joules-per-token x average grid carbon intensity, producing a single number that is wrong by an order of magnitude depending on where the 
+- **HIPAA requires auditability AND minimisation, and inference logging collides with both - 164.312(b) wants the records, 164.316 keeps them 6 years** (`gotchas/sec-hipaa-audit-controls-conflict-with-prompt-log-retention`) — [major] config · A team tries to satisfy the HIPAA Security Rule on an inference deployment and gets stuck in a contradiction: turn on detailed request logging to satisfy the audit-control standard, and you have just 
 - **HW Power Brake means the PSU asserted: core clocks drop by 2x or more, and the symptom is an unexplained throughput collapse rather than a PSU error** (`gotchas/hw-power-brake-psu-instability-crash`) — [major] hardware · nvidia-smi reports 'HW Power Brake' active, meaning an external power brake assertion has been triggered by the system power supply. Per NVIDIA's definition this engages HW Slowdown, which is 'reducin
 - **HW Thermal Slowdown cuts core clocks by a factor of 2 or more, and nvidia-smi reports it as a microsecond counter rather than a visible failure** (`gotchas/hw-thermal-slowdown-halves-clocks-silently`) — [major] hardware · Sustained-token-rate collapses mid-run with no error, no crash and no assertion. A batch that measured X tokens/s over a short run measures roughly X/2 over a long one. The harness reports the run as 
 - **HabanaAI/vllm-fork reached EOL at v1.23.0; vllm-gaudi plugin is the only supported path** (`gotchas/xpu-gaudi-fork-eol`) — [major] framework · The HabanaAI/vllm-fork repository reached end-of-life (EOL) at v1.23.0 and is deprecated in v1.24.0, remaining functional only for legacy use cases until then. The vllm-gaudi plugin is production-read
 - **Hybrid Gated DeltaNet models keep fast prompt processing but collapse ~25x in decode past ~80K context** (`gotchas/gated-deltanet-decode-collapse-long-context`) — [major] kernel · With the model fully resident on GPU (zero 'assigned to device CPU' lines in the log), decode falls from ~33 t/s at 68K KV position to 1.4 t/s (714 ms/token) at 91K position, or times out, while promp
 - **Hybrid attention-SSM batch-size regime crossover** (`gotchas/hybrid-attn-ssm-batch-regime`) — [major] config · The optimal batch size for a hybrid attention-SSM model is set by the SSM state footprint, not by available KV memory. At small batch and long context, the hybrid wins (SSM state is smaller than KV ca
+- **Hybrid sparse+dense retrieval takes gradient-guided corpus poisoning from 38% to 0% - until the attacker optimises against both, then back to 20-44%** (`gotchas/sec-rag-corpus-poisoning-not-caught-by-hybrid-retrieval-alone`) — [major] measurement · The RAG hardening measure that works in the paper does not work in production, because production attackers optimise against whatever defence is deployed. A defence that reduces poisoning to zero agai
 - **If one NCCL communicator-init thread errors (for example an OOM), the remaining init threads block forever on a bootstrap socket that has no timeout** (`gotchas/mgpu-nccl-init-thread-error-deadlocks-others`) — [major] driver · Observable is a hang, not an OOM error. NCCL's group.cc init path spawns one thread per rank and then joins them: it spins on pthread_tryjoin_np for each ASYNC_FUNC_INIT thread, propagating any thread
+- **In disaggregated serving a dead prefill worker is not detected: the decode side attempts the KV pull anyway, and with the default failure policy the client gets a 500 while the stranded KV is only reclaimed by a lease timer** (`gotchas/ops-pd-stranded-kv-and-silent-recompute`) — [major] config · A prefill pod crashes. Every request whose KV pull was in flight against it fails, and there is no liveness check to notice the pod is gone first. Separately, the prefill instance keeps the dead reque
+- **In-decode filters must handle batch-granularity rows, not requests: rows reorder every step and one request can own several rows under speculative decoding** (`gotchas/sec-decode-loop-filter-row-is-not-request`) — [major] framework · A logits processor written against per-request semantics produces output attributed to the wrong request, or applies the wrong transform, once speculative decoding is enabled or once continuous batchi
 - **InfiniBand NDR/XDR naming refers to whole-port rate, not per-lane rate** (`gotchas/nic-ndr-xdr-naming-confusion`) — [major] measurement · NDR is described as '400 Gb/s' and XDR as '800 Gb/s', but these are whole-port figures. The per-lane rates are 100 Gb/s and 200 Gb/s respectively. Confusing per-lane and per-port rates leads to 4x err
 - **InfiniBand costs 2-5x more than RoCE per port but offers hardware congestion control and SHARP** (`gotchas/nic-infiniband-vs-roce-cost`) — [major] hardware · InfiniBand hardware costs significantly more than equivalent Ethernet/RoCE hardware, but provides hardware-based congestion control, SHARP in-network reduction, and better tail latency under load.
+- **Injection resistance cannot be self-evaluated - it needs a benchmark with a fixed threat model, fixed system prompt and a defined attack suite** (`gotchas/sec-prompt-injection-eval-needs-a-benchmark-not-a-handwritten-suite`) — [major] measurement · A team believes its injection defence works because a set of hand-written attacks is refused. Every published attack they later read breaks it. The problem is that the evaluation was never comparable 
 - **Intel Extension for PyTorch (IPEX) is archived and unsupported as of March 2026** (`gotchas/xpu-ipex-archived-no-support`) — [major] framework · The intel-extension-for-pytorch GitHub repository was archived by the owner on Mar 30, 2026. It is now read-only. Intel will not provide or guarantee development, support, maintenance, bug fixes, new 
 - **Inter-node all-reduce runs at roughly half speed under SR-IOV InfiniBand VF pass-through into VMs, and NCCL needs a hand-written topology XML to even see the fabric** (`gotchas/mgpu-vm-passthrough-halves-inter-node-allreduce`) — [major] hardware · Two physical A100 SXM4*8 nodes with two HDR InfiniBand cards each, with SR-IOV VF pass-through into a VM per node (host NUMA and PCIe topology mirrored, hugepages and vCPU pinning applied): inter-node
+- **Inter-token latency and per-request time-per-output-token have different denominators and different weights; swapping them silently changes your SLO** (`gotchas/obs-itl-vs-request-tpot-are-different-metrics`) — [major] measurement · An alert tuned on one metric does not fire when the other degrades, or fires constantly with no user complaint. A dashboard shows p99 decode latency of 80 ms while individual users report multi-second
 - **Intra-node NVLink latency is ~10x lower than inter-node InfiniBand latency, dictating TP vs PP placement** (`gotchas/nic-nvlink-vs-infiniband-latency-gap`) — [major] hardware · Tensor-parallel sharding across a node boundary (using InfiniBand instead of NVLink) incurs ~10x higher latency per collective operation, which can dominate inference time for small-batch or low-laten
 - **Kernel compilation cost dominates for short-running or frequently-changing workloads** (`gotchas/kernel-compilation-cost-dominates-for-short-running-or-frequentl`) — [major] toolchain · For workloads with short execution times or frequently-changing shapes, the cost of JIT compilation (Triton: 0.5-5s per kernel, torch.compile: 30s+ for complex models, CUTLASS: minutes for template in
 - **Long context is not servable on older hardware - the attention kernel is gated by SM generation, and one family hits two head_dim-256 walls** (`gotchas/ctx-gotcha-long-context-kernel-gate-by-sm-generation`) — [major] kernel · Two failures that look like anything but what they are. (1) A context length that works on one node fails on another with the same models, because the attention backend is chosen by SM generation: SM8
@@ -806,6 +865,7 @@
 - **On RDNA, models with head_dim != 128 silently fall back to Triton paged attention and decode collapses at long context** (`gotchas/rdna-triton-paged-attn-decode-cliff`) — [major] kernel · Qwen3.6-27B on gfx1100 decodes at 12.1 tok/s at 518 tokens of context but 4.2 tok/s at 32K. Linear-attention layers keep constant cost; only the 16 full-attention layers degrade. Profiling puts essent
 - **On ROCm, any KV cache type other than q8_0/q8_0 or q4_0/q4_0 explodes the graph into 34 splits** (`gotchas/rocm-flash-attention-kv-type-graph-split-explosion`) — [major] kernel · With flash attention on and a q5_0 KV cache (either K or V), the ROCm backend fragments the compute graph from 2 splits into 34 and pushes about 550 MiB of compute work onto the CPU host buffer. Measu
 - **On Vulkan, enabling Flash Attention can cut prompt processing by ~60% and decode by ~48%** (`gotchas/vulkan-flash-attn-slower`) — [major] kernel · On Strix Halo (RADV, warp size 64) llama-bench shows FA on costing more than it saves: llama-2-7b.Q4_0 pp512 drops 1252.63 -> 508.36 tok/s and tg128 drops 49.91 -> 25.80 tok/s. Qwen3.5-122B-A10B-GGUF 
+- **On a streaming endpoint an output filter that inspects completed text cannot un-send the tokens it already streamed** (`gotchas/sec-streaming-output-scan-cannot-unretract`) — [major] framework · You add a moderation check on the assistant turn. The compliance test passes because the test client is non-streaming. In production the first sentence of the offending content is already delivered be
 - **On consumer Blackwell (RTX 50-series) vLLM had no prebuilt wheel, and the community recipe is build-from-source against the NGC PyTorch container - with FlashAttention 3 disabled and FP8 unavailable** (`gotchas/comm-blackwell-consumer-vllm-no-prebuilt-wheel`) — [major] build · The community answer to 'how do I run vLLM on my 5090' was not a flag. It was: clone vLLM at or above commit ed6ea06577ec06f0b3a9ac921b55ef254f19d923, start nvcr.io/nvidia/pytorch:25.02-py3, run `pyth
 - **On gfx1151 the llama.cpp HIP backend produces corrupt output where Vulkan is correct with byte-identical flags, so cross-backend comparison is the only clean detector** (`gotchas/hip-rocm-corrupt-output-vulkan-is-reference`) — [major] kernel · On a gfx1151 Strix Halo APU (ROCm 7.2.4), same machine, same build, byte-identical server flags (verified with diff), the HIP backend is wrong and Vulkan is right. Two severities: Llama-3.1-8B-Instruc
 - **On gfx1201 the Vulkan backend loses 4.7-6.7x decode throughput to HIP at hidden_size >= 4096, and effective bandwidth collapses to ~70-100 GB/s on a 640 GB/s card** (`gotchas/vulkan-decode-cliff-hidden-size-4096`) — [major] kernel · llama-bench on an RX 9070 XT 16 GB (gfx1201, RDNA4, Windows 11, AMD proprietary driver 25.20.42.14) at -ngl 99: Qwen3-4B Q4_K_M (hidden 2560) gives tg 183.0 t/s (~424 GB/s effective); Qwen3-8B Q4_K_M 
@@ -814,13 +874,19 @@
 - **On single-node PCIe boxes NCCL's cuMem UDS file-descriptor exchange loses a message and the engine hangs at startup in a spin-wait, intermittently, with no error** (`gotchas/mgpu-nccl-cumem-uds-fd-exchange-hangs-at-init`) — [major] driver · On a single-node 8x RTX 3090 box (no NVLink, P2P over PCIe at PXB level, NCCL 2.29.7+cuda13.2) serving a large MoE under vLLM with TP2xPP4 plus expert parallel - a layout that creates on the order of 
 - **On some gfx1201 systems the ROCm backend allocates no VRAM and streams a 30 GB model from system RAM** (`gotchas/rocm-backend-silently-serves-weights-from-host-ram-on-gfx1201`) — [major] driver · On an 8x RADEON AI Pro 9700 XT (gfx1201) host, llama.cpp's ROCm backend reports the full VRAM size in --list-devices, shows both GPUs at normal compute activity, and then allocates nothing on the GPU:
 - **One dead rank does not stop new KV loads to its siblings: per-port peer identity means a 30 s timeout is the only terminator** (`gotchas/pd-p2p-peer-liveness-per-rank-not-per-pod`) — [major] framework · On a disaggregated P/D deployment with multi-rank prefill pods, a source pod became unavailable mid-transfer. The consumer marked the source's rank-0 control peer down within a second - and then submi
+- **Output filtering at serve time: logit masking, post-hoc scanning and a separate guard model are three different systems with three different bills** (`gotchas/sec-output-filter-three-placement-cost`) — [major] framework · An engineer asks 'add content filtering' and gets three mutually exclusive answers depending on who is asked. Logit masking inside the decode loop costs throughput; scanning completed text costs nothi
+- **Preemption costs no visible throughput and only shows up in latency, so a throughput dashboard stays green through a KV-cache collapse** (`gotchas/obs-preemption-hides-latitude-from-throughput`) — [major] measurement · Aggregate output tok/s and request-success rate look normal or even improve while users report stalling. Inter-token latency and time-to-first-token p99 climb. Nothing in the throughput panel moves, a
 - **Prefix cache blocks computed under one LoRA adapter are reused under another when the adapters share a name** (`gotchas/pd-lora-adapter-swap-reuses-stale-prefix-blocks`) — [major] config · Prefix cache corruption when two LoRA adapters share a name but differ in lora_init_id: blocks computed under one adapter are served for requests targeting the other, producing wrong output with no er
+- **Prefix-aware routing scores the first request of a session on a stale QPS average, then latches that decision for the life of the session - so the busiest backend gets picked first and keeps every subsequent turn** (`gotchas/dep-prefixaware-subthreshold-latches-a-bad-first-pick`) — [major] framework · Half the fleet goes idle while half the sessions queue, and nothing in the system says so. Two vLLM backends of equal capacity, prefixaware routing, eight concurrent agent sessions opened in a burst: 
+- **Prompt-injection detectors are not robust to adaptive attackers - a universal optimised suffix fools all layer-wise detectors at once** (`gotchas/sec-injection-detectors-fail-to-adaptive-attacker`) — [major] framework · An injection detector works in evaluation and fails in the wild, and the failure mode is worse than an occasional miss: the attacker optimises against the detector specifically and defeats every layer
 - **Quoting a per-token API price without naming the tier and the context band is meaningless - the same model and the same tokens differ by up to 8x on one provider's own page** (`gotchas/rent-token-rate-without-a-tier-is-meaningless`) — [major] measurement · You build a cost comparison of hosted inference APIs from per-million-token prices and get a stable-looking ranking. It is an artefact of which page section you scraped. On OpenAI's page the SAME mode
 - **Reproducibility: most published inference performance numbers lack the methodology needed to reproduce them** (`gotchas/meth-reproducibility-missing-methodology`) — [major] measurement · A paper or blog post reports 'X tokens/sec' but doesn't state batch size, input/output length, warmup procedure, clock settings, or kernel version. The number is impossible to reproduce or compare.
+- **Router-side admission control observes load without reserving capacity, and fails open on stale telemetry — so N routers each admit a request that all N replicas then must hold** (`gotchas/ops-gateway-admission-has-no-reservation`) — [major] config · Adding a second router replica makes overload worse rather than better. Each replica independently decides a worker is healthy and admits a request, and the N simultaneously-admitted requests are disp
 - **SHARP in-network reduction only helps all-reduce, not all-to-all or all-gather** (`gotchas/nic-sharp-in-network-reduction-limits`) — [major] hardware · SHARP in-network reduction is often described as accelerating 'collective communication', but it only accelerates all-reduce operations. All-to-all (used in MoE expert-parallel) and all-gather do not 
 - **SSM state cannot be paged or evicted like KV cache** (`gotchas/ssm-state-no-paging-eviction`) — [major] config · An SSM layer's recurrent state cannot be paged, evicted, or compressed like KV cache. It is a fixed-size per-sequence tensor that must be resident in HBM for the entire decode. Standard KV cache manag
 - **SYCL crashes or emits gibberish on hybrid linear-attention architectures (qwen3next, qwen35) on Intel Arc Pro B60** (`gotchas/sycl-hybrid-linear-attention-arch-crash-intel-arc`) — [major] kernel · On 2x Intel Arc Pro B60 (24 GB each, no XeLink, Level Zero 1.15.38308+1, Ryzen 7 7700), models with a qwen3next or qwen35 architecture - specifically Qwen3-Coder-Next at Q3_K_XL (33.79 GiB) and Q4_K_M
 - **SYCL_CACHE_PERSISTENT=1 causes crashes in llama.cpp; not recommended** (`gotchas/xpu-sycl-cache-persistent-crash`) — [major] config · Setting SYCL_CACHE_PERSISTENT=1 in the environment causes crashes when running llama.cpp with the SYCL backend. The crash occurs because the SYCL runtime caches and reuses JIT-compiled binaries, and w
+- **Scale-to-zero on an LLM is a bill-shaped decision, not a latency-shaped one: keeping a model warm is the only way to be interactive, so the economics only work when utilization is very low or traffic is genuinely spiky** (`gotchas/dep-serverless-scale-to-zero-only-pays-for-spiky-or-mostly-idle`) — [major] config · Serverless GPU looks cheap until you notice what the cold-start penalty forces you to do about idle capacity, and the fix for that penalty is to keep the container warm - which is the thing you were t
 - **Sizing a rack by summing GPU TDP understates it badly: a 72-GPU GB200 NVL72 rack draws ~120 kW against a 1,200 W per-GPU ceiling, and its installed PSU capacity is 264 kW** (`gotchas/power-floor-scaling-rack-is-not-sum-of-gpu-tdp`) — [major] config · A power budget built by multiplying published per-GPU Max TDP by GPU count is wrong by roughly 40% on facility draw and by more than 2x on installed electrical capacity. For GB200 NVL72: 72 x 1,200 W 
 - **Speculative decoding that works standalone crashes under PD disaggregation, on a per-algorithm basis with no warning** (`gotchas/pd-speculative-decoding-unsupported-per-algorithm-under-pd`) — [major] framework · DFLASH speculative decoding crashes at startup under PD disaggregation: the first update_running_batch on the decode side dies with AttributeError: 'NoneType' object has no attribute 'prepare_for_deco
 - **Standard load balancers cannot see KV cache state - routing decisions are blind to cache locality** (`gotchas/serve-routing-cache-state-not-visible-to-load-balancer`) — [major] config · A standard load balancer (round-robin, least-connections) sends requests to replicas that do not have the prefix cached, causing redundant prefill computation and higher TTFT.
@@ -828,13 +894,19 @@
 - **Sustained clocks are lower than burst clocks: power and thermal limits in compact cases** (`gotchas/local-power-thermal-sustained-clocks`) — [major] hardware · A GPU's sustained inference performance is significantly lower than its burst performance. A card rated at 575W TGP (RTX 5090) may sustain only 400-450W under continuous load, reducing clocks by 10-20
 - **Sustained load drives SW Power Cap and thermal throttling, which move the tail of the latency distribution rather than its mean - so a benchmark that reports only p50 hides the regression entirely** (`gotchas/dvfs-power-cap-moves-tail-latency-under-sustained-load`) — [major] measurement · Mean and median latency look fine while the tail degrades. A deployment passes an SLO defined on p50 and breaks for users, and the failures cluster in the long runs - after the node has been at full l
 - **Sync Boost ties every GPU in a node to the slowest one's achievable clock, so one hot or throttled GPU silently caps the throughput of all eight** (`gotchas/sync-boost-slowest-gpu-caps-whole-node`) — [major] hardware · A tensor-parallel job runs at a clock set by whichever GPU in the node is worst-conditioned, and the operator has no idea which one. Node throughput sits noticeably below the per-GPU figure, uniformly
+- **TGI exposes queue time, inference time and time-per-token but no TTFT and no KV cache utilization - a TTFT SLO on TGI cannot be served by its metrics** (`gotchas/obs-tgi-has-no-ttft-metric`) — [major] measurement · You stand up TGI, wire up /metrics, and find that the two latency numbers you need are missing. Queue time and inference time are there but the split you want is not; time-per-token is there but inclu
+- **TGI's 429 'Model is overloaded' is a concurrency semaphore, not a queue-depth signal — so tgi_queue_size can grow while 429s are firing** (`gotchas/ops-tgi-429-is-semaphore-not-queue`) — [major] config · Under load, TGI returns 429 {"error":"Model is overloaded","error_type":"overloaded"} to some clients while the Prometheus gauge tgi_queue_size stays at or near zero, and tgi_batch_current_size shows 
 - **Temperature-0 greedy decode is not a correctness oracle: the same prompt at temperature 0 produced 80 distinct completions across 1000 runs, all fluent and plausible, with first divergence at token 103** (`gotchas/nrg2-temperature-zero-greedy-decode-is-not-a-determinism-oracle`) — [major] measurement · The cheap oracle fails open. Serving Qwen/Qwen3-235B-A22B-Instruct-2507 at temperature 0 - the configuration everyone reaches for when they want reproducibility - and sampling 1000 completions of 1000
+- **The KV-cache timing side channel largely collapses under realistic contention - do not extrapolate benchmark numbers to production** (`gotchas/sec-kv-cache-timing-attack-collapses-under-load`) — [major] measurement · A security review quotes a KV-cache timing side channel with a large effect size, and the fix - disable prefix caching - is expensive. Then the channel turns out to be nearly unusable on a busy produc
 - **The ROCm LLVM loop-unroller miscompiles gfx906 kernels - fixing it takes -mllvm --amdgpu-unroll-threshold-local=600, and the real fix belongs upstream in rocm-libraries** (`gotchas/comm-gfx906-compiler-flag-unroll-threshold`) — [major] build · Two community members hit the same compiler defect independently and resolved it the same way. legitsplit: 'This looks like the same problem I had. Compiled with -DCMAKE_HIP_FLAGS="-mllvm --amdgpu-unr
 - **The ROCm Triton w4a16 path asserts on GPTQ models with a non-zero-group qzeros layout** (`gotchas/triton-w4a16-gptq-qzeros-assert`) — [major] format · Serving GPTQ-Int4 quantized Qwen3.6-27B fails at triton_w4a16.py line 201 with an assertion on qzeros.shape == (K // group_size, N // 8). Unquantized models run fine, and two independent GPTQ-Int4 rep
 - **The abbreviated GPU UUID form that NVIDIA documents for CUDA_VISIBLE_DEVICES crashes vLLM's device resolution before the model even loads** (`gotchas/mgpu-short-cuda-visible-devices-uuid-crashes-nvml-resolution`) — [major] config · On 8x H200 (driver 590.48.01, Rocky Linux 9.8), setting CUDA_VISIBLE_DEVICES to a short UUID - e.g. GPU-af7b61d8 where the driver reports GPU-af7b61d8-21af-baea-6a19-42a1f9f7c3cb - crashes during Mode
 - **The community-standard way to pool VRAM across consumer NVIDIA cards is layer sharding over llama.cpp's RPC backend, not NCCL tensor parallelism - because it sidesteps the P2P ban entirely** (`gotchas/comm-community-standard-rpc-sharding-for-multi-gpu`) — [major] config · Run `ggml-rpc-server` on each machine (each exposing its own CUDA device over TCP), then point llama-server at the workers with `--rpc host:port[,host:port...]` plus `--split-mode layer -ngl 999 --ten
+- **The gateway rate limiter's counters are per-instance in-memory: N workers means N times the intended limit, and a restart resets every tenant's budget to full** (`gotchas/ops-wasm-ratelimit-state-is-per-worker-and-lost-on-restart`) — [major] config · Tenant rate limits drift upward under load and reset to nothing on deploys. A tenant configured for 60 requests/minute sustains several hundred per minute when the gateway has several workers, and eve
+- **The guard model is a second extraction target: an LLM-as-judge can be replicated from black-box queries, so moderation capability is intellectual property you have to defend** (`gotchas/sec-guard-and-moderation-models-are-themselves-extraction-targets`) — [major] framework · The moderation model is treated as plumbing - a small safety component in front of the real product. It is a trained model with measured capability, queried over an API, and it can be replicated.
 - **The migration resistance: people stay on old hardware and old stacks because the cost is toolchain churn, not because the new part is not faster** (`gotchas/sent-migration-resistance-version-coupling-not-performance`) — [major] toolchain · The blocker to upgrading is consistently described as version coupling across the inference stack, never as the performance delta. A practitioner who benchmarks vLLM on MI300X reports that configurati
 - **The provider's marketing page is static HTML but its actual rate table is JavaScript-rendered or JSON-only - the API is the only reproducible surface, and the table is the only one that goes stale silently** (`gotchas/rent-vendor-pricing-tables-are-js-but-their-apis-are-not`) — [major] measurement · You scrape a provider's pricing page and either get nothing or get a headline. openai.com/api/pricing/ renders the Business/Enterprise seat tiers, not the API rate card - the token prices are on platf
+- **The router is a stateful memory consumer, not a stateless proxy: its prefix tree grows without bound and takes the whole data plane down with it while every engine stays healthy** (`gotchas/dep-router-prefix-tree-ram-is-the-router-oom`) — [major] framework · The router pod restarts periodically - every few minutes or hours, with no obvious trigger - and each restart drops in-flight requests, resets all prefix affinity, and forces a fresh scrape window bef
 - **Time-slicing provides no throughput isolation - one tenant's load silently degrades all others** (`gotchas/serve-time-slicing-no-throughput-isolation`) — [major] hardware · One tenant runs a large batch job, and all other tenants on the same GPU experience latency degradation. There is no isolation.
 - **TurboQuant KV cache (k8v4) is unusable on Ampere consumer/prosumer cards with hybrid MoE models: a Triton FP8 path reports supported below SM 89, gets selected, then fails at runtime** (`gotchas/comm-turboquant-kv-ampere-arch-gate`) — [major] driver · A user on 2x NVIDIA RTX A5000 24GB (SM86) running Qwen/Qwen3-35B-A3B-FP8 with kv_cache_dtype=turboquant_k8v4 and max_model_len=163840 hit a chain of failures, starting with the model refusing to start
 - **Unified memory is not VRAM: capacity, bandwidth, and sharing constraints** (`gotchas/local-unified-memory-not-vram`) — [major] hardware · A Mac with 128GB unified memory can serve a larger model than a discrete GPU with 24GB VRAM, but the advantage is capacity, not speed. The unified memory bandwidth is shared with the CPU and is not de
@@ -843,9 +915,15 @@
 - **Vision encoder runs on separate schedule from decoder** (`gotchas/vision-encoder-runs-on-separate-schedule-from-decoder`) — [major] config · The vision encoder and LLM decoder run on separate schedules, leading to underutilization. While the encoder is running, the decoder is idle, and vice versa.
 - **Vulkan decode collapses ~78% at long context from suballocation fragmentation; llama-bench does not see it** (`gotchas/vulkan-suballoc-fragmentation-decode-cliff`) — [major] measurement · Vulkan decode on an RX 7900 XTX falls off a cliff between 98K and 131K context: Qwen3.8-27B Q4_K_XL with q8_0 KV and FA on measures 40.4 t/s at ctx 65536, 40.8 t/s at 98304, and 8.9 t/s at 131072. Rai
 - **Vulkan decode on an AMD dGPU collapses 2-6x when Resizable BAR is disabled in BIOS** (`gotchas/vulkan-rebar-off-collapses-amd-decode`) — [major] driver · With ReBAR/SAM off in BIOS, llama.cpp's Vulkan backend runs decode at a fraction of the card's bandwidth. On an RX 7900 XTX with Qwen3.8-27B Q4_K_XL: 13.89 t/s for 128-token generation and 25.28 t/s a
+- **Watermark detection fails exactly where the output matters most: low-entropy text, and about 25% of assistant-style responses** (`gotchas/sec-watermark-low-entropy-output-is-where-detection-dies`) — [major] measurement · A watermark works on essays and fails on the deployment's actual traffic. Mark My Words reports KGW watermarking Llama-2-7B-chat and Mistral-7B-Instruct with no perceivable quality loss and detection 
+- **Watermark schemes are reverse-engineerable from a few black-box generations, so a watermark key is not a secret once the endpoint is live** (`gotchas/sec-watermark-stealable-from-black-box-generations`) — [major] framework · An operator treats the watermark key as a durable secret. A user with ordinary API access and some patience recovers the scheme - which green-list rule applies where - and then knows exactly which sub
 - **WebGPU in-browser inference is 2-5x slower than native GPU inference** (`gotchas/local-webgpu-performance-gap`) — [major] framework · The same model that runs at 30 tokens/sec on a native GPU may run at 6-15 tokens/sec in the browser via WebGPU, or 1-5 tokens/sec via WASM.
+- **Weight loading is the one cold-start phase that gets worse the more replicas you add: N pods booting at once race each other for the same object store, and load times go from minutes to potentially hours** (`gotchas/dep-weight-pull-thundering-herd-is-superlinear-in-burst-size`) — [major] config · Cold start is fine at low replica counts and collapses at high ones. One replica pulling weights from S3 is unremarkable; fifty or a hundred replicas pulling the same model at the same instant is a tr
 - **What Intel hardware genuinely cannot do well relative to NVIDIA for LLM inference** (`gotchas/xpu-intel-gpu-limitations-vs-nvidia`) — [major] hardware · Intel GPUs and Gaudi accelerators have several fundamental limitations relative to NVIDIA for LLM inference: (1) No equivalent to CUDA's mature ecosystem - CUDA has 15+ years of optimization, while In
 - **What people regret buying: parts whose inference engines are years behind the vendor's marketing, and the regret is measured in missing features not in tokens per second** (`gotchas/sent-regret-non-blackwell-engine-support-lags`) — [major] framework · The most valuable sentiment record here is a 242-upvote benchmark post whose conclusion is not about throughput at all. Asked on 4x RTX PRO 6000 (SM120), 397B NVFP4, the reporter's practical verdict i
+- **When the KV cache fills, engines preempt running requests and re-prefill them from token zero — the client sees a latency cliff, not an error** (`gotchas/ops-kv-cache-full-preempts-and-recomputes`) — [major] config · Latency climbs sharply for a subset of requests — typically the ones with long inputs and short outputs — while error rate stays at zero and the request is still 'served'. vLLM's log line shows a risi
+- **When the endpoint picker dies, failOpen routes requests straight to the model servers — and those servers have no queue, no priority and no fairness, so losing the control plane silently downgrades the serving policy** (`gotchas/ops-failopen-router-failure-opens-a-bypass`) — [major] config · During an endpoint-picker election or restart, latency degrades and the fairness guarantees vanish for the duration: per-tenant limits stop applying, priority inversion returns, and requests that woul
+- **Whether a watermark survives paraphrasing is genuinely contested in the literature - the pro side and the con side both have primary sources** (`gotchas/sec-watermark-detection-fragile-to-paraphrasing-contested`) — [major] measurement · Two papers in the same literature reach opposite conclusions on the same question. One finds watermarks survive human and machine paraphrasing; another shows a handful of black-box generations from th
 - **Whisper large-v3-turbo is pruned, not scaled** (`gotchas/aud-gotcha-turbo-pruned-not-scaled`) — [major] config · Assuming Whisper large-v3-turbo is simply a smaller version of large-v3 with proportional speedup across all components.
 - **Widely-cited benchmarks can measure the wrong thing: MT-Bench has low separation, LLM-as-a-judge has biases, and contaminated benchmarks measure memorization** (`gotchas/meth-benchmarking-criticism-wrong-measurement`) — [major] measurement · You cite a benchmark result (e.g., 'Model X scores 85 on MMLU') as evidence of capability, but the benchmark is contaminated, has low separation between models, or measures something other than what y
 - **With symmetric memory enabled, all TP schedulers can deadlock permanently and silently inside ncclCommWindowRegister, while /health still returns 200 and GPUs sit at 0%** (`gotchas/mgpu-symm-mem-window-registration-deadlocks-without-timeout`) — [major] framework · TL;DR from the reporter: with --enable-symm-mem on a multi-rank TP engine, every TP scheduler process deadlocks permanently and silently inside ncclCommWindowRegister. The trigger is routine - wheneve
@@ -863,31 +941,44 @@ and t
 - **llama.cpp upstream regressions on gfx906 ship undetected because AMD maintainers hold NVIDIA hardware - the community has to run its own pre/post-merge A/B on every merge** (`gotchas/comm-gfx906-upstream-regression-risk-no-amd-review`) — [major] framework · A concrete instance: the fork maintainer reports that upstream PR ggml-org/llama.cpp#20793 'got merged... and by my testing the original PR broke pipeline parallelism at least on my MI50 system.' Mode
 - **llama.cpp's --tensor-split can produce intermittent output degeneration on long-context MoE inference, and barely rebalances MoE experts regardless of the ratio given** (`gotchas/mgpu-llamacpp-tensor-split-breaks-nondivisible-multi-gpu-sharding`) — [major] framework · llama-server 0.3.0-dev (build 10731) with '--model Qwen3-Coder-Next-UD-Q4_K_M.gguf --ctx-size 65536 --gpu-layers 999 --split-mode layer --tensor-split 4,1 --n-cpu-moe 34 --flash-attn on --parallel 1' 
 - **mlx-lm --kv-bits passes its startup check, then crashes on the first request for hybrid sliding-window models** (`gotchas/mlx-kv-bits-crashes-on-first-request-for-hybrid-attention`) — [major] config · mlx_lm.server starts cleanly and /health returns 200, then the first chat completion raises 'NotImplementedError: RotatingKVCache Quantization NYI'. Affects models whose attention schedule is mixed - 
+- **terminationGracePeriodSeconds defaults to 30s while an LLM drain window needs minutes — SIGKILL lands mid-drain, so the graceful path is configured but never used** (`gotchas/ops-termination-grace-period-kills-the-drain`) — [major] config · A deployment has --shutdown-timeout set and still fails in-flight requests on rollout, with logs showing the drain starting and then stopping abruptly rather than completing. The pod sits Terminating 
 - **vLLM 0.30.0's FA4 kernel ignores num_splits on SM90, costing up to 48% decode throughput** (`gotchas/fa4-num-splits-ignored-sm90`) — [major] kernel · Decode on H100 (SM90) is 48% slower per token than on v0.26.0 at batch 1 and 36% slower at batch 4 for google/gemma-4-26B-A4B-it at ~5.9k context, while TTFT is flat at 61 ms on both. Results stay cor
 - **vLLM cannot transfer KV over PCIe P2P on Arc Pro B60 because the UCX ze_ipc backend is unmerged** (`gotchas/vllm-arc-b60-no-pcie-p2p-kv-transfer`) — [major] framework · Prefill/decode disaggregation on Arc Pro B60 falls back off PCIe peer-to-peer for KV transfer. The blocker is upstream of vLLM: Intel's own engineer on the issue states that the ze_ipc support in UCX 
 - **vLLM crashes on a MIG UUID in CUDA_VISIBLE_DEVICES, and its NVML path reports the parent GPU's memory for a MIG slice** (`gotchas/mgpu-mig-uuid-cannot-be-parsed-by-vllms-device-resolution`) — [major] framework · On an A100 40GB split into 2x 3g.20gb MIG instances on bare metal, setting CUDA_VISIBLE_DEVICES to a MIG UUID crashes vLLM at startup with: 'ValueError: invalid literal for int() with base 10: \'MIG-f
 - **vLLM's --gpu-memory-utilization is a fraction of TOTAL VRAM, so KV cache block allocation fails even with memory visibly free** (`gotchas/vllm-kv-cache-block-budget`) — [major] config · Engine init fails with: ValueError: No available memory for the cache blocks. Try increasing `gpu_memory_utilization` when initializing the engine. Reported cases include llama-2 70B 4-bit AWQ on 4x A
 - **vLLM's AITER integration gate silently excludes RDNA3 (gfx1100)** (`gotchas/aiter-gate-skips-rdna3-gfx1100`) — [major] config · On a gfx1100 Radeon (Radeon PRO W7900 or 7900 XTX) vLLM logs 'AITER is not found or not supported on the current platform, QuarkOCP_MX will fall back to emulation' and then selects TritonInt8ScaledMML
+- **vLLM's own overload signal is HTTP 503, not 429 — a naive 429-based retry policy never sees it** (`gotchas/ops-vllm-admission-rejects-503-not-429`) — [major] config · A load test or client with a 'retry on 429' rule reports 100% success while the server is shedding a large fraction of requests as HTTP 503 Service Unavailable. The 503s appear in the vLLM access log 
+- **vLLM's torch.compile cache defaults to a path inside the container, so on Kubernetes it is discarded on every pod recreation and you pay the full JIT compile on every cold start without ever seeing the benefit of caching** (`gotchas/dep-compile-cache-lives-in-container-and-is-wiped-every-pod`) — [major] config · Cold start does not improve no matter how many times you restart, even though the same model on the same hardware compiles much faster in a REPL. The intuition that 'the second start should be warm' i
+- **A gateway hop costs one to two orders of magnitude less latency than the model call it fronts, but it adds a failure domain, a compatibility ceiling and a throughput ceiling - the overhead number is the least of the three** (`gotchas/dep-gateway-hop-cost-and-value`) — [minor] config · The question 'how much latency does the gateway add' is asked with the expectation of a bad number, and the measured answers are small: roughly 2 ms of data-plane overhead under sustained enterprise L
 - **A single llama.cpp commit regressed Vulkan Q4_K_M decode speed with no prompt-processing change** (`gotchas/vulkan-q4km-speed-regression`) — [minor] kernel · Bisected to first bad commit adc5dd92e8aea98f5e7ac84f6e1bc15de35130b5 on Windows 11 with dual Radeon PRO W7800, Vulkan SDK 1.3.283, Qwen2.5-14B-Instruct-Q4_K_M at -ngl 99. Decode (tg) fell 42.12 -> 36
 - **Apple Silicon has better bandwidth-per-watt than discrete GPUs, but lower absolute bandwidth** (`gotchas/local-bandwidth-per-watt-apple-vs-discrete`) — [minor] hardware · Apple Silicon delivers more memory bandwidth per watt than discrete GPUs, but the absolute bandwidth is lower. A Mac can run a model longer on battery, but a discrete GPU will decode faster when both 
 - **BlueField DPU offloads network processing but not GPU compute or NCCL collectives** (`gotchas/nic-bluefield-dpu-offload-limits`) — [minor] hardware · BlueField DPU is sometimes described as offloading 'AI workloads' or 'collective communication', but it actually offloads network, storage, and security processing - not GPU compute or NCCL collective
 - **CUDA MPS on top of MIG caps the 48-client limit proportionally to Compute Instance size, and gives up the error isolation that justified MIG** (`gotchas/mgpu-mps-max-clients-scale-down-on-mig`) — [minor] hardware · Stacking MPS over MIG produces a lower client ceiling than the headline 48: 'CUDA MPS is supported on top of MIG. The only limitation is that the maximum number of clients (48) is lowered proportional
+- **Cache-aware routing has no way to rebuild its map of which KV blocks live where: the placement view is built from a live event stream, so any router or replica restart leaves it permanently wrong, and the result is silently worse routing rather than an error** (`gotchas/dep-kv-aware-router-view-cannot-be-rebuilt-after-restart`) — [minor] framework · Prefix-cache hit rates drop after a restart and never fully recover, with no error and no unhealthy worker. This is the expected behaviour of the current design, not a bug report: SGLang's own RFC enu
 - **Community consensus on where the quantization quality cliff is: below Q4 is unusable, and below Q8 is unusable for code - but this is forum opinion, and the one measurement in the thread does not test it** (`gotchas/comm-community-quant-quality-floor-opinion`) — [minor] format · The recurring practitioner judgement in r/LocalLLaMA, stated plainly by timschwartz: 'Quantization is lossy compression. It shaves off a few IQ points in exchange for making it smaller. Stuff below Q4
 - **Consensus with a real justification: SGLang is preferred over vLLM specifically for multinode setup and for prefix-heavy structured workloads, and its simpler deployment path is the cited reason** (`gotchas/sent-sglang-multinode-and-prefix-consensus`) — [minor] toolchain · The multinode case is stated bluntly by a practitioner who has run both at tp=16: 'For multinode, I much prefer SGLang's simple setup vs Ray - the docs for vLLM are barely adequate for setting up Ray 
 - **Consensus with a reservation: TensorRT-LLM is recommended only when you own the hardware and can absorb the build and operational complexity, and even enthusiasts concede the complexity** (`gotchas/sent-tensorrt-llm-worth-the-build-step`) — [minor] build · Two practitioner sources, four years apart, agree on the shape and differ on the tone. In 2023 a commenter in the launch thread leads with the gating friction: TensorRT-LLM at launch required that 'yo
 - **Consensus: llama.cpp is the default recommendation for one user, especially on consumer or non-NVIDIA hardware, and the reasons given are dependency count and quant coverage rather than speed** (`gotchas/sent-llamacpp-single-user-consensus`) — [minor] toolchain · In a thread asking for the fastest engine for a single personal assistant, the top answer is the bare name: '"llama-server" from "llama.cpp"' (24 upvotes). The second, at 17 upvotes, gives the reason:
 - **Consensus: vLLM is what production teams reach for by default on datacenter NVIDIA, because of Day-1 model support and ecosystem size - not because it benchmarks best** (`gotchas/sent-vllm-enterprise-default-consensus`) — [minor] toolchain · Asked what stacks the industry actually uses, the highest-scoring answer (63 upvotes) from a working ML engineer says: 'Infra for inference wise most production apps use Nvidia TensorRT LLM or vLLM, c
 - **Counter-consensus worth keeping: on Apple Silicon the corpus does not treat llama.cpp as the default, and nominates MLX instead - so the strongest engine consensus in this slice is vendor-scoped** (`gotchas/sent-llamacpp-not-the-apple-fast-path`) — [minor] toolchain · The 'llama.cpp for single user' consensus is stated for CUDA and AMD hardware in every practitioner thread. On Apple Silicon it is contested, from two directions. In the r/LocalLLaMA engine thread a M
+- **For almost every engine in this repo the honest answer to 'does it run in production, and at what scale' is NO EVIDENCE FOUND - and that negative is worth more than an inferred answer** (`gotchas/ev-production-evidence-is-scarce-and-nearly-always-single-site`) — [minor] measurement · Asked to record real-world deployment evidence for each engine, the actual yield on 2026-10-04 was TWO engines with first-party-adjacent numeric field reports from named production sites: [[sglang]] (
 - **GPU power and link state are node-global, so you cannot set or change them from inside a shared multi-tenant allocation - and a node someone else down-clocked will silently cap your throughput** (`gotchas/node-global-power-state-unsettable-in-shared-allocation`) — [minor] config · A benchmark or production tuning session that works perfectly on a dedicated node behaves differently on a shared cluster, with no error from the tooling. Attempts to fix it fail confusingly: the cloc
 - **Genuinely divided, recorded as a split: on whether the Strix Halo is a bad buy, the thread splits into owners who are delighted and buyers who are not, and the split is not resolvable by benchmarks** (`gotchas/sent-community-split-strix-halo-owners-versus-buyers`) — [minor] hardware · A post titled 'Why the Strix Halo is a poor purchase for most people' (103 upvotes, 394 comments) produced a thread where the top-voted response is a single line of mockery at 182 upvotes - 'This just
 - **Genuinely divided, recorded as a split: whether to buy inference hardware at all is settled only by usage pattern, and price-per-token arguments are explicitly rejected by the local-hardware camp** (`gotchas/sent-community-split-buy-local-versus-rent`) — [minor] hardware · A thread asking whether to buy 4x Ascend GX10 (39 upvotes, 169 comments) surfaces the whole buy-versus-rent dispute cleanly. Rent side, 46 upvotes: 'This is such a bad financial decision it's almost f
+- **GitHub's repos/{owner}/{repo} open_issues_count INCLUDES open pull requests, so quoting it as an issue count overstates unresolved bug reports - and the repos API is undocumented on this point** (`gotchas/ev-github-open-issues-count-includes-pull-requests`) — [minor] measurement · An engine record says 'N open issues' and a reader concludes there are N unresolved problems. The GitHub REST API's repository object returns a field named open_issues_count whose value includes OPEN 
 - **HW Power Brake fires on external power-supply assertion and cuts core clocks by a factor of 2 or more - a PSU or power-delivery limit presents identically to thermal throttling** (`gotchas/psu-power-brake-throttles-under-dvfs-transients`) — [minor] hardware · Throughput drops sharply and then recovers, intermittently, with no thermal explanation available - and the symptom looks exactly like thermal throttling, which sends people to check fans and inlet te
 - **Hugging Face TGI was retired, not merged into vLLM - the codebase was never absorbed and no TGI code is in vLLM** (`gotchas/tgi-retired-not-merged-into-vllm`) — [minor] framework · People describe TGI as having been 'merged into vLLM' or 'absorbed into vLLM' when Hugging Face retired it. Acting on that belief produces two wrong conclusions: that vLLM contains TGI code (it does n
 - **In llama.cpp, --tensor-split does not move MoE expert tensors, so a GPU split that looks configured is actually leaving expert compute on one device** (`gotchas/mgpu-llamacpp-tensor-split-does-not-balance-moe-experts`) — [minor] config · Observable is a persistent asymmetry, not a crash or corruption: 'Even where --tensor-split doesn't cause degeneration, it barely rebalances actual per-GPU compute load: MoE experts stay almost entire
+- **KGW watermarking: hash the previous token, split the vocabulary in half, promote green tokens - and the decode-time cost is dominated by the vocabulary permutation** (`gotchas/sec-watermark-kgw-green-list-mechanism-and-cost`) — [minor] framework · Serving a watermarked model either 'costs nothing' or is unbearably slow, and the difference is the vocabulary permutation, not the logit bias. A delta of a few hundredths on quality is easy; a randpe
+- **Maintenance status is four dated facts, and the one that predicts everything else is the last commit date - measured across all 100 engine repos with resolvable GitHub metadata** (`gotchas/ev-maintenance-status-is-four-dated-facts`) — [minor] measurement · A reader picks between engines on the axis 'is this alive' and gets impression, star count or an undated adjective. The four facts that answer it are: last commit date, last release date, contributor 
 - **Major cloud providers do not publish internal GPU fabric bandwidth specifications** (`gotchas/nic-cloud-fabric-bandwidth-not-public`) — [minor] measurement · Cloud providers (AWS, GCP, Azure) do not publish the internal bandwidth of their GPU cluster fabrics, making it impossible to compare cloud vs on-premises performance directly.
 - **Matryoshka embedding models support dimension truncation with minimal quality loss** (`gotchas/emb-matryoshka-dimension-truncation`) — [minor] config · Embedding models trained with Matryoshka Representation Learning (MRL) can be truncated to fewer dimensions at inference time with little to no loss in retrieval quality, turning the vector-store stor
 - **Methodology: upvote and point counts in this sentiment layer are a popularity proxy observed at a date, never a measurement of quality or of popularity in general** (`gotchas/sent-vote-counts-are-a-popularity-proxy-not-a-measurement`) — [minor] measurement · Every quantitative claim about community sentiment in this slice carries an upvote or Hacker News point count, and the risk is that a reader treats those numbers as results. They are not. A 182-upvote
+- **Most engine histograms are per-request observations but Triton reports per-model aggregates, and prefix-cache counters are token counts not request counts - the same metric name shape hides different denominators** (`gotchas/obs-metric-names-that-look-per-request-are-not`) — [minor] measurement · A p99 computed from an engine histogram looks nothing like the p99 a client measured, and nobody can say which is right. A prefix-cache 'hit rate' of 0.7 turns out to mean 70% of tokens, not 70% of re
 - **Narrow but consistent: ONNX Runtime and OpenVINO are chosen for constrained and non-CUDA deployment, but the corpus treats them as frameworks you build against rather than engines you adopt** (`gotchas/sent-onnx-and-openvino-for-constrained-deployment`) — [minor] toolchain · ONNX is recommended in the situational map with an explicit downgrade: 'ONNX is also technically an option if you're willing to setup an inference script for a specific model, and you need to support 
+- **OpenTelemetry support is real in four of eight engines and absent in the rest; a trace of one request is one span in vLLM and three spans in Triton, and neither is per-token** (`gotchas/obs-tracing-status-per-engine-honest-negatives`) — [minor] measurement · You enable OTel on four engines and get nothing on the other four, with no warning. Or you get a trace and expect a span per token or per prefill/decode step and find one span for the whole request, s
+- **PCI DSS requirement text was not retrieved and no PCI-specific requirement is recorded here - recorded as a refusal, not a gap** (`gotchas/sec-pci-dss-requirement-text-not-retrieved`) — [minor] config · A reader expects this slice to state which PCI DSS requirements apply to prompt and completion handling. It does not, because the standard text was not obtainable.
+- **Per-query anomaly scoring does not catch extraction; distribution testing over a traffic window does, with published numbers** (`gotchas/sec-model-extraction-detectable-at-traffic-level-not-per-query`) — [minor] measurement · A fraud/extraction monitor scores each query against a benign distribution and raises almost nothing, while an attacker steadily distilling the model walks away with a clone. The single queries really
 - **Practitioners' engine choice tracks the hardware axis, not the feature axis: llama.cpp by default, vLLM when MoE tensor parallelism or throughput matters, TensorRT-LLM only where its FP8 block-scaled kernels actually exist** (`gotchas/comm-engine-choice-consumer-vs-datacenter-practice`) — [minor] framework · A practitioner running dual RTX 3090s states the split plainly: 'My daily LLM inference server is llama.cpp, which is far more user friendly and flexible than vLLM, however vLLM's performance is usual
 - **Q: 'Is it worth upgrading my GPU?' - A: the corpus answers a different question - buy VRAM capacity, not compute - and declines to give a generational verdict** (`gotchas/sent-qa-is-it-worth-upgrading-a-card`) — [minor] hardware · Nobody in this corpus answers 'upgrade or not' with a generational recommendation. What they answer instead is a capacity test. A 2024 thread predicting post-5090 price moves states the capacity frami
 - **Q: 'Should I move off Ollama to vLLM/SGLang?' - A: the corpus gives a numeric trigger of about five concurrent users, and names the two situations where you should not move at all** (`gotchas/sent-qa-ollama-vs-real-engine-migration`) — [minor] toolchain · The 'Best LLM Inference engine for today?' thread is literally this question - a user migrating off Ollama for a personal assistant - and the corpus answer is engine-by-situation rather than migrate. 
@@ -895,16 +986,21 @@ and t
 - **Q: 'Which engine for structured output / agentic / multi-turn workloads?' - A: SGLang and vLLM, with the reason stated as prefix reuse, and llama.cpp kept for the local-model reference path** (`gotchas/sent-qa-which-engine-for-structured-and-reasoning-workloads`) — [minor] toolchain · For prefix-heavy and structured work the corpus names vLLM's prefix caching as the specific asset: 'Prefix caching is amazing for best-of-n style generative tasks.' For large-context single-box work o
 - **The migration resistance has a concrete number: Ollama is treated as finished at about five concurrent users, which is what pushes teams onto vLLM or SGLang** (`gotchas/sent-migration-resistance-concurrency-ceiling-caps-ollama`) — [minor] toolchain · The most operationally useful sentiment datum in the corpus is an explicit concurrency ceiling given by someone running a real organization on it. A single-firm deployment (Threadripper Pro 7965WX, 25
 - **The practitioner answer to 'which inference engine is best' is a situation table, not a winner; asking for a ranking is answered by refusing the framing** (`gotchas/sent-engine-choice-is-situational-not-a-ranking`) — [minor] toolchain · A buyer or engineer asks which inference engine is best. The high-scoring replies do not name one. The most-cited framing is that the question is malformed: 'It's often very silly to ask "which is bet
+- **The router reads a worker's protocol once at registration and never re-reads it, so a worker that stops serving its registered protocol is not detected — the circuit breaker opens on live traffic instead** (`gotchas/ops-router-circuit-breaker-blind-to-h2c-downgrade`) — [minor] config · After a rolling update or a network change, one router replica's throughput drops while its peers are fine, and its circuit breaker for that worker is open. The worker's health is red on the side that
+- **The seven feature axes a reader chooses an engine on were recorded for a minority of engines - a dated audit of which are stated, which are absent, and which are affirmatively NO** (`gotchas/ev-feature-axis-coverage-audit`) — [minor] measurement · A reader comparing engines on 'does it do speculative decoding, chunked prefill, prefix caching, disaggregated prefill/decode, structured output, multi-model, multimodal' finds these recorded for some
 - **The unifying finding of this slice: what practitioners optimise for is integration cost and ecosystem maturity, not measured throughput - the same driver explains every engine and hardware preference recorded here** (`gotchas/sent-ecosystem-gap-is-the-real-preference-driver`) — [minor] framework · Every strong consensus in this sentiment layer resolves to the same underlying variable, and it is not performance. On engines: llama.cpp wins on dependency count and quant coverage, vLLM wins on Day-
 - **Triton JIT compilation on gfx906 makes first-token latency enormous and it recurs on every restart unless the compile cache is persisted; on MI50 it silently switches to the V0 engine** (`gotchas/comm-gfx906-triton-jit-cold-start-ttft`) — [minor] framework · Multi-minute time-to-first-token attributed directly to Triton JIT compilation, recurring on every service restart and machine reboot. Compounding it, vLLM logs 'rocm is experimental on VLLM_USE_V1=1.
 - **Two models quantized at 'the same Q4_K_M level' can land at 4.75 and 4.30 bpw, so named-quant comparisons across models are not controlled experiments** (`gotchas/same-named-quant-is-not-a-controlled-comparison`) — [minor] measurement · Standard llama.cpp quantization applies hardcoded rules ('use Q4_K_M, except bump some tensors up/down, except fall back if incompatible, except keep some tensors unquantized'), so two different model
 - **Vision encoder is a separate model requiring separate memory** (`gotchas/vision-encoder-is-a-separate-model-requiring-separate-memory`) — [minor] config · The vision encoder is a separate model that requires its own GPU memory, reducing the memory available for the LLM and KV cache. For a ViT-L/16 encoder (304M params, bf16), this is ~608 MB of addition
 - **Vision encoder not quantized in mixed-precision serving** (`gotchas/vision-encoder-not-quantized-in-mixed-precision-serving`) — [minor] config · The vision encoder runs in BF16 even when the LLM decoder is quantized to FP8 or INT8, leading to a precision mismatch and wasted memory.
+- **Watermarking is a provenance signal, not a safety control - it does not moderate, refuse, or prevent anything** (`gotchas/sec-watermark-provenance-is-not-a-compliance-control`) — [minor] config · A deployment adds a watermark and reports the content-safety problem as solved. The watermark changes which tokens get sampled; it has no ability to refuse, to filter, or to detect harm at generation 
 - **What people regret buying: over-committing capex before validating demand - the recurring answer to 'should I buy this' is rent first** (`gotchas/sent-regret-buying-without-validating-the-workload`) — [minor] hardware · The strongest cross-cutting consensus in the whole slice is not about any particular GPU. It is that the buy decision should be preceded by renting, and the most-voted piece of practical advice in a '
 - **gfx906 is officially 'deprecated' in ROCm's support matrix yet still works in practice - the gap between the two states is where every workaround in this slice lives, and AMD has been asked to reverse it** (`gotchas/comm-gfx906-spec-deprecation-vs-working`) — [minor] config · The upstream issue that established the state of play states it plainly: 'However, Radeon VII gfx906 still listed as deprecated instead of unsupported', alongside the rocBLAS break - i.e. the document
 - **llama.cpp is MIT: no patent grant, no copyleft, only requires preserving copyright notices** (`gotchas/meth-llamacpp-mit-no-patent-grant`) — [minor] config · You want to use llama.cpp in a commercial product and need to understand the license terms. MIT is simpler than Apache 2.0 but has no patent grant.
 - **llama.cpp on the Vulkan backend beats HIP by ~20% on gfx906 at fa=0 and short context, and the reported cause is AMD's aggressive Vulkan power management idling cards between layers in a layer-split** (`gotchas/comm-gfx906-vulkan-20pct-over-hip-short-ctx`) — [minor] driver · One member builds llama.cpp from ROCm 7.14 and separately from the Vulkan backend and reports: 'the PP and TG is roughly 20 pc faster than rocm 7.14 when fa=0. note that my card is capped at 175 w. bu
+- **sglang:utilization and sglang:max_running_requests_under_SLO are documented but permanently zero on current main - do not build an autoscaling rule on them** (`gotchas/obs-sglang-utilization-metric-is-dead`) — [minor] measurement · You configure SGLang with an SLO target, expect sglang:max_running_requests_under_SLO to report the headroom the engine computed, and find it permanently 0. Or sglang:utilization is flat at 0 on a dec
 - **vLLM auto-selects an FP8 linear kernel on RDNA4 that is slower than the one it picked before v0.28** (`gotchas/vllm-rdna4-rowwise-fp8-kernel-auto-selected`) — [minor] framework · On RDNA4 (Radeon AI PRO R9700, gfx1201), serving FP8 compressed-tensors checkpoints with --kv-cache-dtype fp8 and TRITON_ATTN, decode throughput depends on a kernel selector rather than on the hardwar
+- **vLLM derives prefix-cache block hashes from a FIXED default seed so nodes can share a cache - keeping the seed secret is not a security control** (`gotchas/sec-kv-cache-hash-seed-is-fixed-by-default-for-cross-node-reuse`) — [minor] config · Someone asks how to prevent an attacker forging prefix-cache blocks. The hash is sha256 and the seed is a documented constant, so any identical token sequence produces an identical block hash on every
 - **vLLM is Apache 2.0: the patent grant is the key differentiator from MIT, and it terminates on patent litigation** (`gotchas/meth-vllm-apache2-patent-grant`) — [minor] config · You want to use vLLM in a commercial product and assume it's 'open source' like MIT. But Apache 2.0 has a patent grant that MIT lacks, and it terminates if you sue for patent infringement.
 - **vLLM's 'Your GPU does not have native support for FP4' warning fires on weight-only NVFP4 checkpoints, and gets quoted as evidence the silicon lacks FP4 kernels** (`gotchas/nvfp4-marlin-warning-blames-gpu-for-weight-only-checkpoint`) — [minor] measurement · prepare_nvfp4_moe_layer_for_marlin() emits 'Your GPU does not have native support for FP4 computation but FP4 quantization is being used. Weight-only FP4 compression will be used leveraging the Marlin
 
@@ -1083,9 +1179,9 @@ and t
 - **Gemma 2 9B** (`models/gemma-2-9b`) — dense 9.24B · 344,064 B/token KV · GQA + alternating sliding-window/global (sliding_window 4096) · 8,192 ctx
 - **Gemma 3 27B (multimodal)** (`models/gemma-3-27b`) — dense 27.43B · 507,904 B/token KV · GQA + 5:1 sliding-window/global (sliding_window 1024, pattern 6) · 131,072 ctx
 - **Gemma 3n E2B** (`models/gemma-3n-e2b`) — dense 5.44B · 61,440 B/token KV · GQA + 4:1 sliding-window/global (sliding_window 512) · 32,768 ctx
-- **Gemma 4 12B (unified multimodal)** (`models/gemma-4-12b`) — dense 11.96B · GQA + sliding-window/global hybrid with separate global head geometry (global_head_dim 512, num_global_key_value_heads 1) · 262,144 ctx
-- **Gemma 4 26B A4B (MoE, multimodal)** (`models/gemma-4-26b-a4b`) — moe 4/25.81B active · GQA + sliding-window/global hybrid with separate global head geometry (global_head_dim 512, num_global_key_value_heads 2) · 262,144 ctx
-- **Gemma 4 31B (dense, multimodal)** (`models/gemma-4-31b`) — dense 31.27B · GQA + sliding-window/global hybrid with separate global head geometry (global_head_dim 512, num_global_key_value_heads 4) · 262,144 ctx
+- **Gemma 4 12B (unified multimodal)** (`models/gemma-4-12b`) — dense 11.96B · 344,064 B/token KV · GQA + sliding-window/global hybrid with separate global head geometry (global_head_dim 512, num_global_key_value_heads 1) · 262,144 ctx
+- **Gemma 4 26B A4B (MoE, multimodal)** (`models/gemma-4-26b-a4b`) — moe 4/25.81B active · 225,280 B/token KV · GQA + sliding-window/global hybrid with separate global head geometry (global_head_dim 512, num_global_key_value_heads 2) · 262,144 ctx
+- **Gemma 4 31B (dense, multimodal)** (`models/gemma-4-31b`) — dense 31.27B · 901,120 B/token KV · GQA + sliding-window/global hybrid with separate global head geometry (global_head_dim 512, num_global_key_value_heads 4) · 262,144 ctx
 - **Gemma 3 12B IT (multimodal)** (`models/gemma-3-12b-it`) — dense 12.187B · 393,216 B/token KV · sliding-window/hybrid (5 local : 1 global) · 131,072 ctx
 - **Gemma 3 4B IT (multimodal)** (`models/gemma-3-4b-it`) — dense 4.3B · 139,264 B/token KV · sliding-window/hybrid (5 local : 1 global) · 131,072 ctx
 - **Griffin-14B** (`models/griffin-14b`) — hybrid-attention-ssm 14B · hybrid: gated linear recurrences (Hawk) + local attention
@@ -1097,7 +1193,7 @@ and t
 - **Granite 3.3 8B Instruct** (`models/granite-3-3-8b-instruct`) — dense 8.17086B · 163,840 B/token KV · GQA · 131,072 ctx
 - **Granite 4.0 H Tiny** (`models/granite-4-0-h-tiny`) — hybrid-attention-ssm 6.93904B · 8,192 B/token KV · GQA on 4 of 40 layers; Mamba-2 on 36; NoPE · 131,072 ctx
 - **Jina Embeddings v3** (`models/jina-embeddings-v3`) — dense 0.572B · bidirectional encoder (XLM-RoBERTa with LoRA adapters), full attention, no causal mask · 8,194 ctx
-- **Jina Embeddings v4** (`models/jina-embeddings-v4`) — dense 3.24B · 18,432 B/token KV · causal decoder (Qwen2.5-VL text backbone) used as a bi-encoder via mean pooling, with multi-vector projector · 128,000 ctx
+- **Jina Embeddings v4** (`models/jina-embeddings-v4`) — dense 3.24B · 36,864 B/token KV · causal decoder (Qwen2.5-VL text backbone) used as a bi-encoder via mean pooling, with multi-vector projector · 128,000 ctx
 - **Jina Reranker v2 Base Multilingual** (`models/jina-reranker-v2-base-multilingual`) — dense 0.278B · cross-encoder (XLM-RoBERTa), full bidirectional attention over query+passage · 1,026 ctx
 - **LLaVA-OneVision-Qwen2-7B (HF format)** (`models/llava-onevision-qwen2-7b`) — dense 8.031B · 57,344 B/token KV · GQA (LLM); SigLIP full attention (vision) · 32,768 ctx
 - **LFM2-1.2B** (`models/lfm2-1-2b`) — hybrid-attention-ssm 1.17B · hybrid: 10 short-conv (Mamba-style) + 6 full-attention layers · 128,000 ctx
@@ -1137,7 +1233,7 @@ and t
 - **Parakeet CTC 1.1B** (`models/parakeet-ctc-1-1b`) — dense 1.063B · MHA (no GQA); FastConformer encoder only · 5,000 ctx
 - **Parakeet TDT 0.6B v2** (`models/parakeet-tdt-0-6b-v2`) — dense 0.6B
 - **Nomic Embed Text v1.5** (`models/nomic-embed-text-v1-5`) — dense 0.137B · bidirectional encoder (nomic_bert: BERT + rotary, GLU MLP) · 2,048 ctx
-- **Nomic Embed Text v2 MoE** (`models/nomic-embed-text-v2-moe`) — moe 0.058/0.494B active · bidirectional encoder (nomic_bert with MoE), full attention, no causal mask · 2,048 ctx
+- **Nomic Embed Text v2 MoE** (`models/nomic-embed-text-v2-moe`) — moe 0.058/0.494B active · bidirectional encoder (nomic_bert with MoE), full attention, no causal mask, MHA (12 heads, gqa_ratio 1.0) · 2,048 ctx
 - **Hermes-3-Llama-3.1-8B** (`models/hermes-3-llama-3-1-8b`) — dense 8.03026B · 131,072 B/token KV · GQA · 131,072 ctx
 - **Hermes-4-405B** (`models/hermes-4-405b`) — dense 405.853B · 516,096 B/token KV · GQA · 131,072 ctx
 - **Nous-Hermes-2-Mixtral-8x7B-DPO** (`models/nous-hermes-2-mixtral-8x7b-dpo`) — moe 12.9/46.7028B active · 131,072 B/token KV · GQA · 32,768 ctx
@@ -1164,7 +1260,7 @@ and t
 - **InternVL2_5-8B** (`models/internvl2-5-8b`) — dense 8.075B · 131,072 B/token KV · GQA · 32,768 ctx
 - **InternVL3-8B** (`models/internvl3-8b`) — dense 7.944B · 57,344 B/token KV · GQA · 32,768 ctx
 - **Snowflake Arctic Embed L** (`models/snowflake-arctic-embed-l`) — dense 0.334B · bidirectional encoder (BERT), full attention, no causal mask · 512 ctx
-- **Based-1.3B** (`models/based-1-3b`) — hybrid-attention-ssm 1.3B · hybrid: linear attention + sliding-window attention
+- **Based-1.3B** (`models/based-1-3b`) — hybrid-attention-ssm 1.3B · 50,176 B/token KV · three-way interleave: short-conv (BaseConv) on most layers + Taylor linear attention on 7 layers + sliding-window MHA (window 128) on 7 layers · 2,048 ctx
 - **Hyena** (`models/hyena-arch`) — recurrent · implicit long convolution + data-controlled gating
 - **Step-3.5-Flash** (`models/step-3-5-flash`) — moe 11/196.8B active · 196,608 B/token KV · GQA with interleaved sliding-window (36 of 48 layers, window 512) + full attention · 262,144 ctx
 - **GLM-4.1V-9B-Thinking** (`models/glm-4-1v-9b-thinking`) — dense 10.293B · 40,960 B/token KV · GQA (MQA-like, 2 KV heads) + mrope · 65,536 ctx
@@ -1180,11 +1276,11 @@ and t
 - **GLM-4.5** (`models/glm-4-5`) — moe 32/355B active · 376,832 B/token KV · GQA (standard) - NOT MLA despite the DeepSeek-derived MoE design · 131,072 ctx
 - **GLM-4.7-Flash** (`models/glm-4-7-flash`) — moe 3/31.2B active · 54,144 B/token KV · MLA (kv_lora_rank 512, qk_nope 192 + qk_rope 64, v_head_dim 256) · 202,752 ctx
 - **GLM-5.3** (`models/glm-5-3`) — moe 753.3B · 89,856 B/token KV · MLA + DSA sparse attention indexer (index_topk 2048), kv_lora_rank 512 · 1,048,576 ctx
-- **Zamba-7B** (`models/zamba-7b`) — hybrid-attention-ssm 7B · hybrid: Mamba backbone with single shared attention module
+- **Zamba-7B** (`models/zamba-7b`) — hybrid-attention-ssm 7B · 193,024 B/token KV · hybrid: Mamba-2 backbone with a SINGLE SHARED attention block, invoked at 13 of 76 layers; MHA not GQA (16 query heads, 16 KV heads) · 4,096 ctx
 - **ModernBERT Base** (`models/modernbert-base`) — dense 0.15B · bidirectional encoder, alternating local (128) and global attention (every 3rd layer) · 8,192 ctx
 - **E5 Base v2** (`models/e5-base-v2`) — dense 0.109B · bidirectional encoder (BERT), full attention, no causal mask · 512 ctx
 - **E5 Large v2** (`models/e5-large-v2`) — dense 0.335B · bidirectional encoder (BERT), full attention, no causal mask · 512 ctx
-- **E5 Mistral 7B Instruct** (`models/e5-mistral-7b-instruct`) — dense 7B · 8,192 B/token KV · causal decoder (Mistral) used as a bi-encoder via last-token pooling · 32,768 ctx
+- **E5 Mistral 7B Instruct** (`models/e5-mistral-7b-instruct`) — dense 7B · 131,072 B/token KV · causal decoder (Mistral) used as a bi-encoder via last-token pooling · 32,768 ctx
 - **OpenHermes-2.5-Mistral-7B** (`models/openhermes-2-5-mistral-7b`) — dense 7.24175B · 131,072 B/token KV · GQA · 32,768 ctx
 - **Grok 1** (`models/grok-1`) — moe 314B · 262,144 B/token KV · GQA · 8,192 ctx
 
@@ -1203,7 +1299,7 @@ and t
 - **BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models** (`papers/blip2`) — multimodal · icml · 2023 · arXiv:2301.12597 · in-production
 - **Beyond Energy: When Sustainability Dimensions Reshape LLM Serving Decisions (PRISM)** (`papers/sustainability-dimensions-llm-serving`) — serving-systems · arxiv · 2026 · arXiv:2609.35569 · research-only
 - **BitNet: Scaling 1-bit Transformers for Large Language Models** (`papers/bitnet`) — quantization · arxiv · 2023 · arXiv:2310.11453 · research-only
-- **Block Diffusion: Interpolating Between Autoregressive and Diffusion Language Models (BD3-LM)** (`papers/block-diffusion-bd3-lm`) — other · icml · 2025 · arXiv:2503.09573 · research-only
+- **Block Diffusion: Interpolating Between Autoregressive and Diffusion Language Models (BD3-LM)** (`papers/block-diffusion-bd3-lm`) — other · iclr · 2025 · arXiv:2503.09573 · research-only
 - **Blockwise Parallel Transformer for Large Context Models** (`papers/blockwise-parallel-transformer`) — attention · neurips · 2023 · arXiv:2305.19370 · research-only
 - **Break the Sequential Dependency of LLM Inference Using Lookahead Decoding** (`papers/lookahead-parallel-decoding`) — speculative-decoding · arxiv · 2024 · arXiv:2402.02057 · in-upstream-engine
 - **CacheBlend: Fast Large Language Model Serving for RAG with Cached Knowledge Fusion** (`papers/cacheblend-rag-kv-fusion`) — kv-cache · arxiv · 2024 · arXiv:2405.16444 · in-upstream-engine
@@ -1226,9 +1322,9 @@ and t
 - **DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models** (`papers/deepseekmoe`) — moe · arxiv · 2024 · arXiv:2401.06066 · in-production
 - **DeepSpeed Inference: Enabling Efficient Inference of Transformer Models at Unprecedented Scale** (`papers/deepspeed-inference`) — serving-systems · other · 2022 · arXiv:2207.00032 · in-production
 - **DeepSpeed-FastGen: High-throughput Text Generation for LLMs via MII and DeepSpeed-Inference** (`papers/deepspeed-fastgen`) — serving-systems · arxiv · 2024 · arXiv:2401.08671 · in-production
-- **DeepSpeed-MoE: Advancing Mixture-of-Experts Inference and Training to Power Next-Generation AI Scale** (`papers/deepspeed-moe`) — moe · arxiv · 2022 · arXiv:2201.05596 · in-upstream-engine
+- **DeepSpeed-MoE: Advancing Mixture-of-Experts Inference and Training to Power Next-Generation AI Scale** (`papers/deepspeed-moe`) — moe · icml · 2022 · arXiv:2201.05596 · in-upstream-engine
 - **Dense Passage Retrieval for Open-Domain Question Answering** (`papers/dpr`) — retrieval · emnlp · 2020 · arXiv:2004.04906 · in-production
-- **Detecting Pretraining Data from Large Language Models** (`papers/meth-detecting-pretraining-data`) — other · arxiv · 2023 · arXiv:2310.16789 · research-only
+- **Detecting Pretraining Data from Large Language Models** (`papers/meth-detecting-pretraining-data`) — other · iclr · 2024 · arXiv:2310.16789 · research-only
 - **Differential Transformer** (`papers/diff-transformer`) — attention · iclr · 2025 · arXiv:2410.05258 · research-only
 - **Diffusion-LM Improves Controllable Text Generation** (`papers/diffusion-lm`) — other · neurips · 2022 · arXiv:2205.14217 · research-only
 - **DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving** (`papers/paper-distserve`) — serving-systems · osdi · 2024 · arXiv:2401.09670 · research-only
@@ -1248,7 +1344,7 @@ and t
 - **Extending Context Window of Large Language Models via Positional Interpolation** (`papers/position-interpolation`) — position-encoding · arxiv · 2023 · arXiv:2306.15595 · in-upstream-engine
 - **Extreme Compression of Large Language Models via Additive Quantization** (`papers/paper-aqlm`) — quantization · icml · 2024 · arXiv:2401.06118 · in-upstream-engine
 - **Fast Distributed Inference Serving for Large Language Models** (`papers/fastserve-llm`) — scheduling · arxiv · 2023 · arXiv:2305.05920 · research-only
-- **Fast Inference from Transformers via Speculative Decoding** (`papers/leviathan-speculative-decoding`) — speculative-decoding · iclr · 2023 · arXiv:2211.17192 · in-production
+- **Fast Inference from Transformers via Speculative Decoding** (`papers/leviathan-speculative-decoding`) — speculative-decoding · icml · 2023 · arXiv:2211.17192 · in-production
 - **Fast Matrix Multiplications for Lookup Table-Quantized LLMs** (`papers/paper-flute`) — quantization · emnlp · 2024 · arXiv:2407.10960 · research-only
 - **Fast Transformer Decoding: One Write-Head is All You Need** (`papers/multi-query-attention`) — kv-cache · arxiv · 2019 · arXiv:1911.02150 · in-upstream-engine
 - **FastEmit: Low-latency Streaming ASR with Sequence-level Emission Regularization** (`papers/fastemit`) — speech · icassp · 2021 · arXiv:2010.11148 · in-upstream-engine
@@ -1305,10 +1401,10 @@ and t
 - **Learning to Compress Prompts with Gist Tokens** (`papers/gist-tokens`) — long-context · neurips · 2023 · arXiv:2304.08467 · research-only
 - **Leave No Context Behind: Efficient Infinite Context Transformers with Infini-attention** (`papers/infini-attention-infinite-context`) — long-context · arxiv · 2024 · arXiv:2404.07143 · research-only
 - **Leave No Context Behind: Efficient Infinite Context Transformers with Infini-attention** (`papers/infini-attention`) — long-context · arxiv · 2024 · arXiv:2404.07143 · research-only
-- **Let's Verify Step by Step** (`papers/process-supervision-prm800k`) — inference-time-compute · arxiv · 2023 · arXiv:2305.20050 · in-production
+- **Let's Verify Step by Step** (`papers/process-supervision-prm800k`) — inference-time-compute · iclr · 2024 · arXiv:2305.20050 · in-production
 - **Lightning Attention-2: A Free Lunch for Handling Unlimited Sequence Lengths in Large Language Models** (`papers/lightning-attention-2-tiling`) — attention · arxiv · 2024 · arXiv:2401.04658 · in-production
 - **Lightning Attention-2: A Free Lunch for Handling Unlimited Sequence Lengths in Large Language Models** (`papers/lightning-attention-2`) — attention · arxiv · 2024 · arXiv:2401.04658 · abandoned
-- **Linear Transformers Are Secretly Fast Weight Programmers** (`papers/linear-transformers-fast-weight-programmers`) — attention · iclr · 2021 · arXiv:2102.11174 · in-upstream-engine
+- **Linear Transformers Are Secretly Fast Weight Programmers** (`papers/linear-transformers-fast-weight-programmers`) — attention · icml · 2021 · arXiv:2102.11174 · in-upstream-engine
 - **Linformer: Self-Attention with Linear Complexity** (`papers/linformer`) — attention · arxiv · 2020 · arXiv:2006.04768 · abandoned
 - **Llama Guard 3-1B-INT4: Compact and Efficient Safeguard for Human-AI Conversations** (`papers/llama-guard-3-1b-int4`) — security · arxiv · 2024 · arXiv:2411.17713 · in-production
 - **Llama Guard: LLM-based Input-Output Safeguard for Human-AI Conversations** (`papers/llama-guard-safeguard-model`) — security · arxiv · 2023 · arXiv:2312.06674 · in-production
@@ -1383,7 +1479,7 @@ and t
 - **RouteLLM: Learning to Route LLMs with Preference Data** (`papers/routellm`) — routing · iclr · 2025 · arXiv:2406.18665 · in-production
 - **SALMONN: Towards Generic Hearing Abilities for Large Language Models** (`papers/salmonn`) — speech · cvpr · 2024 · arXiv:2310.13289 · research-only
 - **SGLang: Efficient Execution of Structured Language Model Programs** (`papers/paper-sglang`) — serving-systems · neurips · 2024 · arXiv:2312.07104 · in-production
-- **SGLang: Efficient Execution of Structured Language Model Programs** (`papers/sglang-structured-program-runtime`) — serving-systems · arxiv · 2023 · arXiv:2312.07104 · in-upstream-engine
+- **SGLang: Efficient Execution of Structured Language Model Programs** (`papers/sglang-structured-program-runtime`) — serving-systems · neurips · 2024 · arXiv:2312.07104 · in-upstream-engine
 - **SPLADE: Sparse Lexical and Expansion Model for First Stage Ranking** (`papers/splade`) — retrieval · other · 2021 · arXiv:2107.05720 · in-production
 - **SageAttention2: Efficient Attention with Thorough Outlier Smoothing and Per-thread INT4 Quantization** (`papers/sageattention2`) — quantization · icml · 2025 · arXiv:2411.10958 · research-only
 - **SageAttention: Accurate 8-Bit Attention for Plug-and-play Inference Acceleration** (`papers/sageattention`) — quantization · iclr · 2025 · arXiv:2410.02367 · research-only
@@ -1399,7 +1495,7 @@ and t
 - **Sigmoid Loss for Language Image Pre-Training (SigLIP)** (`papers/siglip`) — multimodal · iccv · 2023 · arXiv:2303.15343 · in-production
 - **SimCSE: Simple Contrastive Learning of Sentence Embeddings** (`papers/simcse`) — embedding · emnlp · 2021 · arXiv:2104.08821 · in-production
 - **Simple linear attention language models balance the recall-throughput tradeoff** (`papers/simple-linear-attention`) — attention · icml · 2024 · arXiv:2402.18668 · research-only
-- **Simple linear attention language models balance the recall-throughput tradeoff (Based)** (`papers/based-simple-linear-attention`) — attention · iclr · 2024 · arXiv:2402.18668 · research-only
+- **Simple linear attention language models balance the recall-throughput tradeoff (Based)** (`papers/based-simple-linear-attention`) — attention · icml · 2024 · arXiv:2402.18668 · research-only
 - **SliceGPT: Compress Large Language Models by Deleting Rows and Columns** (`papers/slicegpt`) — pruning · iclr · 2024 · arXiv:2401.15024 · research-only
 - **SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models** (`papers/paper-smoothquant`) — quantization · icml · 2023 · arXiv:2211.10438 · in-upstream-engine
 - **SnapKV: LLM Knows What You are Looking for Before Generation** (`papers/snapkv-paper`) — kv-cache · neurips · 2024 · arXiv:2404.14469 · research-only
@@ -1409,14 +1505,14 @@ and t
 - **SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot** (`papers/sparsegpt`) — pruning · icml · 2023 · arXiv:2301.00774 · research-only
 - **SparseVLM: Visual Token Sparsification for Efficient Vision-Language Model Inference** (`papers/sparsevlm`) — multimodal · icml · 2025 · arXiv:2410.04417 · research-only
 - **SpecInfer: Accelerating Generative Large Language Model Serving with Tree-based Speculative Inference and Verification** (`papers/specinfer-tree-speculative-serving`) — speculative-decoding · asplos · 2024 · arXiv:2305.09781 · in-upstream-engine
-- **SpeechGPT: Empowering Large Language Models with Intrinsic Cross-Modal Conversational Abilities** (`papers/speechgpt`) — speech · arxiv · 2023 · arXiv:2305.11000 · research-only
+- **SpeechGPT: Empowering Large Language Models with Intrinsic Cross-Modal Conversational Abilities** (`papers/speechgpt`) — speech · emnlp · 2023 · arXiv:2305.11000 · research-only
 - **SpinQuant: LLM Quantization with Learned Rotations** (`papers/paper-spinquant`) — quantization · iclr · 2025 · arXiv:2405.16406 · research-only
-- **Splitwise: Efficient generative LLM inference using phase splitting** (`papers/splitwise-prefill-decode-disaggregation`) — serving-systems · arxiv · 2023 · arXiv:2311.18677 · research-only
+- **Splitwise: Efficient generative LLM inference using phase splitting** (`papers/splitwise-prefill-decode-disaggregation`) — serving-systems · isca · 2024 · arXiv:2311.18677 · research-only
 - **Splitwise: Efficient generative LLM inference using phase splitting** (`papers/splitwise`) — serving-systems · isca · 2024 · arXiv:2311.18677 · research-only
 - **SqueezeLLM: Dense-and-Sparse Quantization** (`papers/paper-squeezellm`) — quantization · icml · 2024 · arXiv:2306.07629 · research-only
 - **Stateful Large Language Model Serving with Pensieve** (`papers/paper-pensieve`) — kv-cache · eurosys · 2024 · arXiv:2312.05516 · research-only
 - **Striped Attention: Faster Ring Attention for Causal Transformers** (`papers/striped-attention`) — attention · arxiv · 2023 · arXiv:2311.09431 · research-only
-- **Structured Denoising Diffusion Models in Discrete State-Spaces (SEDD)** (`papers/sedd-score-entropy-discrete-diffusion`) — other · icml · 2024 · arXiv:2107.03006 · in-upstream-engine
+- **Structured Denoising Diffusion Models in Discrete State-Spaces (SEDD)** (`papers/sedd-score-entropy-discrete-diffusion`) — other · neurips · 2021 · arXiv:2107.03006 · in-upstream-engine
 - **Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity** (`papers/switch-transformers`) — moe · other · 2022 · arXiv:2101.03961 · in-upstream-engine
 - **Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve** (`papers/sarathi-serve`) — scheduling · osdi · 2024 · arXiv:2403.02310 · in-upstream-engine
 - **Tetra: Serving Leech-Lattice Quantized LLMs at 2.7 Bits per Parameter** (`papers/tetra`) — quantization · arxiv · 2026 · arXiv:2609.35465 · research-only
@@ -1427,7 +1523,7 @@ and t
 - **The LLM Surgeon** (`papers/llm-surgeon`) — pruning · arxiv · 2023 · arXiv:2312.17244 · research-only
 - **The Llama 3 Herd of Models** (`papers/llama-3-herd`) — distillation · arxiv · 2024 · arXiv:2407.21783 · in-production
 - **ThinQuant: Scalable Rotation Learning for Weight and Activation Quantization of LLMs** (`papers/thinquant`) — quantization · arxiv · 2026 · arXiv:2609.36120 · research-only
-- **Titans: Learning to Memorize at Test Time** (`papers/titans-test-time-memory`) — ssm · arxiv · 2024 · arXiv:2501.00663 · research-only
+- **Titans: Learning to Memorize at Test Time** (`papers/titans-test-time-memory`) — ssm · neurips · 2025 · arXiv:2501.00663 · research-only
 - **Titans: Learning to Memorize at Test Time** (`papers/titans`) — long-context · neurips · 2025 · arXiv:2501.00663 · research-only
 - **Token Latency Fairness: Performance Isolation for Multi-Tenant LLM Serving** (`papers/token-latency-fairness`) — serving-systems · arxiv · 2026 · arXiv:2609.18112 · research-only
 - **Towards General Text Embeddings with Multi-stage Contrastive Learning (GTE)** (`papers/gte`) — embedding · arxiv · 2023 · arXiv:2308.03281 · in-production
@@ -1457,7 +1553,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (1506)
+## Sources (1763)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -1520,8 +1616,10 @@ and t
 - **AWS Trainium3 Architecture (Neuron Docs)** (`sources/aws-trainium3-architecture-neuron-docs`) — blog
 - **Accelerating Production LLMs with Combined Token/Embedding Speculators (arXiv:2404.19124)** (`sources/pap-eff-token-speculators`) — blog
 - **Achieving Top Inference Performance with the NVIDIA H100 Tensor Core GPU and NVIDIA TensorRT-LLM** (`sources/bench-nv-nvidia-h100-tensorrtllm-blog`) — blog · NVIDIA
+- **AcruxCore docs blog - How much overhead does an LLM gateway add? (five-path controlled measurement)** (`sources/dep-acruxcore-gateway-overhead-measurement`) — blog · AcruxCore (gateway vendor; self-interested, methodology disclosed)
 - **Amazon EC2 Trn3 UltraServers (Trainium3)** (`sources/amazon-ec2-trn3-ultraservers-trainium3`) — blog
 - **Announcing Llama 3.1 Support in vLLM** (`sources/bench-nv-vllm-llama31-blog`) — blog · vLLM project
+- **Baseten blog - Introducing the Baseten Delivery Network: fast cold starts for big models** (`sources/dep-baseten-bdn-cold-start-blog`) — blog · Baseten
 - **Break the Sequential Dependency of LLM Inference Using Lookahead Decoding (arXiv:2402.02057)** (`sources/pap-eff-lookahead-decoding`) — blog
 - **CNBC: U.S. curbs export of more AI chips, including Nvidia H800, to China (2023-10-17)** (`sources/acc-fill-cnbc-h800-export-ban`) — blog · CNBC
 - **CacheBlend: Fast Large Language Model Serving for RAG with Cached Knowledge Fusion (arXiv:2405.16444)** (`sources/pap-eff-cacheblend`) — blog
@@ -1536,6 +1634,7 @@ and t
 - **EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees (arXiv:2406.16858)** (`sources/pap-eff-eagle-2`) — blog
 - **EAGLE-3: Scaling up Inference Acceleration of Large Language Models via Training-Time Test (arXiv:2503.01840)** (`sources/pap-eff-eagle-3`) — blog
 - **Evaluating Llama 3.3 70B Inference on NVIDIA H100 and A100 GPUs (genai-perf)** (`sources/bench-nv-silexdata-h100-a100-blog`) — blog · Silex Data Solutions
+- **ExLlamaV3 README feature list and JIT build note (read 2026-10-04)** (`sources/ev-exllamav3-readme-feature-axes`) — blog · turboderp
 - **Export control driven GPU price distortion - H20/H200/H800 as worked example** (`sources/ppl-dep-export-control-price-distortion`) — blog · Reuters / derived from multiple repo records
 - **Falcon-H1 release blogpost** (`sources/hf-eco-falcon-h1-blog`) — blog · TII Falcon Team
 - **Flash-Decoding for long-context inference** (`sources/flop-flashdecoding`) — blog · Stanford CRFM / Tri Dao
@@ -1557,14 +1656,17 @@ and t
 - **Introducing NVFP4 for Efficient and Accurate Low-Precision Inference** (`sources/quant-nvfp4-blog`) — blog · NVIDIA
 - **Introducing gpt-oss** (`sources/model-fr-openai-gpt-oss-blog`) — blog · OpenAI
 - **JSONSchemaBench: A Rigorous Benchmark of Structured Outputs for Language Models (arXiv:2501.10868)** (`sources/pap-eff-jsonschemabench`) — blog
+- **KTransformers README: prefix cache, GLM-5.3-flash multimodal on consumer GPUs (read 2026-10-04)** (`sources/ev-ktransformers-readme-feature-axes`) — blog · kvcache-ai
 - **LLM Inference Performance Engineering: Best Practices for Tuning Decoding** (`sources/bench-meth-databricks-inference-tuning`) — blog · Databricks (MosaicML engineering team)
 - **LLaDA project page** (`sources/hf-eco-llada-demo`) — blog · ML-GSAI
+- **LMDeploy README feature and roadmap lines (read 2026-10-04)** (`sources/ev-lmdeploy-readme-feature-axes`) — blog · InternLM
 - **Large Language Models Cannot Self-Correct Reasoning Yet (arXiv:2310.01798)** (`sources/pap-eff-llms-cannot-self-correct`) — blog
 - **LayerSkip: Enabling Early Exit Inference and Self-Speculative Decoding (arXiv:2404.16710)** (`sources/pap-eff-layerskip`) — blog
 - **Leave No Context Behind: Efficient Infinite Context Transformers with Infini-attention (arXiv:2404.07143)** (`sources/pap-eff-infini-attention`) — blog
 - **Let's Verify Step by Step (arXiv:2305.20050)** (`sources/pap-eff-verify-step-by-step`) — blog
 - **Llama Guard 3-1B-INT4: Compact and Efficient Safeguard for Human-AI Conversations (arXiv:2411.17713)** (`sources/pap-eff-llama-guard-3-1b-int4`) — blog
 - **Llama Guard: LLM-based Input-Output Safeguard for Human-AI Conversations (arXiv:2312.06674)** (`sources/pap-eff-llama-guard`) — blog
+- **MLC LLM README (read 2026-10-04): negative result on the feature axes** (`sources/ev-mlc-llm-readme-feature-axes`) — blog · MLC
 - **MLIR: Multi-Level Intermediate Representation** (`sources/mlir-multi-level-intermediate-representation`) — blog
 - **MagicDec: Breaking the Latency-Throughput Tradeoff for Long Context Generation with Speculative Decoding (arXiv:2408.11049)** (`sources/pap-eff-magicdec`) — blog
 - **Mastering LLM Techniques: Inference Optimization** (`sources/flop-nvidia-inference-optimization`) — blog · NVIDIA Technical Blog (Verma, Vaidya)
@@ -1578,6 +1680,8 @@ and t
 - **NVFP4 Trains with Precision of 16-Bit and Speed and Efficiency of 4-Bit** (`sources/bw-nv-nvfp4-pretraining-blog`) — blog · NVIDIA
 - **NVIDIA GB200 NVL72 Delivers Trillion-Parameter LLM Training and Real-Time Inference** (`sources/bw-nv-gb200-nvl72-blog`) — blog · NVIDIA
 - **ONNX Runtime documentation** (`sources/onnx-runtime-documentation`) — blog
+- **OpenAI Enterprise privacy page (retention, training defaults, access to stored API data, compliance attestations)** (`sources/sec-openai-enterprise-privacy`) — blog · OpenAI
+- **OpenVINO GenAI README: speculative decoding, prefix caching and VLM support (read 2026-10-04)** (`sources/ev-openvino-genai-readme-feature-axes`) — blog · Intel
 - **OpenVINO documentation** (`sources/openvino-documentation`) — blog
 - **Ouroboros: Generating Longer Drafts Phrase by Phrase for Faster Speculative Decoding (arXiv:2402.13720)** (`sources/pap-eff-ouroboros`) — blog
 - **PD Serving of Qwen3.8-2.4T on GB300 NVL72 (vLLM)** (`sources/bench-nv-vllm-qwen38-pd-blog`) — blog · vLLM project
@@ -1589,14 +1693,20 @@ and t
 - **ReAct: Synergizing Reasoning and Acting in Language Models (arXiv:2210.03629)** (`sources/pap-eff-react`) — blog
 - **Recursive Speculative Decoding: Accelerating LLM Inference via Sampling Without Replacement (arXiv:2402.14160)** (`sources/pap-eff-recursive-specdec`) — blog
 - **Reuters: Nvidia tweaks flagship H100 chip for export to China as H800 (2023-03-21)** (`sources/acc-fill-reuters-h800-export-china`) — blog · Reuters
+- **Route179 blog - Optimizing vLLM cold start with model streaming and compile caching (measured phase breakdown)** (`sources/dep-route179-vllm-cold-start-phases`) — blog · Route179 (independent practitioner, project SafetyLens)
 - **Runpod GPU Cloud published hourly pricing (Community and Secure Cloud)** (`sources/pwr-runpod-pricing-page`) — blog · Runpod
 - **SGLang: Fast and Expressive LLM Inference with RadixAttention (LMSYS blog post)** (`sources/ev-sglang-lmsys-benchmark-blog`) — blog · LMSYS Org (UC Berkeley)
 - **Self-Consistency Improves Chain of Thought Reasoning in Language Models (arXiv:2203.11171)** (`sources/pap-eff-self-consistency`) — blog
 - **Sequoia: Scalable, Robust, and Hardware-aware Speculative Decoding (arXiv:2402.12374)** (`sources/pap-eff-sequoia`) — blog
+- **Serverless GPU & LLM Inference Benchmark - container cold start comparison (Sep 2026)** (`sources/dep-serverless-gpu-coldstart-comparison`) — blog · serverlessgpubench.com (affiliate-linked comparison site)
 - **ShortGPT: Layers in Large Language Models are More Redundant Than You Expect (arXiv:2403.03853)** (`sources/pap-eff-shortgpt`) — blog
 - **SpecInfer: Accelerating Generative Large Language Model Serving with Tree-based Speculative Inference and Verification (arXiv:2305.09781)** (`sources/pap-eff-specinfer`) — blog
 - **Stoa Markets public hardware index levels (marketing page)** (`sources/sup-price-stoa-index`) — blog · Stoa Markets, Inc.
 - **Stoa research: How the secondary GPU market works** (`sources/sup-price-stoa-secondary-market`) — blog · Stoa Markets, Inc.
+- **TensorRT-LLM docs/source/installation/build-from-source.md** (`sources/ev-trtllm-build-from-source-doc`) — blog · NVIDIA
+- **TensorRT-LLM quantization documentation (versioned 1.3.0rc29 site, read 2026-10-04)** (`sources/ev-trtllm-quantization-doc`) — blog · NVIDIA
+- **Tensorfuse docs blog - Reduce vLLM GPU cold start time on Kubernetes (Sept 2025 case study)** (`sources/dep-tensorfuse-vllm-cold-start-case-study`) — blog · Tensorfuse
+- **Tetrate - Envoy AI Gateway and Tetrate Agent Router performance benchmarks (2026 living reference)** (`sources/dep-tetrate-envoy-ai-gateway-benchmarks`) — blog · Tetrate (Envoy AI Gateway co-creator; competitor of the gateways it compares)
 - **The State of FP8 KV-Cache and Attention Quantization in vLLM (vLLM project blog, 2026-04-22)** (`sources/ctx-src-vllm-fp8-kvcache-2026-04`) — blog · vLLM project
 - **Trainium3 UltraServers Now Available (AWS Press Release)** (`sources/trainium3-ultraservers-now-available-aws-press-release`) — blog
 - **Turbocharging Llama 2 70B with NVIDIA H100 (Perplexity)** (`sources/bench-nv-perplexity-h100-llama2-blog`) — blog · Perplexity
@@ -1605,10 +1715,16 @@ and t
 - **d-Matrix Corsair Full Production Announcement** (`sources/d-matrix-corsair-full-production-announcement`) — blog
 - **d-Matrix Corsair Product Brief** (`sources/d-matrix-corsair-product-brief`) — blog
 - **d-Matrix Corsair White Paper** (`sources/d-matrix-corsair-white-paper`) — blog
+- **dudeperf3ct blog - Where vLLM cold-start time goes on GKE (phase-by-phase measurement)** (`sources/dep-dudeperf3ct-vllm-cold-start-gke`) — blog · dudeperf3ct (independent practitioner)
+- **llama.cpp tools/server/README.md: llama-server feature and flag surface (read 2026-10-04)** (`sources/ev-llamacpp-server-readme-feature-axes`) — blog · llama.cpp
 - **mirrorfrog.com AI Compute Cards Wiki - Ascend 310P / Enflame T21 pages** (`sources/cn-cn-ai-accelerator-wiki`) — blog · mirrorfrog.com
+- **onnxruntime-genai README: generative-loop components, model architectures and EPU coverage (read 2026-10-04)** (`sources/ev-onnxruntime-genai-readme-feature-axes`) — blog · Microsoft
 - **s1: Simple test-time scaling (arXiv:2501.19393)** (`sources/pap-eff-s1-budget-forcing`) — blog
 - **smcleod.net: patching the NVIDIA open GPU kernel modules to force BAR1 P2P on consumer cards, and retuning vLLM's fused MoE for RTX 3090** (`sources/comm-blog-smcleod-p2p-patched-driver`) — blog · smcleod.net (individual practitioner blog)
+- **vLLM GPU installation docs: build-from-source cost, caching, and parallel-job controls** (`sources/ev-vllm-docs-gpu-install-build-cost`) — blog · vLLM
 - **vLLM Reaches 25K Total TPS/GPU on Qwen3.5 (GB200 NVL72 PD serving)** (`sources/bench-nv-vllm-qwen35-25k-tps-blog`) — blog · vLLM project
+- **vLLM docs: speculative decoding, quantization x hardware, structured outputs, disaggregated prefilling, multimodal inputs (five feature pages read 2026-10-04)** (`sources/ev-vllm-docs-feature-matrix-axes`) — blog · vLLM
+- **ACL Anthology ACL 2024 event index** (`sources/sco-acl-2024-event`) — database · ACL
 - **AWS EC2 Data Transfer Out pricing - NEGATIVE: pricing table not accessible via static fetch** (`sources/ppl-dep-aws-egress-negative`) — database · Amazon Web Services
 - **AWS EC2 Price List API - US East (N. Virginia), current** (`sources/sup-cloud-aws-ec2-price-list-use1`) — database · Amazon Web Services
 - **AWS EC2 Price List API - US West (Oregon), current** (`sources/sup-cloud-aws-ec2-price-list-usw2`) — database · Amazon Web Services
@@ -1633,15 +1749,21 @@ and t
 - **Berkeley Lab 'Queued Up: 2026 Edition' - US transmission interconnection queue characteristics through end of 2025** (`sources/pwr2-lbnl-queued-up-2026`) — database · Lawrence Berkeley National Laboratory / GridTracker
 - **Best Buy search results for Radeon RX 9070 XT** (`sources/noncuda-bestbuy-rx9070xt-search`) — database · Best Buy
 - **CDW product page: PNY NVIDIA RTX PRO 6000 96 GB GDDR7** (`sources/noncuda-cdw-rtxpro6000-pny-96gb`) — database · CDW
+- **CDW product pages - published lead-time ranges for GPU and AI server SKUs (observed 2026-10-04)** (`sources/spl-cdw-published-lead-times-gpu-2026-10`) — database · CDW
 - **CDW search results for RTX PRO 6000** (`sources/noncuda-cdw-rtxpro6000-search`) — database · CDW
 - **Colocation pricing by power density tier - Air-cooled vs liquid-cooled deployment costs** (`sources/ppl-dep-colocation-tiers`) — database · Vantage / derived from existing repo records
 - **CompuCycle corporate IT asset disposal and remarketing services** (`sources/sup-used-compucycle`) — database · CompuCycle
 - **CoreWeave Cloud pricing** (`sources/sup-cloud-coreweave-pricing`) — database · CoreWeave
 - **DeepSpeed-Inference Crossref record (SC22)** (`sources/pap-sys-deepspeed-inference-crossref`) — database · IEEE SC22 (via Crossref)
+- **ECCN 3A090 - advanced-computing integrated circuits (Commerce Control List thresholds)** (`sources/spl-eccn-3a090-ccl`) — database · ECCN Finder (editorial lookup of 15 CFR part 774 supplement no. 1)
 - **EquipNet auctions and IT asset disposition services** (`sources/sup-used-equipnet-auctions`) — database · EquipNet
 - **Fireworks AI pricing - On-Demand deployments** (`sources/sup-cloud-fireworks-pricing`) — database · Fireworks AI
 - **FrugalGPT OpenReview record (TMLR)** (`sources/pap-sys-frugalgpt-openreview`) — database · OpenReview (TMLR)
 - **FrugalGPT OpenReview record — already used for TMLR; see notes on route/cascade adoption** (`sources/pap-sys-frugal-serving-note`) — database · OpenReview (TMLR)
+- **GDPR Article 17 - Right to erasure ('right to be forgotten')** (`sources/sec-gdpr-art-17`) — database · EUR-Lex (via gdpr-info.eu)
+- **GDPR Article 30 - Records of processing activities** (`sources/sec-gdpr-art-30`) — database · EUR-Lex (via gdpr-info.eu)
+- **GDPR Article 32 - Security of processing** (`sources/sec-gdpr-art-32`) — database · EUR-Lex (via gdpr-info.eu)
+- **GDPR Article 5 - Principles relating to processing of personal data** (`sources/sec-gdpr-art-5`) — database · EUR-Lex (via gdpr-info.eu)
 - **GPU cloud billing granularity comparison - Per-second, per-minute, per-hour, per-millisecond** (`sources/ppl-bench-billing-granularity`) — database · Derived from multiple sources in this repo
 - **GPU rental vs purchase break-even - Cloud per-GPU-hour vs used hardware asking prices** (`sources/ppl-dep-rental-vs-purchase-breakeven`) — database · Derived from multiple sources in this repo
 - **GPU.ai GPU Cloud Price Index - Live floor prices across 12+ clouds, snapshot 2026-10-04** (`sources/ppl-cloud-gpu-ai-price-index`) — database · GPU.ai
@@ -1654,13 +1776,18 @@ and t
 - **Geizhals product page: GIGABYTE Radeon RX 9070 XT Gaming OC 16G** (`sources/noncuda-geizhals-9070xt-gb-gaming-oc`) — database · Geizhals
 - **Geizhals product page: NVIDIA GeForce RTX 4090 Founders Edition** (`sources/noncuda-geizhals-4090-founders`) — database · Geizhals
 - **GitHub REST API repository metadata endpoint (repos/{owner}/{repo})** (`sources/niche-github-rest-api-repo-metadata`) — database · GitHub
+- **GitHub REST API repository metadata for all 102 engine repos (batch pull, 2026-10-04)** (`sources/ev-gh-api-repo-metadata-2026-10-04`) — database · GitHub
 - **Google Cloud TPU pricing** (`sources/sup-cloud-gcp-tpu-pricing`) — database · Google
 - **Google Cloud accelerator-optimized VM pricing** (`sources/sup-cloud-gcp-accelerator-optimized-pricing`) — database · Google
 - **Groq console model list with per-1M-token prices** (`sources/rent-src-groq-model-pricing`) — database · Groq
+- **Hugging Face Hub response for meta-llama/Llama-Guard-3-1B: 'Access to model ... is restricted. You must have access to it and be authenticated'** (`sources/sec-hf-llama-guard-gated-access`) — database · Hugging Face
 - **Hugging Face Inference Endpoints (dedicated) - Hourly instance pricing across AWS and GCP** (`sources/ppl-cloud-huggingface-inference-endpoints-pricing`) — database · Hugging Face
 - **Hugging Face Inference Endpoints as orchestrator - Per-minute billing, managed model hosting** (`sources/ppl-orch-huggingface-billing-model`) — database · Hugging Face
 - **Hugging Face Inference Endpoints vs raw cloud GPU pricing - same hardware, different rates** (`sources/ppl-cloud-huggingface-vs-cloud-price`) — database · Hugging Face
 - **Hugging Face config.json files for the long-context model families (fetched 2026-10-04)** (`sources/ctx-src-hf-configs-longctx-models`) — database · Hugging Face / model vendors
+- **ICLR 2021 accepted-paper index (iclr.cc virtual)** (`sources/sco-iclr-accepted-index-2021`) — database · ICLR
+- **ICLR 2024 accepted-paper index (iclr.cc virtual)** (`sources/sco-iclr-accepted-index-2024`) — database · ICLR
+- **ICLR 2025 accepted-paper index (iclr.cc virtual)** (`sources/sco-iclr-accepted-index-2025`) — database · ICLR
 - **IT Creations NVIDIA GPU and accelerator catalogue** (`sources/sup-used-itcreations-gpu`) — database · IT Creations
 - **LMCache OpenReview record (ICLR 2025)** (`sources/pap-sys-lmcache-openreview`) — database · OpenReview (ICLR)
 - **Lambda AI cloud pricing - GPU instances and 1-Click Clusters** (`sources/sup-cloud-lambda-gpu-pricing`) — database · Lambda AI
@@ -1682,6 +1809,8 @@ and t
 - **MuxServe OpenReview record (ICML 2024)** (`sources/pap-sys-muxserve-openreview`) — database · OpenReview (ICML)
 - **NVIDIA H20 96GB spec sheet (Flopper.io aggregation)** (`sources/nv-h20-flopper-specsheet`) — database · Flopper.io
 - **NVIDIA Marketplace consumer GPU catalog (US)** (`sources/noncuda-nvidia-marketplace-gpu-catalog`) — database · NVIDIA
+- **NeurIPS 2021 proceedings index** (`sources/sco-neurips-2021-proceedings`) — database · NeurIPS
+- **NeurIPS 2024 proceedings index** (`sources/sco-neurips-2024-proceedings`) — database · NeurIPS
 - **Newegg GPU category listing for Intel Arc B580** (`sources/noncuda-newegg-arc-b580-search`) — database · Newegg
 - **Newegg GPU category listing for RTX 3090** (`sources/noncuda-newegg-rtx3090-search`) — database · Newegg
 - **Newegg GPU category listing for RTX 4090** (`sources/noncuda-newegg-rtx4090-search`) — database · Newegg
@@ -1691,6 +1820,10 @@ and t
 - **Overclockers UK search results for Intel Arc B580** (`sources/noncuda-overclockers-uk-arc-b580-search`) — database · Overclockers UK
 - **Overclockers UK search results for RTX 3090 / RTX 4090** (`sources/noncuda-overclockers-uk-rtx3090-search`) — database · Overclockers UK
 - **Overclockers UK search results for RTX 5090** (`sources/noncuda-overclockers-uk-rtx5090-search`) — database · Overclockers UK
+- **PMLR ICML 2021 proceedings (volume 139)** (`sources/sco-pmlr-icml-2021-v139`) — database · PMLR
+- **PMLR ICML 2022 proceedings (volume 162)** (`sources/sco-pmlr-icml-2022-v162`) — database · PMLR
+- **PMLR ICML 2023 proceedings (volume 202)** (`sources/sco-pmlr-icml-2023-v202`) — database · PMLR
+- **PMLR ICML 2024 proceedings (volume 235)** (`sources/sco-pmlr-icml-2024-v235`) — database · PMLR
 - **Paperspace (DigitalOcean) Core GPU Pricing - Hourly dedicated GPU rates** (`sources/ppl-cloud-paperspace-pricing`) — database · Paperspace (DigitalOcean)
 - **Paperspace as cloud orchestrator - Per-hour billing, Gradient platform, auto-shutdown** (`sources/ppl-orch-paperspace-billing-model`) — database · Paperspace (DigitalOcean)
 - **Paperspace vs raw cloud GPU pricing - Dedicated GPU rates vs market** (`sources/ppl-cloud-paperspace-vs-cloud-price`) — database · Paperspace (DigitalOcean)
@@ -1723,30 +1856,41 @@ and t
 - **Xinference built-in embedding model catalogue** (`sources/embed-xinference-embedding-catalog`) — database · Xorbits AI
 - **Xinference built-in rerank model catalogue** (`sources/embed-xinference-rerank-catalog`) — database · Xorbits AI
 - **aphrodite-engine/aphrodite-engine redirects to dphnAI/sonar** (`sources/niche-aphrodite-rename-redirect`) — database · GitHub
+- **arXiv API paper metadata query (export.arxiv.org/api/query)** (`sources/sco-arxiv-api-paper-metadata`) — database · arXiv
 - **eBay Graphics/Video Cards category, used condition, datacenter accelerators (A100/H100 search)** (`sources/sup-used-ebay-datacenter-gpu`) — database · eBay
 - **eBay Graphics/Video Cards, used Intel Arc B580 asking prices** (`sources/sup-used-ebay-b580`) — database · eBay
 - **eBay Graphics/Video Cards, used RTX 4090 asking prices** (`sources/sup-used-ebay-4090`) — database · eBay
 - **eBay listing: 32x NVIDIA A100 40GB AI inferencing rack (Core 4 Solutions IT Hardware)** (`sources/sup-used-ebay-a100-rack`) — database · eBay / Core 4 Solutions IT Hardware
 - **eBay listing: NVIDIA A100 40GB SXM4 module, pre-owned (item 158338471596)** (`sources/sup-used-ebay-a100-40-sxm`) — database · eBay / Core 4 Solutions IT Hardware
 - **eBay listing: NVIDIA H100 SXM5 80GB, pre-owned, tested (item 158372715590)** (`sources/sup-used-ebay-h100-sxm`) — database · eBay / frenchy2k1
+- **eCFR 45 CFR 164.312 - Technical safeguards (HIPAA Security Rule)** (`sources/sec-ecfr-164-312`) — database · US Government Publishing Office / HHS
+- **eCFR 45 CFR 164.316 - Policies and procedures and documentation requirements (HIPAA)** (`sources/sec-ecfr-164-316`) — database · US Government Publishing Office / HHS
 - **AirLLM user reports contradicting the compression speed-up claim** (`sources/niche-airllm-speed-issue`) — forum · GitHub
 - **Dynamo issue #12463: vLLM disaggregated serving over InfiniBand returns garbage tokens; GPUDirect RDMA failure on PIX-adjacent passthrough NICs** (`sources/pd-gh-dynamo-12463-rdma-failure-silent-garbage`) — forum · ai-dynamo/dynamo
 - **Dynamo#12463: UCX_NET_DEVICES unset causes garbage tokens in P/D serving** (`sources/src5-gotcha-dynamo-12463-ucx-net-devices`) — forum · NVIDIA Dynamo
+- **FlashInfer issue #4035: RFC on JIT/AOT package KPIs - the three-path artifact model and what 'cold' costs** (`sources/ev-flashinfer-issue-4035-jit-aot-kpi`) — forum · FlashInfer
+- **FlashInfer issue #4110: '[Compilation] GDN decode cold kernel compilation time is too long on SM90/100/120/121' - 30-50 min per test on every arch** (`sources/ev-flashinfer-issue-4110-gdn-cold-compile`) — forum · FlashInfer
+- **FlashInfer issue #4317: sm12x MoE CuTe-DSL kernels never disk-cached, 15-40 s MLIR recompile per kernel shape per engine start** (`sources/ev-flashinfer-issue-4317-cute-dsl-no-cache`) — forum · FlashInfer
 - **Hacker News: Launch HN: Magnitude (YC S25) - Self-optimizing inference engine for agents** (`sources/sent-src-hn-magnitude-launch-49911995`) — forum · Hacker News
 - **Hacker News: NVIDIA introduces TensorRT-LLM for accelerating LLM inference on H100/A100 GPUs** (`sources/sent-src-hn-tensorrt-llm-launch-37439280`) — forum · Hacker News
 - **Hacker News: Which GPU(s) to get for deep learning** (`sources/sent-src-hn-which-gpu-34431056`) — forum · Hacker News
 - **LMCache issue #4463: Silent KV cache corruption on vLLM 0.26 fused/packed KV layout** (`sources/pd-gh-lmcache-4463-packed-kv-silent-corruption`) — forum · LMCache/LMCache
 - **LMCache#4463: Silent KV cache corruption on vLLM 0.26 fused/packed layout** (`sources/src5-gotcha-lmcache-4463-fused-kv-corruption`) — forum · LMCache
+- **LiteLLM issue #35582 - aresponses silently drops the stop param (no UnsupportedParamsError, no warning)** (`sources/dep-litellm-35582-responses-drops-stop`) — forum · LiteLLM (reporter: gateway user)
+- **LiteLLM issue #41913 - tool and instruction fields dropped in translation, HTTP 200, no signal to caller** (`sources/dep-litellm-41913-fields-dropped-in-translation`) — forum · LiteLLM (reporter: gateway user)
 - **MLX-LM M3 Pro benchmarks for Qwen3-4B-Instruct-2507-4bit (mlx-lm PR #1569)** (`sources/bench-apple-mlx-lm-m3-pro-qwen3-4b`) — forum · community / ml-explore
 - **Mooncake issue #4209: TCP transport first transfer after an idle gap fails with queue-full rejections; PD decode hangs until timeout** (`sources/pd-gh-mooncake-4209-tcp-queue-full-hang`) — forum · kvcache-ai/Mooncake
 - **Mooncake#4209: TCP transport queue-full after idle gap causes PD hang** (`sources/src5-gotcha-mooncake-4209-tcp-queue-full`) — forum · Mooncake
 - **ROCm issue #4625: rocBLAS 6.4.0 ships no TensileLibrary for gfx906** (`sources/comm-rocm-issue-4625-tensile-gfx906`) — forum · AMD (ROCm) / user ye-luo
 - **ROCm issue #5215: [Feature] Add support for Instinct MI50/MI60 (gfx906)** (`sources/comm-rocm-issue-5215-mi50-support`) — forum · AMD (ROCm) / user William-Droin
 - **ROCm/vllm#630: MXFP4 kernel dispatch fix for garbage output** (`sources/src5-gotcha-rocm-vllm-630-mxfp4-dispatch`) — forum · AMD ROCm
+- **SGLang RFC #33394 - Recoverable KV Placement State with Snapshots and Event Replay (sgl-router)** (`sources/dep-sgl-router-33394-kv-placement-recovery-rfc`) — forum · SGLang project
 - **SGLang issue #36140: DFLASH speculative decoding unsupported under PD disaggregation (spec_info None crash, then watchdog self-kill)** (`sources/pd-gh-sglang-36140-dflash-spec-under-pd`) — forum · sgl-project/sglang
 - **SGLang issue #39147: HiCacheFile reports an unrestorable prefix for hybrid cache pools** (`sources/pd-gh-sglang-39147-hicache-false-prefix-hit`) — forum · sgl-project/sglang
+- **SGLang issue #40877: '[SM120] Field report: DeepSeek-V4.1-Flash in production on 8x RTX PRO 6000 (PCIe, no NVLink) - working config, measured throughput, rejected topologies'** (`sources/ev-sglang-issue-40877-production-deepseek-v41-flash`) — forum · SGLang
 - **TensorRT-LLM issue #17665: NIXL cache-transceiver hangs forever if a single completion notification is dropped** (`sources/pd-gh-trtllm-17665-nixl-notify-hang`) — forum · NVIDIA/TensorRT-LLM
 - **TensorRT-LLM issue #5581: 'Unsupported SM version for FP8 block scaling GEMM' on 8x RTX 6000 PRO; contains an NVIDIA engineer's arch explanation and a community counter-measurement** (`sources/comm-github-trtllm-5581-8x-rtx6000pro-deepseek`) — forum · TensorRT-LLM GitHub issues
+- **TensorRT-LLM issue #8286: '[Usage]: how long the build stage takes for deepseek-r1 models' - 2+ hours observed** (`sources/ev-trtllm-issue-8286-ds-r1-build-2h`) — forum · NVIDIA
 - **ai-infos/guidances-setup-16-mi50-deepseek-v32 issue #1: Deeply Rooted Single-Node Communication (IPC / Shared Memory) Limitations** (`sources/comm-ai-infos-issue-1-ipc-multinode`) — forum · GitHub (user Felloty)
 - **gfx906 Discord server message export (3,007 messages, 17 channels, Aug 2025 - Oct 2026)** (`sources/comm-gfx906-discord-server-log`) — forum · gfx906 Discord community (Chinese-language AMD ROCm community)
 - **llama.cpp PR #28398: hardware v_perm_b32 for Q1_0 vec_dot on AMD (+110% decode on gfx1201)** (`sources/bench-llamacpp-pr-28398-radeon-r9700-q1`) — forum · llama.cpp contributors (community)
@@ -1758,6 +1902,7 @@ and t
 - **llama.cpp issue #24168: SYCL gibberish output and ggml_sycl_op_mul_mat crash on hybrid models with Arc Pro B60** (`sources/noncuda-llamacpp-24168-sycl-b60-hybrid-crash`) — forum · ggml-org/llama.cpp
 - **llama.cpp issue #25207: unexpected massive performance drop with Vulkan Flash Attention** (`sources/gotcha-llamacpp-issue-25207-vulkan-fa-slowdown`) — forum · llama.cpp GitHub issues
 - **llama.cpp issue #25618: speculative decoding (draft-mtp / draft-dspark) greedy output diverges from vanilla on quantized targets** (`sources/qgotcha-llamacpp-25618-spec-quant-greedy-divergence`) — forum · llama.cpp GitHub issues
+- **llama.cpp issue #26100: speculative draft-cache replay bypasses p_min, inflating repeated-prompt benchmarks ~10x and degrading mixed-traffic serving ~3x** (`sources/ev-llamacpp-issue-26100-spec-benchmark-inflates-10x`) — forum · llama.cpp
 - **llama.cpp issue #26208: ROCm backend allocates host RAM instead of VRAM on gfx1201** (`sources/noncuda-llamacpp-26208-rocm-gfx1201-vram`) — forum · ggml-org/llama.cpp
 - **llama.cpp issue #26529: with the RPC backend active, llama-server aborts inside rpc_buffer_get_tensor the first time a slot prompt becomes eligible for prompt-cache save** (`sources/comm-github-llamacpp-26529-rpc-prompt-cache-abort`) — forum · llama.cpp GitHub issues
 - **llama.cpp issue #26663: Vulkan token generation 5-7x slower than HIP on gfx1201 for models with hidden_size >= 4096** (`sources/qgotcha-llamacpp-26663-vulkan-hidden-size-cliff`) — forum · llama.cpp GitHub issues
@@ -1797,15 +1942,22 @@ and t
 - **r/LocalLLaMA: 'What is the best hardware under 10k to run local big models with over 200b parameters?'** (`sources/sent-src-reddit-under-10k-200b-1otdr19`) — forum · Reddit / u/MaxKruse96 and others
 - **r/LocalLLaMA: 'Why the Strix Halo is a poor purchase for most people' by u/NeverEnPassant** (`sources/sent-src-reddit-strix-halo-poor-purchase-1oonomc`) — forum · Reddit / u/NeverEnPassant
 - **r/LocalLLaMA: vLLM vs SGLang on 2 Nvidia GPUs thread, answer by u/randomfoo2** (`sources/sent-src-reddit-vllm-vs-sglang-1jjl45h`) — forum · Reddit / u/randomfoo2
+- **vLLM Production Stack issue #1073 - PrefixAwareRouter below-threshold fallback uses stale QPS and starves one backend** (`sources/dep-vllm-prodstack-1073-prefixaware-stale-qps-latch`) — forum · vLLM project (reporter: production operator)
+- **vLLM Production Stack issue #1074 - unrecognized metric names yield an all-zero EngineStats that looks healthy** (`sources/dep-vllm-prodstack-1074-metric-prefix-parse-miss`) — forum · vLLM project (reporter: production operator)
+- **vLLM Production Stack issue #687 - router crashes from OOM, prefix cache HashTrie memory usage is unbounded** (`sources/dep-vllm-prodstack-687-router-hashtrie-oom`) — forum · vLLM project
+- **vLLM RFC #17419: 'Kernel Library Restructure / Packaging Split (addressing long build times)'** (`sources/ev-vllm-rfc-17419-build-time`) — forum · vLLM
 - **vLLM issue #12529: V1 engine has higher memory usage, context length collapses from 12K to 3K on 4x RTX 3070** (`sources/gotcha-vllm-issue-12529-v1-higher-memory`) — forum · vLLM GitHub issues
 - **vLLM issue #13247: with tp=1 and penalty parameters, TPOT becomes very slow for batch sizes > 20** (`sources/flop3-vllm-issue-13247-penalties-tpot`) — forum · vllm-project/vllm GitHub issues
+- **vLLM issue #13281: '[Installation]: Compiling and installing from source code is too slow, taking at least 3 hours.'** (`sources/ev-vllm-issue-13281-source-build-3h`) — forum · vLLM
 - **vLLM issue #13608: ImportError, vllm/_C.abi3.so undefined symbol _ZN5torch3jit17parseSchemaOrNameERKSsb** (`sources/gotcha-vllm-issue-13608-torch-abi-mismatch`) — forum · vLLM GitHub issues
 - **vLLM issue #14452: how to run vLLM on RTX 5080/5090 (139 comments, community build-from-source recipe, FA3 does not work on Blackwell, no official prebuilt wheels)** (`sources/comm-github-vllm-14452-rtx50xx-support-thread`) — forum · vLLM GitHub issues
 - **vLLM issue #14628: two RTX 5090s cannot run tensor parallelism because P2P is driver-disabled; fixed by an NCCL commit that falls back to shared memory** (`sources/comm-github-vllm-14628-2x5090-tp-p2p`) — forum · vLLM GitHub issues
 - **vLLM issue #2248: recent vLLMs ask for too much memory, ValueError: No available memory for the cache blocks** (`sources/gotcha-vllm-issue-2248`) — forum · vLLM GitHub issues
+- **vLLM issue #24885 [RFC] Clarifying vLLM Shutdown Semantics** (`sources/ops-vllm-shutdown-rfc-24885`) — forum · vLLM project
 - **vLLM issue #30931: Prefix Cache Corruption with LoRA adapters sharing a name but differing in id** (`sources/pd-gh-vllm-30931-lora-prefix-cache-corruption`) — forum · vllm-project/vllm
 - **vLLM issue #34694: BF16 NVFP4 Marlin produces garbled output on GPUs without native FP4 support** (`sources/gotcha-vllm-issue-34694-nvfp4-bf16-marlin`) — forum · vLLM GitHub issues
 - **vLLM issue #34694: NVFP4 checkpoints produce garbled output with --dtype bfloat16 on GPUs without native FP4 (SM 89 RTX 4090, SM 70 V100)** (`sources/comm-github-vllm-34694-nvfp4-marlin-garbled`) — forum · vLLM GitHub issues
+- **vLLM issue #35387: MTP causes a 76.5% latency regression on Qwen3-Next-80B-A3B-Instruct-FP8 (TP=4, 4x H100)** (`sources/ev-vllm-issue-35387-mtp-latency-regression`) — forum · vLLM
 - **vLLM issue #37242: CUDA graphs DO work on RTX 5090 (sm_120) under WSL2 2.7.0, contrary to community consensus that it is a permanent WSL2/Blackwell limitation** (`sources/comm-github-vllm-37242-5090-wsl2-cudagraphs`) — forum · vLLM GitHub issues
 - **vLLM issue #38967: vLLM >= 0.18.0 segfaults in NCCL cuMemCreate with TP>1 on RTX 4090 (SM 89)** (`sources/comm-github-vllm-38967-4090-tp-cumem-segfault`) — forum · vLLM GitHub issues
 - **vLLM issue #40124: TurboQuant KV cache (k8v4) + hybrid MoE does not work on Ampere (SM 80-86); reporter ships 13 runtime monkey-patches** (`sources/comm-github-vllm-40124-turboquant-ampere`) — forum · vLLM GitHub issues
@@ -1814,6 +1966,7 @@ and t
 - **vLLM issue #43559: accuracy drops ~20% with --enable-prefix-caching together with MTP speculative decoding** (`sources/gotcha-vllm-issue-43559-mtp-prefix-caching-accuracy`) — forum · vLLM GitHub issues
 - **vLLM issue #47159: triton_w4a16_gemm asserts qzeros.shape == (K // group_size, N // 8) on GPTQ models** (`sources/gotcha-vllm-issue-47159-triton-w4a16-qzeros`) — forum · vLLM GitHub issues
 - **vLLM issue #47847: disable_flashinfer_q_quantization + fp8 KV + spec decode silently corrupts sliding-window models on SM100** (`sources/qgotcha-vllm-47847-flashinfer-bf16q-fp8kv-spec-swa`) — forum · vLLM GitHub issues
+- **vLLM issue #48031: VLLM_ENGINE_READY_TIMEOUT_S default 600 s insufficient for large MoE with a cold FlashInfer JIT cache** (`sources/ev-vllm-issue-48031-flashinfer-jit-cold-start`) — forum · vLLM
 - **vLLM issue #49546: VLLM_MARLIN_INPUT_DTYPE=fp8 (Marlin W4A8-FP8) silently corrupts output on GB10/sm_121a** (`sources/qgotcha-vllm-49546-marlin-w4a8-fp8-sm121a`) — forum · vLLM GitHub issues
 - **vLLM issue #49547: FlashInfer + spec-decode silently downgrades to PIECEWISE cudagraphs (-16% measured)** (`sources/gotcha-vllm-issue-49547-spec-decode-cudagraph-downgrade`) — forum · vLLM GitHub issues
 - **vLLM issue #50264: hybrid-Mamba models fall back to Triton paged attention on RDNA and decode collapses** (`sources/gotcha-vllm-issue-50264-rdna-triton-paged-attn`) — forum · vLLM GitHub issues
@@ -1828,6 +1981,7 @@ and t
 - **vLLM issue #54974: modelopt NVFP4 MoE mismatched w1/w3 global scales are detected, warned about, and then used anyway** (`sources/qgotcha-vllm-54974-nvfp4-w13-global-scale`) — forum · vLLM GitHub issues
 - **vLLM issue #55131: Batch-invariant matmul is not actually batch-invariant, and TF32 causes precision degradation** (`sources/nrg2-gh-vllm-55131-tf32-breaks-invariance`) — forum · vLLM project
 - **vLLM issue #56535: FlashInfer flashinfer_b12x MoE backend runs W4A16 checkpoints as W4A4** (`sources/qgotcha-vllm-56535-flashinfer-b12x-w4a16-as-w4a4`) — forum · vLLM GitHub issues
+- **vLLM issue #56700: 3-day bring-up of DeepSeek-V4.1-Flash (769B, MXFP4 experts) on 8x RTX PRO 6000 SM120** (`sources/ev-vllm-issue-56700-production-deepseek-v41-flash`) — forum · vLLM
 - **vLLM issue #56770: compressed-tensors MXFP4 W4A16 is misclassified as W4A4 and dispatched to a W4A4 kernel on SM100+** (`sources/qgotcha-vllm-56770-mxfp4-w4a16-as-w4a4`) — forum · vLLM GitHub issues
 - **vLLM issue #56828: KV Offload P2P peer-down on one rank does not fail loads or block new loads to sibling ranks** (`sources/pd-gh-vllm-56828-p2p-peer-down-no-fail`) — forum · vllm-project/vllm
 - **vLLM issue #57016: VLLM_BATCH_INVARIANT=1 is not batch-invariant for fused-MoE experts with no warning** (`sources/nrg2-gh-vllm-57016-fused-moe-not-invariant`) — forum · vLLM project
@@ -1838,6 +1992,7 @@ and t
 - **vLLM issue #59086: VLLM_BATCH_INVARIANT=1 is not batch-invariant for AWQ models on sm8x in the default mode** (`sources/nrg2-gh-vllm-59086-awq-not-invariant`) — forum · vLLM project
 - **vLLM issue #59203: DeepSeek-V4.1-Flash cannot run on SM120, compressed-layer page_block_size=32 has no FlashInfer sparse-MLA decode kernel** (`sources/gotcha-vllm-issue-59203-sm120-sparse-mla-block-size`) — forum · vLLM GitHub issues
 - **vLLM issue #59362: FA4 ignores num_splits on SM90 in v0.30.0, up to 48% slower decode** (`sources/gotcha-vllm-issue-59362-fa4-num-splits-sm90`) — forum · vLLM GitHub issues
+- **vLLM issue #6073 request for a dedicated /ready endpoint** (`sources/ops-vllm-ready-endpoint-request`) — forum · vLLM project
 - **vLLM#27579: AITER FP8 GEMM performance on MI355** (`sources/src5-gotcha-vllm-27579-aiter-fp8-gemm`) — forum · vLLM / AMD
 - **vLLM#40677: FlashInfer head_size not supported on Blackwell SM120** (`sources/src5-gotcha-vllm-40677-flashinfer-head-size`) — forum · vLLM
 - **vLLM#47159: Triton W4A16 qzeros assertion fails on GPTQ models** (`sources/src5-gotcha-vllm-47159-triton-w4a16-qzeros`) — forum · vLLM
@@ -1854,12 +2009,16 @@ and t
 - **vLLM-metal issue #713: benchmarking pitfalls on macOS (in-process decode penalty, GPU co-tenancy, non-diagnostic short probes)** (`sources/pwr2-vllm-metal-issue-713`) — forum · vllm-project
 - **A Length-Extrapolatable Transformer** (`sources/pap-attn-ntk-aware-scaled-rope`) — paper · arXiv
 - **A Survey on Efficient Inference for Large Language Models (arXiv:2404.14294)** (`sources/mkt-efficient-inference-survey`) — paper · arXiv
+- **A Watermark for Large Language Models (Kirchenbauer et al., KGW)** (`sources/sec-arxiv-2301-10226`) — paper · The green-list/red-list scheme: hash the previous token, seed a PRNG, split the vocabulary in half, softly promote green tokens during sampling, detect with a one-proportion z-test. Section 1.2 states the low-entropy caveat explicitly - perturbing low-entropy completions produces high-perplexity unexpected tokens, and human and machine completions are near-identical there.
 - **AI Application Benchmarking: Power-Aware Performance Analysis for Vision and Language Models (arXiv:2603.16164, RRZE-HPC)** (`sources/nrg2-arxiv-rrze-hpc-ai-power-limits`) — paper · arXiv
 - **AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration** (`sources/quant-awq-paper`) — paper · arXiv
 - **AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration (Lin et al., MLSys 2024)** (`sources/bench-meth-awq`) — paper · arXiv
 - **Accelerating Large Language Model Decoding with Speculative Sampling** (`sources/flop-speculative-sampling-deepmind`) — paper · arXiv (Chen et al.; DeepMind)
+- **Agent-Assisted Side-Channel Attacks on Non-Prefix KV Cache in RAG (SpliceLeak)** (`sources/sec-arxiv-2606-21842`) — paper · Prior KV-cache side channels need strict linear prefix alignment and so fail against real RAG queries with unique private prefixes. SpliceLeak exploits the deterministic micro-architecture of chunk alignment and fusion: a +104 ms hardware latency void, as few as 63 requests per token, up to 100% extraction success in bounded-entropy scenarios, evaluated on vLLM integrated with LMCache.
+- **AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents** (`sources/sec-arxiv-2406-13352`) — paper · 97 realistic tasks (email, e-banking, travel), 629 security test cases. The standard yardstick for measuring an injection defence, and the source of the CaMeL 77%/84% figures.
 - **Agentless: Demystifying LLM-based Software Engineering Agents** (`sources/ev-agentless-swebench-paper`) — paper · Chunqiu Steven Xia et al.
 - **AlpaServe: Statistical Multiplexing with Model Parallelism for Deep Learning Serving (arXiv 2302.11665)** (`sources/pap-sys-alpaserve-arxiv`) — paper · arXiv (Alibaba / SJTU)
+- **An Embarrassingly Simple Detector for Model Extraction Attacks in Large Language Model API Traffic** (`sources/sec-arxiv-2606-05725`) — paper · Formulates extraction monitoring as benign-calibrated traffic-window distribution testing (MMD over a semantic embedding), thresholded from benign-vs-benign comparisons only. 0.3% benign FPR, 100% pure-attacker TPR, 90.5% average TPR over attacker fractions, 95.1% balanced accuracy, across 14 attacker-normal query pairs and three seeds.
 - **Atom: Low-bit Quantization for Efficient and Accurate LLM Serving (Zhao et al.)** (`sources/qlab-atom-paper`) — paper · arXiv
 - **Audio Flamingo: A Novel Audio Language Model with Few-Shot Learning and Dialogue Abilities (arXiv:2402.01831)** (`sources/pap-mm-audio-flamingo`) — paper · arXiv
 - **BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding** (`sources/flop2-bert`) — paper · arXiv (Devlin, Chang, Lee, Toutrainova; Google AI)
@@ -1870,15 +2029,21 @@ and t
 - **Block Diffusion: Interpolating Between Autoregressive and Diffusion Language Models (BD3-LM)** (`sources/pap-arch-2503-09573`) — paper · arXiv
 - **Blockwise Parallel Transformer for Large Context Models** (`sources/pap-attn-blockwise-parallel-transformer`) — paper · arXiv
 - **Break the Sequential Dependency of LLM Inference Using Lookahead Decoding** (`sources/sd-lookahead-paper`) — paper · arXiv (Fu, Bailis, Stoica, Zhang; UC Berkeley)
+- **Bypassing LLM Watermarks with Color-Aware Substitutions** (`sources/sec-arxiv-2403-14719`) — paper · Self Color Testing-based Substitution: recovers token 'colour' by prompting the watermarked model and comparing output token frequencies, then substitutes green tokens. Claims removal for arbitrarily long watermarked text with fewer edits than prior work.
+- **Bypassing Prompt Injection Detectors through Evasive Injections** (`sources/sec-arxiv-2602-00750`) — paper · Shows hidden-layer activation-shift injection detectors are not robust to adaptive adversaries: a multi-probe attack appends a universal adversarially-optimised suffix that jointly fools all layer-wise drift detectors while preserving the injection.
 - **CLIP: Learning Transferable Visual Models (arXiv:2103.00020)** (`sources/clip-learning-transferable-visual-models-arxiv-2103-00020`) — paper · arXiv
 - **CacheGen: KV Cache Compression and Streaming for Fast Large Language Model Serving (Zhang et al., UChicago/JCL)** (`sources/qlab-cachegen-paper`) — paper · arXiv
+- **CachePrune: Privacy-Aware and Fine-Grained KV Cache Sharing for Efficient LLM Inference** (`sources/sec-arxiv-2605-23640`) — paper · Argues prompts are mostly privacy-irrelevant segments (system instructions, public material) and that token-level, sensitivity-masked cache sharing removes the direct reuse side channel while cutting TTFT 4.5x and raising hit rate 44% versus the coarse-grained state of the art.
 - **Careless Whisper: Speech-to-Text Hallucination Harms (arXiv:2402.08021)** (`sources/pap-mm-careless-whisper`) — paper · arXiv
+- **Characterizing Contention-Induced Reliability Collapse in KV-Cache Timing Side Channels for Multi-Tenant LLM Serving** (`sources/sec-arxiv-2609-06853`) — paper · The most important negative result in this area: on vLLM with DeepSeek-R1-Distill-Llama-8B, mean Cohen's d falls from 0.7789 with no synthetic workers to 0.2109 with two workers; AUROC falls from 0.650 (ambient) to 0.531 near 61% overlap. Reproduced on a real two-node two-GPU TP setup (d 3.418 -> 0.511). Two SGLang pilots were statistically inconclusive. Conclusion: measurements on quiet systems overestimate operational exploitability.
 - **Characterizing Performance-Energy Trade-offs of Large Language Models in Multi-Request Workflows (arXiv:2604.09611)** (`sources/pwr2-arxiv-multi-request-energy`) — paper · Md. Monzurul Amin Ifath, Israat Haque
 - **Clipper: A Low-Latency Online Prediction Serving System (arXiv 1612.03079)** (`sources/pap-sys-clipper-arxiv`) — paper · arXiv (UC Berkeley)
+- **Clone What You Can't Steal: Black-Box LLM Replication via Logit Leakage and Distillation** (`sources/sec-arxiv-2509-00973`) — paper · The record for why logprobs on a public API are a model-extraction surface: reconstructs the output projection matrix from top-k logits collected in under 10,000 queries via SVD, then distils. A 6-layer student recovers 97.6% of the teacher's hidden-state geometry at +7.31% perplexity; a 4-layer variant gives 17.1% faster inference at 18.1% fewer parameters. The entire attack completes in under 24 GPU-hours.
 - **ColBERT paper (Khattab & Zaharia, SIGIR'20)** (`sources/embed-colbert-paper`) — paper · arXiv
 - **ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction over BERT (arXiv:2004.12832)** (`sources/pap-mm-colbert`) — paper · arXiv
 - **ColBERTv2 paper (Santhanam et al.)** (`sources/embed-colbertv2-paper`) — paper · arXiv
 - **ColBERTv2: Effective and Efficient Retrieval via Lightweight Late Interaction (arXiv:2112.01488)** (`sources/pap-mm-colbertv2`) — paper · arXiv
+- **Confidential Computing on NVIDIA Hopper GPUs: A Performance Benchmark Study** (`sources/sec-arxiv-2409-03992`) — paper · TEE overhead for LLM inference is minimal on-GPU; the penalty comes from CPU-GPU transfer over PCIe. For the majority of typical LLM queries overhead stays below 7%, and larger models and longer sequences approach zero overhead.
 - **Conformer: Convolution-augmented Transformer for Speech Recognition (arXiv:2005.08100)** (`sources/pap-mm-conformer`) — paper · arXiv
 - **DINOv2: Learning Robust Visual Features (arXiv:2304.07193)** (`sources/dinov2-learning-robust-visual-features-arxiv-2304-07193`) — paper · arXiv
 - **DINOv2: Learning Robust Visual Features without Supervision (arXiv:2304.07193)** (`sources/pap-mm-dinov2`) — paper · arXiv
@@ -1901,7 +2066,9 @@ and t
 - **DeepSpeed-FastGen: High-throughput Text Generation for LLMs via MII and DeepSpeed-Inference (arXiv 2401.08671)** (`sources/pap-sys-fastgen-arxiv`) — paper · arXiv (Microsoft)
 - **DeepSpeed-MoE: Advancing Mixture-of-Experts Inference and Training to Power Next-Generation AI Scale** (`sources/flop-deepspeed-moe`) — paper · arXiv (DeepSpeed team / Microsoft)
 - **DeepSpeed-MoE: Advancing Mixture-of-Experts Inference and Training to Power Next-Generation AI Scale** (`sources/pap-arch-2201-05596`) — paper · arXiv
+- **Defeating Prompt Injections by Design (CaMeL)** (`sources/sec-arxiv-2503-18813`) — paper · Debenedetti et al., Google DeepMind. Extracts control flow and data flow from the TRUSTED query so retrieved data can never influence program flow, and enforces security policy at tool calls via capabilities. 77% of AgentDojo tasks solved with provable security vs 84% undefended - the utility cost is measured, not asserted.
 - **Dense Passage Retrieval for Open-Domain Question Answering (arXiv:2004.04906)** (`sources/pap-mm-dpr`) — paper · arXiv
+- **Design Patterns for Securing LLM Agents against Prompt Injections** (`sources/sec-arxiv-2506-08837`) — paper · Systematic analysis of agent design patterns with provable injection resistance, with explicit utility/security trade-offs rather than a single defence claim.
 - **Detecting Pretraining Data from Large Language Models (arXiv 2310.16789)** (`sources/meth-detecting-pretraining-data-arxiv`) — paper · arXiv (University of Washington / Meta AI)
 - **Differential Transformer** (`sources/pap-attn-diff-transformer`) — paper · arXiv
 - **Diffusion-LM Improves Controllable Text Generation** (`sources/arch-diffusion-lm`) — paper · Li et al. (arXiv)
@@ -1958,6 +2125,7 @@ and t
 - **FlashInfer: Efficient and Customizable Attention Engine for LLM Inference Serving** (`sources/pap-attn-flashinfer-paper`) — paper · arXiv
 - **FlashInfer: Efficient and Customizable Attention Engine for LLM Inference Serving (MLSys 2025)** (`sources/sched-flashinfer-mlsys25`) — paper · arXiv
 - **FlexAttention: A Programming Model for Generating Optimized Attention Kernels** (`sources/pap-attn-flexattention`) — paper · arXiv
+- **Flip, Don't Shuffle: Watermarking LLMs at the Speed of Inference (Stateless Bernoulli Watermarking)** (`sources/sec-arxiv-2609-03844`) — paper · SBW determines green-list membership by a counter-based RNG comparison instead of a vocabulary permutation. States per-token membership complexity drops from O(V log V) for KGW to O(1) for SBW, with SynthID at O(k*m) for m=30 reweighting passes. Reports <1% end-to-end generation overhead at all batch sizes. Model Qwen3-8B (vocab 151,936) on a single RTX 3090 at temperature 1.0, pure sampling without top-p. Self-reported paper; the overhead and complexity figures are its own measurements.
 - **From Crowdsourced Data to High-Quality Benchmarks: Arena-Hard and BenchBuilder Pipeline (arXiv 2406.11939)** (`sources/meth-arena-hard-benchbuilder-arxiv`) — paper · arXiv (UC Berkeley / LMSYS)
 - **FrugalGPT: How to Use Large Language Models While Reducing Cost and Improving Performance (arXiv 2305.05176)** (`sources/pap-sys-frugalgpt-arxiv`) — paper · arXiv (Stanford)
 - **GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers** (`sources/quant-gptq-paper`) — paper · arXiv
@@ -1985,12 +2153,15 @@ and t
 - **Inference without Interference: Disaggregate LLM Inference for Mixed Downstream Workloads (arXiv 2401.11181)** (`sources/pap-sys-tetriinfer-arxiv`) — paper · arXiv (SUSTech / HKUST)
 - **InfiniGen: Efficient Generative Inference of Large Language Models with Dynamic KV Cache Management** (`sources/flop2-infinigen`) — paper · arXiv (Lee, Lee, Seo, Sim; KAIST)
 - **InfiniGen: Efficient Generative Inference of Large Language Models with Dynamic KV Cache Management (Liu et al.)** (`sources/qlab-infini-gen-paper`) — paper · arXiv
+- **Influence Factors on RAG Poisoning** (`sources/sec-arxiv-2606-12469`) — paper · Full-factorial study, 432 configurations. Retriever architecture, dataset and retrieval depth are the strongest factors affecting poisoning EXPOSURE; larger retrieval depth increases the chance of retrieving a poisoned passage; replicating poisoned content across databases amplifies adversarial influence.
 - **InternVL-X: Advancing and Accelerating InternVL Series with Efficient Visual Token Compression (arXiv:2503.21307)** (`sources/pap-mm-internvl-x`) — paper · arXiv
 - **InternVL: Scaling up Vision Foundation Models and Aligning for Generic Visual-Linguistic Tasks (arXiv:2312.14238)** (`sources/pap-mm-internvl`) — paper · arXiv
 - **Introducing v0.5 of the AI Safety Benchmark from MLCommons (arXiv 2404.12241)** (`sources/meth-ai-safety-benchmark-v05-arxiv`) — paper · arXiv (MLCommons)
+- **JailbreakBench: An Open Robustness Benchmark for Jailbreaking Large Language Models (NeurIPS 2024 Datasets and Benchmarks)** (`sources/sec-arxiv-2404-01318`) — paper · Standardised jailbreak evaluation with a defined threat model, fixed system prompts and chat templates, 100 behaviours, and a leaderboard tracking attacks AND defences. Also ships an over-refusal dataset - the metric that makes the cost of an output filter measurable.
 - **Jamba-1.5: Hybrid Transformer-Mamba Models at Scale** (`sources/arch-jamba-15`) — paper · AI21 Labs (arXiv)
 - **Jamba-1.5: Hybrid Transformer-Mamba Models at Scale** (`sources/pap-arch-2408-12570`) — paper · arXiv
 - **Jamba: A Hybrid Transformer-Mamba Language Model** (`sources/arch-jamba`) — paper · AI21 Labs (arXiv)
+- **JudgeStealer: Extracting LLM Judging Capabilities across Evaluation Protocols** (`sources/sec-arxiv-2608-26982`) — paper · Extraction targeting an LLM used as a judge - the safety/moderation model itself is IP worth stealing. Reaches up to 73.3%, 87.0% and 71.6% accuracy for pointwise, pairwise and listwise protocols respectively, using cross-protocol agreement to manufacture extra supervision without extra victim queries.
 - **Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena (arXiv 2306.05685)** (`sources/meth-llm-as-judge-mt-bench-arxiv`) — paper · arXiv (UC Berkeley / LMSYS)
 - **KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache** (`sources/flop2-kivi`) — paper · arXiv
 - **KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache (Yuan et al., LMSYS)** (`sources/qlab-kivi-paper`) — paper · arXiv
@@ -1999,6 +2170,7 @@ and t
 - **Kimi Linear: An Expressive, Efficient Attention Architecture** (`sources/arch-kimi-linear`) — paper · Moonshot AI (arXiv)
 - **Kimi Linear: An Expressive, Efficient Attention Architecture** (`sources/pap-arch-2510-26692`) — paper · arXiv
 - **Kimi Linear: An Expressive, Efficient Attention Architecture** (`sources/pap-attn-kimi-linear`) — paper · arXiv
+- **Knockoff Nets: Stealing Functionality of Black-Box Models** (`sources/sec-arxiv-1812-02766`) — paper · Functionality stealing from query access alone, with no knowledge of training data, model internals or output semantics. Vision results, but the threat model - black-box query access is sufficient - is what transfers to a served LLM.
 - **LLM Inference Unveiled: Survey and Roofline Model Insights** (`sources/flop-llm-inference-roofline-survey`) — paper · arXiv (Yuan, Shang, Zhou et al.)
 - **LLM Maybe LongLM: Self-Extend LLM Context Window Without Tuning** (`sources/pap-attn-selfextend`) — paper · arXiv
 - **LLM-FP4: 4-Bit Floating-Point Quantized Transformers (Li et al.)** (`sources/qlab-llm-fp4-paper`) — paper · arXiv
@@ -2014,6 +2186,7 @@ and t
 - **Large Language Diffusion Models (LLaDA)** (`sources/arch-llada`) — paper · Nie et al. (arXiv)
 - **Large Language Diffusion Models (LLaDA)** (`sources/pap-arch-2502-09992`) — paper · arXiv
 - **Large Language Monkeys: Scaling Inference Compute with Repeated Sampling (arXiv:2407.21787)** (`sources/mkt-large-language-monkeys`) — paper · arXiv
+- **Learnable Linguistic Watermarks for Tracing Model Extraction Attacks on Large Language Models** (`sources/sec-arxiv-2405-01509`) — paper · Watermarking aimed at TRACING the extractor rather than the reader: controlled noise in the token frequency distribution plus a KL-divergence test to tell original from modified distributions.
 - **Learning Transferable Visual Models From Natural Language Supervision (CLIP) (arXiv:2103.00020)** (`sources/pap-mm-clip`) — paper · arXiv
 - **Learning to Compress Prompts with Gist Tokens** (`sources/pap-attn-gist-tokens`) — paper · arXiv
 - **Leave No Context Behind: Efficient Infinite Context Transformers with Infini-attention** (`sources/pap-attn-infini-attention`) — paper · arXiv
@@ -2021,6 +2194,8 @@ and t
 - **Lightning Attention-2: A Free Lunch for Handling Unlimited Sequence Lengths in Large Language Models** (`sources/pap-attn-lightning-attention-2`) — paper · arXiv
 - **Linear Transformers Are Secretly Fast Weight Programmers** (`sources/pap-arch-2102-11174`) — paper · arXiv
 - **Linformer: Self-Attention with Linear Complexity** (`sources/pap-attn-linformer`) — paper · arXiv
+- **Llama Guard 3-1B-INT4: Compact and Efficient Safeguard for Human-AI Conversations** (`sources/sec-arxiv-2411-17713`) — paper · Quantised 440 MB guard (about 7x smaller than Llama Guard 3-1B) reaching at least 30 tokens/s and TTFT of 2.5 s or less on a commodity Android mobile CPU, with comparable or superior moderation scores. Useful as the LOW BOUND on guard-model cost: even the smallest published guard adds seconds, not milliseconds.
+- **Llama Guard: LLM-based Input-Output Safeguard for Human-AI Conversations** (`sources/sec-arxiv-2312-06674`) — paper · The canonical separate-guard-model design: one safety taxonomy, one model, applied to the prompt and to the response. Establishes that the guard is a second model in the request path, not a flag.
 - **Loki: Low-rank Keys for Efficient Sparse Attention (arXiv:2406.02542)** (`sources/mkt-loki-sparse-attention-neurips2024`) — paper · arXiv
 - **LongRoPE2: Near-Lossless LLM Context Window Scaling** (`sources/pap-attn-longrope2`) — paper · arXiv
 - **LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens** (`sources/pap-attn-longrope`) — paper · arXiv
@@ -2032,6 +2207,7 @@ and t
 - **Mamba: Linear-Time Sequence Modeling with Selective State Spaces** (`sources/pap-arch-2312-00752`) — paper · arXiv
 - **Mamba: Linear-Time Sequence Modeling with Selective State Spaces** (`sources/pap-attn-mamba`) — paper · arXiv
 - **MambaVision: A Hybrid Mamba-Transformer Vision Backbone** (`sources/pap-arch-2407-08083`) — paper · arXiv
+- **Mark My Words: Analyzing and Evaluating Language Model Watermarks** (`sources/sec-arxiv-2312-00273`) — paper · Systematic benchmark with three metrics: quality, size (tokens needed to detect), tamper resistance. Reports KGW watermarks Llama-2-7B-chat and Mistral-7B-Instruct with no perceivable quality loss on natural-language tasks, detection in fewer than 100 tokens, and poor performance on CODE generation.
 - **Masked Autoencoders Are Scalable Vision Learners (arXiv:2111.06377)** (`sources/pap-mm-mae`) — paper · arXiv
 - **Matryoshka Representation Learning (arXiv:2205.13147)** (`sources/pap-mm-matryoshka`) — paper · arXiv
 - **Measured Joules, Learned Routes: Learning to Route for Energy-Efficient LLM Serving (arXiv 2609.23085)** (`sources/pap-sys-energyrouting-arxiv`) — paper · arXiv (Brookhaven / Stony Brook)
@@ -2062,8 +2238,11 @@ and t
 - **Nemotron-H: A Family of Accurate and Efficient Hybrid Mamba-Transformer Models** (`sources/arch-nemotron-h`) — paper · NVIDIA (arXiv)
 - **Nemotron-H: A Family of Accurate and Efficient Hybrid Mamba-Transformer Models** (`sources/hf-eco-nemotron-h-paper`) — paper · NVIDIA
 - **Nomic Embed: Training a Reproducible Long Context Text Embedder (arXiv:2402.01613)** (`sources/pap-mm-nomic-embed`) — paper · arXiv
+- **Not what you've signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection** (`sources/sec-arxiv-2302-12173`) — paper · Greshake et al. The origin of the indirect-prompt-injection framing: LLM-integrated applications blur the line between data and instructions, so an attacker who never touches the user interface can inject by writing into data the application will retrieve.
 - **OLMoE: Open Mixture-of-Experts Language Models** (`sources/pap-arch-2409-02060`) — paper · arXiv
 - **OmniQuant: Omnidirectionally Calibrated Quantization for Large Language Models (Shi et al.)** (`sources/qlab-omniquant-paper`) — paper · arXiv
+- **On Google's SynthID-Text LLM Watermarking System: Theoretical Analysis and Empirical Validation** (`sources/sec-arxiv-2603-03410`) — paper · First theoretical analysis of SynthID-Text. Proves the mean score degrades as tournament layers increase and designs a layer-inflation attack; shows the Bayesian score is more robust to layer count; shows the optimal Bernoulli detection parameter is 0.5.
+- **On the Reliability of Watermarks for Large Language Models** (`sources/sec-arxiv-2306-04634`) — paper · Kirchenbauer et al. themselves. Finds watermarks remain detectable after human and machine paraphrasing; after strong human paraphrasing detection needed ~800 tokens on average at a 1e-5 false-positive threshold. Attributes this partly to paraphrases statistically leaking n-grams of the original. This is the PRO-watermark side of the contested paraphrase record.
 - **Orca: A Distributed Serving System for Transformer-Based Generative Models** (`sources/flop-orca-osdi22`) — paper · USENIX OSDI 2022 (Yu, Jeong, Kim, Kim, Chun)
 - **Orca: A Distributed Serving System for Transformer-Based Generative Models (OSDI 2022)** (`sources/sched-orca-osdi22`) — paper · USENIX Association
 - **Ouroboros: Generating Longer Drafts Phrase by Phrase for Faster Speculative Decoding** (`sources/sd-ouroboros-paper`) — paper · arXiv (Zhao et al.; Tsinghua University)
@@ -2081,6 +2260,7 @@ and t
 - **Power Aware Dynamic Reallocation For Inference / RAPID (arXiv:2601.12241)** (`sources/pwr2-arxiv-power-aware-reallocation`) — paper · Yiwei Jiang, Sangeeta Chowdhary, Nathaniel Morris, Rutwik Jain, Srilatha Manne, Sam Bayliss
 - **Pre-gated MoE: An Algorithm-System Co-Design for Fast and Scalable Mixture-of-Expert LLM Inference (arXiv 2308.12066)** (`sources/pap-sys-pregatedmoe-arxiv`) — paper · arXiv (UT Austin)
 - **Pre^3: Enabling Deterministic Pushdown Automata for Faster Structured LLM Generation (ACL 2025)** (`sources/niche-lightllm-pre3-paper`) — paper · arXiv
+- **PrefixWall: Mitigating Prefix Caching Side Channels in Shared LLM Systems** (`sources/sec-arxiv-2603-10726`) — paper · Characterises current defences as a sledgehammer - disable automatic prefix caching and cross-user cache sharing, isolating users at the cost of efficiency for regular users. That framing is the useful part for a serving engineer: the isolation/efficiency trade is explicit and currently resolved badly.
 - **Pretraining Large Language Models with NVFP4** (`sources/quant-nvfp4-paper`) — paper · arXiv
 - **Pretraining Large Language Models with NVFP4 (arXiv 2509.25149)** (`sources/bw-nv-nvfp4-paper`) — paper · arXiv
 - **PyramidKV: Dynamic KV Cache Compression based on Pyramidal Information Funneling** (`sources/pap-attn-pyramidkv-paper`) — paper · arXiv
@@ -2099,6 +2279,7 @@ and t
 - **RWKV: Reinventing RNNs for the Transformer Era** (`sources/arch-rwkv`) — paper · Peng et al. / EleutherAI (arXiv)
 - **RWKV: Reinventing RNNs for the Transformer Era** (`sources/pap-arch-2305-13048`) — paper · arXiv
 - **RWKV: Reinventing RNNs for the Transformer Era** (`sources/pap-attn-rwkv`) — paper · arXiv
+- **Reading Between the Lines: Towards Reliable Black-box LLM Fingerprinting via Zeroth-order Gradient Estimation (ZeroPrint)** (`sources/sec-arxiv-2510-06605`) — paper · Argues black-box fingerprinting from outputs is weak because non-linear output functions destroy parameter information, and estimates the input Jacobian by zeroth-order estimation over semantic-preserving word substitutions.
 - **Recurrent Drafter for Fast Speculative Decoding in Large Language Models** (`sources/sd-redrafter-paper`) — paper · arXiv (Cheng, Zhang, Zhang, Wang, Wang)
 - **RecurrentGemma: Moving Past Transformers for Efficient Open Language Models** (`sources/pap-arch-2404-07839`) — paper · arXiv
 - **Request-Level Energy Attribution for Batched LLM Serving / JouleShare (arXiv:2608.00026)** (`sources/pwr2-arxiv-jouleshare`) — paper · Qi Luo, Kunlin Li, Ziwen Wang, Dongsheng Wang, Yun Chen
@@ -2107,8 +2288,10 @@ and t
 - **Retentive Network: A Successor to Transformer for Large Language Models** (`sources/pap-attn-retnet`) — paper · arXiv
 - **Rethinking Attention with Performers** (`sources/pap-attn-performer`) — paper · arXiv
 - **Revisiting Lossy Verification in Speculative Decoding: Mechanisms, Trade-offs, and Failure Modes** (`sources/ev-lossy-verification-speculative-decoding`) — paper · Tianyu Wang et al.
+- **Revisiting the Robustness of Watermarking to Paraphrasing Attacks** (`sources/sec-arxiv-2411-05277`) — paper · Rastogi and Pruthi, Indian Institute of Science. Shows a limited number of black-box generations from a watermarked model suffices to reverse-engineer the scheme and make paraphrase evasion effective, including against schemes designed to be paraphrase-robust. DIRECTLY CONTRADICTS the robustness claims in the literature it surveys - see the contested paraphrase record.
 - **Ring Attention with Blockwise Transformers for Near-Infinite Context** (`sources/flop2-ring-attention`) — paper · arXiv
 - **Ring Attention with Blockwise Transformers for Near-Infinite Context** (`sources/pap-attn-ring-attention`) — paper · arXiv
+- **Robust Distortion-free Watermarks for Language Models (Kuditipudi et al.)** (`sources/sec-arxiv-2307-15593`) — paper · Distribution-preserving watermarks via inverse transform sampling and exponential minimum sampling. On OPT-1.3B and LLaMA-7B detects at p<=0.01 from 35 tokens after corrupting 40-50% of tokens. Crucially, the Alpaca-7B case study on RESPONSES to user instructions finds ~25% of responses undetectable because those responses are low-entropy.
 - **Roofline: An Insightful Visual Performance Model for Floating-Point Programs and Multicore Architectures** (`sources/flop-roofline-williams-2008`) — paper · ACM Communications of the ACM
 - **RouteLLM: Learning to Route LLMs with Preference Data (arXiv 2406.18665)** (`sources/pap-sys-routellm-arxiv`) — paper · arXiv (Stanford / UC Berkeley / Together AI)
 - **SALMONN: Towards Generic Hearing Abilities for Large Language Models (arXiv:2310.13289)** (`sources/pap-mm-salmonn`) — paper · arXiv
@@ -2116,15 +2299,21 @@ and t
 - **SGLang: Efficient Execution of Structured Language Model Programs** (`sources/flop-sglang`) — paper · arXiv (SGLang team)
 - **SGLang: Efficient Execution of Structured Language Model Programs (arXiv 2312.07104)** (`sources/pap-sys-sglang-arxiv`) — paper · arXiv (Stanford / LMSYS)
 - **SPLADE: Sparse Lexical and Expansion Model for First Stage Ranking (arXiv:2107.05720)** (`sources/pap-mm-splade`) — paper · arXiv
+- **SafeDecoding: Defending against Jailbreak Attacks via Safety-Aware Decoding (ACL 2024)** (`sources/sec-arxiv-2402-08983`) — paper · Xu et al., University of Washington / Penn State / AI2. Safety-disclaimer tokens remain in the top of the sorted token distribution even under attack; the defence amplifies them and attenuates attacker-goal tokens. Author-reported as incurring 'negligible' computation overhead, and applied only to the first m decode steps rather than every step. Their own ATGR metric (avg token generation time with/without defence) is the reported efficiency number; no absolute ms or throughput figure appears in the abstract.
 - **SageAttention2: Efficient Attention with Thorough Outlier Smoothing and Per-thread INT4 Quantization** (`sources/pap-attn-sageattention2`) — paper · arXiv
 - **SageAttention: Accurate 8-Bit Attention for Plug-and-play Inference Acceleration** (`sources/pap-attn-sageattention`) — paper · arXiv
 - **Salus: Fine-Grained GPU Sharing Primitives for Deep Learning Applications (arXiv 1902.04610)** (`sources/pap-sys-salus-arxiv`) — paper · arXiv (University of Michigan)
 - **Samba: Simple Hybrid State Space Models for Efficient Unlimited Context Language Modeling** (`sources/arch-samba`) — paper · Microsoft (arXiv)
 - **Scissorhands: Exploiting the Persistence of Importance Hypothesis for LLM KV Cache Compression at Test Time** (`sources/pap-attn-scissorhands`) — paper · arXiv
+- **SecAlign: Defending Against Prompt Injection with Preference Optimization** (`sources/sec-arxiv-2410-05451`) — paper · Trains the served model to prefer secure over insecure responses on injected inputs. Reports reducing injection success rates to under 10% against attacks more sophisticated than those seen in training. This is a MODEL change, not a serving-layer change - it only exists if you retrain.
+- **Selective KV-Cache Sharing to Mitigate Timing Side-Channels in LLM Inference (SafeKV)** (`sources/sec-arxiv-2508-08438`) — paper · Treats global KV-cache sharing as the cause and builds detection plus isolation into the runtime. Reports up to 40.58% lower TTFT than full isolation and up to 2.66x throughput. Its stated threat model is the scope limit on the whole isolate-everything approach.
+- **Self-Guard: Empowering the LLM to Safeguard Itself** (`sources/sec-arxiv-2310-15851`) — paper · Names the two families precisely: safety training (cannot adapt to new attack types, drops performance) versus safeguards (external models or filters, 'of limited help').
+- **Semantic Chameleon: Corpus-Dependent Poisoning Attacks and Defenses in RAG Systems** (`sources/sec-arxiv-2603-18034`) — paper · Gradient-guided (GCG) corpus poisoning on Security Stack Exchange, 67,941 documents, 50 attacks: 38.0% co-retrieval under pure vector retrieval. Hybrid BM25+vector retrieval reduces attack success from 38% to 0% with no model change; when the attacker jointly optimises payloads for both sparse and dense signals it partially recovers, to 20-44%.
 - **Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks** (`sources/flop2-sbert`) — paper · arXiv (Reimers, Gurevych; TU Darmstadt), EMNLP 2019
 - **Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks (arXiv:1908.10084)** (`sources/pap-mm-sbert`) — paper · arXiv
 - **Serving DNNs like Clockwork: Performance Predictability from the Bottom Up (arXiv 2006.02464)** (`sources/pap-sys-clockwork-arxiv`) — paper · arXiv (Google / University of Washington)
 - **ShadowKV: KV Cache in Shadows for High-Throughput Long-Context LLM Inference (Li et al., ByteDance)** (`sources/qlab-shadowkv-paper`) — paper · arXiv
+- **ShieldGemma: Generative AI Content Moderation Based on Gemma** (`sources/sec-arxiv-2407-21772`) — paper · Separate moderation models over four harm types for both input and output. Reports +10.8% AU-PRC over Llama Guard and +4.3% over WildCard on public benchmarks - a usable head-to-head when choosing a guard.
 - **SigLIP: Sigmoid Loss for Language Image Pre-Training (arXiv:2303.15343)** (`sources/siglip-sigmoid-loss-for-language-image-pre-training-arxiv-2303-1`) — paper · arXiv
 - **Sigmoid Loss for Language Image Pre-Training (SigLIP) (arXiv:2303.15343)** (`sources/pap-mm-siglip`) — paper · arXiv
 - **SignRound: Optimize Weight Rounding via Signed Gradient Descent for the Quantization of LLMs (arXiv:2309.05516)** (`sources/qhw-src-signround-paper`) — paper · arXiv
@@ -2155,6 +2344,7 @@ and t
 - **Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve (OSDI 2024)** (`sources/sched-sarathi-osdi24`) — paper · arXiv
 - **Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve (arXiv 2403.02310)** (`sources/pap-sys-sarathi-arxiv`) — paper · arXiv (Microsoft Research India)
 - **Text Embeddings by Weakly-Supervised Contrastive Pre-training (E5) (arXiv:2212.03533)** (`sources/pap-mm-e5`) — paper · arXiv
+- **The Early Bird Catches the Leak: Unveiling Timing Side Channels in LLM Serving Systems** (`sources/sec-arxiv-2409-20002`) — paper · First demonstration that shared caches and GPU memory allocations create timing side channels from which an API caller can infer confidential SYSTEM PROMPTS and other users' requests.
 - **The Embedder's Dilemma: LLMs Are Better, but at What Cost? (arXiv:2608.12875)** (`sources/pap-mm-embedder-dilemma`) — paper · arXiv
 - **The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits** (`sources/quant-bitnet-paper`) — paper · arXiv
 - **The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale** (`sources/ev-fineweb-dataset-paper`) — paper · Hugging Face
@@ -2182,6 +2372,8 @@ and t
 - **ViT: An Image is Worth 16x16 Words (arXiv:2010.11929)** (`sources/vit-an-image-is-worth-16x16-words-arxiv-2010-11929`) — paper · arXiv
 - **VisionZip: Longer is Better but Not Necessary in Vision Language Models (arXiv:2412.04467)** (`sources/pap-mm-visionzip`) — paper · arXiv
 - **Visual Instruction Tuning (LLaVA) (arXiv:2304.08485)** (`sources/pap-mm-llava`) — paper · arXiv
+- **Watermarking Low-entropy Generation for Large Language Models: An Unbiased and Low-risk Method (STA-1)** (`sources/sec-arxiv-2405-14604`) — paper · States the low-entropy problem directly and proposes Sampling One Then Accepting, an unbiased watermark that preserves the token distribution in expectation with lower risk of unsatisfactory output in low-entropy settings.
+- **Watermarks in the Sand: Impossibility of Strong Watermarking for Generative Models (ICML 2024)** (`sources/sec-arxiv-2311-04378`) — paper · Proves strong watermarking impossible under a quality oracle plus a mixing perturbation oracle, and holds in the private-detection-key setting. Demonstrated against Kirchenbauer 2023, Kuditipudi 2023 and Zhao 2023 with minor quality degradation.
 - **WebLLM: A High-Performance In-Browser LLM Inference Engine** (`sources/niche-webllm-paper`) — paper · arXiv
 - **Where Does the Energy Go? Profiling LLM Agent Inference on Blackwell GPUs (arXiv:2609.29707)** (`sources/pwr2-arxiv-where-does-energy-go`) — paper · Qi Luo, Kunlin Li, Ziwen Wang, Dongsheng Wang, Yun Chen
 - **Which Quantization Should I Use? A Unified Evaluation of llama.cpp Quantization on Llama-3.1-8B-Instruct** (`sources/quant-gguf-kquant-study`) — paper · arXiv
@@ -2266,6 +2458,9 @@ and t
 - **vLLM documentation: GGUF quantization support** (`sources/bench-meth-vllm`) — paper · vLLM project
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations (arXiv:2006.11477)** (`sources/pap-mm-wav2vec2`) — paper · arXiv
 - **wav2vec: Unsupervised Pre-training for Speech Recognition (arXiv:1904.05862)** (`sources/pap-mm-wav2vec`) — paper · arXiv
+- **BIS final rule 91 FR 1684 - Revision to License Review Policy for Advanced Computing Commodities (2026-01-15)** (`sources/spl-bis-2026-01-advanced-computing-case-by-case`) — release-notes · US Bureau of Industry and Security / Federal Register
+- **BIS guidance 2026-05-31 - license required for advanced computing items to D:5/Macau-headquartered entities regardless of location** (`sources/spl-bis-2026-05-d5-guidance`) — release-notes · US Bureau of Industry and Security
+- **BIS press release 2025-05-13 - rescission of the AI Diffusion Rule; strengthened chip export controls** (`sources/spl-bis-2025-05-ai-diffusion-rescission`) — release-notes · US Bureau of Industry and Security
 - **DeepSeek-R1 and R1-Distill model card (huggingface.co/deepseek-ai/DeepSeek-R1)** (`sources/model-cn-r1-distill-card`) — release-notes · DeepSeek
 - **DeepSeek-V4 series model card (V4-Pro and V4-Flash)** (`sources/model-cn-deepseek-v4-card`) — release-notes · DeepSeek
 - **Federal Register 88 FR 73458 - Oct 2023 advanced computing export controls (Country Group D:5 / Macau, RS controls)** (`sources/sup-buy-bis-2023-advanced-computing-controls`) — release-notes · US Bureau of Industry and Security / Federal Register
@@ -2276,10 +2471,15 @@ and t
 - **Ling-3.0-flash model card and config (huggingface.co/inclusionAI)** (`sources/model-cn-ling-3-card`) — release-notes · Ant Group / inclusionAI
 - **MindIE - Ascend inference engine product page** (`sources/cn-huawei-mindie`) — release-notes · Huawei HiSilicon / Ascend Community
 - **MiniMax-M2 and M2.7 model cards and configs (huggingface.co/MiniMaxAI)** (`sources/model-cn-minimax-m2-card`) — release-notes · MiniMax
+- **NVIDIA FY2026 Form 10-K (filed 2026-02-25) - supply chain, purchase commitments, export controls** (`sources/spl-nvda-10k-fy2026-supply-commitments`) — release-notes · NVIDIA Corporation / SEC EDGAR
+- **NVIDIA Form 10-Q Q2 FY2027 (filed 2026-08-26) - H200 China licence outcome, tariff on licensed chips** (`sources/spl-nvda-10q-fy2027q2-h200-licence-outcome`) — release-notes · NVIDIA Corporation / SEC EDGAR
 - **Qwen3.5 and Qwen3.8-Flash-Next model cards and nested text configs (huggingface.co/Qwen)** (`sources/model-cn-qwen35-hybrid-card`) — release-notes · Alibaba Qwen
 - **ROCm 10.0.0 compatibility matrix (GPU -> LLVM target)** (`sources/amd-rocm-compatibility-matrix`) — release-notes · AMD
 - **ROCm Linux install system requirements (supported GPU list)** (`sources/amd-rocm-system-requirements`) — release-notes · AMD
 - **Step-3.5-Flash model card and config (huggingface.co/stepfun-ai)** (`sources/model-cn-step-3-5-card`) — release-notes · StepFun
+- **TensorRT-LLM PR #11250: engine build time improved, 'Nemotron Super V3 fp8 model : 290 sec to 260 sec for tp=8'** (`sources/ev-trtllm-pr-11250-engine-build-time`) — release-notes · NVIDIA
+- **TensorRT-LLM PR #18542: FMHA NVRTC JIT warmup sits on the cold-start critical path (5-11 s per kernel, 80-160 s total)** (`sources/ev-trtllm-pr-18542-fmha-jit-warmup`) — release-notes · NVIDIA
+- **TensorRT-LLM PR #7633: '[None][infra] Disable CU12 build to save build time (cost > 5 hours on SBSA)'** (`sources/ev-trtllm-pr-7633-cu12-build-over-5h`) — release-notes · NVIDIA
 - **vllm-project/flash-attention PR #198: Fix SM90 SplitKV work distribution** (`sources/gotcha-flash-attention-pr-198-sm90-splitkv`) — release-notes · vllm-project/flash-attention
 - **AITER: AMD's AI Tensor Engine for ROCm** (`sources/src5-aiter-github`) — repo · AMD ROCm
 - **AMD ROCm: Open-source software stack for AMD GPU computing** (`sources/src5-rocm-github`) — repo · AMD
@@ -2311,6 +2511,13 @@ and t
 - **DeepEP GitHub repository (DeepSeek)** (`sources/kern-deepep-github`) — repo · deepseek-ai
 - **DeepGEMM GitHub repository (DeepSeek)** (`sources/kern-deepgemm-github`) — repo · deepseek-ai
 - **DeepGEMM: DeepSeek's FP8 GEMM implementation** (`sources/src5-deepgemm-github`) — repo · DeepSeek
+- **DeepSeek-R1-Distill-Llama-70B config.json** (`sources/mbl-cfg-r1-distill-llama-70b`) — repo · Hugging Face
+- **DeepSeek-R1-Distill-Llama-8B config.json** (`sources/mbl-cfg-r1-distill-llama-8b`) — repo · Hugging Face
+- **DeepSeek-R1-Distill-Qwen-1.5B config.json** (`sources/mbl-cfg-r1-distill-qwen-1p5b`) — repo · Hugging Face
+- **DeepSeek-R1-Distill-Qwen-32B config.json** (`sources/mbl-cfg-r1-distill-qwen-32b`) — repo · Hugging Face
+- **DeepSeek-R1-Distill-Qwen-7B config.json** (`sources/mbl-cfg-r1-distill-qwen-7b`) — repo · Hugging Face
+- **DeepSeek-V4-Flash config.json** (`sources/mbl-cfg-deepseek-v4-flash`) — repo · Hugging Face
+- **DeepSeek-V4-Pro config.json** (`sources/mbl-cfg-deepseek-v4-pro`) — repo · Hugging Face
 - **DeepSpeed-MII GitHub repository (org moved from microsoft/)** (`sources/niche-deepspeed-mii-repo`) — repo · DeepSpeed (formerly Microsoft)
 - **DistServe GitHub repository (LLMServe/DistServe)** (`sources/pd-distserve-repo`) — repo · LLMServe (Peking University)
 - **Dynamo components/src/dynamo/common/backend/disagg.py** (`sources/pd-dynamo-disagg-py`) — repo · NVIDIA
@@ -2328,10 +2535,12 @@ and t
 - **FlashInfer GitHub repository** (`sources/kern-flashinfer-github`) — repo · flashinfer-ai
 - **FlashInfer: Kernel Library for LLM Serving** (`sources/src5-flashinfer-github`) — repo · flashinfer-ai
 - **FlashMLA GitHub repository (DeepSeek)** (`sources/kern-flashmla-github`) — repo · deepseek-ai
+- **GLM-4.7-Flash config.json** (`sources/mbl-cfg-glm-4-7-flash`) — repo · Hugging Face
 - **GPTQ reference implementation (IST-DASLab/gptq GitHub repository README)** (`sources/qlab-gptq-github`) — repo · IST-DASLab on GitHub
 - **GPTQ: Accurate Post-Training Quantization for GPT models** (`sources/src5-gptq-github`) — repo · AutoGPTQ
 - **GPTQModel: LLM quantization toolkit (GitHub: ModelCloud/GPTQModel)** (`sources/qhw-src-gptqmodel-repo`) — repo · ModelCloud
 - **GSAI-ML/LLaDA-8B-Instruct model repo** (`sources/hf-eco-llada-8b-instruct`) — repo · GAIR / Ant Group
+- **Gateway API Inference Extension README (inference gateway, Endpoint Picker, stated roadmap gaps)** (`sources/ops-gwie-inference-extension`) — repo · Kubernetes SIGs
 - **Granite 4.0 Language Models model card (H-Tiny spec table)** (`sources/hf-eco-granite-4-0-h-tiny-modelcard`) — repo · IBM Granite
 - **GroqFlow README** (`sources/alt-groqflow-readme`) — repo · Groq
 - **Guidance GitHub repository** (`sources/niche-guidance-repo`) — repo · guidance-ai
@@ -2340,14 +2549,18 @@ and t
 - **Huawei CANN (Compute Architecture for Neural Networks) and MindSpore open-source AI framework** (`sources/cn-huawei-cann-mindspore`) — repo · Huawei / MindSpore community
 - **Hugging Face TGI GitHub repository (archived)** (`sources/engine-tgi-github`) — repo · Hugging Face
 - **Hugging Face Transformers documentation: Bitsandbytes** (`sources/qlab2-transformers-bnb-doc`) — repo · Hugging Face
+- **Hugging Face text-generation-launcher argument reference (MAX_TOTAL_TOKENS, MAX_CONCURRENT_REQUESTS, MAX_BATCH_TOTAL_TOKENS, MAX_WAITING_TOKENS)** (`sources/ops-tgi-launcher-arguments`) — repo · Hugging Face
 - **HuggingFace Optimum README (accelerator export/runtime toolkit)** (`sources/embed-hf-optimum-github`) — repo · HuggingFace
 - **HuggingFace Text Embeddings Inference README** (`sources/embed-hf-tei-github`) — repo · HuggingFace
 - **HuggingFace Transformers reference implementations (glm4_moe, glm4_moe_lite, glm_moe_dsa)** (`sources/model-cn-hf-transformers-ref-impls`) — repo · HuggingFace
 - **HuggingFace model API: safetensors parameter metadata** (`sources/hf-mm-hf-api-safetensors-params`) — repo · HuggingFace
 - **HuggingFace model configs, model cards and safetensors metadata APIs for Chinese open-weight models** (`sources/model-cn-hf-configs-readme-apis`) — repo · HuggingFace
 - **HuggingFaceTB/SmolLM2-1.7B-Instruct config.json** (`sources/hf-edge-smollm2-1-7b-instruct`) — repo · Hugging Face
+- **HuggingFaceTB/SmolLM2-1.7B-Instruct config.json** (`sources/mbl-cfg-smollm2-1-7b-instruct`) — repo · Hugging Face
 - **HuggingFaceTB/SmolLM3-3B config.json** (`sources/hf-edge-smollm3-3b`) — repo · Hugging Face
+- **HuggingFaceTB/SmolLM3-3B config.json** (`sources/mbl-cfg-smollm3-3b`) — repo · Hugging Face
 - **HuggingFaceTB/SmolLM3-3B model repo** (`sources/hf-eco-smollm3-3b`) — repo · Hugging Face TB
+- **HuggingFaceTB/SmolVLM2-2.2B-Instruct config.json** (`sources/mbl-cfg-smolvlm2-2-2b-instruct`) — repo · Hugging Face
 - **IREE: Intermediate Representation Execution Environment** (`sources/iree-intermediate-representation-execution-environment`) — repo · IREE Project / LF AI & Data Foundation
 - **IST-DASLab/marlin: FP16xINT4 LLM inference kernel** (`sources/quant-marlin-repo`) — repo · IST-DASLab
 - **Infinity GitHub repository** (`sources/niche-infinity-repo`) — repo · Michael Feil
@@ -2362,6 +2575,7 @@ and t
 - **Jan GitHub repo** (`sources/cpuedge-jan-github`) — repo · Jan (janhq)
 - **JetStream README (archived notice)** (`sources/alt-jetstream-readme`) — repo · Google AI Hypercomputer
 - **KServe GitHub repository** (`sources/serve-kserve-github`) — repo · KServe
+- **KServe LLMInferenceService autoscaling with the Workload Variant Autoscaler (WVA)** (`sources/ops-kserve-llmisvc-autoscaling`) — repo · KServe
 - **KTransformers GitHub repository** (`sources/engine-ktransformers-github`) — repo · kvcache-ai
 - **Kimi-Audio-7B-Instruct config.json (HuggingFace)** (`sources/hf-mm-kimi-audio-7b-config`) — repo · HuggingFace / Moonshot AI
 - **KoboldCpp GitHub repo** (`sources/cpuedge-koboldcpp-github`) — repo · LostRuins / KoboldAI
@@ -2369,10 +2583,12 @@ and t
 - **LMCache GitHub repository** (`sources/pap-sys-lmcache-github`) — repo · LMCache project
 - **LMCache documentation** (`sources/pd-lmcache-docs`) — repo · LMCache
 - **LMDeploy GitHub repository** (`sources/niche-lmdeploy-repo`) — repo · InternLM / Shanghai AI Lab
+- **LeaderWorkerSet (LWS) and DisaggregatedSet - Kubernetes SIGs README** (`sources/dep-k8s-lws-readme`) — repo · Kubernetes SIGs (lws), co-designed with llm-d (CNCF sandbox)
 - **Lemonade API reference** (`sources/cpuedge-lemonade-api`) — repo · lemonade-sdk (AMD)
 - **Lemonade GitHub repo** (`sources/cpuedge-lemonade-github`) — repo · lemonade-sdk (AMD)
 - **LightLLM GitHub repository** (`sources/niche-lightllm-repo`) — repo · ModelTC
 - **LiquidAI/LFM2-1.2B config.json** (`sources/hf-edge-lfm2-1-2b`) — repo · Hugging Face
+- **LiquidAI/LFM2-1.2B config.json** (`sources/mbl-cfg-lfm2-1-2b`) — repo · Hugging Face
 - **LiquidAI/LFM2.5-1.2B-Instruct config.json** (`sources/hf-edge-lfm2-5-1-2b-instruct`) — repo · Hugging Face
 - **LiteLLM GitHub repo** (`sources/cpuedge-litellm-github`) — repo · Berri AI
 - **LiteLLM LICENSE** (`sources/cpuedge-litellm-license`) — repo · Berri AI
@@ -2381,6 +2597,7 @@ and t
 - **Llama-2-70b-hf config.json (open mirror)** (`sources/flop2-llama2-70b-config`) — repo · Hugging Face
 - **Llama-2-7b-hf config.json (open mirror)** (`sources/flop2-llama2-7b-config`) — repo · Hugging Face hub (NousResearch mirror of Meta Llama-2-7b-hf)
 - **Llama-3.3-70B-Instruct config.json** (`sources/model-fr-hf-config-llama-3-3-70b`) — repo · Hugging Face (unsloth mirror of Meta weights)
+- **Llama-4-Maverick-17B-128E-Instruct config.json** (`sources/mbl-cfg-llama-4-maverick`) — repo · Hugging Face
 - **Llama-4-Maverick-17B-128E-Instruct config.json** (`sources/model-fr-hf-config-llama-4-maverick`) — repo · Hugging Face (unsloth mirror of Meta weights)
 - **Llama-4-Scout-17B-16E-Instruct config.json** (`sources/model-fr-hf-config-llama-4-scout`) — repo · Hugging Face (unsloth mirror of Meta weights)
 - **LoongServe GitHub repository (elastic sequence parallelism, ASP 2024)** (`sources/niche-loongserve-repo`) — repo · LoongServe team (Shanghai Jiao Tong / IPADS)
@@ -2406,6 +2623,8 @@ and t
 - **MiniCPM-V-4_5 config.json (HuggingFace)** (`sources/hf-mm-minicpm-v-4-5-config`) — repo · HuggingFace / OpenBMB
 - **MiniCPM-V-4_6 config.json (HuggingFace)** (`sources/hf-mm-minicpm-v-4-6-config`) — repo · HuggingFace / OpenBMB
 - **MiniCPM-o-2_6 config.json (HuggingFace)** (`sources/hf-mm-minicpm-o-2-6-config`) — repo · HuggingFace / OpenBMB
+- **MiniMaxAI/MiniMax-M1 config.json** (`sources/mbl-cfg-minimax-m1`) — repo · Hugging Face
+- **MiniMaxAI/MiniMax-M2 config.json** (`sources/mbl-cfg-minimax-m2`) — repo · Hugging Face
 - **Ministral-3-8B-Instruct-2512 config.json** (`sources/model-fr-hf-config-mistral-3-8b`) — repo · Hugging Face (Mistral AI)
 - **Ministral-8B-Instruct-2410 config.json** (`sources/model-fr-hf-config-ministral-8b`) — repo · Hugging Face (Mistral AI)
 - **Mistral-7B-v0.1 Hugging Face config.json (raw)** (`sources/fct2-hf-config-mistral-7b`) — repo · Mistral AI / Hugging Face
@@ -2431,8 +2650,11 @@ and t
 - **NVIDIA Inference Xfer Library (NIXL) GitHub repository** (`sources/pd-nixl-repo`) — repo · NVIDIA (ai-dynamo)
 - **NVIDIA NCCL GitHub Repository** (`sources/nic-nccl-github`) — repo · NVIDIA
 - **NVIDIA RULER repository README results table (Claimed Length vs Effective Length, updated)** (`sources/ctx-src-ruler-github-results-table`) — repo · NVIDIA
+- **NousResearch/Hermes-3-Llama-3.1-8B config.json** (`sources/mbl-cfg-hermes-3-llama-3-1-8b`) — repo · Hugging Face
 - **NousResearch/Hermes-3-Llama-3.1-8B model repo** (`sources/hf-eco-hermes-3-llama-3-1-8b`) — repo · Nous Research
+- **NousResearch/Hermes-4-405B config.json** (`sources/mbl-cfg-hermes-4-405b`) — repo · Hugging Face
 - **NousResearch/Hermes-4-405B model repo** (`sources/hf-eco-hermes-4-405b`) — repo · Nous Research
+- **NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO config.json** (`sources/mbl-cfg-nous-hermes-2-mixtral-8x7b-dpo`) — repo · Hugging Face
 - **NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO model repo** (`sources/hf-eco-nous-hermes-2-mixtral-8x7b-dpo`) — repo · Nous Research
 - **ONNX Runtime Execution Providers** (`sources/onnx-runtime-execution-providers`) — repo · Microsoft
 - **ONNX Runtime GenAI GitHub repo** (`sources/cpuedge-onnxruntime-genai-github`) — repo · Microsoft
@@ -2457,6 +2679,12 @@ and t
 - **PyTorch Inductor: torch/_inductor - ML compiler for PyTorch** (`sources/src5-pytorch-inductor-github`) — repo · PyTorch / Meta
 - **Qdrant FastEmbed README** (`sources/embed-qdrant-fastembed-github`) — repo · Qdrant
 - **QuaRot reference implementation (spcl/QuaRot GitHub repository README)** (`sources/qlab-quarot-github`) — repo · spcl (Stanford / Sparsity in ML) on GitHub
+- **Qwen/Qwen2-Audio-7B-Instruct config.json** (`sources/mbl-cfg-qwen2-audio-7b-instruct`) — repo · Hugging Face
+- **Qwen/Qwen2.5-72B-Instruct config.json** (`sources/mbl-cfg-qwen2-5-72b`) — repo · Hugging Face
+- **Qwen/Qwen3-235B-A22B config.json** (`sources/mbl-cfg-qwen3-235b-a22b`) — repo · Hugging Face
+- **Qwen/Qwen3-30B-A3B config.json** (`sources/mbl-cfg-qwen3-30b-a3b`) — repo · Hugging Face
+- **Qwen/Qwen3-8B config.json** (`sources/mbl-cfg-qwen3-8b`) — repo · Hugging Face
+- **Qwen/Qwen3.5-35B-A3B config.json** (`sources/mbl-cfg-qwen3-5-35b-a3b`) — repo · Hugging Face
 - **Qwen2-Audio-7B-Instruct config.json (HuggingFace)** (`sources/hf-mm-qwen2-audio-7b-config`) — repo · HuggingFace / Qwen
 - **Qwen2-VL-7B-Instruct config.json (HuggingFace)** (`sources/hf-mm-qwen2-vl-7b-config`) — repo · HuggingFace / Qwen
 - **Qwen2.5-VL-7B-Instruct config.json (HuggingFace)** (`sources/hf-mm-qwen2-5-vl-7b-config`) — repo · HuggingFace / Qwen
@@ -2468,10 +2696,12 @@ and t
 - **RCCL issue 2191: Multi-communicator concurrent collectives deadlock on gfx90a (FSDP2+TP)** (`sources/mgpu-rccl-2191-multicomm-deadlock`) — repo · ROCm/rccl
 - **ROCm Examples README** (`sources/amd-rocm-examples-readme`) — repo · AMD ROCm
 - **ROCm: Model quantization techniques (AMD Quark, GPTQ, bitsandbytes on Instinct)** (`sources/quant-rocm-quant-doc`) — repo · AMD
+- **RWKV/v5-Eagle-7B-HF config.json** (`sources/mbl-cfg-rwkv5-eagle-7b`) — repo · Hugging Face
 - **RWKV/v5-Eagle-7B-HF model repo** (`sources/hf-eco-rwkv5-eagle-7b`) — repo · RWKV / BlinkDL
 - **RouteLLM GitHub repository (LMSYS LLM router)** (`sources/niche-routellm-repo`) — repo · LMSYS Org / UC Berkeley Sky Computing Lab
 - **SGLang GitHub repository** (`sources/engine-sglang-github`) — repo · SGLang
 - **SGLang GitHub repository** (`sources/serve-sglang-github`) — repo · SGLang
+- **SGLang Model Gateway (sgl-model-gateway / sgl-router) README - control plane and data plane** (`sources/dep-sgl-model-gateway-readme`) — repo · SGLang project
 - **SGLang PR 40726: Reclaim leaked /dev/shm segments at scheduler startup** (`sources/mgpu-sglang-40726-devshm-reclaim`) — repo · sgl-project/sglang
 - **SGLang PR 41479: Let multi-node custom all-reduce v2 pass on topology alone** (`sources/mgpu-sglang-41479-multi-node-custom-ar`) — repo · sgl-project/sglang
 - **SGLang PR 6651: Add PCIe device cross-NUMA node detection to prevent model output corruption** (`sources/mgpu-sglang-6651-cross-numa-allreduce`) — repo · sgl-project/sglang
@@ -2484,6 +2714,7 @@ and t
 - **SGLang issue 36943: --enable-symm-mem all TP schedulers deadlock in ncclCommWindowRegister** (`sources/mgpu-sglang-36943-symm-mem-deadlock`) — repo · sgl-project/sglang
 - **SGLang issue 40723: Leaked sgl_shm_mm_* segments fill /dev/shm -> permanent crashloop** (`sources/mgpu-sglang-40723-devshm-leak`) — repo · sgl-project/sglang
 - **SGLang issue 40877: [SM120] DeepSeek-V4.1-Flash field report on 8x RTX PRO 6000 (PCIe, no NVLink)** (`sources/mgpu-sglang-40877-sm120-pcie-field-report`) — repo · sgl-project/sglang
+- **SGLang server arguments reference (queueing, memory, scheduling, watchdog, retraction policy)** (`sources/ops-sglang-server-arguments`) — repo · SGLang project
 - **SGLang supported models: Diffusion language models** (`sources/mdl2-sglang-diffusion-language-models`) — repo · SGLang project
 - **SGLang supported models: Large Language Models (generative)** (`sources/mdl2-sglang-generative-models`) — repo · SGLang project
 - **SGLang supported models: Multimodal Language Models** (`sources/mdl2-sglang-multimodal-language-models`) — repo · SGLang project
@@ -2498,6 +2729,10 @@ and t
 - **Sonar (ex-Aphrodite Engine) GitHub repository** (`sources/niche-aphrodite-sonar-repo`) — repo · Dolphin Inference Network
 - **Stanford ColBERT README (late interaction reference implementation)** (`sources/embed-colbert-github`) — repo · Stanford FutureData Systems
 - **SynapseAI Core README (archived, not maintained)** (`sources/xpu-synapseai-core-readme`) — repo · HabanaAI
+- **TGI backend queue implementation (unbounded mpsc channel into the batching task)** (`sources/ops-tgi-queue-unbounded`) — repo · Hugging Face
+- **TGI metrics reference (queue size, queue duration, batch size and failure counters)** (`sources/ops-tgi-metrics`) — repo · Hugging Face
+- **TGI router InferError::Overloaded to HTTP 429 mapping and the max_concurrent_requests semaphore** (`sources/ops-tgi-infer-overloaded-429`) — repo · Hugging Face
+- **TGI router design note (continuous batching, prefill/decode asymmetry, latency-throughput tradeoff)** (`sources/ops-tgi-router`) — repo · Hugging Face
 - **TT-Metal / TT-NN GitHub repository** (`sources/niche-tt-metal-repo`) — repo · Tenstorrent
 - **TensorRT-LLM GitHub repository** (`sources/engine-trtllm-github`) — repo · NVIDIA
 - **TensorRT-LLM Linux pip installation docs** (`sources/engine-trtllm-install`) — repo · NVIDIA
@@ -2511,6 +2746,7 @@ and t
 - **ThunderKittens GitHub repository (HazyResearch)** (`sources/kern-thunderkittens-github`) — repo · HazyResearch
 - **TileKernels GitHub repository (DeepSeek)** (`sources/kern-tilekernels-github`) — repo · deepseek-ai
 - **TinyLlama/TinyLlama-1.1B-Chat-v1.0 config.json** (`sources/hf-edge-tinyllama-1-1b-chat`) — repo · Hugging Face
+- **TinyLlama/TinyLlama-1.1B-Chat-v1.0 config.json** (`sources/mbl-cfg-tinyllama-1-1b-chat`) — repo · Hugging Face
 - **TorchServe GitHub repository (PyTorch Serve)** (`sources/niche-torchserve-repo`) — repo · PyTorch / Linux Foundation
 - **Transformer Engine NVFP4 documentation** (`sources/quant-nvfp4-te-docs`) — repo · NVIDIA
 - **Triton Inference Server GitHub repository** (`sources/niche-triton-repo`) — repo · NVIDIA
@@ -2521,7 +2757,11 @@ and t
 - **WebLLM GitHub repository** (`sources/niche-webllm-repo`) — repo · MLC AI
 - **XGrammar GitHub repository (mlc-ai/xgrammar)** (`sources/niche-xgrammar-repo`) — repo · MLC AI
 - **Xorbits Inference (Xinference) README** (`sources/embed-xinference-github`) — repo · Xorbits AI
+- **Zyphra/Zamba-7B-v1 config.json** (`sources/mbl-cfg-zamba-7b`) — repo · Hugging Face
+- **allenai/Molmo-7B-D-0924 config.json** (`sources/mbl-cfg-molmo-7b-d`) — repo · Hugging Face
 - **allenai/OLMo-2-0425-1B config.json** (`sources/hf-edge-olmo-2-1b`) — repo · Hugging Face
+- **allenai/OLMo-2-0425-1B config.json** (`sources/mbl-cfg-olmo-2-1b`) — repo · Hugging Face
+- **allenai/OLMo-3-7B-Instruct config.json** (`sources/mbl-cfg-olmo-3-7b`) — repo · Hugging Face
 - **answerdotai/ModernBERT-base config.json** (`sources/hf-embed-modernbert-base`) — repo · Hugging Face
 - **bespokelabs/Bespoke-Stratos-7B model repo** (`sources/hf-eco-bespoke-stratos-7b`) — repo · Bespoke Labs / Hugging Face
 - **canary-1b-flash config.json (HuggingFace)** (`sources/hf-mm-canary-1b-flash-config`) — repo · HuggingFace / NVIDIA
@@ -2544,6 +2784,7 @@ and t
 - **deepseek-ai/DeepSeek-R1-Distill-Qwen-7B model repo** (`sources/hf-eco-deepseek-r1-distill-qwen-7b`) — repo · DeepSeek-AI / Hugging Face
 - **dropbox/hqq GitHub README** (`sources/qlab2-hqq-readme`) — repo · Dropbox (Mobius team)
 - **exo GitHub repository** (`sources/niche-exo-repo`) — repo · exo labs
+- **falcon-h1-7B-base config.json** (`sources/mbl-cfg-falcon-h1-7b-base`) — repo · Hugging Face
 - **faster-whisper README (GitHub)** (`sources/aud-src-faster-whisper-readme`) — repo · GitHub / SYSTRAN
 - **gemma-2-9b config.json** (`sources/model-fr-hf-config-gemma-2-9b`) — repo · Hugging Face (unsloth mirror of Google weights)
 - **gemma-3-12b-it config.json (mirror: unsloth/gemma-3-12b-it)** (`sources/hf-mm-gemma-3-12b-it-config`) — repo · HuggingFace / unsloth mirror of google/gemma-3-12b-it
@@ -2551,8 +2792,11 @@ and t
 - **gemma-3-4b-it config.json (mirror: unsloth/gemma-3-4b-it)** (`sources/hf-mm-gemma-3-4b-it-config`) — repo · HuggingFace / unsloth mirror of google/gemma-3-4b-it
 - **gemma-3n-e2b-it config.json** (`sources/model-fr-hf-config-gemma-3n-e2b`) — repo · Hugging Face (unsloth mirror of Google weights)
 - **gemma-4-12B-it config.json** (`sources/model-fr-hf-config-gemma-4-12b`) — repo · Hugging Face (Google)
+- **gemma-4-12B-it config.json (text_config)** (`sources/mbl-cfg-gemma-4-12b`) — repo · Hugging Face
 - **gemma-4-26B-A4B-it config.json** (`sources/model-fr-hf-config-gemma-4-26b-a4b`) — repo · Hugging Face (Google)
+- **gemma-4-26B-A4B-it config.json (text_config)** (`sources/mbl-cfg-gemma-4-26b-a4b`) — repo · Hugging Face
 - **gemma-4-31B-it config.json** (`sources/model-fr-hf-config-gemma-4-31b`) — repo · Hugging Face (Google)
+- **gemma-4-31B-it config.json (text_config)** (`sources/mbl-cfg-gemma-4-31b`) — repo · Hugging Face
 - **ggml-common.h (block struct definitions for every GGUF quant type)** (`sources/qlab2-ggml-common-header`) — repo · ggml-org
 - **ggml.h (enum ggml_type)** (`sources/quant-ggml-header`) — repo · ggml-org
 - **glm-4.1v-9b-Thinking config.json (HuggingFace)** (`sources/hf-mm-glm-4-1v-9b-config`) — repo · HuggingFace / THUDM
@@ -2562,10 +2806,14 @@ and t
 - **gpt-oss-120b config.json** (`sources/model-fr-hf-config-gpt-oss-120b`) — repo · Hugging Face / OpenAI
 - **gpt-oss-20b config.json** (`sources/model-fr-hf-config-gpt-oss-20b`) — repo · Hugging Face / OpenAI
 - **h2ogpt GitHub repository (ARCHIVED)** (`sources/niche-h2ogpt-repo`) — repo · H2O.ai
+- **hazyresearch/based-1.3b config.json** (`sources/mbl-cfg-based-1-3b`) — repo · Hugging Face
+- **ibm-granite/granite-3.3-8b-instruct config.json** (`sources/mbl-cfg-granite-3-3-8b-instruct`) — repo · Hugging Face
 - **ibm-granite/granite-3.3-8b-instruct model repo** (`sources/hf-eco-granite-3-3-8b-instruct`) — repo · IBM Granite
+- **ibm-granite/granite-4.0-h-tiny config.json** (`sources/mbl-cfg-granite-4-0-h-tiny`) — repo · Hugging Face
 - **ibm-granite/granite-4.0-h-tiny model repo** (`sources/hf-eco-granite-4-0-h-tiny`) — repo · IBM Granite
 - **ik_llama.cpp GitHub repo** (`sources/cpuedge-ik-llama-cpp-github`) — repo · ikawrakow
 - **ikawrakow/ik_llama.cpp GitHub README** (`sources/qlab2-ik-llama-cpp-readme`) — repo · ikawrakow
+- **inclusionAI/Ling-3.0-Flash config.json** (`sources/mbl-cfg-ling-3-0-flash`) — repo · Hugging Face
 - **intfloat/e5-base-v2 config.json** (`sources/hf-embed-e5-base-v2`) — repo · Hugging Face
 - **intfloat/e5-large-v2 config.json** (`sources/hf-embed-e5-large-v2`) — repo · Hugging Face
 - **intfloat/e5-mistral-7b-instruct config.json** (`sources/hf-embed-e5-mistral-7b-instruct`) — repo · Hugging Face
@@ -2595,46 +2843,115 @@ and t
 - **llamafile Supported Systems docs** (`sources/cpuedge-llamafile-support-docs`) — repo · Mozilla AI (mozilla-ai)
 - **llamafile Supported Systems docs (IQ-quants on NVIDIA section)** (`sources/qlab2-llamafile-support-docs`) — repo · Mozilla AI (mozilla-ai)
 - **llava-onevision-qwen2-7b-ov-hf config.json (HuggingFace)** (`sources/hf-mm-llava-onevision-qwen2-7b-config`) — repo · HuggingFace / llava-hf
+- **llm-d Autoscaling overview (WVA deprecation and capability gaps against KEDA + EPP)** (`sources/ops-llmd-autoscaling-wva-deprecated`) — repo · llm-d
+- **llm-d Disaggregated Serving Operations (vLLM) - fault tolerance, KV leases, rollouts, known NIXL issues** (`sources/ops-llmd-disaggregation-operations`) — repo · llm-d
+- **llm-d EPP Flow Control reference (centralised queuing, saturation detectors, eviction, error mapping, what it does not solve)** (`sources/ops-llmd-flow-control`) — repo · llm-d
+- **llm-d Experimental Token-Aware Autoscaling guide (prefill token velocity, decode KV occupancy, stale-series bug)** (`sources/ops-llmd-autoscaling-token-aware`) — repo · llm-d
 - **llm-d GitHub repository (llm-d/llm-d)** (`sources/pd-llmd-repo`) — repo · llm-d (CNCF sandbox project)
+- **llm-d Graceful Shutdown and Request Draining guide** (`sources/ops-llmd-graceful-shutdown`) — repo · llm-d
+- **llm-d InferencePool architecture reference (endpoint discovery, failOpen/failClose, namespace scoping)** (`sources/ops-llmd-inferencepool`) — repo · llm-d
+- **llm-d KEDA with EPP Metrics design (why utilisation fails, four demand signals, isolation, limitations)** (`sources/ops-llmd-autoscaling-keda-epp`) — repo · llm-d
+- **llm-d Router Operations guide (EPP HA modes, fail-open, proxy and EPP sizing reference data)** (`sources/ops-llmd-router-operations`) — repo · llm-d
+- **llm-d SLO-Aware Autoscaling with KEDA - the control law (saturation signal, hysteresis, in-flight credit, warmup)** (`sources/ops-llmd-autoscaling-slo-control-law`) — repo · llm-d
+- **llm-d vLLM Model-Aware Readiness Probes guide** (`sources/ops-llmd-readiness-probes`) — repo · llm-d
 - **llm.c GitHub repository** (`sources/niche-llmc-repo`) — repo · Andrej Karpathy
 - **lm-format-enforcer GitHub repository** (`sources/niche-lm-format-enforcer-repo`) — repo · noamgat
 - **microsoft/Phi-3-mini-4k-instruct config.json** (`sources/hf-edge-phi-3-mini-4k-instruct`) — repo · Hugging Face
+- **microsoft/Phi-3-mini-4k-instruct config.json** (`sources/mbl-cfg-phi-3-mini-4k-instruct`) — repo · Hugging Face
 - **microsoft/Phi-3.5-mini-instruct config.json** (`sources/hf-edge-phi-3-5-mini-instruct`) — repo · Hugging Face
 - **microsoft/Phi-4-mini-instruct config.json** (`sources/hf-edge-phi-4-mini-instruct`) — repo · Hugging Face
 - **microsoft/Phi-4-mini-reasoning config.json** (`sources/hf-edge-phi-4-mini-reasoning`) — repo · Hugging Face
 - **mistral.rs GitHub repository** (`sources/engine-mistralrs-github`) — repo · EricLBuehler
+- **mistralai/Magistral-Small-2509 config.json** (`sources/mbl-cfg-magistral-small-2509`) — repo · Hugging Face
+- **mistralai/Mamba-Codestral-7B-v0.1 config.json** (`sources/mbl-cfg-mamba-codestral-7b`) — repo · Hugging Face
 - **mistralai/Mamba-Codestral-7B-v0.1 model repo** (`sources/hf-eco-mamba-codestral-7b`) — repo · Mistral AI
+- **mistralai/Ministral-3-8B-Instruct-2512 config.json** (`sources/mbl-cfg-ministral-3-8b-2512`) — repo · Hugging Face
+- **mistralai/Ministral-8B-Instruct-2410 config.json** (`sources/mbl-cfg-ministral-8b`) — repo · Hugging Face
+- **mistralai/Mixtral-8x22B-Instruct-v0.1 config.json** (`sources/mbl-cfg-mixtral-8x22b`) — repo · Hugging Face
+- **mistralai/Mixtral-8x7B-Instruct-v0.1 config.json** (`sources/mbl-cfg-mixtral-8x7b`) — repo · Hugging Face
+- **mistralai/Voxtral-Mini-3B-2507 config.json** (`sources/mbl-cfg-voxtral-mini-3b`) — repo · Hugging Face
 - **mit-han-lab/llm-awq GitHub README** (`sources/qlab2-awq-readme`) — repo · MIT HAN Lab
 - **mixedbread-ai/mxbai-embed-large-v1 config.json** (`sources/hf-embed-mxbai-embed-large-v1`) — repo · Hugging Face
 - **mixedbread-ai/mxbai-rerank-large-v1 config.json** (`sources/hf-embed-mxbai-rerank-large-v1`) — repo · Hugging Face
 - **mixedbread-ai/mxbai-rerank-large-v2 config.json** (`sources/hf-embed-mxbai-rerank-large-v2`) — repo · Hugging Face
 - **mlx-lm PR #1584: RotatingQuantizedKVCache / BatchRotatingQuantizedKVCache** (`sources/mdl2-mlxlm-pr1584-rotating-quantized-kv`) — repo · ml-explore
 - **model2vec-rs GitHub repository (official Rust implementation)** (`sources/niche-model2vec-rs-repo`) — repo · Minish Lab
+- **moonshotai/Kimi-Audio-7B-Instruct config.json** (`sources/mbl-cfg-kimi-audio-7b-instruct`) — repo · Hugging Face
+- **moonshotai/Kimi-K3 config.json** (`sources/mbl-cfg-kimi-k3`) — repo · Hugging Face
 - **mx-llama.cpp: a maintained gfx906 fork of llama.cpp** (`sources/comm-mx-llama-cpp-repo`) — repo · GitHub (mxxm-t)
 - **ncnn GitHub Repository** (`sources/local-ncnn-github`) — repo · Tencent
 - **neuralmagic/sparseml README (End of Life notice)** (`sources/qlab2-sparseml-eol-readme`) — repo · Neural Magic (Red Hat)
 - **nlzy/vllm-gfx906 (archived) - the original community gfx906 vLLM fork** (`sources/comm-nlzy-vllm-gfx906-archived`) — repo · GitHub (nlzy)
 - **nomic-ai/nomic-embed-text-v1.5 config.json** (`sources/hf-embed-nomic-embed-text-v1-5`) — repo · Hugging Face
 - **nomic-ai/nomic-embed-text-v2-moe config.json** (`sources/hf-embed-nomic-embed-text-v2-moe`) — repo · Hugging Face
+- **nomic-ai/nomic-embed-text-v2-moe config.json** (`sources/mbl-cfg-nomic-embed-text-v2-moe`) — repo · Hugging Face
 - **nvidia/Nemotron-H-8B-Base-8K model repo** (`sources/hf-eco-nemotron-h-8b-base-8k`) — repo · NVIDIA
+- **obs-llamacpp-metrics-source** (`sources/obs-llamacpp-metrics-source`) — repo · ggml-org
+- **obs-llamacpp-server-readme-metrics** (`sources/obs-llamacpp-server-readme-metrics`) — repo · ggml-org
+- **obs-lmdeploy-metrics-doc** (`sources/obs-lmdeploy-metrics-doc`) — repo · InternLM
+- **obs-lmdeploy-metrics-loggers** (`sources/obs-lmdeploy-metrics-loggers`) — repo · InternLM
+- **obs-lmdeploy-monitoring-dir** (`sources/obs-lmdeploy-monitoring-dir`) — repo · InternLM
+- **obs-ollama-api-docs** (`sources/obs-ollama-api-docs`) — repo · ollama
+- **obs-ollama-readme-observability** (`sources/obs-ollama-readme-observability`) — repo · ollama
+- **obs-ollama-routes-go** (`sources/obs-ollama-routes-go`) — repo · ollama
+- **obs-sglang-disaggregation-trace-test** (`sources/obs-sglang-disaggregation-trace-test`) — repo · sgl-project/sglang
+- **obs-sglang-metrics-collector** (`sources/obs-sglang-metrics-collector`) — repo · sgl-project/sglang
+- **obs-sglang-observability-trace-py** (`sources/obs-sglang-observability-trace-py`) — repo · sgl-project/sglang
+- **obs-sglang-production-metrics-doc** (`sources/obs-sglang-production-metrics-doc`) — repo · sgl-project/sglang
+- **obs-sglang-request-stage-enum** (`sources/obs-sglang-request-stage-enum`) — repo · sgl-project/sglang
+- **obs-sglang-request-trace-doc** (`sources/obs-sglang-request-trace-doc`) — repo · sgl-project/sglang
+- **obs-sglang-schedule-batch-retract** (`sources/obs-sglang-schedule-batch-retract`) — repo · sgl-project/sglang
+- **obs-sglang-scheduler-retraction** (`sources/obs-sglang-scheduler-retraction`) — repo · sgl-project/sglang
+- **obs-sglang-utilization-regression** (`sources/obs-sglang-utilization-regression`) — repo · sgl-project/sglang
+- **obs-tgi-cli-tracing-flags** (`sources/obs-tgi-cli-tracing-flags`) — repo · huggingface
+- **obs-tgi-metrics-doc** (`sources/obs-tgi-metrics-doc`) — repo · huggingface
+- **obs-tgi-router-server-rs** (`sources/obs-tgi-router-server-rs`) — repo · huggingface
+- **obs-tgi-tracing-py** (`sources/obs-tgi-tracing-py`) — repo · huggingface
+- **obs-triton-metrics-doc** (`sources/obs-triton-metrics-doc`) — repo · triton-inference-server
+- **obs-triton-trace-doc** (`sources/obs-triton-trace-doc`) — repo · triton-inference-server
+- **obs-triton-trtllm-backend-metrics** (`sources/obs-triton-trtllm-backend-metrics`) — repo · triton-inference-server
+- **obs-trtllm-metrics-collector** (`sources/obs-trtllm-metrics-collector`) — repo · NVIDIA
+- **obs-trtllm-otel-readme** (`sources/obs-trtllm-otel-readme`) — repo · NVIDIA
+- **obs-trtllm-tracing-py** (`sources/obs-trtllm-tracing-py`) — repo · NVIDIA
+- **obs-vllm-block-pool-usage** (`sources/obs-vllm-block-pool-usage`) — repo · vllm-project/vllm
+- **obs-vllm-metrics-design-doc** (`sources/obs-vllm-metrics-design-doc`) — repo · vllm-project/vllm
+- **obs-vllm-observability-config** (`sources/obs-vllm-observability-config`) — repo · vllm-project/vllm
+- **obs-vllm-otel-poc-readme** (`sources/obs-vllm-otel-poc-readme`) — repo · vllm-project/vllm
+- **obs-vllm-per-request-metrics-doc** (`sources/obs-vllm-per-request-metrics-doc`) — repo · vllm-project/vllm
+- **obs-vllm-production-metrics-doc** (`sources/obs-vllm-production-metrics-doc`) — repo · vllm-project/vllm
+- **obs-vllm-scheduler-preemption** (`sources/obs-vllm-scheduler-preemption`) — repo · vllm-project/vllm
+- **obs-vllm-v1-metrics-loggers** (`sources/obs-vllm-v1-metrics-loggers`) — repo · vllm-project/vllm
 - **oneDNN - GitHub README** (`sources/xpu-onednn-github-readme`) — repo · uxlfoundation
+- **open-r1/OpenR1-Qwen-7B config.json** (`sources/mbl-cfg-openr1-qwen-7b`) — repo · Hugging Face
 - **open-r1/OpenR1-Qwen-7B model repo** (`sources/hf-eco-openr1-qwen-7b`) — repo · Open-R1 project / Hugging Face
 - **open-thoughts/OpenThinker3-7B model repo** (`sources/hf-eco-openthinker3-7b`) — repo · OpenThoughts / Hugging Face
 - **openai/whisper GitHub repository** (`sources/aud-src-openai-whisper-github`) — repo · GitHub / OpenAI
+- **openbmb/MiniCPM-V-4_6 config.json** (`sources/mbl-cfg-minicpm-v-4-6`) — repo · Hugging Face
 - **optimum-quanto GitHub README (design overview)** (`sources/qlab2-optimum-quanto-readme`) — repo · Hugging Face
 - **optimum-quanto README** (`sources/quant-quanto-readme`) — repo · Hugging Face
 - **parakeet-ctc-1.1b config.json (HuggingFace)** (`sources/hf-mm-parakeet-ctc-1-1b-config`) — repo · HuggingFace / NVIDIA
 - **sentence-transformers/all-MiniLM-L6-v2 config.json** (`sources/hf-embed-all-minilm-l6-v2`) — repo · Hugging Face
 - **sentence-transformers/all-mpnet-base-v2 config.json** (`sources/hf-embed-all-mpnet-base-v2`) — repo · Hugging Face
+- **sgl-model-gateway WASM rate-limit example README and its documented limitations** (`sources/ops-sglang-wasm-ratelimit-example`) — repo · SGLang project
+- **sgl-router POLICY_DESIGN.md target design (per-engine admission limits, bucket fallback, error mapping)** (`sources/ops-sglang-router-policy-design`) — repo · SGLang project
+- **sgl-router README (worker discovery, PD version grouping, KV bootstrap, API-key handling)** (`sources/ops-sglang-router-readme`) — repo · SGLang project
+- **sgl-router monitoring reference (router metric names, circuit breaker state, in-flight gauges)** (`sources/ops-sglang-router-monitoring`) — repo · SGLang project
+- **teknium/OpenHermes-2.5-Mistral-7B config.json** (`sources/mbl-cfg-openhermes-2-5-mistral-7b`) — repo · Hugging Face
 - **teknium/OpenHermes-2.5-Mistral-7B model repo** (`sources/hf-eco-openhermes-2-5-mistral-7b`) — repo · teknium
 - **thenlper/gte-large config.json** (`sources/hf-embed-gte-large`) — repo · Hugging Face
 - **tiiuae/Falcon-H1-7B-Base model repo** (`sources/hf-eco-falcon-h1-7b-base`) — repo · TII / Hugging Face
 - **tiiuae/Falcon3-7B-Instruct model repo** (`sources/hf-eco-falcon3-7b-instruct`) — repo · TII / Hugging Face
+- **tiiuae/falcon3-7B-Instruct config.json** (`sources/mbl-cfg-falcon3-7b`) — repo · Hugging Face
 - **torch.compile FAQ and troubleshooting** (`sources/torch-compile-faq-and-troubleshooting`) — repo · PyTorch / Meta
 - **torch.compile documentation** (`sources/torch-compile-documentation`) — repo · PyTorch / Meta
 - **unsloth/DeepSeek-R1-Distill-Llama-8B-GGUF repo (GGUF file tree)** (`sources/hf-eco-unsloth-deepseek-r1-distill-llama-8b-gguf`) — repo · Unsloth / Hugging Face
+- **unsloth/Hermes-4-405B-GGUF config.json** (`sources/mbl-cfg-hermes-4-405b-gguf`) — repo · Hugging Face
 - **unsloth/Hermes-4-405B-GGUF repo (GGUF file tree)** (`sources/hf-eco-hermes-4-405b-gguf`) — repo · Unsloth / Hugging Face
 - **vLLM Ascend plugin GitHub repository** (`sources/niche-vllm-ascend-repo`) — repo · vLLM project (community)
+- **vLLM AsyncEngineArgs defaults for the ops-relevant engine and scheduler knobs** (`sources/ops-vllm-engine-arg-defaults`) — repo · vLLM project
+- **vLLM AsyncLLM.check_admission() source (max_num_queued_reqs / max_num_queued_tokens admission path)** (`sources/ops-vllm-async-llm-admission`) — repo · vLLM project
+- **vLLM EngineCore source (_handle_shutdown, SIGTERM handling, abort vs drain)** (`sources/ops-vllm-engine-core-shutdown`) — repo · vLLM project
+- **vLLM FrontendArgs / cli_args: api_key field ('If provided, the server will require one of these keys to be presented in the header')** (`sources/sec-vllm-api-key-flag`) — repo · vLLM project
 - **vLLM GGUF documentation** (`sources/quant-vllm-gguf-doc`) — repo · vllm-project
 - **vLLM GPU installation docs** (`sources/engine-vllm-install-gpu`) — repo · vLLM
 - **vLLM GitHub repository** (`sources/engine-vllm-github`) — repo · vLLM
@@ -2652,15 +2969,22 @@ and t
 - **vLLM PR 51241: Add /dev/shm size calculator for tensor parallel deployment** (`sources/mgpu-vllm-51241-shm-calculator`) — repo · vllm-project/vllm
 - **vLLM PR 52535: Make the attention-head / TP divisibility error actionable** (`sources/mgpu-vllm-52535-divisibility-actionable`) — repo · vllm-project/vllm
 - **vLLM PR 52555: Add opt-in custom all-reduce max-size override** (`sources/mgpu-vllm-52555-custom-ar-nvlink`) — repo · vllm-project/vllm
+- **vLLM Production Stack - vllm_router README (request router)** (`sources/dep-vllm-prodstack-router-readme`) — repo · vLLM project
 - **vLLM Production Stack GitHub repository** (`sources/niche-vllm-production-stack-repo`) — repo · vLLM project
 - **vLLM Quantization Documentation (docs.vllm.ai)** (`sources/qhw-src-vllm-quant-docs`) — repo · vLLM
+- **vLLM Security documentation (API Key Authentication Limitations, cache salting, media UUIDs, gRPC, media limits)** (`sources/ops-vllm-security-api-key`) — repo · vLLM project
+- **vLLM SharedAdmissionStats source (lock-free cross-process admission counters)** (`sources/ops-vllm-shared-admission-stats`) — repo · vLLM project
 - **vLLM TPU inference plugin (tpu-inference) - GitHub README** (`sources/alt-tpu-vllm-inference-readme`) — repo · vllm-project
+- **vLLM V1 scheduler source (_preempt_request and the running-queue eviction loop)** (`sources/ops-vllm-scheduler-preemption`) — repo · vLLM project
 - **vLLM automatic prefix caching docs** (`sources/engine-vllm-prefix-caching`) — repo · vLLM
+- **vLLM custom logits processors documentation (docs/features/custom_logitsprocs.md) and vllm/v1/sample/logits_processor/interface.py** (`sources/sec-vllm-logits-processor-interface`) — repo · vLLM project
+- **vLLM docs engine arguments: --enable-log-requests, --max-log-len, --disable-log-stats** (`sources/sec-vllm-engine-args-logging`) — repo · vLLM project
 - **vLLM docs: Disaggregated Prefilling (experimental)** (`sources/pd-vllm-disagg-prefill-docs`) — repo · vLLM project
 - **vLLM docs: KV Offloading Usage Guide (OffloadingConnector)** (`sources/pd-vllm-kv-offloading-docs`) — repo · vLLM project
 - **vLLM docs: NixlConnector Usage Guide** (`sources/pd-vllm-nixl-connector-docs`) — repo · vLLM project
 - **vLLM documentation: Batch Invariance (docs/features/batch_invariance.md, read from the vllm repo at main)** (`sources/nrg2-vllm-docs-batch-invariance`) — repo · vLLM project
 - **vLLM documentation: Disaggregated Prefilling (experimental)** (`sources/pap-sys-vllm-disagg-prefill`) — repo · vLLM project
+- **vLLM documentation: Security (docs/usage/security.md)** (`sources/sec-vllm-security-doc`) — repo · vLLM project
 - **vLLM feature compatibility matrix** (`sources/engine-vllm-feature-matrix`) — repo · vLLM
 - **vLLM issue 28498: [Bug][RL]: Port Conflict** (`sources/mgpu-vllm-28498-zmq-port-conflict`) — repo · vllm-project/vllm
 - **vLLM issue 40980: TP=2 deadlock on dual AMD R9700 (gfx1201/RDNA4) - GPUs spin at 100%** (`sources/mgpu-vllm-40980-rocm-tp2-deadlock`) — repo · vllm-project/vllm
@@ -2669,13 +2993,19 @@ and t
 - **vLLM issue 52435: AssertionError n_physical_experts=256 must be divisible by ep_size=3** (`sources/mgpu-vllm-52435-ep-divisibility`) — repo · vllm-project/vllm
 - **vLLM issue 58290: Multi-node TP=8 (2 nodes x 4 H200) hangs in ncclCommInitRank during startup** (`sources/mgpu-vllm-58290-multinode-init-hang`) — repo · vllm-project/vllm
 - **vLLM issue 59185: B200 cross-node TP=4 startup hangs without MNNVL during communicator initialization** (`sources/mgpu-vllm-59185-b200-cross-node-hang`) — repo · vllm-project/vllm
+- **vLLM prometheus.py multiprocess-registry source and its stale-directory warning** (`sources/ops-vllm-prometheus-multiproc`) — repo · vLLM project
 - **vLLM quantization hardware matrix** (`sources/engine-vllm-quant-matrix`) — repo · vLLM
 - **vLLM supported models documentation** (`sources/pap-arch-vllm-supported-models`) — repo · vLLM project
 - **vLLM supported models documentation, re-read for architecture-class and encoder-decoder statements** (`sources/mdl2-vllm-supported-models-2026-10`) — repo · vLLM project
+- **vLLM v1 metrics loggers source (Prometheus metric names and documentation strings)** (`sources/ops-vllm-metrics-loggers`) — repo · vLLM project
+- **vLLM v1/utils.py shutdown() and the engine-process shutdown-timeout helpers** (`sources/ops-vllm-process-shutdown-timeout`) — repo · vLLM project
+- **vLLM vllm/entrypoints/serve/utils/request_logger.py source (RequestLogger)** (`sources/sec-vllm-request-logger-source`) — repo · vLLM project
+- **vLLM vllm/v1/core/kv_cache_utils.py: prefix-cache block hashing, cache_salt, DEFAULT_NONE_HASH_SEED** (`sources/sec-vllm-kv-block-hash-source`) — repo · vLLM project
 - **vLLM vllm/v1/engine/detokenizer.py (main)** (`sources/flop3-vllm-detokenizer-source`) — repo · vllm-project/vllm
 - **vLLM vllm/v1/sample/logits_processor/builtin.py (main) - min_p, logit bias, min_tokens processors** (`sources/flop3-vllm-logits-processor-builtin`) — repo · vllm-project/vllm
 - **vLLM vllm/v1/sample/ops/penalties.py (main)** (`sources/flop3-vllm-penalties-source`) — repo · vllm-project/vllm
 - **vLLM vllm/v1/sample/rejection_sampler.py (main)** (`sources/flop3-vllm-rejection-sampler-source`) — repo · vllm-project/vllm
+- **vLLM vllm/v1/sample/sampler.py (Sampler.forward / Sampler.sample) source** (`sources/sec-vllm-sampler-pipeline-source`) — repo · vLLM project
 - **vLLM vllm/v1/sample/sampler.py (main) - the per-step sampler chain and its logit dtype conversions** (`sources/flop3-vllm-sampler-source`) — repo · vllm-project/vllm
 - **vLLM-Metal plugin repository** (`sources/engine-vllm-metal-github`) — repo · vLLM
 - **vLLM-project LLM Compressor (llmcompressor) GitHub README** (`sources/qlab2-llmcompressor-readme`) — repo · vLLM project / Red Hat AI
@@ -2691,10 +3021,13 @@ and t
 - **whisper-tiny config.json (HuggingFace)** (`sources/aud-src-whisper-tiny-config`) — repo · HuggingFace / OpenAI
 - **whisper.cpp README (GitHub)** (`sources/aud-src-whisper-cpp-readme`) — repo · GitHub / ggml-org
 - **xai-org/grok-1 model card and run.py** (`sources/model-fr-hf-config-grok-1`) — repo · xAI
+- **zai-org/GLM-4.5 config.json** (`sources/mbl-cfg-glm-4-5`) — repo · Hugging Face
+- **zai-org/GLM-5 config.json** (`sources/mbl-cfg-glm-5`) — repo · Hugging Face
 - **Cambricon MLU590 — aggregated analyst and brokerage estimates** (`sources/cn-cambricon-mlu590`) — review · flopper.io (aggregating brokerage/analyst notes)
 - **Cerebras Systems (company and wafer-scale background)** (`sources/asic-cerebras-wikipedia`) — review · Wikipedia
 - **Huawei Ascend 910B (aggregated analyst and teardown figures)** (`sources/asic-ascend-910b-secondary`) — review · aiwiki.ai (aggregating SemiAnalysis, TechInsights, CSET)
 - **Iluvatar CoreX BI-V150 (Tiangai 150) — product overview and estimates** (`sources/cn-iluvatar-bi-v150`) — review · mirrorfrog.com (aggregating Chinese sources)
+- **NEGATIVE: no accelerator OEM or major distributor publishes a lead time in weeks (checked 2026-10-04)** (`sources/spl-negative-no-oem-publishes-lead-time`) — review · (negative finding; probed Dell, Supermicro, HPE, QCT, CDW, Insight, Provantage, IT Creations, ServersDirect)
 - **NanoReview GPU specification pages (launch MSRP)** (`sources/sup-price-nanoreview-msrp`) — review · NanoReview
 - **TechInsights: Enflame S60 AI Accelerator Processor Floorplan Analysis** (`sources/cn-enflame-techinsights`) — review · TechInsights
 - **Wikipedia: Biren Technology** (`sources/cn-biren-wikipedia`) — review · Wikipedia
@@ -2735,6 +3068,7 @@ and t
 - **AMD Radeon RX 9070 XT product specifications page** (`sources/acc-fill-amd-radeon-rx-9070xt-product-page`) — spec-sheet · AMD
 - **AMD Ryzen AI Max+ 395 (Radeon 8060S Graphics) product specifications page** (`sources/acc-fill-amd-ryzen-ai-max-plus-395-product-page`) — spec-sheet · AMD
 - **AWS EC2 Spot Instances Pricing page (up-to-90%-off statement, per-AZ spot table)** (`sources/rent-src-aws-spot-pricing-page`) — spec-sheet · AWS
+- **AWS EC2 User Guide - Capacity Blocks for ML: 8-week booking horizon, 64/256 instance caps** (`sources/spl-aws-capacity-block-booking-horizon`) — spec-sheet · Amazon Web Services
 - **AWS Inferentia product page** (`sources/asic-aws-inferentia-product`) — spec-sheet · Amazon Web Services
 - **Amazon EC2 Capacity Blocks for ML overview** (`sources/sup-cloud-aws-ec2-capacityblocks-overview`) — spec-sheet · Amazon Web Services
 - **Amazon EC2 Inf2 Architecture** (`sources/alt-inf2-arch`) — spec-sheet · Amazon Web Services
@@ -2841,6 +3175,7 @@ and t
 - **NVIDIA DGX H100/H200 User Guide - Introduction (power and environmental specifications)** (`sources/pwr2-nvidia-dgx-h100-power-specs`) — spec-sheet · NVIDIA
 - **NVIDIA Enterprise Marketplace - Data Center Where to Buy (NPN partners)** (`sources/sup-buy-nvidia-marketplace-wtb`) — spec-sheet · NVIDIA
 - **NVIDIA GB200 NVL72 product page (spec table)** (`sources/nv-gb200-nvl72-product-page`) — spec-sheet · NVIDIA
+- **NVIDIA GPU Operator documentation: Time-Slicing GPUs in Kubernetes, and the time-slicing vs MIG comparison** (`sources/sec-nvidia-gpu-operator-timeslicing`) — spec-sheet · NVIDIA
 - **NVIDIA GeForce RTX 3090 / 3090 Ti family product page** (`sources/consumer-nvidia-rtx-3090-family-product-page`) — spec-sheet · NVIDIA
 - **NVIDIA GeForce RTX 4090 product page** (`sources/consumer-nvidia-rtx-4090-product-page`) — spec-sheet · NVIDIA
 - **NVIDIA GeForce RTX 5070 Product Page** (`sources/local-nvidia-rtx-5070-product-page`) — spec-sheet · NVIDIA
@@ -2865,6 +3200,7 @@ and t
 - **NVIDIA L40 GPU datasheet** (`sources/nv-l40-datasheet`) — spec-sheet · NVIDIA
 - **NVIDIA L40S product page specification table** (`sources/acc2-nv-l40s-product-page`) — spec-sheet · NVIDIA
 - **NVIDIA Multi-Instance GPU User Guide, Release 615** (`sources/mgpu-nvidia-mig-user-guide`) — spec-sheet · NVIDIA
+- **NVIDIA Multi-Instance GPU User Guide: Introduction** (`sources/sec-nvidia-mig-intro`) — spec-sheet · NVIDIA
 - **NVIDIA NCCL Documentation** (`sources/nic-nccl-docs`) — spec-sheet · NVIDIA
 - **NVIDIA NVLink and NVLink Switch product page and specification table** (`sources/link-nvlink-switch-spec`) — spec-sheet · NVIDIA
 - **NVIDIA NVLink-C2C product page** (`sources/link-nvlink-c2c-product-page`) — spec-sheet · NVIDIA
@@ -2885,6 +3221,7 @@ and t
 - **OCP Microscaling Formats (MX) Specification v1.0** (`sources/quant-ocp-mx-spec`) — spec-sheet · Open Compute Project
 - **Olmo 3 model flow** (`sources/model-fr-ai2-olmo-page`) — spec-sheet · Ai2
 - **OpenAI API pricing (platform docs, Standard/Batch/Flex/Fast tables)** (`sources/rent-src-openai-api-pricing`) — spec-sheet · OpenAI
+- **PCI Security Standards Council document library: PCI DSS v4.0.1 (June 2024), Summary of Changes v4.0 to v4.0.1, Prioritized Approach** (`sources/sec-pci-dss-v4-0-1-document-library`) — spec-sheet · PCI Security Standards Council
 - **PCI-SIG 'PCI Express 6.0 Specification' page** (`sources/net2-pcisig-pcie6-spec`) — spec-sheet · PCI-SIG
 - **PCI-SIG FAQ 'What bit rates does the PCIe 5.0 specification support and how does it compare to prior PCIe generations?'** (`sources/net2-pcisig-pcie5-faq`) — spec-sheet · PCI-SIG
 - **PCI-SIG specifications library index** (`sources/link-pcisig-specifications`) — spec-sheet · PCI-SIG
@@ -2930,28 +3267,40 @@ and t
 - **xAI developer pricing (Text API per 1M tokens, cached input, long-context tiers)** (`sources/rent-src-xai-pricing`) — spec-sheet · xAI
 - **AMD 'Introducing AMD CDNA 4 Architecture' white paper** (`sources/net2-amd-cdna4-whitepaper`) — whitepaper · AMD
 - **Android NNAPI deprecation notices (AOSP and Android NDK)** (`sources/niche-android-nnapi-deprecation`) — whitepaper · Android Open Source Project
+- **Baseten documentation - Cold starts (startup phases, startup time card)** (`sources/dep-baseten-cold-starts-docs`) — whitepaper · Baseten
 - **Biren Technology Hot Chips 34 presentation 'BR100 GPGPU: Accelerating Datacenter Scale AI Computing'** (`sources/net2-biren-hotchips-br100`) — whitepaper · Biren Technology
 - **CUDA Graphs: Official Documentation** (`sources/src5-cuda-graphs-docs`) — whitepaper · NVIDIA
 - **CUDA Programming Guide (v13.4.2)** (`sources/src5-cuda-programming-guide`) — whitepaper · NVIDIA
 - **DeepSeek-V3 Technical Report (arXiv:2412.19437)** (`sources/model-cn-deepseek-v3-report`) — whitepaper · arXiv / DeepSeek-AI
+- **Envoy AI Gateway (Agent Router) - AIGatewayRoute + InferencePool guide** (`sources/dep-envoy-ai-gateway-inferencepool-guide`) — whitepaper · Envoy AI Gateway project (now Agentic AI Foundation)
 - **GPU interconnect and cluster costs - NVLink, InfiniBand, and Ethernet options** (`sources/ppl-dep-interconnect-cluster-costs`) — whitepaper · NVIDIA / derived from existing repo records
 - **GPU rack power density and cooling requirements - Air cooling ceiling and liquid cooling requirement** (`sources/ppl-dep-power-density-cooling`) — whitepaper · Vantage / derived from multiple repo records
 - **GPUDirect Storage Documentation** (`sources/src5-gpudirect-storage-docs`) — whitepaper · NVIDIA
+- **Gateway API Inference Extension - Introduction and concepts (Kubernetes SIGs)** (`sources/dep-gateway-api-inference-extension-intro`) — whitepaper · Kubernetes SIGs (gateway-api-inference-extension)
 - **Huawei CloudMatrix 384 (CM384) supernode — system architecture and specifications** (`sources/cn-huawei-cloudmatrix384`) — whitepaper · Huawei (arXiv:2506.12708v1, cited by China Research Collective and SemiAnalysis)
 - **Intel Gaudi 3 AI Accelerator Technical Paper (July 2025, V1 Rev 3)** (`sources/asic-intel-gaudi3-tech-paper`) — whitepaper · Intel
 - **Introducing the AMD CDNA 2 Architecture (white paper)** (`sources/link2-amd-cdna2-whitepaper`) — whitepaper · AMD
 - **KEDA Scaling Deployments documentation** (`sources/serve-keda-docs`) — whitepaper · KEDA
 - **KServe KEDA autoscaling documentation** (`sources/serve-kserve-keda-autoscaling`) — whitepaper · KServe
 - **KServe LLMInferenceService documentation** (`sources/serve-kserve-docs-llmisvc`) — whitepaper · KServe
+- **KServe documentation - LLMInferenceService overview (GenAI-first CRD built on llm-d)** (`sources/dep-kserve-llmisvc-overview`) — whitepaper · KServe (CNCF incubating as of 2025-11-11)
 - **Kimi K2: Open Agentic Intelligence (arXiv:2507.20534)** (`sources/model-cn-kimi-k2-paper`) — whitepaper · arXiv / Moonshot AI
 - **Kimi Linear: An Expressive, Efficient Attention Architecture (arXiv:2510.26692)** (`sources/model-cn-kimi-linear-paper`) — whitepaper · arXiv / Moonshot AI
 - **Kubernetes Horizontal Pod Autoscaling documentation** (`sources/serve-k8s-hpa-docs`) — whitepaper · Kubernetes
+- **Kubernetes documentation - Schedule GPUs** (`sources/dep-k8s-schedule-gpus-docs`) — whitepaper · Kubernetes project
+- **Kubernetes documentation - Taints and Tolerations** (`sources/dep-k8s-taints-tolerations-docs`) — whitepaper · Kubernetes project
+- **LiteLLM Proxy - Virtual keys, budgets and rate limits documentation** (`sources/dep-litellm-virtual-keys-docs`) — whitepaper · LiteLLM (Berri AI)
+- **LiteLLM Proxy - quick start documentation** (`sources/dep-litellm-proxy-quickstart-docs`) — whitepaper · LiteLLM (Berri AI)
 - **MLPerf Inference Rules (official submission rules document)** (`sources/ev-mlperf-inference-rules-official`) — whitepaper · MLCommons
 - **MiniMax-M1: Scaling Test-Time Compute Efficiently with Lightning Attention (arXiv:2506.13585)** (`sources/model-cn-minimax-m1-paper`) — whitepaper · arXiv / MiniMax
+- **Modal documentation - Cold start performance (scaledown_window, min_containers, buffer_containers)** (`sources/dep-modal-cold-start-docs`) — whitepaper · Modal
+- **Modal documentation - Scaling out (autoscaler parameters, dynamic updates)** (`sources/dep-modal-scale-docs`) — whitepaper · Modal
+- **Modal documentation - Storing model weights on Modal (Volume vs Image)** (`sources/dep-modal-model-weights-docs`) — whitepaper · Modal
 - **NVIDIA A100 Tensor Core GPU Architecture white paper** (`sources/link2-nvidia-ampere-architecture-whitepaper`) — whitepaper · NVIDIA
 - **NVIDIA A100 Tensor Core GPU Architecture white paper (Ampere) - Table 4 Comparison of NVIDIA Data Center GPUs** (`sources/acc-fill-nvidia-ampere-whitepaper-a100-40gb`) — whitepaper · NVIDIA
 - **NVIDIA Ada GPU Architecture whitepaper v2.02** (`sources/consumer-nvidia-ada-gpu-architecture-whitepaper`) — whitepaper · NVIDIA
 - **NVIDIA CUDA PTX ISA 9.4 documentation** (`sources/kern-ptx-isa`) — whitepaper · NVIDIA
+- **NVIDIA GPU Operator - Time-Slicing GPUs in Kubernetes** (`sources/dep-nvidia-gpu-operator-time-slicing`) — whitepaper · NVIDIA
 - **NVIDIA MIG User Guide** (`sources/serve-mig-nvidia-docs`) — whitepaper · NVIDIA
 - **NVIDIA RTX Blackwell GPU Architecture whitepaper (GeForce RTX 50 series)** (`sources/consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper`) — whitepaper · NVIDIA
 - **NVIDIA developer blog 'NVSwitch Accelerates NVIDIA DGX-2'** (`sources/net2-nvidia-nvswitch1-dgx2-blog`) — whitepaper · NVIDIA
@@ -2959,12 +3308,16 @@ and t
 - **NVIDIA technical blog: NVLink and NVSwitch supercharge large language model inference** (`sources/link-nvlink-nvswitch-inference-blog`) — whitepaper · NVIDIA
 - **NVSHMEM: Parallel programming interface for NVIDIA GPU clusters** (`sources/src5-nvshmem-developer-page`) — whitepaper · NVIDIA
 - **ONNX Runtime NNAPI Execution Provider documentation** (`sources/niche-ort-nnapi-ep-doc`) — whitepaper · Microsoft / ONNX Runtime
+- **Portkey AI Gateway - Load balancing (weighted, sticky) documentation** (`sources/dep-portkey-load-balancing-docs`) — whitepaper · Portkey
 - **Qwen3 Technical Report (arXiv:2505.09388)** (`sources/model-cn-qwen3-report`) — whitepaper · arXiv / Alibaba Qwen
 - **ROCm MI100 microarchitecture reference (gfx908)** (`sources/amd-rocm-mi100-microarch`) — whitepaper · AMD
 - **ROCm MI300 series microarchitecture reference (gfx942, XCD)** (`sources/amd-rocm-mi300-microarch`) — whitepaper · AMD
 - **Ray Serve documentation** (`sources/serve-ray-docs`) — whitepaper · Ray
 - **UALink white paper (TASK Consultancy)** (`sources/link-ualink-whitepaper`) — whitepaper · UALink Consortium / TASK Consultancy
 - **Uptime Institute Global Data Center Survey Results 2026 - 16th annual survey, published July 2026** (`sources/ppl-dep-uptime-institute-2026-survey`) — whitepaper · Uptime Institute
+- **llm-d documentation - Deploying with Envoy AI Gateway (gateway + EPP topology)** (`sources/dep-llmd-envoy-ai-gateway-guide`) — whitepaper · llm-d (CNCF sandbox)
+- **vLLM Production Stack - Prefix Aware Routing tutorial (docs)** (`sources/dep-vllm-prodstack-prefix-aware-tutorial`) — whitepaper · vLLM project
+- **vLLM documentation - Engine arguments, LoadConfig (load-format and safetensors-load-strategy)** (`sources/dep-vllm-engine-args-load-config`) — whitepaper · vLLM project
 
 ## Compilers & kernel DSLs (10)
 
@@ -2981,33 +3334,34 @@ and t
 
 ## Coverage
 
-Total records: **2937**
+Total records: **3290**
 
 | group | records |
 |---|---|
-| severity:major | 144 |
-| backend:cuda | 69 |
+| severity:major | 190 |
+| backend:cuda | 77 |
+| severity:blocker | 66 |
 | flop bound:memory | 54 |
-| severity:blocker | 48 |
+| severity:minor | 54 |
 | flop bound:compute | 39 |
-| severity:minor | 39 |
-| backend:cpu | 33 |
-| backend:rocm | 31 |
-| backend:metal | 30 |
+| backend:rocm | 37 |
+| backend:cpu | 34 |
+| backend:metal | 34 |
 | flop bound:both | 30 |
 | vendor:nvidia | 28 |
 | vendor:asic-other | 26 |
-| backend:cpu-avx512 | 21 |
+| backend:cpu-avx512 | 25 |
+| backend:cpu-avx2 | 19 |
+| backend:vulkan | 18 |
 | vendor:amd | 18 |
-| backend:cpu-avx2 | 17 |
-| backend:vulkan | 16 |
 | flop bound:interconnect | 16 |
+| backend:hip | 10 |
 | flop bound:launch_overhead | 10 |
 | vendor:apple | 10 |
-| backend:hip | 9 |
+| backend:tpu | 8 |
 | backend:npu | 7 |
 | backend:opencl | 7 |
-| backend:tpu | 7 |
+| backend:xpu | 7 |
 | vendor:intel | 7 |
 | backend:arm64-neon | 6 |
 | backend:onnxruntime | 6 |
@@ -3015,10 +3369,10 @@ Total records: **2937**
 | backend:tensorrt | 6 |
 | backend:webgpu | 6 |
 | backend:xnnpack | 5 |
-| backend:xpu | 5 |
 | backend:wasm | 4 |
 | vendor:google | 4 |
 | backend:coreml | 3 |
+| backend:inferentia | 3 |
 | backend:intel-gaudi-hpu | 3 |
 | backend:nnapi | 3 |
 | backend:none | 3 |
@@ -3026,7 +3380,6 @@ Total records: **2937**
 | vendor:amazon | 3 |
 | vendor:cambricon | 3 |
 | backend:apple-mps | 2 |
-| backend:inferentia | 2 |
 | backend:mkl | 2 |
 | backend:onnx | 2 |
 | backend:pytorch | 2 |
@@ -3038,8 +3391,10 @@ Total records: **2937**
 | backend:amd-hip/rocm | 1 |
 | backend:amd-npu | 1 |
 | backend:api-only (proxies to external providers) | 1 |
+| backend:ascend | 1 |
 | backend:ascend-cann | 1 |
 | backend:aws-inferentia2 | 1 |
+| backend:camb | 1 |
 | backend:cerebras-wse | 1 |
 | backend:directml | 1 |
 | backend:first-gen-gaudi | 1 |
@@ -3054,8 +3409,12 @@ Total records: **2937**
 | backend:intel-gaudi | 1 |
 | backend:intel-gpu | 1 |
 | backend:llama.cpp | 1 |
+| backend:maca | 1 |
 | backend:mps (via torch) | 1 |
+| backend:neuron | 1 |
 | backend:nnapi (cpu/gpu/npu via vendor drivers) | 1 |
+| backend:none (gateway layer - L7 proxy plus an external-processing extension; does not load weights) | 1 |
+| backend:none (gateway layer - forwards to any OpenAI-compatible or native provider endpoint) | 1 |
 | backend:none (orchestration layer - drives any Python callable) | 1 |
 | backend:none (orchestration layer - drives vLLM, SGLang, TensorRT-LLM, Triton) | 1 |
 | backend:none (proxy layer - no local compute backend of its own) | 1 |
@@ -3066,6 +3425,7 @@ Total records: **2937**
 | backend:python | 1 |
 | backend:rapids-fil | 1 |
 | backend:rocm/hip | 1 |
+| backend:rpc | 1 |
 | backend:rust-native | 1 |
 | backend:sycl | 1 |
 | backend:tensorrt-rtx | 1 |
