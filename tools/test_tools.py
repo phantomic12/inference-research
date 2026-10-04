@@ -17,6 +17,12 @@ TOOLS = Path(__file__).resolve().parent
 ROOT = TOOLS.parent
 
 
+def _budget() -> int:
+    """The recorded dangling-reference budget, read the way validate.py reads it."""
+    return int(json.loads((ROOT / "tools" / "ref_budget.json")
+                         .read_text(encoding="utf-8"))["max_dangling_refs"])
+
+
 def run_tool(script: str, *args: str, cwd: Path) -> subprocess.CompletedProcess:
     """Run the COPY of the tool inside cwd.
 
@@ -185,14 +191,184 @@ class TestValidate(Harness):
         self.assertEqual(r.returncode, 1)
         self.assertIn("is not a record id", r.stdout)
 
-    def test_dangling_hardware_ref_is_warning_only(self):
+    def test_dangling_hardware_ref_is_reported_but_not_fatal(self):
         self.write("data/sources/acme-spec.json", self.good_source())
         self.write("data/accelerators/acme-a100.json", self.good_accelerator())
         # the fixture's `interconnect: ["nvlink"]` has no interconnect record yet
         r = self.validate()
         self.assertEqual(r.returncode, 0)
-        self.assertIn("WARN", r.stdout)
-        self.assertIn("not a record id (ok if planned)", r.stdout)
+        self.assertIn("nvlink", r.stdout)
+        self.assertIn("is not a record id", r.stdout)
+        self.assertIn("1 dangling", r.stdout)
+
+
+class TestDanglingReferences(Harness):
+    """A reference in an id-bearing field that names no real record is a defect.
+
+    tools/validate.py counts them and refuses to pass once the count exceeds
+    the budget in tools/ref_budget.json, so the debt stays visible and can only
+    shrink. Resolution is the same one every other check uses: reference fields
+    hold BARE slugs, compared against the set of record ids.
+    """
+
+    def good_supply(self, slug: str = "acme-cloud",
+                    accelerator_ids: list[str] | None = None) -> dict:
+        return {
+            "id": slug, "type": "supply", "name": "ACME cloud",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "kind": "cloud", "vendor": "ACME",
+            "accelerator_ids": (["acme-a100"] if accelerator_ids is None
+                                else accelerator_ids),
+            "region": "us-test-1", "channels": ["on-prem-cloud"], "price_usd": 2.0,
+            "price_basis": "per GPU-hour", "availability": "in-stock",
+            "lead_time_weeks": None, "export_controlled": None, "notes": "",
+        }
+
+    def good_engine(self, slug: str = "trtllm") -> dict:
+        return {
+            "id": slug, "type": "engine", "name": slug.upper(),
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"],
+        }
+
+    def test_reference_to_nonexistent_id_is_reported(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/supply/acme-cloud.json",
+                   self.good_supply(accelerator_ids=["ghost-accel"]))
+        r = self.validate()
+        # reported, and counted against the budget
+        self.assertIn("ghost-accel", r.stdout)
+        self.assertIn("is not a record id", r.stdout)
+        self.assertIn("1 dangling", r.stdout)
+        # one dangling reference is far below the real repo's budget
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_dangling_reference_fails_when_over_budget(self):
+        """The budget is the ratchet: 0 allowed must fail on the first one."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/supply/acme-cloud.json",
+                   self.good_supply(accelerator_ids=["ghost-accel"]))
+        r = self.validate("--max-dangling-refs", "0")
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("1 dangling reference", r.stdout)
+        self.assertIn("budget of 0", r.stdout)
+
+    def test_budget_at_exactly_the_count_still_passes(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/supply/acme-cloud.json",
+                   self.good_supply(accelerator_ids=["ghost-accel"]))
+        r = self.validate("--max-dangling-refs", "1")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_valid_cross_type_reference_resolves(self):
+        """supply -> accelerator, accelerator -> interconnect, quantization ->
+        accelerator, benchmark -> engine: all cross-type, all must resolve."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/interconnect/acme-nvlink.json", self.good_interconnect())
+        rec = self.good_accelerator()
+        rec["interconnect"] = ["acme-nvlink"]
+        self.write("data/accelerators/acme-a100.json", rec)
+        self.write("data/supply/acme-cloud.json", self.good_supply())
+        self.write("data/quantization/acme-fp8.json", {
+            "id": "acme-fp8", "type": "quantization", "name": "ACME FP8",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "scheme": "fp8-e4m3", "bits": "8",
+            "weight_group_size": None, "activation_scheme": None,
+            "native_support": ["acme-a100"], "emulated_support": [],
+            "kernels": [], "quality_delta": None, "notes": "",
+        })
+        self.write("data/benchmarks/b1.json", {
+            "id": "b1", "type": "benchmark", "name": "run",
+            "status": "draft", "confidence": 0.5, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "engine_id": "trtllm",
+            "accelerator_ids": ["acme-a100"], "interconnect_ids": ["acme-nvlink"],
+            "model": "acme-model", "format_id": "acme-fp8",
+            "metric": "decode_tok_s", "value": 1.0,
+            "unit": "tok/s", "methodology": "bs1", "measured_by": "self",
+            "reproducible": False, "notes": "",
+        })
+        self.write("data/engines/trtllm.json", self.good_engine("trtllm"))
+        # Every reference above resolves, so with a budget of 0 the run is clean.
+        r = self.validate("--max-dangling-refs", "0")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("0 dangling", r.stdout)
+
+    def test_ambiguous_bare_slug_is_rejected_not_guessed(self):
+        """The same bare slug in two directories is already an error, and a
+        reference to it must be reported too rather than resolved by guess."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/engines/dup.json", self.good_engine("dup"))
+        # a second `dup` in another canonical directory
+        self.write("data/accelerators/dup.json", {
+            "id": "dup", "type": "accelerator", "name": "Dup accelerator",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "vendor": "asic-other",
+            "architecture": "test-arch", "release_year": 2025, "process_nm": 12,
+            "form_factors": ["pcie"], "vram_gb": 80.0, "memory_type": "hbm3e",
+            "memory_bus_bit": 5120, "memory_bandwidth_gbps": 3000.0,
+            "memory_bandwidth_basis": "HBM3e x 5120-bit", "flops": [],
+            "tdp_w": 700.0, "interconnect": [], "unified_memory": False,
+            "consumer": False, "notes": "",
+        })
+        self.write("data/supply/acme-cloud.json",
+                   self.good_supply(accelerator_ids=["dup"]))
+        r = self.validate()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("ambiguous id 'dup'", r.stdout)
+        # and the reference itself is still flagged: two rules, one resolution
+        self.assertIn("supply/acme-cloud", r.stdout)
+        self.assertIn("'dup'", r.stdout)
+        self.assertIn("is not a record id", r.stdout)
+
+    def test_config_field_name_is_not_a_reference(self):
+        """Non-reference fields hold configuration names, not ids, and must
+        never be counted. `pcie` is a form factor here and a real interconnect
+        id three directories away — it is still not a reference."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/interconnect/acme-pcie.json", self.good_interconnect("acme-pcie"))
+        rec = self.good_accelerator()
+        rec["interconnect"] = ["acme-pcie"]
+        rec["form_factors"] = ["pcie", "oam"]
+        rec["memory_type"] = "hbm3e"
+        self.write("data/accelerators/acme-a100.json", rec)
+        r = self.validate("--max-dangling-refs", "0")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("0 dangling", r.stdout)
+        self.assertNotIn("DANGLING", r.stdout)
+
+    def test_budget_file_is_the_committed_baseline(self):
+        """The budget lives in the repo, not in code, so the baseline is
+        reviewable in a diff and the ratchet is a one-line edit."""
+        p = ROOT / "tools" / "ref_budget.json"
+        self.assertTrue(p.exists(), "tools/ref_budget.json missing")
+        budget = json.loads(p.read_text(encoding="utf-8"))
+        self.assertIn("max_dangling_refs", budget)
+        self.assertIsInstance(budget["max_dangling_refs"], int)
+
+    def test_real_repo_is_within_its_own_budget(self):
+        """The whole point: the real data/ must not exceed the recorded budget,
+        so a new dangling reference fails CI while the existing debt stays
+        visible. Runs the REAL repo (validate.py only reads), not the temp copy.
+
+        Deliberately count-relative, not equality: the budget is a CEILING and
+        the count shrinks as references get fixed, so the assertion has to hold
+        while the debt shrinks too.
+        """
+        r = run_tool("validate.py", cwd=ROOT)
+        self.assertEqual(r.returncode, 0, r.stdout[-4000:])
+        tail = [ln for ln in r.stdout.splitlines() if "dangling reference(s)" in ln]
+        self.assertEqual(len(tail), 1, r.stdout[-2000:])
+        count = int(tail[0].split()[0])
+        self.assertLessEqual(count, _budget(),
+                             f"{count} dangling references exceeds budget {_budget()}")
+        # ...and the check is real: one below the ACTUAL count must fail, so the
+        # green run above is not just the check being disabled.
+        self.assertGreater(count, 0, "no dangling references to test the ratchet with")
+        tight = run_tool("validate.py", "--max-dangling-refs", str(count - 1),
+                         cwd=ROOT)
+        self.assertEqual(tight.returncode, 1, tight.stdout[-2000:])
+        self.assertIn(f"dangling references: {count}, budget of {count - 1}",
+                      tight.stdout)
 
 
 class TestNewRecord(Harness):

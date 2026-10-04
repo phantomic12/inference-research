@@ -25,7 +25,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from registry import DIRS, TITLES, TYPES  # noqa: E402
+from registry import DIRS, REF_FIELDS, TITLES, TYPES  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "site" / "src" / "data"
@@ -36,21 +36,11 @@ OUT = ROOT / "site" / "src" / "data"
 # card() renderer, which already encodes the right per-type summary.
 # ---------------------------------------------------------------------------
 
-# Fields whose values are bare record slugs, and the type they should point at.
-REF_FIELDS: dict[str, dict[str, str]] = {
-    "accelerator": {"interconnect": "interconnect"},
-    "benchmark": {
-        "engine_id": "engine",
-        "accelerator_ids": "accelerator",
-        "interconnect_ids": "interconnect",
-        "format_id": "quantization",
-    },
-    "flop": {"affected_by_hardware": "accelerator"},
-    "gotcha": {"affects": "any"},
-    "paper": {"hardware_relevance": "accelerator"},
-    "quantization": {"native_support": "accelerator", "emulated_support": "accelerator"},
-    "supply": {"accelerator_ids": "accelerator"},
-}
+# Fields whose values are bare record slugs, and the type they should point at,
+# are REF_FIELDS above: imported from registry.py, which is the single definition
+# shared with tools/validate.py. This tool computed 110 dangling references that
+# validate.py never checked, and a second copy of this table is how that
+# divergence happened in the first place.
 
 REF_LABELS = {
     "sources": "Sources",
