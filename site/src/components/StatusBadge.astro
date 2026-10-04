@@ -1,0 +1,32 @@
+---
+import { confBand, STATUS_MEANING } from '../lib/data';
+
+interface Props {
+  status: string;
+  confidence?: number | null;
+  /** Renders the status's meaning as a tooltip *in addition* to the visible label. */
+  explain?: boolean;
+}
+
+const { status, confidence, explain = false } = Astro.props;
+const band = confBand(confidence ?? null);
+const meaning = STATUS_MEANING[status];
+---
+
+<span class="status-row" style="display:inline-flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+  <span
+    class={`status status-${status}`}
+    title={explain && meaning ? meaning : undefined}
+  >{status}</span>
+  {confidence !== undefined && <span class={`conf ${band.cls}`}>{band.label}</span>}
+</span>
+{explain && meaning && <span class="status-meaning">{meaning}</span>}
+
+<style>
+  .status-meaning {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--fg-dim);
+    margin-top: 0.3rem;
+  }
+</style>

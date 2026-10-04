@@ -1,0 +1,77 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { marked } from 'marked';
+import Base from '../../layouts/Base.astro';
+import RecordLink from '../../components/RecordLink.astro';
+import { DOCS, DOC_INDEX, docUrl } from '../../lib/data';
+import type { DocEntry } from '../../lib/data';
+import names from '../../data/names.json';
+
+export const getStaticPaths = (async () => {
+  return DOCS.map((d) => ({ params: { slug: d.slug }, props: { doc: d } }));
+}) satisfies GetStaticPaths;
+
+const { doc } = Astro.props as { doc: DocEntry };
+
+// The pipeline rewrites [[type/slug]] and inter-doc .md links into site URLs, so
+// `marked` only has to turn markdown into HTML. Doc prose is rendered, never
+// rewritten: the text is the repo's, not this site's.
+const html = marked.parse(doc.markdown, { gfm: true, breaks: false, async: false }) as string;
+
+const idx = DOC_INDEX.findIndex((d) => d.slug === doc.slug);
+const prev = idx > 0 ? DOC_INDEX[idx - 1] : undefined;
+const next = idx >= 0 && idx < DOC_INDEX.length - 1 ? DOC_INDEX[idx + 1] : undefined;
+---
+
+<Base
+  title={doc.title}
+  nav="docs"
+  description={`${doc.title} — synthesis doc from the inference-research corpus.`}
+  pf={{ type: 'doc', summary: `${doc.title} · ${doc.chars.toLocaleString()} characters` }}
+>
+  <main class="wrap" data-pagefind-body>
+    <meta data-pagefind-meta="type" content="doc" />
+    <nav class="breadcrumb">
+      <a href="/">index</a> / <a href="/docs/">docs</a> / <span>{doc.slug}</span>
+    </nav>
+    <div class="layout-detail">
+      <article class="prose" set:html={html} />
+      <aside class="sidebar">
+        <div class="panel">
+          <h3>All docs</h3>
+          <div class="panel-body scroll">
+            <ul>
+              {DOC_INDEX.map((d) => (
+                <li>
+                  {d.slug === doc.slug ? (
+                    <span class="rname" style="color:var(--fg);font-weight:600">{d.title.replace(/^\d\d\s+—\s+/, '')}</span>
+                  ) : (
+                    <a href={docUrl(d.slug)} class="rname">{d.title.replace(/^\d\d\s+—\s+/, '')}</a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>This file</h3>
+          <div class="panel-body">
+            <ul>
+              <li><span class="hint">source</span> <code>docs/{doc.slug}.md</code></li>
+              <li><span class="hint">size</span> <span class="mono">{doc.chars.toLocaleString()} chars</span></li>
+            </ul>
+            <p class="hint" style="margin:.5rem 0 0">
+              Record ids in this doc link to their record pages — that is the whole
+              point of the [[type/id]] syntax.
+            </p>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <nav class="section" style="display:flex;gap:1rem;justify-content:space-between;border-top:1px solid var(--border);padding-top:1rem">
+      <span>{prev && <a href={docUrl(prev.slug)}>← {prev.title.replace(/^\d\d\s+—\s+/, '')}</a>}</span>
+      <span>{next && <a href={docUrl(next.slug)}>{next.title.replace(/^\d\d\s+—\s+/, '')} →</a>}</span>
+    </nav>
+  </main>
+</Base>

@@ -1,0 +1,47 @@
+---
+/**
+ * A link to another record, labelled with that record's real name.
+ *
+ * Cross-references are stored as bare slugs and resolved to qualified ids at
+ * build time; this component turns an id into a link plus the target's name, so a
+ * reference reads "NVIDIA H100 SXM" and lands on that record's page.
+ */
+import names from '../data/names.json';
+import { recUrl, typeTitle } from '../lib/data';
+
+interface Props {
+  rid: string;
+  /** Prefix the label with the target's type, e.g. "engine · vLLM". */
+  showType?: boolean;
+}
+
+const { rid, showType = false } = Astro.props;
+const entry = (names as Record<string, { n: string; t: string; s: string }>)[rid];
+// A dangling id still renders as a link target rather than breaking the page;
+// the pipeline reports these separately so they can be fixed in data/.
+const label = entry?.n ?? rid.split('/')[1] ?? rid;
+const status = entry?.s ?? '';
+---
+
+<a href={recUrl(rid)} class="record-link" data-rid={rid}>
+  {showType && <span class="t">{typeTitle(entry?.t ?? '')}</span>}
+  <span class="rname">{label}</span>
+  {status === 'contested' && <span class="status status-contested" title="This linked record is contested">contested</span>}
+  {status === 'draft' && <span class="status status-draft" title="This linked record is a draft">draft</span>}
+</a>
+
+<style>
+  .record-link {
+    display: inline-flex;
+    gap: 0.35rem;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+  .record-link .t {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--fg-faint);
+    text-transform: none;
+  }
+  .record-link .status { font-size: 0.6rem; padding: 0 0.25rem; }
+</style>

@@ -1,0 +1,172 @@
+---
+import { META, PRIMARY_TYPES, typeUrl, recUrl } from '../lib/data';
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  /** Marks the active top-nav entry: a type name, 'docs', 'graph', 'compare', ... */
+  nav?: string;
+  /** Pagefind facets for this page: type, status, rid. */
+  pf?: { type?: string; status?: string; rid?: string; title?: string; summary?: string };
+}
+
+const { title, description, nav, pf } = Astro.props;
+const total = META.total.toLocaleString();
+const contested = META.status.contested ?? 0;
+const draft = META.status.draft ?? 0;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · inference-research</title>
+    {description && <meta name="description" content={description} />}
+    <meta name="color-scheme" content="dark" />
+        <!-- Pagefind reads these <meta> tags for the type/status/rid filters on
+             /search/, so their values are the record's own fields. -->
+        {pf?.type && <meta data-pagefind-meta="type" content={pf.type} />}
+        {pf?.status && <meta data-pagefind-meta="status" content={pf.status} />}
+        {pf?.rid && <meta data-pagefind-meta="rid" content={pf.rid} />}
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      </head>
+  <body>
+    <header class="masthead">
+      <div class="masthead-inner">
+        <a class="brand" href="/">inference<span class="caret">/</span>research</a>
+        <nav class="nav" aria-label="Record types">
+          {PRIMARY_TYPES.map((t) => (
+            <a href={typeUrl(t.type)} aria-current={nav === t.type ? 'page' : undefined}>{t.title}</a>
+          ))}
+        </nav>
+        <nav class="nav" aria-label="Views">
+          <a href="/docs/" aria-current={nav === 'docs' ? 'page' : undefined}>Docs</a>
+          <a href="/compare/" aria-current={nav === 'compare' ? 'page' : undefined}>Compare</a>
+          <a href="/graph/" aria-current={nav === 'graph' ? 'page' : undefined}>Graph</a>
+          <a href="/search/" aria-current={nav === 'search' ? 'page' : undefined}>Search</a>
+        </nav>
+        <span class="masthead-spacer"></span>
+        <nav class="nav nav-provenance" aria-label="Provenance">
+          <a href={typeUrl('source')} title={`${META.counts.source} cited sources`}>
+            Sources ({META.counts.source})
+          </a>
+        </nav>
+        <div class="searchbox">
+          <input
+            type="search"
+            id="q"
+            placeholder={`Search ${total} records…  /`}
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Search all records"
+            aria-controls="sr"
+            aria-expanded="false"
+          />
+          <div class="search-results" id="sr" role="listbox" aria-label="Search results"></div>
+        </div>
+      </div>
+    </header>
+
+    <slot />
+
+    <footer class="wrap" style="border-top:1px solid var(--border);margin-top:3rem;padding-top:1rem;padding-bottom:2rem;color:var(--fg-faint);font-size:0.78rem">
+          <p style="margin:0">
+            Generated from <code>data/</code> by <code>tools/build_site_data.py</code> —
+            {total} records, {META.mean_confidence?.toFixed(2)} mean confidence,
+            <span class="status status-contested" style="font-size:.65rem">contested {contested}</span>
+            <span class="status status-draft" style="font-size:.65rem">draft {draft}</span>.
+            Every number on this site traces to a record, and every record to the
+            <a href={typeUrl('source')}>{META.counts.source} sources</a> it was checked against.
+          </p>
+        </footer>
+
+    <script>
+          // Masthead quick search, sharing the Pagefind-backed module with /search/
+          // so both rank and filter identically. The index is built after
+          // `astro build`, so the box reports that plainly when it is missing (dev).
+          import { escapeHtml, highlight, queryTerms, runSearch } from '../lib/search';
+          import { META } from '../lib/data';
+
+      const input = document.getElementById('q') as HTMLInputElement | null;
+      const panel = document.getElementById('sr') as HTMLElement | null;
+
+      if (input && panel) {
+        let timer: number | undefined;
+        let seq = 0;
+
+        async function run() {
+          const q = input!.value.trim();
+          if (q.length < 2) {
+            panel!.removeAttribute('data-open');
+            input!.setAttribute('aria-expanded', 'false');
+            return;
+          }
+          const mine = ++seq;
+          panel!.innerHTML = '<p class="search-empty">Searching…</p>';
+          panel!.setAttribute('data-open', 'true');
+
+          const hits = await runSearch(q);
+          if (mine !== seq) return;
+
+          if (hits === null) {
+            panel!.innerHTML =
+              '<p class="search-empty">Search index not built. Run <code>npm run build</code>, ' +
+              'then serve <code>dist/</code>.</p>';
+            return;
+          }
+          const terms = queryTerms(q);
+          if (!hits.length) {
+            panel!.innerHTML = `<p class="search-empty">No records match “${escapeHtml(q)}”.</p>`;
+          } else {
+            panel!.innerHTML =
+              '<ol>' +
+              hits
+                .slice(0, 14)
+                .map(
+                  (h) => `<li><a href="${h.url}">
+                    <span class="sr-name">${highlight(escapeHtml(h.title), terms)}</span>
+                    <span class="sr-meta">${
+                      h.status
+                        ? `<span class="status status-${escapeHtml(h.status)}">${escapeHtml(h.status)}</span>`
+                        : '<span class="status status-verified">doc</span>'
+                    }<span>${escapeHtml(h.type)}</span>${
+                      h.rid ? `<span>${escapeHtml(h.rid)}</span>` : ''
+                    }</span>
+                    ${h.summary ? `<span class="sr-snip">${highlight(escapeHtml(h.summary), terms)}</span>` : ''}
+                  </a></li>`,
+                )
+                .join('') +
+              '</ol>';
+          }
+          input!.setAttribute('aria-expanded', 'true');
+        }
+
+        input.addEventListener('input', () => {
+          window.clearTimeout(timer);
+          timer = window.setTimeout(run, 130) as unknown as number;
+        });
+        input.addEventListener('focus', () => {
+          if (input.value.trim().length >= 2) run();
+        });
+        document.addEventListener('keydown', (ev) => {
+          const ke = ev as KeyboardEvent;
+          if (ke.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+            ke.preventDefault();
+            input.focus();
+            input.select();
+          }
+          if (ke.key === 'Escape') {
+            panel!.removeAttribute('data-open');
+            input!.blur();
+          }
+        });
+        document.addEventListener('click', (ev) => {
+          const t = ev.target as Node;
+          if (!panel!.contains(t) && t !== input) panel!.removeAttribute('data-open');
+        });
+      }
+    </script>
+  </body>
+</html>

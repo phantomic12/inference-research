@@ -1,0 +1,373 @@
+---
+import graph from '../data/graph.json';
+import Base from '../layouts/Base.astro';
+import { META, recUrl } from '../lib/data';
+import names from '../data/names.json';
+
+interface Node { i: string; t: string; n: string; s: string }
+interface Edge { 0: string; 1: string; 2: string }
+
+const nodes = graph.nodes as Node[];
+const edges = graph.edges as Edge[];
+
+// Only non-source nodes belong in a layout view: sources are cited by everything
+// and would collapse the graph into one hub.
+const layoutNodes = nodes.filter((n) => n.t !== 'source');
+const layoutEdges = edges.filter((e) => !e[0].startsWith('sources/') && !e[1].startsWith('sources/'));
+
+const byType = new Map<string, number>();
+for (const n of layoutNodes) byType.set(n.t, (byType.get(n.t) ?? 0) + 1);
+
+const degrees = new Map<string, number>();
+for (const e of layoutEdges) {
+  degrees.set(e[0], (degrees.get(e[0]) ?? 0) + 1);
+  degrees.set(e[1], (degrees.get(e[1]) ?? 0) + 1);
+}
+const hubs = [...degrees.entries()]
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 14)
+  .map(([rid, d]) => ({ rid, d, name: names[rid as keyof typeof names]?.n ?? rid }));
+
+// The graph file is fetched by the page rather than inlined: it is the largest
+// single artefact and only this view needs it.
+const payload = JSON.stringify({ nodes: layoutNodes, edges: layoutEdges });
+const TYPE_COLORS: Record<string, string> = {
+  accelerator: '#58a6ff', flop: '#bc8cff', engine: '#3fb950', quantization: '#d29922',
+  interconnect: '#39c5cf', benchmark: '#f0883e', gotcha: '#f85149', supply: '#a371f7',
+  model: '#7ee787', paper: '#79c0ff', source: '#6b7787',
+};
+---
+
+<Base
+  title="Cross-reference graph"
+  nav="graph"
+  description="The record graph: which records reference which, as resolved at build time."
+>
+  <main class="wrap" data-pagefind-body>
+    <meta data-pagefind-meta="type" content="page" />
+    <div class="page-head">
+      <h1>Cross-reference graph</h1>
+      <p class="sub">
+        {layoutEdges.length.toLocaleString()} resolved references between
+        {' '}{layoutNodes.length.toLocaleString()} non-source records. This is the graph the
+        repo actually encodes: a benchmark points at its engine and its accelerators, a
+        gotcha points at what it affects, a FLOP class points at the hardware it is
+        sensitive to. Sources are excluded here — everything cites them, so they would be
+        one hub.
+      </p>
+    </div>
+
+    <section class="section">
+      <h2>Neighbourhood</h2>
+      <p class="hint">
+        Type a record id or name to draw its immediate neighbourhood. This is the same
+        data as the "Cross-references" and "Referenced by" panels on every record page,
+        drawn instead of listed.
+      </p>
+      <div class="controls" style="position:static;margin-top:.6rem">
+        <div class="control" style="flex:1 1 26rem">
+          <label for="g-q">record</label>
+          <input type="search" id="g-q" list="g-list" placeholder="e.g. nvidia-h100-sxm, decode gemm, prefix caching" autocomplete="off" />
+          <datalist id="g-list"></datalist>
+        </div>
+        <span class="control-count" id="g-count"></span>
+      </div>
+      <div id="g-out" class="neighbourhood" style="margin-top:.75rem">
+        <p class="hint">The most-connected records:</p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Record</th><th>Type</th><th class="num">Connections</th></tr></thead>
+            <tbody>
+              {hubs.map((h) => (
+                <tr>
+                  <td><a href={recUrl(h.rid)}>{h.name}</a> <span class="row-id">{h.rid}</span></td>
+                  <td><span class="mono" style="font-size:.75rem">{h.rid.split('/')[0]}</span></td>
+                  <td class="num">{h.d}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Whole-corpus map</h2>
+      <p class="hint">
+        A force-directed layout of all non-source records. Each record is one dot, each
+        resolved reference one line. It is dense — that is the point: the corpus is a
+        graph, not a list.
+      </p>
+      <canvas id="g-canvas" class="graph-canvas"></canvas>
+      <div class="graph-legend">
+        {[...byType.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => (
+          <span style={`color:${TYPE_COLORS[t] ?? '#888'}`}>{t} ({n})</span>
+        ))}
+      </div>
+      <p class="hint" style="margin-top:.5rem">
+        Hover a dot for its name; click to open the record. Dots with a red ring are
+        contested records.
+      </p>
+    </section>
+  </main>
+
+  <script is:inline define:vars={{ payload, TYPE_COLORS }}>
+    // ---- neighbourhood (string search over the embedded id list) ----------
+    const graphData = JSON.parse(payload);
+    const outEl = document.getElementById('g-out');
+    const input = document.getElementById('g-q');
+    const dl = document.getElementById('g-list');
+    const countEl = document.getElementById('g-count');
+    const namesMap = JSON.parse(document.getElementById('g-names')?.textContent ?? '{}');
+
+    const byId = new Map(graphData.nodes.map((n) => [n.i, n]));
+    const out = new Map();
+    for (const e of graphData.edges) {
+      if (!out.has(e[0])) out.set(e[0], []);
+      if (!out.has(e[1])) out.set(e[1], []);
+      out.get(e[0]).push([e[1], e[2], 'out']);
+      out.get(e[1]).push([e[0], e[2], 'in']);
+    }
+
+    // datalist: ids + names, capped so the DOM stays small.
+    const suggestions = [];
+    for (const n of graphData.nodes) {
+      suggestions.push([n.i, n.n]);
+      if (suggestions.length > 1200) break;
+    }
+    if (dl) {
+      dl.innerHTML = suggestions
+        .map(([id, name]) => `<option value="${String(id).replace(/"/g, '&quot;')}">${String(name).replace(/[<>&]/g, '')}</option>`)
+        .join('');
+    }
+
+    function resolve(q) {
+      const s = q.trim().toLowerCase();
+      if (!s) return null;
+      let hit = graphData.nodes.find((n) => n.i.toLowerCase() === s);
+      if (hit) return hit;
+      hit = graphData.nodes.find((n) => n.i.toLowerCase().includes(s));
+      if (hit) return hit;
+      hit = graphData.nodes.find((n) => n.n.toLowerCase() === s);
+      if (hit) return hit;
+      return graphData.nodes.find((n) => n.n.toLowerCase().includes(s)) ?? null;
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    }
+
+    function drawNeighbourhood(q) {
+      const node = resolve(q);
+      if (!node) {
+        outEl.innerHTML = '<p class="empty-state">No record matches that name or id.</p>';
+        if (countEl) countEl.textContent = '';
+        return;
+      }
+      const links = out.get(node.i) ?? [];
+      const groups = new Map();
+      for (const [other, via, dir] of links) {
+        const key = `${dir === 'out' ? 'references' : 'referenced by'} ${via}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(other);
+      }
+      const sections = [...groups.entries()]
+        .sort((a, b) => b[1].length - a[1].length)
+        .map(([k, list]) => {
+          const items = list
+            .slice(0, 60)
+            .map((rid) => {
+              const n = byId.get(rid);
+              const contested = n && n.s === 'contested' ? ' <span class="status status-contested">contested</span>' : '';
+              return `<li><a href="/r/${rid}/">${esc(n ? n.n : rid)}</a>${contested}</li>`;
+            })
+            .join('');
+          const more = list.length > 60 ? `<li class="hint">+ ${list.length - 60} more</li>` : '';
+          return `<div class="nb-group"><h4>${esc(k)} (${list.length})</h4><ul>${items}${more}</ul></div>`;
+        })
+        .join('');
+      outEl.innerHTML = `<div class="nb-group"><h4>${esc(node.i)} — ${esc(node.n)}</h4><ul><li><a href="/r/${node.i}/">open record</a></li></ul></div>${sections}`;
+      if (countEl) countEl.textContent = `${node.i} · ${links.length} connections`;
+    }
+
+    let t;
+    if (input) {
+      input.addEventListener('input', () => {
+        window.clearTimeout(t);
+        t = window.setTimeout(() => drawNeighbourhood(input.value), 160);
+      });
+    }
+
+    // ---- whole-corpus force layout --------------------------------------
+    const canvas = document.getElementById('g-canvas');
+    if (canvas && window.requestAnimationFrame) {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const cssW = canvas.clientWidth || 900;
+      const cssH = canvas.clientHeight || 540;
+      canvas.width = cssW * dpr;
+      canvas.height = cssH * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+
+      const N = graphData.nodes.length;
+      const E = graphData.edges;
+      // Cap the drawn edge set: a 3,600-edge force sim in a browser is fine, but
+      // drawing every line as a separate path is not worth the pixels.
+      const step = Math.max(1, Math.floor(E.length / 2500));
+      const drawnEdges = E.filter((_, i) => i % step === 0);
+      const idx = new Map(graphData.nodes.map((n, i) => [n.i, i]));
+
+      const px = new Float32Array(N);
+      const py = new Float32Array(N);
+      const vx = new Float32Array(N);
+      const vy = new Float32Array(N);
+      const adj = Array.from({ length: N }, () => []);
+      for (const e of drawnEdges) {
+        const a = idx.get(e[0]);
+        const b = idx.get(e[1]);
+        if (a === undefined || b === undefined) continue;
+        adj[a].push(b);
+        adj[b].push(a);
+      }
+      // Seed on a type-clustered circle so the layout starts near its own answer.
+      const typeIdx = new Map();
+      graphData.nodes.forEach((n, i) => {
+        if (!typeIdx.has(n.t)) typeIdx.set(n.t, typeIdx.size);
+        const k = typeIdx.get(n.t);
+        const a = (k / typeIdx.size) * Math.PI * 2;
+        px[i] = cssW / 2 + Math.cos(a) * cssW * 0.3;
+        py[i] = cssH / 2 + Math.sin(a) * cssH * 0.3;
+      });
+
+      let alpha = 1;
+      const ITER = 220;
+      const repulse = 900;
+      let hover = -1;
+      let mx = -1;
+      let my = -1;
+
+      canvas.addEventListener('mousemove', (ev) => {
+        const r = canvas.getBoundingClientRect();
+        mx = ev.clientX - r.left;
+        my = ev.clientY - r.top;
+      });
+      canvas.addEventListener('mouseleave', () => { mx = -1; my = -1; });
+      canvas.addEventListener('click', () => {
+        if (hover >= 0) location.href = `/r/${graphData.nodes[hover].i}/`;
+      });
+
+      function tick(it) {
+        const damp = 1 - it / ITER;
+        // repulsion, sampled rather than O(n^2) for every node
+        for (let i = 0; i < N; i++) {
+          for (let j = i + 1; j < N; j += 7) {
+            let dx = px[i] - px[j];
+            let dy = py[i] - py[j];
+            let d2 = dx * dx + dy * dy;
+            if (d2 < 1) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = 1; }
+            const f = repulse / d2;
+            const d = Math.sqrt(d2);
+            vx[i] += (dx / d) * f; vy[i] += (dy / d) * f;
+            vx[j] -= (dx / d) * f; vy[j] -= (dy / d) * f;
+          }
+        }
+        for (let i = 0; i < N; i++) {
+          for (const j of adj[i]) {
+            const dx = px[j] - px[i];
+            const dy = py[j] - py[i];
+            const d = Math.max(1, Math.hypot(dx, dy));
+            const f = (d - 28) * 0.012;
+            vx[i] += (dx / d) * f;
+            vy[i] += (dy / d) * f;
+          }
+        }
+        for (let i = 0; i < N; i++) {
+          // gentle pull to centre keeps disconnected clusters on screen
+          vx[i] += (cssW / 2 - px[i]) * 0.0016;
+          vy[i] += (cssH / 2 - py[i]) * 0.0016;
+          px[i] += Math.max(-12, Math.min(12, vx[i])) * damp;
+          py[i] += Math.max(-12, Math.min(12, vy[i])) * damp;
+          vx[i] *= 0.82; vy[i] *= 0.82;
+          px[i] = Math.max(3, Math.min(cssW - 3, px[i]));
+          py[i] = Math.max(3, Math.min(cssH - 3, py[i]));
+        }
+      }
+
+      function paint() {
+        ctx.clearRect(0, 0, cssW, cssH);
+        ctx.fillStyle = '#0a0d11';
+        ctx.fillRect(0, 0, cssW, cssH);
+        ctx.lineWidth = 0.4;
+        ctx.strokeStyle = 'rgba(88,166,255,0.10)';
+        ctx.beginPath();
+        for (const e of drawnEdges) {
+          const a = idx.get(e[0]);
+          const b = idx.get(e[1]);
+          if (a === undefined || b === undefined) continue;
+          ctx.moveTo(px[a], py[a]);
+          ctx.lineTo(px[b], py[b]);
+        }
+        ctx.stroke();
+
+        hover = -1;
+        let best = 18 * 18;
+        for (let i = 0; i < N; i++) {
+          const n = graphData.nodes[i];
+          const r = n.s === 'contested' ? 3.6 : 2.4;
+          ctx.beginPath();
+          ctx.arc(px[i], py[i], r, 0, Math.PI * 2);
+          ctx.fillStyle = TYPE_COLORS[n.t] ?? '#888';
+          ctx.globalAlpha = 0.85;
+          ctx.fill();
+          if (n.s === 'contested') {
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = '#f85149';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+          const dx = px[i] - mx;
+          const dy = py[i] - my;
+          const d2 = dx * dx + dy * dy;
+          if (mx >= 0 && d2 < best) { best = d2; hover = i; }
+        }
+
+        if (hover >= 0) {
+          const n = graphData.nodes[hover];
+          ctx.font = '12px ui-monospace, monospace';
+          const w = ctx.measureText(n.n).width;
+          const bx = Math.min(cssW - w - 16, px[hover] + 10);
+          const by = Math.max(16, py[hover] - 8);
+          ctx.fillStyle = 'rgba(22,27,34,0.95)';
+          ctx.fillRect(bx - 5, by - 14, w + 10, 20);
+          ctx.strokeStyle = '#384252';
+          ctx.strokeRect(bx - 5, by - 14, w + 10, 20);
+          ctx.fillStyle = '#dbe3ec';
+          ctx.fillText(n.n, bx, by);
+        }
+      }
+
+      let it = 0;
+      function frame() {
+        if (it < ITER) {
+          tick(it);
+          it++;
+          paint();
+          window.requestAnimationFrame(frame);
+        } else {
+          // settled: keep painting so hover stays live
+          const loop = () => {
+            paint();
+            window.requestAnimationFrame(loop);
+          };
+          loop();
+        }
+      }
+      frame();
+    }
+
+    void namesMap;
+  </script>
+
+  <script type="application/json" id="g-names" set:html={JSON.stringify(names)} />
+</Base>

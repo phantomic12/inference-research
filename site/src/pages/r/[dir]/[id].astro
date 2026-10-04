@@ -1,0 +1,281 @@
+---
+import type { GetStaticPaths } from 'astro';
+import Base from '../../../layouts/Base.astro';
+import StatusBadge from '../../../components/StatusBadge.astro';
+import RecordLink from '../../../components/RecordLink.astro';
+import {
+  META, STATUS_MEANING, confBand, recUrl, splitRid, typeTitle, typeUrl,
+} from '../../../lib/data';
+import type { Backref, Field, Record_, RefGroup } from '../../../lib/data';
+
+// Every per-record payload the pipeline wrote. This glob is both the route table
+// and the data source, so a record exists on the site exactly when its JSON
+// exists — there is no second list to keep in sync.
+export const getStaticPaths = (async () => {
+  const modules = import.meta.glob<{ default: Record_ }>(
+    '../../../data/records/**/*.json',
+    { eager: true },
+  );
+  return Object.values(modules).map((mod) => {
+    const rec = mod.default;
+    const { dir, stem } = splitRid(rec.rid);
+    return {
+      params: { dir, id: stem },
+      props: { rec },
+    };
+  });
+}) satisfies GetStaticPaths;
+
+const { rec } = Astro.props as { rec: Record_ };
+
+const band = confBand(rec.confidence);
+const meaning = STATUS_MEANING[rec.status] ?? '';
+
+// Fields are split into the cross-referencing ones (rendered as links in the
+// sidebar) and the plain ones (rendered as the field table).
+const refFields = new Set(rec.refs.map((r) => r.field));
+const plainFields = rec.fields.filter((f) => !refFields.has(f.key));
+
+const sourcesGroup = rec.refs.find((g) => g.field === 'sources');
+const linkGroups = rec.refs.filter((g) => g.field !== 'sources');
+
+// Back-references, grouped by the field that created them, so "12 records cite
+// this via affected_by_hardware" is readable rather than a flat list.
+const backByVia = new Map<string, Backref[]>();
+for (const b of rec.backrefs) {
+  const k = b.via;
+  if (!backByVia.has(k)) backByVia.set(k, []);
+  backByVia.get(k)!.push(b);
+}
+const backGroups = [...backByVia.entries()].sort(
+  (a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]),
+);
+
+// Contested records get their disagreement stated before anything else, so a
+// reader cannot reach a number without having seen that it is unresolved.
+const contested = rec.status === 'contested';
+const draft = rec.status === 'draft';
+const SEV: Record<string, string> = { blocker: 'sev-blocker', major: 'sev-major', minor: 'sev-minor' };
+const sevField = rec.fields.find((f) => f.key === 'severity');
+const sev = typeof sevField?.value === 'string' ? sevField.value : '';
+
+// Years are identifiers, not quantities: "2,022" reads as a comma-separated
+// list and is wrong. Quantities (bandwidth, bytes) do want digit grouping.
+const YEAR_KEYS = /(_year|year|^published$|^accessed$|^updated$)/;
+function formatNumber(key: string, n: number): string {
+  if (YEAR_KEYS.test(key)) return String(n);
+  if (Number.isInteger(n)) return n.toLocaleString('en-US');
+  return n.toLocaleString('en-US', { maximumFractionDigits: 4 });
+}
+function formatScalar(v: unknown): string {
+  if (typeof v === 'boolean') return v ? 'yes' : 'no';
+  if (typeof v === 'number') return formatNumber('', v);
+  if (v === null || v === undefined) return '—';
+  return String(v);
+}
+---
+
+<Base
+  title={rec.name}
+  nav={rec.type}
+  description={`${typeTitle(rec.type)} · ${rec.head}`}
+  pf={{
+    type: rec.type,
+    status: String(rec.status),
+    rid: rec.rid,
+    summary: `${rec.head}${rec.tail.length ? ' · ' + rec.tail.join(' · ') : ''}`.slice(0, 240),
+  }}
+>
+  <main class="wrap" data-pagefind-body>
+    <nav class="breadcrumb">
+      <a href="/">index</a> /
+      <a href={typeUrl(rec.type)}>{typeTitle(rec.type)}</a> /
+      <span>{rec.rid.split('/')[1]}</span>
+    </nav>
+
+    <div class={`detail-head status-rail-${rec.status}`}>
+      <div class="detail-meta">
+        <span class={`status status-${rec.status}`}>{rec.status}</span>
+        <span class={`conf ${band.cls}`}>{band.label}</span>
+        {sev && <span class={`sev ${SEV[sev] ?? ''}`}>{sev}</span>}
+        <span class="hint mono">updated {rec.updated ?? '—'}</span>
+      </div>
+      <h1>{rec.name}</h1>
+      {rec.head && <div class="headline">{rec.head}</div>}
+    </div>
+
+    {contested && (
+      <div class="contested-banner" role="alert">
+        <span style="font-size:1.1rem;line-height:1.3" aria-hidden="true">⚠</span>
+        <div>
+          <strong>This record is contested.</strong> {meaning}
+          {' '}Where the record's <code>notes</code> or a field below gives two values,
+          both are shown with their sources — the repo deliberately did not pick one.
+        </div>
+      </div>
+    )}
+    {draft && (
+      <div class="draft-banner">
+        <span style="font-size:1.1rem;line-height:1.3" aria-hidden="true">◐</span>
+        <div>
+          <strong>This record is a draft.</strong> {meaning}
+          {' '}Treat every number on this page as provisional.
+        </div>
+      </div>
+    )}
+    {!contested && !draft && rec.status === 'deprecated' && (
+      <div class="draft-banner">
+        <div><strong>Deprecated.</strong> {meaning}</div>
+      </div>
+    )}
+
+    <div class="layout-detail">
+      <div>
+        <section class="section" style="margin-top:0">
+          <h2>Fields</h2>
+          <div class="fields">
+            <div class="field">
+              <div class="field-key">id</div>
+              <div class="field-val num"><code>{rec.rid}</code></div>
+            </div>
+            {plainFields.map((f) => (
+              <div class="field">
+                            <div class="field-key">{f.label}</div>
+                            <div class={`field-val${f.prose ? ' prose-block' : ''}`}>
+                              {f.url && typeof f.value === 'string' ? (
+                                <a href={f.value} rel="noreferrer noopener" target="_blank">{f.value}</a>
+                              ) : Array.isArray(f.value) ? (
+                                <span class="taglist">
+                                  {f.value.map((v, i) =>
+                                    typeof v === 'object' && v !== null ? (
+                                      // accelerator.flops is a list of objects; render each row
+                                      // as a labelled table rather than a JSON blob.
+                                      <span class="flops-row" key={i}>
+                                        {Object.entries(v).map(([k, val]) => (
+                                          <span class="flops-cell">
+                                            <span class="k">{k}</span>
+                                            <span class="v">{formatScalar(val)}</span>
+                                          </span>
+                                        ))}
+                                      </span>
+                                    ) : (
+                                      <span class="tag" key={i}>{String(v)}</span>
+                                    ),
+                                  )}
+                                </span>
+                              ) : typeof f.value === 'boolean' ? (
+                                <span class="num">{f.value ? 'yes' : 'no'}</span>
+                              ) : typeof f.value === 'number' ? (
+                                <span class="num">{formatNumber(f.key, f.value)}</span>
+                              ) : (
+                                String(f.value)
+                              )}
+                            </div>
+                          </div>
+            ))}
+          </div>
+        </section>
+
+        {rec.notes && (
+          <section class="section">
+            <h2>Notes</h2>
+            <div class="prose-block">
+              {rec.notes.split(/\n{2,}/).map((para) => (
+                <p>{para}</p>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section class="section">
+          <h2>Cross-references</h2>
+          {linkGroups.length === 0 && sourcesGroup ? (
+            <p class="hint">This record references no other records — it is a leaf. It is cited by {rec.backrefs.length}.</p>
+          ) : linkGroups.length === 0 ? (
+            <p class="hint">This record references no other records.</p>
+          ) : (
+            <div class="neighbourhood">
+              {linkGroups.map((g) => (
+                <div class="nb-group">
+                  <h4>{g.label} <span class="n">({g.targets.length})</span></h4>
+                  <ul>
+                    {g.targets.map((t) => (
+                      <li><RecordLink rid={t} showType={rec.type !== splitRid(t).dir} /></li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <aside class="sidebar">
+        <div class="panel">
+          <h3>Referenced by <span class="n">{rec.backrefs.length}</span></h3>
+          <div class="panel-body scroll">
+            {rec.backrefs.length === 0 ? (
+              <p class="hint" style="margin:0">Nothing in the corpus cites this record yet.</p>
+            ) : (
+              backGroups.map(([via, list]) => (
+                <>
+                  <div class="hint mono" style="margin:.4rem 0 .2rem">via {via} · {list.length}</div>
+                  <ul>
+                    {list.slice(0, 40).map((b) => (
+                      <li>
+                        <RecordLink rid={b.from} showType />
+                      </li>
+                    ))}
+                  </ul>
+                  {list.length > 40 && (
+                    <p class="more">+ {list.length - 40} more</p>
+                  )}
+                </>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Sources <span class="n">{sourcesGroup?.targets.length ?? 0}</span></h3>
+          <div class="panel-body scroll">
+            {!sourcesGroup?.targets.length ? (
+              <p class="hint" style="margin:0">No sources recorded.</p>
+            ) : (
+              <ul>
+                {sourcesGroup.targets.map((t) => (
+                  <li><RecordLink rid={t} showType={false} /></li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Provenance</h3>
+          <div class="panel-body">
+            <ul>
+              <li><span class="hint">updated</span> <span class="mono">{rec.updated ?? '—'}</span></li>
+              <li><span class="hint">confidence</span> <span class={`conf ${band.cls}`}>{band.label}</span></li>
+              <li><span class="hint">status</span> <span class={`status status-${rec.status}`}>{rec.status}</span></li>
+              <li><span class="hint">type</span> <a href={typeUrl(rec.type)}>{typeTitle(rec.type)}</a></li>
+            </ul>
+            <p class="hint" style="margin:.5rem 0 0">
+              Raw record: <code>data/{rec.rid}.json</code>
+            </p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Compare</h3>
+          <div class="panel-body">
+            <p class="hint" style="margin:0 0 .5rem">Put this record side by side with others of the same type.</p>
+            <a class="tag" href={`/compare/?type=${rec.type}&picks=${encodeURIComponent(rec.rid)}`}>
+              open in compare <span class="t">→</span>
+            </a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</Base>

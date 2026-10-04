@@ -1,0 +1,132 @@
+---
+import Base from '../layouts/Base.astro';
+import FilterBar from '../components/FilterBar.astro';
+import RecordList from '../components/RecordList.astro';
+import StatusBadge from '../components/StatusBadge.astro';
+import { META, PRIMARY_TYPES, docUrl, typeUrl, recUrl } from '../lib/data';
+
+const contested = (META.status.contested ?? 0).toLocaleString();
+const draft = (META.status.draft ?? 0).toLocaleString();
+const verified = (META.status.verified ?? 0).toLocaleString();
+const deprecated = (META.status.deprecated ?? 0).toLocaleString();
+
+// The decision docs are the entry point for a reader with a question rather
+// than a record id; 00-index.md is generated and deliberately not rendered.
+const headlineDocs = META.docs.filter((d) => /^(01|02|03|04|05)/.test(d.slug));
+const restDocs = META.docs.filter((d) => !/^(01|02|03|04|05)/.test(d.slug));
+
+const SORTS = {
+  'name-asc': 'name A→Z',
+  'name-desc': 'name Z→A',
+  status: 'status (unresolved first)',
+  'confidence-asc': 'confidence low→high',
+  'confidence-desc': 'confidence high→low',
+  'updated-asc': 'last verified, oldest first',
+};
+---
+
+<Base
+  title="inference-research"
+  description={`${META.total.toLocaleString()} cited records on inference hardware, engines, quantization, benchmarks and traps. ${contested} contested, ${draft} draft.`}
+>
+  <main class="wrap" data-pagefind-body>
+    <meta data-pagefind-meta="type" content="page" />
+    <section class="hero">
+      <h1>Choosing inference hardware, with the disagreements left in.</h1>
+      <p>
+        Every claim on this site is one JSON record in <code>data/</code>, and every record
+        cites the sources it was checked against. Where two sources disagree, the record
+        is marked <span class="status status-contested">contested</span> and both numbers
+        are kept — this repo does not pick a favourite. A
+        <span class="status status-draft">draft</span> record has not been verified yet.
+        Neither is a verified record, and on this site they never look like one.
+      </p>
+      <p>
+        Start from a <a href="/search/">search</a>, a <a href="/compare/">side-by-side
+        comparison</a>, or the decision docs below.
+      </p>
+
+      <div class="statusbar">
+        <StatusBadge status="verified" confidence={META.mean_confidence} />
+        <span style="font-size:.82rem;color:var(--fg-dim)">
+          {verified} verified · {contested} contested · {draft} draft · {deprecated} deprecated
+          · mean confidence {META.mean_confidence?.toFixed(2)}
+        </span>
+      </div>
+
+      <div class="stat-grid">
+        {PRIMARY_TYPES.map((t) => (
+          <a class="stat" href={typeUrl(t.type)}>
+            <span class="n">{t.count.toLocaleString()}</span>
+            <span class="l">{t.title}</span>
+          </a>
+        ))}
+        <a class="stat provenance" href={typeUrl('source')} title="Provenance: documents cited by the records above">
+          <span class="n">{(META.counts.source ?? 0).toLocaleString()}</span>
+          <span class="l">Sources (provenance)</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Decision docs</h2>
+      <p class="hint">
+        Written from the records, citing record ids inline. Every claim in these docs is
+        backed by a record you can open.
+      </p>
+      <div class="doclist" style="margin-top:.75rem">
+        {headlineDocs.map((d) => (
+          <a class="doccard" href={docUrl(d.slug)}>
+            <span class="t">{d.title.replace(/^\d\d\s+—\s+/, '')}</span>
+            <span class="m">{d.slug}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="section">
+          <h2>All records</h2>
+          <div class="stat-grid">
+            {PRIMARY_TYPES.map((t) => (
+              <a class="stat" href={typeUrl(t.type)}>
+                <span class="n">{t.count.toLocaleString()}</span>
+                <span class="l">{t.title}</span>
+              </a>
+            ))}
+            <a class="stat provenance" href={typeUrl('source')} title="Provenance: documents cited by the records above">
+              <span class="n">{(META.counts.source ?? 0).toLocaleString()}</span>
+              <span class="l">Sources (provenance)</span>
+            </a>
+          </div>
+          <p class="hint" style="margin-top:1rem">
+            {META.dangling.length > 0 && (
+              <>
+                {META.dangling.length} cross-references in <code>data/</code> name a record that
+                does not exist yet; those render as plain text rather than as broken links.
+                {' '}
+              </>
+            )}
+            <a href={typeUrl('source')}>Sources ({META.counts.source})</a> are kept out of the
+            main navigation on purpose: they are provenance, not findings.
+            {' '}Compare any two or four records side by side on the
+            <a href="/compare/">compare page</a>.
+          </p>
+        </section>
+
+    <section class="section">
+      <h2>Using the repo directly</h2>
+      <p class="prose-block">
+        This site is generated. The repo is the source of truth, and the same answers are
+        available without a browser:
+      </p>
+      <pre><code>python tools/query.py list accelerators
+python tools/query.py get accelerators/nvidia-h100-sxm
+python tools/query.py refs gotchas/aiter-gate-skips-rdna3-gfx1100
+python tools/query.py search "prefix caching"
+python tools/cost_per_token.py
+
+python tools/build_site_data.py    # regenerate site/src/data/
+cd site &amp;&amp; npm run build     # rebuild this site</code></pre>
+    </section>
+  </main>
+</Base>

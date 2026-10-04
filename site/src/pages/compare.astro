@@ -1,0 +1,113 @@
+---
+import Base from '../layouts/Base.astro';
+import { META, PRIMARY_TYPES, recUrl } from '../lib/data';
+
+const SORTS: Record<string, string> = {
+  'name-asc': 'name A→Z',
+  'name-desc': 'name Z→A',
+  status: 'status (unresolved first)',
+  'confidence-asc': 'confidence low→high',
+  'confidence-desc': 'confidence high→low',
+  'updated-asc': 'last verified, oldest first',
+};
+
+const PRESETS: { label: string; type: string; picks: string[]; note: string }[] = [
+  {
+    label: 'Flagship NVIDIA vs AMD',
+    type: 'accelerator',
+    picks: ['accelerators/nvidia-h100-sxm', 'accelerators/nvidia-b200', 'accelerators/amd-instinct-mi300x'],
+    note: 'The three parts most serving decisions actually come down to.',
+  },
+  {
+    label: 'Same silicon, different form factor',
+    type: 'accelerator',
+    picks: ['accelerators/nvidia-h100-sxm', 'accelerators/nvidia-h100-pcie', 'accelerators/nvidia-h100-nvl'],
+    note: 'Identical die, three memory configurations — the datasheet differences are the interesting part.',
+  },
+  {
+    label: 'Decode engines, consumer silicon',
+    type: 'engine',
+    picks: ['engines/llama-cpp', 'engines/vllm', 'engines/exllamav2'],
+    note: 'Different answers to different questions; read avoid_for, not the README.',
+  },
+  {
+    label: '4-bit weight-only formats',
+    type: 'quantization',
+    picks: ['quantization/awq', 'quantization/gptq', 'quantization/exl2', 'quantization/spinquant'],
+    note: 'All 4-bit, none of them comparable — the schemes differ in more than the grid.',
+  },
+  {
+    label: 'Scale-up fabrics',
+    type: 'interconnect',
+    picks: ['interconnect/nvlink-4', 'interconnect/amd-infinity-fabric-link'],
+    note: 'Compare per-direction bandwidth, not the vendor aggregate.',
+  },
+  {
+    label: 'MoE models with an explicit active-parameter split',
+    type: 'model',
+    picks: ['models/deepseek-v3', 'models/qwen3-235b-a22b'],
+    note: 'params_b vs active_params_b is the whole serving problem for these.',
+  },
+];
+---
+
+<Base
+  title="Compare"
+  nav="compare"
+  description="Side-by-side field comparison of 2-4 records of the same type."
+>
+  <main class="wrap" data-pagefind-body>
+    <meta data-pagefind-meta="type" content="page" />
+    <div class="page-head">
+      <h1>Compare</h1>
+      <p class="sub">
+        Pick 2–4 records of the same type and read their fields side by side. Values are
+        copied verbatim from the records; the table only aligns them. Fields where the
+        records disagree are shaded, so a contested value cannot hide behind a neighbour
+        that happens to agree.
+      </p>
+    </div>
+
+    <section class="section" style="margin-top:1.25rem">
+      <h2>Start from a question</h2>
+      <div class="doclist">
+        {PRESETS.map((p) => (
+          <a
+            class="doccard"
+            href={`/compare/?type=${p.type}&picks=${encodeURIComponent(p.picks.join(','))}`}
+          >
+            <span class="t">{p.label}</span>
+            <span class="l" style="display:block;font-size:.8rem;color:var(--fg-dim);margin-top:.15rem">{p.note}</span>
+            <span class="m">{p.picks.length} records</span>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Build your own</h2>
+      <p class="hint">
+        The row set is fetched per type, so picking accelerators downloads only the
+        accelerator matrix. Selection lives in the URL — copy the address bar to share
+        a comparison.
+      </p>
+      <div data-compare></div>
+    </section>
+  </main>
+
+  <script>
+    // The compare tool is a self-contained island: it loads only the chosen
+    // type's matrix, so /compare/ stays small even though the corpus is not.
+    import { loadCompare, renderCompare } from '../lib/compare-client';
+
+    const host = document.querySelector('[data-compare]');
+    if (host instanceof HTMLElement) {
+      await renderCompare(host);
+      void loadCompare;
+    }
+  </script>
+</Base>
+
+<style is:global>
+  [data-compare] { display: block; }
+</style>

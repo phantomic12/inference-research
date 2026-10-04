@@ -1,0 +1,149 @@
+---
+import Base from '../layouts/Base.astro';
+import { META, PRIMARY_TYPES } from '../lib/data';
+---
+
+<Base
+  title="Search"
+  nav="search"
+  description="Full-text search over all 2,000+ inference-research records, with type and status filters."
+  pf={{ type: 'search' }}
+>
+  <main class="wrap" data-pagefind-body>
+    <meta data-pagefind-meta="type" content="page" />
+    <div class="page-head">
+      <h1>Search</h1>
+      <p class="sub">
+        Full text over every record — names, notes, mechanisms, problems, methodology and
+        the doc prose. The index is built from the rendered pages after the site build, so
+        it ships as static files and works offline; there is no server and no query API.
+      </p>
+    </div>
+
+    <section class="section" style="margin-top:1rem">
+      <div class="controls" style="position:static" data-search-root>
+        <div class="control" style="flex:1 1 24rem">
+          <label for="s-q">query</label>
+          <input type="search" id="s-q" placeholder="e.g. decode gemm memory bound, prefix caching, gfx1100" autocomplete="off" autofocus />
+        </div>
+        <div class="control">
+          <label for="s-type">type</label>
+          <select id="s-type">
+            <option value="">all types</option>
+            {PRIMARY_TYPES.map((t) => <option value={t.type}>{t.title} ({t.count})</option>)}
+            <option value="source">Sources ({META.counts.source})</option>
+            <option value="doc">Docs ({META.docs.length})</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="s-status">status</label>
+          <select id="s-status">
+            <option value="">any status</option>
+            <option value="contested">contested ({META.status.contested ?? 0})</option>
+            <option value="draft">draft ({META.status.draft ?? 0})</option>
+            <option value="verified">verified ({META.status.verified ?? 0})</option>
+            <option value="deprecated">deprecated ({META.status.deprecated ?? 0})</option>
+          </select>
+        </div>
+        <span class="control-count" data-search-count></span>
+      </div>
+      <div data-search-out>
+        <p class="hint">Type a query. <kbd>/</kbd> focuses the box from anywhere.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    import { escapeHtml, escapeRe, highlight, queryTerms, runSearch } from '../lib/search';
+
+    const root = document.querySelector('[data-search-root]');
+    const out = document.querySelector('[data-search-out]');
+    if (root instanceof HTMLElement && out instanceof HTMLElement) {
+      const q = root.querySelector('#s-q') as HTMLInputElement;
+      const type = root.querySelector('#s-type') as HTMLSelectElement;
+      const status = root.querySelector('#s-status') as HTMLSelectElement;
+      const count = root.querySelector('[data-search-count]');
+
+      const params = new URLSearchParams(location.search);
+      if (params.get('q')) q.value = params.get('q')!;
+      if (params.get('type')) type.value = params.get('type')!;
+      if (params.get('status')) status.value = params.get('status')!;
+
+      let seq = 0;
+
+      async function go() {
+        const term = q.value.trim();
+        const p = new URLSearchParams();
+        if (term) p.set('q', term);
+        if (type.value) p.set('type', type.value);
+        if (status.value) p.set('status', status.value);
+        history.replaceState(null, '', p.toString() ? `/search/?${p}` : '/search/');
+
+        if (term.length < 2) {
+          out.innerHTML = '<p class="hint">Type at least two characters.</p>';
+          if (count) count.textContent = '';
+          return;
+        }
+        const mine = ++seq;
+        out.innerHTML = '<p class="hint">Searching…</p>';
+
+        const filters: { type?: string; status?: string } = {};
+                if (type.value) filters.type = type.value;
+                if (status.value) filters.status = status.value;
+
+        const hits = await runSearch(term, filters);
+        if (mine !== seq) return;
+        if (hits === null) {
+          out.innerHTML =
+            '<p class="empty-state">The search index is not built in this environment. ' +
+            'Run <code>npm run build</code> (which runs Pagefind over <code>dist/</code>), ' +
+            'then serve <code>dist/</code> rather than using <code>npm run dev</code>.</p>';
+          return;
+        }
+        if (!hits.length) {
+          out.innerHTML = `<p class="empty-state">No records match “${escapeHtml(term)}”.</p>`;
+          if (count) count.textContent = '0 results';
+          return;
+        }
+        const terms = queryTerms(term);
+        out.innerHTML =
+          '<div class="rows">' +
+          hits
+            .map(
+              (h) => `
+            <div class="row status-rail-${escapeHtml(h.status || 'verified')}">
+              <span class="dot ${escapeHtml(h.status)}"></span>
+              <div>
+                <a class="row-name" href="${h.url}">${highlight(escapeHtml(h.title), terms)}</a>
+                <div class="row-sub">
+                  ${h.status ? `<span class="status status-${escapeHtml(h.status)}">${escapeHtml(h.status)}</span>` : ''}
+                  <span>${escapeHtml(h.type)}</span>
+                  ${h.rid ? `<span class="row-id">${escapeHtml(h.rid)}</span>` : ''}
+                  ${h.summary ? `<span class="sr-snip">${highlight(escapeHtml(h.summary), terms)}</span>` : ''}
+                </div>
+              </div>
+            </div>`,
+            )
+            .join('') +
+          '</div>';
+        if (count) count.textContent = `${hits.length}${hits.length === 60 ? '+' : ''} results`;
+      }
+
+      let t: number | undefined;
+      q.addEventListener('input', () => {
+        window.clearTimeout(t);
+        t = window.setTimeout(go, 140) as unknown as number;
+      });
+      type.addEventListener('change', go);
+      status.addEventListener('change', go);
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+          ev.preventDefault();
+          q.focus();
+          q.select();
+        }
+      });
+      if (q.value.trim().length >= 2) go();
+    }
+  </script>
+</Base>

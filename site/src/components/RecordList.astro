@@ -1,0 +1,58 @@
+---
+import type { Row } from '../lib/data';
+import { confBand, recUrl, statusRank, typeTitle } from '../lib/data';
+
+interface Props {
+  rows: Row[];
+  /** Identifies the row container so a FilterBar can find it. */
+  listId: string;
+  showId?: boolean;
+}
+
+const { rows, listId, showId = true } = Astro.props;
+
+// Contested first, then draft: a reader scanning the list must not read past a
+// contested record believing the rest are verified.
+const sorted = [...rows].sort((a, b) => {
+  const s = statusRank(a.status) - statusRank(b.status);
+  return s !== 0 ? s : a.name.localeCompare(b.name);
+});
+---
+
+<div class="rows" data-list={listId}>
+  {sorted.map((r) => {
+    const band = confBand(r.confidence);
+    return (
+      <div
+        class={`row status-rail-${r.status}`}
+        data-name={r.name}
+        data-rid={r.rid}
+        data-status={r.status}
+        data-confidence={r.confidence ?? ''}
+        data-updated={r.updated ?? ''}
+        data-nbackrefs={r.nbackrefs}
+        data-facets={JSON.stringify(r.facets)}
+      >
+        <span class={`dot ${r.status}`} aria-hidden="true" />
+        <div>
+          <a class="row-name" href={recUrl(r.rid)}>{r.name}</a>
+          <div class="row-sub">
+            {r.head && <span>{r.head}</span>}
+            {r.tail.map((t, i) => (
+              <>
+                {i > 0 && <span class="sep" aria-hidden="true">·</span>}
+                <span>{t}</span>
+              </>
+            ))}
+            {showId && <span class="row-id">{r.rid}</span>}
+          </div>
+        </div>
+        <div class="row-flags">
+          <span class={`status status-${r.status}`}>{r.status}</span>
+          <span class={`conf ${band.cls}`}>{band.label}</span>
+        </div>
+      </div>
+    );
+  })}
+  {sorted.length === 0 && <p class="empty-state">No records of this type yet.</p>}
+</div>

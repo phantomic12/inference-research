@@ -1,0 +1,249 @@
+---
+/**
+ * Sort/filter bar for a type index. Renders as static HTML (all rows present in
+ * the source) and narrows them client-side, so the page is complete and readable
+ * with JS disabled and without a round trip.
+ *
+ * Filter state is mirrored into the URL hash so a filtered view is shareable.
+ */
+interface Props {
+  /** Facet field names to offer, in order. */
+  facets: string[];
+  /** Sort options: value -> label. */
+  sorts: Record<string, string>;
+  /** Rows in the DOM, for the client-side filter script. */
+  target: string;
+}
+
+const { facets, sorts, target } = Astro.props;
+---
+
+<div class="controls" data-controls data-target={target}>
+  <div class="control">
+    <label for="f-text">Filter</label>
+    <input type="search" id="f-text" data-filter-text placeholder="substring…" autocomplete="off" />
+  </div>
+  {facets.map((f) => (
+    <div class="control">
+      <label for={`f-${f}`}>{f.replace(/_/g, ' ')}</label>
+      <select id={`f-${f}`} data-filter-facet={f}>
+        <option value="">all</option>
+      </select>
+    </div>
+  ))}
+  <div class="control">
+    <label for="f-status">status</label>
+    <select id="f-status" data-filter-facet="status">
+      <option value="">all</option>
+      <option value="contested">contested</option>
+      <option value="draft">draft</option>
+      <option value="verified">verified</option>
+      <option value="deprecated">deprecated</option>
+    </select>
+  </div>
+  <div class="control">
+    <label for="f-sort">sort</label>
+    <select id="f-sort" data-sort>
+      {Object.entries(sorts).map(([v, l]) => <option value={v}>{l}</option>)}
+    </select>
+  </div>
+  <span class="control-count" data-count></span>
+</div>
+
+<div class="chips" data-chips></div>
+
+<script>
+  // Progressive enhancement: populate facet options from the rows already in the
+  // DOM, then filter and sort without touching the network.
+  interface RowEl extends HTMLElement {
+    dataset: DOMStringMap & { name: string; rid: string; status: string; facets: string };
+  }
+
+  const root = document.querySelector('[data-controls]');
+  if (root instanceof HTMLElement) {
+    const target = root.dataset.target!;
+    const list = document.querySelector(`[data-list="${target}"]`);
+    const chips = document.querySelector('[data-chips]');
+    const counter = document.querySelector('[data-count]');
+    const textInput = root.querySelector('[data-filter-text]') as HTMLInputElement | null;
+    const sortSel = root.querySelector('[data-sort]') as HTMLSelectElement | null;
+
+    const rows: RowEl[] = list
+      ? Array.from(list.querySelectorAll<RowEl>('.row'))
+      : [];
+
+    const num = (el: RowEl, key: string): number => {
+      try {
+        return JSON.parse(el.dataset.facets || '{}')[key];
+      } catch {
+        return NaN;
+      }
+    };
+
+    const facetState: Record<string, string> = {};
+    const facetSels = Array.from(
+      root.querySelectorAll<HTMLSelectElement>('[data-filter-facet]'),
+    );
+
+    // Populate each facet's options from the values actually present.
+    for (const sel of facetSels) {
+      const field = sel.dataset.filterFacet!;
+      if (field === 'status') continue;
+      const seen = new Map<string, number>();
+      for (const r of rows) {
+        let v = '';
+        try {
+          v = JSON.parse(r.dataset.facets || '{}')[field] ?? '';
+        } catch { /* ignore */ }
+        if (v !== '' && v !== null) seen.set(String(v), (seen.get(String(v)) ?? 0) + 1);
+      }
+      const values = Array.from(seen.entries()).sort((a, b) =>
+        a[0].localeCompare(b[0], undefined, { numeric: true }),
+      );
+      for (const [v, n] of values) {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = `${v} (${n})`;
+        sel.appendChild(o);
+      }
+    }
+
+    function matches(r: RowEl): boolean {
+      if (textInput && textInput.value.trim()) {
+        const q = textInput.value.trim().toLowerCase();
+        const hay = `${r.dataset.name} ${r.dataset.rid} ${r.textContent ?? ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      for (const sel of facetSels) {
+        const want = sel.value;
+        if (!want) continue;
+        const field = sel.dataset.filterFacet!;
+        if (field === 'status') {
+          if (r.dataset.status !== want) return false;
+        } else {
+          let v = '';
+          try {
+            v = String(JSON.parse(r.dataset.facets || '{}')[field] ?? '');
+          } catch { /* ignore */ }
+          if (v !== want) return false;
+        }
+      }
+      return true;
+    }
+
+    function sortRows(): void {
+      if (!list || !sortSel) return;
+      const mode = sortSel.value;
+      const arr = [...rows];
+      const statusRank = (s: string) =>
+        ['contested', 'draft', 'verified', 'deprecated'].indexOf(s);
+      arr.sort((a, b) => {
+        let av: number | string;
+        let bv: number | string;
+        switch (mode) {
+          case 'name-desc':
+            return b.dataset.name.localeCompare(a.dataset.name);
+          case 'status':
+            return (
+              statusRank(a.dataset.status) - statusRank(b.dataset.status) ||
+              a.dataset.name.localeCompare(b.dataset.name)
+            );
+          case 'confidence-asc':
+            av = a.dataset.confidence ?? -1;
+            bv = b.dataset.confidence ?? -1;
+            break;
+          case 'confidence-desc':
+            av = -(a.dataset.confidence ?? -1);
+            bv = -(b.dataset.confidence ?? -1);
+            break;
+          case 'backrefs':
+            av = -(a.dataset.nbackrefs ? Number(a.dataset.nbackrefs) : 0);
+            bv = -(b.dataset.nbackrefs ? Number(b.dataset.nbackrefs) : 0);
+            break;
+          case 'updated-asc':
+            av = a.dataset.updated ?? '';
+            bv = b.dataset.updated ?? '';
+            return String(av).localeCompare(String(bv)) ||
+              a.dataset.name.localeCompare(b.dataset.name);
+          default:
+            // 'status' — unresolved records first, then by name. This is the
+            // default because a reader must not pass a contested record
+            // believing everything below it is verified.
+            return (
+              statusRank(a.dataset.status) - statusRank(b.dataset.status) ||
+              a.dataset.name.localeCompare(b.dataset.name)
+            );
+        }
+        if (av === bv) return a.dataset.name.localeCompare(b.dataset.name);
+        return (av as number) < (bv as number) ? -1 : 1;
+      });
+      for (const r of arr) list.appendChild(r);
+    }
+
+    function syncChips(): void {
+      if (!chips) return;
+      chips.innerHTML = '';
+      const active: string[] = [];
+      for (const sel of facetSels) {
+        const field = sel.dataset.filterFacet!;
+        if (sel.value) active.push(`${field}=${sel.value}`);
+      }
+      if (textInput && textInput.value.trim()) active.push(`"${textInput.value.trim()}"`);
+      for (const a of active) {
+        const b = document.createElement('button');
+        b.className = 'chip';
+        b.type = 'button';
+        b.setAttribute('aria-pressed', 'true');
+        b.textContent = `${a} ✕`;
+        b.addEventListener('click', () => {
+          for (const sel of facetSels) {
+            const f = sel.dataset.filterFacet!;
+            if (active.includes(`${f}=${sel.value}`)) sel.value = '';
+          }
+          if (textInput && active.includes(`"${textInput.value.trim()}"`)) textInput.value = '';
+          apply();
+        });
+        chips.appendChild(b);
+      }
+    }
+
+    function apply(): void {
+      let shown = 0;
+      for (const r of rows) {
+        const ok = matches(r);
+        r.classList.toggle('hidden', !ok);
+        if (ok) shown += 1;
+      }
+      if (counter) {
+        counter.textContent = `${shown.toLocaleString()} of ${rows.length.toLocaleString()} shown`;
+      }
+      syncChips();
+      const h = new URLSearchParams();
+      if (textInput && textInput.value.trim()) h.set('q', textInput.value.trim());
+      for (const sel of facetSels) if (sel.value) h.set(sel.dataset.filterFacet!, sel.value);
+      if (sortSel && sortSel.value) h.set('sort', sortSel.value);
+      const s = h.toString();
+      history.replaceState(null, '', s ? `#${s}` : location.pathname);
+    }
+
+    for (const sel of facetSels) sel.addEventListener('change', apply);
+    if (sortSel) sortSel.addEventListener('change', () => { sortRows(); apply(); });
+    if (textInput) {
+      let t: number | undefined;
+      textInput.addEventListener('input', () => {
+        window.clearTimeout(t);
+        t = window.setTimeout(apply, 120) as unknown as number;
+      });
+    }
+
+    // Restore state from the hash so a filtered view can be shared.
+    const params = new URLSearchParams(location.hash.slice(1));
+    if (textInput && params.get('q')) textInput.value = params.get('q')!;
+    for (const sel of facetSels) {
+      const want = params.get(sel.dataset.filterFacet!);
+      if (want) sel.value = want;
+    }
+    if (sortSel && params.get('sort')) sortSel.value = params.get('sort')!;
+    if (params.toString()) { sortRows(); apply(); } else { sortRows(); apply(); }
+  }
+</script>

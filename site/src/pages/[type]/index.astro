@@ -1,0 +1,121 @@
+---
+import type { GetStaticPaths } from 'astro';
+import Base from '../../layouts/Base.astro';
+import FilterBar from '../../components/FilterBar.astro';
+import RecordList from '../../components/RecordList.astro';
+import { META, recUrl, typeUrl, typeInfo, typeTitle } from '../../lib/data';
+import type { Row } from '../../lib/data';
+
+// One page per record type. Rows come from the per-type index the pipeline
+// emits, so adding a record to data/ adds a row here with no hand editing.
+export const getStaticPaths = (async () => {
+  return META.types.map((t) => ({
+    params: { type: t.type },
+    props: { info: t },
+  }));
+}) satisfies GetStaticPaths;
+
+const { info } = Astro.props as { info: (typeof META.types)[number] };
+
+const rows = (await import(`../../data/index/${info.type}.json`)).default as Row[];
+
+// Default sort must agree with the order the server rendered (contested
+      // first). Sorting unconditionally here would silently undo that and put a
+      // contested record back among the verified ones.
+      const SORTS: Record<string, string> = {
+  'status': 'status (unresolved first)',
+        'name-asc': 'name A→Z',
+        'name-desc': 'name Z→A',
+        'confidence-asc': 'confidence low→high',
+        'confidence-desc': 'confidence high→low',
+        'updated-asc': 'last verified, oldest first',
+        'backrefs': 'most referenced first',
+      };
+
+const BLURB: Record<string, string> = {
+  accelerator:
+    'Memory capacity, bandwidth, tensor-core FLOPS per precision, TDP and fabric. This is the hardware-selection table: compare two parts on the Compare page before reading a benchmark that names one.',
+  flop:
+    'One record per operation class, each with a bound_by and an arithmetic-intensity derivation. This is the "why is my inference slow, and which hardware property would fix it" layer — it sits between a benchmark and a part.',
+  engine:
+    'What each engine supports where. Read hardware_caveats and avoid_for before the README: in this repo the exclusions are better evidenced than the inclusions, and they are what actually bites.',
+  quantization:
+    'Formats, bit widths and their hardware paths. Note native_support versus emulated_support — a format that only runs by dequantising to fp16 is not natively supported, whatever the vendor table implies.',
+  interconnect:
+    'Per-link, per-direction bandwidth and the scale-up versus scale-out distinction. Read bandwidth_basis: the repo refuses to convert a vendor bidirectional aggregate into a per-direction number without recording the derivation.',
+  benchmark:
+    'Measurements with their methodology attached. Check measured_by and reproducible before quoting a number — a vendor tok/s and a reproduced tok/s are not the same claim.',
+  gotcha:
+    'The traps, ordered by severity. The blocker-severity entries come first because they are the only ones that produce confident, plausible, wrong answers rather than a crash. Read before deploying, not after.',
+  supply:
+    'Where a part can be obtained and at what price. The most perishable data here: price_usd means nothing without price_basis, and nothing without its updated date.',
+  model:
+    'Released models and what their architecture does to the FLOP mix. kv_cache_bytes_per_token is the number that decides whether a model fits at all.',
+  paper:
+    'Contributions with a mechanism and an adoption status. adoption is what separates a citation from an instruction, and speedup_reported always carries its baseline.',
+  source:
+    'Provenance. Every source here is cited by at least one record; the back-reference count on each row is how many records rely on it.',
+};
+
+const blurb = BLURB[info.type] ?? '';
+
+const byStatus = META.status_order
+  .map((s) => ({ s, n: rows.filter((r) => r.status === s).length }))
+  .filter((x) => x.n > 0);
+
+const mostCited = [...rows]
+  .filter((r) => r.nbackrefs > 0)
+  .sort((a, b) => b.nbackrefs - a.nbackrefs)
+  .slice(0, 8);
+---
+
+<Base
+  title={info.title}
+  nav={info.type}
+  description={`${rows.length.toLocaleString()} ${info.title.toLowerCase()} records: ${blurb.slice(0, 150)}`}
+>
+  <main class="wrap" data-pagefind-body>
+    <nav class="breadcrumb">
+      <a href="/">index</a> / <span>{info.type}</span>
+    </nav>
+    <div class="page-head">
+      <h1>{info.title} <span class="hint">({rows.length.toLocaleString()})</span></h1>
+      <p class="sub">{blurb}</p>
+      <div class="statusbar">
+        {byStatus.map(({ s, n }) => (
+          <span class={`status status-${s}`}>{s} {n.toLocaleString()}</span>
+        ))}
+        <a class="hint" href={typeUrl('source')}>→ sources ({META.counts.source})</a>
+      </div>
+    </div>
+
+    <FilterBar facets={info.facets} sorts={SORTS} target={info.type} />
+    <RecordList listId={info.type} rows={rows} />
+
+    {mostCited.length > 0 && (
+      <section class="section">
+        <h2>Most referenced</h2>
+        <p class="hint">
+          The records other records point at. Useful as an entry point: a heavily
+          referenced accelerator or engine is one many decisions in this repo assume.
+        </p>
+        <div class="table-scroll" style="margin-top:.6rem">
+          <table>
+            <thead>
+              <tr><th>Record</th><th class="num">Referenced by</th><th class="num">Cites</th></tr>
+            </thead>
+            <tbody>
+              {mostCited.map((r) => (
+                <tr>
+                  <td><a href={recUrl(r.rid)}>{r.name}</a></td>
+                  <td class="num">{r.nbackrefs}</td>
+                  <td class="num">{r.nrefs}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )}
+  </main>
+</Base>
