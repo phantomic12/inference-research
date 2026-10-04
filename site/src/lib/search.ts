@@ -39,7 +39,8 @@ interface PagefindModule {
 
 const TYPE_ORDER = [
   'accelerator', 'flop', 'engine', 'quantization', 'interconnect', 'benchmark',
-  'gotcha', 'supply', 'model', 'paper', 'source', 'doc', 'typeindex', 'page',
+  'gotcha', 'supply', 'model', 'paper', 'source', 'compiler', 'metric_exposure',
+  'doc', 'typeindex', 'page',
 ];
 
 let cached: Promise<PagefindModule | null> | null = null;

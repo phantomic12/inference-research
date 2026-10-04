@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metric_exposure",
+  "title": "metric_exposure",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "name",
+    "engine_id",
+    "metric_name",
+    "metric_type",
+    "exposure",
+    "status",
+    "confidence",
+    "updated",
+    "sources"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "type": {
+      "const": "metric_exposure"
+    },
+    "name": {
+      "type": "string",
+      "description": "human-readable label, e.g. 'vLLM prefill TTFT histogram'"
+    },
+    "engine_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "bare engine record id this metric belongs to. One record per (engine, metric): an engine with forty metrics has forty records, each individually correctable and individually citable. Nullable so a generated skeleton validates; an unset value is null, never a placeholder string."
+    },
+    "metric_name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "the metric's name EXACTLY as the engine emits it, including namespace and unit suffix (vllm:time_to_first_token_seconds). The verbatim name is the whole point — it is what a scraper has to match, and a paraphrase makes the record useless for detection work. Nullable so a generated skeleton validates; an unset value is null, never a placeholder string."
+    },
+    "metric_type": {
+      "enum": [
+        "counter",
+        "gauge",
+        "histogram",
+        "summary",
+        "log-only",
+        "unknown",
+        null
+      ],
+      "description": "Prometheus-style typing, since that is the vocabulary engines actually document in. log-only = emitted to stdout/a log line and never aggregated; unknown = the engine does not declare a type. Nullable so a generated skeleton validates; an unset value is null, never a placeholder string.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "unit": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "seconds, bytes, requests, tokens, 1 (ratio), etc. The unit suffix of metric_name is often but not always the unit; state it explicitly because a mislabelled unit silently breaks every percentile downstream."
+    },
+    "exposure": {
+      "enum": [
+        "prometheus",
+        "opentelemetry",
+        "statsd",
+        "http-json",
+        "otlp-endpoint",
+        "python-api",
+        "stdout-log",
+        "callback-hook",
+        "file",
+        "cli",
+        "unknown",
+        null
+      ],
+      "description": "how a collector reaches it. http-json and stdout-log are the two that get scraped with a regex and break silently when a version changes the format, which is exactly what a reader needs to know before trusting an absence. Nullable so a generated skeleton validates; an unset value is null, never a placeholder string.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "endpoint": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "path or address, e.g. '/metrics' or ':9464/metrics'. Null for in-process APIs with no network surface."
+    },
+    "histogram_buckets": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "number"
+      },
+      "description": "bucket upper bounds in the metric's own unit, in order. Required for a histogram to be usable: a histogram with unknown buckets gives quantiles that are wrong rather than absent. Null for non-histograms."
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "label keys this metric carries, e.g. ['engine','model_name','finished_reason']. Label cardinality is what decides whether the metric can be used per-model or only fleet-wide."
+    },
+    "enabled_by_default": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "true if the metric is on without opting in. false means someone has to turn it on — the single most common reason an 'it does not report X' claim is wrong."
+    },
+    "phase_scoped": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "true if the value is attributable to prefill or decode separately rather than to the whole request. This is the distinction that decides whether a metric can explain a TTFT-vs-ITL regression. Nullable in a skeleton for the same reason: null means not established."
+    },
+    "verified_negatively": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "true only when the ABSENCE of this metric was actively confirmed against a primary source (the engine's own metrics registry, its docs, or its source tree) at the version named in notes. Without this, 'checked' and 'never checked' are the same record. null = not established."
+    },
+    "notes": {
+      "type": "string",
+      "description": "engine version checked, how it was enabled, and any caveat about the value's meaning."
+    },
+    "status": {
+      "enum": [
+        "verified",
+        "draft",
+        "contested",
+        "deprecated"
+      ]
+    },
+    "confidence": {
+      "type": "number"
+    },
+    "updated": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "source ids; each must exist in data/sources/"
+    }
+  },
+  "additionalProperties": false
+}

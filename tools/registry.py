@@ -27,6 +27,7 @@ DIRS = {
     "paper": "papers",
     "source": "sources",
     "compiler": "compilers",
+    "metric_exposure": "metric-exposures",
 }
 
 TYPES = list(DIRS)
@@ -53,6 +54,7 @@ REF_FIELDS: dict[str, dict[str, str]] = {
     "paper": {"hardware_relevance": "accelerator"},
     "quantization": {"native_support": "accelerator", "emulated_support": "accelerator"},
     "supply": {"accelerator_ids": "accelerator"},
+    "metric_exposure": {"engine_id": "engine"},
 }
 
 # Fields that hold a single reference and may be null (so an absent value is
@@ -78,4 +80,5 @@ TITLES = {
     "paper": "Papers",
     "source": "Sources",
     "compiler": "Compilers & kernel DSLs",
+    "metric_exposure": "Metric exposures",
 }

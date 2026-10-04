@@ -205,5 +205,5 @@ async function typeList(): Promise<string[]> {
   } catch {
     /* fall through */
   }
-  return ['accelerator', 'benchmark', 'engine', 'flop', 'gotcha', 'interconnect', 'model', 'paper', 'quantization', 'source', 'supply'];
+  return ['accelerator', 'benchmark', 'compiler', 'engine', 'flop', 'gotcha', 'interconnect', 'metric_exposure', 'model', 'paper', 'quantization', 'source', 'supply'];
 }

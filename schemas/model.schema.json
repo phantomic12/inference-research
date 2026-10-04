@@ -135,6 +135,61 @@
         "null"
       ]
     },
+    "kv_lora_rank": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "MLA latent KV rank: the width of the compressed KV vector actually cached, in place of num_kv_heads * head_dim. DeepSeek-V2/V3 use 512. This is why an MLA model can hold a longer context than a GQA model of similar size, and it is NOT derivable from head_dim. Null for non-MLA models."
+    },
+    "qk_rope_head_dim": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "MLA decoupled rotary sub-head width (64 in DeepSeek-V2/V3). Added to kv_lora_rank to give the per-layer per-token KV cache size: num_layers * (kv_lora_rank + qk_rope_head_dim) * bytes_per_element. Null for non-MLA models."
+    },
+    "qk_nope_head_dim": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "MLA non-positional (NoPE) QK sub-head width (128 in DeepSeek-V2/V3). Affects attention arithmetic and the projection shapes, not the cached KV size. Null for non-MLA models."
+    },
+    "v_head_dim": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "MLA value sub-head width. In DeepSeek-V2/V3 this equals qk_nope_head_dim, which is why MLA caches (kv_lora_rank + qk_rope_head_dim) and NOT (2 * v_head_dim) bytes per token. Recorded separately because the two are independent in general. Null for non-MLA models."
+    },
+    "kv_compression": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "per-layer KV compression, when it is not uniform. V4-style CSA (compressed-sparse attention) gives selected layers a much lower compression ratio than the HCA baseline, so a single average ratio hides the real peak. Describe the ratio per layer group and name the groups. Null when the model has no layered compression or the compression is uniform."
+    },
+    "attention_layer_indices": {
+      "type": "array",
+      "items": {
+        "type": [
+          "integer",
+          "null"
+        ]
+      },
+      "description": "zero-based indices of the layers that are full attention, for hybrid architectures. Hybrid KV cost depends entirely on this split: only these layers carry a KV cache. Null for uniform architectures."
+    },
+    "layer_types": {
+      "type": "array",
+      "items": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "description": "per-layer type in layer order, e.g. ['attention','ssm','attention',...]. Pairs with attention_layer_indices; when present its length should equal num_layers. Null when the architecture is uniform."
+    },
     "gqa_ratio": {
       "type": [
         "number",
@@ -154,6 +209,27 @@
         "null"
       ],
       "description": "YaRN, NTK-aware, LongRoPE, mrope, etc; null when native"
+    },
+    "context_scaling_method": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "native",
+        "none-verified",
+        "pi",
+        "ntk-aware",
+        "yarn",
+        "self-extend",
+        "llama3",
+        "mrope",
+        "linear",
+        "other",
+        "unknown",
+        null
+      ],
+      "description": "queryable classification of the context-extension method. Deliberately NOT an enum on context_scaling: that field has no enum and carries free-text values in 100+ existing records ('verified native', 'mrope', 'llama3 rope scaling'), so an enum there would break all of them at once. Keep the detail in context_scaling and the class here. native = extended to the model's own trained length with no scaling; none-verified = suspected native but not confirmed; unknown = not established. `unknown` means the record's author looked and could not establish the method; null means the field was simply never filled in."
     },
     "activation": {
       "type": [

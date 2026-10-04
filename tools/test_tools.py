@@ -36,6 +36,20 @@ def run_tool(script: str, *args: str, cwd: Path) -> subprocess.CompletedProcess:
 
 
 class Harness(unittest.TestCase):
+    @staticmethod
+    def expected_dirs() -> list[str]:
+        """The canonical data/ directories, read from registry.DIRS.
+
+        Every directory assertion in this file goes through here rather than a
+        literal list. A literal list is a second definition of the canonical
+        directories: it goes stale the instant a type is added, and a stale copy
+        fails every directory test at once instead of the one test that is
+        actually about the new type.
+        """
+        sys.path.insert(0, str(TOOLS))
+        from registry import DIRS  # noqa: PLC0415
+        return sorted(DIRS.values())
+
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp(prefix="ir-test-"))
         for sub in ("tools", "schemas", "docs"):
@@ -810,17 +824,18 @@ class TestCanonicalDirectories(Harness):
     fail loudly rather than silently accommodating the change.
     """
 
-    CANONICAL_DIRS = [
-        "accelerators", "benchmarks", "compilers", "engines", "flops",
-        "gotchas", "interconnect", "models", "papers", "quantization",
-        "sources", "supply",
-    ]
-
     def test_canonical_dir_list_is_exact(self):
-        """The canonical directory list must match exactly."""
+        """The canonical directory list must match registry.DIRS exactly.
+
+        Deliberately NOT a hardcoded list. A hardcoded copy is a second
+        definition of the canonical dirs that goes stale the moment a type is
+        added — and going stale silently is how a new type breaks every
+        directory test at once. registry.DIRS is the single source of truth,
+        so this asserts that data/ matches the registry and nothing else.
+        """
         sys.path.insert(0, str(TOOLS))
         from registry import DIRS
-        self.assertEqual(sorted(DIRS.values()), self.CANONICAL_DIRS)
+        self.assertEqual(sorted(DIRS.values()), sorted(self.expected_dirs()))
 
     def test_no_stray_directories_in_repo(self):
         """No stray directories exist in the real data/ directory."""
@@ -828,8 +843,7 @@ class TestCanonicalDirectories(Harness):
         if not data_dir.exists():
             self.skipTest("data/ directory does not exist")
         actual = {d.name for d in data_dir.iterdir() if d.is_dir()}
-        expected = set(self.CANONICAL_DIRS)
-        strays = actual - expected
+        strays = actual - set(self.expected_dirs())
         self.assertEqual(strays, set(), f"stray directories found: {strays}")
 
     def test_no_flop_singular_dir(self):
@@ -867,6 +881,585 @@ class TestIdFilenameMatch(Harness):
                 if isinstance(rec, dict) and rec.get("id") != f.stem:
                     mismatches.append(f"{dir_name}/{f.stem}: id={rec.get('id')!r}")
         self.assertEqual(mismatches, [], f"id/filename mismatches: {mismatches}")
+
+
+# ---------------------------------------------------------------------------
+# Schema additions collected from eight sibling agents.
+#
+# Each of these was requested by an agent that could not make the change itself
+# (shared schema files are parent-only, so a parallel edit would silently drop
+# the other agent's enum values). They are collected here, in one authoritative
+# edit, and each has a test that fails for the right reason first.
+#
+# Every new field is OPTIONAL and defaults to null. That is deliberate: an
+# optional field cannot make an existing record newly invalid, which is what
+# keeps this commit safe to land on its own.
+# ---------------------------------------------------------------------------
+
+
+class TestModelKVFields(Harness):
+    """MLA is currently encoded only in prose in attention_variant, so
+    DeepSeek-vs-GLM-4.5 KV differences are not queryable.
+
+    kv_cache_bytes_per_token exists, but the DERIVATION differs per architecture
+    (MLA is num_layers * (kv_lora_rank + qk_rope_head_dim) * bytes, NOT the GQA
+    formula), and nothing in the schema says which. These fields make the
+    architecture queryable and let the derivation be reproduced from the record
+    rather than from notes prose.
+    """
+
+    def model_with(self, **over) -> dict:
+        rec = {
+            "id": "acme-mla", "type": "model", "name": "ACME MLA model",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "architecture": "dense", "params_b": 70.0,
+        }
+        rec.update(over)
+        return rec
+
+    def test_mla_kv_fields_accepted(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/models/acme-mla.json", self.model_with(
+            attention_variant="MLA", kv_lora_rank=512, qk_rope_head_dim=64,
+            qk_nope_head_dim=128, v_head_dim=128,
+            kv_compression="per-layer CSA 2/8 at layers 8-16, HCA 2/8 elsewhere",
+        ))
+        r = self.validate()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_mla_kv_fields_accept_null(self):
+        """Null is the default: a non-MLA model must still validate."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/models/acme-mla.json", self.model_with(
+            kv_lora_rank=None, qk_rope_head_dim=None, qk_nope_head_dim=None,
+            v_head_dim=None, kv_compression=None))
+        r = self.validate()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_kv_lora_rank_rejects_non_integer(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/models/acme-mla.json",
+                   self.model_with(kv_lora_rank="512"))
+        r = self.validate()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("expected type", r.stdout)
+
+
+class TestModelHybridFields(Harness):
+    """For hybrids, 'which layers are attention' is free text in every record.
+
+    attention_layer_indices and layer_types make it queryable: a reader can ask
+    which attention layers exist without parsing prose, and a hybrid's KV cost
+    per layer depends entirely on that split.
+    """
+
+    def test_layer_fields_accepted(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/models/acme-hybrid.json", {
+            "id": "acme-hybrid", "type": "model", "name": "ACME hybrid",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "architecture": "hybrid-attention-ssm",
+            "params_b": 7.0, "attention_layer_indices": [0, 2, 4, 6, 8],
+            "layer_types": ["attention", "ssm", "attention", "ssm", "attention",
+                            "ssm", "attention", "ssm", "attention"],
+        })
+        r = self.validate()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_layer_indices_reject_string_members(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/models/acme-hybrid.json", {
+            "id": "acme-hybrid", "type": "model", "name": "ACME hybrid",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "architecture": "hybrid-attention-ssm",
+            "params_b": 7.0, "attention_layer_indices": ["first", "third"],
+        })
+        r = self.validate()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("expected type", r.stdout)
+
+
+class TestContextScalingMethod(Harness):
+    """The enum is a SEPARATE field, never an enum on context_scaling.
+
+    context_scaling has no enum today and ~100+ records carry free-text values
+    ('verified native', 'mrope', 'llama3 rope scaling'). Adding an enum to it
+    would break every one of those records at once. So context_scaling keeps its
+    free text and context_scaling_method is the new queryable enum.
+    """
+
+    def schema_enum(self, field: str):
+        schema = json.loads(
+            (ROOT / "schemas" / "model.schema.json").read_text(encoding="utf-8"))
+        return schema["properties"].get(field, {}).get("enum")
+
+    def test_context_scaling_field_stays_free_text(self):
+        """The regression this whole design exists to prevent: if an enum ever
+        lands on context_scaling, every existing free-text record breaks."""
+        self.assertIsNone(self.schema_enum("context_scaling"))
+
+    def test_real_records_still_validate_against_context_scaling(self):
+        """Belt and braces: every real model's free-text context_scaling must
+        still be legal, which is only true because the enum is elsewhere."""
+        vals = set()
+        for f in sorted((ROOT / "data" / "models").glob("*.json")):
+            try:
+                rec = json.loads(f.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+            if isinstance(rec, dict) and rec.get("context_scaling") is not None:
+                vals.add(rec["context_scaling"])
+        self.assertGreater(len(vals), 1,
+                           "expected many distinct free-text context_scaling values")
+
+    def test_context_scaling_method_enum_values(self):
+        # The trailing null is deliberate: the field is optional, and a null must
+        # not be a validation error. Compare on the named values only.
+        self.assertEqual(self.schema_enum("context_scaling_method"), [
+            "native", "none-verified", "pi", "ntk-aware", "yarn",
+            "self-extend", "llama3", "mrope", "linear", "other", "unknown", None,
+        ])
+
+    def test_method_enum_accepted_and_bad_value_rejected(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        base = {
+            "id": "acme-long", "type": "model", "name": "ACME long ctx",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "architecture": "dense", "params_b": 7.0,
+            "context_scaling": "yarn factor 4, verified native at 128k",
+            "context_scaling_method": "yarn",
+        }
+        self.write("data/models/acme-long.json", base)
+        ok = self.validate()
+        self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
+
+        bad = dict(base, context_scaling_method="rope-magic-scaling-9000")
+        self.write("data/models/acme-long.json", bad)
+        r = self.validate()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("not in allowed enum", r.stdout)
+
+    def test_both_fields_can_coexist(self):
+        """The two fields are independent: prose detail in one, class in the
+        other. Coexistence is the whole reason for two fields."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/models/acme-long.json", {
+            "id": "acme-long", "type": "model", "name": "ACME long ctx",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "architecture": "dense", "params_b": 7.0,
+            "context_scaling": "mrope, 3D tiling of the frequency grid",
+            "context_scaling_method": "mrope",
+        })
+        r = self.validate()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
+class TestGotchaClassValues(Harness):
+    """Operations / security / privacy / compliance are real gotcha classes and
+    had no home, so records about them had to file themselves under a wrong
+    existing value."""
+
+    def gotcha_enum(self):
+        return json.loads(
+            (ROOT / "schemas" / "gotcha.schema.json").read_text(encoding="utf-8")
+        )["properties"]["class"]["enum"]
+
+    def test_new_classes_added_and_all_existing_kept(self):
+        enum = self.gotcha_enum()
+        for v in ("operations", "security", "privacy", "compliance"):
+            self.assertIn(v, enum)
+        # Every pre-existing value must survive: widening an enum is only
+        # backward compatible if nothing is removed.
+        for v in ("driver", "kernel", "framework", "config", "hardware", "format",
+                  "toolchain", "measurement", "build"):
+            self.assertIn(v, enum)
+
+    def test_new_class_validates(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        for cls in ("operations", "security", "privacy", "compliance"):
+            slug = f"acme-{cls}-gotcha"
+            self.write(f"data/gotchas/{slug}.json", {
+                "id": slug, "type": "gotcha", "name": f"{cls} gotcha",
+                "status": "draft", "confidence": 0.6, "updated": "2026-10-03",
+                "sources": ["acme-spec"], "class": cls, "symptom": "s",
+                "severity": "major",
+            })
+        r = self.validate()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
+class TestEngineTracingFields(Harness):
+    """A deliberate verified negative is currently indistinguishable from
+    'never checked', which is why the observability slice had to abuse prose.
+    tracing_support says what exists; verified_negatively says the absence was
+    actually looked for."""
+
+    def engine_enum(self, field: str):
+        return json.loads(
+            (ROOT / "schemas" / "engine.schema.json").read_text(encoding="utf-8")
+        )["properties"].get(field, {}).get("enum")
+
+    def test_tracing_support_enum_values(self):
+        self.assertEqual(self.engine_enum("tracing_support"),
+                         ["none", "basic", "per-request", "per-phase", "unknown", None])
+
+    def test_verified_negatively_is_a_boolean_field(self):
+        schema = json.loads(
+            (ROOT / "schemas" / "engine.schema.json").read_text(encoding="utf-8"))
+        self.assertEqual(schema["properties"]["verified_negatively"]["type"],
+                         ["boolean", "null"])
+
+    def test_tracing_fields_accepted(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/engines/trtllm.json", {
+            "id": "trtllm", "type": "engine", "name": "TensorRT-LLM",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "tracing_support": "per-phase",
+            "verified_negatively": False,
+        })
+        r = self.validate()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_bad_tracing_enum_rejected(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/engines/trtllm.json", {
+            "id": "trtllm", "type": "engine", "name": "TensorRT-LLM",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "tracing_support": "full-jaeger",
+        })
+        r = self.validate()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("not in allowed enum", r.stdout)
+
+
+class TestSupplyProvenanceFields(Harness):
+    """export_controlled is a bare boolean, so 39 records are correct but
+    indistinguishable from unknown: the mechanism, the licence paragraph and
+    the destination screening all live in notes or nowhere.
+
+    lead_time_weeks:null is likewise overloaded — it means 'nobody publishes it',
+    'instant on-demand', and 'peer-to-peer marketplace' at once.
+    """
+
+    def supply_enum(self, field: str):
+        return json.loads(
+            (ROOT / "schemas" / "supply.schema.json").read_text(encoding="utf-8")
+        )["properties"].get(field, {}).get("enum")
+
+    def test_export_control_fields_are_free_text(self):
+        """The EAR/BIS citation is prose, not an enum: the regime names are not
+        a closed set and a wrong enum value here is a compliance error."""
+        schema = json.loads(
+            (ROOT / "schemas" / "supply.schema.json").read_text(encoding="utf-8"))
+        for f in ("export_control_regime", "export_control_note"):
+            self.assertEqual(schema["properties"][f]["type"], ["string", "null"])
+            self.assertNotIn("enum", schema["properties"][f])
+
+    def test_lead_time_source_enum_values(self):
+        self.assertEqual(self.supply_enum("lead_time_source"),
+                         ["published", "midpoint-inference", "structural-na",
+                          "unknown", None])
+
+    def test_lead_time_basis_is_nullable_string(self):
+        schema = json.loads(
+            (ROOT / "schemas" / "supply.schema.json").read_text(encoding="utf-8"))
+        self.assertEqual(schema["properties"]["lead_time_basis"]["type"],
+                         ["string", "null"])
+
+    def test_supply_fields_accepted(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/supply/acme-cloud.json", {
+            "id": "acme-cloud", "type": "supply", "name": "ACME cloud",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "kind": "cloud", "accelerator_ids": [],
+            "price_usd": None, "availability": "in-stock",
+            "lead_time_weeks": None, "lead_time_source": "structural-na",
+            "lead_time_basis": "on-demand rental; provisioning is minutes, not weeks",
+            "export_controlled": True,
+            "export_control_regime": "EAR 3A090.a, licence exception required for CN destination",
+            "export_control_note": "screened at checkout by destination country and end user",
+        })
+        r = self.validate()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_bad_lead_time_source_rejected(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/supply/acme-cloud.json", {
+            "id": "acme-cloud", "type": "supply", "name": "ACME cloud",
+            "status": "draft", "confidence": 0.5, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "kind": "cloud", "accelerator_ids": [],
+            "lead_time_source": "vibes",
+        })
+        r = self.validate()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("not in allowed enum", r.stdout)
+
+    def test_real_supply_records_still_valid_with_null_lead_time(self):
+        """Pre-existing records with lead_time_weeks:null and no new fields must
+        keep validating — the new fields are optional.
+
+        The budget is raised on purpose: only supply/ and sources/ are copied
+        into the temp repo, so every accelerator reference is unresolvable. This
+        test is about schema validity, not reference debt (which
+        test_real_repo_is_within_its_own_budget covers against the real repo).
+        """
+        for sub in ("supply", "sources"):
+            shutil.copytree(ROOT / "data" / sub, self.tmp / "data" / sub,
+                            dirs_exist_ok=True)
+        r = self.validate("--max-dangling-refs", "100000")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
+class TestPaperVenueTrack(Harness):
+    """ACL-family Findings and EACL papers are UNDER-CLAIMED today: a Findings
+    paper has no honest value in `venue`, and `other` cannot distinguish
+    'published at a second-tier venue' from 'venue not yet known'.
+
+    This field lets a record say which track it appeared in without changing
+    `venue` — which stays untouched so no existing paper record can break.
+    """
+
+    def venue_track_enum(self):
+        return json.loads(
+            (ROOT / "schemas" / "paper.schema.json").read_text(encoding="utf-8")
+        )["properties"].get("venue_track", {}).get("enum")
+
+    def test_venue_track_enum_values(self):
+        self.assertEqual(self.venue_track_enum(),
+                         ["main", "findings", "workshop", "industry", "unknown", None])
+
+    def test_venue_enum_untouched(self):
+        """`venue` must keep every existing value; this is additive only."""
+        venue = json.loads(
+            (ROOT / "schemas" / "paper.schema.json").read_text(encoding="utf-8")
+        )["properties"]["venue"]["enum"]
+        for v in ("acl", "emnlp", "naacl", "arxiv-preprint", "other"):
+            self.assertIn(v, venue)
+
+    def test_venue_track_accepted_and_rejected(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        base = {
+            "id": "acme-findings-paper", "type": "paper", "name": "ACME paper",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "arxiv_id": "2301.00001", "venue": "emnlp",
+            "category": "kv-cache", "venue_track": "findings",
+        }
+        self.write("data/papers/acme-findings-paper.json", base)
+        ok = self.validate()
+        self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
+        bad = dict(base, venue_track="poster")
+        self.write("data/papers/acme-findings-paper.json", bad)
+        r = self.validate()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("not in allowed enum", r.stdout)
+
+    def test_real_paper_records_still_validate(self):
+        """Same shape as the supply test above: papers/ + sources/ only, so the
+        reference budget is irrelevant to what is being asserted here."""
+        for sub in ("papers", "sources"):
+            shutil.copytree(ROOT / "data" / sub, self.tmp / "data" / sub,
+                            dirs_exist_ok=True)
+        r = self.validate("--max-dangling-refs", "100000")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
+class TestMetricExposureRecordType(Harness):
+    """metric_exposure is a new record type: one record per (engine, metric) pair
+    describing how that engine exposes a metric and how to turn it on.
+
+    Verbatim metric names used to live in engine prose, which made them
+    unqueryable. Adding a type is the ten-step checklist in the research-kb-repo
+    skill; these tests are steps 1, 3, 4, 7 and 10, plus the guard for the
+    specific regression that already bit this repo once — a type in DIRS with no
+    TITLES entry, which KeyErrors the Pages deploy script.
+    """
+
+    DIR = "metric-exposures"
+
+    def good_exposure(self, slug: str = "acme-m1", **over) -> dict:
+        rec = {
+            "id": slug, "type": "metric_exposure", "name": "vllm prometheus",
+            "status": "verified", "confidence": 0.8, "updated": "2026-10-03",
+            "sources": ["acme-spec"], "engine_id": "vllm", "metric_name": "vllm:request_success_total",
+            "metric_type": "counter", "unit": "requests",
+            "exposure": "prometheus", "endpoint": "/metrics",
+            "histogram_buckets": None, "labels": ["engine", "model_name"],
+            "enabled_by_default": True, "phase_scoped": False,
+            "verified_negatively": False, "notes": "",
+        }
+        rec.update(over)
+        return rec
+
+    def test_type_is_registered_with_dir_and_title(self):
+        """Step 3, and the KeyError guard. build_site_data.py reads
+        TITLES[t] for every t in TYPES; a type in DIRS but not TITLES crashed the
+        Pages deploy. Both halves are asserted from one registry read so they
+        cannot drift."""
+        sys.path.insert(0, str(TOOLS))
+        from registry import DIRS, TITLES, TYPES
+        self.assertIn("metric_exposure", DIRS)
+        self.assertEqual(DIRS["metric_exposure"], self.DIR)
+        self.assertIn("metric_exposure", TYPES)
+        for t in TYPES:
+            self.assertIn(t, TITLES, f"{t} has no TITLES label")
+            self.assertTrue(TITLES[t], f"{t} has an empty TITLES label")
+
+    def test_every_type_has_a_schema(self):
+        """Step 1."""
+        sys.path.insert(0, str(TOOLS))
+        from registry import TYPES
+        for t in TYPES:
+            p = ROOT / "schemas" / f"{t}.schema.json"
+            self.assertTrue(p.exists(), f"missing schema for {t}")
+            schema = json.loads(p.read_text(encoding="utf-8"))
+            self.assertIs(schema.get("additionalProperties"), False, t)
+
+    def test_data_dir_exists_for_new_type(self):
+        """Step 8: an empty dir vanishes in git, so .gitkeep must be present."""
+        d = ROOT / "data" / self.DIR
+        self.assertTrue(d.is_dir(), f"data/{self.DIR}/ missing")
+        self.assertTrue((d / ".gitkeep").exists(), f"data/{self.DIR}/.gitkeep missing")
+
+    def test_skeleton_template_generates_a_valid_record(self):
+        """Step 4: a skeleton that does not validate is the classic failure —
+        null where the schema requires an enum value, or a missing field."""
+        r = run_tool("new_record.py", "metric_exposure",
+                     "--name", "ACME metric", "--source", "acme-spec", cwd=self.tmp)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.write("data/sources/acme-spec.json", self.good_source())
+        v = self.validate()
+        self.assertEqual(v.returncode, 0, v.stdout + v.stderr)
+
+    def test_engine_reference_resolves(self):
+        """Step 5: metric_exposure.engine_id is a real cross-reference."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/engines/vllm.json", {
+            "id": "vllm", "type": "engine", "name": "vLLM",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"],
+        })
+        self.write(f"data/{self.DIR}/acme-m1.json", self.good_exposure())
+        r = self.validate("--max-dangling-refs", "0")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_dangling_engine_id_is_reported(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write(f"data/{self.DIR}/acme-m1.json",
+                   self.good_exposure(engine_id="ghost-engine"))
+        r = self.validate("--max-dangling-refs", "0")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("is not a record id", r.stdout)
+
+    def test_index_renders_the_new_type_not_blank(self):
+        """Step 7: without a card() branch the record renders with no summary."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write(f"data/{self.DIR}/acme-m1.json", self.good_exposure())
+        r = run_tool("index.py", cwd=self.tmp)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        text = (self.tmp / "docs" / "00-index.md").read_text(encoding="utf-8")
+        self.assertIn("Metric exposures", text)
+        line = [ln for ln in text.splitlines() if "acme-m1" in ln]
+        self.assertEqual(len(line), 1, text)
+        # the summary must carry real content, not just the id
+        self.assertIn("vllm:request_success_total", line[0])
+
+    def test_site_data_build_does_not_keyerror_on_the_new_type(self):
+        """The exact regression: build_site_data.py raised KeyError when a type
+        was added to DIRS without TITLES, and that script is what Pages runs."""
+        for sub in ("sources", self.DIR):
+            d = self.tmp / "data" / sub
+            d.mkdir(parents=True, exist_ok=True)
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write(f"data/{self.DIR}/acme-m1.json", self.good_exposure())
+        r = run_tool("build_site_data.py", "--check", cwd=self.tmp)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertNotIn("KeyError", r.stdout + r.stderr)
+
+    def test_metric_name_enum_rejected_value(self):
+        """Step 1 again, negatively: exposure and metric_type are closed sets."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write(f"data/{self.DIR}/acme-m1.json",
+                   self.good_exposure(metric_type="vibes"))
+        r = self.validate()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("not in allowed enum", r.stdout)
+
+    def test_query_stats_and_gaps_know_the_type(self):
+        """Steps 3/6 from the consumer side: query.py must not blow up on an
+        unknown type, and the type must appear in stats."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write(f"data/{self.DIR}/acme-m1.json", self.good_exposure())
+        s = run_tool("query.py", "stats", cwd=self.tmp)
+        self.assertEqual(s.returncode, 0, s.stdout + s.stderr)
+        self.assertIn("Metric exposures", s.stdout)
+        g = run_tool("query.py", "gaps", cwd=self.tmp)
+        self.assertEqual(g.returncode, 0, g.stdout + g.stderr)
+
+    def test_query_refs_backreference_resolves(self):
+        """Step 6: the typed dict in cmd_refs, or back-references silently
+        resolve to nothing."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/engines/vllm.json", {
+            "id": "vllm", "type": "engine", "name": "vLLM",
+            "status": "verified", "confidence": 0.9, "updated": "2026-10-03",
+            "sources": ["acme-spec"],
+        })
+        self.write(f"data/{self.DIR}/acme-m1.json", self.good_exposure())
+        r = run_tool("query.py", "refs", "engines/vllm", cwd=self.tmp)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("acme-m1", r.stdout)
+
+
+class TestSiteDataCoversEveryType(Harness):
+    """Guards the class of defect that has already cost this repo one deploy:
+    a tool that carries its own per-type tables must not silently skip a type.
+
+    FIELD_META and FACETS in build_site_data.py are hand-maintained dicts keyed
+    by type; a new type missing from them renders as an unlabelled record rather
+    than failing. These tests force the failure instead of the silence.
+    """
+
+    def site_module(self):
+        sys.path.insert(0, str(TOOLS))
+        import build_site_data
+        return build_site_data
+
+    def test_field_meta_covers_every_type(self):
+        from registry import TYPES
+        missing = [t for t in TYPES if t not in self.site_module().FIELD_META]
+        self.assertEqual(missing, [], f"FIELD_META missing types: {missing}")
+
+    def test_ref_labels_cover_every_ref_field(self):
+        from registry import REF_FIELDS
+        labels = self.site_module().REF_LABELS
+        missing = [f for fields in REF_FIELDS.values() for f in fields
+                   if f not in labels and f != "sources"]
+        self.assertEqual(missing, [], f"REF_LABELS missing fields: {missing}")
+
+    def test_registry_tables_agree_with_each_other(self):
+        """TITLES keys == TYPES, no dir collisions, REF_FIELDS keys are types."""
+        sys.path.insert(0, str(TOOLS))
+        from registry import DIRS, REF_FIELDS, TITLES, TYPES
+        self.assertEqual(sorted(TITLES), sorted(TYPES))
+        self.assertEqual(len(set(DIRS.values())), len(DIRS),
+                         "two types share a data directory")
+        for t, fields in REF_FIELDS.items():
+            self.assertIn(t, TYPES, f"REF_FIELDS has unknown type {t}")
+            for f, target in fields.items():
+                self.assertIn(target, (*TYPES, "any"), f"{t}.{f} -> {target}")
+
+    def test_new_record_templates_cover_every_type(self):
+        sys.path.insert(0, str(TOOLS))
+        from registry import TYPES
+        import new_record
+        missing = [t for t in TYPES if t not in new_record.TEMPLATES]
+        self.assertEqual(missing, [], f"TEMPLATES missing types: {missing}")
+
+    def test_build_site_data_runs_against_the_real_repo(self):
+        """--check writes nothing and exercises every type end to end."""
+        r = run_tool("build_site_data.py", "--check", cwd=ROOT)
+        self.assertEqual(r.returncode, 0, r.stdout[-4000:] + r.stderr[-2000:])
+        self.assertNotIn("KeyError", r.stdout + r.stderr)
 
 
 if __name__ == "__main__":

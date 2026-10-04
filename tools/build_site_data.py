@@ -54,6 +54,7 @@ REF_LABELS = {
     "hardware_relevance": "Hardware relevance",
     "native_support": "Native support",
     "emulated_support": "Emulated support",
+    "engine_id": "Engine",
 }
 
 FIELD_META: dict[str, list[tuple[str, str]]] = {
@@ -81,7 +82,10 @@ FIELD_META: dict[str, list[tuple[str, str]]] = {
         ("scheduling", "Scheduling"), ("supported_backends", "Backends"),
         ("supported_formats", "Formats"), ("notable_features", "Notable features"),
         ("hardware_caveats", "Hardware caveats"), ("best_for", "Best for"),
-        ("avoid_for", "Avoid for"), ("docs_url", "Docs"),
+        ("avoid_for", "Avoid for"),
+        ("tracing_support", "Tracing support"),
+        ("verified_negatively", "Verified negatives"),
+        ("docs_url", "Docs"),
     ],
     "quantization": [
         ("scheme", "Scheme"), ("bits", "Bits"),
@@ -114,7 +118,11 @@ FIELD_META: dict[str, list[tuple[str, str]]] = {
         ("accelerator_ids", "Accelerators"), ("channels", "Channels"),
         ("price_usd", "Price (USD)"), ("price_basis", "Price basis"),
         ("availability", "Availability"), ("lead_time_weeks", "Lead time (weeks)"),
+        ("lead_time_source", "Lead time source"),
+        ("lead_time_basis", "Lead time basis"),
         ("export_controlled", "Export controlled"),
+        ("export_control_regime", "Export control regime"),
+        ("export_control_note", "Export control note"),
     ],
     "model": [
         ("family", "Family"), ("vendor", "Vendor"), ("release_year", "Release year"),
@@ -125,14 +133,24 @@ FIELD_META: dict[str, list[tuple[str, str]]] = {
         ("num_layers", "Layers"), ("num_kv_heads", "KV heads"),
         ("head_dim", "Head dim"), ("gqa_ratio", "GQA ratio"),
         ("max_position_embeddings", "Max context"),
-        ("context_scaling", "Context scaling"), ("activation", "Activation"),
+        ("context_scaling", "Context scaling"),
+        ("context_scaling_method", "Context scaling method"),
+        ("activation", "Activation"),
         ("attention_variant", "Attention variant"),
+        ("kv_lora_rank", "KV LoRA rank (MLA)"),
+        ("qk_rope_head_dim", "QK rope head dim"),
+        ("qk_nope_head_dim", "QK nope head dim"),
+        ("v_head_dim", "V head dim"),
+        ("kv_compression", "KV compression"),
+        ("attention_layer_indices", "Attention layer indices"),
+        ("layer_types", "Layer types"),
         ("kv_cache_bytes_per_token", "KV cache (bytes/token)"),
         ("flops_per_token_active", "FLOPs per active token"),
         ("open_weights", "Open weights"), ("license", "License"),
     ],
     "paper": [
-        ("arxiv_id", "arXiv"), ("venue", "Venue"), ("year", "Year"),
+        ("arxiv_id", "arXiv"), ("venue", "Venue"),
+        ("venue_track", "Venue track"), ("year", "Year"),
         ("category", "Category"), ("adoption", "Adoption"),
         ("authors", "Authors"), ("affiliations", "Affiliations"),
         ("problem", "Problem"), ("mechanism", "Mechanism"),
@@ -145,6 +163,32 @@ FIELD_META: dict[str, list[tuple[str, str]]] = {
         ("published", "Published"), ("accessed", "Accessed"),
         ("archived_url", "Archived URL"),
     ],
+    # `compiler` and `metric_exposure` were both added to DIRS without an entry
+    # here. Nothing failed: their records simply rendered with every field
+    # labelled `repo`, `category`, `language` instead of a human label, because
+    # ordered_fields() falls back to key.replace("_", " "). test_field_meta_
+    # covers_every_type now makes that gap a test failure instead of silence.
+    "compiler": [
+        ("repo", "Repo"), ("language", "Language"), ("license", "License"),
+        ("first_release_year", "First release"), ("category", "Category"),
+        ("target_backends", "Target backends"), ("input_languages", "Input languages"),
+        ("output_artifacts", "Output artifacts"),
+        ("compilation_strategy", "Compilation strategy"),
+        ("autotuning", "Autotuning"), ("production_ready", "Production ready"),
+        ("production_evidence", "Production evidence"),
+        ("strengths", "Strengths"), ("weaknesses", "Weaknesses"),
+        ("learning_curve", "Learning curve"),
+        ("compile_time_seconds", "Compile time (s)"),
+    ],
+    "metric_exposure": [
+        ("engine_id", "Engine"), ("metric_name", "Metric name"),
+        ("metric_type", "Metric type"), ("unit", "Unit"),
+        ("exposure", "Exposure"), ("endpoint", "Endpoint"),
+        ("histogram_buckets", "Histogram buckets"), ("labels", "Labels"),
+        ("enabled_by_default", "Enabled by default"),
+        ("phase_scoped", "Phase scoped"),
+        ("verified_negatively", "Verified negatively"),
+    ],
 }
 
 FACETS: dict[str, list[str]] = {
@@ -155,10 +199,13 @@ FACETS: dict[str, list[str]] = {
     "interconnect": ["kind"],
     "benchmark": ["metric", "measured_by"],
     "gotcha": ["class", "severity"],
-    "supply": ["kind", "availability"],
-    "model": ["architecture", "family", "vendor"],
-    "paper": ["category", "venue", "adoption", "year"],
+    "supply": ["kind", "availability", "lead_time_source"],
+    "model": ["architecture", "family", "vendor", "context_scaling_method"],
+    "paper": ["category", "venue", "venue_track", "adoption", "year"],
     "source": ["kind", "publisher"],
+    "compiler": ["category", "license", "learning_curve", "production_ready"],
+    "metric_exposure": ["metric_type", "exposure", "phase_scoped",
+                        "enabled_by_default", "verified_negatively"],
 }
 
 # Long-form fields: render as prose, not as a wrapped scalar.
@@ -167,6 +214,10 @@ PROSE = {
     "notable_features", "symptom", "root_cause", "workaround", "quality_delta",
     "memory_bandwidth_basis", "problem", "mechanism", "speedup_reported",
     "topology", "switching", "methodology", "price_basis", "bandwidth_basis",
+    # New free-text fields. These carry a citation, a mechanism, or a per-layer
+    # description; rendered as a scalar they wrap into unreadable fragments.
+    "kv_compression", "layer_types", "export_control_note", "export_control_regime",
+    "lead_time_basis",
 }
 # Fields holding a single URL.
 URL_FIELDS = {"url", "archived_url", "docs_url", "code_url"}
@@ -272,7 +323,12 @@ def summarise(rec: dict) -> dict:
     elif t == "engine":
         head = ", ".join(g("supported_backends") or []) or "no backends listed"
         tail = [_clip("; ".join(g("best_for") or []), 280)]
-        facets = {"license": _s(g("license"))}
+        if g("tracing_support") and g("tracing_support") != "unknown":
+            tail.append(f"tracing: {g('tracing_support')}")
+        if g("verified_negatively"):
+            tail.append("verified negatives")
+        facets = {"license": _s(g("license")),
+                  "tracing_support": _s(g("tracing_support"))}
     elif t == "quantization":
         head = _s(g("bits")) or "?"
         tail = [_clip(g("quality_delta"), 240)]
@@ -298,7 +354,10 @@ def summarise(rec: dict) -> dict:
         tail = [x for x in tail if x]
         if g("price_basis"):
             tail.append(_clip(g("price_basis"), 80))
-        facets = {"kind": _s(g("kind")), "availability": _s(g("availability"))}
+        if g("export_control_regime"):
+            tail.append(_clip(g("export_control_regime"), 80))
+        facets = {"kind": _s(g("kind")), "availability": _s(g("availability")),
+                  "lead_time_source": _s(g("lead_time_source"))}
     elif t == "model":
         arch = g("architecture") or "?"
         tot, act = g("params_b"), g("active_params_b")
@@ -313,7 +372,11 @@ def summarise(rec: dict) -> dict:
             tail.append(str(g("attention_variant")))
         if _num(g("max_position_embeddings")):
             tail.append(f"{int(g('max_position_embeddings')):,} ctx")
-        facets = {"architecture": str(arch), "family": _s(g("family")), "vendor": _s(g("vendor"))}
+        if _num(g("kv_lora_rank")):
+            tail.append(f"MLA latent {int(g('kv_lora_rank'))}")
+        facets = {"architecture": str(arch), "family": _s(g("family")),
+                  "vendor": _s(g("vendor")),
+                  "context_scaling_method": _s(g("context_scaling_method"))}
     elif t == "paper":
         venue = _s(g("venue")).replace("-preprint", "") or "?"
         arx = f"arXiv:{g('arxiv_id')}" if g("arxiv_id") else "no arXiv"
@@ -325,6 +388,25 @@ def summarise(rec: dict) -> dict:
             tail.append(_clip(g("problem"), 200))
         facets = {"category": _s(g("category")), "venue": _s(g("venue")),
                   "adoption": _s(g("adoption")), "year": _s(g("year"))}
+    elif t == "metric_exposure":
+        head = f"{g('engine_id') or '?'} · {g('metric_type') or '?'}"
+        tail = [x for x in [_s(g("metric_name")), _s(g("exposure")),
+                            _clip(g("unit"), 24)] if x]
+        if g("phase_scoped"):
+            tail.append("phase-scoped")
+        if g("enabled_by_default") is False:
+            tail.append("opt-in")
+        facets = {"metric_type": _s(g("metric_type")), "exposure": _s(g("exposure")),
+                  "phase_scoped": _s(g("phase_scoped")),
+                  "enabled_by_default": _s(g("enabled_by_default")),
+                  "verified_negatively": _s(g("verified_negatively"))}
+    elif t == "compiler":
+        head = _s(g("category"))
+        tail = [_clip(g("learning_curve"), 40), _clip(g("compilation_strategy"), 60)]
+        tail = [x for x in tail if x]
+        facets = {"category": _s(g("category")), "license": _s(g("license")),
+                  "learning_curve": _s(g("learning_curve")),
+                  "production_ready": _s(g("production_ready"))}
     else:
         head = _s(g("kind"))
         tail = [_s(g("publisher"))]
@@ -488,6 +570,12 @@ SEARCH_FIELDS = [
     "supported_formats", "kernels", "channels", "region", "license", "vendor",
     "memory_type", "class", "metric", "kind", "severity", "availability",
     "adoption", "category", "venue", "publisher", "url", "model",
+    # Added with the new fields: a reader types "tracing", "per-phase",
+    # "3A090", "structural-na" or a verbatim metric name, and none of those
+    # were searchable before.
+    "tracing_support", "context_scaling_method", "venue_track", "metric_name",
+    "metric_type", "exposure", "endpoint", "lead_time_source", "labels",
+    "export_control_regime", "kv_compression",
 ]
 NOTE_CAP = 4000  # chars of a field indexed; full text stays on the detail page
 

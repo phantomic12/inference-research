@@ -45,9 +45,6 @@ def card(r: dict) -> str:
     elif t == "flop":
         head = f"{r.get('bound_by')} bound"
         tail = [str(r.get("arithmetic_intensity") or "")]
-    elif t == "engine":
-        head = ", ".join(r.get("supported_backends") or []) or "no backends listed"
-        tail = ["; ".join(r.get("best_for") or [])[:200]]
     elif t == "quantization":
         head = str(r.get("bits") or "?")
         tail = [str(r.get("quality_delta") or "")]
@@ -60,14 +57,6 @@ def card(r: dict) -> str:
     elif t == "gotcha":
         head = f"[{r.get('severity')}] {r.get('class')}"
         tail = [str(r.get("symptom") or "")[:200]]
-    elif t == "supply":
-        bits = [str(x) for x in (r.get("vendor"), r.get("region")) if x]
-        head = " · ".join(bits) or r.get("kind") or ""
-        price = r.get("price_usd")
-        tail = [f"${price:,}" if isinstance(price, (int, float)) else "", str(r.get("availability") or "")]
-        tail = [x for x in tail if x]
-        if r.get("price_basis"):
-            tail.append(str(r["price_basis"])[:80])
     elif t == "model":
         arch = r.get("architecture") or "?"
         tot, act = r.get("params_b"), r.get("active_params_b")
@@ -81,8 +70,43 @@ def card(r: dict) -> str:
             tail.append(f"{r['kv_cache_bytes_per_token']:,.0f} B/token KV")
         if r.get("attention_variant"):
             tail.append(str(r["attention_variant"]))
+        # MLA vs GQA is the KV-cache difference between DeepSeek and GLM-4.5,
+        # and it was invisible until these became queryable fields.
+        if r.get("kv_lora_rank"):
+            tail.append(f"MLA latent {r['kv_lora_rank']}")
+        if r.get("attention_layer_indices"):
+            tail.append(f"attn on {len(r['attention_layer_indices'])} layers")
         if r.get("max_position_embeddings"):
             tail.append(f"{int(r['max_position_embeddings']):,} ctx")
+    elif t == "metric_exposure":
+        head = f"{r.get('engine_id')} · {r.get('metric_type')}"
+        tail = [str(r.get("metric_name") or ""), str(r.get("exposure") or "")]
+        tail = [x for x in tail if x]
+        if r.get("phase_scoped"):
+            tail.append("phase-scoped")
+        if r.get("enabled_by_default") is False:
+            tail.append("opt-in")
+    elif t == "engine":
+        bits = []
+        if r.get("tracing_support") and r["tracing_support"] != "unknown":
+            bits.append(f"tracing: {r['tracing_support']}")
+        if r.get("verified_negatively"):
+            bits.append("verified negatives")
+        extra = " · ".join(bits)
+        head = ", ".join(r.get("supported_backends") or []) or "no backends listed"
+        tail = ["; ".join(r.get("best_for") or [])[:200]]
+        if extra:
+            tail.append(extra)
+    elif t == "supply":
+        bits = [str(x) for x in (r.get("vendor"), r.get("region")) if x]
+        head = " · ".join(bits) or r.get("kind") or ""
+        price = r.get("price_usd")
+        tail = [f"${price:,}" if isinstance(price, (int, float)) else "", str(r.get("availability") or "")]
+        tail = [x for x in tail if x]
+        if r.get("price_basis"):
+            tail.append(str(r["price_basis"])[:80])
+        if r.get("export_control_regime"):
+            tail.append(str(r["export_control_regime"])[:60])
     elif t == "paper":
         venue = (r.get("venue") or "?").replace("-preprint", "")
         arx = f"arXiv:{r['arxiv_id']}" if r.get("arxiv_id") else "no arXiv"

@@ -96,6 +96,16 @@ TEMPLATES = {
         "strengths": [], "weaknesses": [], "learning_curve": None,
         "compile_time_seconds": None, "notes": "",
     },
+    "metric_exposure": {
+        # metric_type and exposure are REQUIRED by the schema, so the skeleton
+        # seeds them with the honest "unknown" value rather than null: a null in
+        # a required field is a validation error, and "unknown" is the answer
+        # that keeps the record valid while claiming nothing.
+        "engine_id": None, "metric_name": None, "metric_type": "unknown",
+        "unit": None, "exposure": "unknown", "endpoint": None,
+        "histogram_buckets": [], "labels": [], "enabled_by_default": None,
+        "phase_scoped": None, "verified_negatively": None, "notes": "",
+    },
 }
 
 

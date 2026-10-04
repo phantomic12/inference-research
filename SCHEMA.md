@@ -7,7 +7,7 @@ JSON Schema per record type lives in `schemas/`. This is the human version.
 | field | type | meaning |
 |---|---|---|
 | `id` | string | stable kebab-case slug, globally unique, matches filename |
-| `type` | enum | accelerator, flop, engine, quantization, interconnect, benchmark, gotcha, source |
+| `type` | enum | accelerator, flop, engine, quantization, interconnect, benchmark, gotcha, supply, model, paper, compiler, metric_exposure, source |
 | `name` | string | display name |
 | `status` | enum | verified (checked against primary source), draft, contested (sources disagree), deprecated |
 | `confidence` | number | 0.0-1.0 |
@@ -70,8 +70,20 @@ One file per operation class, e.g. `flops/prefill-attention.md`.
     hardware_caveats      [string]  free text: "no ROCm on gfx1100", "CUDA-only MoE path"
     best_for              [string]  the workloads it wins, in plain language
     avoid_for             [string]
+    tracing_support       enum      none | basic | per-request | per-phase |
+                       unknown | null. How far tracing goes. per-phase is the
+                       only level that can attribute a value to prefill vs
+                       decode, which is what explains a TTFT-vs-ITL regression
+    verified_negatively   bool|null true only when the ABSENCE of a capability
+                       was actively confirmed against a primary source. Without
+                       it, 'looked and it is not there' and 'never looked' are
+                       the same null, and a verified negative gets recorded as
+                       prose instead of data
     docs_url
     notes
+
+Per-metric detail lives in `metric_exposure` records, one per (engine, metric),
+so a verbatim metric name is queryable instead of buried in `notable_features`.
 
 ## quantization
 
@@ -143,7 +155,14 @@ a contribution with a method, a claim, and an adoption status.
     speedup_reported     string|null   the paper's OWN claim, always with baseline
                          and settings. Never a bare number — a "3x speedup" with
                          no baseline is worse than null
-    adoption             in-production | in-upstream-engine | research-only |
+    venue_track          main | findings | workshop | industry | unknown | null
+                         which track WITHIN the venue. Exists because ACL-family
+                         Findings and EACL were under-claimed: a Findings paper
+                         has no honest value in `venue`, and `other` cannot
+                         separate 'second-tier venue' from 'venue not yet known'.
+                         Additive — `venue` is untouched, so no existing paper
+                         record can break
+    adoption             in-production | in-upstream-engine | research-only
                          abandoned | unknown
     code_url             string|null
     open_weights         bool|null
@@ -176,9 +195,34 @@ completely different hardware.
     num_layers          int|null
     num_kv_heads        int|null
     head_dim            int|null
+    kv_lora_rank        int|null    MLA latent KV rank (DeepSeek-V2/V3: 512). The
+                       width actually cached, in place of num_kv_heads * head_dim.
+                       Null for non-MLA models. This is the field that makes
+                       "DeepSeek vs GLM-4.5 KV cache" a query instead of a note
+    qk_rope_head_dim    int|null    MLA decoupled rotary sub-head (64). Added to
+                       kv_lora_rank for the per-token KV size
+    qk_nope_head_dim    int|null    MLA non-positional QK sub-head (128)
+    v_head_dim          int|null    MLA value sub-head. Equals qk_nope_head_dim in
+                       DeepSeek-V2/V3, which is why MLA caches
+                       (kv_lora_rank + qk_rope_head_dim) and NOT 2 * v_head_dim
+    kv_compression      string|null per-layer KV compression when non-uniform.
+                       V4-style CSA gives selected layers a lower ratio than the
+                       HCA baseline, so one average hides the real peak
+    attention_layer_indices [int|null]  which layers are full attention, for
+                       hybrids. Only these layers carry a KV cache
+    layer_types         [string|null] per-layer type in order; length should
+                       equal num_layers when present
     gqa_ratio           number|null    attention heads / kv heads
     max_position_embeddings int|null
-    context_scaling     string|null   YaRN, NTK-aware, LongRoPE, mrope; null if native
+    context_scaling     string|null   free text, NEVER an enum: 'verified
+                       native', 'mrope', 'llama3 rope scaling' and more are in
+                       100+ existing records and an enum here would break every
+                       one of them at once
+    context_scaling_method  enum|null   native | none-verified | pi | ntk-aware |
+                       yarn | self-extend | llama3 | mrope | linear | other |
+                       unknown | null. The queryable CLASS; keep the detail in
+                       context_scaling. null = never filled in; unknown = looked
+                       and could not establish
     activation          string|null   silu, gelu, swiglu, geglu
     attention_variant   string|null    standard, MLA, GQA, MQA, sliding-window/
                        hybrid, NSA, lightning attention
@@ -197,6 +241,14 @@ all: at 128k context a 70B GQA model and a 671B MoE can differ by an order of
 magnitude in resident KV despite the MoE having fewer active params. Derive it
 from `num_layers * num_kv_heads * head_dim * 2 (K and V) * bytes_per_element`
 and put that arithmetic in `notes`.
+
+That GQA formula does NOT apply to MLA. For an MLA model the per-token KV is
+`num_layers * (kv_lora_rank + qk_rope_head_dim) * bytes_per_element`, which is
+why `kv_lora_rank` and `qk_rope_head_dim` exist as fields: with only
+`head_dim` recorded, the two families cannot be told apart and a reader
+recomputing the figure gets an answer several times too large. When a model has
+per-layer compression, `kv_compression` overrides the uniform formula and the
+derivation in `notes` must show which layers.
 
 `benchmark.model` predates this type and stays free text. Where a benchmark
 names a model that has a record here, note the pairing rather than rewriting
@@ -225,8 +277,28 @@ listing them is still queryable.
     availability          in-stock | lead-time | backorder | allocation-only |
                          discontinued | unknown
     lead_time_weeks       number|null
-    export_controlled     bool|null      restricted by region/entity; name the
-                         regime in notes
+    lead_time_source      enum      published | midpoint-inference |
+                         structural-na | unknown | null. Provenance of the
+                         number above, which is otherwise unreadable when null.
+                         structural-na means the number does not apply because
+                         the channel is structurally instant (on-demand cloud,
+                         peer-to-peer marketplace, spot capacity) — NOT the same
+                         as 'nobody publishes it'
+    lead_time_basis       string|null    why the figure is what it is, or why it
+                         is null: measurement window, quote-date range, and for
+                         structural-na the reason no number applies
+    export_controlled     bool|null      restricted by region/entity. The boolean
+                         ALONE is not actionable — see the two fields below
+    export_control_regime string|null   the actual citation: 'EAR 3A090.a',
+                         'EAR 3E001', 'EAR 744.23 (Entity List)'. Free text on
+                         purpose: these are not a closed set and a wrong enum
+                         value here is a compliance error. Cite the paragraph,
+                         not a country list
+    export_control_note   string|null    the MECHANISM: which licence or
+                         exception, self-declared or verified at sale, whether
+                         destination and end-user screening happens, who signs.
+                         This is what separates 'formally restricted, sold to
+                         anyone with a credit card' from 'genuinely screened'
     notes
 
 Supply records are the most perishable data in this repo. A price without an
@@ -235,8 +307,14 @@ quarter.
 
 ## gotcha
 
-    class                driver | kernel | framework | config | hardware | format |
-                         toolchain | measurement
+    class                driver | kernel | framework | config | hardware | format
+                         toolchain | measurement | build | operations |
+                         security | privacy | compliance
+                         operations = day-to-day running/scaling/housekeeping
+                         (an OOM that only appears at 90% utilisation);
+                         security = attack surface or vulnerability; privacy =
+                         data handling, redaction, what the engine logs about
+                         prompts; compliance = licence, export, regulatory
     affects              [string]   record ids only: engine, accelerator,
                                     quantization or interconnect ids
     concepts             [string]   free-text scope markers that are NOT record
@@ -277,6 +355,44 @@ A compiler, DSL, or code-generation stack for inference — the layer between a 
     learning_curve        low | moderate | high | very-high
     compile_time_seconds  number|null  typical compile time for a single kernel
     notes
+
+## metric_exposure
+
+One record per (engine, metric): how that engine exposes one metric and how to
+turn it on. This type exists because verbatim metric names used to live in
+`engine.notable_features` prose, which made them unqueryable — the single reason
+the observability slice had to write metric inventories as sentences.
+
+    engine_id            string     bare engine record id this metric belongs to
+    metric_name          string     EXACTLY as emitted, namespace and unit suffix
+                       included (vllm:time_to_first_token_seconds). A paraphrase
+                       makes the record useless for detection work
+    metric_type          enum      counter | gauge | histogram | summary |
+                       log-only | unknown | null
+    unit                 string|null   seconds, bytes, requests, tokens, 1 (ratio)
+    exposure             enum      prometheus | opentelemetry | statsd |
+                       http-json | otlp-endpoint | python-api | stdout-log |
+                       callback-hook | file | cli | unknown | null. http-json and
+                       stdout-log are the two a scraper matches by regex and
+                       breaks on a version bump
+    endpoint             string|null   '/metrics', ':9464/metrics'
+    histogram_buckets    [number]|null  bucket upper bounds in the metric's own
+                       unit. A histogram with unknown buckets gives quantiles
+                       that are wrong rather than absent
+    labels               [string]      label keys. Cardinality decides whether
+                       the metric works per-model or only fleet-wide
+    enabled_by_default   bool|null     false means someone has to turn it on —
+                       the most common reason an 'it does not report X' claim
+                       is wrong
+    phase_scoped         bool|null     attributable to prefill or decode
+                       separately rather than to the whole request
+    verified_negatively  bool|null     the ABSENCE was actively confirmed at the
+                       engine version named in notes. Without it, 'checked' and
+                       'never checked' are the same record
+    notes
+
+`metric_type` and `exposure` are required, but nullable, so a generated skeleton
+validates immediately. `new_record.py` seeds both with `unknown`.
 
 ## source
 

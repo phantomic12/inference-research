@@ -97,12 +97,47 @@
         "null"
       ]
     },
+    "lead_time_source": {
+      "enum": [
+        "published",
+        "midpoint-inference",
+        "structural-na",
+        "unknown",
+        null
+      ],
+      "description": "provenance of lead_time_weeks, which is otherwise unreadable when null. published = the vendor or channel states it. midpoint-inference = inferred from two published points. structural-na = the number does not apply because the channel is structurally instant (on-demand cloud rental, peer-to-peer marketplace, spot capacity) — NOT the same as 'nobody publishes it'. unknown = not established.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "lead_time_basis": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "why lead_time_weeks has the value it has, or why it is null: the measurement window, whether it is a quote-date range, and for structural-na the reason no number applies."
+    },
     "export_controlled": {
       "type": [
         "boolean",
         "null"
       ],
-      "description": "true if sale is restricted by region/entity; see notes for the regime"
+      "description": "true if sale is restricted by region/entity. The BOOLEAN ALONE is not enough to act on: name the regime in export_control_regime and the mechanism in export_control_note."
+    },
+    "export_control_regime": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "the actual citation, e.g. 'EAR 3A090.a', 'EAR 3A090.a.1 / 3E001', 'EAR 744.23 (Entity List)', 'EAR 126.18 (military end use)'. Free text on purpose: these are not a closed set, and a wrong enum value here is a compliance error, not a typo. Cite the paragraph, not a country list."
+    },
+    "export_control_note": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "the mechanism: which licence or exception, whether it is self-declared or verified at sale, whether destination and end-user screening happens, and who must sign. This is what distinguishes 'formally restricted, sold to anyone with a credit card' from 'genuinely screened'."
     },
     "notes": {
       "type": "string"

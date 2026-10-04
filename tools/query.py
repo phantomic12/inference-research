@@ -19,7 +19,7 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from registry import DIRS, TITLES, TYPES  # noqa: E402
+from registry import DIRS, REF_FIELDS, TITLES, TYPES  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -142,14 +142,6 @@ def cmd_refs(args) -> None:
     t, r = recs[key]
     bare = key.split("/", 1)[1]
     bare_to_qualified = {i.split("/", 1)[1]: i for i in recs}
-    typed = {
-        "benchmark": ["engine_id", "accelerator_ids", "interconnect_ids", "format_id"],
-        "flop": ["affected_by_hardware"],
-        "quantization": ["native_support", "emulated_support"],
-        "gotcha": ["affects"],
-        "accelerator": ["interconnect"],
-        "supply": ["accelerator_ids"],
-    }.get(t, [])
     print(f"{key}  ({t})")
     print("  cites:")
     for s in r.get("sources") or []:
@@ -157,11 +149,18 @@ def cmd_refs(args) -> None:
         print(f"    [{'ok' if ok else 'MISSING'}] {s}  "
               f"{recs[bare_to_qualified[s]][1].get('name','') if ok else ''}")
     print("  referenced by:")
+    # Back-references are INCOMING, so the field list must come from the OTHER
+    # record's type, not this one's. Reading it off `t` only found records that
+    # cite a record of their own type, which is why benchmark -> engine and
+    # supply -> accelerator back-references were invisible. REF_FIELDS in
+    # registry.py is the single source of truth and covers every type, so a new
+    # record type gets back-references for free rather than needing a second
+    # edit to a hardcoded table here.
     found = False
-    for rid, (_, rr) in sorted(recs.items()):
+    for rid, (tt, rr) in sorted(recs.items()):
         if rid == key:
             continue
-        for f in typed + ["sources"]:
+        for f in list(REF_FIELDS.get(tt, {})) + ["sources"]:
             v = rr.get(f)
             vals = [str(x) for x in v] if isinstance(v, list) else [str(v)] if v else []
             # reference fields hold bare slugs; compare on the bare slug
