@@ -8,7 +8,30 @@ import re
 import sys
 from pathlib import Path
 
-DIST = Path.home() / "inference-research" / "site" / "dist"
+# Resolve dist/ relative to this script, not to $HOME. The old form
+# (Path.home() / "inference-research" / "site" / "dist") happened to be correct
+# on one machine and silently wrong everywhere else: on a CI runner it points at
+# /home/runner/inference-research/site/dist, which does not exist, so every page
+# reads as 0 bytes and the build looks broken when it is fine.
+DIST = Path(__file__).resolve().parent.parent / "dist"
+
+
+def _base() -> str:
+    """Read `base` out of astro.config.mjs rather than duplicating it here.
+
+    If the two ever disagree the verifier would be checking paths the site
+    never emits, and every link would fail for a reason that has nothing to do
+    with the site.
+    """
+    cfg = Path(__file__).resolve().parent.parent / "astro.config.mjs"
+    try:
+        m = re.search(r"base:\s*['\"]([^'\"]*)['\"]", cfg.read_text(encoding="utf-8"))
+        return m.group(1) if m else "/"
+    except OSError:
+        return "/"
+
+
+BASE = _base()
 fails: list[str] = []
 ok = 0
 
@@ -90,31 +113,49 @@ def hrefs(html: str) -> list[str]:
     return re.findall(r'href="(/[^"]*)"', html)
 
 def exists(url: str) -> bool:
+    # Astro writes the configured `base` (/inference-research/) into every href,
+    # but dist/ is rooted at the site root, so the prefix must be stripped before
+    # the path can be looked up on disk. The previous lstrip("/") only handled
+    # the leading slash and left "inference-research/..." in the path, which made
+    # all 78,492 internal links look broken.
     p = url.split("#")[0].split("?")[0]
+    if p.startswith(BASE):
+        p = p[len(BASE):]
+    p = p.lstrip("/")
+    if not p:
+        return (DIST / "index.html").exists()
     if p.endswith("/"):
-        return (DIST / p.lstrip("/") / "index.html").exists()
-    return (DIST / p.lstrip("/")).exists()
+        return (DIST / p / "index.html").exists()
+    return (DIST / p).exists()
+
+
+def rhrefs(html: str, prefix: str) -> list[str]:
+    """Record hrefs with the site `base` stripped, so assertions can be written
+    against root-relative paths (/r/...) regardless of deployment subpath."""
+    bp = BASE if BASE.endswith("/") else BASE + "/"
+    return [h[len(bp):] for h in hrefs(html) if h.startswith(bp + prefix)]
+
 
 # pair 1: benchmark -> its accelerators + engine
 bm = read("r/benchmarks/h100-8gpu-node-loaded-76-percent-of-tdp-measured/index.html")
-bm_links = [h for h in hrefs(bm) if h.startswith("/r/accelerators/") or h.startswith("/r/engines/")]
+bm_links = rhrefs(bm, "r/accelerators/") + rhrefs(bm, "r/engines/")
 check("benchmark page has accelerator/engine links", len(bm_links) > 0, str(bm_links[:3]))
 for l in bm_links[:4]:
     check(f"benchmark -> {l} resolves", exists(l))
 
 # pair 2: gotcha -> the engine it affects
 gh = read("r/gotchas/aiter-gate-skips-rdna3-gfx1100/index.html")
-gh_eng = [h for h in hrefs(gh) if h.startswith("/r/engines/")]
+gh_eng = rhrefs(gh, "r/engines/")
 check("gotcha links an engine", len(gh_eng) > 0, str(gh_eng))
 for l in gh_eng:
     check(f"gotcha -> {l} resolves", exists(l))
-gh_acc = [h for h in hrefs(gh) if h.startswith("/r/accelerators/")]
+gh_acc = rhrefs(gh, "r/accelerators/")
 for l in gh_acc:
     check(f"gotcha -> accelerator {l} resolves", exists(l))
 
 # pair 3: paper -> hardware_relevance, and a paper with none
 pp = read("r/papers/alpaserve/index.html")
-pp_acc = [h for h in hrefs(pp) if h.startswith("/r/accelerators/")]
+pp_acc = rhrefs(pp, "r/accelerators/")
 check("paper -> accelerator links exist", len(pp_acc) > 0, str(pp_acc[:3]))
 for l in pp_acc:
     check(f"paper -> {l} resolves", exists(l))
