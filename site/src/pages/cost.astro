@@ -1,0 +1,240 @@
+---
+import Base from '../layouts/Base.astro';
+import { META, typeUrl } from '../lib/data';
+
+const title = 'Cost per Token';
+const description = 'What does inference actually cost? Join supply prices to benchmark throughput: USD per million output tokens across providers, accelerators, and models.';
+---
+
+<Base title={title} description={description} nav="cost">
+  <main class="wrap" data-pagefind-body>
+    <nav class="breadcrumb">
+      <a href="/">index</a> / <span>cost per token</span>
+    </nav>
+
+    <div class="page-head">
+      <h1>Cost per Token</h1>
+      <p class="sub">
+        Every row joins a <a href={typeUrl('supply')}>supply price</a> to a{' '}
+        <a href={typeUrl('benchmark')}>benchmark throughput</a> figure. The result is USD per
+        million output tokens — the number that decides whether a deployment pays for itself.
+        <strong>2,200x spread</strong> between the cheapest and most expensive option.
+      </p>
+    </div>
+
+    <div class="join-controls" data-cost-controls>
+      <div class="control">
+        <label for="c-concurrency">Concurrency</label>
+        <select id="c-concurrency" data-filter="concurrency">
+          <option value="">all</option>
+          <option value="aggregate">aggregate (fleet)</option>
+          <option value="single-user">single-user</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="c-tier">Price tier</label>
+        <select id="c-tier" data-filter="tier">
+          <option value="">all</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="c-accel">Accelerator</label>
+        <select id="c-accel" data-filter="accelerator">
+          <option value="">all</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="c-provider">Provider</label>
+        <select id="c-provider" data-filter="provider">
+          <option value="">all</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="c-search">Search</label>
+        <input type="search" id="c-search" data-search placeholder="model, provider…" />
+      </div>
+      <span class="control-count" data-count></span>
+    </div>
+
+    <div class="cost-table-wrap">
+      <table class="cost-table" data-cost-table>
+        <thead>
+          <tr>
+            <th class="num">USD/Mtok</th>
+            <th>Concurrency</th>
+            <th>Tier</th>
+            <th>Provider</th>
+            <th>Accelerator</th>
+            <th>Model</th>
+            <th class="num">tok/s/GPU</th>
+            <th class="num">$/GPU-hr</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody data-cost-body>
+          <tr><td colspan="9" class="loading-cell">Loading cost data…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <section class="section">
+      <h2>How to read this</h2>
+      <div class="prose-block">
+        <p>
+          <strong>Aggregate</strong> rows are fleet-average costs: the benchmark measured total
+          output tokens/s across all in-flight requests. <strong>Single-user</strong> rows are what
+          one request sees. These are different populations — never compare an aggregate row to a
+          single-user row.
+        </p>
+        <p>
+          The <strong>tier</strong> column matters as much as the price. Spot and peer-to-peer
+          prices are 2-5x cheaper but can be revoked with minutes' notice. On-demand is the only
+          tier you can build a production SLA on.
+        </p>
+        <p>
+          Every row links to both the <code>supply/</code> and <code>benchmarks/</code> records
+          it was derived from. The join is computed by{' '}
+          <code>tools/cost_per_token.py</code> — no numbers are hand-entered.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    interface CostRow {
+      provider: string;
+      accelerator: string;
+      model: string | null;
+      engine: string | null;
+      metric: string;
+      concurrency: string;
+      gpus_covered: number | null;
+      tok_s_total: number;
+      tok_s_per_gpu: number;
+      usd_per_gpu_hour: number;
+      tier: string;
+      usd_per_mtok: number;
+      supply_ref: string;
+      bench_ref: string;
+      measured_by: string | null;
+      bench_status: string;
+      supply_status: string;
+      reproducible: boolean | null;
+      unit: string;
+    }
+
+    interface CostData {
+      rows: CostRow[];
+      unknown: { bench: string; reason: string }[];
+    }
+
+    let allRows: CostRow[] = [];
+
+    function fmtUsd(n: number): string {
+      if (n < 0.01) return n.toFixed(4);
+      if (n < 1) return n.toFixed(3);
+      if (n < 10) return n.toFixed(2);
+      return n.toFixed(1);
+    }
+
+    function statusBadge(s: string): string {
+      if (s === 'contested') return '<span class="status status-contested">contested</span>';
+      if (s === 'draft') return '<span class="status status-draft">draft</span>';
+      return '';
+    }
+
+    function render(rows: CostRow[]): void {
+      const tbody = document.querySelector('[data-cost-body]');
+      if (!tbody) return;
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No rows match these filters.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(r => `
+        <tr class="cost-row" data-tier="${r.tier}">
+          <td class="num cost-cell">$${fmtUsd(r.usd_per_mtok)}</td>
+          <td>${r.concurrency}</td>
+          <td><span class="tier-tag">${r.tier}</span></td>
+          <td><a href="/r/${r.supply_ref}/">${r.provider}</a></td>
+          <td><a href="/r/accelerators/${r.accelerator}/">${r.accelerator}</a></td>
+          <td>${r.model || '—'}</td>
+          <td class="num">${r.tok_s_per_gpu.toLocaleString()}</td>
+          <td class="num">$${r.usd_per_gpu_hour.toFixed(2)}</td>
+          <td>${statusBadge(r.bench_status)}${statusBadge(r.supply_status)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function applyFilters(): void {
+      const concurrency = (document.querySelector('[data-filter="concurrency"]') as HTMLSelectElement)?.value || '';
+      const tier = (document.querySelector('[data-filter="tier"]') as HTMLSelectElement)?.value || '';
+      const accel = (document.querySelector('[data-filter="accelerator"]') as HTMLSelectElement)?.value || '';
+      const provider = (document.querySelector('[data-filter="provider"]') as HTMLSelectElement)?.value || '';
+      const search = (document.querySelector('[data-search"]') as HTMLInputElement)?.value?.toLowerCase() || '';
+
+      let rows = allRows;
+      if (concurrency) rows = rows.filter(r => r.concurrency === concurrency);
+      if (tier) rows = rows.filter(r => r.tier === tier);
+      if (accel) rows = rows.filter(r => r.accelerator === accel);
+      if (provider) rows = rows.filter(r => r.provider === provider);
+      if (search) {
+        rows = rows.filter(r =>
+          (r.model || '').toLowerCase().includes(search) ||
+          r.provider.toLowerCase().includes(search) ||
+          r.accelerator.toLowerCase().includes(search)
+        );
+      }
+      render(rows);
+      const counter = document.querySelector('[data-count]');
+      if (counter) counter.textContent = `${rows.length.toLocaleString()} of ${allRows.length.toLocaleString()} rows`;
+    }
+
+    function populateSelect(sel: HTMLSelectElement, values: string[]): void {
+      const unique = [...new Set(values)].sort();
+      for (const v of unique) {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = v;
+        sel.appendChild(o);
+      }
+    }
+
+    async function init(): Promise<void> {
+      try {
+        const resp = await fetch('/joined/cost_per_token.json');
+        const data: CostData = await resp.json();
+        allRows = data.rows;
+
+        // Populate filter dropdowns
+        const tierSel = document.querySelector('[data-filter="tier"]') as HTMLSelectElement;
+        const accelSel = document.querySelector('[data-filter="accelerator"]') as HTMLSelectElement;
+        const provSel = document.querySelector('[data-filter="provider"]') as HTMLSelectElement;
+        if (tierSel) populateSelect(tierSel, allRows.map(r => r.tier));
+        if (accelSel) populateSelect(accelSel, allRows.map(r => r.accelerator));
+        if (provSel) populateSelect(provSel, allRows.map(r => r.provider));
+
+        render(allRows);
+        const counter = document.querySelector('[data-count]');
+        if (counter) counter.textContent = `${allRows.length.toLocaleString()} rows`;
+
+        // Wire up filters
+        document.querySelectorAll('[data-filter]').forEach(el => {
+          el.addEventListener('change', applyFilters);
+        });
+        const searchInput = document.querySelector('[data-search]') as HTMLInputElement;
+        if (searchInput) {
+          let t: number | undefined;
+          searchInput.addEventListener('input', () => {
+            window.clearTimeout(t);
+            t = window.setTimeout(applyFilters, 150) as unknown as number;
+          });
+        }
+      } catch (e) {
+        const tbody = document.querySelector('[data-cost-body]');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Failed to load cost data. Run <code>python tools/build_joined_views.py</code>.</td></tr>';
+      }
+    }
+
+    init();
+  </script>
+</Base>

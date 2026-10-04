@@ -42,12 +42,16 @@ const draft = META.status.draft ?? 0;
           ))}
         </nav>
         <nav class="nav" aria-label="Views">
+          <a href="/cost/" aria-current={nav === 'cost' ? 'page' : undefined}>Cost</a>
+          <a href="/compat/" aria-current={nav === 'compat' ? 'page' : undefined}>Compat</a>
+          <a href="/roofline/" aria-current={nav === 'roofline' ? 'page' : undefined}>Roofline</a>
           <a href="/docs/" aria-current={nav === 'docs' ? 'page' : undefined}>Docs</a>
           <a href="/compare/" aria-current={nav === 'compare' ? 'page' : undefined}>Compare</a>
           <a href="/graph/" aria-current={nav === 'graph' ? 'page' : undefined}>Graph</a>
           <a href="/search/" aria-current={nav === 'search' ? 'page' : undefined}>Search</a>
         </nav>
         <span class="masthead-spacer"></span>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">◐</button>
         <nav class="nav nav-provenance" aria-label="Provenance">
           <a href={typeUrl('source')} title={`${META.counts.source} cited sources`}>
             Sources ({META.counts.source})
@@ -83,7 +87,26 @@ const draft = META.status.draft ?? 0;
         </footer>
 
     <script>
-          // Masthead quick search, sharing the Pagefind-backed module with /search/
+      // Theme toggle: respects prefers-color-scheme, stores override in localStorage
+      (function() {
+        const btn = document.getElementById('theme-toggle');
+        const stored = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = stored || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+        if (btn) {
+          btn.addEventListener('click', function() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+          });
+        }
+      })();
+    </script>
+
+    <script>
+      // Masthead quick search, sharing the Pagefind-backed module with /search/
           // so both rank and filter identically. The index is built after
           // `astro build`, so the box reports that plainly when it is missing (dev).
           import { escapeHtml, highlight, queryTerms, runSearch } from '../lib/search';

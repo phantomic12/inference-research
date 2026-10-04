@@ -1,0 +1,257 @@
+---
+import Base from '../layouts/Base.astro';
+import { META, typeUrl } from '../lib/data';
+
+const title = 'Roofline Explorer';
+const description = 'Which hardware property does each flop class actually demand? Join accelerator specs to flop arithmetic intensity: ridge points, crossovers, and the knob that moves each class.';
+---
+
+<Base title={title} description={description} nav="roofline">
+  <main class="wrap" data-pagefind-body>
+    <nav class="breadcrumb">
+      <a href="/">index</a> / <span>roofline</span>
+    </nav>
+
+    <div class="page-head">
+      <h1>Roofline Explorer</h1>
+      <p class="sub">
+        Every <a href={typeUrl('flop')}>flop record</a> carries an arithmetic intensity and a{' '}
+        <code>bound_by</code> field. Every <a href={typeUrl('accelerator')}>accelerator record</a>{' '}
+        carries peak FLOPS and memory bandwidth. Join them and the ridge point — where a part
+        crosses from memory-bound to compute-bound — falls out as{' '}
+        <code>1000 × TFLOPS ÷ GB/s</code>. That number decides which hardware property actually
+        matters for each workload.
+      </p>
+    </div>
+
+    <div class="join-controls" data-roof-controls>
+      <div class="control">
+        <label for="r-bound">Bound by</label>
+        <select id="r-bound" data-filter="bound_by">
+          <option value="">all</option>
+          <option value="memory">memory</option>
+          <option value="compute">compute</option>
+          <option value="interconnect">interconnect</option>
+          <option value="both">both</option>
+          <option value="launch_overhead">launch overhead</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="r-vendor">Vendor</label>
+        <select id="r-vendor" data-filter="vendor">
+          <option value="">all</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="r-search">Search</label>
+        <input type="search" id="r-search" data-search placeholder="class, accelerator…" />
+      </div>
+      <span class="control-count" data-count></span>
+    </div>
+
+    <section class="section" style="margin-top:0">
+      <h2>Accelerator ridge points</h2>
+      <p class="hint">Ridge = 1000 × dense TFLOPS ÷ memory bandwidth (GB/s). Higher is better — it means the part stays memory-bound at larger batch sizes.</p>
+      <div class="table-scroll">
+        <table class="roof-table" data-roof-accel>
+          <thead>
+            <tr>
+              <th>Accelerator</th>
+              <th class="num">VRAM</th>
+              <th class="num">Bandwidth</th>
+              <th class="num">Dense TFLOPS</th>
+              <th class="num">Ridge (flop/byte)</th>
+              <th class="num">FP8 TFLOPS</th>
+              <th class="num">FP8 Ridge</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody data-roof-accel-body>
+            <tr><td colspan="8" class="loading-cell">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Flop classes by bound</h2>
+      <p class="hint">Each class's arithmetic intensity and the knob that moves it. Sorted by bound type.</p>
+      <div class="table-scroll">
+        <table class="roof-table" data-roof-flop>
+          <thead>
+            <tr>
+              <th>Class</th>
+              <th>Bound by</th>
+              <th>Arithmetic intensity</th>
+              <th>Scales with</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody data-roof-flop-body>
+            <tr><td colspan="5" class="loading-cell">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>How to use this</h2>
+      <div class="prose-block">
+        <p>
+          <strong>Memory-bound classes</strong> (decode GEMM, decode attention, MoE experts, KV transfer)
+          are limited by memory bandwidth. The ridge tells you the batch size at which the part
+          becomes compute-bound — below it, you are buying bandwidth, not FLOPS.
+        </p>
+        <p>
+          <strong>Compute-bound classes</strong> (prefill attention, reranking, batch encoding, diffusion)
+          are limited by tensor-core FLOPS. The ridge tells you the context length at which attention
+          becomes compute-bound — above it, you are buying FLOPS.
+        </p>
+        <p>
+          <strong>Interconnect-bound classes</strong> (MoE routing, TP all-reduce, KV transfer) are limited
+          by link bandwidth. No ridge point applies — the cost is in the network, not the compute.
+        </p>
+        <p>
+          Every accelerator and flop class links to its record page. The ridge computation is done by{' '}
+          <code>tools/build_joined_views.py</code> from the records' own FLOPS and bandwidth figures.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    interface RoofData {
+      accelerators: {
+        rid: string;
+        name: string;
+        status: string;
+        vendor: string;
+        architecture: string;
+        vram_gb: number | null;
+        memory_type: string | null;
+        memory_bandwidth_gbps: number;
+        dense_tflops: number;
+        fp8_tflops: number;
+        ridge: number;
+        fp8_ridge: number | null;
+        tdp_w: number | null;
+      }[];
+      flop_classes: {
+        rid: string;
+        name: string;
+        class: string | null;
+        bound_by: string | null;
+        arithmetic_intensity: string | null;
+        scales_with: string | null;
+        status: string;
+      }[];
+    }
+
+    let roofData: RoofData | null = null;
+
+    function statusBadge(s: string): string {
+      if (s === 'contested') return '<span class="status status-contested">contested</span>';
+      if (s === 'draft') return '<span class="status status-draft">draft</span>';
+      return '';
+    }
+
+    function renderAccelerators(): void {
+      const tbody = document.querySelector('[data-roof-accel-body]');
+      if (!tbody || !roofData) return;
+
+      const vendorFilter = (document.querySelector('[data-filter="vendor"]') as HTMLSelectElement)?.value || '';
+      const search = (document.querySelector('[data-search"]') as HTMLInputElement)?.value?.toLowerCase() || '';
+
+      let rows = roofData.accelerators;
+      if (vendorFilter) rows = rows.filter(r => r.vendor === vendorFilter);
+      if (search) rows = rows.filter(r =>
+        r.name.toLowerCase().includes(search) ||
+        r.architecture.toLowerCase().includes(search)
+      );
+
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td><a href="/r/${r.rid}/">${r.name}</a></td>
+          <td class="num">${r.vram_gb ?? '—'}</td>
+          <td class="num">${r.memory_bandwidth_gbps.toLocaleString()}</td>
+          <td class="num">${r.dense_tflops.toLocaleString()}</td>
+          <td class="num ridge-cell">${r.ridge.toFixed(1)}</td>
+          <td class="num">${r.fp8_tflops ? r.fp8_tflops.toLocaleString() : '—'}</td>
+          <td class="num">${r.fp8_ridge ? r.fp8_ridge.toFixed(1) : '—'}</td>
+          <td>${statusBadge(r.status)}</td>
+        </tr>
+      `).join('');
+
+      const counter = document.querySelector('[data-count]');
+      if (counter) counter.textContent = `${rows.length} accelerators`;
+    }
+
+    function renderFlopClasses(): void {
+      const tbody = document.querySelector('[data-roof-flop-body]');
+      if (!tbody || !roofData) return;
+
+      const boundFilter = (document.querySelector('[data-filter="bound_by"]') as HTMLSelectElement)?.value || '';
+      const search = (document.querySelector('[data-search"]') as HTMLInputElement)?.value?.toLowerCase() || '';
+
+      let rows = roofData.flop_classes;
+      if (boundFilter) rows = rows.filter(r => r.bound_by === boundFilter);
+      if (search) rows = rows.filter(r =>
+        (r.class || '').toLowerCase().includes(search) ||
+        (r.name || '').toLowerCase().includes(search)
+      );
+
+      // Sort: memory first, then compute, then interconnect, then both, then launch_overhead
+      const order: Record<string, number> = { memory: 0, compute: 1, interconnect: 2, both: 3, launch_overhead: 4 };
+      rows.sort((a, b) => (order[a.bound_by || ''] ?? 99) - (order[b.bound_by || ''] ?? 99));
+
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td><a href="/r/${r.rid}/">${r.class || r.name}</a></td>
+          <td><span class="bound-tag bound-${r.bound_by}">${r.bound_by || '—'}</span></td>
+          <td class="ai-cell">${r.arithmetic_intensity ? `<code>${r.arithmetic_intensity}</code>` : '—'}</td>
+          <td>${r.scales_with || '—'}</td>
+          <td>${statusBadge(r.status)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function populateVendorFilter(): void {
+      if (!roofData) return;
+      const sel = document.querySelector('[data-filter="vendor"]') as HTMLSelectElement;
+      const vendors = [...new Set(roofData.accelerators.map(r => r.vendor).filter(Boolean))].sort();
+      for (const v of vendors) {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = v;
+        sel.appendChild(o);
+      }
+    }
+
+    async function init(): Promise<void> {
+      try {
+        const resp = await fetch('/joined/roofline.json');
+        roofData = await resp.json();
+        populateVendorFilter();
+        renderAccelerators();
+        renderFlopClasses();
+        document.querySelectorAll('[data-filter]').forEach(el => {
+          el.addEventListener('change', () => { renderAccelerators(); renderFlopClasses(); });
+        });
+        const searchInput = document.querySelector('[data-search]') as HTMLInputElement;
+        if (searchInput) {
+          let t: number | undefined;
+          searchInput.addEventListener('input', () => {
+            window.clearTimeout(t);
+            t = window.setTimeout(() => { renderAccelerators(); renderFlopClasses(); }, 150) as unknown as number;
+          });
+        }
+      } catch (e) {
+        document.querySelectorAll('[data-roof-accel-body], [data-roof-flop-body]').forEach(tbody => {
+          if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Failed to load roofline data. Run <code>python tools/build_joined_views.py</code>.</td></tr>';
+        });
+      }
+    }
+
+    init();
+  </script>
+</Base>

@@ -33,3 +33,13 @@ if (!existsSync(payload)) {
   console.error('[site] build_site_data.py ran but produced no site/src/data/meta.json');
   process.exit(1);
 }
+
+// Also build joined-view data (cost-per-token, compatibility, roofline)
+const joinedScript = resolve(here, '../../tools/build_joined_views.py');
+if (existsSync(joinedScript)) {
+  for (const py of candidates) {
+    const res = spawnSync(py, [joinedScript], { stdio: 'inherit', cwd: resolve(here, '../..') });
+    if (res.error) continue;
+    if (res.status === 0) break;
+  }
+}

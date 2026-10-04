@@ -1,0 +1,214 @@
+---
+import Base from '../layouts/Base.astro';
+import { META, typeUrl } from '../lib/data';
+
+const title = 'Model × Engine Compatibility';
+const description = 'Which inference engine supports which model architecture? A 14-family × 8-engine matrix built from the repo\'s own registry records.';
+---
+
+<Base title={title} description={description} nav="compat">
+  <main class="wrap" data-pagefind-body>
+    <nav class="breadcrumb">
+      <a href="/">index</a> / <span>compatibility</span>
+    </nav>
+
+    <div class="page-head">
+      <h1>Model × Engine Compatibility</h1>
+      <p class="sub">
+        124 <a href={typeUrl('model')}>model records</a> classified into 14 architecture families,
+        joined to 8 <a href={typeUrl('engine')}>engine records</a>. Each cell cites the registry
+        record that establishes it. <code>?</code> means no record states it — that is a real answer.
+      </p>
+    </div>
+
+    <div class="join-controls" data-compat-controls>
+      <div class="control">
+        <label for="cm-family">Family</label>
+        <select id="cm-family" data-filter="family">
+          <option value="">all families</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="cm-engine">Engine</label>
+        <select id="cm-engine" data-filter="engine">
+          <option value="">all engines</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="cm-status">Cell status</label>
+        <select id="cm-status" data-filter="cell">
+          <option value="">all</option>
+          <option value="Y">supported (Y)</option>
+          <option value="Y*">supported with constraint (Y*)</option>
+          <option value="N">not supported (N)</option>
+          <option value="?">unknown (?)</option>
+          <option value="partial">partial</option>
+        </select>
+      </div>
+      <span class="control-count" data-count></span>
+    </div>
+
+    <div class="compat-matrix-wrap">
+      <table class="compat-matrix" data-compat-table>
+        <thead>
+          <tr>
+            <th>Family</th>
+            <th data-engine-header></th>
+          </tr>
+        </thead>
+        <tbody data-compat-body>
+          <tr><td colspan="9" class="loading-cell">Loading compatibility data…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <section class="section">
+      <h2>Legend</h2>
+      <div class="legend-grid">
+        <div class="legend-item"><span class="cell-y">Y</span> A record names this architecture family as supported.</div>
+        <div class="legend-item"><span class="cell-ystar">Y*</span> Supported but the record attaches a constraint.</div>
+        <div class="legend-item"><span class="cell-n">N</span> A record explicitly excludes it, or the model's registration is absent from a registry that otherwise enumerates its neighbours.</div>
+        <div class="legend-item"><span class="cell-partial">partial</span> Some architectures in the family are supported, others are not.</div>
+        <div class="legend-item"><span class="cell-unknown">?</span> No record states this. The engine may support it, but the repo has no evidence.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Models by family</h2>
+      <div data-family-list>
+        <p class="loading-cell">Loading…</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    interface CompatData {
+      families: string[];
+      engines: string[];
+      matrix: Record<string, string[]>;
+      family_models: Record<string, { rid: string; name: string; status: string; architecture: string; attention_variant: string }[]>;
+      engine_info: Record<string, { rid: string; name: string; status: string; license: string | null; supported_backends: string[]; best_for: string[]; avoid_for: string[] }>;
+    }
+
+    let compatData: CompatData | null = null;
+
+    function cellClass(cell: string): string {
+      if (cell === 'Y') return 'cell-y';
+      if (cell === 'Y*') return 'cell-ystar';
+      if (cell === 'N') return 'cell-n';
+      if (cell === '?') return 'cell-unknown';
+      if (cell === 'partial') return 'cell-partial';
+      return 'cell-unknown';
+    }
+
+    function renderMatrix(): void {
+      const tbody = document.querySelector('[data-compat-body]');
+      const thead = document.querySelector('[data-compat-table] thead tr');
+      if (!tbody || !thead || !compatData) return;
+
+      // Set engine headers
+      const engines = compatData.engines;
+      thead.innerHTML = '<th>Family</th>' + engines.map(e =>
+        `<th><a href="/r/${compatData!.engine_info[e]?.rid ?? ''}/">${compatData!.engine_info[e]?.name ?? e}</a></th>`
+      ).join('');
+
+      // Set rows
+      const familyFilter = (document.querySelector('[data-filter="family"]') as HTMLSelectElement)?.value || '';
+      const engineFilter = (document.querySelector('[data-filter="engine"]') as HTMLSelectElement)?.value || '';
+      const cellFilter = (document.querySelector('[data-filter="cell"]') as HTMLSelectElement)?.value || '';
+
+      let rows = compatData.families;
+      if (familyFilter) rows = rows.filter(f => f === familyFilter);
+
+      let engineCols = engines;
+      if (engineFilter) engineCols = engineCols.filter(e => e === engineFilter);
+
+      tbody.innerHTML = rows.map(family => {
+        const cells = compatData!.matrix[family] || [];
+        const visibleCells = engineCols.map(e => {
+          const idx = engines.indexOf(e);
+          const cell = cells[idx] || '?';
+          if (cellFilter) {
+            if (cellFilter === 'Y' && cell !== 'Y') return '';
+            if (cellFilter === 'Y*' && cell !== 'Y*') return '';
+            if (cellFilter === 'N' && cell !== 'N') return '';
+            if (cellFilter === '?' && cell !== '?') return '';
+            if (cellFilter === 'partial' && cell !== 'partial') return '';
+          }
+          return `<td class="${cellClass(cell)}" title="${family} × ${e}: ${cell}">${cell}</td>`;
+        });
+        if (cellFilter && visibleCells.every(c => c === '')) return '';
+        return `<tr><th><a href="/model/?family=${family}">${family}</a></th>${visibleCells.join('')}</tr>`;
+      }).join('');
+
+      // Update count
+      const count = tbody.querySelectorAll('tr').length;
+      const counter = document.querySelector('[data-count]');
+      if (counter) counter.textContent = `${count} families`;
+    }
+
+    function renderFamilyList(): void {
+      const container = document.querySelector('[data-family-list]');
+      if (!container || !compatData) return;
+
+      container.innerHTML = compatData.families.map(family => {
+        const models = compatData!.family_models[family] || [];
+        if (!models.length) return '';
+        return `
+          <div class="family-group">
+            <h3>${family} <span class="n">(${models.length})</span></h3>
+            <div class="family-models">
+              ${models.map(m => `
+                <a class="model-chip" href="/r/${m.rid}/" data-status="${m.status}">
+                  ${m.name}
+                  ${m.status === 'contested' ? '<span class="status status-contested">contested</span>' : ''}
+                  ${m.status === 'draft' ? '<span class="status status-draft">draft</span>' : ''}
+                </a>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function populateFilters(): void {
+      if (!compatData) return;
+      const famSel = document.querySelector('[data-filter="family"]') as HTMLSelectElement;
+      const engSel = document.querySelector('[data-filter="engine"]') as HTMLSelectElement;
+      if (famSel) {
+        for (const f of compatData.families) {
+          const o = document.createElement('option');
+          o.value = f;
+          o.textContent = f;
+          famSel.appendChild(o);
+        }
+      }
+      if (engSel) {
+        for (const e of compatData.engines) {
+          const o = document.createElement('option');
+          o.value = e;
+          o.textContent = compatData!.engine_info[e]?.name ?? e;
+          engSel.appendChild(o);
+        }
+      }
+    }
+
+    async function init(): Promise<void> {
+      try {
+        const resp = await fetch('/joined/compatibility.json');
+        compatData = await resp.json();
+        populateFilters();
+        renderMatrix();
+        renderFamilyList();
+        document.querySelectorAll('[data-filter]').forEach(el => {
+          el.addEventListener('change', renderMatrix);
+        });
+      } catch (e) {
+        const tbody = document.querySelector('[data-compat-body]');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Failed to load compatibility data. Run <code>python tools/build_joined_views.py</code>.</td></tr>';
+      }
+    }
+
+    init();
+  </script>
+</Base>

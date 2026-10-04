@@ -58,6 +58,9 @@ CASES = [
     ("compare/index.html", ["Compare"]),
     ("graph/index.html", ["Cross-reference graph"]),
     ("search/index.html", ["Search"]),
+    ("cost/index.html", ["Cost per Token", "USD/Mtok", "Concurrency"]),
+    ("compat/index.html", ["Model", "Engine", "Compatibility", "Family"]),
+    ("roofline/index.html", ["Roofline", "Ridge", "Bound by"]),
 ]
 for path, needles in CASES:
     html = read(path)
