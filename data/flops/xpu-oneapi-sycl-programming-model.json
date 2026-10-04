@@ -1,0 +1,15 @@
+{
+  "id": "xpu-oneapi-sycl-programming-model",
+  "type": "flop",
+  "name": "oneAPI/Level Zero/SYCL Programming Model: Intel-Specific Kernel Optimization",
+  "class": "custom_kernel",
+  "bound_by": "compute",
+  "scales_with": ["work_group_size", "sub_group_size", "vector_width"],
+  "affected_by_hardware": ["intel-arc-pro-b60", "intel-arc-pro-b70", "intel-arc-b580", "xpu-intel-dc-gpu-max-1550", "xpu-intel-dc-gpu-flex-170"],
+  "workarounds": ["Use SYCL sub-groups for warp-level primitives", "Use oneDNN for optimized GEMM kernels", "Use Level Zero for fine-grained control over Intel GPU memory and compute"],
+  "notes": "Intel's oneAPI programming model consists of three layers: (1) SYCL (Data Parallel C++) - a C++17-based single-source heterogeneous programming model; (2) oneAPI Libraries (oneDNN, oneMKL, oneDPL) - optimized domain-specific libraries; (3) Level Zero - a low-level API for direct control over Intel GPUs. What makes an Intel-specific optimization possible that is not portable to CUDA: (a) SYCL sub-groups map directly to Intel's Xe sub-group architecture (16-wide SIMD on Xe-LP, 32-wide on Xe-HPG), enabling warp-level primitives that are not available in standard CUDA C++; (b) oneDNN Graph API can fuse operations into a single optimized graph that is specific to Intel's Xe architecture; (c) Level Zero provides explicit control over Intel GPU memory pools, compute units, and sub-device partitioning that has no CUDA equivalent; (d) the SYCL runtime JIT-compiles kernels for the specific Intel GPU architecture at runtime, enabling architecture-specific optimizations that are not possible with pre-compiled CUDA binaries. The llama.cpp SYCL backend uses oneDNN as its default GEMM library since 2024.8, which provides optimized matrix multiplication kernels for Intel GPUs. The oneAPI 2026.1 release improved SYCL build performance 3.1x (Arc B570: pp 1331 vs 434 t/s vs 2025.3). Intel-specific optimizations that are NOT portable to CUDA: sub-group shuffles, oneDNN graph fusion, Level Zero memory pool control, and SYCL JIT architecture-specific kernel generation.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": ["xpu-onednn-github-readme", "xpu-llamacpp-sycl-docs", "src5-intel-level-zero-spec"]
+}

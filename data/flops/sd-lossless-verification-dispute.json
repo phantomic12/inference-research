@@ -1,0 +1,28 @@
+{
+  "id": "sd-lossless-verification-dispute",
+  "type": "flop",
+  "name": "Speculative decoding losslessness dispute: lossy verification rewrites the decoding distribution",
+  "class": "speculative_verify",
+  "arithmetic_intensity": "The theoretical guarantee of speculative decoding (Leviathan et al. 2023, Chen et al. 2023) is that modified rejection sampling preserves the target distribution EXACTLY - this is the 'lossless' property. EAGLE-2 claims to be a 'lossless acceleration algorithm' that 'ensures that the distribution of the generated text remains unchanged.' However, arXiv 2607.26627 ('Revisiting Lossy Verification in Speculative Decoding') directly challenges this: 'lossy verification schemes... silently rewrite the decoding distribution, and the resulting acceleration can come at the cost of unstable, sometimes severely degraded generation quality.' The paper unifies existing methods into two categories: (1) truncation-based verification - 'performance can degrade significantly compared to the true truncation sampling baseline due to distributional distortion'; (2) collaborative verification - 'well-designed relaxation principles, namely overshoot suppression and supervision quality, matter far more than the linear interpolation between draft and target.' The dispute is about whether PRACTICAL implementations achieve the theoretical lossless guarantee. The theoretical guarantee requires exact modified rejection sampling; any relaxation (typical acceptance, truncation, collaborative verification) breaks the guarantee.",
+  "bound_by": "memory",
+  "scales_with": [
+    "acceptance_scheme (strict rejection sampling = lossless; typical acceptance = lossy)",
+    "draft_model_quality (better draft = fewer rejections = less distributional distortion)",
+    "verification_strategy (truncation vs collaborative - different failure modes)"
+  ],
+  "affected_by_hardware": [],
+  "workarounds": [
+    "Use strict modified rejection sampling (not typical acceptance) when losslessness is required",
+    "For lossy methods, measure quality degradation on task-specific benchmarks before deployment",
+    "Prefer methods with well-calibrated draft models (EAGLE-2's confidence scores approximate acceptance rates)",
+    "Consider n-gram/lookahead methods which are exact (no distributional distortion) but have lower acceptance rates"
+  ],
+  "notes": "The losslessness dispute is UNRESOLVED and important. The theoretical foundation (Leviathan et al.) proves that modified rejection sampling is distribution-preserving. EAGLE-2 claims to implement this correctly and thus be 'lossless.' The lossy verification paper (arXiv 2607.26627) shows that PRACTICAL lossy verification methods (which relax strict rejection sampling for speed) DO degrade quality, and that the degradation can be severe. The key question for practitioners: is your implementation doing exact modified rejection sampling, or has it been relaxed? Medusa's typical acceptance scheme is explicitly lossy. EAGLE-2 claims to be lossless but the lossy verification paper suggests that even subtle implementation details can introduce distributional distortion. The safest approach: if losslessness is required, use strict rejection sampling and verify output quality empirically. If some quality degradation is acceptable, lossy methods can provide higher speedups.",
+  "status": "contested",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "sd-eagle2-paper",
+    "ev-lossy-verification-speculative-decoding"
+  ]
+}

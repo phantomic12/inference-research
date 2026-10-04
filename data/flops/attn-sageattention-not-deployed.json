@@ -1,0 +1,32 @@
+{
+  "id": "attn-sageattention-not-deployed",
+  "type": "flop",
+  "name": "SageAttention is research-only: absent from vLLM and SGLang LLM serving paths",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "SageAttention is a quantization-based attention optimization that is NOT deployed in production engines. It is absent from the vLLM source tree and in SGLang it appears only under multimodal_gen, not the LLM serving path. SageAttention quantizes attention computations to int8/fp8 to reduce compute cost, but it is research-only. The key distinction: SageAttention is not in vLLM (absent from the tree), not in SGLang's LLM path (only in multimodal_gen), and not in any production serving engine. This is a verified fact from source code inspection, not a README claim.",
+  "bound_by": "compute",
+  "scales_with": [
+    "context_length",
+    "batch_size",
+    "precision (int8/fp8 quantization)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-b200"
+  ],
+  "workarounds": [
+    "Use FA-2/FA-3/FA-4 for production attention kernels",
+    "Use FlashMLA for MLA models on Blackwell",
+    "Use FlashInfer for customizable attention with JIT compilation"
+  ],
+  "notes": "SageAttention is research-only. It is NOT in vLLM (absent from the tree). In SGLang, it appears only under multimodal_gen, not the LLM serving path. This is verified from source code, not from README claims. The practical implication: do not expect SageAttention to be available in production serving engines. For quantized attention, use FA-3's FP8 path on Hopper or FA-4's FP8 path on Blackwell, or FlashMLA's fp8/fp4 KV cache on Blackwell. Sources: vLLM GitHub, SGLang GitHub, SageAttention paper.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "attn-flashattention-3-paper",
+    "attn-flashattention-4-paper",
+    "kern-flashmla-github"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "alt-rebellions-chiplet-mesh",
+  "type": "flop",
+  "name": "Rebellions Rebel100: 4-chiplet UCIe mesh and predictive DMA for inference",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Rebel100 uses 4 chiplets connected via UCIe-Advanced mesh at 1 TB/s per bidirectional channel at 11 ns latency. The four chiplets present as one virtual die with no software-visible boundary. 144 GB HBM3E at 4.8 TB/s. The predictive DMA engine enables 2.7 TB/s effective bandwidth for KV data prefetch on long-context decode. The inter-chiplet link, not the memory, is the architectural story — 11 ns is roughly a register-to-register hop.",
+  "bound_by": "memory",
+  "scales_with": [
+    "hbm3e_bandwidth (4.8 TB/s, 144 GB capacity)",
+    "ucie_mesh_bandwidth (1 TB/s per channel, 11 ns latency)",
+    "predictive_dma (2.7 TB/s effective for KV prefetch)",
+    "num_chiplets (4, presenting as one virtual die)"
+  ],
+  "affected_by_hardware": [
+    "rebellions-rebel100"
+  ],
+  "workarounds": [
+    "Use RBLN SDK compiler and runtime",
+    "Use vLLM-rbln for serving",
+    "Leverage predictive DMA for KV cache prefetch on long-context decode",
+    "Use the 4-chiplet mesh for tensor parallelism without software-visible boundaries"
+  ],
+  "notes": "The inter-chiplet mesh is the key architectural innovation. 11 ns latency is roughly a register-to-register hop, which means the 4 chiplets behave like a single die. This eliminates the inter-chip communication overhead that plagues multi-GPU inference. The predictive DMA engine is a software-visible optimization for KV cache prefetch — it can be tuned rather than being a fixed property. The 144 GB HBM3E capacity is sufficient for large models. Production deployment: SK Telecom's A.X K1 sovereign LLM runs on RebelServer.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-rbln-sdk"
+  ]
+}

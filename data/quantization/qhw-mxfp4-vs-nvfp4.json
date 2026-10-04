@@ -1,0 +1,34 @@
+{
+  "id": "qhw-mxfp4-vs-nvfp4",
+  "type": "quantization",
+  "name": "MXFP4 vs NVFP4: block size, scale format, and hardware support comparison",
+  "scheme": "mxfp4",
+  "bits": "w4a4 (both weights and activations quantized to 4-bit floating point)",
+  "weight_group_size": 32,
+  "activation_scheme": "MXFP4: shared power-of-two E8M0 scale per 32-element block. NVFP4: E4M3 fractional scale per 16-element block plus FP32 per-tensor global scale. The key difference: MXFP4 uses power-of-two scales (no fractional scales), NVFP4 uses fractional E4M3 scales. NVIDIA's own comparison shows NVFP4 has lower scale-encoding MSE (0.08 vs 0.72 for E8M0).",
+  "native_support": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-radeon-pro-vii"
+  ],
+  "kernels": [
+    "TensorRT-LLM MXFP4 plugins",
+    "CUTLASS MX block-scaled GEMM",
+    "TensorRT-LLM NVFP4 plugins",
+    "CUTLASS block-scaled FP4 GEMM"
+  ],
+  "quality_delta": "NVIDIA's own comparison (from the NVFP4 blog) rates MXFP4 as carrying 'risk of noticeable accuracy drop compared to FP8' where NVFP4 does not. The scale-encoding MSE is 0.72 for E8M0 (MXFP4) vs 0.08 for E4M3 (NVFP4). This is a vendor ranking, not a measurement. No independent controlled benchmark comparing MXFP4 and NVFP4 on the same model with the same calibration data was found.",
+  "notes": "MXFP4 and NVFP4 are both W4A4 formats for Blackwell, but they are NOT interchangeable. The key differences: (1) Block size: MXFP4 uses 32-element blocks, NVFP4 uses 16-element blocks. (2) Scale format: MXFP4 uses power-of-two E8M0 (no fractional scales), NVFP4 uses fractional E4M3. (3) Scale levels: MXFP4 has one level (per-block), NVFP4 has two levels (per-block E4M3 + per-tensor FP32). (4) Standard: MXFP4 is an open OCP standard, NVFP4 is NVIDIA-proprietary. The practical consequence: a model quantized to MXFP4 cannot be served with NVFP4 kernels and vice versa. The block size difference means the quantization error characteristics are different - smaller blocks (NVFP4) generally give better accuracy but require more scale storage. The scale format difference means NVFP4 can represent scales more precisely (E4M3 has ~2 decimal digits vs E8M0's power-of-two steps). NVIDIA's preference for NVFP4 is based on the scale-encoding MSE, but this is a vendor claim. The OCP MX specification is open and has been adopted by multiple vendors, while NVFP4 is NVIDIA-only. For open-source deployment, MXFP4 is the more portable choice.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "qhw-src-mxfp-paper",
+    "qhw-src-nvfp4-paper"
+  ]
+}

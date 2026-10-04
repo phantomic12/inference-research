@@ -1,0 +1,34 @@
+{
+  "id": "amd-fp8-ocp-vs-mxfp8-precision",
+  "type": "flop",
+  "name": "OCP-FP8 (E4M3/E5M2) vs MXFP8 precision differences on CDNA3 and CDNA4",
+  "class": "quantization_overhead",
+  "bound_by": "compute",
+  "scales_with": [
+    "precision",
+    "block_size",
+    "scaling_strategy"
+  ],
+  "affected_by_hardware": [
+    "mi300x",
+    "mi325x",
+    "mi350x",
+    "mi355x"
+  ],
+  "workarounds": [
+    "OCP-FP8 uses per-tensor or per-channel scaling - simpler but less accurate for large dynamic ranges",
+    "MXFP8 uses block-scaled representation (per-block scaling factors) - better accuracy for the same bit width",
+    "On CDNA3, only OCP-FP8 (E4M3/E5M2) is supported - MXFP8 is a CDNA4 addition",
+    "On CDNA4, both OCP-FP8 and MXFP8 are natively supported at the same throughput"
+  ],
+  "notes": "OCP-FP8 (Open Compute Project FP8) defines two formats: E4M3 (4 exponent bits, 3 mantissa bits - higher precision, smaller range) and E5M2 (5 exponent bits, 2 mantissa bits - lower precision, larger range). These are per-tensor or per-channel scaled formats. MXFP8 (Microscaling FP8) is part of the OCP MX specification and uses block-scaled representation where each block of elements shares a scaling factor. On CDNA3 (MI300X/MI325X), only OCP-FP8 is supported. On CDNA4 (MI350X/MI355X), both OCP-FP8 and MXFP8 are natively supported. AMD's product pages print them separately: 'Peak OCP-FP8 Performance (E5M2, E4M3)' and 'Peak MXFP8 Performance'. On MI355X, both are 5.0 PFLOPs dense. The key difference is that MXFP8's block scaling provides better numerical accuracy for inference workloads with large dynamic ranges, while OCP-FP8 is simpler and has broader ecosystem support. AMD's vLLM blog notes that FP8 KV cache on MI300X uses E4M3 format.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "amd-mi300x-product-page",
+    "amd-mi355x-product-page",
+    "amd-mi355x-brochure",
+    "net2-rocm-mi350-microarch"
+  ]
+}

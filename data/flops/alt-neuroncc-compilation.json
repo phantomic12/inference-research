@@ -1,0 +1,32 @@
+{
+  "id": "alt-neuroncc-compilation",
+  "type": "flop",
+  "name": "AWS Neuron: neuroncc compilation, NEFF format, and auto-casting",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The Neuron Graph Compiler (neuronx-cc) transforms ML models from TensorFlow/MXNet/PyTorch/XLA HLO into NEFF (Neuron Executable File Format). It auto-casts FP32 operations to BF16 by default for optimal performance. Supports optimization levels 1-3 (compilation time vs runtime performance). Model-specific optimizations for Transformer and U-Net architectures. Logical NeuronCore sharding for distributed inference. The compiler is invoked transparently through framework plugins.",
+  "bound_by": "both",
+  "scales_with": [
+    "model_size (larger models = longer compilation)",
+    "optimization_level (1-3, higher = better runtime but longer compile)",
+    "precision (FP32->BF16 auto-cast, or FP8 for higher throughput)",
+    "num_neuron_cores (sharding degree affects compilation)"
+  ],
+  "affected_by_hardware": [
+    "aws-inferentia2",
+    "aws-trainium2"
+  ],
+  "workarounds": [
+    "Use auto-casting (FP32->BF16) for zero-code-change deployment",
+    "Use optimization level 3 for production (best runtime performance)",
+    "Use FP8 (cFP8) on Inferentia2/Trainium2 for 2x throughput vs FP16",
+    "Use model-specific optimizations (Transformer, U-Net)",
+    "Configure logical NeuronCore sharding for multi-chip inference"
+  ],
+  "notes": "The compilation model is similar to TPU's XLA but with more user control. The auto-casting path is the key productivity feature: 'AWS Neuron takes high-precision FP32 models and automatically casts them to lower-precision data types while optimizing accuracy and performance.' This removes the need for lower-precision retraining. The NEFF format is the deployment artifact — compiled once, loaded by the runtime. For inference, the tradeoff is optimization level (compile time vs runtime performance) and precision (FP8 vs BF16 vs FP16).",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-neuron-compiler"
+  ]
+}

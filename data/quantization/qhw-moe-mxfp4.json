@@ -1,0 +1,32 @@
+{
+  "id": "qhw-moe-mxfp4",
+  "type": "quantization",
+  "name": "MXFP4 MoE quantization: per-expert scales and block scaling for mixture-of-experts",
+  "scheme": "mxfp4",
+  "bits": "w4a4 (MXFP4 weights and activations for MoE layers)",
+  "weight_group_size": 32,
+  "activation_scheme": "MXFP4 block-scaled format with E8M0 power-of-two scales per 32-element block. For MoE, the question is whether per-expert scales are needed or whether the standard block scaling suffices. The SGLang docs show that MXFP4 is supported for MoE on Ascend NPUs and that per-expert quantization is an active research area.",
+  "native_support": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x"
+  ],
+  "kernels": [
+    "TensorRT-LLM MXFP4 MoE plugins",
+    "CUTLASS MX block-scaled GEMM for MoE",
+    "SGLang MoE MXFP4 path"
+  ],
+  "quality_delta": null,
+  "notes": "MoE quantization is challenging because different experts have different activation distributions. The existing moe-mixed-precision record documents that shared experts (accessed by all tokens) may need higher precision than token-conditioned experts. For MXFP4 MoE, the question is whether the 32-element block size is appropriate for MoE layers. The SGLang docs show that MXFP4 is supported for MoE on Ascend NPUs (950PR/DT Series) with both online and offline quantization. The docs also show that modelopt_fp4 supports 'load-time BF16/FP16/FP8 MoE conversion with per-tensor FP32 activation scales'. This suggests that per-tensor scales (not per-expert) are used for MoE, which may be suboptimal. The block scaling in MXFP4 (32 elements) may not align well with MoE's expert structure. RELEVANCE TO THE REPO'S THEME: MoE quantization is another case where the format may not match the model structure. The 32-element block size is designed for dense layers, but MoE layers have different characteristics. This is a potential source of silent accuracy degradation that has not been well-documented.",
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-04",
+  "sources": [
+    "qhw-src-sglang-quant-docs"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "amd-cdna3-mfma-precision-support",
+  "type": "flop",
+  "name": "CDNA3 Matrix Core MFMA instruction precision support (native vs emulated)",
+  "class": "decode_gemm",
+  "bound_by": "compute",
+  "scales_with": [
+    "precision",
+    "batch_size",
+    "matrix_dimensions"
+  ],
+  "affected_by_hardware": [
+    "mi300x",
+    "mi325x",
+    "gfx942"
+  ],
+  "workarounds": [
+    "TF32 is natively supported on CDNA3 (653.7 TFLOPS dense) but NOT on CDNA4 - CDNA4 emulates TF32 in software",
+    "FP8 (E4M3/E5M2) is natively supported on CDNA3 at 2614.9 TFLOPS dense",
+    "BF16 and FP16 share the same matrix core path at 1307.4 TFLOPS dense on CDNA3",
+    "INT8 shares the FP8 matrix core path at 2614.9 TFLOPS dense on CDNA3"
+  ],
+  "notes": "CDNA3 (gfx942) Matrix Cores natively execute: FP64 (256 FLOPS/clock/CU), FP32 (256), TF32 (1024 vector, no native matrix TF32 - the 653.7 TFLOPS figure is vector), FP16 (2048), BF16 (2048), FP8 (4096), INT8 (4096). The MFMA (Matrix Fused Multiply-Add) instruction is the hardware primitive. FP8 is 2x the FP16 rate. INT8 shares the FP8 path. CDNA3 does NOT support FP4 or FP6 natively - those are CDNA4 additions. TF32 on CDNA3 is listed as 'Vector TF32' at 1024 FLOPS/clock/CU, not a matrix path - the 653.7 TFLOPS peak is achieved through the vector units, not matrix cores. This is a key distinction: TF32 GEMMs on CDNA3 run on vector ALUs, not matrix cores.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "amd-rocm-mi300-microarch",
+    "amd-mi300x-product-page"
+  ]
+}

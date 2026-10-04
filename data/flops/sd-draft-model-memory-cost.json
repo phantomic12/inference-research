@@ -1,0 +1,35 @@
+{
+  "id": "sd-draft-model-memory-cost",
+  "type": "flop",
+  "name": "Draft model memory cost: competition with KV cache for HBM budget",
+  "class": "speculative_draft",
+  "arithmetic_intensity": "The draft model's weights occupy HBM alongside the target model weights and the KV cache. For a target model of size N_target and draft model of size N_d, the total weight footprint is N_target + N_d + KV_cache. The KV cache grows as batch_size * context_length * num_layers * num_heads * head_dim * 2 (for K and V) * bytes_per_param. For a 70B target with 7B draft at batch 32 and 128K context, the KV cache can easily exceed 10GB, while the draft model at BF16 is ~14GB. The draft model is a FIXED cost that does not scale with batch or context, while KV cache scales linearly with both. This means: (1) At small batch and short context, the draft model can be a significant fraction of total HBM, potentially preventing the target model from fitting. (2) At large batch and long context, KV cache dominates and the draft model is negligible. (3) The draft model competes with KV cache for the same HBM - every byte spent on draft weights is a byte not available for KV cache, which directly reduces max batch size or max context length. N-gram/lookahead methods have ZERO draft model memory cost - they need only a small hash table or suffix array.",
+  "bound_by": "memory",
+  "scales_with": [
+    "draft_model_size (N_d - fixed HBM cost regardless of batch or context)",
+    "target_model_size (N_target - the baseline HBM cost)",
+    "kv_cache_size (grows with batch * context * layers * heads * head_dim)",
+    "batch_size (amplifies KV cache, making draft model relatively cheaper)",
+    "context_length (amplifies KV cache, making draft model relatively cheaper)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Use n-gram/lookahead/prompt-lookup drafters - zero draft model memory cost",
+    "Use early-exit draft models that share layers with the target model",
+    "Quantize the draft model to FP8/INT8 to reduce its HBM footprint (with acceptance rate risk)",
+    "Offload draft model to CPU/NVMe and swap in only during draft phase (adds latency)"
+  ],
+  "notes": "The memory competition is a real deployment constraint. For example, on an 80GB H100: a 70B target in BF16 needs ~140GB (doesn't fit), in FP8 needs ~70GB (fits with room for KV cache). Adding a 7B draft model in BF16 needs ~14GB, leaving ~6GB for KV cache - which may be insufficient for production batch sizes. In FP8, the draft model needs ~7GB, leaving ~13GB. This is why n-gram/lookahead methods are attractive for memory-constrained deployments: they provide speculative acceleration with zero additional weight memory. The tradeoff is lower acceptance rate (1.6-1.7 vs 4.2-5.5 for EAGLE-2) but the memory savings can enable larger batch sizes or longer contexts that more than compensate.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "sd-eagle2-paper",
+    "sd-medusa-paper",
+    "sd-lookahead-paper"
+  ]
+}

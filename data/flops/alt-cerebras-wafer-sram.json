@@ -1,0 +1,32 @@
+{
+  "id": "alt-cerebras-wafer-sram",
+  "type": "flop",
+  "name": "Cerebras WSE-3: wafer-scale SRAM bandwidth advantage for inference",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The WSE-3 packs 44 GB of on-chip SRAM at 21 PB/s bandwidth (CS-3) or 43.2 PB/s (CS-4 Turbo). This is ~1000x the bandwidth of GPU HBM. Weights stay on-chip — there is no weight streaming from HBM. Tokens flow uninterrupted through model layers pipelined across wafers. The bandwidth advantage is most pronounced for decode, where GPU inference is bottlenecked by memory bandwidth. Cerebras claims up to 30x faster inference than GPUs for frontier models.",
+  "bound_by": "compute",
+  "scales_with": [
+    "model_size (must fit in 44 GB SRAM per wafer, or be pipelined across wafers)",
+    "sram_bandwidth (21-43.2 PB/s, ~1000x GPU HBM)",
+    "num_wafers (CS-4 has 3 wafers for larger models)",
+    "token_generation_rate (up to 750 tok/s for GPT-5.6 Sol Ultrafast)"
+  ],
+  "affected_by_hardware": [
+    "cerebras-wse-3"
+  ],
+  "workarounds": [
+    "Pipeline model layers across multiple wafers for models larger than 44 GB",
+    "Use the wafer-scale SRAM to eliminate HBM bottleneck entirely",
+    "Leverage 2 microsecond wafer-to-wafer latency for multi-wafer models",
+    "Use disaggregated inference (prefill on one system, decode on another)"
+  ],
+  "notes": "The bandwidth advantage is the entire architectural point. On GPUs, inference is bottlenecked by memory bandwidth — model weights must be repeatedly transferred from HBM to compute. Cerebras eliminates this by putting all weights in SRAM. The 21 PB/s bandwidth means the memory bottleneck is effectively removed. The tradeoff is capacity: 44 GB is small compared to GPU HBM (80-192 GB), so very large models need multi-wafer pipelining. The CS-4's 3 wafers and 2 microsecond wafer-to-wafer latency make this practical. Measured: GPT-5.6 Sol Ultrafast at 750 output tokens/sec.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-cerebras-ultrafast",
+    "asic-cerebras-cs3",
+    "asic-cerebras-cs4"
+  ]
+}

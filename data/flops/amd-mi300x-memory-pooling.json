@@ -1,0 +1,31 @@
+{
+  "id": "amd-mi300x-memory-pooling",
+  "type": "flop",
+  "name": "MI300X 192GB HBM3 memory pooling and KV cache capacity advantage",
+  "class": "kv_transfer",
+  "bound_by": "memory",
+  "scales_with": [
+    "model_size",
+    "batch_size",
+    "sequence_length",
+    "kv_cache_dtype"
+  ],
+  "affected_by_hardware": [
+    "mi300x",
+    "mi325x"
+  ],
+  "workarounds": [
+    "MI300X's 192GB HBM3 (2.4x H100's 80GB) enables single-node serving of large models",
+    "FP8 KV cache halves KV memory usage vs BF16, doubling effective batch capacity",
+    "AMD recommends 8 instances of TP=1 for models <=70B to maximize memory utilization"
+  ],
+  "notes": "MI300X's 192GB HBM3 memory is 2.4x the NVIDIA H100's 80GB and 1.59x the bandwidth (5.3 TB/s vs 3.35 TB/s). This large memory pool is the key inference advantage: (1) It enables single-node serving of Llama-3.1 405B and DeepSeek v3/R1 (671B) without multi-node communication. (2) It supports larger KV caches for large batch sizes and long sequences, reducing evictions. (3) AMD recommends serving models <=70B in 8 instances of TP=1 (one per GPU) to maximize throughput, as this avoids inter-GPU communication overhead entirely. (4) FP8 KV cache (supported via ROCm 6.2) halves KV memory usage, doubling effective batch capacity. (5) The memory bandwidth advantage (1.59x H100) directly translates to higher decode throughput in memory-bound scenarios. MI325X increases this to 256GB HBM3E at 6 TB/s, and MI350X/MI355X to 288GB HBM3E at 8 TB/s.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-amd-rocm-llm-inference-best-practices",
+    "bench-amd-vllm-rocm-optimize-fp8-gemm",
+    "amd-mi300x-product-page"
+  ]
+}

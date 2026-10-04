@@ -1,0 +1,32 @@
+{
+  "id": "alt-cerebras-limitations",
+  "type": "flop",
+  "name": "Cerebras WSE-3: what does NOT work well — capacity, flexibility, and ecosystem",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Cerebras WSE-3 limitations: (1) capacity — 44 GB SRAM per wafer is small vs GPU HBM (80-192 GB), so models >44 GB require multi-wafer pipelining; (2) no dynamic batching — the wafer-scale architecture is optimized for single-stream low-latency decode, not high-throughput batched inference; (3) limited software ecosystem — no vLLM, no PyTorch native support; uses Cerebras SDK only; (4) no fine-tuning on CS-3/CS-4 (training is separate); (5) high cost per system; (6) limited to Cerebras Cloud or on-prem deployment.",
+  "bound_by": "memory",
+  "scales_with": [
+    "model_size (44 GB limit per wafer)",
+    "batch_size (optimized for single-stream, not high-throughput batching)",
+    "software_ecosystem (limited vs GPU)",
+    "deployment_flexibility (Cerebras Cloud or on-prem only)"
+  ],
+  "affected_by_hardware": [
+    "cerebras-wse-3"
+  ],
+  "workarounds": [
+    "Use multi-wafer pipelining for models >44 GB",
+    "Use disaggregated inference: prefill on GPU/Trainium, decode on Cerebras",
+    "Use Cerebras Cloud for on-demand access without hardware purchase",
+    "Accept the software ecosystem limitations — use Cerebras SDK"
+  ],
+  "notes": "Honest negatives: Cerebras publishes no per-chip throughput figure for standard benchmarks (no MLPerf, no third-party throughput comparisons). The 750 tok/s figure is for a specific model (GPT-5.6 Sol Ultrafast) and is a vendor claim. The architecture is optimized for low-latency single-stream decode, not high-throughput batched inference. The software ecosystem is limited — no vLLM, no PyTorch native support. Training is not supported on CS-3/CS-4 (separate systems). These are significant limitations for general-purpose inference workloads.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-cerebras-ultrafast",
+    "asic-cerebras-cs3",
+    "asic-cerebras-cs4"
+  ]
+}

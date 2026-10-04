@@ -1,0 +1,17 @@
+{
+  "id": "xpu-intel-gpu-limitations-vs-nvidia",
+  "type": "gotcha",
+  "name": "What Intel hardware genuinely cannot do well relative to NVIDIA for LLM inference",
+  "class": "hardware",
+  "affects": ["intel-arc-pro-b60", "intel-arc-pro-b70", "intel-arc-b580", "xpu-intel-dc-gpu-max-1550", "xpu-intel-dc-gpu-flex-170", "intel-gaudi2", "intel-gaudi3"],
+  "concepts": ["intel", "nvidia", "llm-inference", "comparison"],
+  "symptom": "Intel GPUs and Gaudi accelerators have several fundamental limitations relative to NVIDIA for LLM inference: (1) No equivalent to CUDA's mature ecosystem - CUDA has 15+ years of optimization, while Intel's oneAPI/SYCL ecosystem is less mature. (2) No equivalent to TensorRT-LLM - NVIDIA's optimized inference engine has no Intel equivalent. (3) No equivalent to FlashAttention-3 on Hopper - Intel's attention kernels are less optimized. (4) No equivalent to NVLink - Intel GPUs use PCIe or Ethernet, with no high-bandwidth scale-up fabric. (5) No equivalent to CUDA graphs with dynamic shapes - Gaudi requires static shapes, which limits flexibility. (6) No equivalent to NVIDIA's FP8 support - Intel's FP8 support is limited to Gaudi 3 and is less mature. (7) No equivalent to NVIDIA's large memory capacity - the largest Intel GPU (Max 1550) has 128 GB HBM2e, while NVIDIA H200 has 141 GB HBM3e and B200 has 192 GB HBM3e. (8) No equivalent to NVIDIA's high bandwidth - the fastest Intel GPU (Max 1550) has 3.276 TB/s, while NVIDIA H200 has 4.8 TB/s and B200 has 8 TB/s. (9) No equivalent to NVIDIA's mature quantization ecosystem - GPTQ, AWQ, and Marlin have no Intel equivalents. (10) No equivalent to NVIDIA's speculative decoding ecosystem - Eagle, Medusa, and other speculative decoding methods are primarily NVIDIA-optimized.",
+  "root_cause": "These are fundamental architectural and ecosystem differences, not bugs or missing features. NVIDIA's CUDA ecosystem has 15+ years of optimization and a massive developer community. Intel's oneAPI ecosystem is newer and smaller. NVIDIA's hardware has higher bandwidth, larger memory, and more mature software. Intel's advantages are: (1) lower cost per GB of VRAM, (2) open standards (oneAPI, SYCL, Level Zero), (3) Gaudi's Ethernet-first scaling for multi-node inference, (4) Arc Pro's large VRAM (24-32 GB) at consumer prices.",
+  "workaround": "For LLM inference, NVIDIA remains the best choice for: high-throughput serving, large models (70B+), FP8 quantization, speculative decoding, and multi-GPU scaling. Intel is competitive for: cost-sensitive deployments, single-GPU inference with quantized models (7B-14B), and workloads that benefit from open standards. Gaudi is competitive for: multi-node inference with Ethernet scaling, and workloads that can use its large HBM capacity (96-128 GB).",
+  "severity": "major",
+  "notes": "This is an honest assessment of Intel's position relative to NVIDIA for LLM inference. Intel's strengths are cost, open standards, and Gaudi's Ethernet scaling. NVIDIA's strengths are ecosystem maturity, hardware performance, and software optimization. The gap is narrowing but remains significant as of 2026.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": ["xpu-onednn-github-readme", "xpu-ipex-github-readme", "xpu-vllm-gaudi-readme", "xpu-llamacpp-sycl-docs"]
+}

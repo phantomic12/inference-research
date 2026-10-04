@@ -1,0 +1,34 @@
+{
+  "id": "sched-kv-cache-aware-scheduling",
+  "type": "flop",
+  "name": "KV cache-aware scheduling: LMCache/offloading to CPU and SSD, and the measured hit-rate effect on TTFT",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "Not an arithmetic mechanism at all, which is why it matters as a kernel-level decision input. A KV tier between the GPU and host/remote storage changes how many bytes the decode attention kernel pulls from HBM, but it does not change the attention FLOPs at all. The strongest version of the effect is prefix reuse: if a shared prefix KV is resident in GPU memory because a cache tier kept it there, every request reading that prefix does zero HBM traffic for it. LMCache (ICLR 2025) provides a dedicated KV cache layer with connector interface and non-blocking save/load paths. vLLM's offloading connector uses async DMA (cudaMemcpyAsync) to move KV between GPU and CPU, with the vendor claiming loading from the CPU tier 'reduces TTFT by X2-X22' depending on prompt size (H100, 500GB DRAM, GPU prefix caching disabled). The win condition is: long context (large C_block) plus low batch (idle compute to trade) plus preemption pressure.",
+  "bound_by": "memory",
+  "scales_with": [
+    "context_length",
+    "prefix_sharing_rate across requests",
+    "GPU HBM capacity (the tier only helps once the hot set fits)",
+    "batch_size",
+    "pcie_generation_and_width (Gen4 x16 vs Gen5 x16 is roughly a 2x difference)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Keep the shared prefix KV resident on GPU across requests",
+    "Move cold KV to host or device memory and fetch on demand, trading bandwidth for capacity",
+    "Compress or quantize KV before it leaves the GPU so the transfer, not the attention kernel, pays for the precision reduction",
+    "Async DMA offload with prefetch so a cold cache never stalls the step (vLLM OffloadingConnector)",
+    "Offload before preemption so a preempted sequence resumes instead of recomputing"
+  ],
+  "notes": "The measured hit-rate effect on TTFT is significant but conditional. vLLM's blog reports that loading from the CPU tier reduces TTFT by 2-22x depending on prompt size, but this is with GPU prefix caching disabled to isolate the CPU tier effect. In production with prefix caching enabled, the marginal benefit is smaller. The key insight is that KV cache offloading is primarily a capacity mechanism, not a latency mechanism: it helps when the working set exceeds HBM capacity and preemption would otherwise force recompute. LMCache's contribution is making the cache layer explicit and reusable across engines, rather than each engine implementing its own ad-hoc offload. The failure mode is correctness, not speed: a KV tier that serves a block which does not match the current model, adapter, layout or kernel configuration produces wrong output with no error.",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-04",
+  "sources": [
+    "sched-vllm-pagedattention-sosp23"
+  ]
+}

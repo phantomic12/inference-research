@@ -1,0 +1,32 @@
+{
+  "id": "amd-fp4-mxfp4-support",
+  "type": "flop",
+  "name": "MXFP4 native hardware support on CDNA4 (MI350X/MI355X)",
+  "class": "decode_gemm",
+  "bound_by": "compute",
+  "scales_with": [
+    "precision",
+    "batch_size",
+    "matrix_dimensions"
+  ],
+  "affected_by_hardware": [
+    "mi350x",
+    "mi355x",
+    "gfx950"
+  ],
+  "workarounds": [
+    "MXFP4 is only available on CDNA4 (MI350X/MI355X) - not on CDNA3",
+    "MXFP4 runs at the same throughput as MXFP6 (9.2 PFLOPS on MI350X, 10.1 PFLOPS on MI355X)",
+    "MXFP4 uses block-scaled representation with per-block scaling factors"
+  ],
+  "notes": "CDNA4 adds native hardware support for MXFP4 (Microscaling 4-bit floating point) at 9.2 PFLOPS on MI350X and 10.1 PFLOPS on MI355X. This is 2x the OCP-FP8 rate and equal to the MXFP6 rate. MXFP4 uses the OCP MX block-scaled format where each block of elements shares a scaling factor (typically 32 elements per block). The key inference advantage is memory bandwidth: 4-bit weights halve the memory traffic vs 8-bit, which is the primary bottleneck in decode. AMD's product page prints 'Peak Microscaling Four-bit Precision Matrix (MXFP4) Performance 10.1 PFLOPs' with NO sparsity variant - so 10.1 PFLOPS is the DENSE figure. This is distinct from CDNA3 which has no FP4 support at all. The practical use case is weight-only quantization for memory-bound decode workloads. AMD's vLLM blog shows GPT-OSS-120B running with FP4 quantized weights and BF16 computation on MI355X.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "amd-mi355x-product-page",
+    "amd-mi355x-brochure",
+    "net2-rocm-mi350-microarch",
+    "bench-amd-mi355x-vs-b200-vllm"
+  ]
+}

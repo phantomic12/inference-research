@@ -1,0 +1,37 @@
+{
+  "id": "attn-mla-kernel-support-matrix",
+  "type": "flop",
+  "name": "MLA kernel support matrix: which architectures and engines support Multi-head Latent Attention",
+  "class": "decode_attention",
+  "arithmetic_intensity": "MLA kernel support is arch-specific and engine-specific. FlashMLA (DeepSeek's kernel library) requires NVIDIA SM100/SM103 (Blackwell) with CUDA >= 13.1. The 2026.09.30 release REMOVED Hopper support and earlier models (V3/V3.2/V4.0). Decode supports only FP8 and FP4 KV cache - bf16 KV is explicitly NOT supported. On Hopper, an older FlashMLA checkout is required. vLLM integrates FlashMLA for DeepSeek models. SGLang also supports MLA. The kernel choice changes the KV cache FORMAT: FlashMLA uses 528 bytes/token for FP8 (512 bytes e4m3 + 16 bytes e8m0 scales) or 288 bytes/token for FP4 (256 bytes e2m1 + 32 bytes e4m3 scales). This is a hard constraint: a kernel that hard-codes the KV format will not accept another engine's cache.",
+  "bound_by": "memory",
+  "scales_with": [
+    "context_length (KV cache bytes scale linearly)",
+    "kv_cache_dtype (fp8/fp4/bf16 - FlashMLA only supports fp8/fp4)",
+    "num_layers (MLA cache per layer is (d_c+d_rh) elements)",
+    "head_dim (d_c = kv_lora_rank, typically 512)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "nvidia-h100-sxm"
+  ],
+  "workarounds": [
+    "Use FlashMLA on Blackwell (SM100/SM103) with CUDA >= 13.1",
+    "Use older FlashMLA checkout (commit ba89a34) for Hopper and V3/V3.2/V4.0",
+    "Use vLLM or SGLang which integrate FlashMLA for DeepSeek models",
+    "On Hopper, use FA-2/FA-3 with standard attention kernels (MLA absorbed form)",
+    "FP8 KV cache with per-token inlined scales (e8m0) for 2x bytes reduction vs bf16",
+    "FP4 KV cache with per-token scales (e4m3) for 3.5x bytes reduction vs bf16"
+  ],
+  "notes": "MLA is the most significant attention variant for serving because it changes the cache size by ~85x vs MHA. DeepSeek-V3 config: kv_lora_rank=512, qk_rope_head_dim=64, 61 layers. MLA cache = 61*(512+64) = 35,136 elements/token = 70,272 bytes = 68.6 KiB/token at bf16. vs MHA: 61*2*128*(128+64) = 2,998,272 elements = 5,856 KiB/token. 85.3x reduction. FlashMLA performance: up to 1024 TFlops decode on B200, 1350 TFlops sparse prefill. The fused norm-RoPE-attn-RoPE-cast kernel achieves 1460 TFlops prefill and 950 TFlops decode on B200. Hardware constraint: SM100/SM103 only, CUDA >= 13.1. Hopper support removed in 2026.09.30 release. bf16 KV NOT supported in FlashMLA decode. Sources: FlashMLA GitHub, DeepSeek-V2 paper (arXiv 2405.04434), DeepSeek-V3 paper (arXiv 2412.19437).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "attn-deepseek-v2-mla-paper",
+    "attn-deepseek-v3-paper",
+    "kern-flashmla-github"
+  ]
+}

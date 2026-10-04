@@ -1,0 +1,36 @@
+{
+  "id": "bw-nvlink5-nvl72-domain-topology",
+  "type": "flop",
+  "name": "NVLink 5 and GB200/GB300 NVL72 domain topology: 72-GPU domain and crossing it",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "NVLink 5 provides 1.8 TB/s bidirectional bandwidth per GPU (vs 900 GB/s on Hopper NVLink 4), which is 14x PCIe Gen5. The GB200 NVL72 connects 72 Blackwell GPUs in a single NVLink domain using 9 NVLink switch trays, each with 144 NVLink ports at 100 GB/s, delivering 130 TB/s total NVLink bandwidth. The domain acts as a single massive GPU with 30 TB unified memory. Fifth-gen NVLink scales to 576 GPUs in a single domain with over 1 PB/s total bandwidth. The NVLink Switch Chip enables 4x bandwidth efficiency with NVIDIA SHARP (Scalable Hierarchical Aggregation and Reduction Protocol) FP8 support. What breaks when you cross the 72-GPU domain: communication falls back to InfiniBand or Ethernet, which has much higher latency and lower bandwidth. The GB200 NVL72 delivers 30x faster real-time LLM inference vs H100 (1.8T parameter GPT-MoE, TTL=50ms, FTL=5s, 32768 input/1024 output) - this requires the full 72-GPU domain. The GB200 compute tray has 2 Grace CPUs + 4 Blackwell GPUs with NVLink-C2C at 900 GB/s for coherent CPU-GPU memory access. NVLink 5 per-GPU bandwidth is a bidirectional aggregate (not per-lane per-direction). The NVL72 system uses liquid cooling and copper cable cartridges for operational simplicity.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "number of GPUs in the NVLink domain (72 for NVL72, up to 576 for full NVLink 5)",
+    "model size (larger models need more GPUs in the domain)",
+    "tensor-parallel degree (must fit within the domain for full NVLink bandwidth)",
+    "MoE expert parallelism (benefits from large domain for all-to-all communication)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-gb200-nvl72",
+    "nvidia-b200",
+    "nvidia-b300"
+  ],
+  "workarounds": [
+    "Keep tensor-parallel and expert-parallel groups within a single NVL72 domain",
+    "Use NVLink-C2C (900 GB/s) for CPU-GPU coherent memory access",
+    "Use SHARP FP8 for in-network reduction to reduce communication volume",
+    "For multi-rack scaling, use InfiniBand or Spectrum-X Ethernet (accepting the bandwidth/latency penalty)",
+    "Use PD disaggregation to separate prefill and decode across different NVL72 domains"
+  ],
+  "notes": "The 72-GPU NVLink domain is the key differentiator for GB200/GB300 NVL72 vs HGX B200 (8 GPUs). The 1.8 TB/s per-GPU bidirectional bandwidth is 2x H100 SXM's 900 GB/s. The 130 TB/s total NVLink bandwidth in NVL72 is what enables 30x faster real-time LLM inference vs H100 for trillion-parameter models. The NVLink Switch System uses 9 switch trays with 144 ports each. Each GPU has 18 NVLink ports. The NVL72 can also be configured as NVL36 (36 GPUs, 9 dual GB200 compute nodes). The GB200 NVL72 product page states: 'NVLink Bandwidth 130 TB/s' for the system and '3.6 TB/s' for the GB200 Grace Blackwell Superchip (which is 2 GPUs + 1 Grace CPU). The 30x inference speedup is for the full 72-GPU system vs HGX H100 scaled over InfiniBand.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "bw-nv-gb200-nvl72-blog",
+    "bw-nv-blackwell-architecture-page",
+    "link-nvlink-switch-spec",
+    "link-nvlink-nvswitch-inference-blog"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "qhw-marlin-kernel",
+  "type": "quantization",
+  "name": "Marlin INT4 weight-only kernel (FP16xINT4 mixed-precision GEMM)",
+  "scheme": "gptq",
+  "bits": "w4a16 (4-bit weights, FP16 activations)",
+  "weight_group_size": 128,
+  "activation_scheme": "FP16 activations, no quantization. Weights are INT4 with per-group FP16 scales (group size 128). The kernel dequantizes weights to FP16 in registers before the tensor-core multiply, so the compute is FP16 x FP16, not INT4 x INT4.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-l40s",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "Marlin CUDA kernel (marlin/marlin_cuda_kernel.cu)",
+    "vLLM marlin format (awq_marlin, gptq_marlin)",
+    "SGLang marlin backend"
+  ],
+  "quality_delta": "From the Marlin README benchmark table (Llama2 models, INT4 group=128): 7B WikiText-2 5.12 (FP16) vs 5.27 (INT4), RedPajama 6.14 vs 6.30, MMLU 41.80 vs 40.07. 13B: WikiText-2 4.57 vs 4.67, RedPajama 5.67 vs 5.79, MMLU 52.10 vs 51.13. 70B: WikiText-2 3.12 vs 3.21, RedPajama 4.74 vs 4.81, MMLU 65.43 vs 64.81. These are GPTQ-quantized models evaluated with Marlin kernels, so the delta includes both quantization error and any kernel-specific effects.",
+  "notes": "Marlin is the canonical INT4 weight-only kernel for Ampere/Ada GPUs. KEY PRECISION FACT: despite being called an 'INT4 kernel', the actual tensor-core operation is FP16 x FP16 - weights are dequantized to FP16 in registers before the multiply. This is NOT an INT4 tensor-core path (which does not exist on Ampere/Ada). The speedup comes from reduced memory bandwidth (4-bit weight storage), not from faster arithmetic. PERFORMANCE: the README claims 'near-ideal 4x speedups up to batchsizes of 16-32 tokens' on A10, with the 3.87x theoretical maximum (accounting for 0.125 bits/weight scale storage overhead). The kernel uses striped partitioning, L2 cache optimization, and double buffering to sustain this across batch sizes. CRITICAL CAVEAT: Marlin is NOT optimized for Hopper (SM90) - the README explicitly says 'Marlin is not yet optimized for Hopper'. On Hopper, Machete is the preferred kernel. The vLLM compatibility matrix shows Marlin supports Turing (SM7.5) and above, but NOT Volta (SM7.0). SGLang uses Marlin as the W4A16 fallback for NVFP4 checkpoints on SM80-SM90.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "qhw-src-marlin-repo"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "sched-pipeline-parallelism",
+  "type": "flop",
+  "name": "Pipeline parallelism for LLM inference: when PP beats TP and the bubble problem",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "PP splits a model layer-wise, where each GPU is responsible for a subset of layers. The arithmetic intensity of each stage is the same as a dense model at the same batch size, but the batch is split into micro-batches that flow through the pipeline. The key advantage over TP: PP requires only point-to-point communication (activations) once per stage, rather than a collective per layer. The key disadvantage: pipeline bubbles - if one stage is slower than the others, the entire pipeline stalls. Sarathi-Serve showed that chunked prefill with stall-free scheduling can reduce pipeline bubbles by creating balanced micro-batches, achieving up to 5.6x gains in end-to-end serving capacity for Falcon-180B with pipeline parallelism.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "num_stages (more stages = more parallelism but also more bubbles)",
+    "micro_batch_size (larger micro-batches = fewer bubbles but more memory)",
+    "num_layers (more layers = more stages needed)",
+    "batch_size (larger batches = more micro-batches = better pipeline utilization)",
+    "prompt_length (longer prompts = more variable execution time = more bubbles)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm"
+  ],
+  "workarounds": [
+    "Pipeline parallelism (PP): split model layer-wise across GPUs, avoiding per-layer all-reduce",
+    "Sarathi-Serve chunked prefill: balanced micro-batches reduce pipeline bubbles",
+    "Micro-batching: split batch into micro-batches that flow through the pipeline",
+    "Combine PP with TP: use PP across nodes and TP within nodes for large models",
+    "AlpaServe: statistical multiplexing with model parallelism for multi-model serving"
+  ],
+  "notes": "When PP beats TP: for deep models that don't fit on a single GPU, PP is preferred because (1) it requires only point-to-point communication (activations) once per stage, rather than a collective per layer, (2) it scales linearly with the number of GPUs, and (3) it tolerates slow fabrics better than TP. When TP beats PP: for shallow models or when high-bandwidth interconnects (NVLink) are available, TP is simpler and has lower overhead. The bubble problem is the key challenge: if one stage is slower than the others, the entire pipeline stalls. Sarathi-Serve's chunked prefill with stall-free scheduling addresses this by creating balanced micro-batches. The measured result is up to 5.6x gains in end-to-end serving capacity for Falcon-180B with pipeline parallelism. DistServe also showed that inter-op parallelism (PP) becomes advantageous as the arrival rate increases, because it reduces queuing delay.",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-04",
+  "sources": [
+    "sched-sarathi-osdi24",
+    "sched-distserve-osdi24"
+  ]
+}

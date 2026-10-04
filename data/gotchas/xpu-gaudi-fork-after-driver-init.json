@@ -1,0 +1,17 @@
+{
+  "id": "xpu-gaudi-fork-after-driver-init",
+  "type": "gotcha",
+  "name": "Forking after HPU driver initialization causes hangs on exit; vLLM auto-overrides to spawn",
+  "class": "config",
+  "affects": ["vllm"],
+  "concepts": ["gaudi", "hpu", "vllm", "multiprocessing"],
+  "symptom": "On HPU, if vLLM's worker start method is set to 'fork' (the upstream default), forking after HPU driver initialization leaves driver state in child processes and can cause hangs on exit. vLLM logs a warning when it auto-overrides to 'spawn'.",
+  "root_cause": "The HPU driver (SynapseAI/Habana runtime) is not fork-safe. Forking a process that has already initialized the HPU driver copies the driver state into the child process, which can cause hangs or crashes on exit.",
+  "workaround": "On HPU, vLLM automatically overrides VLLM_WORKER_MULTIPROC_METHOD to 'spawn'. Do not set it to 'fork' explicitly. The 'uni', 'external_launcher', and 'ray' backends do not use Python multiprocessing, so the setting has no effect for them.",
+  "severity": "major",
+  "notes": "This is a Gaudi-specific issue that does not occur on CUDA or ROCm. It affects anyone running multi-card vLLM on Gaudi. The auto-override is handled by the vLLM Gaudi plugin's platform layer.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": ["xpu-vllm-gaudi-readme"]
+}

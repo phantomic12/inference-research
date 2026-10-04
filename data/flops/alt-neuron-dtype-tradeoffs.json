@@ -1,0 +1,34 @@
+{
+  "id": "alt-neuron-dtype-tradeoffs",
+  "type": "flop",
+  "name": "AWS Neuron: dtype and configuration tradeoffs for inference",
+  "class": "quantization_overhead",
+  "arithmetic_intensity": "Inferentia2 supports FP32, TF32, BF16, FP16, UINT8, and cFP8 (configurable FP8). Trainium2 adds FP8 at 1300 TFLOPS per chip. The auto-cast path takes FP32/FP16 models and casts down to BF16/FP8/cFP8 at compile time. Stochastic rounding is available to protect accuracy. The dtype choice directly affects throughput: FP8 is 2x FP16 on paper, but real speedup depends on the model and whether the compiler can effectively use the lower precision.",
+  "bound_by": "both",
+  "scales_with": [
+    "precision (FP32 -> BF16 -> FP8, each step changes throughput)",
+    "model_architecture (some models tolerate lower precision better)",
+    "stochastic_rounding (accuracy protection at slight performance cost)",
+    "auto_cast_vs_manual (auto-cast is easier but may not be optimal)"
+  ],
+  "affected_by_hardware": [
+    "aws-inferentia2",
+    "aws-trainium2"
+  ],
+  "workarounds": [
+    "Use auto-casting for zero-code-change deployment (FP32->BF16)",
+    "Use cFP8 for 2x throughput vs FP16 on Inferentia2/Trainium2",
+    "Enable stochastic rounding for accuracy protection",
+    "Use manual precision control for maximum performance",
+    "Profile with Neuron Explorer to find optimal dtype configuration"
+  ],
+  "notes": "The dtype tradeoff is the primary performance knob for AWS Neuron. The auto-cast path is designed for productivity: 'Autocasting reduces time to market by removing the need for lower-precision retraining.' For maximum performance, manual FP8 configuration with stochastic rounding gives the best throughput but requires accuracy validation. The Neuron Explorer tool provides profiling and AI-powered recommendations for dtype and sharding configuration.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-neuron-compiler",
+    "alt-inf2-arch",
+    "alt-trn2-arch"
+  ]
+}

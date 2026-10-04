@@ -1,0 +1,39 @@
+{
+  "id": "sched-tensor-parallel-crossover",
+  "type": "flop",
+  "name": "Tensor parallel crossover batch B*: the batch above which the all-reduce dominates",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "Pure data movement, AI = 0 - like kv_transfer, this class performs no arithmetic, so every question about it is a bandwidth question. Tensor parallelism shards each layer's weight matrices across N devices and inserts two communication ops per layer. The op that matters in inference is the all-reduce over the hidden dimension. Payload: with batch B and hidden width d in bf16, each rank contributes B*d*2 bytes; a ring all-reduce moves 2*(N-1)/N * 2*s bytes per rank, which for N >= 4 rounds to 4*s, i.e. 4*B*d bytes per rank per layer. Crossover: set the all-reduce time equal to the weight-read time it competes with. 4*B*d/BW_link = 2*P_layer/BW_hbm => B* = P_layer*BW_link / (2*d*BW_hbm). For Llama-2-7B geometry (d = 4096, 11008 intermediate, 32 layers; P_layer = 202,375,168) on an H100 SXM (BW_hbm = 3350 GB/s): B* = 202,375,168 * BW_link / (2 * 4096 * 3350). With NVLink 4 at the full per-GPU per-direction 450 GB/s (18 links x 25 GB/s), B* = 3,318 - far above any real serving batch. With a single NVLink 4 link at 25 GB/s per direction, B* = 184. On PCIe 4.0 x16 at 31.5 GB/s per direction, B* = 232.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "batch_size B (payload is 4*B*d bytes per rank per layer - the cost is LINEAR in B while the weight read it competes with is constant)",
+    "interconnect_bandwidth_per_rank (the dominant multiplier: B* ranges from 184 on a single 25 GB/s NVLink 4 link to 3,318 on a full 450 GB/s per-GPU domain - an 18x spread)",
+    "tensor_parallel_degree N (ring volume 2*(N-1)/N saturates near 4*s for N >= 4, so cost per rank is roughly flat in N)",
+    "num_layers (2 communication ops per layer, so the total is linear in depth)",
+    "hidden_width d (payload is linear in d: 4096 for a 7B, 8192 for a 70B)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x",
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "workarounds": [
+    "NVSwitch rather than point-to-point topologies, which raises effective per-GPU bandwidth from 25 to 450 GB/s per direction and moves B* from 184 to 3,318",
+    "Megatron-LM layer placement that minimizes the number of collectives to two per layer and overlaps them with independent compute",
+    "Replace the all-reduce with reduce-scatter + all-gather, which halves the payload (2*s per rank instead of 4*s) and therefore halves B*",
+    "Fuse the all-reduce into the preceding GEMM's epilogue so the partial sum is reduced while still in registers/shared memory",
+    "Overlapping communication with compute - the all-reduce for layer i can proceed while layer i-1's GEMM runs",
+    "Prefer pipeline parallelism over tensor parallelism for deep models: PP needs point-to-point sends of activations once per stage rather than a collective per layer"
+  ],
+  "notes": "The number worth carrying is B* = P_layer * BW_link / (2 * d * BW_hbm), because it says something the folklore usually gets backwards. The received wisdom is that tensor parallelism is expensive and should be minimized; the derivation shows the opposite on a fabric-rich part - at 450 GB/s per GPU the crossover is B = 3,318, far beyond any serving batch, so the all-reduce is free and TP can be used freely to fit a model. On a point-to-point link the crossover is B = 184, still above typical latency-serving batches, which is why TP over PCIe works acceptably at small batch and degrades badly under continuous batching at B in the hundreds. So the practical rule is: the crossover batch is a function of the FABRIC, not of the model, and the model only enters through the ratio P_layer/d (roughly the feed-forward expansion). Measured confirmations: NVIDIA reports up to 1.5x higher throughput for Llama 3.1 70B on H200 with NVSwitch vs point-to-point, which is the same effect as raising BW_link. No measured refutations found in the literature.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "flop2-megatron-lm",
+    "link-nvlink-switch-spec",
+    "link-pcisig-specifications"
+  ]
+}

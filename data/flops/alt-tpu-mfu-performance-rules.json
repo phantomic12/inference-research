@@ -1,0 +1,39 @@
+{
+  "id": "alt-tpu-mfu-performance-rules",
+  "type": "flop",
+  "name": "TPU MFU: performance guide rules for achieving good model flops utilization",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "MFU (Model FLOPs Utilization) on TPU is governed by: (1) input-bound models — ensure steady data stream with parallel reads, (2) small batch from sharding — use largest batch that fits, (3) memory management — TPU_PREMAPPED_BUFFER_SIZE tuning, pinned_host vs unpinned_host, (4) network — MTU 8896, multi-NIC for multislice, (5) XLA optimizations — padding, tensor dimensions > MXU size, batch size rules, fusion, broadcasting. For TPU7x: FP8 gives 1.3x over BF16, rematerialization costs 25-30% FLOPs, SparseCore collective offloading overlaps communication.",
+  "bound_by": "both",
+  "scales_with": [
+    "batch_size (larger batch = better MXU utilization)",
+    "data_pipeline (input-bound if data cannot be loaded fast enough)",
+    "precision (FP8 doubles peak FLOPs vs BF16 on TPU7x)",
+    "rematerialization_policy (25-30% FLOPs overhead for memory savings)",
+    "communication_overhead (FSDP all-gather, EP all-to-all)"
+  ],
+  "affected_by_hardware": [
+    "google-tpu-v5e",
+    "google-tpu-v5p",
+    "google-tpu-v6e"
+  ],
+  "workarounds": [
+    "Use tf.data with num_parallel_reads for input-bound models",
+    "Use largest batch size that fits in TPU memory",
+    "Set TPU_PREMAPPED_BUFFER_SIZE for host-device transfer bottlenecks",
+    "Use pinned_host for activation/KV cache offloading (avoids layout conversion)",
+    "Use MTU 8896 for network performance",
+    "Use multi-NIC for multislice training",
+    "Enable FP8 on TPU7x for 1.3x compute throughput",
+    "Use SparseCore collective offloading to overlap communication with compute",
+    "Tune rematerialization: aggressive for long sequences, minimal for short"
+  ],
+  "notes": "The TPU performance guide is the primary source. Key insight: TPUs perform calculations very fast, so the bottleneck is almost always data movement, not compute. The guide's first recommendation is to profile the model. For inference, the relevant rules are: use large enough batches, ensure data pipeline is not the bottleneck, and use bucketing to maintain static shapes. For TPU7x, FP8 is a primary tuning lever. The 25-30% rematerialization overhead is the cost of fitting models in HBM — a compute-for-memory tradeoff.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-tpu-perf-guide",
+    "alt-tpu-ironwood-perf"
+  ]
+}

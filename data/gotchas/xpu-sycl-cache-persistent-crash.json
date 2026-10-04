@@ -1,0 +1,17 @@
+{
+  "id": "xpu-sycl-cache-persistent-crash",
+  "type": "gotcha",
+  "name": "SYCL_CACHE_PERSISTENT=1 causes crashes in llama.cpp; not recommended",
+  "class": "config",
+  "affects": ["llama-cpp"],
+  "concepts": ["sycl", "oneapi", "llama.cpp"],
+  "symptom": "Setting SYCL_CACHE_PERSISTENT=1 in the environment causes crashes when running llama.cpp with the SYCL backend. The crash occurs because the SYCL runtime caches and reuses JIT-compiled binaries, and when the binary file changes (e.g., due to a code update), the new and old codes mix, leading to a crash.",
+  "root_cause": "The SYCL runtime's persistent cache mechanism is not safe for production use when the underlying code changes frequently. The cache is stored in ~/.cache/libsycl_cache/ and persists across runs.",
+  "workaround": "Do not set SYCL_CACHE_PERSISTENT=1. If you have already set it and experience crashes, remove the local cache: rm -rf ~/.cache/libsycl_cache/ and unset SYCL_CACHE_PERSISTENT. Note that some AI assistants recommend this setting to 'speed up SYCL backend' - this is incorrect advice; it only speeds up startup by skipping JIT compilation, not running speed.",
+  "severity": "major",
+  "notes": "This is a known issue documented in the llama.cpp SYCL backend docs. The crash is caused by mixing old and new JIT-compiled binaries. The setting is not recommended by the llama.cpp SYCL backend team.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": ["xpu-llamacpp-sycl-docs"]
+}

@@ -1,0 +1,43 @@
+{
+  "id": "attn-regime-map-context-batch",
+  "type": "flop",
+  "name": "Attention kernel regime map: what wins at each context length and batch size",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The optimal attention kernel depends on context length, batch size, and hardware. SHORT CONTEXT (L < 4K), SMALL BATCH (B < 8): FA-2 or FA-3 with standard tiling. The kernel is compute-bound; tiling efficiency is high. FA-2 achieves 50-73% peak on A100. FA-3 achieves 75% on H100. SHORT CONTEXT, LARGE BATCH (B > 32): FA-2/FA-3 with split-KV (FlashDecoding). The KV cache is small but batch is large, so split-KV increases parallelism. FlashInfer's load-balanced scheduling adjusts to dynamic batch sizes. MEDIUM CONTEXT (4K < L < 32K), ANY BATCH: FA-3 on Hopper (warp specialization + TMA), FA-4 on Blackwell (tcgen05 + TMEM). FA-3: 740 TFLOPs/s FP16, 1.2 PFLOPs/s FP8. FA-4: 1605 TFLOPs/s BF16 on B200. LONG CONTEXT (32K < L < 128K), SMALL BATCH: FA-3/FA-4 with split-KV and paged attention. The KV cache is large; split-KV is essential for SM utilization. FlashInfer: 28-30% latency reduction for long-context. LONG CONTEXT, LARGE BATCH: MLA (DeepSeek) or sliding-window hybrid (Gemma 3). MLA reduces cache 85x, making long context feasible. Sliding-window reduces prefill cost 5.9x at 128K. VERY LONG CONTEXT (L > 128K): MLA with fp8/fp4 KV cache (FlashMLA on Blackwell). MLA cache at 128K: 68.6 KiB/token * 128K = 8.6 GiB per sequence. With fp8: 4.3 GiB. With fp4: 2.4 GiB. MHA equivalent: 5.856 MiB/token * 128K = 732 GiB - infeasible. BATCH SIZE EFFECT: at batch 1, decode attention is memory-bound with low SM utilization; split-KV is essential. At batch 32+, the GEMM is large enough to saturate SMs; split-KV is unnecessary. At batch 256+, the KV cache is large; paged attention and MLA become critical.",
+  "bound_by": "both",
+  "scales_with": [
+    "context_length (determines tiling efficiency and cache size)",
+    "batch_size (determines SM utilization and split-KV necessity)",
+    "head_dim (FA-3/4 tuned for 128/256)",
+    "precision (fp8 doubles tensor-core flops but SFU exp unchanged)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "workarounds": [
+    "L < 4K, B < 8: FA-2/FA-3 standard tiling",
+    "L < 4K, B > 32: FA-2/FA-3 with split-KV (FlashDecoding)",
+    "4K < L < 32K: FA-3 on Hopper, FA-4 on Blackwell",
+    "32K < L < 128K: FA-3/FA-4 with split-KV and paged attention",
+    "L > 128K: MLA with fp8/fp4 KV cache (FlashMLA on Blackwell)",
+    "Any L, B > 256: MLA or sliding-window hybrid to reduce cache pressure"
+  ],
+  "notes": "Measured performance by regime (all author-reported): FA-2: 50-73% peak on A100, 225 TFLOPs/s training (72% MFU). FA-3: 740 TFLOPs/s FP16 (75%), 1.2 PFLOPs/s FP8 on H100. FA-4: 1605 TFLOPs/s BF16 on B200 (71%), 1.3x vs cuDNN 9.13, 2.7x vs Triton. FlashInfer: 29-69% inter-token-latency reduction vs compiler backends, 28-30% latency reduction for long-context. FlashMLA: 1024 TFlops decode, 1350 TFlops sparse prefill on B200. MLA cache: 68.6 KiB/token bf16, 34.3 KiB/token fp8, 19.3 KiB/token fp4. At 128K context: MLA fp4 = 2.4 GiB/seq, MHA = 732 GiB/seq (infeasible). The regime map shows that no single kernel wins everywhere: FA-2/3 for short context, FA-3/4 for medium, MLA for long context, split-KV for small batch. The hardware arch determines which kernel is available: FA-3 requires Hopper, FA-4 requires Blackwell, FlashMLA requires Blackwell SM100/103. Sources: arXiv 2205.14135, 2307.08691, 2407.08608, 2501.09294, 2501.01005, FlashMLA GitHub.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "attn-flashattention-paper",
+    "attn-flashattention-2-paper",
+    "attn-flashattention-3-paper",
+    "attn-flashattention-4-paper",
+    "attn-flashinfer-paper",
+    "attn-deepseek-v2-mla-paper",
+    "attn-deepseek-v3-paper",
+    "kern-flashmla-github"
+  ]
+}

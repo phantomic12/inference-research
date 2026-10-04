@@ -1,0 +1,39 @@
+{
+  "id": "attn-sliding-window-ssm-fixed-state-cost",
+  "type": "flop",
+  "name": "Sliding-window and SSM hybrid decode: the fixed per-sequence state cost invisible in KV-per-token calculations",
+  "class": "decode_attention",
+  "arithmetic_intensity": "Hybrid attention-SSM models have a per-sequence cost that does NOT show up in a KV-per-token calculation. For SSM layers (Mamba, etc.), the recurrent state is fixed-size per sequence: state = d_inner * N elements, where d_inner = expand * hidden and N = ssm_state_size. This state is CONSTANT in context length - it does not grow with L. For Nemotron-H-8B (hidden 4096, expand 2, N=128): state = 8192*128 = 1,048,576 elements = 2.0 MiB per layer at bf16. With 48 Mamba layers: 96.0 MiB per sequence, independent of context. Compare: 4 attention layers with 8 KV heads, head_dim 128: 4*2*8*128*2 = 16,384 bytes/token = 16 KiB/token, which at 8k context is 128 MiB and already exceeds the entire recurrent state. At 128k it is 2.0 GiB. The state is NOT free - it is a fixed per-sequence tax that stops amortising as batch grows. At batch 256, a hybrid pays 256*96 MiB = 24.6 GiB of state whether sequences are 1k or 128k tokens. This is the opposite trade from KV cache, which grows with context.",
+  "bound_by": "memory",
+  "scales_with": [
+    "batch_size (state is per sequence, does NOT amortise with batch)",
+    "context_length (NOT at all for SSM layers - this is the defining property)",
+    "ssm_state_size N",
+    "expand ratio (d_inner = expand*hidden)",
+    "num_mamba_layers"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-b200",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Do not page or evict the state - it is fixed-size, allocate contiguously, never evict",
+    "Batch the state update across sequences so the state GEMM gets a real M dimension",
+    "fp8 or bf16 state to halve the per-sequence cost",
+    "Interleave a small number of attention layers (10-20%) for exact recall",
+    "Cache the state across turns of multi-turn conversations"
+  ],
+  "notes": "Verified hybrid ratios from configs: Nemotron-H-8B 48 Mamba / 4 attention (paper: 'Roughly 8% of the total layers are self-attention layers'). Granite-4.0-h-tiny 36 mamba / 4 attention. Jamba: 8x smaller KV cache than vanilla Transformer. The fixed state is a per-sequence cost that never amortises, so the optimal batch size for a hybrid model is set by the state footprint, not by available KV memory. At very large batch, a pure-attention model with paged KV can hold more total tokens than a hybrid with 96 MiB/seq of undividable state. Sliding-window attention (Gemma 3: w=1024, 5:1 local:global) has a different cost structure: local layers are O(1) in cache (bounded at w), global layers still grow linearly. The local:global ratio is the published knob for prefill cost reduction. Sources: arch-nemotron-h, arch-hf-config-nemotron-h, arch-hf-config-granite4, arch-jamba, arch-gemma3.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "arch-nemotron-h",
+    "arch-hf-config-nemotron-h",
+    "arch-hf-config-granite4",
+    "arch-jamba",
+    "arch-gemma3"
+  ]
+}

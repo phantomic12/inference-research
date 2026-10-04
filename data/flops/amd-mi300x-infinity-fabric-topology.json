@@ -1,0 +1,31 @@
+{
+  "id": "amd-mi300x-infinity-fabric-topology",
+  "type": "flop",
+  "name": "MI300X Infinity Fabric 7-link topology and tensor-parallel scaling efficiency",
+  "class": "custom_kernel",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "tensor_parallel_size",
+    "pipeline_parallel_size",
+    "num_gpus"
+  ],
+  "affected_by_hardware": [
+    "mi300x",
+    "mi325x",
+    "gfx942"
+  ],
+  "workarounds": [
+    "Use TP=1 for small models (<=30B) to avoid AllReduce overhead - AMD recommends 8 instances of TP=1",
+    "For large models, TP=8 on a single 8-GPU node keeps all communication on Infinity Fabric",
+    "Pipeline parallelism should be used to scale beyond 8 GPUs, as it requires less communication than TP"
+  ],
+  "notes": "MI300X uses 7 Infinity Fabric links at 128 GB/s per direction (153.6 GB/s bidirectional per link) to form a fully connected 8-GPU node. Total aggregate P2P bandwidth: 896 GB/s. The 7-link (not 8-link) topology means each GPU connects to 7 others in a fully connected mesh - no switch. This is the scale-up network. For tensor parallelism: TP=8 on a single node keeps all AllReduce traffic on Infinity Fabric at 896 GB/s aggregate. The AllReduce bandwidth per GPU is 7 x 128 = 896 GB/s (one link per peer). For pipeline parallelism: P2P communication is only between adjacent pipeline stages, requiring 1 link per stage boundary. The 7-link full mesh means TP=8 has no communication bottleneck from the network topology itself - the bottleneck is the AllReduce algorithm efficiency. AMD's guidance: for models <=30B, use TP=1 (8 separate instances) to avoid communication overhead. For models >70B, TP=8 on a single node is optimal. The 896 GB/s aggregate is 1.7x the PCIe Gen5 x16 bandwidth (128 GB/s), so intra-node TP is always preferred over cross-node TP.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "amd-rocm-mi300-microarch",
+    "amd-mi300x-product-page",
+    "net2-amd-cdna4-whitepaper"
+  ]
+}

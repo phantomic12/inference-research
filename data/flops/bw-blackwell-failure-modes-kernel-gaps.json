@@ -1,0 +1,40 @@
+{
+  "id": "bw-blackwell-failure-modes-kernel-gaps",
+  "type": "flop",
+  "name": "Blackwell-specific failure modes, numerical issues, and kernel availability gaps",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Several Blackwell-specific failure modes and gaps are documented. (1) SM100 vs SM120 incompatibility: CUTLASS README explicitly warns that sm_100a-compiled kernels are NOT compatible with RTX 50 series (SM120) because SM120 has a different compute capability from datacenter SM100. This means datacenter Blackwell kernels cannot be used on consumer Blackwell GPUs and vice versa. (2) K=96 block-scaled FP4 requires sm_103a or sm_107a (not sm_100a): the tcgen05.mma .kind::mxf4/.kind::mxf4nvf4 with K=96 is only supported on sm_103a and sm_107a, not on sm_100a (B200). K=128/192 requires sm_107f or higher. This means B200 cannot use the largest block-scaled FP4 tile sizes. (3) Sub-byte types not supported for .shared::cluster.global on sm_120a: this constrains a cluster-mapped FP4 pipeline on consumer Blackwell. (4) FlashMLA removed Hopper support: the 2026.09.30 release requires NVIDIA SM100/SM103 with CUDA >= 13.1 and removed Hopper support (V3/V3.2/V4.0), so a Hopper part gets an older FlashMLA or a different MLA path entirely. (5) DeepGEMM scale format change: SM100 requires packed UE8M0 scales (four per int) while SM90 wants FP32 scales - switching an FP8 model from H100 to B200 changes the memory layout the engine must produce. (6) NVFP4 accuracy on small models: the NVFP4 blog notes 'lower risk of noticeable accuracy drop particularly for larger models' - small models may see more accuracy degradation with NVFP4. (7) Blackwell Ultra datasheet INT8 inconsistency: the Blackwell Ultra datasheet prints INT8 as '330 TOPS / 307 TOPS' which is internally inconsistent with the FP8 row (10 PFLOPS = 10,000 TOPS) by ~30x - treated as a transcription artifact. (8) The Blackwell Ultra FP4 row uses a different sparse/dense convention (Sparse|Dense) than every other row (sparse with dense=half), creating a documentation trap.",
+  "bound_by": "compute",
+  "scales_with": [
+    "architecture target (sm_100a vs sm_103a vs sm_107a vs sm_107f vs sm_120)",
+    "kernel library version (CUTLASS, FlashMLA, DeepGEMM)",
+    "precision format (FP4, FP8, NVFP4, MXFP4)",
+    "model size (NVFP4 accuracy varies with model size)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "nvidia-rtx-5090"
+  ],
+  "workarounds": [
+    "Target sm_100a for datacenter Blackwell, sm_120 for consumer Blackwell - do not mix",
+    "For K=96 block-scaled FP4, use sm_103a or sm_107a (not sm_100a)",
+    "For K=128/192 block-scaled FP4, use sm_107f or higher",
+    "Use CUTLASS 4.8+ for Blackwell tcgen05 kernel support",
+    "Use FlashMLA 2026.09.30+ for Blackwell MLA (Hopper requires older version)",
+    "Account for packed UE8M0 scale format when porting FP8 kernels from SM90 to SM100",
+    "Validate NVFP4 accuracy on small models before deployment"
+  ],
+  "notes": "The most practically significant failure mode is the SM100/SM120 split: a kernel compiled for datacenter Blackwell (sm_100a) will not run on consumer Blackwell (SM120), and the CUTLASS README states this explicitly. The K=96/K=128/K=192 block-scaled FP4 tile size restrictions on sm_100a are a lesser-known limitation that affects kernel design. The FlashMLA Hopper support removal is a sharp example of the arch-support-matrix effect. The DeepGEMM scale format change (FP32 on SM90 vs packed UE8M0 on SM100) is a concrete porting hazard. The Blackwell Ultra datasheet's INT8 inconsistency and the FP4 row's reversed sparse/dense convention are documentation traps that have already caused errors in this repo.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "kern-cutlass-github",
+    "kern-ptx-isa",
+    "bw-nv-blackwell-ultra-blog",
+    "bw-nv-nvfp4-inference-blog",
+    "bw-nv-nvfp4-pretraining-blog"
+  ]
+}

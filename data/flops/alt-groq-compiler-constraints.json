@@ -1,0 +1,30 @@
+{
+  "id": "alt-groq-compiler-constraints",
+  "type": "flop",
+  "name": "Groq LPU: compiler and kernel constraints from static scheduling",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The Groq compiler is model-independent — it does not require model-specific kernel coding (unlike GPUs). It accepts workloads from multiple frameworks and maps/schedules them across one or more LPUs. The compiler outputs a program encompassing all data movement information. Constraints: (1) all shapes must be static — no dynamic shapes, (2) the entire data flow graph must be known at compile time, (3) no data-dependent control flow, (4) memory allocation is static. This means no dynamic batching, no variable-length sequences without padding, no runtime reconfiguration.",
+  "bound_by": "launch_overhead",
+  "scales_with": [
+    "model_complexity (more complex models = longer compilation)",
+    "num_chips (more chips = more scheduling)",
+    "sequence_length (must be static or bucketed)",
+    "batch_size (must be static)"
+  ],
+  "affected_by_hardware": [
+    "groq-lpu"
+  ],
+  "workarounds": [
+    "Use static shapes and bucketing for variable-length inputs",
+    "Accept longer compilation times as the cost of deterministic execution",
+    "Use the model-independent compiler — no custom kernels needed for standard ops",
+    "Design models to fit within SRAM capacity constraints"
+  ],
+  "notes": "The compiler constraint is the flip side of determinism. Because all data movement is statically scheduled, the compiler must know the entire execution graph at compile time. This eliminates runtime overhead but requires static shapes. For inference serving, this means bucketing is mandatory — you cannot dynamically adjust batch sizes. The benefit is that once compiled, execution is perfectly predictable with zero variance. The compiler is a key differentiator: 'We didn't touch chip design until the compiler's architecture was designed.'",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-groq-lpu-arch"
+  ]
+}

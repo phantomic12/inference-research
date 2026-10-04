@@ -1,0 +1,37 @@
+{
+  "id": "attn-low-rank-kv-compression-status",
+  "type": "flop",
+  "name": "Low-rank key projection and KV compression: research-only vs deployed",
+  "class": "decode_attention",
+  "arithmetic_intensity": "Low-rank key projection and KV compression aim to reduce the KV cache by projecting to a lower-dimensional space. MLA (Multi-head Latent Attention) is the deployed extreme of this: it compresses K and V JOINTLY through one shared down-projection W_DKV, so every head's K and V live in the same d_c-dimensional subspace. MLA is deployed in DeepSeek-V2/V3/V4. GQA/MQA reduce cache by reducing KV head count - GQA is universally deployed, MQA is widely used. Low-rank key projection (separate from MLA) is research-only: no production engine ships a general low-rank KV projection. KV quantization (fp8/int8/int4) is deployed: FlashMLA supports fp8/fp4 KV cache on Blackwell. KV compression via token merging (e.g., PyramidKV, SnapKV, H2O) is research-only: they reduce the number of cached tokens but require a selection pass and are not in production engines.",
+  "bound_by": "memory",
+  "scales_with": [
+    "context_length (KV cache bytes scale linearly)",
+    "num_kv_heads (GQA/MQA reduce head count)",
+    "kv_lora_rank d_c (MLA cache elements per token)",
+    "kv_cache_dtype (fp8/fp4/int8 quantization)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "MLA: compress K and V jointly through shared down-projection (deployed in DeepSeek)",
+    "GQA: reduce KV head count (universally deployed)",
+    "MQA: single KV head (widely used)",
+    "KV quantization: fp8/fp4/int8 KV cache (deployed in FlashMLA on Blackwell)",
+    "Token merging: PyramidKV, SnapKV, H2O (research-only)"
+  ],
+  "notes": "Deployment status summary: DEPLOYED: MLA (DeepSeek-V2/V3/V4), GQA (most modern models), MQA (many models), KV quantization (fp8 in FlashMLA, int8/int4 in various engines). RESEARCH-ONLY: low-rank key projection (general), token merging (PyramidKV, SnapKV, H2O), NSA, DSA (only in DeepSeek-V3.2 with FlashMLA), YOCO, RetNet, Kimi Linear. The key insight: MLA is the only low-rank compression that is deployed because it preserves quality while achieving 85x cache reduction. GQA/MQA are deployed because they are simple and preserve quality. Token merging and general low-rank projection lose quality and are not in production. SageAttention is NOT in vLLM or SGLang LLM serving path - it is research-only. Sources: arch-deepseek-v2-mla, arch-nsa, arch-retnet, arch-kimi-linear, kern-flashmla-github.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "attn-deepseek-v2-mla-paper",
+    "kern-flashmla-github",
+    "arch-nsa",
+    "arch-retnet",
+    "arch-kimi-linear"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "id": "amd-vllm-rocm-flags",
+  "type": "flop",
+  "name": "vLLM ROCm-specific flags, environment variables, and known-good configuration",
+  "class": "custom_kernel",
+  "bound_by": "launch_overhead",
+  "scales_with": [
+    "model_architecture",
+    "precision",
+    "tensor_parallel_size"
+  ],
+  "affected_by_hardware": [
+    "mi300x",
+    "mi325x",
+    "mi350x",
+    "mi355x"
+  ],
+  "workarounds": [
+    "VLLM_ROCM_USE_AITER=1: enables AITER as default kernel backend (attention, MoE, GEMM)",
+    "VLLM_ROCM_USE_AITER_LINEAR=1: enables AITER block-scaled FP8 GEMM (required for DeepSeek models)",
+    "VLLM_ROCM_USE_AITER_MHA=1: enables AITER multi-head attention",
+    "VLLM_ROCM_QUICK_REDUCE_QUANTIZATION=INT4: enables QuickReduce with INT4 quantization",
+    "VLLM_ROCM_USE_AITER_TRITON_FUSED_ROPE_ZEROS_KV_CACHE=1: enables fused RoPE + zeros KV cache",
+    "VLLM_ROCM_SHUFFLE_KV_CACHE_LAYOUT=1: enables AMD's preshuffled KV cache layout for 15-20% decode throughput improvement",
+    "PYTORCH_TUNABLEOP_ENABLED=1: enables PyTorch tunable GEMM operations (~26% latency reduction)",
+    "--attention-backend ROCM_AITER_FA: 3-path routing (prefill/extend/decode) with AITER primitives",
+    "--attention-backend ROCM_AITER_MLA: AITER MLA backend for DeepSeek models",
+    "--kv-cache-dtype fp8: FP8 KV cache to halve KV memory usage",
+    "--compilation-config '{\"custom_ops\": [\"-rms_norm\", \"-quant_fp8\"], \"cudagraph_mode\": \"FULL_AND_PIECEWISE\"}': graph capture + custom ops"
+  ],
+  "notes": "vLLM on ROCm has extensive AMD-specific configuration. Key environment variables: VLLM_ROCM_USE_AITER=1 (master switch for AITER backends), VLLM_ROCM_USE_AITER_LINEAR=1 (block-scaled FP8 GEMM for DeepSeek), VLLM_ROCM_USE_AITER_MHA=1 (MHA attention), VLLM_ROCM_QUICK_REDUCE_QUANTIZATION=INT4 (QuickReduce communication), VLLM_ROCM_SHUFFLE_KV_CACHE_LAYOUT=1 (shuffled KV layout for 15-20% decode improvement). Key flags: --attention-backend ROCM_AITER_FA (3-path routing, 2.7-4.4x TPS vs ROCM_ATTN), --attention-backend ROCM_AITER_MLA (1.2-1.5x TPS vs TRITON_MLA), --kv-cache-dtype fp8, --compilation-config with cudagraph_mode FULL_AND_PIECEWISE. Known-good configuration for MI355X (from AMD's blog): VLLM_ROCM_USE_AITER=1, VLLM_ROCM_USE_AITER_MHA=1, VLLM_ROCM_QUICK_REDUCE_QUANTIZATION=INT4, --tensor-parallel-size 8, --max-num-batched-tokens 8192, --kv-cache-dtype fp8, --compilation-config with custom_ops and cudagraph_mode. For MI300X: PYTORCH_TUNABLEOP_ENABLED=1 gives ~26% latency reduction.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "bench-amd-mi355x-vs-b200-vllm",
+    "amd-vllm-rocm-attn-backends",
+    "bench-amd-vllm-rocm-optimize-fp8-gemm",
+    "amd-vllm-09x-rocm"
+  ]
+}

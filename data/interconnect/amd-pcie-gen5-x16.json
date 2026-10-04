@@ -1,0 +1,23 @@
+{
+  "id": "amd-pcie-gen5-x16",
+  "type": "interconnect",
+  "name": "PCIe Gen5 x16 host link (128 GB/s, unchanged across CDNA3/CDNA4)",
+  "kind": "pcie",
+  "version": "PCIe Gen5 x16",
+  "bandwidth_gbps": 128,
+  "bandwidth_basis": "PCIe Gen5 x16: 32 GT/s per lane x 16 lanes / 8 bits per byte = 64 GB/s per direction, 128 GB/s bidirectional. The MI300X product page lists 'Bus Type: PCIe 5.0 x16'. The MI355X product page lists '1 PCIe Gen 5 x16 (128 GB/s)'. This is the host-to-GPU link, not the GPU-to-GPU interconnect.",
+  "link_count": 1,
+  "topology": "Host-to-GPU (tree topology via root complex). Each GPU has one PCIe Gen5 x16 link to the host. In a dual-socket 8-GPU system, 4 GPUs are connected to each socket's root complex.",
+  "scale_up": false,
+  "scale_out": false,
+  "switching": "PCIe root complex and optional PCIe switches",
+  "notes": "PCIe Gen5 x16 provides 128 GB/s bidirectional bandwidth between the host CPU and each GPU. This is the host-to-GPU link, not the GPU-to-GPU scale-up network. For inference, PCIe Gen5 x16 is sufficient for model loading and CPU-GPU communication but is NOT used for inter-GPU communication (that uses Infinity Fabric). The 128 GB/s PCIe bandwidth is 1/7 of the 896 GB/s Infinity Fabric aggregate on CDNA3, and 1/8.4 of the 1075.2 GB/s on CDNA4. This is why AMD recommends keeping tensor parallelism within a single 8-GPU node (on Infinity Fabric) rather than across nodes (which would require PCIe or network). The MI355X product page explicitly lists '1 PCIe Gen 5 x16 (128 GB/s)' as the I/O interconnect.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "amd-mi300x-product-page",
+    "amd-mi355x-product-page",
+    "amd-mi355x-brochure"
+  ]
+}

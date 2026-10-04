@@ -1,0 +1,31 @@
+{
+  "id": "qhw-smoothquant-fp8-interaction",
+  "type": "quantization",
+  "name": "SmoothQuant with FP8 activations: does outlier migration still help?",
+  "scheme": "smoothquant",
+  "bits": "w8a8 (8-bit weights, 8-bit activations)",
+  "weight_group_size": null,
+  "activation_scheme": "SmoothQuant migrates quantization difficulty from activations to weights using a per-channel transformation. When the activation is already FP8, the question is whether the migration still helps. The answer depends on whether FP8's limited precision (E4M3 has ~2 decimal digits) is sufficient to represent the migrated scales.",
+  "native_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s"
+  ],
+  "emulated_support": [
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "TensorRT-LLM SmoothQuant W8A8 path",
+    "CUTLASS INT8 GEMM",
+    "vLLM SmoothQuant config"
+  ],
+  "quality_delta": null,
+  "notes": "This is a research question rather than a documented result. The key issue: SmoothQuant's migration transforms activations by dividing by s_j and multiplying weights by s_j. When the activation is quantized to FP8 E4M3, the migrated activation has a different distribution that may or may not be easier to quantize. The FP8 format has limited precision (E4M3 has 3 mantissa bits), so the migration may not help as much as it does for INT8. The existing SmoothQuant record shows it was designed for INT8, not FP8. The interaction between SmoothQuant and FP8 is an open research question. PRACTICAL IMPLICATION: if you are using FP8 activations, you may not need SmoothQuant at all - the FP8 format already handles outliers better than INT8 because the exponent provides dynamic range. But this has not been verified with a controlled benchmark. This is a priority for further research.",
+  "status": "draft",
+  "confidence": 0.4,
+  "updated": "2026-10-04",
+  "sources": [
+    "qhw-src-vllm-quant-docs"
+  ]
+}

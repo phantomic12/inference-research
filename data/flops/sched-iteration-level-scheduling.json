@@ -1,0 +1,36 @@
+{
+  "id": "sched-iteration-level-scheduling",
+  "type": "flop",
+  "name": "Iteration-level scheduling: the CPU overhead that CUDA graphs cannot remove",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Not a flop class in isolation - it is the class that decides which flop classes a step contains. Iteration-level scheduling (Orca, OSDI 2022) admits a new request as soon as any sequence in the running batch finishes, so the batch never sits at one sequence and the decode GEMM's AI (= B) actually climbs. The cost is that a mixed step's shapes vary per iteration, which fights CUDA Graphs' static-configuration requirement. The host-side CPU overhead of iteration-level scheduling is significant: this repo records 11.7% of wall time on Qwen3-0.6B/H100 spent in the iteration-level scheduler that CUDA graphs cannot remove. This is the price of dynamic batching - the scheduler must run on the host to decide which sequences to admit/retire each iteration, and this decision cannot be captured in a CUDA graph.",
+  "bound_by": "launch_overhead",
+  "scales_with": [
+    "batch_size (larger batches mean more sequences to track per iteration)",
+    "arrival_rate (higher arrival rate means more frequent scheduling decisions)",
+    "num_concurrent_requests (more concurrent requests = more complex scheduling)",
+    "scheduler_policy (prefill-first vs decode-first vs chunked-prefill preemption changes the mix)",
+    "kv_cache_pressure (preemption and swapping add kv_transfer work to a step)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Iteration-level scheduling / continuous batching (Orca, OSDI 2022): admit and retire sequences per iteration rather than per batch",
+    "Chunked prefill to bound the prefill chunk added to a step, so a long prompt cannot stall decode ITLs",
+    "Preemption by recompute or swap when KV memory is exhausted, trading compute or PCIe traffic for a smaller batch",
+    "Load-balanced scheduling compatible with CUDAGraph's static configuration (FlashInfer, arXiv 2501.01005)",
+    "Priority scheduling that separates TTFT-sensitive from throughput-sensitive traffic into different admission classes"
+  ],
+  "notes": "Design consequence: this is the class that turns the decode-gemm AI=B result into an actual throughput number. Because AI = B, the entire throughput story of an inference service is 'what is the average effective B', and continuous batching is the mechanism that keeps B high as requests arrive and complete. The trade is explicit and unavoidable: latency-serving (small B, memory-bound, launch-overhead-sensitive) and throughput-serving (large B, compute-bound) stress different hardware properties, and one engine tuned for the second can be the wrong choice for the first. Record the scheduler policy alongside any throughput benchmark, because 'continuous batching' alone does not specify whether long prompts are chunked or preempted. The 11.7% CPU overhead figure is critical: it means that even with CUDA graphs eliminating kernel launch overhead, the host-side scheduler still consumes 11.7% of wall time on a small model (Qwen3-0.6B) on an H100. This is the irreducible cost of dynamic batching.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "sched-orca-osdi22",
+    "sched-vllm-pagedattention-sosp23",
+    "sched-flashinfer-mlsys25"
+  ]
+}

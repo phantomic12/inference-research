@@ -1,0 +1,37 @@
+{
+  "id": "amd-rocm-failure-modes",
+  "type": "flop",
+  "name": "Documented ROCm failure modes: Vulkan PPL explosion, HIP gfx1151 corrupt output, HIP ubatch wrong logits",
+  "class": "custom_kernel",
+  "bound_by": "compute",
+  "scales_with": [
+    "rocm_version",
+    "gpu_architecture",
+    "precision",
+    "batch_size"
+  ],
+  "affected_by_hardware": [
+    "mi300x",
+    "mi325x",
+    "mi350x",
+    "mi355x",
+    "gfx1151",
+    "gfx942",
+    "gfx950"
+  ],
+  "workarounds": [
+    "llama.cpp issue #27506: ROCm backend PPL explosion (7.7 -> 3024) starting from b10040 - use b10038 or earlier",
+    "llama.cpp issue #27579: HIP/ROCm gfx1151 produces corrupted output while Vulkan is correct - use Vulkan backend for gfx1151",
+    "llama.cpp issue #28211: HIP/ROCm gfx1151 produces wrong logits for prompts longer than n_ubatch - keep n_ubatch >= prompt length",
+    "Always validate ROCm output against a known-good baseline (e.g., Vulkan or CPU) when upgrading ROCm versions"
+  ],
+  "notes": "Three documented ROCm failure modes in llama.cpp: (1) ISSUE #27506 - PPL EXPLOSION: ROCm backend severe perplexity explosion starting from build b10040. Bisect with concrete PPL values: b10038 = 7.7241, b10040 = 3024.3587, latest master = 2177.3497. Vulkan build unaffected. This demonstrates llama-perplexity as a corruption detector. (2) ISSUE #27579 - gfx1151 CORRUPT OUTPUT: HIP/ROCm backend produces corrupted output on gfx1151 (Radeon 8060S / Ryzen AI Max) while Vulkan is correct with byte-identical flags. Three-model matrix with two failure severities. The issue explicitly rules out the -f unsafe-math-optimizations removal as the cause. (3) ISSUE #28211 - HIP UBATCH WRONG LOGITS: HIP/ROCm on gfx1151 produces wrong logits (not a crash) for prompts longer than n_ubatch. Minimal public-API reproducer that decodes the same prompt twice differing only in n_ubatch. BF16 also affected (84.7476 vs 13.8167 on Vulkan), which rules out the quantized-matmul kernel as the cause. These failure modes are specific to gfx1151 (RDNA4 consumer silicon), not CDNA3/CDNA4 datacenter GPUs, but they illustrate the importance of validating ROCm output against known-good baselines.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "qgotcha-llamacpp-27506-rocm-ppl-explosion",
+    "qgotcha-llamacpp-27579-hip-gfx1151-corrupt-output",
+    "qgotcha-llamacpp-28211-hip-ubatch-wrong-logits"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "alt-tpu-xla-static-shapes",
+  "type": "flop",
+  "name": "TPU XLA compilation: static shapes, padding, and fusion",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "XLA compiles the entire HLO graph to a TPU executable at compile time. All tensor shapes must be known statically — there is no dynamic shape support. The compiler pads tensors to 128x8 chunks (the MXU tile size); padding wastes compute and memory. Batch size must be a multiple of 64 (8 per core) with feature dims multiple of 128, OR batch multiple of 1024 with feature dims multiple of 8. Fusion eliminates intermediate HBM round-trips. Broadcasting can force materialization and prevent fusion.",
+  "bound_by": "both",
+  "scales_with": [
+    "batch_size (must be multiple of 64 or 1024 for efficiency)",
+    "feature_dimensions (must be multiple of 128 or 8)",
+    "tensor_shapes (must be static — no dynamic shapes)",
+    "fusion_opportunities (more fusion = less HBM traffic)"
+  ],
+  "affected_by_hardware": [
+    "google-tpu-v5e",
+    "google-tpu-v5p",
+    "google-tpu-v6e"
+  ],
+  "workarounds": [
+    "Pad tensors to multiples of 128 (feature) and 64/1024 (batch) to avoid XLA padding waste",
+    "Use jax.jit with static_argnums to force recompilation per shape rather than dynamic shapes",
+    "Structure data to tile into 128x8 chunks natively",
+    "Avoid broadcasting patterns that prevent fusion (e.g., argmax of broadcast)",
+    "Use XLA flags to control fusion behavior"
+  ],
+  "notes": "The TPU performance guide explicitly states: 'To use TPU memory efficiently, structure your data so that it can be tiled into 128 x 8 chunks.' Padding has two drawbacks: (1) under-utilizes the TPU core, (2) increases on-chip memory and can cause OOM. The XLA compiler automatically pads when needed, but well-chosen dimensions avoid it. For v6e+, MXU is 256x256 (up from 128x128), so the minimum efficient GEMM dimension doubled. This is the single most important TPU-specific optimization: shape your model and batch to the hardware tile size.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-tpu-perf-guide",
+    "alt-tpu-system-arch"
+  ]
+}

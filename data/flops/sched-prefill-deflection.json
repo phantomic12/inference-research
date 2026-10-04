@@ -1,0 +1,35 @@
+{
+  "id": "sched-prefill-deflection",
+  "type": "flop",
+  "name": "Prefill deflection scheduling: deflecting prefill to idle decode nodes instead of queueing",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Not an arithmetic mechanism - it is a scheduling decision that changes where prefill executes. The key insight from Kairos (arXiv 2607.02043) is that under bursty, heavy-tailed workloads, prefill nodes saturate while decode nodes have compute underutilized. On a 2P2D A100 cluster, decode SM utilization is 7-27% while prefill SM utilization is 75-84%. Deflection routes the prefill phase of requests to decode nodes as chunked-prefill steps interleaved with in-flight decode batches. Because the prefill phase runs in place on the decode node, the inter-node KV transfer is eliminated entirely. Kairos reduces P95 TTFT by up to 81% and raises SLO attainment by up to 79% over state-of-the-art disaggregated schedulers, at sub-millisecond per-request routing cost.",
+  "bound_by": "both",
+  "scales_with": [
+    "decode_node_utilization (the win case: decode nodes with low SM utilization can absorb prefill work)",
+    "prefill_queue_depth (longer queues = more benefit from deflection)",
+    "prompt_length (longer prompts = more prefill work to deflect)",
+    "chunk_size (smaller chunks = less TBT interference but more scheduling overhead)",
+    "arrival_rate (bursty arrivals create the prefill/decode imbalance that deflection exploits)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm"
+  ],
+  "workarounds": [
+    "Kairos prefill deflection (arXiv 2607.02043): per-request TBT-safe chunk-size sweep using analytical step-latency models",
+    "Static deflection policies (SQ, SL): simpler but under-deflect or over-deflect",
+    "Sarathi-Serve chunked prefill: fixed chunk size for colocated serving, not disaggregated",
+    "FlashInfer load-balanced scheduling: CUDA-graph-compatible dynamic batching"
+  ],
+  "notes": "When deflection helps: under bursty, heavy-tailed workloads where prefill nodes saturate while decode nodes idle. The key condition is that decode nodes have spare compute capacity (SM utilization < 30%) and the prefill queue is non-empty. When it hurts: when decode nodes are already busy (high SM utilization), when the prompt is very long (chunking overhead dominates), or when the TBT SLO is very stringent (any prefill injection violates TBT). The chunk-size tradeoff is critical: Kairos found that chunk sizes up to 512 tokens increase step latency by at most 30 ms across all workloads and batch sizes, but chunk sizes of 1024-2048 can increase latency by up to 250 ms by the fifth chunk. Static policies (threshold-based) are not ideal: under-deflection misses up to 36% of Oracle's TTFT gain, while over-deflection violates TBT 1.5% of the time. The right decision depends on the request, node state, and workload characteristics, necessitating per-request scheduling driven by SLO-aware step-latency models.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "sched-kairos-arxiv",
+    "sched-sarathi-osdi24",
+    "sched-flashinfer-mlsys25"
+  ]
+}

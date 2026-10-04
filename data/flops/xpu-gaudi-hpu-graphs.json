@@ -1,0 +1,15 @@
+{
+  "id": "xpu-gaudi-hpu-graphs",
+  "type": "flop",
+  "name": "Gaudi HPU Graphs: Static Shape Capture and Replay",
+  "class": "custom_kernel",
+  "bound_by": "launch_overhead",
+  "scales_with": ["batch_size", "sequence_length", "num_layers", "hidden_size"],
+  "affected_by_hardware": ["gaudi-2", "gaudi-3", "hpu"],
+  "workarounds": ["Use torch.compile with mode='reduce-overhead' to enable HPU graphs", "Use static shapes (fixed batch size and sequence length) to avoid graph recompilation", "Use the vLLM Gaudi plugin's custom graph caching for fast warm-up"],
+  "notes": "HPU graphs are Gaudi's equivalent of CUDA graphs: they capture a sequence of kernel launches into a single graph that can be replayed with minimal launch overhead. This is critical for LLM inference where many small kernel launches (attention, FFN, sampling) would otherwise be launch-bound. The vLLM Gaudi plugin implements custom graph caching for fast warm-up and efficient memory use. torch.compile with mode='reduce-overhead' enables HPU graphs automatically. The key constraint is static shapes: the batch size and sequence length must be fixed at capture time, so any change triggers recompilation. This is why vLLM on Gaudi uses a bucketing mechanism to group requests into fixed-size buckets. The HabanaAI/vllm-fork reached EOL at v1.23.0; the vllm-gaudi plugin is the production path. HPU graphs are not portable to CUDA or ROCm; they are a Gaudi-specific feature that requires the Habana runtime (torch-hpu).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": ["xpu-vllm-gaudi-readme", "xpu-vllm-gaudi-plugin-system"]
+}

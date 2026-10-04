@@ -1,0 +1,36 @@
+{
+  "id": "attn-paged-attention-block-size-hardcoded",
+  "type": "flop",
+  "name": "Paged attention block-size constraints: kernels that hard-code block size and the compression ratio trap",
+  "class": "decode_attention",
+  "arithmetic_intensity": "PagedAttention (vLLM) manages KV cache in fixed-size blocks. The block size is a kernel constraint, not just a storage choice. FlashAttention's paged path requires page_block_size to be a multiple of 256. Some kernels hard-code the block size entirely, so a different compression ratio has no solution. The block_table is per (batch, max_num_blocks_per_seq) int32. Paging changes no arithmetic - FLOPs and total bytes are identical. What changes is coalescing efficiency and the absence of per-request reallocation copies. The real payoff is capacity (no wasted padding) and elimination of defragmentation copies. vLLM achieves near-zero waste in KV cache memory and 2-4x throughput improvement vs FasterTransformer and Orca.",
+  "bound_by": "memory",
+  "scales_with": [
+    "context_length",
+    "batch_size",
+    "page size (must be multiple of 256 in FA-2 paged path)",
+    "num_kv_heads"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-b200",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Block table indirection inside the attention kernel instead of copying blocks",
+    "Page size chosen as a multiple of the kernel's vectorized load width (256 in FA-2)",
+    "Fused cache update: FA-2's flash_attn_with_kvcache writes new K/V and does attention in one kernel",
+    "Rotary embedding applied inside the same kernel as the cache write",
+    "Block-sparse attention plans on top of paging to skip fully-masked pages"
+  ],
+  "notes": "Hard constraint: page_block_size must be a multiple of 256 in FlashAttention's paged path. This is a kernel-level constraint, not a recommendation. A kernel that hard-codes block size will not accept another engine's cache. The block_table is per (batch, max_num_blocks_per_seq) int32. Paging is the substrate that split-KV and cascade attention both assume. vLLM's PagedAttention paper (SOSP 2023, arXiv 2309.06180) shows 2-4x throughput improvement. The improvement is more pronounced with longer sequences, larger models, and more complex decoding algorithms. FlashInfer (MLSys 2025, arXiv 2501.01005) uses block-sparse format and composable formats for KV-cache storage heterogeneity, with JIT compilation for attention template customization. Sources: arXiv 2309.06180, 2501.01005, FlashAttention GitHub.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "attn-pagedattention-paper",
+    "attn-flashinfer-paper",
+    "kern-flashattention-github"
+  ]
+}

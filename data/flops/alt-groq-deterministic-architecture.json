@@ -1,0 +1,30 @@
+{
+  "id": "alt-groq-deterministic-architecture",
+  "type": "flop",
+  "name": "Groq LPU: deterministic single-core-per-token architecture and SRAM-to-DRAM ratio",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The Groq LPU uses a deterministic assembly-line architecture where each token is processed by a single core (SIMD function unit) with no dynamic scheduling, no cache misses, and no variance. All data movement is statically scheduled at compile time. The SRAM-to-DRAM ratio is effectively infinite — there is no DRAM tier. 230 MB of on-chip SRAM at 80 TB/s bandwidth vs GPU HBM at ~8 TB/s. This means the memory hierarchy assumptions are completely inverted: there is no weight streaming from HBM, no cache hierarchy, no prefetching. The compiler must fit the entire model (or a tile of it) in SRAM at compile time.",
+  "bound_by": "memory",
+  "scales_with": [
+    "model_size (must fit in 230 MB SRAM per chip, or be tiled across chips)",
+    "sram_bandwidth (80 TB/s — 10x GPU HBM)",
+    "num_chips (larger models need more chips for capacity)",
+    "compile_time (static scheduling means longer compilation for complex models)"
+  ],
+  "affected_by_hardware": [
+    "groq-lpu"
+  ],
+  "workarounds": [
+    "Tile large models across hundreds of chips (70B-class needs ~300+ chips)",
+    "Use the model-independent compiler — no model-specific kernel coding needed",
+    "Accept that models larger than 230 MB require multi-chip configurations",
+    "Leverage determinism: latency is predictable and holds under load"
+  ],
+  "notes": "The architectural point that matters for inference: SRAM-only with no DRAM tier means there is no weight-streaming path. A model larger than 230 MB must be tiled across many chips and the tapeout is fixed at compile time. The compiler statically schedules all data movement and the result is a deterministic assembly line. This is why Groq's headline latency figures hold under load — there is no cache miss variance, no dynamic scheduling overhead. The tradeoff is capacity: 230 MB is small compared to GPU HBM (80-192 GB), so large models need many chips. The 80 TB/s SRAM bandwidth is the key advantage — it eliminates the memory bottleneck that dominates GPU inference.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-groq-lpu-arch"
+  ]
+}

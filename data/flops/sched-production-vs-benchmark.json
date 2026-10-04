@@ -1,0 +1,37 @@
+{
+  "id": "sched-production-vs-benchmark",
+  "type": "flop",
+  "name": "Which scheduling optimizations survive at production scale versus which are benchmark artifacts",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Not an arithmetic mechanism - it is a meta-observation about which scheduling techniques work in production versus which only work in benchmarks. The key distinction: production workloads have heavy-tailed prompt lengths, bursty arrivals, and mixed prefill/decode traffic, while benchmarks often use uniform prompt lengths, Poisson arrivals, and isolated prefill or decode. Techniques that work in benchmarks but fail in production: (1) static chunk sizes (work in benchmarks with uniform prompts, fail in production with heavy-tailed prompts), (2) prefill-prioritizing scheduling (works in benchmarks with low arrival rates, fails in production with bursty arrivals), (3) fixed batch sizes (work in benchmarks with uniform traffic, fail in production with variable load). Techniques that survive in production: (1) iteration-level scheduling with dynamic batching, (2) chunked prefill with adaptive chunk sizes, (3) prefill/decode disaggregation with KV transfer, (4) KV cache offloading with prefix caching.",
+  "bound_by": "both",
+  "scales_with": [
+    "prompt_length_distribution (heavy-tailed vs uniform)",
+    "arrival_rate (bursty vs Poisson)",
+    "prefill_decode_ratio (mixed vs isolated)",
+    "slo_stringency (loose vs tight)",
+    "model_size (small vs large)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h200-sxm"
+  ],
+  "workarounds": [
+    "Iteration-level scheduling with dynamic batching (Orca, vLLM, SGLang)",
+    "Chunked prefill with adaptive chunk sizes (Sarathi-Serve, Kairos)",
+    "Prefill/decode disaggregation with KV transfer (DistServe, Mooncake)",
+    "KV cache offloading with prefix caching (vLLM, LMCache)",
+    "Load-balanced scheduling compatible with CUDA Graphs (FlashInfer)"
+  ],
+  "notes": "The key insight is that production workloads are fundamentally different from benchmark workloads. Benchmarks use uniform prompt lengths, Poisson arrivals, and isolated prefill or decode, which makes static optimizations look good. Production workloads have heavy-tailed prompt lengths (P50=842, P90=10336 for the Kairos trace), bursty arrivals (Gamma-distributed inter-arrival), and mixed prefill/decode traffic. The techniques that survive are those that adapt to this dynamism: iteration-level scheduling, adaptive chunk sizes, and disaggregation. The techniques that fail are those that assume uniformity: static chunk sizes, fixed batch sizes, and prefill-prioritizing scheduling. The 11.7% CPU overhead of iteration-level scheduling is a production reality that benchmarks often ignore. The KV transfer cost of disaggregation is a production reality that benchmarks often ignore. The chunk-size tradeoff is a production reality that benchmarks often ignore. The implication for researchers: evaluate on production-derived traces, not synthetic benchmarks.",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-04",
+  "sources": [
+    "sched-kairos-arxiv",
+    "sched-sarathi-osdi24",
+    "sched-distserve-osdi24",
+    "sched-flashinfer-mlsys25"
+  ]
+}

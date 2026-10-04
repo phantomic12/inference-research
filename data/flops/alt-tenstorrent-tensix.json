@@ -1,0 +1,32 @@
+{
+  "id": "alt-tenstorrent-tensix",
+  "type": "flop",
+  "name": "Tenstorrent Tensix: small-SRAM, modest-bandwidth, open-source architecture",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Tenstorrent Wormhole (n150) has 108 MB SRAM, 12 GB GDDR6 at 288 GB/s, 74 TFLOPS FP16. Blackhole (p150) has 180 MB SRAM, 32 GB GDDR6 at 512 GB/s, 664 TFLOPS BLOCKFP8. The architecture uses Tensix cores with dedicated RISC-V control cores and a network-on-chip. SRAM acts as a L2-like feed tier. The design bets on very low power (160-300 W) and open-source software rather than winning the bandwidth race. For inference, it is decisively bandwidth-bound at batch 1.",
+  "bound_by": "memory",
+  "scales_with": [
+    "sram_capacity (108-180 MB, acts as L2)",
+    "gddr6_bandwidth (288-512 GB/s, the wall for batch-1 decode)",
+    "num_tensix_cores (72-120 per ASIC)",
+    "power_consumption (160-300 W, very low)"
+  ],
+  "affected_by_hardware": [
+    "tenstorrent-wormhole-n150",
+    "tenstorrent-blackhole-p150"
+  ],
+  "workarounds": [
+    "Use TT-Forge compiler (MLIR-based, PyTorch/JAX/ONNX)",
+    "Use TT-NN for pre-optimized operations",
+    "Use TT-Metalium for custom kernels",
+    "Leverage open-source software stack (TT-Forge, TT-NN, TT-Metalium all open source)",
+    "Use tt-inference-server for vLLM-compatible serving"
+  ],
+  "notes": "Tenstorrent's key differentiator is the fully open-source software stack. TT-Forge is an MLIR-based compiler that works with PyTorch, JAX, and ONNX. TT-NN provides pre-optimized operations. TT-Metalium is a low-level C++ SDK. The hardware is modest — 288-512 GB/s bandwidth is far below GPU HBM — but the power efficiency (160-300 W) and open-source approach are the value propositions. For inference, the bandwidth bottleneck is the primary limitation. The block-float formats (BLOCKFP2/4/8) have native hardware paths.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-tenstorrent-docs"
+  ]
+}

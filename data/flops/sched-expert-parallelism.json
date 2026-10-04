@@ -1,0 +1,35 @@
+{
+  "id": "sched-expert-parallelism",
+  "type": "flop",
+  "name": "Expert parallelism for MoE: when EP beats TP and the dispatch/combine overhead",
+  "class": "moe_experts",
+  "arithmetic_intensity": "EP shards experts across GPUs rather than sharding each expert's weights. For a MoE model with E experts, EP assigns E/N experts to each GPU. The arithmetic intensity of each expert GEMM is the same as a dense GEMM at the same batch size, but the batch is split across experts by the router. The key advantage over TP: EP requires no all-reduce per layer (only an all-to-all dispatch and combine), so the communication cost is O(B*d) rather than O(B*d*N). The key disadvantage: load imbalance - if the router sends more tokens to some experts than others, some GPUs idle while others are saturated. DeepSeek-V3 uses 256 experts with top-8 routing, and the report discusses EP as the preferred parallelism strategy for MoE models.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "num_experts (more experts = more parallelism but also more dispatch overhead)",
+    "top_k_routing (higher k = more tokens per expert = better load balance but more communication)",
+    "batch_size (larger batches = better expert utilization)",
+    "expert_capacity_factor (the maximum tokens per expert before overflow)",
+    "num_gpus (EP degree determines how many experts per GPU)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Expert parallelism (EP): shard experts across GPUs, avoiding per-layer all-reduce",
+    "DeepSeek-V3's 256 experts with top-8 routing: uses EP as the preferred parallelism strategy",
+    "Expert capacity factor: cap tokens per expert to prevent overflow",
+    "Auxiliary-loss-free load balancing: DeepSeek-V3's approach to balance expert load without auxiliary loss",
+    "Combine EP with TP: use EP across nodes and TP within nodes for large MoE models"
+  ],
+  "notes": "When EP beats TP: for MoE models with many experts, EP is preferred because (1) it avoids the per-layer all-reduce that TP requires, (2) it scales naturally with the number of experts, and (3) the all-to-all dispatch/combine is cheaper than N all-reduces for large N. When TP beats TP: for dense models or MoE with few experts, TP is simpler and has lower overhead. The crossover depends on the number of experts and the batch size. DeepSeek-V3's 256 experts with top-8 routing means each token is processed by 8 experts, so the effective batch per expert is B*8/E = B*8/256 = B/32. For B=128, each expert sees 4 tokens on average, which is too few for efficient GEMM. This is why MoE models need large batch sizes or expert capacity factors to utilize GPUs efficiently. The dispatch/combine overhead is the price of EP: each token must be routed to its top-k experts, and the results must be combined. This is O(B*k*d) communication, which is cheaper than TP's O(B*d*N) for large N but still significant.",
+  "status": "verified",
+  "confidence": 0.80,
+  "updated": "2026-10-04",
+  "sources": [
+    "sched-deepseek-v3-report",
+    "flop2-megatron-lm"
+  ]
+}

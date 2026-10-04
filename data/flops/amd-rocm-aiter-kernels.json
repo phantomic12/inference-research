@@ -1,0 +1,34 @@
+{
+  "id": "amd-rocm-aiter-kernels",
+  "type": "flop",
+  "name": "AITER (AI Tensor Engine for ROCm) kernel library and measured speedups",
+  "class": "custom_kernel",
+  "bound_by": "compute",
+  "scales_with": [
+    "model_architecture",
+    "precision",
+    "batch_size",
+    "sequence_length"
+  ],
+  "affected_by_hardware": [
+    "mi300x",
+    "mi325x",
+    "mi350x",
+    "mi355x"
+  ],
+  "workarounds": [
+    "AITER is the default kernel backend for LLM inference on AMD GPUs, integrated into vLLM and SGLang",
+    "Set VLLM_ROCM_USE_AITER=1 to enable AITER backends in vLLM",
+    "AITER provides fused MoE, MLA, block-scaled FP8 GEMM, and attention kernels"
+  ],
+  "notes": "AITER (AI Tensor Engine for ROCm) is AMD's high-performance AI operator library, providing optimized GPU kernels for inference and training. It supports multiple kernel backends: Triton, Composable Kernel (CK), and hand-tuned ASM. Measured speedups: (1) AITER block-scaled FP8 GEMM in vLLM 0.9.x: 19.4% request throughput increase, 18.6% output token throughput increase. (2) AITER MLA with matrix absorption on MI300X: up to 2x faster inference vs non-AITER, with speedup increasing with context length. (3) AITER Biased Group TopK for DeepSeek-V3: 4.9% request throughput, 6.1% TTFT reduction. (4) AITER integration in SGLang for DeepSeek-R1: 14,635.98 token/s total throughput. (5) ROCM_AITER_FA attention backend in vLLM: 2.7-4.4x higher TPS than ROCM_ATTN on MHA models. (6) ROCM_AITER_MLA: 1.2-1.5x higher TPS than TRITON_MLA on DeepSeek MLA. AITER is the default attention backend on ROCm in vLLM when VLLM_ROCM_USE_AITER=1 is set.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "amd-vllm-09x-rocm",
+    "amd-aiter-mla-mi300x",
+    "amd-aiter-sglang-deepseek",
+    "amd-vllm-rocm-attn-backends"
+  ]
+}

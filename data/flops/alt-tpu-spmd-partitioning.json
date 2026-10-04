@@ -1,0 +1,34 @@
+{
+  "id": "alt-tpu-spmd-partitioning",
+  "type": "flop",
+  "name": "TPU SPMD partitioning: how layout constrains model architecture",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "TPUs use SPMD (Single Program, Multiple Data) where the same program runs on all cores. The XLA compiler automatically partitions tensors across cores using layout constraints. This means the model architecture must be amenable to automatic sharding — manual control is limited compared to GPU tensor parallelism. The compiler inserts collectives (all-reduce, all-gather) automatically, but the sharding strategy is constrained by the SPMD model.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "num_cores (more cores = more sharding)",
+    "tensor_dimensions (must be divisible by core count for even sharding)",
+    "model_architecture (some architectures shard cleanly, others do not)",
+    "ici_bandwidth (inter-chip interconnect bandwidth bounds collective cost)"
+  ],
+  "affected_by_hardware": [
+    "google-tpu-v5e",
+    "google-tpu-v5p",
+    "google-tpu-v6e"
+  ],
+  "workarounds": [
+    "Use FSDP (Fully Sharded Data Parallel) as default — preferred by Google for TPU7x",
+    "Use Expert Parallelism for MoE models (all-to-all routing)",
+    "Use Context Parallelism for long sequences (shards sequence dimension)",
+    "Minimize tensor parallelism — high arithmetic intensity (11.5k on TPU7x) makes TP communication-bound",
+    "Design model dimensions to be divisible by core count"
+  ],
+  "notes": "The SPMD model is both a constraint and a simplification. Unlike GPU inference where the user manually specifies tensor parallelism degree and placement, TPU's XLA compiler handles sharding automatically. The Ironwood performance guide recommends: 'select the simplest sharding strategy that meets memory constraints, as this minimizes communication overhead.' For MoE, Expert Parallelism is necessary. For long contexts, Context Parallelism is essential. The key insight is that SPMD means the compiler controls layout, so the model architect must work with the compiler rather than against it.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-tpu-ironwood-perf",
+    "alt-tpu-system-arch"
+  ]
+}

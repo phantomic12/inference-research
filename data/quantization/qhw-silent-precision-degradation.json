@@ -1,0 +1,33 @@
+{
+  "id": "qhw-silent-precision-degradation",
+  "type": "quantization",
+  "name": "Silent precision degradation: when W4A4 formats are served as W4A16 on pre-Blackwell hardware",
+  "scheme": "nvfp4",
+  "bits": "w4a4 advertised, w4a16 actual on pre-Blackwell hardware",
+  "weight_group_size": 16,
+  "activation_scheme": "The activation quantization is silently dropped on pre-Blackwell hardware. The user loads an NVFP4 or MXFP4 model expecting 4-bit x 4-bit compute, but the serving framework (vLLM or SGLang) selects a W4A16 kernel (Marlin) that dequantizes FP4 weights to FP16 and upcasts FP4 activations to FP16. The memory saving materializes (4-bit weight storage) but the compute speedup does not (FP16 x FP16 multiply).",
+  "native_support": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s"
+  ],
+  "kernels": [
+    "Marlin (W4A16 fallback for NVFP4 on SM80-SM90)",
+    "FlashInfer CuTe DSL (NVFP4 on SM100)",
+    "FlashInfer CUTLASS (NVFP4 on SM100/SM120)"
+  ],
+  "quality_delta": null,
+  "notes": "THIS IS THE MOST IMPORTANT RECORD FOR THE REPO'S THEME. The documented cases of silent precision degradation: (1) SGLang's --fp4-gemm-backend auto-selection uses Marlin on SM80-SM90, which is a W4A16 kernel. An NVFP4 checkpoint loaded on an A100 or H100 will be served with Marlin, which dequantizes FP4 weights to FP16 and upcasts FP4 activations to FP16. The user sees the memory saving but not the compute speedup. (2) vLLM's modelopt_fp4 uses 'Marlin W4A16 fallback on Ampere/Hopper and native FP4 backends on Blackwell'. Same issue. (3) The vLLM --kernel-config example shows 'nvfp4_w4a16' as a quantization scheme name, which explicitly acknowledges that NVFP4 is being served as W4A16. This is a SILENT failure: the model produces correct results (the dequantization is numerically correct), but the user is not getting the performance they expected. The accuracy is also affected: the FP4 activation quantization is dropped, so the activation is effectively FP16, which is higher precision than expected. This means the accuracy is BETTER than expected, but the performance is WORSE than expected. The user may not realize that the FP4 activation quantization is not being used. This is the same pattern as the existing records: MXFP4 W4A16 misclassified as W4A4; FlashInfer W4A16 actually executing as W4A4; NVFP4 with w13 global scales; FP8 scatter not CUDA-graph safe; sliding-window attention plus fp8 KV plus speculative decoding causing silent corruption.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "qhw-src-sglang-quant-docs",
+    "qhw-src-vllm-quant-docs"
+  ]
+}

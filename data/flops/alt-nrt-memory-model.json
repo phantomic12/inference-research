@@ -1,0 +1,35 @@
+{
+  "id": "alt-nrt-memory-model",
+  "type": "flop",
+  "name": "AWS Neuron: NRT memory model, collectives, and multi-chip inference",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "The NeuronX Runtime (NRT) loads NEFF files and executes them on NeuronCores. It handles device allocation, memory management, and collective communications. For multi-chip inference, NeuronLink provides chip-to-chip bandwidth (192 GB/s for Inf2, 1024 GB/s for Trn2). The runtime supports explicit async APIs (nrta_*) for fine-grained scheduling. Collectives (AllGather, ReduceScatter, AllReduce, AlltoAll, Permute) are used for distributed inference. Intra-node collectives use NeuronLink; inter-node use EFA.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "num_chips (more chips = more communication)",
+    "neuronlink_bandwidth (192 GB/s Inf2, 1024 GB/s Trn2)",
+    "efa_bandwidth (inter-node, 3.2 Tbps for Trn2)",
+    "collective_type (AllReduce vs AllGather vs AlltoAll)"
+  ],
+  "affected_by_hardware": [
+    "aws-inferentia2",
+    "aws-trainium2"
+  ],
+  "workarounds": [
+    "Use NeuronLink for intra-instance chip-to-chip communication",
+    "Use EFA for inter-instance scaling",
+    "Use explicit async APIs (nrta_*) for fine-grained scheduling",
+    "Configure LNC (Logical Neuron Core) to control rank granularity",
+    "Use hierarchical collectives: intra-node first, then inter-node"
+  ],
+  "notes": "The NRT memory model is the key to multi-chip inference on AWS. NeuronLink allows memory pooling across chips — a model can be sharded across 12 Inferentia2 chips (Inf2.48xlarge) or 16 Trainium2 chips (Trn2.48xlarge) with the runtime handling the communication transparently. The LNC (Logical Neuron Core) configuration controls how physical cores are exposed as ranks: LNC=2 (default) exposes 2 cores as 1 rank, LNC=1 exposes them separately. This affects the granularity of tensor parallelism.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-neuron-runtime",
+    "alt-neuron-collectives",
+    "alt-trn2-arch",
+    "alt-inf2-arch"
+  ]
+}

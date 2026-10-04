@@ -1,0 +1,37 @@
+{
+  "id": "sched-prefill-decode-disaggregation",
+  "type": "flop",
+  "name": "Prefill-decode disaggregation: measured TTFT improvements and the KV transfer cost that dominates",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "AI = 0 in the strict sense - disaggregation is a data movement and scheduling decision, not arithmetic. The KV cache transfer is a DMA copy with no arithmetic, so cost = KV bytes / interconnect bandwidth. The useful question is never 'how fast is the copy' but 'is the copy cheaper than the interference it replaces'. DistServe (OSDI 2024) showed that disaggregation can serve 7.4x more requests or 12.6x tighter SLO vs colocated serving. But the KV transfer cost can dominate everything else: Kairos (arXiv 2607.02043) measured that on a 2P2D A100 cluster with DeepSeek-V2-Lite, KV-cache transfer accounts for 22-57% of P95 TTFT (4205.4 ms of 6278.8 ms for LPLD, 3584.6 ms of 6292.0 ms for HPHD). Prefill execution is only 2-23% of P95 TTFT. This means that in disaggregated setups, the actual prefill computation is NOT the bottleneck - scheduling and data movement are.",
+  "bound_by": "interconnect",
+  "scales_with": [
+    "kv_bytes_resident (linear in context_length x live sequences - the volume is whatever does not fit in HBM)",
+    "interconnect_bandwidth (the dominant term: NVLink at 450 GB/s per direction vs PCIe at 31.5 GB/s is a 14x difference)",
+    "num_prefill_nodes and num_decode_nodes (the P:D ratio determines how many requests share each phase)",
+    "prompt_length (longer prompts = larger KV cache to transfer)",
+    "arrival_rate (bursty arrivals cause queueing on prefill nodes while decode nodes idle)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Prefill/decode disaggregation (DistServe, OSDI 2024): separate the phases onto different GPUs to eliminate interference",
+    "Chunked prefill with piggyback (Sarathi-Serve, OSDI 2024): split long prompts into chunks and interleave with decodes on the same GPU",
+    "Prefill deflection (Kairos, arXiv 2607.02043): route prefill to idle decode nodes, eliminating KV transfer entirely",
+    "KV cache offload to CPU/DRAM tier (vLLM): use PCIe to move KV to host memory when GPU memory is exhausted",
+    "LMCache: KV cache layer with connector interface for cross-engine reuse"
+  ],
+  "notes": "The key insight from Kairos is that prefill execution is only 2-23% of P95 TTFT in disaggregated serving, while queue wait and KV transfer account for 77-98%. This inverts the common assumption that prefill compute is the bottleneck. The implication is that optimizing prefill kernels is largely misdirected effort for TTFT in disaggregated setups - the bottleneck is scheduling and data movement. DistServe's 7.4x goodput improvement comes from eliminating interference, not from faster prefill. The KV transfer cost is the price of disaggregation: it can be 4.2 seconds at P95 for a 512-token request on A100 with NVLink. The chunk-size tradeoff is critical: smaller chunks reduce TBT interference but increase the number of chunks (O(N^2) KV cache reads); larger chunks are more efficient but cause generation stalls. Sarathi-Serve's chunked prefill with stall-free scheduling achieves 2.6x higher serving capacity for Mistral-7B on a single A100.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "sched-distserve-osdi24",
+    "sched-kairos-arxiv",
+    "sched-sarathi-osdi24"
+  ]
+}

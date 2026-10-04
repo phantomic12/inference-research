@@ -1,0 +1,15 @@
+{
+  "id": "xpu-gaudi-static-shapes",
+  "type": "flop",
+  "name": "Gaudi Static Shape Requirement for Inference Optimization",
+  "class": "custom_kernel",
+  "bound_by": "launch_overhead",
+  "scales_with": ["batch_size", "sequence_length"],
+  "affected_by_hardware": ["gaudi-2", "gaudi-3", "hpu"],
+  "workarounds": ["Use bucketing to group requests into fixed batch sizes", "Pad sequences to fixed lengths", "Use torch.compile with static shape hints"],
+  "notes": "Gaudi's compiler (SynapseAI) requires static shapes for optimal kernel generation. Unlike CUDA, which can handle dynamic shapes with some overhead, Gaudi's TPC (Tensor Processor Core) kernels are compiled for specific shapes and any shape change triggers recompilation. This is why vLLM on Gaudi uses a bucketing mechanism: requests are grouped into fixed-size buckets (e.g., batch sizes 1, 2, 4, 8, 16) and each bucket has its own compiled graph. The vLLM Gaudi plugin's bucketing mechanism is listed as a key advantage. For llama.cpp on Intel GPUs (Arc, Arc Pro), the SYCL backend also benefits from static shapes but handles them differently: the SYCL runtime JIT-compiles kernels for each shape encountered, and the SYCL_CACHE_PERSISTENT environment variable can cache these (though it is not recommended due to crash risk). The static shape requirement is a fundamental architectural difference from CUDA and is the primary reason Gaudi inference requires more upfront tuning.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": ["xpu-vllm-gaudi-readme", "xpu-llamacpp-sycl-docs"]
+}

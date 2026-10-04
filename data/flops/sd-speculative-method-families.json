@@ -1,0 +1,39 @@
+{
+  "id": "sd-speculative-method-families",
+  "type": "flop",
+  "name": "Speculative decoding method families: draft-model vs n-gram/lookahead vs tree variants",
+  "class": "speculative_draft",
+  "arithmetic_intensity": "Three distinct families with fundamentally different cost profiles. (1) Draft-model (EAGLE-1/2/3, Medusa, Hydra): AI ~ k for the draft pass (reads draft weights once for k positions), AI ~ k for verify (reads target weights once for k positions). Draft model is a separate neural network with its own weights in HBM. (2) N-gram/lookahead/prompt-lookup: AI is effectively infinite for the draft phase - no weights to read, just a hash table or suffix array lookup. The verify pass still has AI ~ k. This is why PLD and Lookahead achieve speedup ratios close to their average acceptance length (1.6-1.7x speedup with 1.6-1.7 acceptance length) - the draft is nearly free. (3) Tree/multi-candidate variants (EAGLE-2, Medusa tree attention): same AI per pass but the tree structure allows multiple candidate paths, increasing the expected accepted tokens per cycle. EAGLE-2 achieves 4.2-5.5 acceptance length vs 2.4-2.6 for Medusa and 1.6-1.7 for PLD/Lookahead, because the tree structure exploits context-dependent acceptance rates.",
+  "bound_by": "memory",
+  "scales_with": [
+    "draft_k (number of speculative positions - the AI lever for both draft and verify)",
+    "draft_model_size (sets draft_cost/target_cost ratio; n-gram methods have zero draft model cost)",
+    "tree_width and tree_depth (for tree variants - multiply draft work but increase expected acceptance)",
+    "acceptance_rate (determines whether the method helps at all - low acceptance means wasted draft work)",
+    "context_length (verify attention flops scale as k*L)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Use n-gram/lookahead drafter when possible - zero draft model cost means speedup ≈ acceptance length",
+    "Tree-structured drafts (EAGLE-2, Medusa) to increase expected accepted tokens per cycle",
+    "Dynamic draft trees (EAGLE-2) that adapt to context-dependent acceptance rates",
+    "Typical acceptance (Medusa) to boost acceptance rate at cost of generation quality",
+    "Training-time test (EAGLE-3) to improve draft model quality and enable scaling"
+  ],
+  "notes": "Measured acceptance lengths from EAGLE-2 paper (Table 1, temperature=0): EAGLE-2 achieves 4.2-5.5 tokens/cycle across Vicuna 7B/13B, LLaMA2-Chat 7B/13B/70B, LLaMA3-Instruct 8B/70B. EAGLE-1: 3.2-4.5. Hydra: 3.4-3.9. Medusa: 2.4-2.8. Standard speculative sampling: 1.9-2.6. PLD: 1.2-1.7. Lookahead: 1.4-1.7. The acceptance rate is THE determining factor: a method with 1.5 acceptance length and zero draft cost (PLD) achieves similar speedup to one with 2.5 acceptance length and significant draft cost (Medusa). EAGLE-2's advantage is both higher acceptance length AND tree structure that exploits context-dependence. Speedup ratios at temperature=0: EAGLE-2 3.4-4.3x, EAGLE-1 2.8-3.1x, Hydra 2.6-2.9x, Medusa 1.8-2.1x, SpS 1.7-1.9x, PLD 1.3-1.7x, Lookahead 1.5-1.6x.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "sd-eagle2-paper",
+    "sd-eagle3-paper",
+    "sd-eagle1-paper",
+    "sd-medusa-paper",
+    "sd-hydra-paper",
+    "sd-lookahead-paper"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "qhw-exllama-throughput",
+  "type": "quantization",
+  "name": "ExLlamaV2 EXL2 kernel throughput benchmarks (3090 Ti / 4090)",
+  "scheme": "exl2",
+  "bits": "2-8 bpw (adjustable average bits-per-weight)",
+  "weight_group_size": null,
+  "activation_scheme": "FP16 activations, no quantization. Weights are quantized to mixed bit widths (2-8 bits) with per-group scales. The kernel dequantizes to FP16 before the multiply.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-rtx-4090",
+    "nvidia-rtx-3090-ti"
+  ],
+  "kernels": [
+    "ExLlamaV2 EXL2 GEMM/dequantize kernels",
+    "ExLlamaV2 Q4/Q6/Q8 KV-cache modes"
+  ],
+  "quality_delta": null,
+  "notes": "ExLlamaV2 throughput benchmarks from the README (3090 Ti / 4090): Llama GPTQ 7B grpsz 128: 181/205 t/s. Llama GPTQ 13B grpsz 128: 110/114 t/s. Llama GPTQ 33B grpsz 128 act-order: 44/48 t/s. OpenLlama GPTQ 3B grpsz 128 act-order: 259/296 t/s. CodeLlama EXL2 4.0 bpw 34B: 44/50 t/s. Llama2 EXL2 3.0 bpw 7B: 217/257 t/s. Llama2 EXL2 4.0 bpw 7B: 185/211 t/s. Llama2 EXL2 5.0 bpw 7B: 164/179 t/s. Llama2 EXL2 2.5 bpw 70B: 33/38 t/s. TinyLlama EXL2 3.0 bpw 1.1B: 656/770 t/s. TinyLlama EXL2 4.0 bpw 1.1B: 602/700 t/s. KEY OBSERVATION: The throughput scales inversely with bit width - 2.5 bpw is slower than 3.0 bpw which is slower than 4.0 bpw. This is because lower bit widths require more complex dequantization and the memory bandwidth saving is offset by increased compute overhead. The 70B model at 2.5 bpw runs at 33-38 t/s, which is usable but much slower than the 7B model at 4.0 bpw (185-211 t/s). The act-order flag (activation-aware ordering) improves quality but reduces throughput. No quality delta is published in the README - only throughput numbers. The project is archived with development moved to ExLlamaV3.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "qhw-src-exllamav2-repo"
+  ]
+}

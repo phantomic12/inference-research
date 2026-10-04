@@ -1,0 +1,15 @@
+{
+  "id": "xpu-onednn-graph-fusion",
+  "type": "flop",
+  "name": "oneDNN Graph API and IPEX Fusion for Transformer Inference",
+  "class": "custom_kernel",
+  "bound_by": "memory",
+  "scales_with": ["num_layers", "hidden_size", "ffn_hidden_size", "num_heads"],
+  "affected_by_hardware": ["intel-arc-pro-b60", "intel-arc-pro-b70", "intel-arc-b580", "xpu-intel-dc-gpu-max-1550", "xpu-intel-dc-gpu-flex-170"],
+  "workarounds": ["Use oneDNN Graph API to fuse operations into a single optimized graph", "Use IPEX (archived) or PyTorch directly for transformer optimization", "Use llama.cpp SYCL backend which uses oneDNN as default GEMM library"],
+  "notes": "oneDNN Graph API provides a high-level API for fusing multiple operations (e.g., MatMul + Bias + Activation + LayerNorm) into a single optimized graph. This is distinct from operator-level fusion: the Graph API can fuse across operation boundaries, eliminating intermediate memory traffic entirely. oneDNN is the default GEMM library for llama.cpp SYCL backend since 2024.8. The oneDNN Graph API is specific to Intel's Xe architecture and is not portable to CUDA. Intel Extension for PyTorch (IPEX) provided additional optimizations for transformer inference: (1) fused attention kernels, (2) fused LayerNorm + Linear, (3) INT8 quantization with oneDNN, (4) memory format optimization (channels_last for conv, blocked format for matmul). However, IPEX was archived on Mar 30, 2026, and Intel recommends using PyTorch directly going forward, as most IPEX features have been upstreamed into PyTorch. The oneDNN Graph API remains the primary Intel-specific fusion mechanism. For llama.cpp, the SYCL backend's use of oneDNN means that GEMM operations are already optimized for Intel GPUs, but the fusion pass is handled by llama.cpp's own graph compiler, not by oneDNN Graph API. The oneAPI 2026.1 release improved SYCL build performance 3.1x, which indirectly benefits all oneDNN-based inference.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": ["xpu-onednn-github-readme", "xpu-ipex-github-readme", "xpu-llamacpp-sycl-docs"]
+}

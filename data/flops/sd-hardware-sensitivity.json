@@ -1,0 +1,37 @@
+{
+  "id": "sd-hardware-sensitivity",
+  "type": "flop",
+  "name": "Speculative decoding hardware sensitivity: GPU generations, FP8/FP4-native methods",
+  "class": "speculative_draft",
+  "arithmetic_intensity": "Acceptance rate is primarily a function of draft-model quality and task, NOT hardware - the same draft model achieves the same acceptance rate on any GPU. What changes across hardware is the OVERHEAD PROFILE: (1) On GPUs with higher memory bandwidth (H100 → B200 → GB300), the verify pass gets faster but so does normal decode, so the relative speedup from speculative decoding actually DECREASES because the baseline is faster. (2) On GPUs with lower bandwidth (consumer cards, older datacenter), speculative decoding helps more because the baseline is more severely memory-bound. (3) FP8/FP4-native methods: EAGLE/Medusa/Hydra draft models are typically stored in BF16/FP16. Running them in FP8 requires re-quantization of the draft model, which can degrade acceptance rate. The target model may already be FP8/FP4 quantized (e.g., NVFP4 on B200), but the draft model usually is not natively quantized. N-gram/lookahead methods are quantization-agnostic - they have no weights to quantize. (4) Tensor core generation: newer GPUs (Hopper wgmma, Blackwell tcgen05) have higher compute-to-bandwidth ratios, making decode MORE compute-bound at a given batch, which further erodes speculative decoding's benefit.",
+  "bound_by": "memory",
+  "scales_with": [
+    "gpu_memory_bandwidth (higher bandwidth = faster baseline = less relative benefit from speculation)",
+    "gpu_compute_throughput (higher compute = decode becomes compute-bound sooner = less benefit)",
+    "draft_model_quantization (FP8/FP4 draft models may have lower acceptance rate than BF16)",
+    "target_model_quantization (FP8/FP4 target is fine - verify pass reads quantized weights)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "nvidia-gb300",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Use n-gram/lookahead drafters - quantization-agnostic, no draft model to re-quantize",
+    "If using neural draft models, keep them in BF16/FP16 - re-quantizing to FP8/FP4 risks acceptance rate degradation",
+    "On newer GPUs with higher compute-to-bandwidth ratios, prefer n-gram methods or disable speculation at lower batch sizes",
+    "On consumer/older GPUs with lower bandwidth, neural draft models provide larger absolute benefit"
+  ],
+  "notes": "Key distinction: acceptance rate is hardware-independent (it's a property of the draft model's predictive accuracy), but the OVERHEAD PROFILE and thus the net speedup is hardware-dependent. A method that achieves 3x on an A100 might achieve only 2x on an H100 because the H100's baseline decode is faster (more bandwidth headroom consumed by normal decode). The FP8/FP4 question is about the DRAFT model, not the target: production deployments typically quantize the target model (for memory savings) but keep the draft model in higher precision (for acceptance rate). Re-quantizing the draft model to FP8/FP4 is possible but risks quality degradation that directly reduces acceptance rate. N-gram/lookahead/prompt-lookup methods sidestep this entirely - they have no weights.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-04",
+  "sources": [
+    "sd-eagle2-paper",
+    "sd-eagle3-paper",
+    "sd-medusa-paper",
+    "sd-lookahead-paper"
+  ]
+}

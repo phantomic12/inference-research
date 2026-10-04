@@ -1,0 +1,15 @@
+{
+  "id": "xpu-gaudi-fusion-pass",
+  "type": "flop",
+  "name": "Gaudi Fusion Pass: Operator Fusion on SynapseAI",
+  "class": "custom_kernel",
+  "bound_by": "memory",
+  "scales_with": ["num_layers", "hidden_size", "ffn_hidden_size"],
+  "affected_by_hardware": ["gaudi-2", "gaudi-3", "hpu"],
+  "workarounds": ["Use torch.compile to trigger automatic fusion", "Use the vLLM Gaudi plugin's custom fused kernels (hpu_fused_moe, hpu_layernorm)"],
+  "notes": "The SynapseAI compiler on Gaudi performs operator fusion automatically when shapes are static. Common fusions include: LayerNorm + Linear, MatMul + Bias + Activation, and attention kernel fusion. The vLLM Gaudi plugin registers custom fused kernels: hpu_fused_moe (fused Mixture-of-Experts), hpu_layernorm (fused layer normalization), hpu_rotary_embedding (fused RoPE), hpu_mamba_mixer2 (fused Mamba mixer). These custom ops are not available on CUDA or ROCm. The fusion pass is most effective when combined with HPU graphs: the graph captures the fused kernels as a single unit, eliminating both launch overhead and intermediate memory traffic. For llama.cpp on Intel GPUs, the SYCL backend uses oneDNN for GEMM operations and performs fusion at the graph level via oneDNN Graph API. The fusion pass is a key reason Gaudi can achieve competitive inference throughput despite lower peak TFLOPS than NVIDIA: by reducing memory traffic and launch overhead, the effective throughput approaches the memory bandwidth limit.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": ["xpu-vllm-gaudi-readme", "xpu-vllm-gaudi-plugin-system"]
+}

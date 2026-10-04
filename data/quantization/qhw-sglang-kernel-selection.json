@@ -1,0 +1,38 @@
+{
+  "id": "qhw-sglang-kernel-selection",
+  "type": "quantization",
+  "name": "SGLang hardware-dependent kernel selection logic for FP4/FP8 GEMM",
+  "scheme": "nvfp4",
+  "bits": "varies by backend - W4A16 (Marlin), W4A4 (NVFP4), W8A8 (FP8)",
+  "weight_group_size": null,
+  "activation_scheme": "Depends on the selected backend. The kernel selection is based on hardware compute capability and the quantization format of the checkpoint.",
+  "native_support": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+  ],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x"
+  ],
+  "kernels": [
+    "Marlin (W4A16 fallback for NVFP4 on SM80-SM90)",
+    "FlashInfer CuTe DSL (NVFP4 on SM100)",
+    "FlashInfer CUTLASS (NVFP4 on SM100/SM120)",
+    "FlashInfer cuDNN (NVFP4 on SM100/SM120, CUDA 13+, cuDNN 9.15+)",
+    "DeepGEMM (blockwise FP8 on SM90/SM100)",
+    "FlashInfer TRTLLM (blockwise FP8 on SM100)",
+    "AITER (AMD ROCm)",
+    "Triton (fallback)"
+  ],
+  "quality_delta": null,
+  "notes": "CRITICAL KERNEL SELECTION LOGIC: SGLang's --fp4-gemm-backend auto-selection order is: 1) flashinfer_cutedsl on SM100, 2) marlin on SM80-SM90, 3) flashinfer_cutlass otherwise (including SM120). This means that on SM80-SM90 (Ampere/Hopper), an NVFP4 checkpoint will be served with Marlin, which is a W4A16 kernel - the FP4 weights are dequantized to FP16 and the FP4 activations are upcast to FP16. The NVFP4 format is effectively treated as W4A16 on pre-Blackwell hardware. This is a SILENT PRECISION DEGRADATION: the user loads an NVFP4 model expecting 4-bit x 4-bit compute, but gets 4-bit weight storage with FP16 compute. The memory saving materializes but the compute speedup does not. On SM100 (Blackwell), the native NVFP4 path is used. For FP8: auto-selection is 1) DeepGEMM (SM90/SM100, if installed), 2) FlashInfer TRTLLM (SM100), 3) CUTLASS (SM120), 4) AITER (AMD), 5) Triton (fallback). MXFP8 dense linear uses flashinfer_cutlass on SM100, else triton. The platform compatibility table shows that modelopt_fp4 uses 'Marlin W4A16 fallback on Ampere/Hopper and native FP4 backends on Blackwell'. This is the documented case where the WRONG kernel gets picked because a format (NVFP4) is classified as weight-only when it is actually weight-and-activation - on pre-Blackwell hardware, the activation quantization is silently dropped.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "qhw-src-sglang-quant-docs"
+  ]
+}

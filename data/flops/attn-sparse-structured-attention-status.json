@@ -1,0 +1,36 @@
+{
+  "id": "attn-sparse-structured-attention-status",
+  "type": "flop",
+  "name": "Sparse and structured attention variants: NSA, DSA, and their honest deployment status",
+  "class": "decode_attention",
+  "arithmetic_intensity": "Sparse attention reduces the WORK SET but adds a full-context index pass and non-contiguous gather. NSA (Native Sparse Attention): three paths per query - compressed coarse tokens, top-k selected fine tokens, sliding window. Per-query decode work falls from L to (compressed_count + selected_count + w) while the index pass still touches all L. NSA reports 11.6x decode / 9.0x forward / 6.0x backward speedups at 64k context. But NSA names the trap: token-granular selection 'leads to the need to load a large number of individual tokens from the KV cache during attention computation. This non-contiguous memory access prevents efficient adaptation of fast attention techniques.' DSA (DeepSeek Sparse Attention, DeepSeek-V3.2): FP8-capable ReLU indexer scores every KV token, then only top-2048 are attended. Instantiated on MLA mode. The indexer is itself an attention-shaped pass over the full context. DSA's saving is a subtraction from the full-context, not a complexity class change.",
+  "bound_by": "both",
+  "scales_with": [
+    "context_length (the axis every variant attacks)",
+    "sparse selection granularity (block-granular is hardware-friendly; token-granular is not)",
+    "local:global or sparse:dense ratio",
+    "indexer cost (full-context scoring pass)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Block-granular, group-shared sparse selection instead of per-token selection",
+    "FP8 indexers for the scoring pass",
+    "Grouped GEMM / flash-decoding style split-K over the selected set",
+    "Keep periodic full attention at a published ratio"
+  ],
+  "notes": "Deployment status: NSA is research-only (no production engine ships it). DSA is deployed in DeepSeek-V3.2 but requires FlashMLA on Blackwell. The key warning from NSA's own text: 'Many approaches fail to achieve speedups comparable to their theoretical gains' because of memory-access and scheduling, not arithmetic. For any sparse variant, the number to trust is measured decode tok/s at the target context length on the target part, not the complexity class. YOCO (self-decoder/cross-decoder) reduces cache size by sharing across layers with no math change - deployed in some models. RetNet: 8.4x decode and 70% memory saving at 8k on A100 - research-only. Kimi Linear: up to 75% KV reduction and 2.3x measured at 1M - research-only. Sources: arch-nsa, arch-yoco, arch-deepseek-v32-dsa, arch-retnet, arch-kimi-linear.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "arch-nsa",
+    "arch-yoco",
+    "arch-deepseek-v32-dsa",
+    "arch-retnet",
+    "arch-kimi-linear"
+  ]
+}

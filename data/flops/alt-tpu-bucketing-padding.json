@@ -1,0 +1,33 @@
+{
+  "id": "alt-tpu-bucketing-padding",
+  "type": "flop",
+  "name": "TPU bucketing and padding: batch size rules for MXU efficiency",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "The TPU runtime splits a batch across all 8 cores of a TPU device. For v5e/v5p/v6e, each core uses 8x128 vector registers. Batch size should be evenly divisible by 8 or 128. The XLA compiler rounds up tensor sizes in HBM for efficiency. Two rules: (1) batch multiple of 64 with feature dims multiple of 128, OR (2) batch multiple of 1024 with feature dims multiple of 8. Batch 1024 with feature dims multiple of 128 gives best efficiency.",
+  "bound_by": "memory",
+  "scales_with": [
+    "batch_size (the primary knob — must align to 64 or 1024)",
+    "feature_dimensions (must align to 128 or 8)",
+    "num_tpu_cores (8 per host, batch splits across cores)",
+    "mxu_tile_size (128x128 for pre-v6e, 256x256 for v6e+)"
+  ],
+  "affected_by_hardware": [
+    "google-tpu-v5e",
+    "google-tpu-v5p",
+    "google-tpu-v6e"
+  ],
+  "workarounds": [
+    "Choose batch size as multiple of 64 (8 per core) with feature dims multiple of 128",
+    "Or batch size multiple of 1024 (128 per core) with feature dims multiple of 8",
+    "Use batch 1024 with feature dims multiple of 128 for best efficiency",
+    "For inference, use bucketing: group requests into fixed-size buckets to avoid recompilation",
+    "Pad sequences to fixed lengths within a bucket"
+  ],
+  "notes": "This is the most practically important TPU optimization rule. The performance guide states it explicitly. For inference serving, bucketing is the standard approach: group incoming requests into fixed-size batches (e.g., 64, 128, 256) and pad to the bucket boundary. This avoids the recompilation penalty of dynamic shapes while keeping the MXU tiles full. The tradeoff is padding waste vs recompilation cost.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-04",
+  "sources": [
+    "alt-tpu-perf-guide"
+  ]
+}

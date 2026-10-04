@@ -1,0 +1,15 @@
+{
+  "id": "xpu-arc-pro-llamacpp-quantization",
+  "type": "flop",
+  "name": "Arc Pro B60/B70 llama.cpp GGUF Quantization Optimization",
+  "class": "decode_gemm",
+  "bound_by": "memory",
+  "scales_with": ["quantization_bits", "batch_size", "context_length", "hidden_size"],
+  "affected_by_hardware": ["intel-arc-pro-b60", "intel-arc-pro-b70"],
+  "workarounds": ["Use Q4_K_M as the safe default quantization", "Use Q4_0 for maximum decode speed", "Avoid Q8_0 and IQ4_NL on Battlemage (4x slower than Q4_0)", "Use FP16 KV cache (default) for best performance"],
+  "notes": "Measured on Intel Arc Pro B70 (Battlemage, 608 GB/s theoretical bandwidth), Qwen3.5-27B, one GPU: Q4_0 23.67 t/s (57% of peak), Q4_K_S 23.05 (56%), Q4_K_M 20.56 (53%), IQ4_XS 17.52 (40%), Q6_K 13.83 (48%), Q5_K_M 13.78 (41%), IQ4_NL 5.85 (14%), Q8_0 4.88 (21%). The decisive datapoint: IQ4_NL and Q4_0 are the same size (14.60 vs 14.63 GiB) and differ 4x in speed, which excludes data volume and points at kernel efficiency. Root cause: the SYCL backend's reorder optimization (splits scale factors from weight data for coalesced memory access) was implemented for Q4_0, Q4_K and Q6_K in PR #12035 but never extended to Q8_0 or IQ4_NL. Fix for Q8_0 landed as PR #21527. On Arc Pro B60 (456 GB/s), the same pattern holds but at lower absolute throughput. The generalizable lesson: on a new Intel dGPU, assume some quant types have no tuned kernel until measured, and prefer Q4_K_M as the safe default. Context KV size: default context is too big and causes OOM; use -c 8192 or smaller. Batch size: larger batches improve throughput but require more VRAM for KV cache. The Vulkan backend shows the same quantization performance pattern as SYCL, confirming it is a kernel efficiency issue, not a backend issue.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": ["xpu-llamacpp-sycl-docs", "sycl-quant-reorder-gap-makes-some-quants-4x-slower"]
+}

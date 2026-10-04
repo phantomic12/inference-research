@@ -1,0 +1,34 @@
+{
+  "id": "sd-production-deployments",
+  "type": "flop",
+  "name": "Production speculative decoding deployments: engines, settings, and measured throughput",
+  "class": "speculative_verify",
+  "arithmetic_intensity": "Production deployments of speculative decoding are limited and settings vary by engine. (1) vLLM: supports n-gram speculation (prompt lookup) and EAGLE/MTP. Default is often disabled for throughput workloads. CUDA graph downgrades for spec-decode have been reported. (2) SGLang: supports EAGLE-3 with 1.38x throughput improvement at batch 64 (measured in EAGLE-3 paper). (3) TensorRT-LLM: supports EAGLE and Medusa with various quantization options. (4) HuggingFace Transformers: supports standard speculative sampling via assisted_generation. Key production pattern: speculative decoding is enabled for LATENCY-SENSITIVE workloads (small batch, interactive) and disabled for THROUGHPUT workloads (large batch, batch inference). The batch size threshold is typically 16-32, consistent with Medusa's finding that benefit disappears beyond batch 32.",
+  "bound_by": "memory",
+  "scales_with": [
+    "batch_size (primary determinant of whether speculation helps)",
+    "engine_implementation (vLLM, SGLang, TensorRT-LLM have different overhead profiles)",
+    "draft_model_choice (n-gram vs EAGLE vs Medusa - different acceptance/cost tradeoffs)",
+    "quantization (FP8/FP4 target with BF16 draft is common)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-gb300"
+  ],
+  "workarounds": [
+    "Enable speculation only for batch sizes below 16-32",
+    "Use n-gram speculation for memory-constrained or throughput-oriented deployments",
+    "Use EAGLE-3 for maximum latency reduction at small batch",
+    "Disable speculation for batch inference workloads"
+  ],
+  "notes": "Production reality: speculative decoding is NOT universally enabled. It is a latency optimization that is selectively applied. The most common production configuration is: n-gram speculation (cheapest, zero memory cost) enabled by default for all batch sizes, with EAGLE/Medusa enabled only for small-batch latency-sensitive requests. The EAGLE-3 paper's 1.38x throughput at batch 64 is notable because it shows SOME benefit at moderate batch, but this is still far below the 3-6.5x at batch 1. The existing repo records document correctness hazards: vLLM issue #43559 (~20% accuracy loss from MTP + prefix caching), issue #53670 (EAGLE/MTP prefix-cache corruption), and SGLang issue #36140 (DFLASH spec crash under PD disaggregation). These interaction effects are a major production concern.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "sd-eagle3-paper",
+    "sd-eagle2-paper",
+    "sd-medusa-paper"
+  ]
+}
