@@ -1,0 +1,28 @@
+{
+  "id": "sglang-pp-deepseek-v31-prefill-throughput-128k",
+  "type": "benchmark",
+  "name": "SGLang Chunked PP: DeepSeek-V3.1 prefill throughput 3.31x with PP4 TP8 vs TP8 on H20",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-lmsys-chunked-pipeline-ttft"
+  ],
+  "engine_id": "sglang",
+  "accelerator_ids": [
+    "nvidia-h20"
+  ],
+  "interconnect_ids": [
+    "nvlink-4",
+    "nvswitch-4"
+  ],
+  "model": "DeepSeek-V3.1",
+  "format_id": null,
+  "metric": "prefill_tok_s",
+  "value": 3.31,
+  "unit": "x speedup (prefill throughput ratio, PP4 TP8 vs TP8, batch size 1)",
+  "methodology": "Hardware: H20 cluster (4 nodes, 32 GPUs total). Engine: SGLang with Chunked Pipeline Parallelism (CPP), async P2P communication, dynamic chunking. Model: DeepSeek-V3.1. Workload: batch size 1, ultra-long context prefill. Configuration: PP4 TP8 (4 pipeline stages, 8 tensor parallel per stage) with chunked prefill size 12288 (12K) and dynamic chunking smooth factor 0.65. Comparison: PP4 TP8 yields 3.31x prefill throughput vs TP8 alone, and outperforms TP32 by 30.5%. Also reports up to 67.9% TTFT reduction with 82.8% strong scaling efficiency. For Qwen3-235B-A22B-FP8 on H20 with PP8: up to 81% TTFT reduction for ultra-long prompts.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "Published by LMSYS on 2026-01-15. Demonstrates that pipeline parallelism with chunked prefill is the most effective strategy for long-context prefill at scale. The 3.31x throughput gain from PP4 TP8 vs TP8 shows that TP alone hits communication bottlenecks (all-reduce after every layer), while PP reduces communication volume by only transferring at pipeline boundaries. Dynamic chunking eliminates pipeline bubbles from fixed scheduling. Compatible with PD disaggregation and HiCache."
+}

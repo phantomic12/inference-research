@@ -1,0 +1,28 @@
+{
+  "id": "kairos-ttft-breakdown-prefill-vs-queue-vs-kv-transfer",
+  "type": "benchmark",
+  "name": "Kairos: P95 TTFT breakdown in disaggregated serving — prefill execution is 2-23%, queue+KV transfer is 77-98%",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-03",
+  "sources": [
+    "paper-kairos-prefill-deflection-ttft-breakdown"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "interconnect_ids": [
+    "nvlink-3",
+    "nvswitch-2"
+  ],
+  "model": "DeepSeek-V2-Lite (MoE)",
+  "format_id": null,
+  "metric": "ttft_ms",
+  "value": 6278.8,
+  "unit": "ms (P95 TTFT, LPLD workload, 2P2D disaggregated, A100 80GB, cold cache)",
+  "methodology": "Hardware: 2 prefill + 2 decode nodes (2P2D), each NVIDIA A100 80GB. Engine: vLLM 0.18.1 with Kairos prefill-deflection scheduler. Model: DeepSeek-V2-Lite (MoE). Workload: production-derived trace normalized to 32K context. Five workloads tested: LPLD (low prompt/low decode), LPHD, HPLD, HPHD, Bursty. Cache state: cold (no prefix caching mentioned). P95 TTFT breakdown for LPLD: prefill queue wait = 59.2 ms, prefill execution = 191.4 ms, KV-cache transfer = 4205.4 ms, decode queue wait = 54.5 ms, end-to-end TTFT = 6278.8 ms. Prefill execution is only 3.1% of P95 TTFT for LPLD. For HPLD: prefill execution = 1340.2 ms (23.2% of 5781.5 ms). For HPHD: prefill execution = 1222.8 ms (19.4% of 6292.0 ms). For Bursty: prefill execution = 1070.1 ms (13.6% of 7893.9 ms).",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Published on arXiv:2607.02043 (2026-07-02) by Microsoft Research. The most important TTFT breakdown finding for disaggregated serving: prefill execution accounts for only 2-23% of P95 TTFT, while prefill queue wait and inter-node KV-cache transfer account for 77-98%. This means that in disaggregated setups, the actual prefill computation is NOT the bottleneck — scheduling and data movement are. Deflecting prefill to decode nodes (building KV cache in place) eliminates KV transfer and reduces P95 TTFT by up to 81%. Also shows decode nodes are severely underutilized (SM utilization 7-27% vs 75-84% on prefill nodes)."
+}

@@ -1,0 +1,28 @@
+{
+  "id": "vllm-command-a-w4a4-ttft-512-128k",
+  "type": "benchmark",
+  "name": "vLLM 0.26.0 TTFT for Command A W4A4 (218B MoE) at 512-128K context on 2xH100",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-capp-vllm-longctx-ttft"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-h100-sxm"
+  ],
+  "interconnect_ids": [
+    "nvlink-4",
+    "nvswitch-4"
+  ],
+  "model": "CohereLabs/command-a-plus-05-2026-w4a4 (218B total / 25B active MoE, NVFP4 experts)",
+  "format_id": null,
+  "metric": "ttft_ms",
+  "value": 16800,
+  "unit": "ms (TTFT p50, single-request, 128K context, cold cache)",
+  "methodology": "Hardware: 2x NVIDIA H100 80GB SXM, NVLink NV18, TP2. Engine: vLLM 0.26.0. Model: Command A W4A4 (218B total / 25B active MoE, NVFP4 experts with BF16 attention/KV). Measurement: single-request TTFT (max_concurrency=1, output_len=1), the latency floor for prefill. Context: 128K tokens. Cache state: cold (random prompts with unique seeds per run, prefix caching on but cannot contaminate). All 91 runs completed with zero preemptions. Sibling TTFT points: 512 = 78 ms, 2K = 216 ms, 8K = 785 ms, 32K = 3390 ms, 64K = 7290 ms, 128K = 16800 ms. Sliding-window architecture (24 of 32 layers cap at 4096-token window) makes long context unusually cheap to hold.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Published by SamMausberg (capp-vllm-bench) in August 2026. The most detailed public TTFT breakdown at long context. Key findings: (1) TTFT scales super-linearly with context: 78ms at 512, 785ms at 8K, 3.39s at 32K, 7.29s at 64K, 16.8s at 128K. (2) The sliding-window architecture means only 8 of 32 layers pay for long context, so 128K costs 1.9x a 64K sequence (not 2x). (3) Saturated prefill throughput at 128K is 8080 tok/s (B=3), only 30% below the 8K peak of 10843 tok/s. (4) Chunked prefill budget (8192 default) is the right trade-off; dropping to 2048 costs 8-18% prefill throughput but halves TTFT under load. (5) CUDA graphs are essential: 5.8x on single-stream decode."
+}

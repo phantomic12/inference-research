@@ -1,0 +1,21 @@
+{
+  "id": "huawei-ub",
+  "type": "interconnect",
+  "name": "Huawei Unified Bus (UB) — Ascend 910C / CloudMatrix 384 scale-up fabric",
+  "kind": "other",
+  "version": "UB, Ascend 910C generation (CloudMatrix 384)",
+  "bandwidth_gbps": 196.0,
+  "bandwidth_basis": "PER NPU, UNIDIRECTIONAL. The China Research Collective analysis (June 2026) states: 'The UB bus uses 224 Gbps high-speed transceivers, with 7 transceivers per NPU, totaling 1,568 Gbps (196 GB/s) unidirectional bandwidth.' This is consistent with the per-NPU figure derived from the CloudMatrix384 system: 384 NPUs x 196 GB/s = 75.3 TB/s aggregate scale-up bandwidth. The SemiAnalysis newsletter (2025-09-19) states 'Each Huawei Ascend 910C GPU has 2,800Gbit/s of uni-directional scale-up bandwidth' — this appears to be the aggregate across all 7 transceivers (7 x 224 Gbps = 1,568 Gbps = 196 GB/s per direction, with 2,800 Gb/s likely being a different measurement or including both directions). The 196 GB/s per direction figure is recorded as it is the one that is arithmetically consistent with the transceiver count and is explicitly stated as unidirectional.",
+  "link_count": 7,
+  "topology": "Two-level switching: L1 on-board switching (7 UB Switch chips per compute node, each NPU connected to all 7 switches at 28 GB/s per port) and L2 rack-level switching (112 L2 UB switch chips across 4 communication racks, 7 sub-planes x 16 chips each, each sub-plane an independent 384-port full-mesh network). The system uses 6,912 800G LPO optical transceivers for entirely optical intra- and inter-rack connectivity. Scale-out is separate: 200 Gbps RoCE RDMA per NPU (76.8 Tbps total).",
+  "scale_up": true,
+  "scale_out": true,
+  "switching": "Two-level: L1 on-board UB Switch chips (7 per node) and L2 rack-level UB switch chips (112 across 4 communication racks). Each sub-plane is an independent 384-port full-mesh network with 28 GB/s per port and zero oversubscription.",
+  "notes": "THE HIERARCHY POINT: the Unified Bus is Huawei's answer to the Ascend 910B's HCCS scale-up problem. Where HCCS provided only ~90 GB/s per chip of chip-to-chip bandwidth (3 ports x 30 GB/s), the UB provides 196 GB/s per NPU unidirectional — roughly 2.2x the HCCS figure. But the real innovation is not the per-NPU bandwidth, it is the system architecture: CloudMatrix 384 uses 384 NPUs across 16 racks with a two-level switching hierarchy and 6,912 optical transceivers to create a fully non-blocking all-to-all network. This is a rack-scale fabric, not a chip-to-chip link. THE INFERENCE CONSEQUENCE: at 196 GB/s per NPU against 3.2 TB/s of local HBM2e memory, the scale-up-to-local ratio is 0.061, which is actually WORSE than the 910B's HCCS ratio (90/1400 = 0.064). This means the 910C is even more bandwidth-bound at the scale-up level than the 910B was, and the CloudMatrix 384 system compensates not with faster per-NPU fabric but with more NPUs and optical connectivity. The DeepSeek V4 Pro inference results (6,688 tokens/s/NPU prefill, 1,943 tokens/s/NPU decode) demonstrate that this architecture can deliver competitive inference throughput despite the relatively weak per-NPU fabric. KIND: filed as 'other' because UB is a proprietary vendor fabric with no entry in the schema's interconnect enum.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "cn-huawei-cloudmatrix384"
+  ]
+}

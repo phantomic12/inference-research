@@ -1,0 +1,23 @@
+{
+  "id": "generalcompute-128k-ttft-6-models",
+  "type": "benchmark",
+  "name": "GeneralCompute: TTFT at 128K input for 6 open models (batch=1, cold cache)",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-generalcompute-128k-ttft"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "Qwen2.5 7B / Llama 4 Scout (~17B active MoE) / Gemma 3 27B / DeepSeek V3 (~37B active MoE) / Qwen2.5 72B / Mistral Large 123B",
+  "format_id": null,
+  "metric": "ttft_ms",
+  "value": 2100,
+  "unit": "ms (TTFT, 128K input, batch=1, cold cache, 512 output tokens)",
+  "methodology": "Hardware: GeneralCompute inference infrastructure (specific GPUs not stated). Engine: not explicitly stated (likely vLLM or SGLang). Measurement: TTFT from request submission to first output token. Context: 128,000 tokens (concatenated documents from legal/financial corpus). Output: 512 tokens. Batch size: 1 (single request, to isolate latency from throughput effects). Three runs per model, median reported. Cache state: cold (no prefix caching mentioned). Models loaded at native weight precision. TTFT results: Qwen2.5 7B = 2.1s, Llama 4 Scout = 4.2s, Gemma 3 27B = 8.7s, DeepSeek V3 = 9.8s, Qwen2.5 72B = 12.4s, Mistral Large = 14.1s.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "Published by GeneralCompute. The only public TTFT comparison across multiple model families at 128K context with batch=1. Key findings: (1) MoE architecture helps more at long context than short context — Llama 4 Scout (17B active) beats dense 72B models on TTFT. (2) GQA head count affects decode more than prefill. (3) Flash Attention 3 support improves TTFT at long context. (4) 128K context is not yet fast enough for real-time interactive applications except with the smallest models. (5) Qwen2.5 7B completes the same request in 1/6 the time Mistral Large does. Decode speeds at 128K: Qwen2.5 7B = 94 tok/s, Llama 4 Scout = 71 tok/s, Gemma 3 27B = 38 tok/s, DeepSeek V3 = 28 tok/s, Qwen2.5 72B = 19 tok/s, Mistral Large = 16 tok/s."
+}

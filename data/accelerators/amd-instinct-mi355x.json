@@ -21,7 +21,7 @@
   "memory_type": "hbm3e",
   "memory_bus_bit": 8192,
   "memory_bandwidth_gbps": 8000,
-  "memory_bandwidth_basis": "'8 TB/s' per AMD's spec table and MI355X datasheet (GD-176 rev L). Same 8192-bit memory interface as MI300X/MI325X; the bandwidth comes from HBM3E data rate, not from a wider bus. AMD does not publish the derivation arithmetic, so 8 TB/s is a vendor figure with no independently checkable basis in either document - treat it as 'up to 8 TB/s'. AUDIT VERIFIED: 8192-bit x 8 Gb/s per pin / 8 = 8,000 GB/s, which reconciles exactly with AMD's printed figure. (The generic 'HBM3E = 5.0 Gbps' assumption that a mechanical audit would apply gives 5,120 GB/s and is wrong for this part: MI350-series HBM3E runs at 8 Gb/s per pin, and AMD's own spec table lists 'Memory Clock 8 GHz'.)",
+  "memory_bandwidth_basis": "'8 TB/s' per AMD's spec table and MI355X datasheet (GD-176 rev L). Same 8192-bit memory interface as MI300X/MI325X; the bandwidth comes from HBM3E data rate, not from a wider bus. AMD does not publish the derivation arithmetic, so 8 TB/s is a vendor figure with no independently checkable basis in either document - treat it as 'up to 8 TB/s'. AUDIT CORRECTION: 8192-bit x 8 Gb/s per pin / 8 = 8,192 GB/s, not 8,000. The correct per-pin rate is 7.81 Gbps (8000 x 8 / 8192). (The generic 'HBM3E = 5.0 Gbps' assumption that a mechanical audit would apply gives 5,120 GB/s and is wrong for this part: MI350-series HBM3E runs at ~7.81 Gbps per pin, and AMD's own spec table lists 'Memory Clock 8 GHz'.)",
   "flops": [
     {
       "precision": "fp32",
@@ -70,28 +70,32 @@
       "tflops": 5000.0,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi355x-product-page"
+      "source_id": "amd-mi355x-product-page",
+      "notes": "AMD product page prints 'Peak OCP-FP8 Performance (E5M2, E4M3) 5 PFLOPs' (dense). This is the rounded figure."
     },
     {
       "precision": "fp8",
       "tflops": 10066.3,
       "dense": false,
       "vendor_claim": true,
-      "source_id": "amd-mi355x-product-page"
+      "source_id": "amd-mi355x-product-page",
+      "notes": "AMD product page prints 'Peak OCP-FP8 Performance with Structured Sparsity (E5M2, E4M3) 10.1 PFLOPs' (sparse). This is the rounded figure."
     },
     {
       "precision": "fp8",
       "tflops": 5033.2,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi355x-brochure"
+      "source_id": "amd-mi355x-brochure",
+      "notes": "AMD brochure (GD-176 rev L) prints 'OCP-FP8 (PFLOPS) 5.0332' (dense). This is the precise figure; the product page rounds to 5 PFLOPs."
     },
     {
       "precision": "fp8",
       "tflops": 10066.4,
       "dense": false,
       "vendor_claim": true,
-      "source_id": "amd-mi355x-brochure"
+      "source_id": "amd-mi355x-brochure",
+      "notes": "AMD brochure (GD-176 rev L) prints 'OCP-FP8 (PFLOPS) 10.0664' (sparse). This is the precise figure; the product page rounds to 10.1 PFLOPs."
     },
     {
       "precision": "fp6",
@@ -126,14 +130,16 @@
       "tflops": 5033.2,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "amd-mi355x-product-page"
+      "source_id": "amd-mi355x-product-page",
+      "notes": "AMD product page prints 'Peak INT8 Matrix Performance 5 POPs' (dense). The brochure gives the precise figure 5.0332 POPs."
     },
     {
       "precision": "int8",
       "tflops": 10066.3,
       "dense": false,
       "vendor_claim": true,
-      "source_id": "amd-mi355x-product-page"
+      "source_id": "amd-mi355x-product-page",
+      "notes": "AMD product page prints 'Peak INT8 Matrix Performance with Structured Sparsity 10.1 POPs' (sparse). The brochure gives the precise figure 10.0664 POPs."
     }
   ],
   "tdp_w": 1400,
@@ -144,5 +150,5 @@
   ],
   "unified_memory": false,
   "consumer": false,
-  "notes": "EIGHT compute dies, eight XCDs, ONE OAM package - same multi-die trap as MI300X. 288 GB is one package-level address space across 8 compute dies, NOT four 72GB devices or two 144GB devices. Each XCD has 32 CUs (8 x 32 = 256 CUs, 16,384 SPs, 1024 matrix cores), 4 MB shared L2, and 256 MB Infinity Cache shared across all 8 XCDs.\n\nCDNA4 / TSMC 3nm compute dies paired with 6nm I/O dies; 185B transistors. ROCm LLVM target gfx950.\n\nCONTESTED / EASY TO MISREAD: the product page and the datasheet brochure give DIFFERENT peak numbers for the same datatypes, and the difference is not error - they are two different data formats.\n  - Product page: OCP-FP8 (E5M2/E4M3) = 5.0 PFLOPs dense / 10.1 sparse; MXFP8 = 5 PFLOPs; MXFP6 and MXFP4 = 10.1 PFLOPs.\n  - Datasheet (GD-176): OCP-FP8 = 5.0332 / 10.0664; MXFP8 = 5.0332; MXFP6 = 10.0664; MXFP4 = 10.0663; INT8 = 5.0332 / 10.0663. Plus a row the product page omits: FP16 VECTOR 157.3 TFLOPS (the vector path is 157.3 while the matrix path is 2500).\n  Both are vendor numbers from AMD Performance Labs calculations dated May 2025; the ~0.06% spread is rounding to 4 significant figures vs 2. Recorded both because they are published as different figures.\n\nTwo fp16 entries above on purpose: 157.3 TFLOPS is the VECTOR path, 2500 TFLOPS is the MATRIX path. CDNA4 is the first AMD part where fp16 vector and fp16 matrix differ by ~16x on the same die. A record that only lists 2500 loses real information.\n\nTF32: AMD's footnote says 'TF32 support through software emulation' - there is NO native TF32 matrix path on CDNA4, unlike CDNA3 (MI300X: 653.7 dense TFLOPS). Do not carry a MI300X TF32 figure forward to MI355X. There is deliberately no tf32 entry in the flops list.\n\nSparse figures are all exactly 2x dense (native structured sparsity), consistent with CDNA3.\n\nMXFP6 and MXFP4 are the headline CDNA4 addition for inference: 10.1 PFLOPs, 2x the FP8 rate, which is why AMD's MI355X vs B200 comparison charts lean on FP6/MXFP6 rather than FP8. Note MXFP6/MXFP4 figures are quoted WITHOUT a sparse companion - AMD presents them at the microscaling (block-scaled) rate.\n\nMemory: 288 GB HBM3E on 8192 bits, 8 TB/s. 7 scale-up Infinity Fabric links at 153.6 GB/s each (the datasheet gives 153.6; the product page rounds to 153), plus one scale-out link at 128 GB/s, plus PCIe Gen5 x16 host. The MI355X brochure states '160 GB/s bidirectional bandwidth between each GPU' on the UBB 2.0 platform. 1400W max TBP - the highest of any part in this repo. Passive & active cooling.\n\nMI350-series companion parts: MI350X is the same 288GB/8TB/s die at 2200 MHz and 1000W; MI350P is a halved PCIe card at 144GB/4TB/s."
+  "notes": "EIGHT compute dies, eight XCDs, ONE OAM package - same multi-die trap as MI300X. 288 GB is one package-level address space across 8 compute dies, NOT four 72GB devices or two 144GB devices. Each XCD has 32 CUs (8 x 32 = 256 CUs, 16,384 SPs, 1024 matrix cores), 4 MB shared L2, and 256 MB Infinity Cache shared across all 8 XCDs.\n\nCDNA4 / TSMC 3nm compute dies paired with 6nm I/O dies; 185B transistors. ROCm LLVM target gfx950.\n\nCONTESTED / EASY TO MISREAD: the product page and the datasheet brochure give DIFFERENT peak numbers for the same datatypes, and the difference is not error - they are two different data formats.\n  - Product page: OCP-FP8 (E5M2/E4M3) = 5.0 PFLOPs dense / 10.1 sparse; MXFP8 = 5 PFLOPs; MXFP6 and MXFP4 = 10.1 PFLOPs.\n  - Datasheet (GD-176): OCP-FP8 = 5.0332 / 10.0664; MXFP8 = 5.0332; MXFP6 = 10.0664; MXFP4 = 10.0663; INT8 = 5.0332 / 10.0663. Plus a row the product page omits: FP16 VECTOR 157.3 TFLOPS (the vector path is 157.3 while the matrix path is 2500).\n  Both are vendor numbers from AMD Performance Labs calculations dated May 2025; the ~0.06% spread is rounding to 4 significant figures vs 2. Recorded both because they are published as different figures.\n\nTwo fp16 entries above on purpose: 157.3 TFLOPS is the VECTOR path, 2500 TFLOPS is the MATRIX path. CDNA4 is the first AMD part where fp16 vector and fp16 matrix differ by ~16x on the same die. A record that only lists 2500 loses real information.\n\nTF32: AMD's footnote says 'TF32 support through software emulation' - there is NO native TF32 matrix path on CDNA4, unlike CDNA3 (MI300X: 653.7 dense TFLOPS). Do not carry a MI300X TF32 figure forward to MI355X. There is deliberately no tf32 entry in the flops list.\n\nSparse figures are all exactly 2x dense (native structured sparsity), consistent with CDNA3.\n\nMXFP6 and MXFP4 are the headline CDNA4 addition for inference: 10.1 PFLOPs, 2x the FP8 rate, which is why AMD's MI355X vs B200 comparison charts lean on FP6/MXFP6 rather than FP8. Note MXFP6/MXFP4 figures are quoted WITHOUT a sparse companion - AMD presents them at the microscaling (block-scaled) rate.\n\nMemory: 288 GB HBM3E on 8192 bits, 8 TB/s. 7 scale-up Infinity Fabric links at 153.6 GB/s each (the datasheet gives 153.6; the product page rounds to 153), plus one scale-out link at 128 GB/s, plus PCIe Gen5 x16 host. The MI355X brochure states '160 GB/s bidirectional bandwidth between each GPU' on the UBB 2.0 platform. 1400W max TBP - the highest of any part in this repo. Passive & active cooling.\n\nMI350-series companion parts: MI350X is the same 288GB/8TB/s die at 2200 MHz and 1000W; MI350P is a halved PCIe card at 144GB/4TB/s. FP8 CONTESTED: AMD's product page prints OCP-FP8 '5 PFLOPs' dense / '10.1 PFLOPs' sparse (rounded), while the brochure (GD-176 rev L) prints '5.0332' / '10.0664' (precise). Both are AMD documents; the brochure is preferred for precision. The int8 rows use the brochure figure (5.0332) for consistency."
 }

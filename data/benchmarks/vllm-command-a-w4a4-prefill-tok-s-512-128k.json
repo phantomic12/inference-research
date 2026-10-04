@@ -1,0 +1,28 @@
+{
+  "id": "vllm-command-a-w4a4-prefill-tok-s-512-128k",
+  "type": "benchmark",
+  "name": "vLLM 0.26.0 prefill throughput for Command A W4A4 at 512-128K context on 2xH100",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-03",
+  "sources": [
+    "bench-capp-vllm-longctx-ttft"
+  ],
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-h100-sxm"
+  ],
+  "interconnect_ids": [
+    "nvlink-4",
+    "nvswitch-4"
+  ],
+  "model": "CohereLabs/command-a-plus-05-2026-w4a4 (218B total / 25B active MoE, NVFP4 experts)",
+  "format_id": null,
+  "metric": "prefill_tok_s",
+  "value": 8080,
+  "unit": "tok/s (saturated prefill, 128K context, B=3, cold cache)",
+  "methodology": "Hardware: 2x NVIDIA H100 80GB SXM, TP2. Engine: vLLM 0.26.0. Model: Command A W4A4 (218B total / 25B active MoE, NVFP4 experts). Measurement: saturated prefill (max-batch concurrent requests, output_len=1). Context: 128K tokens. Batch size: 3 (max that fits in KV cache at 128K). Cache state: cold (random prompts, unique seeds). Sibling prefill throughput points: 512 = 11587 tok/s (B=85), 2K = 11357 tok/s (B=30), 8K = 10843 tok/s (B=10), 32K = 10084 tok/s (B=4), 64K = 9274 tok/s (B=2), 128K = 8080 tok/s (B=3). Per-token cost: below ~8K it falls as fixed per-step overhead amortizes; beyond 32K the O(L^2) full-attention layers take over, and by 128K per-token cost is ~35% above its 8K best.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Published by SamMausberg (capp-vllm-bench) in August 2026. Shows that prefill throughput degrades only ~25% from 8K (10843 tok/s) to 128K (8080 tok/s) despite the 16x increase in context length. This is because 24 of 32 layers use sliding-window attention capped at 4096 tokens, so only 8 layers pay the O(L^2) cost. The 11.5K tok/s at 2xH100 sustains roughly 580 TFLOPS (~29% of aggregate dense BF16 peak), which is credible for a token-choice MoE routing through Marlin dequant on every expert GEMM."
+}
