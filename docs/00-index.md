@@ -64,7 +64,7 @@
 - **Cambricon MLU370 (Siyuan 370) AIDC accelerators** (`accelerators/cambricon-mlu370`) — cambricon mluarch03 2021 · 48 GB lpddr5 · 307.2 GB/s · 75 W
 - **Cambricon MLU370-X8 AIDC accelerator (dual Siyuan 370, train+infer)** (`accelerators/cambricon-mlu370-x8`) — cambricon mluarch03 (dual Siyuan 370 chiplet) 2022 · 48 GB lpddr5 · 614.4 GB/s · 250 W
 - **Cambricon MLU590 (Siyuan 590) training accelerator** (`accelerators/cambricon-mlu590`) — cambricon mluarch05 2023 · 192 GB hbm2e · 2400 GB/s · 350 W
-- **Cerebras WSE-3 (CS-3 system)** (`accelerators/cerebras-wse-3`) — cerebras wafer-scale engine (WSE-3) 2024 · 44 GB sram (on-wafer, no DRAM tier) · 21000 GB/s · 25000 W
+- **Cerebras WSE-3 (CS-3 system)** (`accelerators/cerebras-wse-3`) — cerebras wafer-scale engine (WSE-3) 2024 · 44 GB sram (on-wafer, no DRAM tier) · 21000 GB/s · 27000 W
 - **Google Cloud TPU v4** (`accelerators/google-tpu-v4`) — google v4 2021 · 32 GB hbm2 · 1200 GB/s · 192 W
 - **Google Cloud TPU v5e** (`accelerators/google-tpu-v5e`) — google v5e 2023 · 16 GB hbm2 · 819 GB/s
 - **Google Cloud TPU v5p** (`accelerators/google-tpu-v5p`) — google v5p 2023 · 95 GB hbm2e · 2765 GB/s
@@ -75,8 +75,8 @@
 - **Intel Arc Pro B70** (`accelerators/intel-arc-pro-b70`) — intel battlemage (Xe2 HPG, BMG G21) 2026 · 32 GB gddr6 · 608 GB/s · 230 W
 - **Intel Data Center GPU Flex 170** (`accelerators/xpu-intel-dc-gpu-flex-170`) — intel alchemist (Xe-HPG, ACM-G11) 2022 · 16 GB gddr6 · 384 GB/s · 75 W
 - **Intel Data Center GPU Max 1550** (`accelerators/xpu-intel-dc-gpu-max-1550`) — intel ponte-vecchio (Xe-HPC, PVC) 2023 · 128 GB hbm2e · 3276 GB/s · 600 W
-- **Intel Gaudi 2** (`accelerators/intel-gaudi2`) — intel gaudi-2 2022 · 96 GB hbm2e · 2460 GB/s
-- **Intel Gaudi 3 (HL-325 OAM / HL-338 PCIe)** (`accelerators/intel-gaudi3`) — intel gaudi-3 2024 · 128 GB hbm2e · 3700 GB/s
+- **Intel Gaudi 2** (`accelerators/intel-gaudi2`) — intel gaudi-2 2022 · 96 GB hbm2e · 2460 GB/s · 600 W
+- **Intel Gaudi 3 (HL-325 OAM / HL-338 PCIe)** (`accelerators/intel-gaudi3`) — intel gaudi-3 2024 · 128 GB hbm2e · 3700 GB/s · 900 W
 - **NVIDIA A10** (`accelerators/nvidia-a10`) — nvidia ampere 2021 · 24 GB GDDR6 · 600 GB/s · 150 W
 - **NVIDIA A100 40GB SXM4** (`accelerators/nvidia-a100-40gb-sxm4`) — nvidia ampere 2020 · 40 GB HBM2 · 1555 GB/s · 400 W
 - **NVIDIA A100 80GB PCIe** (`accelerators/nvidia-a100-80gb-pcie`) — nvidia ampere 2020 · 80 GB HBM2e · 1935 GB/s · 300 W
