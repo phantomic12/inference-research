@@ -50,13 +50,13 @@ export function loadPagefind(): Promise<PagefindModule | null> {
   // is not resolvable at build time. Building the specifier at runtime keeps it
   // a genuine browser-side dynamic import of a static file, with the bundler
   // never asked to resolve it.
-  const spec = '/pagefind/pagefind.js';
+  const spec = `${import.meta.env.BASE_URL}pagefind/pagefind.js`;
   cached = import(/* @vite-ignore */ spec)
     .then(async (m: any) => {
       // basePath must point at the /pagefind/ output subdir: Pagefind resolves
       // pagefind-entry.json and the .pf_meta/.pf_index files relative to it.
       // baseUrl is what result URLs are reported relative to.
-      await m.options({ basePath: '/pagefind/', baseUrl: '/', excerptLength: 40 });
+      await m.options({ basePath: `${import.meta.env.BASE_URL}pagefind/`, baseUrl: import.meta.env.BASE_URL, excerptLength: 40 });
       return m as PagefindModule;
     })
     .catch(() => null);
@@ -87,7 +87,9 @@ export function queryTerms(q: string): string[] {
 }
 
 export function hitUrl(url: string): string {
-  return url.endsWith('/') ? url : `${url}/`;
+  const base = import.meta.env.BASE_URL;
+  const withSlash = url.endsWith('/') ? url : `${url}/`;
+  return `${base}${withSlash}`;
 }
 
 /**
@@ -96,9 +98,11 @@ export function hitUrl(url: string): string {
  * reader filtered by type.
  */
 function isIndexPage(url: string, type: string): boolean {
-  if (url.includes('/docs/') || url.includes('/compare/') || url.includes('/graph/')) return false;
-  if (url.startsWith('/r/')) return false;
-  return url.replace(/^\//, '').split('/')[0] !== type;
+  const base = import.meta.env.BASE_URL;
+  const stripped = url.startsWith(base) ? url.slice(base.length) : url;
+  if (stripped.includes('/docs/') || stripped.includes('/compare/') || stripped.includes('/graph/')) return false;
+  if (stripped.startsWith('/r/')) return false;
+  return stripped.replace(/^\//, '').split('/')[0] !== type;
 }
 
 export async function runSearch(
@@ -117,10 +121,10 @@ export async function runSearch(
   // facets /search/ filters on are resolved from a small static map shipped
   // alongside the site: for a record, the type is the directory in its URL and
   // the status is in the map. Cheap, exact, and independent of the index format.
-  const FACETS: Record<string, { t: string; s: string }> = await fetch('/facets.json')
+  const FACETS: Record<string, { t: string; s: string }> = await fetch(`${import.meta.env.BASE_URL}facets.json`)
     .then((r) => (r.ok ? r.json() : {}))
     .catch(() => ({}));
-  const TITLES: Record<string, string> = await fetch('/titles.json')
+  const TITLES: Record<string, string> = await fetch(`${import.meta.env.BASE_URL}titles.json`)
     .then((r) => (r.ok ? r.json() : {}))
     .catch(() => ({}));
 
@@ -134,8 +138,10 @@ export async function runSearch(
   const facetsOf = (h: SearchHit): { t: string; s: string } => {
     const known = FACETS[h.rid];
     if (known) return known;
-    if (!h.url.startsWith('/r/')) return { t: h.type, s: h.status };
-    const dir = h.url.replace(/^\/r\//, '').split('/')[0];
+    const base = import.meta.env.BASE_URL;
+    const stripped = h.url.startsWith(base) ? h.url.slice(base.length) : h.url;
+    if (!stripped.startsWith('/r/')) return { t: h.type, s: h.status };
+    const dir = stripped.replace(/^\/r\//, '').split('/')[0];
     return { t: BY_DIR[dir] ?? h.type, s: h.status };
   };
 
@@ -155,8 +161,10 @@ export async function runSearch(
       status: d.meta.status ?? '',
       summary: d.excerpt ?? '',
     };
-    const path = hit.url.replace(/^\/r\//, '');
-    const isRecord = hit.url.startsWith('/r/');
+    const base = import.meta.env.BASE_URL;
+    const stripped = hit.url.startsWith(base) ? hit.url.slice(base.length) : hit.url;
+    const path = stripped.replace(/^\/r\//, '');
+    const isRecord = stripped.startsWith('/r/');
     if (isRecord) {
       const stem = path.replace(/\/$/, '');
       hit.rid = FACETS[stem] ? stem : hit.rid;
@@ -174,10 +182,13 @@ export async function runSearch(
   // Records first, then docs, then index pages: a reader searching for a fact
   // wants the record, not the page that lists records.
   raw.sort((a, b) => {
+    const base = import.meta.env.BASE_URL;
+    const strip = (u: string) => u.startsWith(base) ? u.slice(base.length) : u;
     const rank = (h: SearchHit) => {
-      if (h.url.startsWith('/r/')) return 0;
+      const s = strip(h.url);
+      if (s.startsWith('/r/')) return 0;
       if (h.type === 'doc') return 1;
-      if (h.url.includes('/docs/')) return 1;
+      if (s.includes('/docs/')) return 1;
       return 2;
     };
     const ra = rank(a);

@@ -1,0 +1,80 @@
+name: Deploy site
+
+# The Astro site is static output served by GitHub Pages from the
+# https://phantomic12.github.io/inference-research/ subpath. Every path in the
+# built site is relative to astro.config.mjs `base`, so a wrong `base` 404s
+# every asset. This workflow builds from the committed tree (a clean checkout
+# of the pushed commit) rather than the working tree, so a concurrent write to
+# data/ cannot produce a build that does not match the commit it deploys.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two deploys at once. `cancel-in-progress: false` queues rather than
+# cancelling, so a half-published deploy is never left dangling.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Build what is committed. fetch-depth 0 would also work but is
+          # unnecessary; the repo's own tools only need the working tree.
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the local toolchain (v26.7.0) so the build cannot diverge
+          # between CI and the machine that last tested it.
+          node-version: '26'
+          cache: 'npm'
+          cache-dependency-path: site/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Validate records
+        # Cheap guard: the site is generated from these records, so shipping a
+        # build made from a broken tree is worse than shipping nothing.
+        run: python tools/validate.py --quiet
+
+      - name: Build site
+        # prebuild runs tools/build_site_data.py, which reads data/ and docs/
+        # from this clean checkout.
+        working-directory: site
+        run: npm run build
+
+      - name: Verify build
+        working-directory: site
+        run: npm run verify
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

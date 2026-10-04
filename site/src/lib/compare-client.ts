@@ -18,7 +18,7 @@ export async function loadCompare(type: string): Promise<CompareData | null> {
   if (!type) return null;
   if (cache.has(type)) return cache.get(type)!;
   try {
-    const res = await fetch(`/c/${encodeURIComponent(type)}-slim.json`);
+    const res = await fetch(`${import.meta.env.BASE_URL}c/${encodeURIComponent(type)}-slim.json`);
     if (!res.ok) return null;
     const data = (await res.json()) as CompareData;
     cache.set(type, data);
@@ -34,7 +34,7 @@ function esc(s: string): string {
 }
 
 function recUrl(rid: string): string {
-  return `/r/${rid}/`;
+  return `${import.meta.env.BASE_URL}r/${rid}/`;
 }
 
 /** Order fields so identity-ish keys come first and prose sinks to the bottom. */
@@ -97,7 +97,7 @@ export async function renderCompare(host: HTMLElement): Promise<void> {
     const p = new URLSearchParams();
     p.set('type', type);
     if (chosen.length) p.set('picks', chosen.join(','));
-    history.replaceState(null, '', `/compare/?${p.toString()}`);
+    history.replaceState(null, '', `${import.meta.env.BASE_URL}compare/?${p.toString()}`);
   }
 
   async function load() {
@@ -200,7 +200,7 @@ export async function renderCompare(host: HTMLElement): Promise<void> {
 
 async function typeList(): Promise<string[]> {
   try {
-    const res = await fetch('/type-list.json');
+    const res = await fetch(`${import.meta.env.BASE_URL}type-list.json`);
     if (res.ok) return (await res.json()) as string[];
   } catch {
     /* fall through */

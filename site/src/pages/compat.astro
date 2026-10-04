@@ -9,7 +9,7 @@ const description = 'Which inference engine supports which model architecture? A
 <Base title={title} description={description} nav="compat">
   <main class="wrap" data-pagefind-body>
     <nav class="breadcrumb">
-      <a href="/">index</a> / <span>compatibility</span>
+      <a href={import.meta.env.BASE_URL}>index</a> / <span>compatibility</span>
     </nav>
 
     <div class="page-head">
@@ -109,7 +109,7 @@ const description = 'Which inference engine supports which model architecture? A
       // Set engine headers
       const engines = compatData.engines;
       thead.innerHTML = '<th>Family</th>' + engines.map(e =>
-        `<th><a href="/r/${compatData!.engine_info[e]?.rid ?? ''}/">${compatData!.engine_info[e]?.name ?? e}</a></th>`
+        `<th><a href="${import.meta.env.BASE_URL}r/${compatData!.engine_info[e]?.rid ?? ''}/">${compatData!.engine_info[e]?.name ?? e}</a></th>`
       ).join('');
 
       // Set rows
@@ -138,7 +138,7 @@ const description = 'Which inference engine supports which model architecture? A
           return `<td class="${cellClass(cell)}" title="${family} × ${e}: ${cell}">${cell}</td>`;
         });
         if (cellFilter && visibleCells.every(c => c === '')) return '';
-        return `<tr><th><a href="/model/?family=${family}">${family}</a></th>${visibleCells.join('')}</tr>`;
+        return `<tr><th><a href="${import.meta.env.BASE_URL}model/?family=${family}">${family}</th>${visibleCells.join('')}</tr>`;
       }).join('');
 
       // Update count
@@ -159,7 +159,7 @@ const description = 'Which inference engine supports which model architecture? A
             <h3>${family} <span class="n">(${models.length})</span></h3>
             <div class="family-models">
               ${models.map(m => `
-                <a class="model-chip" href="/r/${m.rid}/" data-status="${m.status}">
+                <a class="model-chip" href="${import.meta.env.BASE_URL}r/${m.rid}/" data-status="${m.status}">
                   ${m.name}
                   ${m.status === 'contested' ? '<span class="status status-contested">contested</span>' : ''}
                   ${m.status === 'draft' ? '<span class="status status-draft">draft</span>' : ''}
@@ -195,7 +195,7 @@ const description = 'Which inference engine supports which model architecture? A
 
     async function init(): Promise<void> {
       try {
-        const resp = await fetch('/joined/compatibility.json');
+        const resp = await fetch(`${import.meta.env.BASE_URL}joined/compatibility.json`);
         compatData = await resp.json();
         populateFilters();
         renderMatrix();

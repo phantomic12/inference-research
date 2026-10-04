@@ -89,15 +89,15 @@ export const DOC_INDEX = META.docs;
 
 /** Page URL for a qualified record id such as `accelerators/nvidia-h100-sxm`. */
 export function recUrl(rid: string): string {
-  return `/r/${rid}/`;
+  return `${import.meta.env.BASE_URL}r/${rid}/`;
 }
 
 export function typeUrl(type: string): string {
-  return `/${type}/`;
+  return `${import.meta.env.BASE_URL}${type}/`;
 }
 
 export function docUrl(slug: string): string {
-  return `/docs/${slug}/`;
+  return `${import.meta.env.BASE_URL}docs/${slug}/`;
 }
 
 export function docBySlug(slug: string): DocEntry | undefined {
