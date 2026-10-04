@@ -14,7 +14,18 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WT="${TMPDIR:-$LOCALAPPDATA/Temp}/ir-index-$$"
+
+# Pick a temp dir that native tools can actually reach. On git-bash/MSYS, /tmp
+# is a shell-local path that `git worktree add` (a native binary) cannot create
+# files under, so prefer LOCALAPPDATA and fall back to the system temp.
+if [ -n "${LOCALAPPDATA:-}" ]; then
+  SCRATCH="$LOCALAPPDATA/Temp"
+elif [ -n "${TMPDIR:-}" ] && [ -d "${TMPDIR:-}" ]; then
+  SCRATCH="$TMPDIR"
+else
+  SCRATCH="$(mktemp -d)"
+fi
+WT="$SCRATCH/ir-index-$$"
 
 cd "$REPO"
 git fetch -q origin
