@@ -1,0 +1,31 @@
+{
+  "id": "w6s-stale-repo-path-citation-looks-first-party",
+  "type": "gotcha",
+  "name": "A source citation pointing at a file that upstream moved looks first-party and cannot be followed - and the reported move is often not a move at all",
+  "class": "toolchain",
+  "affects": [],
+  "concepts": [
+    "citation-integrity",
+    "repo-layout",
+    "refactor",
+    "source-verification",
+    "vllm",
+    "sglang",
+    "prometheus",
+    "metrics"
+  ],
+  "symptom": "A source record cites a specific file inside an upstream repo - the natural way to cite code, because a permalink to a source file is the strongest evidence available. Upstream refactors, the file moves, and the citation silently becomes unfollowable. There is no error anywhere: the record still has a github.com URL, the repo still exists, the vendor still exists, and the number in the record is usually still true. It just cannot be checked without knowing where the file went. Real instances found in the 2026-10-05 sweep: vLLM relocated its entire csrc quantization tree under csrc/libtorch_stable/quantization/ (so csrc/quantization/marlin/dequant.h, csrc/quantization/w8a8/cutlass/scaled_mm_entry.cu and csrc/quantization/fp4/nvfp4_scaled_mm_entry.cu are all stale); SGLang's managers/scheduler.py needed the python/sglang/srt/ prefix to resolve; and xinference's core/metrics.py needed the xinference/ prefix, where core/metrics.py at the repo root matches nothing.",
+  "root_cause": "Upstream refactors are routine and a file permalink has no redirect, so the citation ages silently - the same failure mode as a dead URL except that the domain is github.com, which reads as durable. Two aggravating factors specific to this repo. First, a partial move is the norm rather than a total one: an agent reported that vLLM's metric collectors had moved out of vllm/v1/metrics/loggers.py, and sweeping all 153 GitHub-path source records plus 47 in-notes repo paths against the authenticated recursive trees found the report to be UNFOUNDED - vllm/v1/metrics/loggers.py, vllm/v1/metrics/buckets.py and vllm/v1/spec_decode/metrics.py are all present on main, and SGLang's python/sglang/srt/observability/ tree has grown to 39 Python files rather than moved. Second, a sweep that only checks the URL field misses the majority of the exposure: of the paths cited across the source directory, 47 live in notes prose and are invisible to any URL check, and a path mentioned in prose is the easiest of all to get wrong because it is written from memory.",
+  "workaround": "Cite a permalink to an immutable ref (a tag or a commit SHA) rather than to a moving branch, and when citing a moving branch, re-verify the path before publishing a number. To sweep, resolve every repo path in the corpus - in the url field AND in notes prose - against the repo's recursive git tree via the authenticated GitHub API, and treat a miss as a candidate rather than a verdict: the two common false positives are a top-level directory that happens to share a name with the repo (stripping 'vllm/' from vllm/v1/metrics/loggers.py because the repo is named vllm) and a path that genuinely moved to a new prefix. Check the tree's truncated flag before believing a miss, and cross-check a surprising miss with an independent code search before writing it down. Note that unauthenticated GitHub allows 60 requests/hour versus 5000 authenticated, which is the difference between a sweep that runs and one that rate-limits after the first two repos.",
+  "severity": "minor",
+  "notes": "Severity is minor rather than major only because nothing here loses a figure - a stale path is a verification cost paid by the next reader, not a wrong number. The reason it is worth a gotcha at all is the asymmetry in what a sweep finds: 145 of 153 URL-level paths and 35 of 47 prose-level paths were live, so the expected yield of any given sweep is low, and the reported vLLM metrics move that prompted this work turned out to be a non-event on the main branch. That is worth writing down, because the natural response to 'someone reported a stale path' is to go and change paths, and in this case doing so would have replaced a correct citation with a wrong one. The three that really had moved were all in vLLM's C++ quantization tree, a corner a metrics-focused report would never have looked at.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
+  "sources": [
+    "w4q-vllm-cutlass-capability-gates",
+    "obs-vllm-v1-metrics-loggers",
+    "w3m-vllm-buckets-module",
+    "w5e-xinference-metrics-docs"
+  ]
+}

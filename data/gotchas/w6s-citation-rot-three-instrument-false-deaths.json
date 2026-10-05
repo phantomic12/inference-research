@@ -1,0 +1,31 @@
+{
+  "id": "w6s-citation-rot-three-instrument-false-deaths",
+  "type": "gotcha",
+  "name": "A citation goes dead-looking three different ways - deleted file, moved file, and wrong-repo file - and a single probe of a single hypothesis cannot tell them apart",
+  "class": "compliance",
+  "affects": [],
+  "concepts": [
+    "citation-integrity",
+    "link-rot",
+    "probe-method",
+    "false-negative",
+    "source-verification",
+    "github",
+    "archive"
+  ],
+  "symptom": "A source record's URL stops resolving and gets written off as DEAD, when the document is alive at a different address. Three distinct mechanisms produce the identical symptom, and the fix differs in each case. (1) TRULY DELETED: the Pallas README was removed from jax-ml/jax main and the prose moved to docs.jax.dev; the KServe LLMISVC autoscaling page moved down a path segment (.../llmisvc/llmisvc-autoscaling became .../llmisvc/autoscaling/llmisvc-autoscaling). (2) DEAD AFTER A REDIRECT: mellanox.com/products/infiniband 301s into network.nvidia.com/products/infiniband, which itself 404s - a probe that checks only the pre-redirect status scores this LIVE. (3) WRONG REPO, FILE ALIVE: an MLCommons raw-log citation was written against inference_results_v6.1 while the record was titled v5.1; the Supermicro B200 directory genuinely does not exist in v6.1, so the probe was correct about v6.1 and wrong about the record. That log is alive today in inference_results_v5.1 and re-reads 947.90 samples/s against 122268.73 tokens/s, which is the repo's proof that eight MLPerf Interactive rows are mislabelled 'Queries/s'.",
+  "root_cause": "The three mechanisms are indistinguishable from the outside because all of them present as a non-200 on the exact URL under test. The failure is a probe-design failure, not a data failure: each negative in this repo has been asserted on ONE URL against ONE hypothesis (this file is gone / this host is gone / this repo is gone), and a negative asserted on a single probe is worth nothing. The v6.1 Supermicro case is the sharpest example - the probe checked the repo named in the URL, and a wrong-repo citation is by construction invisible to a probe of the URL. A fourth mechanism, the WAF block, produces the same non-200 and is not a death at all: intel.com returns 403 to a scripted client while its own CDN host returns 200 for a different file in the same minute.",
+  "workaround": "Before writing DEAD on any citation: (a) resolve the redirect CHAIN and check the FINAL status, not the first hop; (b) search for the document by its title, not just by URL transform, because the surviving path is frequently not derivable from the dead one - the KServe move inserted a segment, it did not rename a leaf; (c) if the URL is raw.githubusercontent.com, check the SIBLING tagged repo (v5.1 vs v6.1) before concluding the file is deleted, and treat a repo-name mismatch as a likely citation typo; (d) treat 403 and 429 as INDETERMINATE - they describe the client, not the document - and only 404/410 on two independent clients with a content-level body check counts as dead; (e) check Wayback's availability API before declaring a page unrecoverable, and record the empty result as the evidence, since an uncaptured page and a deleted one need different treatment. When a replacement is found, verify the CONTENT says what the record claims rather than trusting the 200 - the KServe page kept the idleReplicaCount mechanism but every worked example uses idleReplicaCount: 1, so the record's 'idleReplicaCount=0 for true scale-to-zero' claim had to be withdrawn even though the URL was repairable. When no replacement exists, say so in the record and demote status to contested rather than leaving a citation that looks sourced.",
+  "severity": "major",
+  "notes": "This gotcha exists because this repo has now produced four instrument artefacts in its own audits, and every one of them came from the same shortcut. rent-cerebras-api-token-pricing-negative was a false death caused by a static probe missing a JS-rendered table. Five mlcommons repository roots were briefly called dead when a transient probe artefact was mistaken for five missing repos. The v5.1/v6.1 Supermicro log above is the third. A fourth, recorded in w6s-unreachable-but-cited-2026-10-05, is the temptation to convert intel.com's 403 into a death. The asymmetry is the point: a false death deletes a valid vendor citation and loses a figure, while a missed death merely leaves a stale link that a reader can discover. Both are bad, but they are not equally recoverable, so the cheaper error is always to write INDETERMINATE with the probe named. The positive corollary from this sweep: of the nine URLs a prior pass called dead, four had clean live replacements with the content verified, one was never dead at all, and the remaining four were honestly unrecoverable - so the true dead rate in a 1942-record source directory that had been audited twice was well under half a percent, and every one of the apparent failures was a probe artefact rather than link rot.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-05",
+  "sources": [
+    "w6s-unreachable-but-cited-2026-10-05",
+    "bench-mlperf-v5-1-supermicro-b200-llama3-8b-interactive-log",
+    "pallas-a-jax-kernel-dsl",
+    "serve-kserve-keda-autoscaling",
+    "src5-infiniband-docs"
+  ]
+}
