@@ -21,8 +21,8 @@
       "dense": true,
       "vendor_claim": true,
       "source_id": "cn-huawei-atlas-650e-spec",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp16 for Huawei Ascend 950DT NPU (per-accelerator, Atlas 650E / 950 SuperPoD) (source of record: 'Atlas 650E AI Server product page and llms-content spec dump', kind: spec-sheet).  Recorded dense:true as printed."
+      "basis": "derived",
+      "basis_detail": "DERIVED, not transcribed: Huawei publishes the Atlas 650E cabinet total; this value is that total divided by 8 NPUs. basis was 'vendor-spec-sheet' until 2026-10-05, which misrepresented a derivation as a quotation."
     },
     {
       "precision": "bf16",
@@ -30,8 +30,8 @@
       "dense": true,
       "vendor_claim": true,
       "source_id": "cn-huawei-atlas-650e-spec",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own bf16 for Huawei Ascend 950DT NPU (per-accelerator, Atlas 650E / 950 SuperPoD) (source of record: 'Atlas 650E AI Server product page and llms-content spec dump', kind: spec-sheet).  Recorded dense:true as printed."
+      "basis": "derived",
+      "basis_detail": "DERIVED, not transcribed: Huawei publishes the Atlas 650E cabinet total; this value is that total divided by 8 NPUs. basis was 'vendor-spec-sheet' until 2026-10-05, which misrepresented a derivation as a quotation."
     },
     {
       "precision": "fp8",
@@ -39,8 +39,8 @@
       "dense": true,
       "vendor_claim": true,
       "source_id": "cn-huawei-atlas-650e-spec",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp8 for Huawei Ascend 950DT NPU (per-accelerator, Atlas 650E / 950 SuperPoD) (source of record: 'Atlas 650E AI Server product page and llms-content spec dump', kind: spec-sheet).  Recorded dense:true as printed."
+      "basis": "derived",
+      "basis_detail": "DERIVED, not transcribed: Huawei publishes the Atlas 650E cabinet total; this value is that total divided by 8 NPUs. basis was 'vendor-spec-sheet' until 2026-10-05, which misrepresented a derivation as a quotation."
     },
     {
       "precision": "fp4_block_scaled",
@@ -61,10 +61,10 @@
   ],
   "unified_memory": true,
   "consumer": false,
-  "notes": "THE HIERARCHY POINT: this generation breaks the pattern that the whole 910 line was stuck in, and it does so in a way that matters specifically for inference. The per-NPU numbers are derived by dividing Huawei's server figures by 8 (Atlas 650E: 8 NPUs, 12.48 PFLOPS mxFP4, 6.43 PFLOPS mxFP8/FP8/HiF8, 3.40 PFLOPS FP16/BF16, 8 x 96 GB, 4.0 TB/s), giving roughly 1560 / 804 / 425 TFLOPS per NPU - note that FP8 is only 1.9x FP16 and mxFP4 only 3.7x FP16, which is a deliberately narrow precision ladder compared to Blackwell's roughly 2x-per-step. THAT is the important number for a serving study: the 4:1 FP16-to-FP4 spread means low-precision decode acceleration is worth much less here than on an NVIDIA part, and there is no FP4-with-FP8-accumulate story to tell. Everything quoted is a VENDOR THEORETICAL figure and Huawei's own page carries the disclaimer 'Theoretical computing power may have a <1% error in actual testing' - so these are clock-derived peak numbers, not measurements. The genuinely novel part is memory, not compute: 96 GB per NPU of Huawei-developed on-chip memory at 500 GB/s per NPU, and at SuperPoD scale '256 TB unified global memory addressing & memory semantics' across up to 1024 NPUs. UNIFIED GLOBAL MEMORY ACROSS 1024 NPUS IS THE HEADLINE. If real, it removes the tensor-parallel-collectives problem that constrains every GPU-based serving stack, because a KV cache can be addressed as one flat address space rather than replicated per rank - that is a fundamentally different memory model from NVLink domains and it is the first credible non-Apple unified-memory story in a datacenter part. Scale-up link is UB Link 2.0: 784 GB/s bidirectional per NPU intra-server, 1.68 TB/s per NPU in 16-NPU full-mesh, 1.72 PB/s across a 1024-NPU SuperPoD - which is roughly 1.7 TB/s per chip and therefore about 3.5x the local memory bandwidth, an unusually healthy scale-up-to-local ratio and the exact inverse of the 910B's HCCS problem. Scale-out is UBoE and RoCE at 400 Gbps per NPU unidirectional. Atlas 650E is 14U air-cooled at ~14.5 kW with 2 x 950 CPUs; Atlas 950 SuperPoD is a 44OU cabinet of 64 NPUs at ~100 kW liquid-cooled, and scales to 1024 NPUs. Software: MindIE on CANN (cn-huawei-mindie). Note the predecessor-generation comparison is not apples to apples: 910C used SMIC 7 nm and HBM2e, this uses on-chip memory, and Huawei does not publish a process node for 950DT.\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). %s NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either inference is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the note above names the specific document that was read and found not to carry it, so a future pass does not have to re-establish that from scratch.\n\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). Huawei's own Atlas/Ascend spec pages and the CloudMatrix 384 whitepaper publish capacity, bandwidth and topology but no memory-bus width in bits and no per-pin rate. Not back-computed: the bandwidth figures on this family are already partly derived from secondary sources, and stacking a second inference on a derived aggregate would compound two guesses. NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the text above names the specific document read and found not to carry it, so a future pass does not have to re-establish that from scratch.",
-  "status": "verified",
+  "notes": "HUAWEI'S OWN TWO PAGES DISAGREE BY 14.3% PER NPU. Recorded 2026-10-05, previously the record presented Atlas 650E and Atlas 950 SuperPoD as if they agreed. They do not:\n  Atlas 650E (8 NPU)          -> 1,560 / 803.75 / 425 TFLOPS per NPU (mxFP4 / FP8 / FP16)\n  Atlas 950 SuperPoD (64 NPU) -> 1,783 / 918.75 / 486 TFLOPS per NPU\nThe SuperPoD figures are 1.143x the 650E figures across all three precisions, consistently - which points at a different clock or a different NPU SKU under the SuperPoD rather than an arithmetic slip. This record stores the 650E-derived set. Both are kept here rather than one being deleted, because the repo cannot currently say which configuration a buyer receives.\n\nSECOND DEFECT, same pass: the fp16 / bf16 / fp8 rows are marked basis 'vendor-spec-sheet' but are per-NPU DERIVATIONS (Huawei publishes cabinet totals; dividing by 8 is ours). Only fp4_block_scaled was marked 'derived'. That inconsistency let three derived figures pass as transcribed ones - the exact defect the required basis field was added to prevent. All three are now marked 'derived'.",
+  "status": "contested",
   "confidence": 0.7,
-  "updated": "2026-10-03",
+  "updated": "2026-10-05",
   "sources": [
     "cn-huawei-atlas-650e-spec",
     "cn-huawei-atlas-950-superpod-spec",

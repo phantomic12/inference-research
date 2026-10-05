@@ -2,9 +2,9 @@
   "id": "xpu-intel-dc-gpu-flex-170",
   "type": "accelerator",
   "name": "Intel Data Center GPU Flex 170",
-  "status": "verified",
+  "status": "contested",
   "confidence": 0.85,
-  "updated": "2026-10-04",
+  "updated": "2026-10-05",
   "vendor": "intel",
   "architecture": "alchemist (Xe-HPG, ACM-G11)",
   "release_year": 2022,
@@ -14,9 +14,9 @@
   ],
   "vram_gb": 16,
   "memory_type": "gddr6",
-  "memory_bus_bit": 128,
-  "memory_bandwidth_gbps": 384,
-  "memory_bandwidth_basis": "Intel ARK spec table: 16 GB GDDR6 at 384 GB/s. 128-bit bus implied by GDDR6 configuration.",
+  "memory_bus_bit": 256,
+  "memory_bandwidth_gbps": 576,
+  "memory_bandwidth_basis": "Intel ARK Flex 170 spec table, retrieved 2026-10-04: 'Memory Size 16 GB' | 'Memory Type GDDR6' | 'Graphics Memory Interface 256 bit' | 'Graphics Memory Bandwidth 576 GB/s'. Bandwidth is ARK's own figure, not derived.",
   "flops": [
     {
       "precision": "fp16",
@@ -46,15 +46,17 @@
       "basis_detail": "oneDNN (oneAPI) GitHub README."
     }
   ],
-  "tdp_w": 75,
+  "tdp_w": 150,
   "interconnect": [
     "pcie-gen4"
   ],
   "unified_memory": false,
   "consumer": false,
-  "notes": "Alchemist (ACM-G11) data center GPU, the predecessor to Battlemage in the data center market. 16 GB GDDR6 at 384 GB/s. 75 W TDP. Supports oneAPI/SYCL/oneDNN. Verified llama.cpp SYCL backend device. The Flex Series is positioned for media streaming, cloud gaming, and AI inference at the edge. The Flex 170 is the higher-end variant; the Flex 140 is the lower-end. The Flex Series is distinct from both the Max Series (HBM, high compute) and the Arc Pro Series (workstation, GDDR6, higher clocks). For LLM inference, the Flex 170's 16 GB VRAM limits it to smaller models (7B-14B at Q4 quantization).",
+  "notes": "COLUMN-MIXING ERROR, CORRECTED 2026-10-05. This record previously carried tdp_w 75, memory_bandwidth_gbps 384 and memory_bus_bit 128. All three are the Flex 140's figures; this record is the Flex 170. Intel's own ARK page for the 170 prints 'Memory Size 16 GB' | 'Memory Type GDDR6' | 'Graphics Memory Interface 256 bit' | 'Graphics Memory Bandwidth 576 GB/s' | 'TBP 150 W'. The 384 GB/s and 128-bit were never printed by Intel for either part - 384 is the 140's bandwidth and the 128-bit was an INFERENCE from GDDR6, which ARK contradicts at 256 bit.\n\nSTATUS CONTESTED because the flops rows are still not reconcilable with any Intel publication. ARK publishes no compute figure for this part at all - no TFLOPS row, no TOPS row. The stored fp32 20 / fp16 80 / int8 160 match neither the 170 nor the 140. The Flex Series product brief gives the 170 as '16 TFLOPS (FP32) / 250 TOPS (INT8)', which is a different pair again. Rather than pick a figure no source supports, the rows are kept and the disagreement is stated. A reader should not plan on these three numbers.\n\nSPARSITY: ARK carries no sparsity footnote and no row titled for one on this part, so every published figure is dense as printed and must not be halved - Intel's convention in its strongest form, where there is no sparse row to find.",
   "sources": [
-    "xpu-onednn-github-readme",
-    "xpu-llamacpp-sycl-docs"
+    "w4h-intel-dc-gpu-flex-170-ark-spec-table",
+    "w4h-intel-dc-gpu-flex-series-product-brief",
+    "xpu-llamacpp-sycl-docs",
+    "xpu-onednn-github-readme"
   ]
 }
