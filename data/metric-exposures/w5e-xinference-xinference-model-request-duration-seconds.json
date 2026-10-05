@@ -1,0 +1,38 @@
+{
+  "id": "w5e-xinference-xinference-model-request-duration-seconds",
+  "name": "Xinference model request duration histogram",
+  "metric_name": "xinference:model_request_duration_seconds",
+  "metric_type": "histogram",
+  "unit": "seconds",
+  "histogram_buckets": [
+    0.01,
+    0.025,
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    1.0,
+    2.5,
+    5.0,
+    10.0,
+    30.0,
+    60.0,
+    120.0
+  ],
+  "enabled_by_default": false,
+  "phase_scoped": false,
+  "engine_id": "xinference",
+  "exposure": "prometheus",
+  "confidence": 0.9,
+  "sources": [
+    "w5e-xinference-core-metrics",
+    "w5e-xinference-metrics-docs"
+  ],
+  "notes": "Whole-request wall time (queue + inference), not a phase breakdown. 13 finite buckets plus float('inf'). Because the tail is dense in the sub-second range and the finite ladder stops at 120 s, a slow-but-not-pathological request lands in the overflow bucket and the histogram cannot distinguish a 3-minute request from a 30-minute one - a percentile above 120 s is not computable from this ladder. Xinference main (xorbitsai/inference), read 2026-10-05. NOT ON BY DEFAULT on the worker: the /metrics endpoint is only mounted when XINFERENCE_DISABLE_METRICS is unset AND a metrics exporter host or port is supplied; otherwise launch_metrics_export_server() is never called and the endpoint does not exist. Supervisor-side metrics are deregistered from the worker's registry on purpose (launch_metrics_export_server removes _SUPERVISOR_ONLY_METRICS), so the worker endpoint carries only worker metrics and the supervisor endpoint only supervisor metrics. aioprometheus, not prometheus_client: counters do not auto-suffix _total the way prometheus_client does, so two of these names end in _counter and three do not - match on the literal name.",
+  "type": "metric_exposure",
+  "status": "verified",
+  "updated": "2026-10-05",
+  "verified_negatively": null,
+  "labels": [],
+  "endpoint": ":9090/metrics (only when a metrics exporter host/port is set)"
+}

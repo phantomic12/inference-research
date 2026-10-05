@@ -1,0 +1,34 @@
+{
+  "id": "w5e-xinference-xinference-time-to-first-token-seconds",
+  "name": "Xinference time-to-first-token histogram",
+  "metric_name": "xinference:time_to_first_token_seconds",
+  "metric_type": "histogram",
+  "unit": "seconds",
+  "histogram_buckets": [
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    1,
+    2.5,
+    5,
+    10,
+    30
+  ],
+  "enabled_by_default": false,
+  "phase_scoped": true,
+  "engine_id": "xinference",
+  "exposure": "prometheus",
+  "confidence": 0.9,
+  "sources": [
+    "w5e-xinference-core-metrics",
+    "w5e-xinference-metrics-docs"
+  ],
+  "notes": "Declared in xinference/core/metrics.py as a module-level aioprometheus Histogram with buckets=(0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, float('inf')). The float('inf') tail bound is NOT recorded as a bucket number here because it is not a finite bound; it is the standard Prometheus overflow bucket and every observation above 30 s lands in it. This is one of only TWO per-request latency histograms in the whole registry - there is no ITL/TPOT histogram and no decode-time histogram, so a TTFT-vs-ITL regression cannot be decomposed here. Xinference main (xorbitsai/inference), read 2026-10-05. NOT ON BY DEFAULT on the worker: the /metrics endpoint is only mounted when XINFERENCE_DISABLE_METRICS is unset AND a metrics exporter host or port is supplied; otherwise launch_metrics_export_server() is never called and the endpoint does not exist. Supervisor-side metrics are deregistered from the worker's registry on purpose (launch_metrics_export_server removes _SUPERVISOR_ONLY_METRICS), so the worker endpoint carries only worker metrics and the supervisor endpoint only supervisor metrics. aioprometheus, not prometheus_client: counters do not auto-suffix _total the way prometheus_client does, so two of these names end in _counter and three do not - match on the literal name.",
+  "type": "metric_exposure",
+  "status": "verified",
+  "updated": "2026-10-05",
+  "verified_negatively": null,
+  "labels": [],
+  "endpoint": ":9090/metrics (only when a metrics exporter host/port is set)"
+}

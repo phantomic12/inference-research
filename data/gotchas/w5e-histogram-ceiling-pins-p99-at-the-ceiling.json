@@ -1,0 +1,37 @@
+{
+  "id": "w5e-histogram-ceiling-pins-p99-at-the-ceiling",
+  "type": "gotcha",
+  "name": "A histogram whose top bucket sits below your real latency makes p99 report the ceiling, not the data - and it looks like a stable measurement",
+  "class": "measurement",
+  "symptom": "An inter-token-latency p99 sits at exactly 2.0 seconds, day after day, and does not move. The dashboard looks healthy - a round, plausible number with no variance - while users report stutters of five and ten seconds. Every percentile below the ceiling varies normally, so the chart is not obviously broken; only the p99 is pinned, and it is pinned to a value that is a property of the BUCKET LADDER rather than of the traffic. This exact failure happened in NVIDIA Dynamo: lib/llm/src/http/service/metrics.rs carries a test named itl_default_buckets_reach_80_seconds whose comment reads 'The ceiling was 2.0s, so any inter-token latency above it landed in +Inf and histogram_quantile pinned p99 at exactly 2.0 -- indistinguishable from a real 2s measurement.' The fix was to widen the shipped default from 2.0 s to 80 s and then ASSERT the exact ladder in a test, and the test's stated purpose is to guard the default, 'not just the env-var override'.",
+  "root_cause": "Prometheus histogram_quantile cannot interpolate above the highest finite bucket. Every observation that exceeds the top bound lands in the +Inf bucket, which carries a count but no upper bound, so the quantile is reported as the ceiling itself - a value that is a function of configuration, not measurement. The failure is silent in a specific way: it produces a NUMBER, not an error, and that number is stable, so it is easy to mistake for a real plateau in the latency distribution. Two things make it survive review. First, the ladder is usually correct for the workload it was tuned on, so the bug only appears after a change - a longer context, a slower model, a busier node, a disaggregated decode hop. Second, the symptom appears in the TAIL, so mean and median look fine. The generalisable lesson is that a round, low-variance tail percentile is evidence about the ladder, not about the traffic: check whether the p99 sits exactly on a bucket boundary before believing it. The corollary is that any engine whose buckets are ENV-CONFIGURABLE (Dynamo's DYN_METRICS_ITL_{MIN,MAX,COUNT}) should have its ceiling checked against the observed max on every deployment, because two deployments of the same version legitimately have different ladders.",
+  "workaround": "Read the top finite `le` label off /metrics and compare it to the maximum observation you can find (a recent max() over the _sum/_count pair, or a client-side histogram). If they are the same order of magnitude, the percentile is ceiling-pinned and untrustworthy. Then either widen the ladder at the engine - for Dynamo, set DYN_METRICS_ITL_MAX to comfortably above the worst observed inter-token latency - or stop using histogram_quantile for the tail and track max/percentiles client-side. Note that Dynamo's ladder is GENERATED, not literal: generate_log_buckets(min,max,count) with values rounded to 2 significant figures, so you cannot predict the bounds from the env var alone; read the exported `le` labels, which is exactly what the shipped test does through its bucket_upper_bounds helper.",
+  "severity": "major",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-05",
+  "sources": [
+    "w5e-dynamo-http-service-metrics",
+    "w5e-dynamo-prometheus-names",
+    "obs-vllm-v1-metrics-loggers",
+    "obs-serving-slos-ttft-tpot-not-tok-s"
+  ],
+  "concepts": [
+    "prometheus",
+    "histogram",
+    "percentile",
+    "latency",
+    "observability",
+    "kv-cache",
+    "p99",
+    "dynamo"
+  ],
+  "affects": [
+    "nvidia-dynamo",
+    "vllm",
+    "sglang",
+    "tensorrt-llm",
+    "text-generation-inference"
+  ],
+  "notes": "Recorded as a measurement-class gotcha because it is version-independent in MECHANISM (any histogram with a finite ceiling can do it) but was version-specific in INCIDENCE: the Dynamo default moved from a 2.0 s ceiling to 80 s, and the repo now pins it with a test. Related and worth reading together: obs-serving-slos-ttft-tpot-not-tok-s (why the tail percentile is the SLO metric at all) and the vLLM inter_token_latency ladder in this corpus, whose 0.01 bottom bound is the mirror-image failure - it cannot resolve anything faster than 10 ms per token, which is precisely why Dynamo's ladder starts at 0.0018."
+}

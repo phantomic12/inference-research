@@ -1,0 +1,44 @@
+{
+  "id": "w5e-dynamo-dynamo-router-overhead-total-ms",
+  "type": "metric_exposure",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-05",
+  "name": "Dynamo router total per-request routing overhead histogram",
+  "engine_id": "nvidia-dynamo",
+  "metric_name": "dynamo_router_overhead_total_ms",
+  "metric_type": "histogram",
+  "unit": "milliseconds",
+  "exposure": "prometheus",
+  "endpoint": "/metrics (frontend port 8000; NOT on the standalone router)",
+  "histogram_buckets": [
+    0.01,
+    0.03,
+    0.09,
+    0.27,
+    0.81,
+    2.43,
+    7.29,
+    21.87,
+    65.61,
+    196.83,
+    590.49,
+    1771.47,
+    5314.41,
+    15943.23,
+    47829.69,
+    143489.07,
+    430467.21
+  ],
+  "labels": [
+    "router_id"
+  ],
+  "enabled_by_default": true,
+  "phase_scoped": true,
+  "verified_negatively": null,
+  "sources": [
+    "w5e-dynamo-http-service-metrics",
+    "w5e-dynamo-prometheus-names"
+  ],
+  "notes": "The routing_overhead family is a per-phase decomposition of the ROUTER'S OWN CPU WORK: dynamo_router_overhead_block_hashing_ms, overhead_indexer_find_matches_ms, overhead_seq_hashing_ms, overhead_scheduling_ms and this roll-up. Two important corrections a reader would otherwise get wrong. (1) THE NAME PREFIX is dynamo_router (name_prefix::ROUTER), not dynamo_routing_overhead - prometheus_names.py has a ROUTING_OVERHEAD constant holding the SUFFIXES, which is an easy trap since it looks like a prefix. (2) THERE ARE TWO LADDERS in lib/llm/src/kv_router/metrics.rs: compute_overhead_buckets() = prometheus::exponential_buckets(0.001, 2.0, 15) is used for the two pure-CPU phases (block hashing, sequence hashing), while async_overhead_buckets() = exponential_buckets(0.01, 3.0, 17) is used for indexer find_matches, scheduling, TOTAL and shared-cache query - this record carries the async ladder because that is the one on the total. Note the units are MILLISECONDS while every surrounding latency metric is in seconds: a query that forgets the suffix is wrong by 1000x and silently so. Every histogram in the family carries a const_label router_id (the router's etcd discovery.instance_id), so series are per-router not fleet-wide. The doc comment on register() notes this is NOT available on the standalone router, which has no frontend HTTP server - a real absence that looks like a config error."
+}

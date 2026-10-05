@@ -1,0 +1,23 @@
+{
+  "id": "w5e-xinference-xinference-model-last-load-duration-seconds",
+  "name": "Xinference last model load duration gauge",
+  "metric_name": "xinference:model_last_load_duration_seconds",
+  "metric_type": "gauge",
+  "unit": "seconds",
+  "enabled_by_default": false,
+  "engine_id": "xinference",
+  "exposure": "prometheus",
+  "confidence": 0.9,
+  "sources": [
+    "w5e-xinference-core-metrics",
+    "w5e-xinference-metrics-docs"
+  ],
+  "notes": "A GAUGE holding the duration of the LAST model load, not a histogram and not a counter. There is no distribution of load times on this engine - only the most recent one - so a slow-load regression that has since been overwritten by a fast load is invisible. The name ends _duration_seconds but the type is gauge and no bucket ladder exists. Xinference main (xorbitsai/inference), read 2026-10-05. NOT ON BY DEFAULT on the worker: the /metrics endpoint is only mounted when XINFERENCE_DISABLE_METRICS is unset AND a metrics exporter host or port is supplied; otherwise launch_metrics_export_server() is never called and the endpoint does not exist. Supervisor-side metrics are deregistered from the worker's registry on purpose (launch_metrics_export_server removes _SUPERVISOR_ONLY_METRICS), so the worker endpoint carries only worker metrics and the supervisor endpoint only supervisor metrics. aioprometheus, not prometheus_client: counters do not auto-suffix _total the way prometheus_client does, so two of these names end in _counter and three do not - match on the literal name.",
+  "type": "metric_exposure",
+  "status": "verified",
+  "updated": "2026-10-05",
+  "verified_negatively": null,
+  "phase_scoped": null,
+  "labels": [],
+  "endpoint": ":9090/metrics (only when a metrics exporter host/port is set)"
+}

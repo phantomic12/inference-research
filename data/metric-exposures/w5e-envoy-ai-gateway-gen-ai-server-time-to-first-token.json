@@ -1,0 +1,51 @@
+{
+  "id": "w5e-envoy-ai-gateway-gen-ai-server-time-to-first-token",
+  "name": "Envoy AI Gateway time-to-first-token histogram (OTel gen_ai semconv)",
+  "metric_name": "gen_ai.server.time_to_first_token",
+  "metric_type": "histogram",
+  "unit": "seconds",
+  "histogram_buckets": [
+    0.001,
+    0.005,
+    0.01,
+    0.02,
+    0.04,
+    0.06,
+    0.08,
+    0.1,
+    0.25,
+    0.5,
+    0.75,
+    1.0,
+    2.5,
+    5.0,
+    7.5,
+    10.0,
+    15.0,
+    20.0,
+    30.0,
+    45.0,
+    60.0
+  ],
+  "labels": [
+    "gen_ai.operation.name",
+    "gen_ai.provider.name",
+    "gen_ai.request.model",
+    "gen_ai.response.model",
+    "gen_ai.original.model",
+    "gen_ai.backend"
+  ],
+  "phase_scoped": true,
+  "notes": "Declared in internal/metrics/genai.go as mustRegisterHistogram(meter, genaiMetricServerTimeToFirstToken, WithDescription('Time to receive first token in streaming responses.'), WithUnit('s'), WithExplicitBucketBoundaries(0.001, 0.005, 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 15.0, 20.0, 30.0, 45.0, 60.0)). 21 explicit bounds - this engine does NOT rely on the OTel SDK's default bucket set, so the ladder is exactly this list and a quantile call is reproducible. The description says 'in streaming responses': on a non-streaming request this histogram has no observation to record, so a non-streaming deployment shows an empty series rather than a zero. That is a silent gap, not a latency of zero. Envoy AI Gateway main (envoyproxy/ai-gateway), read 2026-10-05. Metrics go through an OpenTelemetry MeterProvider (internal/metrics/metrics.go NewMeterFromEnv), not a bare prometheus_client registry: a Prometheus reader is ALWAYS attached, and a console or OTLP exporter is added additionally when OTEL_METRICS_EXPORTER is 'console', or when it is neither 'none' nor 'prometheus' and an OTLP endpoint env var is set. OTEL_SDK_DISABLED=true turns off the extra exporters but not the Prometheus reader. That means the metric names are dotted OTel names (gen_ai.server.*), which the Prometheus exporter renders with dots replaced by underscores and a unit suffix appended - so the scraped series is NOT the literal constant in genai.go. Names follow the OpenTelemetry GenAI semantic conventions, not any engine's private scheme.",
+  "type": "metric_exposure",
+  "status": "verified",
+  "updated": "2026-10-05",
+  "verified_negatively": null,
+  "engine_id": "envoy-ai-gateway",
+  "exposure": "prometheus",
+  "confidence": 0.9,
+  "sources": [
+    "w5e-envoy-ai-gateway-metrics-genai"
+  ],
+  "endpoint": ":8080/metrics (Prometheus reader always attached)"
+}

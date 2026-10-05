@@ -1,0 +1,44 @@
+{
+  "id": "w5e-dynamo-dynamo-frontend-time-to-first-token-seconds",
+  "name": "Dynamo frontend time-to-first-token histogram",
+  "metric_name": "dynamo_frontend_time_to_first_token_seconds",
+  "metric_type": "histogram",
+  "unit": "seconds",
+  "histogram_buckets": [
+    0.0,
+    0.0022,
+    0.0047,
+    0.01,
+    0.022,
+    0.047,
+    0.1,
+    0.22,
+    0.47,
+    1.0,
+    2.2,
+    4.7,
+    10.0,
+    22.0,
+    48.0,
+    100.0,
+    220.0,
+    480.0
+  ],
+  "labels": [
+    "model"
+  ],
+  "phase_scoped": true,
+  "notes": "generate_log_buckets(0.001, 480.0, 18) - 18 generated bounds from 2.2 ms to 480 s. Override with DYN_METRICS_TTFT_{MIN,MAX,COUNT}. Attributes TTFT to the PREFILL worker in a disaggregated deployment (the collector's per-worker attribution logic does this explicitly) and simultaneously updates a per-worker gauge, so a reader can tell which half of a split deployment got slow. NVIDIA Dynamo main (ai-dynamo/dynamo), read 2026-10-05. IMPORTANT CONTEXT that changes how every record in this set reads: Dynamo is a serving framework that BRIDGES vendor engine registries rather than reimplementing them. components/src/dynamo/common/backend/metrics.py has engines call register_global_registry (default prometheus_client.REGISTRY) or register_engine_registry (a custom CollectorRegistry, e.g. SGLang's multiprocess one), and their vendor-prefixed series - vllm:, sglang:, trtllm_, lmcache: - appear on the SAME /metrics endpoint alongside Dynamo's own dynamo_* names. So on a Dynamo deployment you will find vLLM and SGLang metrics that are recorded in this repo against THOSE engines, and the dynamo_component / dynamo_namespace / dynamo_endpoint labels plus model and model_name are injected at scrape time by Dynamo. The names below are Dynamo's OWN, from the auto-generated prometheus_names.py (generated from lib/runtime/src/metrics/prometheus_names.rs - do not hand-edit). Prefix is dynamo_frontend.",
+  "type": "metric_exposure",
+  "status": "verified",
+  "updated": "2026-10-05",
+  "verified_negatively": null,
+  "engine_id": "nvidia-dynamo",
+  "exposure": "prometheus",
+  "confidence": 0.92,
+  "endpoint": "/metrics on the frontend service",
+  "sources": [
+    "w5e-dynamo-http-service-metrics",
+    "w5e-dynamo-prometheus-names"
+  ]
+}

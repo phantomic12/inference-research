@@ -20,8 +20,7 @@
     500,
     1000,
     2000,
-    5000,
-    8192
+    5000
   ],
   "labels": [
     "model_name",
@@ -30,10 +29,10 @@
   "enabled_by_default": true,
   "phase_scoped": null,
   "verified_negatively": null,
-  "notes": "vLLM main, PrometheusStatLogger in vllm/v1/metrics/loggers.py, read 2026-10-04. On by default (EngineArgs.disable_log_stats defaults False); served at :8000/metrics. Bucket family name in --custom-histogram-buckets: request_tokens. Bucket bounds are build_1_2_5_buckets(max_model_len), so they DEPEND on the served model's context length; the list here is the ladder for a model with an 8192-token context.",
+  "notes": "vLLM main, PrometheusStatLogger in vllm/v1/metrics/loggers.py, read 2026-10-04. On by default (EngineArgs.disable_log_stats defaults False); served at :8000/metrics. Bucket family name in --custom-histogram-buckets: request_tokens. Bucket bounds are build_1_2_5_buckets(max_model_len), so they DEPEND on the served model's context length; the list here is the ladder for a model with an 8192-token context. Bucket ladder re-verified against vllm/v1/metrics/buckets.py at v0.30.0 (main, 2026-09-22) on 2026-10-05: build_1_2_5_buckets(8192) returns [1,2,5,10,20,50,100,200,500,1000,2000,5000] - it stops at the first mantissa whose value exceeds max_value, the next candidate is 1*10^4=10000, which exceeds max_value, so the function returns immediately: 8192 is NEVER a bound at any context length. An earlier version of this record carried a trailing 8192, which is unreachable by construction and would make a histogram_quantile call silently wrong rather than absent.",
   "status": "verified",
-  "confidence": 0.94,
-  "updated": "2026-10-04",
+  "confidence": 0.95,
+  "updated": "2026-10-05",
   "sources": [
     "obs-vllm-v1-metrics-loggers",
     "w3m-vllm-buckets-module",

@@ -1,0 +1,46 @@
+{
+  "id": "w5e-dynamo-dynamo-frontend-inter-token-latency-seconds",
+  "name": "Dynamo frontend inter-token-latency histogram",
+  "metric_name": "dynamo_frontend_inter_token_latency_seconds",
+  "metric_type": "histogram",
+  "unit": "seconds",
+  "histogram_buckets": [
+    0.0,
+    0.0018,
+    0.0033,
+    0.0059,
+    0.011,
+    0.02,
+    0.035,
+    0.064,
+    0.12,
+    0.21,
+    0.38,
+    0.69,
+    1.2,
+    2.3,
+    4.1,
+    7.4,
+    13.0,
+    24.0,
+    44.0,
+    80.0
+  ],
+  "labels": [
+    "model"
+  ],
+  "phase_scoped": true,
+  "notes": "Buckets are GENERATED, not literal: generate_log_buckets(0.001, 80.0, 20) produces log-spaced bounds rounded to 2 significant figures, always with a leading 0.0. This exact 20-bound ladder is asserted as a shipped contract by the test itl_default_buckets_reach_80_seconds, whose comment explains why it is pinned: the ceiling used to be 2.0 s, so any ITL above it fell into +Inf and histogram_quantile reported p99 as exactly 2.0 - indistinguishable from a genuine 2 s measurement. The same comment notes the 0.0018 bottom edge is deliberate: vLLM's ITL ladder starts at 0.01 and cannot resolve anything faster than 10 ms per token, so raising the ceiling here must not cost the low-end resolution. That is the whole reason to prefer Dynamo's ITL over vLLM's for slow-token-count workloads. Overridable via DYN_METRICS_ITL_{MIN,MAX,COUNT} (a deprecated DYN_HISTOGRAM_-prefixed form is still honoured with a deprecation warning), so treat the ladder as deployment-specific and read the le labels rather than assuming. NVIDIA Dynamo main (ai-dynamo/dynamo), read 2026-10-05. IMPORTANT CONTEXT that changes how every record in this set reads: Dynamo is a serving framework that BRIDGES vendor engine registries rather than reimplementing them. components/src/dynamo/common/backend/metrics.py has engines call register_global_registry (default prometheus_client.REGISTRY) or register_engine_registry (a custom CollectorRegistry, e.g. SGLang's multiprocess one), and their vendor-prefixed series - vllm:, sglang:, trtllm_, lmcache: - appear on the SAME /metrics endpoint alongside Dynamo's own dynamo_* names. So on a Dynamo deployment you will find vLLM and SGLang metrics that are recorded in this repo against THOSE engines, and the dynamo_component / dynamo_namespace / dynamo_endpoint labels plus model and model_name are injected at scrape time by Dynamo. The names below are Dynamo's OWN, from the auto-generated prometheus_names.py (generated from lib/runtime/src/metrics/prometheus_names.rs - do not hand-edit). Prefix is dynamo_frontend.",
+  "type": "metric_exposure",
+  "status": "verified",
+  "updated": "2026-10-05",
+  "verified_negatively": null,
+  "engine_id": "nvidia-dynamo",
+  "exposure": "prometheus",
+  "confidence": 0.92,
+  "endpoint": "/metrics on the frontend service",
+  "sources": [
+    "w5e-dynamo-http-service-metrics",
+    "w5e-dynamo-prometheus-names"
+  ]
+}

@@ -4,11 +4,12 @@
   "name": "vLLM Ascend (Huawei Ascend NPU hardware plugin)",
   "status": "verified",
   "confidence": 0.9,
-  "updated": "2026-10-03",
+  "updated": "2026-10-05",
   "sources": [
     "niche-github-rest-api-repo-metadata",
     "niche-vllm-ascend-repo",
-    "ev-gh-api-repo-metadata-2026-10-04"
+    "ev-gh-api-repo-metadata-2026-10-04",
+    "w5e-vllm-ascend-observability-provider"
   ],
   "repo": "vllm-project/vllm-ascend",
   "languages": [
@@ -69,5 +70,7 @@
     "A stable release train; expect to run release candidates"
   ],
   "docs_url": "https://docs.vllm.ai/projects/ascend/en/latest/",
-  "notes": "The single most important record in the niche-hardware half of this slice. It documents vLLM's hardware-pluggable architecture in production, which is the mechanism by which every future non-CUDA accelerator will be supported - and the pinned-version cost that mechanism imposes. Related: [[niche-tt-metal]] does the same for Tenstorrent via a separate plugin, and [[niche-tensorrt-llm]] is the in-tree CUDA example. All metadata from the GitHub API on 2026-10-03. ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-10-04 (0.0 months before this record), latest release v0.23.0.post1 published 2026-09-22, 679 contributors (distinct committers including anonymous), open_issues_count 3745 (issues PLUS pull requests - see [[ev-github-open-issues-count-includes-pull-requests]]), not archived, 2919 stars. See [[ev-maintenance-status-is-four-dated-facts]] for how to read this fact set."
+  "notes": "The single most important record in the niche-hardware half of this slice. It documents vLLM's hardware-pluggable architecture in production, which is the mechanism by which every future non-CUDA accelerator will be supported - and the pinned-version cost that mechanism imposes. Related: [[niche-tt-metal]] does the same for Tenstorrent via a separate plugin, and [[niche-tensorrt-llm]] is the in-tree CUDA example. All metadata from the GitHub API on 2026-10-03. ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-10-04 (0.0 months before this record), latest release v0.23.0.post1 published 2026-09-22, 679 contributors (distinct committers including anonymous), open_issues_count 3745 (issues PLUS pull requests - see [[ev-github-open-issues-count-includes-pull-requests]]), not archived, 2919 stars. See [[ev-maintenance-status-is-four-dated-facts]] for how to read this fact set. TRACING VERIFIED NEGATIVELY 2026-10-05. This is an ACTIVE absence, checked against all 664 Python files under vllm_ascend/ (excluding tests): a word-boundary search for otel, opentelemetry, start_span and get_tracer returns ZERO hits. The near-misses are false friends - 'remotely loaded' in dyntra_lb_scheduler.py, recompute_scheduler.py, scheduler_profiling_chunk.py and mamba_hybrid.py, and 'span' only ever as substring of another word. vllm_ascend/observability/ is NOT a tracing surface: provider.py registers an MS Service Metric provider (imported lazily from ms_service_metric.provider_api so there is no hard Core dependency) over two YAML files, and handlers.py pushes five EPLB expert-hotness gauges through get_metric_recorder(). So on Ascend the tracing you get is upstream vLLM's, whatever it is - the plugin contributes metrics, not spans. Recorded as verified_negatively rather than left unknown because the search was exhaustive and the negative is the useful answer: a reader can now stop looking, and can rule out 'Ascend has better tracing than CUDA' as a selection criterion.",
+  "tracing_support": "none",
+  "verified_negatively": true
 }

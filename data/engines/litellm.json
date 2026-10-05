@@ -2,7 +2,7 @@
   "id": "litellm",
   "type": "engine",
   "name": "LiteLLM",
-  "tracing_support": "unknown",
+  "tracing_support": "per-phase",
   "repo": "BerriAI/litellm",
   "languages": [
     "Python",
@@ -58,13 +58,15 @@
     "Any assumption that API compatibility implies capability parity across providers."
   ],
   "docs_url": "https://docs.litellm.ai/docs/",
-  "notes": "Included per the delegated brief's allowance for a genuinely distinct serving/routing layer. It is deliberately scoped to the routing/proxy role and touches no inference kernel, so it does not overlap the GPU-serving engines other agents cover. supported_formats records passthrough behaviour rather than weight formats because no weight format reaches this layer — a weight-format query against this record will correctly return nothing useful. Scheduling fields are request-level (which upstream, in what order, with what fallback), not sequence-level; there is no continuous batching or paged KV here. ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-10-04 (0.0 months before this record), latest release v1.104.0 published 2026-10-03, 1768 contributors (distinct committers including anonymous), open_issues_count 5179 (issues PLUS pull requests - see [[ev-github-open-issues-count-includes-pull-requests]]), not archived, 60124 stars. See [[ev-maintenance-status-is-four-dated-facts]] for how to read this fact set. tracing_support=unknown (set 2026-10-04): the record mentions an OpenTelemetry flush endpoint only, which establishes neither that tracing is absent nor what a trace contains. LiteLLM is a proxy, so any spans it emits would describe upstream requests rather than inference phases.",
+  "notes": "Included per the delegated brief's allowance for a genuinely distinct serving/routing layer. It is deliberately scoped to the routing/proxy role and touches no inference kernel, so it does not overlap the GPU-serving engines other agents cover. supported_formats records passthrough behaviour rather than weight formats because no weight format reaches this layer — a weight-format query against this record will correctly return nothing useful. Scheduling fields are request-level (which upstream, in what order, with what fallback), not sequence-level; there is no continuous batching or paged KV here. ||| MAINTENANCE (dated fact, GitHub API, 2026-10-04): last commit 2026-10-04 (0.0 months before this record), latest release v1.104.0 published 2026-10-03, 1768 contributors (distinct committers including anonymous), open_issues_count 5179 (issues PLUS pull requests - see [[ev-github-open-issues-count-includes-pull-requests]]), not archived, 60124 stars. See [[ev-maintenance-status-is-four-dated-facts]] for how to read this fact set. tracing_support=unknown (set 2026-10-04): the record mentions an OpenTelemetry flush endpoint only, which establishes neither that tracing is absent nor what a trace contains. LiteLLM is a proxy, so any spans it emits would describe upstream requests rather than inference phases. TRACING VERIFIED 2026-10-05. Read at main 2026-10-05. LiteLLM's integrations/otel/model/spans.py is a declared, closed span vocabulary rather than scattered call sites: SpanRole = PROXY_REQUEST (SERVER, the only root, name literal 'Received Proxy Server Request'), LLM_CALL, MCP_TOOL_CALL, MCP_LIST_TOOLS, GUARDRAIL, DB_CALL and SERVICE, each mapped in SPAN_REGISTRY to a LiteLLMSpanKind and an explicit parent. Phase spans exist inside the request: logger.phase_span(name) / start_phase_span creates an INTERNAL SERVICE span, and the auth phase in particular is emitted as a live phase span specifically so its DB lookups nest under it instead of appearing as flat post-hoc service spans. Because request phases (auth, guardrail, llm_call, db_call) are separately attributable within one trace, per-phase is the honest level. Worth knowing: _METRICS_ONLY_SERVICES = {self, router, proxy_pre_call, auth} documents which service timings deliberately do NOT become spans, and client-propagated trace context in params._meta is recorded as a span LINK rather than a parent - so a span rooted at the client will not appear under the gateway's trace.",
   "status": "verified",
   "confidence": 0.9,
-  "updated": "2026-10-03",
+  "updated": "2026-10-05",
   "sources": [
     "cpuedge-litellm-github",
     "cpuedge-litellm-license",
-    "ev-gh-api-repo-metadata-2026-10-04"
-  ]
+    "ev-gh-api-repo-metadata-2026-10-04",
+    "w5e-litellm-otel-span-model"
+  ],
+  "verified_negatively": false
 }
