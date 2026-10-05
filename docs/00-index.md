@@ -388,7 +388,7 @@
 - **vllm.cpp** (`engines/vllm-cpp`) — cuda, metal, vulkan, cpu-avx512 · Deploying a single binary with no Python runtime where vLLM-equivalent scheduling is still wanted; Reproducing vLLM scheduling semantics token-for-token outside the PyTorch ecosystem; Constraints wher
 - **whisper.cpp** (`engines/whisper-cpp`) — cuda, rocm, hip, metal, vulkan, cpu-avx512, cpu-avx2, opencl, xnnpack, npu · Cross-platform Whisper inference from a single binary; Edge and mobile deployment (iOS, Android, WASM); Scenarios where Python/PyTorch is not available or desired; Rapid prototyping and benchmarking
 
-## Quantization formats (103)
+## Quantization formats (104)
 
 - **AQLM (additive / multi-codebook quantization)** (`quantization/aqlm`) — 2, 3 and 4-bit weights (targeting sub-4-bit); activations remain fp16, so this is w2a16 / w3a16 · From the paper's abstract: AQLM is 'the first scheme that is Pareto optimal in terms of accuracy-vs-model-size when compressing to less than 3 bits per parameter' and 'significantly improves upon all known schemes in the extreme compression (2bit) regime'. No specific perplexity number in the abstract; none recorded.
 - **AWQ (activation-aware weight quantization)** (`quantization/awq`) — w4a16 · From the AWQ paper itself, OPT-6.7B under INT3-g128: WikiText perplexity 43.2 for plain RTN vs 13.0 when the salient 1% of weights are identified by activation distribution and kept in FP16; AWQ's per-channel scaling is the hardware-efficient alternative to that mixed-precision layout (quant-awq-paper). No fp16-vs-AWQ delta number was quoted in the abstract, so no second figure.
@@ -492,6 +492,7 @@
 - **llmcompressor (Red Hat AI / vLLM project) + compressed-tensors checkpoint format** (`quantization/llmcompressor-quant`) — the scheme set is named, not numeric: FP8_BLOCK, FP8_DYNAMIC, INT8, W2A16..W8A16 (and G32/G64 group variants), MXFP4, MXFP8, NVFP4, plus arbitrary-bit and mixed-precision. The documented worked example is FP8 weights with RTN at block_size 128 and dynamic FP8 activations · n/a - the README ships no controlled fp16 delta. The documented example uses Qwen/Qwen3-30B-A3B and only says 'Confirm generations of the quantized model look sane'. Null + note.
 - **optimum-quanto (Hugging Face quantization library)** (`quantization/optimum-quanto`) — int2 / int4 / int8 / float8 weights (and optional int8/float8 activations) · Qualitative only, from the project README: models compiled with int8/float8 weights and float8 activations are 'very close to the full-precision models', and inference latency with quantized-weights-only is comparable to full precision where optimized kernels exist (quant-quanto-readme). No numeric benchmark delta published - hence quality_delta left as this qualitative statement rather than null only.
 - **vLLM Implementation x Hardware support matrix (which quantization implementation runs on which architecture, and where it does NOT)** (`quantization/qhw-vllm-supported-hardware-matrix`) — matrix record - spans AWQ, GPTQ, Marlin, llm-compressor INT8 W8A8/W4A8, llm-compressor FP8 W8A8, bitsandbytes, DeepSpeedFP, GGUF
+- **vLLM per-format kernel capability matrix derived from source (which format has a NATIVE GEMM on which GPU generation, which silently degrades to emulation, and which is a verified negative)** (`quantization/qhw-vllm-kernel-capability-matrix`) — matrix record - spans NVFP4 (W4A4 and W4A16), MXFP4, MXFP6, MXFP8, FP8 per-tensor, FP8 block-scaled, FP8 rowwise, INT8 W8A8, W4A8, AWQ/GPTQ W4A16, and the 4-bit/3-bit KV-cache dtypes
 - **vLLM quantization backend selection and hardware compatibility** (`quantization/qhw-vllm-kernel-selection`) — varies by method - W4A16 (GPTQ/AWQ/Marlin), W8A8 (FP8/INT8), W4A4 (NVFP4 on Blackwell)
 
 ## Interconnect (53)
@@ -703,7 +704,7 @@
 - **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (321)
+## Gotchas (330)
 
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
 - **A cache hit produces different output than a cold run, with no error anywhere in the stack** (`gotchas/pd-cache-hit-silently-differs-from-cold-run`) — [blocker] framework · The disaggregated deployment looks completely healthy and still returns wrong text. Both vLLM servers start, return HTTP 200, stay healthy after the requests, report that LMCache P/D mode is enabled, 
@@ -783,6 +784,7 @@
 - **A JIT cache keyed on more than the kernel shape recompiles inside a single process: FlashInfer's micro-kernel cache key includes batch size AND workspace size, so cache growth invalidates entries it already paid for** (`gotchas/ev-jit-cache-key-invalidation`) — [major] config · Within one running server process, a kernel that compiled successfully at startup recompiles later, several times, as real traffic arrives. FlashInfer issue #4317 documents the mechanism in a single s
 - **A KGW-style watermark is designed for stochastic sampling - under temperature 0 the signal it relies on is not produced** (`gotchas/sec-watermark-greedy-decoding-defeats-the-signal`) — [major] security · The same watermarked model returns detectable text at temperature 1.0 and undetectable text at temperature 0. Any batch that goes all-greedy contributes no watermark signal at all, which also corrupts
 - **A PCIe-only multi-GPU box serving a large MoE saturates interconnect rather than compute, so adding GPUs or SMs does not scale and utilization can look healthy while throughput is capped** (`gotchas/mgpu-pcie-only-multigpu-is-communication-bound`) — [major] measurement · Measured on 8x RTX PRO 6000 Blackwell Max-Q (SM120, 96 GB, PCIe-only, no NVLink) serving DeepSeek-V4.1-Flash: 128K cold prefill 6,853 tok/s (re-run 6,765, -1.3%), 32K prompt ~7,196 tok/s, at ~87% GPU 
+- **A benchmark record whose value is a speedup ratio but whose metric says decode_tok_s is selected by every filter that matters and read as a rate** (`gotchas/bench-metric-enum-hides-a-dimensionless-ratio`) — [major] measurement · You pick hardware by filtering data/benchmarks/ on metric: decode_tok_s and taking the largest value, because that is the field a capacity planner reaches for. Three records in that slice are not thro
 - **A benchmark shorter than the queue ramp measures the idle-to-loaded transition, not the steady state - the MLPerf traces show ~15 minutes of sub-3 kW ramp before the plateau** (`gotchas/pwr-short-run-measures-ramp-not-steady-state`) — [major] measurement · Two runs of the identical configuration on the identical node report different tokens/s, and the shorter run reports the HIGHER number. Mean power and joules per token come out too low in the same run
 - **A block format's declared block size is not its scale group, and a library default is not a format constant - reading either wrong silently corrupts the memory arithmetic** (`gotchas/qzgw-block-size-is-not-the-super-block-and-a-default-is-not-a-constant`) — [major] format · Two wrong-but-plausible weight_group_size values, both of which change every memory and quality number computed from them. (1) SEVEN GGUF records carried 256, which is the K-quant SUPER-BLOCK (QK_K) r
 - **A closed-loop autoscaler on scraped telemetry overshoots because the signal is stale by the time the decision is made — several replicas are added for a burst that one replica would have absorbed** (`gotchas/ops-autoscaler-telemetry-lag-thundering-herd`) — [major] operations · A traffic burst triggers a scale-up to several replicas, then a scale-down, then another scale-up — the classic flapping pattern — while the burst itself was short enough that the original replica cou
@@ -878,6 +880,7 @@
 - **Multi-GPU Intel Arc under SYCL loses P2P, then crashes or hangs in device-to-device copies** (`gotchas/sycl-multi-gpu-arc-loses-p2p-and-crashes`) — [major] hardware · Multi-card Intel Arc dGPU configurations fail in the peer-copy path in three distinct ways. (1) The OpenCL runtime has no P2P at all: ur_die with 'Experimental P2P feature is not implemented for OpenC
 - **NCCL bus bandwidth is typically 2x achieved bandwidth for inter-node collectives** (`gotchas/nic-nccl-bus-bandwidth-vs-achieved`) — [major] measurement · NCCL all-reduce performance over InfiniBand achieves only ~50-60% of the theoretical bus bandwidth, and this gap is rarely stated explicitly.
 - **NVFP4 fused-MoE loading detects mismatched gate/up global scales, warns once, and then dequantizes the up half with the gate half's scale anyway** (`gotchas/nvfp4-fused-moe-w13-global-scale-mismatch`) — [major] format · ModelOptNvFp4FusedMoE.process_weights_after_loading fuses gate_proj and up_proj into w13 and keeps only the gate per-tensor global scale. When a checkpoint ships different scale_2 for the two, the up 
+- **Native NVFP4 compute exists only on sm100/103 and sm120/121 with CUDA 12.8+: every other NVIDIA part, including Hopper, has no NVFP4 GEMM at all and the engine raises NOT_IMPLEMENTED** (`gotchas/w4q-nvfp4-native-only-sm100-sm120-cuda128`) — [major] hardware · An NVFP4 checkpoint on an H100, an H200, an A100, an L40S or a 4090 either (a) loads and runs with no tensor-core FP4 benefit, the FP4 weights dequantized and the FP4 activations upcast, so the memory
 - **Newer NVIDIA consumer architectures are not supersets: SM100 supports FP8 block-scaled GEMM and SM120 does not, because SM90/100/120 have entirely different FP8 instruction sets** (`gotchas/comm-sm120-fp8-arch-split-expert-account`) — [major] hardware · A user with 8x RTX 6000 PRO (768GB VRAM total) trying to serve original FP8 weights gets the flat refusal `Unsupported SM version for FP8 block scaling GEMM`. The FP4 checkpoint does load, but at 27 t
 - **No vendor publishes joules-per-token for inference: the only way to get it is to measure it yourself or estimate from TDP and throughput, and the estimation error is 30-50% because TDP is a thermal ceiling not a power measurement and throughput depends on batch size, sequence length and model** (`gotchas/vendors-dont-publish-joules-per-token-estimation-error`) — [major] measurement · A joules-per-token figure is needed for a cost model, a carbon calculation, or a capacity plan. The vendor datasheet does not contain it. The only available figures are TDP (a thermal design power cei
 - **Offline is NOT reliably faster than Server: on identical MLPerf LLM hardware the ordering reverses sign across scale, from -6% on one node to +1.9% on a 72-GPU rack** (`gotchas/bench-mlperf-offline-is-not-always-faster-than-server`) — [major] measurement · The rule 'the Offline scenario produces higher throughput than Server, so quote Offline' is repeated constantly in vendor comparison posts and it is false as a general statement. Measured Offline-minu
@@ -910,6 +913,7 @@
 - **SYCL crashes or emits gibberish on hybrid linear-attention architectures (qwen3next, qwen35) on Intel Arc Pro B60** (`gotchas/sycl-hybrid-linear-attention-arch-crash-intel-arc`) — [major] kernel · On 2x Intel Arc Pro B60 (24 GB each, no XeLink, Level Zero 1.15.38308+1, Ryzen 7 7700), models with a qwen3next or qwen35 architecture - specifically Qwen3-Coder-Next at Q3_K_XL (33.79 GiB) and Q4_K_M
 - **SYCL_CACHE_PERSISTENT=1 causes crashes in llama.cpp; not recommended** (`gotchas/xpu-sycl-cache-persistent-crash`) — [major] config · Setting SYCL_CACHE_PERSISTENT=1 in the environment causes crashes when running llama.cpp with the SYCL backend. The crash occurs because the SYCL runtime caches and reuses JIT-compiled binaries, and w
 - **Scale-to-zero on an LLM is a bill-shaped decision, not a latency-shaped one: keeping a model warm is the only way to be interactive, so the economics only work when utilization is very low or traffic is genuinely spiky** (`gotchas/dep-serverless-scale-to-zero-only-pays-for-spiky-or-mostly-idle`) — [major] config · Serverless GPU looks cheap until you notice what the cold-start penalty forces you to do about idle capacity, and the fix for that penalty is to keep the container warm - which is the thing you were t
+- **Searching arXiv for DeepGEMM by title returns a same-name paper by unrelated CPU-inference authors - reject it on author grounds** (`gotchas/meta-deepgemm-title-search-returns-the-wrong-deepgemm`) — [major] toolchain · The natural way to fill the DeepGEMM citation is a title search on the arXiv API. That search DOES return exactly one hit, it is titled 'DeepGEMM', and it looks authoritative - so it is easy to record
 - **Sizing a rack by summing GPU TDP understates it badly: a 72-GPU GB200 NVL72 rack draws ~120 kW against a 1,200 W per-GPU ceiling, and its installed PSU capacity is 264 kW** (`gotchas/power-floor-scaling-rack-is-not-sum-of-gpu-tdp`) — [major] config · A power budget built by multiplying published per-GPU Max TDP by GPU count is wrong by roughly 40% on facility draw and by more than 2x on installed electrical capacity. For GB200 NVL72: 72 x 1,200 W 
 - **Speculative decoding that works standalone crashes under PD disaggregation, on a per-algorithm basis with no warning** (`gotchas/pd-speculative-decoding-unsupported-per-algorithm-under-pd`) — [major] framework · DFLASH speculative decoding crashes at startup under PD disaggregation: the first update_running_batch on the decode side dies with AttributeError: 'NoneType' object has no attribute 'prepare_for_deco
 - **Standard load balancers cannot see KV cache state - routing decisions are blind to cache locality** (`gotchas/serve-routing-cache-state-not-visible-to-load-balancer`) — [major] config · A standard load balancer (round-robin, least-connections) sends requests to replicas that do not have the prefix cached, causing redundant prefill computation and higher TTFT.
@@ -968,8 +972,11 @@ and t
 - **mlx-lm --kv-bits passes its startup check, then crashes on the first request for hybrid sliding-window models** (`gotchas/mlx-kv-bits-crashes-on-first-request-for-hybrid-attention`) — [major] config · mlx_lm.server starts cleanly and /health returns 200, then the first chat completion raises 'NotImplementedError: RotatingKVCache Quantization NYI'. Affects models whose attention schedule is mixed - 
 - **terminationGracePeriodSeconds defaults to 30s while an LLM drain window needs minutes — SIGKILL lands mid-drain, so the graceful path is configured but never used** (`gotchas/ops-termination-grace-period-kills-the-drain`) — [major] operations · A deployment has --shutdown-timeout set and still fails in-flight requests on rollout, with logs showing the drain starting and then stopping abruptly rather than completing. The pod sits Terminating 
 - **vLLM 0.30.0's FA4 kernel ignores num_splits on SM90, costing up to 48% decode throughput** (`gotchas/fa4-num-splits-ignored-sm90`) — [major] kernel · Decode on H100 (SM90) is 48% slower per token than on v0.26.0 at batch 1 and 36% slower at batch 4 for google/gemma-4-26B-A4B-it at ~5.9k context, while TTFT is flat at 61 ms on both. Results stay cor
+- **vLLM MXFP4 is native on sm100/sm120 only if an optional module is installed, and is unconditional software emulation on sm90 and below: the model loads either way and only a logger.warning_once distinguishes them** (`gotchas/w4q-vllm-mxfp4-no-native-kernel-sm120`) — [major] kernel · Nothing at all, at load time. An MXFP4 checkpoint (group 32, E8M0 scales) starts normally on an RTX 5090, an RTX PRO 6000 Blackwell, an H100 or a 4090, produces correct output, and reports a plausible
+- **vLLM W4A8 (INT4 weight + INT8 activation) is CPU-only, not Arm-only: it runs on x86 through two code paths the support table marks NO, and the NVIDIA NOs are real because loading fails loudly** (`gotchas/w4q-vllm-w4a8-is-cpu-only-on-cpu-not-arm-only`) — [major] kernel · Two opposite surprises from one format. On the GPU side, an INT4-weight + INT8-activation checkpoint refuses to load at all with ValueError('Failed to find a kernel that can implement the WNA16 linear
 - **vLLM cannot transfer KV over PCIe P2P on Arc Pro B60 because the UCX ze_ipc backend is unmerged** (`gotchas/vllm-arc-b60-no-pcie-p2p-kv-transfer`) — [major] framework · Prefill/decode disaggregation on Arc Pro B60 falls back off PCIe peer-to-peer for KV transfer. The blocker is upstream of vLLM: Intel's own engineer on the issue states that the ze_ipc support in UCX 
 - **vLLM crashes on a MIG UUID in CUDA_VISIBLE_DEVICES, and its NVML path reports the parent GPU's memory for a MIG slice** (`gotchas/mgpu-mig-uuid-cannot-be-parsed-by-vllms-device-resolution`) — [major] framework · On an A100 40GB split into 2x 3g.20gb MIG instances on bare metal, setting CUDA_VISIBLE_DEVICES to a MIG UUID crashes vLLM at startup with: 'ValueError: invalid literal for int() with base 10: \'MIG-f
+- **vLLM silently downgrades FP8 activation scaling from per-token to per-tensor when CUTLASS FP8 is unavailable (Ampere, or CUDA older than 12.4 on Ada): the checkpoint says dynamic per-token, the engine computes per-tensor, nothing warns** (`gotchas/w4q-vllm-fp8-per-token-silently-downgrades-to-per-tensor`) — [major] kernel · An FP8 checkpoint quantized with per-token (per-row) dynamic activation scales produces worse accuracy than the same checkpoint quantized with per-tensor scales would predict, with no error and no war
 - **vLLM's --gpu-memory-utilization is a fraction of TOTAL VRAM, so KV cache block allocation fails even with memory visibly free** (`gotchas/vllm-kv-cache-block-budget`) — [major] config · Engine init fails with: ValueError: No available memory for the cache blocks. Try increasing `gpu_memory_utilization` when initializing the engine. Reported cases include llama-2 70B 4-bit AWQ on 4x A
 - **vLLM's AITER integration gate silently excludes RDNA3 (gfx1100)** (`gotchas/aiter-gate-skips-rdna3-gfx1100`) — [major] config · On a gfx1100 Radeon (Radeon PRO W7900 or 7900 XTX) vLLM logs 'AITER is not found or not supported on the current platform, QuarkOCP_MX will fall back to emulation' and then selects TritonInt8ScaledMML
 - **vLLM's own overload signal is HTTP 503, not 429 — a naive 429-based retry policy never sees it** (`gotchas/ops-vllm-admission-rejects-503-not-429`) — [major] operations · A load test or client with a 'retry on 429' rule reports 100% success while the server is shedding a large fraction of requests as HTTP 503 Service Unavailable. The 503s appear in the vLLM access log 
@@ -1010,6 +1017,8 @@ and t
 - **Q: 'Should I move off Ollama to vLLM/SGLang?' - A: the corpus gives a numeric trigger of about five concurrent users, and names the two situations where you should not move at all** (`gotchas/sent-qa-ollama-vs-real-engine-migration`) — [minor] toolchain · The 'Best LLM Inference engine for today?' thread is literally this question - a user migrating off Ollama for a personal assistant - and the corpus answer is engine-by-situation rather than migrate. 
 - **Q: 'Which GPU should I buy for local LLMs?' - A: stack used RTX 3090s, the consensus answer, on VRAM per dollar rather than on benchmark rank** (`gotchas/sent-qa-which-gpu-should-i-buy-local`) — [minor] hardware · Asked directly in a thread about getting above 200B parameters on a $10k budget (79 upvotes, 185 comments), the highest-scoring answer in the entire corpus (85 upvotes) is a used-3090 recommendation w
 - **Q: 'Which engine for structured output / agentic / multi-turn workloads?' - A: SGLang and vLLM, with the reason stated as prefix reuse, and llama.cpp kept for the local-model reference path** (`gotchas/sent-qa-which-engine-for-structured-and-reasoning-workloads`) — [minor] toolchain · For prefix-heavy and structured work the corpus names vLLM's prefix caching as the specific asset: 'Prefix caching is amazing for best-of-n style generative tasks.' For large-context single-box work o
+- **TensorRT-LLM has no paper - the absence is verified by an empty title search, and its kernels are documented in this repo as records instead** (`gotchas/meta-tensorrt-llm-has-no-paper-do-not-invent-one`) — [minor] toolchain · A reader auditing this repo for inference coverage sees that TensorRT-LLM - one of the two or three production inference engines on NVIDIA hardware - has engine, observability and multiple FLOP/kernel
+- **The llama.cpp no-paper negative still holds, but the count of papers merely MENTIONING llama.cpp grew from 5 to 70 - the gap grows faster than it gets filled** (`gotchas/meta-llamacpp-negative-holds-but-mention-count-is-growing`) — [minor] toolchain · The existing gotcha meta-llama-cpp-has-no-paper-do-not-invent-one was written against a search that returned 5 results for all:"llama.cpp". It now returns 70. That looks like the negative is decaying 
 - **The migration resistance has a concrete number: Ollama is treated as finished at about five concurrent users, which is what pushes teams onto vLLM or SGLang** (`gotchas/sent-migration-resistance-concurrency-ceiling-caps-ollama`) — [minor] toolchain · The most operationally useful sentiment datum in the corpus is an explicit concurrency ceiling given by someone running a real organization on it. A single-firm deployment (Threadripper Pro 7965WX, 25
 - **The practitioner answer to 'which inference engine is best' is a situation table, not a winner; asking for a ranking is answered by refusing the framing** (`gotchas/sent-engine-choice-is-situational-not-a-ranking`) — [minor] toolchain · A buyer or engineer asks which inference engine is best. The high-scoring replies do not name one. The most-cited framing is that the question is malformed: 'It's often very silly to ask "which is bet
 - **The router reads a worker's protocol once at registration and never re-reads it, so a worker that stops serving its registered protocol is not detected — the circuit breaker opens on live traffic instead** (`gotchas/ops-router-circuit-breaker-blind-to-h2c-downgrade`) — [minor] operations · After a rolling update or a network change, one router replica's throughput drops while its peers are fine, and its circuit breaker for that worker is open. The worker's health is red on the side that
@@ -1028,6 +1037,7 @@ and t
 - **sglang:utilization and sglang:max_running_requests_under_SLO are documented but permanently zero on current main - do not build an autoscaling rule on them** (`gotchas/obs-sglang-utilization-metric-is-dead`) — [minor] measurement · You configure SGLang with an SLO target, expect sglang:max_running_requests_under_SLO to report the headroom the engine computed, and find it permanently 0. Or sglang:utilization is flat at 0 on a dec
 - **vLLM auto-selects an FP8 linear kernel on RDNA4 that is slower than the one it picked before v0.28** (`gotchas/vllm-rdna4-rowwise-fp8-kernel-auto-selected`) — [minor] framework · On RDNA4 (Radeon AI PRO R9700, gfx1201), serving FP8 compressed-tensors checkpoints with --kv-cache-dtype fp8 and TRITON_ATTN, decode throughput depends on a kernel selector rather than on the hardwar
 - **vLLM derives prefix-cache block hashes from a FIXED default seed so nodes can share a cache - keeping the seed secret is not a security control** (`gotchas/sec-kv-cache-hash-seed-is-fixed-by-default-for-cross-node-reuse`) — [minor] privacy · Someone asks how to prevent an attacker forging prefix-cache blocks. The hash is sha256 and the seed is a documented constant, so any identical token sequence produces an identical block hash on every
+- **vLLM has no plain 4-bit or sub-3-bit KV cache on NVIDIA: the only sub-8-bit cache dtypes are TurboQuant (research kernels) and int4_per_token_head, and there is no 2-bit KV dtype at all** (`gotchas/w4q-vllm-no-sub-8bit-kv-cache-on-nvidia`) — [minor] format · A reader planning capacity for long-context serving asks for a 4-bit (or 2-bit) KV cache, finds that --kv-cache-dtype accepts only a fixed list of strings, and concludes the engine supports 8-bit and 
 - **vLLM is Apache 2.0: the patent grant is the key differentiator from MIT, and it terminates on patent litigation** (`gotchas/meth-vllm-apache2-patent-grant`) — [minor] config · You want to use vLLM in a commercial product and assume it's 'open source' like MIT. But Apache 2.0 has a patent grant that MIT lacks, and it terminates if you sue for patent infringement.
 - **vLLM's 'Your GPU does not have native support for FP4' warning fires on weight-only NVFP4 checkpoints, and gets quoted as evidence the silicon lacks FP4 kernels** (`gotchas/nvfp4-marlin-warning-blames-gpu-for-weight-only-checkpoint`) — [minor] measurement · prepare_nvfp4_moe_layer_for_marlin() emits 'Your GPU does not have native support for FP4 computation but FP4 quantization is being used. Weight-only FP4 compression will be used leveraging the Marlin
 
@@ -1311,16 +1321,18 @@ and t
 - **OpenHermes-2.5-Mistral-7B** (`models/openhermes-2-5-mistral-7b`) — dense 7.24175B · 131,072 B/token KV · GQA · 32,768 ctx
 - **Grok 1** (`models/grok-1`) — moe 314B · 262,144 B/token KV · GQA · 8,192 ctx
 
-## Papers (274)
+## Papers (296)
 
 - **A Length-Extrapolatable Transformer** (`papers/ntk-aware-scaled-rope`) — position-encoding · acl · 2022 · arXiv:2212.10554 · in-upstream-engine
 - **A Simple and Effective Pruning Approach for Large Language Models** (`papers/wanda`) — pruning · iclr · 2024 · arXiv:2306.11695 · research-only
+- **AIBrix: Towards Scalable, Cost-Effective Large Language Model Inference Infrastructure** (`papers/w4p-aibrix-multitenant-serving-control-plane`) — cluster · arxiv · 2025 · arXiv:2504.03648 · in-upstream-engine
 - **AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration** (`papers/paper-awq`) — quantization · mlsys · 2024 · arXiv:2306.00978 · in-production
 - **Accelerating Large Language Model Decoding with Speculative Sampling** (`papers/chen-speculative-sampling-deepmind`) — speculative-decoding · arxiv · 2023 · arXiv:2302.01318 · in-production
 - **Accelerating Production LLMs with Combined Token/Embedding Speculators** (`papers/production-token-embedding-speculators`) — speculative-decoding · arxiv · 2024 · arXiv:2404.19124 · in-production
 - **Accelerating Sparse Deep Neural Networks** (`papers/sparse-tensor-cores`) — sparsity · arxiv · 2021 · arXiv:2104.08378 · in-production
 - **AlpaServe: Statistical Multiplexing with Model Parallelism for Deep Learning Serving** (`papers/alpaserve`) — serving-systems · osdi · 2023 · arXiv:2302.11665 · research-only
 - **AlphaQ: Calibration-Free Bit Allocation for Mixture-of-Experts Quantization** (`papers/alphaq`) — quantization · arxiv · 2026 · arXiv:2606.04980 · research-only
+- **Apple Intelligence Foundation Language Models: Tech Report 2025 (PT-MoE server model)** (`papers/w4p-apple-ptmoe-server-model`) — moe · arxiv · 2025 · arXiv:2507.13575 · in-production
 - **Atom: Low-bit Quantization for Efficient and Accurate LLM Serving** (`papers/paper-atom`) — quantization · mlsys · 2024 · arXiv:2310.19102 · research-only
 - **Audio Flamingo: A Novel Audio Language Model with Few-Shot Learning and Dialogue Abilities** (`papers/audio-flamingo`) — speech · icml · 2024 · arXiv:2402.01831 · research-only
 - **BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models** (`papers/blip2`) — multimodal · icml · 2023 · arXiv:2301.12597 · in-production
@@ -1329,10 +1341,12 @@ and t
 - **Block Diffusion: Interpolating Between Autoregressive and Diffusion Language Models (BD3-LM)** (`papers/block-diffusion-bd3-lm`) — other · iclr · 2025 · arXiv:2503.09573 · research-only
 - **Blockwise Parallel Transformer for Large Context Models** (`papers/blockwise-parallel-transformer`) — attention · neurips · 2023 · arXiv:2305.19370 · research-only
 - **Break the Sequential Dependency of LLM Inference Using Lookahead Decoding** (`papers/lookahead-parallel-decoding`) — speculative-decoding · icml · 2024 · arXiv:2402.02057 · in-upstream-engine
+- **Cache-Craft: Managing Chunk-Caches for Efficient Retrieval-Augmented Generation** (`papers/w4p-cachecraft-rag-chunk-cache`) — retrieval · sigmod · 2025 · arXiv:2502.15734 · research-only
 - **CacheBlend: Fast Large Language Model Serving for RAG with Cached Knowledge Fusion** (`papers/cacheblend-rag-kv-fusion`) — kv-cache · arxiv · 2024 · arXiv:2405.16444 · in-upstream-engine
 - **CacheGen: KV Cache Compression and Streaming for Fast Large Language Model Serving** (`papers/paper-cachegen`) — kv-cache · other · 2024 · arXiv:2310.07240 · research-only
 - **Carbon Emissions and Large Neural Network Training** (`papers/carbon-emissions-large-neural-training`) — other · arxiv · 2021 · arXiv:2104.10350 · in-production
 - **Careless Whisper: Speech-to-Text Hallucination Harms** (`papers/careless-whisper`) — speech · other · 2024 · arXiv:2402.08021 · in-production
+- **Cascade Speculative Drafting for Even Faster LLM Inference (CS Drafting)** (`papers/w4p-cascade-speculative-drafting`) — speculative-decoding · neurips · 2024 · arXiv:2312.11462 · research-only
 - **Chain-of-Thought Prompting Elicits Reasoning in Large Language Models** (`papers/chain-of-thought-prompting`) — inference-time-compute · neurips · 2022 · arXiv:2201.11903 · in-production
 - **Clipper: A Low-Latency Online Prediction Serving System** (`papers/clipper`) — serving-systems · nsdi · 2017 · arXiv:1612.03079 · in-production
 - **ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction over BERT** (`papers/colbert`) — retrieval · other · 2020 · arXiv:2004.12832 · in-production
@@ -1346,6 +1360,7 @@ and t
 - **DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model** (`papers/paper-deepseek-v2`) — moe · arxiv · 2024 · arXiv:2405.04434 · in-production
 - **DeepSeek-V3 Technical Report** (`papers/deepseek-v3-report`) — moe · arxiv · 2024 · arXiv:2412.19437 · in-production
 - **DeepSeek-V3 Technical Report** (`papers/paper-deepseek-v3`) — moe · arxiv · 2024 · arXiv:2412.19437 · in-production
+- **DeepSeek-V3.2: Pushing the Frontier of Open Large Language Models (introducing DeepSeek Sparse Attention, DSA)** (`papers/w4p-deepseek-sparse-attention-dsa`) — attention · arxiv · 2025 · arXiv:2512.02556 · in-upstream-engine
 - **DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models** (`papers/deepseekmoe`) — moe · acl · 2024 · arXiv:2401.06066 · in-production
 - **DeepSpeed Inference: Enabling Efficient Inference of Transformer Models at Unprecedented Scale** (`papers/deepspeed-inference`) — serving-systems · other · 2022 · arXiv:2207.00032 · in-production
 - **DeepSpeed-FastGen: High-throughput Text Generation for LLMs via MII and DeepSpeed-Inference** (`papers/deepspeed-fastgen`) — serving-systems · arxiv · 2024 · arXiv:2401.08671 · in-production
@@ -1363,6 +1378,7 @@ and t
 - **EAGLE-3: Scaling up Inference Acceleration of Large Language Models via Training-Time Test** (`papers/eagle-3-training-time-test`) — speculative-decoding · neurips · 2025 · arXiv:2503.01840 · in-upstream-engine
 - **EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty** (`papers/eagle-feature-level-speculative`) — speculative-decoding · icml · 2024 · arXiv:2401.15077 · in-upstream-engine
 - **EAQuant: Enhancing Post-Training Quantization for MoE Models via Expert-Aware Optimization** (`papers/eaquant`) — quantization · arxiv · 2025 · arXiv:2506.13329 · research-only
+- **ESS: An Offload-Centric Latent-Cache Management Architecture for DeepSeek-V3.2-Exp** (`papers/w4p-ess-latent-cache-offload-deepseek`) — serving-systems · arxiv · 2025 · arXiv:2512.10576 · research-only
 - **Efficient Memory Management for Large Language Model Serving with PagedAttention** (`papers/pagedattention-vllm`) — serving-systems · sosp · 2023 · arXiv:2309.06180 · in-production
 - **Efficient Streaming Language Models with Attention Sinks** (`papers/streamingllm`) — long-context · iclr · 2024 · arXiv:2309.17453 · research-only
 - **Efficiently Modeling Long Sequences with Structured State Spaces** (`papers/s4`) — ssm · iclr · 2022 · arXiv:2111.00396 · research-only
@@ -1375,6 +1391,7 @@ and t
 - **Fast Matrix Multiplications for Lookup Table-Quantized LLMs** (`papers/paper-flute`) — quantization · emnlp · 2024 · arXiv:2407.10960 · research-only
 - **Fast Transformer Decoding: One Write-Head is All You Need** (`papers/multi-query-attention`) — kv-cache · arxiv · 2019 · arXiv:1911.02150 · in-upstream-engine
 - **FastEmit: Low-latency Streaming ASR with Sequence-level Emission Regularization** (`papers/fastemit`) — speech · icassp · 2021 · arXiv:2010.11148 · in-upstream-engine
+- **Fiddler: CPU-GPU Orchestration for Fast Inference of Mixture-of-Experts Models** (`papers/w4p-fiddler-cpu-gpu-moe-orchestration`) — moe · iclr · 2025 · arXiv:2402.07033 · research-only
 - **Flamingo: a Visual Language Model for Few-Shot Learning** (`papers/flamingo`) — multimodal · neurips · 2022 · arXiv:2204.14198 · research-only
 - **FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning** (`papers/flashattention-2`) — attention · iclr · 2024 · arXiv:2307.08691 · in-upstream-engine
 - **FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision** (`papers/flashattention-3`) — attention · neurips · 2024 · arXiv:2407.08608 · in-upstream-engine
@@ -1412,6 +1429,7 @@ and t
 - **Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena** (`papers/meth-llm-as-judge-mt-bench`) — other · neurips · 2023 · arXiv:2306.05685 · in-production
 - **KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache** (`papers/kivi`) — kv-cache · icml · 2024 · arXiv:2402.02750 · research-only
 - **KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization** (`papers/paper-kvquant`) — kv-cache · neurips · 2024 · arXiv:2401.18079 · research-only
+- **Kimi K2: Open Agentic Intelligence** (`papers/w4p-kimi-k2-moe-agentic`) — moe · arxiv · 2025 · arXiv:2507.20534 · in-upstream-engine
 - **Kimi Linear: An Expressive, Efficient Attention Architecture** (`papers/kimi-linear-kda`) — attention · arxiv · 2025 · arXiv:2510.26692 · in-upstream-engine
 - **Kimi Linear: An Expressive, Efficient Attention Architecture** (`papers/kimi-linear`) — attention · arxiv · 2025 · arXiv:2510.26692 · in-upstream-engine
 - **LLM Maybe LongLM: Self-Extend LLM Context Window Without Tuning** (`papers/selfextend`) — long-context · icml · 2024 · arXiv:2401.01325 · research-only
@@ -1441,11 +1459,13 @@ and t
 - **Llumnix: Dynamic Scheduling for Large Language Model Serving** (`papers/llumnix-dynamic-scheduling`) — scheduling · osdi · 2024 · arXiv:2406.03243 · research-only
 - **LongRoPE2: Near-Lossless LLM Context Window Scaling** (`papers/longrope2`) — position-encoding · icml · 2025 · arXiv:2502.20082 · in-upstream-engine
 - **LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens** (`papers/longrope`) — position-encoding · icml · 2024 · arXiv:2402.13753 · in-upstream-engine
+- **LoongServe: Efficiently Serving Long-Context Large Language Models with Elastic Sequence Parallelism** (`papers/w4p-loongserve-elastic-sequence-parallelism`) — serving-systems · sosp · 2024 · arXiv:2404.09526 · research-only
 - **M3-Embedding: Multi-Linguality, Multi-Functionality, Multi-Granularity Text Embeddings** (`papers/paper-bge-m3`) — embedding · acl · 2024 · arXiv:2402.03216 · in-production
 - **MARLIN: Mixed-Precision Auto-Regressive Parallel Inference on Large Language Models** (`papers/marlin-mixed-precision-autoregressive-inference`) — quantization · other · 2024 · arXiv:2408.11743 · in-upstream-engine
 - **MInference 1.0: Accelerating Pre-filling for Long-Context LLMs via Dynamic Sparse Attention** (`papers/minference`) — long-context · neurips · 2024 · arXiv:2407.02490 · research-only
 - **MTEB: Massive Text Embedding Benchmark** (`papers/mteb`) — embedding · other · 2023 · arXiv:2210.07316 · in-production
 - **MagicDec: Breaking the Latency-Throughput Tradeoff for Long Context Generation with Speculative Decoding** (`papers/magicdec-long-context-specdec`) — speculative-decoding · iclr · 2025 · arXiv:2408.11049 · research-only
+- **MagicPIG: LSH Sampling for Efficient LLM Generation** (`papers/w4p-magicpig-lsh-attention-sampling`) — kv-cache · iclr · 2025 · arXiv:2410.16179 · research-only
 - **Mamba: Linear-Time Sequence Modeling with Selective State Spaces** (`papers/mamba-selective-ssm`) — ssm · arxiv · 2023 · arXiv:2312.00752 · in-upstream-engine
 - **Mamba: Linear-Time Sequence Modeling with Selective State Spaces** (`papers/mamba`) — ssm · colm · 2024 · arXiv:2312.00752 · in-upstream-engine
 - **MambaVision: A Hybrid Mamba-Transformer Vision Backbone** (`papers/mambavision`) — ssm · cvpr · 2025 · arXiv:2407.08083 · in-upstream-engine
@@ -1455,7 +1475,10 @@ and t
 - **Measuring the Carbon Intensity of AI in Cloud Instances** (`papers/carbon-intensity-ai-cloud-instances`) — other · other · 2022 · arXiv:2206.05229 · in-production
 - **Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads** (`papers/medusa-multiple-decoding-heads`) — speculative-decoding · icml · 2024 · arXiv:2401.10774 · in-upstream-engine
 - **MegaBlocks: Efficient Sparse Training with Mixture-of-Experts** (`papers/megablocks`) — moe · mlsys · 2023 · arXiv:2211.15841 · research-only
+- **MegaScale-Infer: Serving Mixture-of-Experts at Scale with Disaggregated Expert Parallelism** (`papers/w4p-megascale-infer-disaggregated-expert-parallelism`) — moe · other · 2025 · arXiv:2504.02263 · research-only
+- **MemServe: Context Caching for Disaggregated LLM Serving with Elastic Memory Pool** (`papers/w4p-memserve-elastic-memory-pool`) — kv-cache · arxiv · 2024 · arXiv:2406.17565 · research-only
 - **Microscaling Data Formats for Deep Learning** (`papers/mx-formats`) — quantization · arxiv · 2023 · arXiv:2310.10537 · in-production
+- **MiniCache: KV Cache Compression in Depth Dimension for Large Language Models** (`papers/w4p-minicache-depth-kv-compression`) — kv-cache · neurips · 2024 · arXiv:2405.14366 · research-only
 - **MiniLLM: On-Policy Distillation of Large Language Models** (`papers/minillm`) — distillation · iclr · 2024 · arXiv:2306.08543 · research-only
 - **MiniMax-01: Scaling Foundation Models with Lightning Attention** (`papers/minimax-01`) — attention · arxiv · 2025 · arXiv:2501.08313 · in-production
 - **MiniMax-M1: Scaling Test-Time Compute Efficiently with Lightning Attention** (`papers/paper-minimax-m1`) — attention · arxiv · 2025 · arXiv:2506.13585 · in-production
@@ -1465,12 +1488,14 @@ and t
 - **Mixture-of-Depths: Dynamically allocating compute in transformer-based language models** (`papers/mixture-of-depths`) — inference-time-compute · arxiv · 2024 · arXiv:2404.02258 · research-only
 - **Mixture-of-Experts with Expert Choice Routing** (`papers/expert-choice-routing`) — routing · neurips · 2022 · arXiv:2202.09368 · research-only
 - **MoBA: Mixture of Block Attention for Long-Context LLMs** (`papers/moba`) — attention · neurips · 2025 · arXiv:2502.13189 · in-production
+- **MoE-Lightning: High-Throughput MoE Inference on Memory-constrained GPUs** (`papers/w4p-moe-lightning-hierarchical-roofline`) — moe · arxiv · 2024 · arXiv:2411.11217 · research-only
 - **MoEQuant: Enhancing Quantization for Mixture-of-Experts Large Language Models via Expert-Balanced Sampling and Affinity Guidance** (`papers/moequant`) — quantization · icml · 2025 · arXiv:2505.03804 · research-only
 - **MobileLLM: Optimizing Sub-billion Parameter Language Models for On-Device Use Cases** (`papers/mobilellm-on-device`) — other · icml · 2024 · arXiv:2402.14905 · in-production
 - **Molmo and PixMo: Open Weights and Open Data for State-of-the-Art Vision-Language Models** (`papers/molmo`) — multimodal · cvpr · 2025 · arXiv:2409.17146 · in-production
 - **Mooncake: A KVCache-centric Disaggregated Architecture for LLM Serving** (`papers/mooncake-kimi`) — serving-systems · other · 2024 · arXiv:2407.00079 · in-production
 - **MuxServe: Flexible Spatial-Temporal Multiplexing for Multiple LLM Serving** (`papers/muxserve`) — serving-systems · icml · 2024 · arXiv:2404.02015 · research-only
 - **Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention** (`papers/nsa-native-sparse`) — attention · acl · 2025 · arXiv:2502.11089 · in-upstream-engine
+- **Nemotron-H: A Family of Accurate and Efficient Hybrid Mamba-Transformer Models** (`papers/w4p-nemotron-h-hybrid-mamba-transformer`) — ssm · arxiv · 2025 · arXiv:2504.03624 · in-upstream-engine
 - **Nomic Embed: Training a Reproducible Long Context Text Embedder** (`papers/nomic-embed`) — embedding · other · 2024 · arXiv:2402.01613 · in-production
 - **OLMoE: Open Mixture-of-Experts Language Models** (`papers/olmoe`) — moe · iclr · 2025 · arXiv:2409.02060 · in-upstream-engine
 - **OmniQuant: Omnidirectionally Calibrated Quantization for Large Language Models** (`papers/paper-omniquant`) — quantization · iclr · 2024 · arXiv:2308.13137 · research-only
@@ -1489,6 +1514,7 @@ and t
 - **Power Aware Dynamic Reallocation For Inference (RAPID)** (`papers/rapid-power-aware-disaggregated-inference`) — scheduling · arxiv · 2026 · arXiv:2601.12241 · research-only
 - **PowerInfer: Fast Large Language Model Inference with a Consumer-grade GPU** (`papers/powerinfer-consumer-gpu-serving`) — serving-systems · sosp · 2024 · arXiv:2312.12456 · research-only
 - **Pre-gated MoE: An Algorithm-System Co-Design for Fast and Scalable Mixture-of-Expert LLM Inference** (`papers/pre-gated-moe`) — moe · isca · 2024 · arXiv:2308.12066 · research-only
+- **Preble: Efficient Distributed Prompt Scheduling for LLM Serving** (`papers/w4p-preble-distributed-prompt-scheduling`) — scheduling · iclr · 2025 · arXiv:2407.00023 · research-only
 - **Pretraining Large Language Models with NVFP4** (`papers/nvfp4-pretraining`) — quantization · arxiv · 2025 · arXiv:2509.25149 · research-only
 - **Punica: Multi-Tenant LoRA Serving** (`papers/punica-multi-tenant-lora-serving`) — serving-systems · mlsys · 2024 · arXiv:2310.18547 · in-upstream-engine
 - **PyramidKV: Dynamic KV Cache Compression based on Pyramidal Information Funneling** (`papers/pyramidkv-paper`) — kv-cache · colm · 2025 · arXiv:2406.02069 · research-only
@@ -1512,7 +1538,9 @@ and t
 - **Rethinking Attention with Performers** (`papers/performer`) — attention · iclr · 2021 · arXiv:2009.14794 · abandoned
 - **Ring Attention with Blockwise Transformers for Near-Infinite Context** (`papers/ring-attention`) — attention · iclr · 2024 · arXiv:2310.01889 · research-only
 - **RouteLLM: Learning to Route LLMs with Preference Data** (`papers/routellm`) — routing · iclr · 2025 · arXiv:2406.18665 · in-production
+- **S-LoRA: Serving Thousands of Concurrent LoRA Adapters** (`papers/w4p-s-lora-multi-tenant-adapter-serving`) — serving-systems · arxiv · 2023 · arXiv:2311.03285 · research-only
 - **SALMONN: Towards Generic Hearing Abilities for Large Language Models** (`papers/salmonn`) — speech · iclr · 2024 · arXiv:2310.13289 · research-only
+- **SAM Decoding: Speculative Decoding via Suffix Automaton** (`papers/w4p-sam-decoding-suffix-automaton`) — speculative-decoding · acl · 2025 · arXiv:2411.10666 · in-upstream-engine
 - **SGLang: Efficient Execution of Structured Language Model Programs** (`papers/paper-sglang`) — serving-systems · neurips · 2024 · arXiv:2312.07104 · in-production
 - **SGLang: Efficient Execution of Structured Language Model Programs** (`papers/sglang-structured-program-runtime`) — serving-systems · neurips · 2024 · arXiv:2312.07104 · in-upstream-engine
 - **SPLADE: Sparse Lexical and Expansion Model for First Stage Ranking** (`papers/splade`) — retrieval · other · 2021 · arXiv:2107.05720 · in-production
@@ -1539,6 +1567,7 @@ and t
 - **Sparse Attention with Linear Units** (`papers/sau`) — attention · emnlp · 2021 · arXiv:2104.07012 · research-only
 - **SparseGPT: Massive Language Models Can Be Accurately Pruned in One-Shot** (`papers/sparsegpt`) — pruning · icml · 2023 · arXiv:2301.00774 · research-only
 - **SparseVLM: Visual Token Sparsification for Efficient Vision-Language Model Inference** (`papers/sparsevlm`) — multimodal · icml · 2025 · arXiv:2410.04417 · research-only
+- **SpecExec: Massively Parallel Speculative Decoding for Interactive LLM Inference on Consumer Devices** (`papers/w4p-specexec-consumer-speculative`) — speculative-decoding · neurips · 2024 · arXiv:2406.02532 · research-only
 - **SpecInfer: Accelerating Generative Large Language Model Serving with Tree-based Speculative Inference and Verification** (`papers/specinfer-tree-speculative-serving`) — speculative-decoding · asplos · 2024 · arXiv:2305.09781 · in-upstream-engine
 - **SpeechGPT: Empowering Large Language Models with Intrinsic Cross-Modal Conversational Abilities** (`papers/speechgpt`) — speech · emnlp · 2023 · arXiv:2305.11000 · research-only
 - **SpinQuant: LLM Quantization with Learned Rotations** (`papers/paper-spinquant`) — quantization · iclr · 2025 · arXiv:2405.16406 · research-only
@@ -1566,6 +1595,7 @@ and t
 - **Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention** (`papers/linear-transformers`) — attention · icml · 2020 · arXiv:2006.16236 · research-only
 - **Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality** (`papers/mamba-2-ssd`) — ssm · icml · 2024 · arXiv:2405.21060 · in-upstream-engine
 - **Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality** (`papers/mamba-2`) — ssm · icml · 2024 · arXiv:2405.21060 · in-upstream-engine
+- **TurboRAG: Accelerating Retrieval-Augmented Generation with Precomputed KV Caches for Chunked Text** (`papers/w4p-turborag-precomputed-chunk-kv`) — retrieval · arxiv · 2024 · arXiv:2410.07590 · research-only
 - **Turning Whisper into a Real-Time Transcription System (Whisper-Streaming)** (`papers/whisper-streaming`) — speech · other · 2023 · arXiv:2307.14743 · in-production
 - **Tutel / Flex: Adaptive Mixture-of-Experts at Scale** (`papers/tutel-flex`) — moe · mlsys · 2023 · arXiv:2206.03382 · research-only
 - **Unsupervised Dense Information Retrieval with Contrastive Learning (Contriever)** (`papers/contriever`) — retrieval · other · 2021 · arXiv:2112.09118 · in-upstream-engine
@@ -1575,6 +1605,8 @@ and t
 - **Where Does the Energy Go? Profiling LLM Agent Inference on Blackwell GPUs** (`papers/where-does-the-energy-go-blackwell-profiling`) — serving-systems · arxiv · 2026 · arXiv:2609.29707 · research-only
 - **Whisper: Robust Speech Recognition via Large-Scale Weak Supervision** (`papers/whisper`) — speech · icml · 2023 · arXiv:2212.04356 · in-production
 - **WizardLM: Empowering Large Pre-Trained Language Models to Follow Complex Instructions** (`papers/wizardlm`) — distillation · iclr · 2024 · arXiv:2304.12244 · research-only
+- **XGrammar-2: Dynamic and Efficient Structured Generation Engine for Agentic LLMs** (`papers/w4p-xgrammar2-dynamic-agentic-structured-generation`) — structured-output · other · 2026 · arXiv:2601.04426 · in-upstream-engine
+- **XGrammar: Flexible and Efficient Structured Generation Engine for Large Language Models** (`papers/w4p-xgrammar-structured-generation-engine`) — structured-output · mlsys · 2025 · arXiv:2411.15100 · in-upstream-engine
 - **XWind: A Cross-site Router for Large Language Model Inference Serving at Renewable Energy Farms** (`papers/xwind-renewable-site-inference-router`) — serving-systems · arxiv · 2026 · arXiv:2605.23348 · research-only
 - **YaRN: Efficient Context Window Extension of Large Language Models** (`papers/yarn`) — position-encoding · iclr · 2024 · arXiv:2309.00071 · in-upstream-engine
 - **Zamba: A Compact 7B SSM Hybrid Model** (`papers/zamba`) — ssm · arxiv · 2024 · arXiv:2405.16712 · research-only
@@ -1588,7 +1620,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (1851)
+## Sources (1906)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -1762,6 +1794,7 @@ and t
 - **vLLM GPU installation docs: build-from-source cost, caching, and parallel-job controls** (`sources/ev-vllm-docs-gpu-install-build-cost`) — blog · vLLM
 - **vLLM Reaches 25K Total TPS/GPU on Qwen3.5 (GB200 NVL72 PD serving)** (`sources/bench-nv-vllm-qwen35-25k-tps-blog`) — blog · vLLM project
 - **vLLM docs: speculative decoding, quantization x hardware, structured outputs, disaggregated prefilling, multimodal inputs (five feature pages read 2026-10-04)** (`sources/ev-vllm-docs-feature-matrix-axes`) — blog · vLLM
+- **ACL Anthology 2025.acl-long.595 - SAM Decoding: Speculative Decoding via Suffix Automaton** (`sources/sco-aclanthology-2025-sam-decoding`) — database · ACL
 - **ACL Anthology ACL 2024 event index** (`sources/sco-acl-2024-event`) — database · ACL
 - **AWS EC2 Data Transfer Out pricing - NEGATIVE: pricing table not accessible via static fetch** (`sources/ppl-dep-aws-egress-negative`) — database · Amazon Web Services
 - **AWS EC2 Price List API - US East (N. Virginia), current** (`sources/sup-cloud-aws-ec2-price-list-use1`) — database · Amazon Web Services
@@ -1792,6 +1825,7 @@ and t
 - **Colocation pricing by power density tier - Air-cooled vs liquid-cooled deployment costs** (`sources/ppl-dep-colocation-tiers`) — database · Vantage / derived from existing repo records
 - **CompuCycle corporate IT asset disposal and remarketing services** (`sources/sup-used-compucycle`) — database · CompuCycle
 - **CoreWeave Cloud pricing** (`sources/sup-cloud-coreweave-pricing`) — database · CoreWeave
+- **Crossref record for DOI 10.1145/3786335.3813124 - XGrammar-2** (`sources/sco-crossref-cais26-xgrammar2`) — database · Crossref
 - **Crossref records for ColBERT (SIGIR'20), SPLADE (SIGIR'21), PLAID (CIKM'22), CacheGen (SIGCOMM'24)** (`sources/w3p-crossref-sigir-cikm-sigcomm-venues`) — database · Crossref
 - **DeepSpeed-Inference Crossref record (SC22)** (`sources/pap-sys-deepspeed-inference-crossref`) — database · IEEE SC22 (via Crossref)
 - **ECCN 3A090 - advanced-computing integrated circuits (Commerce Control List thresholds)** (`sources/spl-eccn-3a090-ccl`) — database · ECCN Finder (editorial lookup of 15 CFR part 774 supplement no. 1)
@@ -1840,6 +1874,8 @@ and t
 - **MLPerf Inference v6.0 official results database, summary_results.json (520 result rows)** (`sources/bench-mlperf-v6-0-summary-json`) — database · MLCommons
 - **MLPerf Inference v6.1 official results database, summary.csv (492 result rows, closed + open divisions)** (`sources/bench-mlperf-v6-1-summary-csv`) — database · MLCommons
 - **MLPerf Results Change Log - invalidated and modified results** (`sources/ev-mlperf-results-change-log`) — database · MLCommons
+- **MLSys 2025 proceedings index (proceedings.mlsys.org)** (`sources/sco-mlsys-2025-proceedings`) — database · MLSys
+- **MLSys 2026 proceedings index (proceedings.mlsys.org)** (`sources/sco-mlsys-2026-proceedings`) — database · MLSys
 - **Managed service premium quantification - Same hardware, different providers, different rates** (`sources/ppl-bench-managed-service-premium`) — database · Derived from multiple sources in this repo
 - **Micro Center refurbished GeForce RTX 3090 / RTX 3090 Ti listing pages** (`sources/sup-used-microcenter-refurb-3090`) — database · Micro Center
 - **Micro Center search results for Intel Arc B580** (`sources/noncuda-microcenter-arc-b580-search`) — database · Micro Center
@@ -1852,10 +1888,12 @@ and t
 - **NVIDIA Marketplace consumer GPU catalog (US)** (`sources/noncuda-nvidia-marketplace-gpu-catalog`) — database · NVIDIA
 - **NeurIPS 2021 proceedings index** (`sources/sco-neurips-2021-proceedings`) — database · NeurIPS
 - **NeurIPS 2024 proceedings index** (`sources/sco-neurips-2024-proceedings`) — database · NeurIPS
+- **NeurIPS 2024 proceedings index, full-text title sweep** (`sources/sco-neurips-2024-index-extended`) — database · NeurIPS
 - **Newegg GPU category listing for Intel Arc B580** (`sources/noncuda-newegg-arc-b580-search`) — database · Newegg
 - **Newegg GPU category listing for RTX 3090** (`sources/noncuda-newegg-rtx3090-search`) — database · Newegg
 - **Newegg GPU category listing for RTX 4090** (`sources/noncuda-newegg-rtx4090-search`) — database · Newegg
 - **Newegg search, Intel Arc B580, including Newegg Refreshed refurbished tier** (`sources/sup-used-newegg-refreshed-b580`) — database · Newegg
+- **OpenReview api2 note-search index (venue + venueid per forum, mirrors DBLP for older venues)** (`sources/sco-openreview-venue-search`) — database · OpenReview
 - **Oracle Cloud Infrastructure Price List** (`sources/sup-cloud-oracle-cloud-pricelist`) — database · Oracle
 - **Overclockers UK graphics card listings (new, and out-of-stock RTX 4090)** (`sources/sup-used-overclockers-uk`) — database · Overclockers UK
 - **Overclockers UK search results for Intel Arc B580** (`sources/noncuda-overclockers-uk-arc-b580-search`) — database · Overclockers UK
@@ -1865,6 +1903,7 @@ and t
 - **PMLR ICML 2022 proceedings (volume 162)** (`sources/sco-pmlr-icml-2022-v162`) — database · PMLR
 - **PMLR ICML 2023 proceedings (volume 202)** (`sources/sco-pmlr-icml-2023-v202`) — database · PMLR
 - **PMLR ICML 2024 proceedings (volume 235)** (`sources/sco-pmlr-icml-2024-v235`) — database · PMLR
+- **PMLR ICML 2025 proceedings (volume 267)** (`sources/sco-pmlr-icml-2025-v267`) — database · PMLR
 - **Paperspace (DigitalOcean) Core GPU Pricing - Hourly dedicated GPU rates** (`sources/ppl-cloud-paperspace-pricing`) — database · Paperspace (DigitalOcean)
 - **Paperspace as cloud orchestrator - Per-hour billing, Gradient platform, auto-shutdown** (`sources/ppl-orch-paperspace-billing-model`) — database · Paperspace (DigitalOcean)
 - **Paperspace vs raw cloud GPU pricing - Dedicated GPU rates vs market** (`sources/ppl-cloud-paperspace-vs-cloud-price`) — database · Paperspace (DigitalOcean)
@@ -1899,7 +1938,10 @@ and t
 - **Xinference built-in embedding model catalogue** (`sources/embed-xinference-embedding-catalog`) — database · Xorbits AI
 - **Xinference built-in rerank model catalogue** (`sources/embed-xinference-rerank-catalog`) — database · Xorbits AI
 - **aphrodite-engine/aphrodite-engine redirects to dphnAI/sonar** (`sources/niche-aphrodite-rename-redirect`) — database · GitHub
+- **arXiv API negative search: no paper for NVIDIA DeepGEMM (and a name-collision warning)** (`sources/sco-arxiv-no-paper-search-deepgemm`) — database · arXiv
+- **arXiv API negative search: no paper titled TensorRT-LLM** (`sources/sco-arxiv-no-paper-search-trtllm`) — database · arXiv
 - **arXiv API paper metadata query (export.arxiv.org/api/query)** (`sources/sco-arxiv-api-paper-metadata`) — database · arXiv
+- **arXiv API recheck: papers mentioning llama.cpp (70 results, all third-party uses)** (`sources/sco-arxiv-llamacpp-negative-recheck`) — database · arXiv
 - **eBay Graphics/Video Cards category, used condition, datacenter accelerators (A100/H100 search)** (`sources/sup-used-ebay-datacenter-gpu`) — database · eBay
 - **eBay Graphics/Video Cards, used Intel Arc B580 asking prices** (`sources/sup-used-ebay-b580`) — database · eBay
 - **eBay Graphics/Video Cards, used RTX 4090 asking prices** (`sources/sup-used-ebay-4090`) — database · eBay
@@ -2472,7 +2514,9 @@ and t
 - **arXiv:2310.10537 — Microscaling Data Formats for Deep Learning** (`sources/pap-quant-mx-formats`) — paper · arXiv
 - **arXiv:2310.11453 — BitNet: Scaling 1-bit Transformers for Large Language Models** (`sources/pap-quant-bitnet`) — paper · arXiv
 - **arXiv:2310.19102 — Atom: Low-bit Quantization for Efficient and Accurate LLM Serving** (`sources/pap-quant-atom`) — paper · arXiv
+- **arXiv:2311.03285 - S-LoRA: Serving Thousands of Concurrent LoRA Adapters** (`sources/pap-w4p-s-lora`) — paper · arXiv
 - **arXiv:2312.05516 — Stateful Large Language Model Serving with Pensieve** (`sources/pap-quant-pensieve`) — paper · arXiv
+- **arXiv:2312.11462 - Cascade Speculative Drafting for Even Faster LLM Inference** (`sources/pap-w4p-cascade-spec-drafting`) — paper · arXiv
 - **arXiv:2312.17244 — The LLM Surgeon** (`sources/pap-quant-llm-surgeon`) — paper · arXiv
 - **arXiv:2401.06118 — Extreme Compression of Large Language Models via Additive Quantization** (`sources/pap-quant-aqlm`) — paper · arXiv
 - **arXiv:2401.15024 — SliceGPT: Compress Large Language Models by Deleting Rows and Columns** (`sources/pap-quant-slicegpt`) — paper · arXiv
@@ -2480,26 +2524,46 @@ and t
 - **arXiv:2402.02446 — LQER: Low-Rank Quantization Error Reconstruction for LLMs** (`sources/pap-quant-lqer`) — paper · arXiv
 - **arXiv:2402.02750 — KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache** (`sources/pap-quant-kivi`) — paper · arXiv
 - **arXiv:2402.04396 — QuIP#: Even Better LLM Quantization with Hadamard Incoherence and Lattice Codebooks** (`sources/pap-quant-quip-sharp`) — paper · arXiv
+- **arXiv:2402.07033 - Fiddler: CPU-GPU Orchestration for Fast Inference of Mixture-of-Experts Models** (`sources/pap-w4p-fiddler`) — paper · arXiv
 - **arXiv:2402.17764 — The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits** (`sources/pap-quant-bitnet-b158`) — paper · arXiv
 - **arXiv:2404.00456 — QuaRot: Outlier-Free 4-Bit Inference in Rotated LLMs** (`sources/pap-quant-quarot`) — paper · arXiv
+- **arXiv:2404.09526 - LoongServe: Efficiently Serving Long-Context Large Language Models with Elastic Sequence Parallelism** (`sources/pap-w4p-loongserve`) — paper · arXiv
 - **arXiv:2405.04532 — QServe: W4A8KV4 Quantization and System Co-design for Efficient LLM Serving** (`sources/pap-quant-qserve`) — paper · arXiv
 - **arXiv:2405.07135 — Post Training Quantization of Large Language Models with Microscaling Formats** (`sources/pap-quant-mx-ftptq`) — paper · arXiv
 - **arXiv:2405.14256 — ZipCache: Accurate and Efficient KV Cache Quantization with Salient Token Identification** (`sources/pap-quant-zipcache`) — paper · arXiv
+- **arXiv:2405.14366 - MiniCache: KV Cache Compression in Depth Dimension for Large Language Models** (`sources/pap-w4p-minicache`) — paper · arXiv
 - **arXiv:2405.16406 — SpinQuant: LLM Quantization with Learned Rotations** (`sources/pap-quant-spinquant`) — paper · arXiv
+- **arXiv:2406.02532 - SpecExec: Massively Parallel Speculative Decoding for Interactive LLM Inference on Consumer Devices** (`sources/pap-w4p-specexec`) — paper · arXiv
 - **arXiv:2406.08155 QuantMoE-Bench: Examining Post-Training Quantization for Mixture-of-Experts** (`sources/qlab2-arxiv-quantmoebench`) — paper · arXiv
 - **arXiv:2406.08155 — QuantMoE-Bench: Examining Post-Training Quantization for Mixture-of-Experts** (`sources/pap-quant-quantmoe-bench`) — paper · arXiv
+- **arXiv:2406.17565 - MemServe: Context Caching for Disaggregated LLM Serving with Elastic Memory Pool** (`sources/pap-w4p-memserve`) — paper · arXiv
 - **arXiv:2406.19707 — InfiniGen: Efficient Generative Inference of Large Language Models with Dynamic KV Cache Management** (`sources/pap-quant-infinigen`) — paper · arXiv
+- **arXiv:2407.00023 - Preble: Efficient Distributed Prompt Scheduling for LLM Serving** (`sources/pap-w4p-preble`) — paper · arXiv
 - **arXiv:2407.10960 — Fast Matrix Multiplications for Lookup Table-Quantized LLMs** (`sources/pap-quant-flute`) — paper · arXiv
 - **arXiv:2407.21783 — The Llama 3 Herd of Models** (`sources/pap-quant-llama-3-herd`) — paper · arXiv
+- **arXiv:2410.07590 - TurboRAG: Accelerating Retrieval-Augmented Generation with Precomputed KV Caches for Chunked Text** (`sources/pap-w4p-turborag`) — paper · arXiv
+- **arXiv:2410.16179 - MagicPIG: LSH Sampling for Efficient LLM Generation** (`sources/pap-w4p-magicpig`) — paper · arXiv
 - **arXiv:2410.21465 — ShadowKV: KV Cache in Shadows for High-Throughput Long-Context LLM Inference** (`sources/pap-quant-shadowkv`) — paper · arXiv
+- **arXiv:2411.10666 - SAM Decoding: Speculative Decoding via Suffix Automaton** (`sources/pap-w4p-sam-decoding`) — paper · arXiv
+- **arXiv:2411.11217 - MoE-Lightning: High-Throughput MoE Inference on Memory-constrained GPUs** (`sources/pap-w4p-moelightning`) — paper · arXiv
+- **arXiv:2411.15100 - XGrammar: Flexible and Efficient Structured Generation Engine for Large Language Models** (`sources/pap-w4p-xgrammar`) — paper · arXiv
 - **arXiv:2412.08905 — Phi-4 Technical Report** (`sources/pap-quant-phi-4`) — paper · arXiv
 - **arXiv:2501.12948 — DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning** (`sources/pap-quant-deepseek-r1`) — paper · arXiv
+- **arXiv:2502.15734 - Cache-Craft: Managing Chunk-Caches for Efficient Retrieval-Augmented Generation** (`sources/pap-w4p-cachecraft`) — paper · arXiv
+- **arXiv:2504.02263 - MegaScale-Infer: Serving Mixture-of-Experts at Scale with Disaggregated Expert Parallelism** (`sources/pap-w4p-megascale-infer`) — paper · arXiv
+- **arXiv:2504.03624 - Nemotron-H: A Family of Accurate and Efficient Hybrid Mamba-Transformer Models** (`sources/pap-w4p-nemotron-h`) — paper · arXiv
+- **arXiv:2504.03648 - AIBrix: Towards Scalable, Cost-Effective Large Language Model Inference Infrastructure** (`sources/pap-w4p-aibrix`) — paper · arXiv
 - **arXiv:2505.03804 MoEQuant: Enhancing Quantization for Mixture-of-Experts LLMs via Expert-Balanced Sampling and Affinity Guidance** (`sources/qlab2-arxiv-moequant`) — paper · arXiv
 - **arXiv:2505.03804 — MoEQuant: Enhancing Quantization for Mixture-of-Experts Large Language Models via Expert-Balanced Sampling and Affinity Guidance** (`sources/pap-quant-moequant`) — paper · arXiv
 - **arXiv:2505.05799 MxMoE: Mixed-precision Quantization for MoE with Accuracy and Performance Co-Design** (`sources/qlab2-arxiv-mxmoe`) — paper · arXiv
 - **arXiv:2506.13329 EAQuant: Enhancing PTQ for MoE Models via Expert-Aware Optimization** (`sources/qlab2-arxiv-eaquant`) — paper · arXiv
 - **arXiv:2506.13329 — EAQuant: Enhancing Post-Training Quantization for MoE Models via Expert-Aware Optimization** (`sources/pap-quant-eaquant`) — paper · arXiv
+- **arXiv:2507.13575 - Apple Intelligence Foundation Language Models: Tech Report 2025** (`sources/pap-w4p-apple-ptmoe`) — paper · arXiv
+- **arXiv:2507.20534 - Kimi K2: Open Agentic Intelligence** (`sources/pap-w4p-kimi-k2`) — paper · arXiv
 - **arXiv:2509.25149 — Pretraining Large Language Models with NVFP4** (`sources/pap-quant-nvfp4-pretraining`) — paper · arXiv
+- **arXiv:2512.02556 - DeepSeek-V3.2: Pushing the Frontier of Open Large Language Models** (`sources/pap-w4p-deepseek-v32`) — paper · arXiv
+- **arXiv:2512.10576 - ESS: An Offload-Centric Latent-Cache Management Architecture for DeepSeek-V3.2-Exp** (`sources/pap-w4p-ess-deepseek`) — paper · arXiv
+- **arXiv:2601.04426 - XGrammar-2: Dynamic and Efficient Structured Generation Engine for Agentic LLMs** (`sources/pap-w4p-xgrammar2`) — paper · arXiv
 - **arXiv:2606.04980 AlphaQ: Calibration-Free Bit Allocation for Mixture-of-Experts Quantization** (`sources/qlab2-arxiv-alphaq`) — paper · arXiv
 - **arXiv:2606.04980 — AlphaQ: Calibration-Free Bit Allocation for Mixture-of-Experts Quantization** (`sources/pap-quant-alphaq`) — paper · arXiv
 - **arXiv:2606.05688 Value-and-Structure Alignment for Routing-Consistent Quantization of Mixture-of-Experts Models (VSRAQ)** (`sources/qlab2-arxiv-vsraq`) — paper · arXiv
@@ -3028,6 +3092,7 @@ and t
 - **vLLM Ascend plugin GitHub repository** (`sources/niche-vllm-ascend-repo`) — repo · vLLM project (community)
 - **vLLM AsyncEngineArgs defaults for the ops-relevant engine and scheduler knobs** (`sources/ops-vllm-engine-arg-defaults`) — repo · vLLM project
 - **vLLM AsyncLLM.check_admission() source (max_num_queued_reqs / max_num_queued_tokens admission path)** (`sources/ops-vllm-async-llm-admission`) — repo · vLLM project
+- **vLLM CUTLASS capability gates (csrc/.../w8a8/cutlass/scaled_mm_entry.cu and fp4/nvfp4_scaled_mm_entry.cu): cutlass_scaled_mm_supports_fp8 / _block_fp8 / _fp4** (`sources/w4q-vllm-cutlass-capability-gates`) — repo · vLLM project
 - **vLLM EngineCore source (_handle_shutdown, SIGTERM handling, abort vs drain)** (`sources/ops-vllm-engine-core-shutdown`) — repo · vLLM project
 - **vLLM FrontendArgs / cli_args: api_key field ('If provided, the server will require one of these keys to be presented in the header')** (`sources/sec-vllm-api-key-flag`) — repo · vLLM project
 - **vLLM GGUF documentation** (`sources/quant-vllm-gguf-doc`) — repo · vllm-project
@@ -3055,6 +3120,7 @@ and t
 - **vLLM TPU inference plugin (tpu-inference) - GitHub README** (`sources/alt-tpu-vllm-inference-readme`) — repo · vllm-project
 - **vLLM V1 scheduler source (_preempt_request and the running-queue eviction loop)** (`sources/ops-vllm-scheduler-preemption`) — repo · vLLM project
 - **vLLM automatic prefix caching docs** (`sources/engine-vllm-prefix-caching`) — repo · vLLM
+- **vLLM compressed-tensors W4A8 dispatch code (compressed_tensors.py, schemes/compressed_tensors_w4a8_int.py, kernels/linear/mixed_precision/*): how a W4A8 checkpoint is routed and where it fails** (`sources/w4q-vllm-w4a8-dispatch-code`) — repo · vLLM project
 - **vLLM custom logits processors documentation (docs/features/custom_logitsprocs.md) and vllm/v1/sample/logits_processor/interface.py** (`sources/sec-vllm-logits-processor-interface`) — repo · vLLM project
 - **vLLM docs engine arguments: --enable-log-requests, --max-log-len, --disable-log-stats** (`sources/sec-vllm-engine-args-logging`) — repo · vLLM project
 - **vLLM docs: Disaggregated Prefilling (experimental)** (`sources/pd-vllm-disagg-prefill-docs`) — repo · vLLM project
@@ -3075,6 +3141,8 @@ and t
 - **vLLM prometheus.py multiprocess-registry source and its stale-directory warning** (`sources/ops-vllm-prometheus-multiproc`) — repo · vLLM project
 - **vLLM quantization docs - Supported Hardware table (Implementation x architecture)** (`sources/qzgw-vllm-supported-hardware-table`) — repo · vLLM project
 - **vLLM quantization hardware matrix** (`sources/engine-vllm-quant-matrix`) — repo · vLLM
+- **vLLM quantization kernel source (vllm/model_executor/kernels/linear/*) - per-format is_supported()/can_implement() capability gates** (`sources/w4q-vllm-quant-kernel-source`) — repo · vLLM project
+- **vLLM quantized KV cache architecture gates (vllm/config/cache.py CacheDType, vllm/v1/attention/backends/flashinfer.py NVFP4 KV cache gate)** (`sources/w4q-vllm-kv-cache-arch-gates`) — repo · vLLM project
 - **vLLM supported models documentation** (`sources/pap-arch-vllm-supported-models`) — repo · vLLM project
 - **vLLM supported models documentation, re-read for architecture-class and encoder-decoder statements** (`sources/mdl2-vllm-supported-models-2026-10`) — repo · vLLM project
 - **vLLM v1 metrics loggers source (Prometheus metric names and documentation strings)** (`sources/ops-vllm-metrics-loggers`) — repo · vLLM project
@@ -3150,15 +3218,19 @@ and t
 - **AMD ROCm 'AMD Instinct MI350 Series microarchitecture' reference page** (`sources/net2-rocm-mi350-microarch`) — spec-sheet · AMD
 - **AMD Radeon AI PRO R9700 product specifications page (AI 9000 Series)** (`sources/acc-fill-amd-radeon-ai-pro-r9700-product-page`) — spec-sheet · AMD
 - **AMD Radeon Instinct MI50 datasheet (archived 2021-01-12)** (`sources/amd-mi50-datasheet`) — spec-sheet · AMD
+- **AMD Radeon Instinct MI50 datasheet (archived AMD PDF) - MI50 figures are dense, no structured-sparsity footnote on this generation** (`sources/w4h-amd-mi50-datasheet-dense-no-sparsity-label`) — spec-sheet · Advanced Micro Devices (AMD-authored PDF, retrieved via the Wayback Machine copy of amd.com)
+- **AMD Radeon Instinct MI60 datasheet (archived AMD PDF) - MI60 and MI50 compute table, no sparsity labelling at all** (`sources/w4h-amd-radeon-instinct-mi60-datasheet`) — spec-sheet · Advanced Micro Devices (AMD-authored PDF, retrieved via the Wayback Machine copy of amd.com; the live amd.com URL is dead)
 - **AMD Radeon Instinct MI60 product page (archived 2018-11-22)** (`sources/amd-mi60-product-page`) — spec-sheet · AMD
 - **AMD Radeon PRO W7900 datasheet (PID 232010504)** (`sources/acc2-amd-radeon-pro-w7900-datasheet`) — spec-sheet · Advanced Micro Devices
 - **AMD Radeon Pro VII product page (archived 2021-02-16)** (`sources/amd-radeon-pro-vii-product-page`) — spec-sheet · AMD
+- **AMD Radeon Pro VII product page (archived AMD page) - FP16/FP32/FP64/INT8 figures, dense, no structured-sparsity label** (`sources/w4h-amd-radeon-pro-vii-product-page-dense`) — spec-sheet · Advanced Micro Devices (AMD page, retrieved via the Wayback Machine)
 - **AMD Radeon RX 7900 XTX product specifications page** (`sources/acc-fill-amd-radeon-rx-7900xtx-product-page`) — spec-sheet · AMD
 - **AMD Radeon RX 9070 XT product specifications page** (`sources/acc-fill-amd-radeon-rx-9070xt-product-page`) — spec-sheet · AMD
 - **AMD Ryzen AI Max+ 395 (Radeon 8060S Graphics) product specifications page** (`sources/acc-fill-amd-ryzen-ai-max-plus-395-product-page`) — spec-sheet · AMD
 - **AWS EC2 Spot Instances Pricing page (up-to-90%-off statement, per-AZ spot table)** (`sources/rent-src-aws-spot-pricing-page`) — spec-sheet · AWS
 - **AWS EC2 User Guide - Capacity Blocks for ML: 8-week booking horizon, 64/256 instance caps** (`sources/spl-aws-capacity-block-booking-horizon`) — spec-sheet · Amazon Web Services
 - **AWS Inferentia product page** (`sources/asic-aws-inferentia-product`) — spec-sheet · Amazon Web Services
+- **AWS Inferentia product page (aws.amazon.com) - the 190 TFLOPS FP16 per-chip sentence, quoted with AWS's own precision wording** (`sources/w4h-aws-inferentia2-product-page-190tf`) — spec-sheet · Amazon Web Services (aws.amazon.com, AWS's own product page)
 - **Amazon EC2 Capacity Blocks for ML overview** (`sources/sup-cloud-aws-ec2-capacityblocks-overview`) — spec-sheet · Amazon Web Services
 - **Amazon EC2 Inf2 Architecture** (`sources/alt-inf2-arch`) — spec-sheet · Amazon Web Services
 - **Amazon EC2 Inf2 instances** (`sources/asic-aws-inf2-instances`) — spec-sheet · Amazon Web Services
@@ -3187,6 +3259,7 @@ and t
 - **Azure Managed Disks pricing (Premium SSD v2 / Ultra per-GiB-per-hour storage charge)** (`sources/rent-src-azure-managed-disks`) — spec-sheet · Microsoft
 - **Azure Spot Virtual Machines documentation (eviction policy, 30-second notice, max price, ARG SpotResources)** (`sources/rent-src-azure-spot-vm-doc`) — spec-sheet · Microsoft
 - **Biren (壁仞) BILI 166 series product pages: 166C, 166M, 166L** (`sources/cn-biren-bili-166`) — spec-sheet · Biren Technology (壁仞科技)
+- **Biren BILI 166C inference card product page (BirenTech's own site) - form factor and power published, NO compute or memory figure published** (`sources/w4h-biren-166c-product-page-no-compute-figure`) — spec-sheet · Biren Technology (birentech.com, the company's own site)
 - **Blackhole PCIe Cards (p100a/p150a/p150b) product guide** (`sources/asic-tenstorrent-blackhole-docs`) — spec-sheet · Tenstorrent
 - **CDW product page - NVIDIA DGX B200 8x180GB server (quote-only)** (`sources/sup-buy-cdw-dgx-b200`) — spec-sheet · CDW
 - **CDW product page - NVIDIA RTX PRO 6000 Blackwell Server Edition (4-6+ week lead time)** (`sources/sup-buy-cdw-rtx-pro-6000-be`) — spec-sheet · CDW
@@ -3227,12 +3300,16 @@ and t
 - **Google Cloud Compute Engine VM instance pricing** (`sources/sup-cloud-gcp-compute-vm-pricing`) — spec-sheet · Google
 - **Google Cloud Spot VMs documentation (up-to-91% discount, preemption, no SLA, CUD exclusion)** (`sources/rent-src-gcp-spot-vm-doc`) — spec-sheet · Google Cloud
 - **Google Cloud Storage pricing (Standard/Nearline/Coldline/Archive per-GiB-hour, Class A/B operations)** (`sources/rent-src-gcp-cloud-storage-pricing`) — spec-sheet · Google Cloud
+- **Groq LPU technology page - the 80 TB/s on-chip SRAM bandwidth sentence, and the CONFIRMED ABSENCE of any per-chip compute figure** (`sources/w4h-groq-lpu-inference-engine-80tbs-no-perchip-figure`) — spec-sheet · Groq (groq.com, the company's own site)
 - **HPE ProLiant Compute XD685 (NVIDIA or AMD Instinct GPU options)** (`sources/sup-buy-hpe-xd685`) — spec-sheet · HPE
 - **Horizon Robotics Journey 5 (J5) — developer documentation overview** (`sources/cn-horizon-journey5`) — spec-sheet · Horizon Robotics (地平线)
+- **Huawei Atlas 650E AI server product page - AI Performance and on-chip memory tables, SERVER-level figures only** (`sources/w4h-huawei-atlas-650e-spec-table-server-level-only`) — spec-sheet · Huawei Technologies (hiascend.com, Huawei Ascend's own hardware site)
+- **Huawei Atlas 950 SuperPoD product page - 64-NPU AI Performance and on-chip memory table, an INDEPENDENT second server figure for the same 950DT** (`sources/w4h-huawei-atlas-950-superpod-64npu-ai-performance`) — spec-sheet · Huawei Technologies (hiascend.com)
 - **Hugging Face Hub — Pickle Scanning documentation** (`sources/meth-huggingface-pickle-security`) — spec-sheet · Hugging Face
 - **HuggingFace config.json - LLaDA-8B-Instruct (GSAI-MML/LLaDA-8B-Instruct)** (`sources/bk2ms-llada-8b-instruct-config`) — spec-sheet · Hugging Face (model repository raw file)
 - **HuggingFace config.json - Seed-OSS-36B-Instruct (ByteDance-Seed/seed-oss-36B)** (`sources/bk2ms-seed-oss-36b-config`) — spec-sheet · Hugging Face (model repository raw file)
 - **IT Creations enterprise server distributor catalog page** (`sources/sup-buy-it-creations`) — spec-sheet · IT Creations
+- **Iluvatar CoreX Tiangai 100 (BI-V100) and Zhikai 100 (MR-V100) product pages - memory/interface/TDP published, NO compute figure published** (`sources/w4h-iluvatar-tiangai100-zhikai100-spec-tables`) — spec-sheet · Iluvatar CoreX (iluvatar.com, the company's own site)
 - **Iluvatar CoreX Tiangai 100 (BI-V100) training accelerator card product page** (`sources/cn-iluvatar-tianggai100`) — spec-sheet · Iluvatar CoreX (天数智芯)
 - **Iluvatar CoreX Zhikai 100 / 50 (MR-V100 / MR-V50) inference accelerator card product page** (`sources/cn-iluvatar-zhikai100`) — spec-sheet · Iluvatar CoreX (天数智芯)
 - **InfiniBand Trade Association: InfiniBand Architecture Specification and FAQ** (`sources/link-ibta-specification`) — spec-sheet · InfiniBand Trade Association
@@ -3244,6 +3321,10 @@ and t
 - **Intel Arc Pro B70 ARK specifications** (`sources/acc2-arc-pro-b70-ark`) — spec-sheet · Intel
 - **Intel Arc Pro B70 Graphics ARK product specifications (SKU 245797)** (`sources/acc-fill-intel-arc-pro-b70-ark-specs`) — spec-sheet · Intel
 - **Intel Arc Pro B70 Graphics ARK specifications (SKU 245797) - verbatim rows, re-verified in a browser session 2026-10-04** (`sources/vb-intel-arc-pro-b70-ark-spec-table-reverify`) — spec-sheet · Intel
+- **Intel Data Center GPU Flex 170, ARK specifications page (first-party)** (`sources/w4h-intel-dc-gpu-flex-170-ark-spec-table`) — spec-sheet · Intel Corporation (intel.com ARK)
+- **Intel Data Center GPU Flex Series product brief (Flex 140 / Flex 170 peak-compute table)** (`sources/w4h-intel-dc-gpu-flex-series-product-brief`) — spec-sheet · Intel Corporation (cdrdv2-public.intel.com, Intel's own document CDN)
+- **Intel Data Center GPU Max 1550, ARK specifications page (first-party)** (`sources/w4h-intel-dc-gpu-max-1550-ark-spec-table`) — spec-sheet · Intel Corporation (intel.com ARK)
+- **Intel Data Center GPU Max Series product brief (Max 1100 / 1450 / 1550 architecture table)** (`sources/w4h-intel-dc-gpu-max-series-product-brief`) — spec-sheet · Intel Corporation (intel.com central-libraries, Intel's own document store)
 - **Intel Gaudi AI Accelerator products page** (`sources/asic-intel-gaudi-product`) — spec-sheet · Intel
 - **Intel Gaudi AI accelerator products page (Shop section: Dell/HPE/Supermicro)** (`sources/sup-buy-intel-gaudi`) — spec-sheet · Intel
 - **Intel Gaudi Optimizing Training Platform Guide** (`sources/xpu-habana-optimization-guide`) — spec-sheet · Intel
@@ -3253,9 +3334,12 @@ and t
 - **MLPerf Inference v4.1 NVIDIA H200-SXM-141GBx8_TRT_MaxQ system description (TGP 700W, air-cooled, 8x H200-SXM-141GB)** (`sources/pwr-mlperf-v4-1-h200-maxq-system-json`) — spec-sheet · MLCommons and NVIDIA
 - **MTT S4000 product page (Moore Threads)** (`sources/cn-mthreads-s4000`) — spec-sheet · Moore Threads (摩尔线程)
 - **MTT S5000 product page (Moore Threads)** (`sources/cn-mthreads-s5000`) — spec-sheet · Moore Threads (摩尔线程)
+- **MetaX C550 OAM GPGPU product page (MetaX's own English site) - features published, NO compute figure published** (`sources/w4h-metax-c550-oam-product-page`) — spec-sheet · MetaX Technologies (metax-tech.com, the company's own site)
 - **MetaX C550 product page (OAM GPGPU)** (`sources/cn-metax-c550`) — spec-sheet · MetaX (沐曦)
 - **Method record: how source-record content was re-verified for silent revision on 2026-10-04 (spec sheets, MLPerf tables, pricing pages)** (`sources/w3s-silent-revision-class-vendor-spec-and-pricing-pages`) — spec-sheet · NVIDIA
 - **Mistral AI pricing page (per-million-token statement and example rates)** (`sources/rent-src-mistral-pricing`) — spec-sheet · Mistral AI
+- **Moore Threads MTT S4000 product page - precisions and memory published, NO absolute compute figure published** (`sources/w4h-mthreads-s4000-product-page-no-figure`) — spec-sheet · Moore Threads (mthreads.com)
+- **Moore Threads MTT S5000 (PH100, Pinghu architecture) product page and architecture page - precisions named, NO absolute compute figure published** (`sources/w4h-mthreads-s5000-phi100-no-perf-figure`) — spec-sheet · Moore Threads (mthreads.com, the company's own site)
 - **NVIDIA A10 Tensor Core GPU datasheet** (`sources/nv-a10-datasheet`) — spec-sheet · NVIDIA
 - **NVIDIA A100 Tensor Core GPU datasheet** (`sources/nv-a100-datasheet`) — spec-sheet · NVIDIA
 - **NVIDIA A100 Tensor Core GPU datasheet (SXM4 and PCIe)** (`sources/net2-nvidia-a100-datasheet`) — spec-sheet · NVIDIA
@@ -3264,10 +3348,12 @@ and t
 - **NVIDIA Blackwell Architecture product page** (`sources/vb-nvidia-blackwell-architecture-page`) — spec-sheet · NVIDIA
 - **NVIDIA Blackwell Ultra datasheet (GB300 NVL72 / HGX B300 technical specifications)** (`sources/pwr2-nvidia-blackwell-ultra-datasheet`) — spec-sheet · NVIDIA
 - **NVIDIA Blackwell Ultra datasheet (GB300 NVL72 / HGX B300)** (`sources/nv-blackwell-ultra-datasheet`) — spec-sheet · nor-tech.com (NVIDIA reseller) - NVIDIA-authored document, reseller host
+- **NVIDIA Blackwell Ultra datasheet (GB300 NVL72 / HGX B300) - the FP4 Sparse|Dense PAIR row and its footnote, read on NVIDIA's own CDN** (`sources/w4h-nvidia-blackwell-ultra-datasheet-fp4-pair-footnote`) — spec-sheet · NVIDIA (first-party CDN dam-cdn.nvd.orangelogic.com, reached from resources.nvidia.com/en-us-blackwell-architecture/blackwell-ultra-datasheet)
 - **NVIDIA Blackwell Ultra datasheet doc 4169750 (OCT25) - GB300 NVL72 per-GPU and system specs, per-row sparse/dense footnotes** (`sources/w3a-nvidia-gb300-blackwell-ultra-datasheet-4169750`) — spec-sheet · nor-tech.com (NVIDIA reseller) - NVIDIA-authored document, non-NVIDIA host
 - **NVIDIA Blackwell Ultra datasheet, first-party copy (GB300 NVL72 / HGX B300)** (`sources/vb-nvidia-blackwell-ultra-datasheet-firstparty`) — spec-sheet · NVIDIA (first-party CDN dam-cdn.nvd.orangelogic.com, linked from resources.nvidia.com/en-us-blackwell-architecture/blackwell-ultra-datasheet)
 - **NVIDIA Blackwell datasheet (GB200 NVL72 / GB200 NVL4 / HGX B200 technical specifications)** (`sources/pwr2-nvidia-blackwell-datasheet`) — spec-sheet · NVIDIA
 - **NVIDIA Blackwell datasheet (GB200 NVL72 / GB200 NVL4 / HGX B200)** (`sources/nv-blackwell-datasheet`) — spec-sheet · nor-tech.com (NVIDIA reseller) - NVIDIA-authored document, reseller host
+- **NVIDIA Blackwell datasheet (GB200 NVL72 / GB200 NVL4 / HGX B200) - every Tensor Core row printed sparse-only, retrieved and re-read row by row** (`sources/w4h-nvidia-blackwell-datasheet-fp4-sparse-footnote`) — spec-sheet · NVIDIA-authored document, served from reseller CDN nor-tech.com (document footer '4204213. Oct 25' per the first-party copy already recorded as vb-nvidia-blackwell-datasheet-firstparty)
 - **NVIDIA Blackwell datasheet, first-party copy (GB200 NVL72 / GB200 NVL4 / HGX B200)** (`sources/vb-nvidia-blackwell-datasheet-firstparty`) — spec-sheet · NVIDIA (first-party CDN dam-cdn.nvd.orangelogic.com, linked from nvidia.com/en-us/data-center/gb200-nvl72)
 - **NVIDIA BlueField DPU Product Page** (`sources/nic-nvidia-bluefield-page`) — spec-sheet · NVIDIA
 - **NVIDIA BlueField-3 Networking Platform User Guide** (`sources/nic-bluefield3-user-guide`) — spec-sheet · NVIDIA
@@ -3345,6 +3431,7 @@ and t
 - **RBLN SDK (Rebellions compiler, runtime, vLLM)** (`sources/alt-rbln-sdk`) — spec-sheet · Rebellions
 - **RDMA: Remote Direct Memory Access** (`sources/src5-rdma-docs`) — spec-sheet · RDMA Consortium
 - **ROCm 10.0.0 Compatibility Matrix** (`sources/src5-rocm-compatibility-matrix-10`) — spec-sheet · AMD
+- **Rebellions Rebel100 accelerator card brochure v1.6 (the document that prints the explicit '(Dense)' compute label)** (`sources/w4h-rebellions-rebel100-brochure-dense-label`) — spec-sheet · Rebellions, Inc. (rebellions.ai, the company's own WordPress uploads)
 - **Rebellions Rebel100 product page** (`sources/asic-rebellions-rebel100`) — spec-sheet · Rebellions
 - **Run inference on Cloud TPU** (`sources/alt-tpu-inference`) — spec-sheet · Google Cloud
 - **Servers Direct AI infrastructure shop (build-to-order, publish base config prices)** (`sources/sup-buy-servers-direct`) — spec-sheet · Servers Direct
@@ -3720,14 +3807,14 @@ and t
 
 ## Coverage
 
-Total records: **3673**
+Total records: **3760**
 
 | group | records |
 |---|---|
-| severity:major | 197 |
+| severity:major | 203 |
 | backend:cuda | 77 |
 | severity:blocker | 67 |
-| severity:minor | 56 |
+| severity:minor | 59 |
 | flop bound:memory | 55 |
 | flop bound:compute | 42 |
 | backend:rocm | 37 |
