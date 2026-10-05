@@ -1,0 +1,54 @@
+{
+  "id": "w7k-tensorrt",
+  "type": "compiler",
+  "name": "TensorRT",
+  "repo": "NVIDIA/TensorRT (open-source components only; the optimizer itself ships as a binary SDK)",
+  "language": "C++",
+  "license": "Apache-2.0 for the open-source components; the TensorRT SDK itself is NVIDIA proprietary",
+  "first_release_year": null,
+  "category": "compiler-framework",
+  "target_backends": [
+    "cuda"
+  ],
+  "input_languages": [
+    "onnx",
+    "pytorch",
+    "tensorflow"
+  ],
+  "output_artifacts": [
+    "cubin",
+    "plan"
+  ],
+  "compilation_strategy": "aot",
+  "autotuning": true,
+  "production_ready": true,
+  "production_evidence": [
+    "TensorRT-LLM is built on TensorRT and is NVIDIA's flagship LLM inference path",
+    "NVIDIA Dynamo (engines/nvidia-dynamo) drives TRT-LLM workers rather than replacing them",
+    "Multiple MLPerf Inference submissions in this repo run TensorRT-family engines on NVIDIA GPUs"
+  ],
+  "strengths": [
+    "Offline (AOT) build: one serialized engine, no JIT at serve time, so steady-state latency has no compile component",
+    "True per-layer autotuning: the builder profiles each layer's candidate tactics and keeps the best, which is stronger than the heuristic-only path IREE and ONNX Runtime take",
+    "Native INT8, INT4 (weight-only), FP8 E4M3 and FP4 E2M1 under a symmetric, zero-centred quantization scheme",
+    "Layer fusion plus pointwise fusion, CUDA graph capture out of the box, and multi-stream execution for aggregate throughput"
+  ],
+  "weaknesses": [
+    "The engine is an arch- and version-bound artifact, not a portable binary: without hardware compatibility mode 'engines are not portable across different GPU architectures', and they are not portable across platforms at all - so an engine built on H100 does not run on Blackwell and rebuild is required",
+    "Build time is a real CI cost: seconds for small networks to 'tens of minutes (or longer) for large models with complex topology'",
+    "Tactics are picked against a fully available GPU, so under concurrent-stream contention 'kernels TensorRT picked while profiling against a fully available GPU may no longer be optimal at runtime'",
+    "Closed-source optimizer: only some components are Apache-2.0, so the thing that actually determines performance cannot be audited or patched",
+    "Fixed shapes unless optimization profiles are built, and each new shape range multiplies build cost"
+  ],
+  "learning_curve": "high",
+  "compile_time_seconds": null,
+  "notes": "Recorded separately from the existing engines/tensorrt-llm record because that one is an ENGINE (a serving runtime with scheduling, KV cache and paged attention) and this one is the COMPILER that produces its plans and kernels. They fail differently and are versioned differently. The compiler-level fact a deployment planner most needs, and which is assumed wrong constantly: a TensorRT engine is not portable. NVIDIA's own support matrix says serialized engines are not portable across platforms, and without hardware compatibility mode they are not portable across GPU architectures - so the engine is rebuilt per architecture class, and hardware compatibility mode trades peak performance for reach. autotuning is true, and it is a different KIND of autotuning from Triton's: the builder profiles candidate TACTICS per layer against the actual hardware and keeps the best, rather than searching a config space at runtime. compile_time_seconds is null even though NVIDIA publishes a range, because the schema field is 'typical compile time for a SINGLE KERNEL' and TensorRT's published figure is whole-network engine build time, which is a different quantity - a per-kernel figure would be invented. first_release_year is null for the same reason as elsewhere in this pass: no reachable primary source states it, and mapping a version number to a year is the kind of derivation this repo's contract exists to prevent. Note the existing gotcha meta-tensorrt-llm-has-no-paper-do-not-invent-one: TensorRT-LLM has no paper, so no paper-shaped capability claim may be attached to this stack.",
+  "sources": [
+    "w7k-tensorrt-support-matrix-11-3",
+    "w7k-tensorrt-optimization-11-3",
+    "src5-tensorrt-llm-github"
+  ],
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-05"
+}

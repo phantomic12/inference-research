@@ -1,0 +1,37 @@
+{
+  "id": "w7k-qualcomm-qnn",
+  "type": "compiler",
+  "name": "Qualcomm AI Engine Direct (QNN) SDK",
+  "repo": null,
+  "language": "C++",
+  "license": "Qualcomm proprietary - no open-source repository is published for the QNN SDK",
+  "first_release_year": null,
+  "category": "compiler-framework",
+  "target_backends": [],
+  "input_languages": [
+    "onnx"
+  ],
+  "output_artifacts": [],
+  "compilation_strategy": "aot",
+  "autotuning": false,
+  "production_evidence": [],
+  "strengths": [
+    "The direct NPU programming path for Qualcomm Hexagon silicon, where the GPU toolchains in this repo have nothing to offer",
+    "Reaches shipping software through frameworks rather than direct use: ONNX Runtime GenAI lists QNN as a supported backend (engines/onnxruntime-genai), and ExecuTorch delegates to it on Android (engines/local-executorch)"
+  ],
+  "weaknesses": [
+    "Documentation is gated behind a Qualcomm ID sign-in; the docs.qualcomm.com bundle attempted returned a sign-in wall and a page timeout, so the toolchain's mechanics could not be verified from a primary source",
+    "No public repository exists for the SDK, so nothing about its compilation strategy, tuning or output format is auditable",
+    "Closed toolchain with no published tactic search and no published engine-portability rules"
+  ],
+  "learning_curve": "very-high",
+  "compile_time_seconds": null,
+  "notes": "THIS RECORD IS MOSTLY DELIBERATE GAPS, and that is the honest state of the evidence rather than an unfinished record. QNN's compiler mechanics could not be verified from a primary source: the vendor's technical documentation requires an authenticated Qualcomm ID (the docs.qualcomm.com bundle attempted returned a sign-in wall and a page timeout), the public product page carries no compilation detail, and the GitHub API has no official QNN repository - the closest hit, qdsp6sw/qualcomm-ai-engine-direct-sdk, is a 6-star placeholder created and last pushed on the same day in 2024 with no description. CONSEQUENTLY, production_ready is left ABSENT rather than null: the schema types production_ready as a strict boolean, so a null would fail validation and a value would be a guess. Absent is the correct encoding for 'the repo publishes nothing on this point', which is preferred over guessing. production_evidence is an empty list for the same reason - the two integration facts I do have (ONNX Runtime GenAI lists QNN as a backend; ExecuTorch delegates to it on Android) are real and are recorded as strengths, but they are evidence that the SDK ships and integrates, not evidence that the COMPILER is production-ready, and upgrading one to the other is exactly the vendor-claim-as-fact error AGENTS.md forbids. target_backends and output_artifacts are EMPTY because the enum has no term for a Hexagon NPU and none for the artifacts QNN emits (DLC context binaries and Hexagon device binaries); input_languages carries onnx because that is genuinely how these frameworks feed it and it is the one field where the enum has an honest value. first_release_year is null because no reachable source states it. compilation_strategy is aot on the general shape of a device SDK that converts a model offline rather than JIT-compiling at serve time, and it is the weakest claim in this record for that reason - it is the shape every closed inference SDK has, not something Qualcomm documents. To complete this record, get ungated access to the AI Engine Direct SDK documentation and replace w7k-qualcomm-ai-engine-direct-sdk with a real source; that source's own note already recommends this. Confidence is deliberately low (0.5): the integration facts are solid, the compiler facts are absent.",
+  "sources": [
+    "w7k-qualcomm-ai-engine-direct-sdk",
+    "local-executorch-github"
+  ],
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-05"
+}

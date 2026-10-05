@@ -1,0 +1,56 @@
+{
+  "id": "w7k-modular-max-mojo",
+  "type": "compiler",
+  "name": "MAX and Mojo (Modular)",
+  "repo": "modular/modular",
+  "language": "Python (Mojo) with C++/Python runtime",
+  "license": "Apache-2.0 with LLVM Exceptions (the LICENSE file states this; the GitHub API reports NOASSERTION)",
+  "first_release_year": 2023,
+  "category": "compiler-framework",
+  "target_backends": [
+    "cuda",
+    "rocm",
+    "metal",
+    "cpu-avx512"
+  ],
+  "input_languages": [
+    "python",
+    "pytorch"
+  ],
+  "output_artifacts": [
+    "ptx",
+    "amdgcn",
+    "metal",
+    "llvm-ir",
+    "mlir-ir"
+  ],
+  "compilation_strategy": "mixed",
+  "autotuning": false,
+  "production_ready": false,
+  "production_evidence": [
+    "NO INDEPENDENT PRODUCTION EVIDENCE FOUND. The vendor publishes a hosted inference product and an enterprise 'schedule a demo' path, which is commercial availability rather than third-party production use. This is a false, not an omission, because no third-party production deployment is documented in any source reachable here"
+  ],
+  "strengths": [
+    "One package across NVIDIA, AMD and Apple silicon with no CUDA-version matching and no hardware selection at install time - the vendor states 'no CUDA version to match, no hardware option to select'",
+    "Does not depend on PyTorch, CUDA or ROCm, so containers are smaller and cold starts faster, per the vendor",
+    "Mojo exposes MLIR directly: four built-ins (__mlir_type, __mlir_attr, __mlir_op, __mlir_region) let a kernel author emit an operation Mojo does not surface - the docs name NVVM barriers, AMD matrix multiplies and target-specific address spaces",
+    "All MAX Python API, model pipelines and GPU kernels for NVIDIA, AMD and Apple are open sourced",
+    "Explicit GPU compatibility check: DeviceContext() 'raises an error if no compatible GPU is available' rather than failing later"
+  ],
+  "weaknesses": [
+    "The portability claim is entirely vendor-published with no third-party cross-vendor benchmark behind it in any source found here",
+    "MLIR is exposed to users, which is a strength for reaching hardware and a liability for stability: Mojo's semantics change with the upstream MLIR it is built on",
+    "No autotuner documented - performance is whatever the compiler's own scheduling and the shipped kernel library achieve",
+    "Youngest toolchain here and the smallest deployment base: a 2023 repo with no published third-party production case study",
+    "Serving and modelling APIs are young, and the Python-like surface will not map a team existing PyTorch expertise one-for-one"
+  ],
+  "learning_curve": "high",
+  "compile_time_seconds": null,
+  "notes": "Recorded as a compiler, not an engine, on the strength of the two facts that make it one: MAX compiles model graphs down across three hardware families from one package, and Mojo is a frontend onto MLIR rather than a closed DSL. The inline-MLIR escape hatch is the part most likely to matter to a kernel author and the part easiest to miss - Mojo's documented answer to 'this operation is not exposed' is 'write the MLIR op yourself', which makes it a Python-shaped MLIR frontend rather than a language with its own dialect design. PRODUCTION_READY IS FALSE, DELIBERATELY, and this is the one production_ready value in this batch that is a negative claim rather than an omission. Modular sells hosted inference and demos to enterprises, and a less careful pass would have recorded 'yes' on the strength of that; but production_ready in this schema means used in production INFERENCE ENGINES, and no third-party engine deployment or independent measurement is documented in any source reachable here. A vendor product page is not production evidence, and recording it as such would be the exact vendor-claim-as-fact error AGENTS.md's contract exists to prevent. If a third-party production deployment appears, this flips to true with the source named. output_artifacts carries mlir-ir, which is NOT in this schema's documented enum (ptx, amdgcn, spirv, air, metal, c, llvm-ir, triton-ir, cubin, plan) - flagged here as enum debt rather than presented as a listed value, because Mojo genuinely does emit MLIR and the enum genuinely does not describe it. validate.py does not enforce item enums on arrays, which is why it passes; that is a validator gap, not a licence to invent. compile_time_seconds is null: no primary source publishes a per-kernel compile time. confidence is 0.8 for the mechanism and materially lower for the performance story, which rests entirely on vendor claims.",
+  "sources": [
+    "w7k-modular-max-and-mojo-mlir"
+  ],
+  "status": "draft",
+  "confidence": 0.7,
+  "updated": "2026-10-05"
+}

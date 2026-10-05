@@ -1,0 +1,49 @@
+{
+  "id": "w7k-amd-composable-kernel",
+  "type": "compiler",
+  "name": "AMD Composable Kernel (CK)",
+  "repo": "ROCm/rocm-libraries (projects/composablekernel); the standalone ROCm/composable_kernel repo is a deprecated read-only mirror",
+  "language": "C++",
+  "license": "Apache-2.0 (as part of ROCm rocm-libraries)",
+  "first_release_year": 2021,
+  "category": "template-library",
+  "target_backends": [
+    "rocm"
+  ],
+  "input_languages": [
+    "cutlass-cpp"
+  ],
+  "output_artifacts": [
+    "amdgcn"
+  ],
+  "compilation_strategy": "template-instantiation",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "AITER, AMD's production inference kernel library, has Composable Kernel as one of its backends alongside Triton and hand-tuned ASM (see flops/amd-rocm-aiter-kernels)",
+    "vLLM's ROCm attention and MLP paths reach CK through AITER on MI300-series parts"
+  ],
+  "strengths": [
+    "Built on HIP C++, so the same headers target AMD GPUs and CPUs - AMD's own framing is 'across multiple architectures including GPUs and CPUs'",
+    "CK-Tile models the hardware instead of approximating it: separate documentation for intrawave and interwave scheduling, which is the CDNA-specific decision a CUDA port cannot inherit",
+    "Header-only C++ templates: no build step, no DSL to learn, and full control at the register and shared-memory level",
+    "Ships inside the ROCm super-repo, so it versions with the rest of ROCm rather than as a separate download"
+  ],
+  "weaknesses": [
+    "Category honesty: CK is not a compiler and not a DSL - it is a header library, which is why compilation_strategy is template-instantiation and autotuning is false",
+    "C++ templates mean longer compile times and much worse error messages than a DSL",
+    "Written against one vendor's wavefront and matrix-core model; nothing here ports to NVIDIA",
+    "The standalone repo carries a [DEPRECATED] banner pointing at ROCm/rocm-libraries, so older docs and CI snippets that clone it are following a mirror",
+    "The user's CDNA-generation matrix is narrower than CK's: CK supports CDNA3 and CDNA4, and the existing gotcha aiter-gate-skips-rdna3-gfx1100 shows what happens on the generations in between"
+  ],
+  "learning_curve": "high",
+  "compile_time_seconds": null,
+  "notes": "AMD's answer to CUTLASS, and the direct counterpart to the existing cutlass-cute record - same shape (header C++ template library, template-instantiation, no autotuner), different silicon underneath. Reading the two records side by side is the point: CK-Tile's documentation is organised around intrawave versus interwave scheduling and tile structure sized to the tensor core units, where CUTLASS/CuTe is organised around warp-level MMA and CuTe layouts. That difference is the concrete content of 'porting CUDA to ROCm is not a recompile'. autotuning is false as a property of CK itself. The autotuning in the ROCm inference path happens one layer up, in AITER, which selects among CK, Triton and hand-tuned ASM - so a reader should not read AITER's measured speedups as CK's autotuning. input_languages carries cutlass-cpp because that is the schema's existing term for a C++-template kernel library and CK is the AMD instance of that shape; strictly it is HIP C++ headers rather than CUTLASS headers, and that mismatch is a vocabulary limitation rather than a claim that CK consumes CUTLASS. No compile-time figure is asserted: CK is header-only, so 'compile time' is C++ template instantiation time inside the consumer's build, which is not a per-kernel number this field can hold.",
+  "sources": [
+    "w7k-rocm-composable-kernel-guide",
+    "amd-vllm-rocm-attn-backends"
+  ],
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-05"
+}

@@ -1,0 +1,56 @@
+{
+  "id": "w7k-tilelang",
+  "type": "compiler",
+  "name": "TileLang (Tile Language)",
+  "repo": "tile-ai/tilelang",
+  "language": "Python",
+  "license": "MIT (LICENSE also records additional collaboration terms with Microsoft Corporation for 2024-12-01 to 2025-03-14, a window that has passed)",
+  "first_release_year": 2024,
+  "category": "kernel-dsl",
+  "target_backends": [
+    "cuda",
+    "rocm",
+    "metal"
+  ],
+  "input_languages": [
+    "python"
+  ],
+  "output_artifacts": [
+    "ptx",
+    "amdgcn",
+    "metal",
+    "c"
+  ],
+  "compilation_strategy": "mixed",
+  "autotuning": true,
+  "production_ready": true,
+  "production_evidence": [
+    "DeepSeek ships TileKernels, a library of kernels written in TileLang, and requires TileLang >= 0.1.15 for it (see flops/tilelang-tile-dsl-moe-routing-quant and the existing kernels source note)",
+    "The repo's own dated news records an Ascend 950 backend shipping native code generation - a dependency in DeepSeek's TileKernels requirements rather than a demo"
+  ],
+  "strengths": [
+    "The 2025-2026 DSL that has actually crossed into a shipped stack - the repo's dated news records DeepSeek depending on it and an Ascend 950 backend with native code generation, automatic scheduling and synchronization (2026-09-30)",
+    "Autotuning is built in and correct in the way that matters for deployment: @tilelang.autotune stacked on @tilelang.jit 'compiles candidates in parallel, validates correctness, benchmarks them, and caches the best result for reuse', so tuning is paid once per config rather than per call",
+    "Built on TVM, so it inherits TVM's schedule space rather than inventing one",
+    "Multi-backend dialect organised over static CUDA, ROCm and Metal (2026-07-24), with a Metal 4 cooperative-tensor GEMM path for Apple M5 (2026-07-28)",
+    "Ahead of the curve on block-scaled formats: SM120 NVF4 block-scaled MMA (2026-07-30)"
+  ],
+  "weaknesses": [
+    "Inherits every TVM dependency and weakness, including the compile-time cost the existing compilers/apache-tvm record documents at minutes to hours with autotuning on",
+    "Autotuning costs are real at build time: the config space in the documented example is a product over block_M, block_N, block_K, stages and threads",
+    "Younger than Triton with a much smaller deployment base; version 0.1.15 is pre-1.0 and the 0.1.13 notes say several legacy APIs were removed",
+    "Pythonic syntax is a lower level of control than Mojo or Triton in the places that matter for peak performance",
+    "No AMD MI300-class or Apple production throughput figure is published with methodology - the README shows benchmark plots without conditions"
+  ],
+  "learning_curve": "moderate",
+  "compile_time_seconds": null,
+  "notes": "This is the record for 'any 2025-2026 kernel DSL that has become load-bearing', and TileLang is the one that qualified on evidence rather than hype: a shipped kernel library at DeepSeek pins a minimum version of it, and the same repo requires either NVIDIA SM90/SM100 with CUDA >= 13.1 or Ascend 950 with CANN >= 9.2.0. The existing flops/tilelang-tile-dsl-moe-routing-quant record already established the layering - DSL -> kernel library (TileKernels) -> GEMM library (DeepGEMM) - and this record adds the DSL layer the repo's compilers/ type was missing entirely. autotuning is true and the caching behaviour is the deployment-relevant detail: the autotuner benchmarks and caches, so a tuned kernel is reused across launches, which separates it from a search that runs per call. output_artifacts and target_backends both include metal because the repo records a Metal 4 cooperative-tensor GEMM path, not because Metal support is theoretical. compile_time_seconds is null: TVM-based autotuning is measured in minutes to hours per the existing apache-tvm record, which is not a 'typical compile time for a single kernel' and would be misleading here. The README's performance plots are vendor-published without hardware conditions, so no performance figure is asserted in this record; the existing flops record already flags that DeepSeek's 'close to hardware limits' claim carries no numbers.",
+  "sources": [
+    "w7k-tilelang-readme-and-autotune",
+    "kern-tilekernels-github",
+    "tilelang-tile-dsl-moe-routing-quant"
+  ],
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-05"
+}

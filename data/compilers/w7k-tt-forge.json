@@ -1,0 +1,50 @@
+{
+  "id": "w7k-tt-forge",
+  "type": "compiler",
+  "name": "TT-Forge (Tenstorrent's MLIR-based compiler; the TT-Bridge / graph-frontend layer)",
+  "repo": "tenstorrent/tt-forge",
+  "language": "Python",
+  "license": "Apache-2.0",
+  "first_release_year": 2024,
+  "category": "compiler-framework",
+  "target_backends": [],
+  "input_languages": [
+    "pytorch",
+    "jax",
+    "tensorflow",
+    "onnx"
+  ],
+  "output_artifacts": [
+    "amdgcn"
+  ],
+  "compilation_strategy": "aot",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "The vendor's own software-stack overview presents TT-Forge as the supported path to compile PyTorch, JAX and TensorFlow models for Tenstorrent hardware",
+    "The existing engines/niche-tt-metal record carries TT-Metalium/TT-NN throughput tables measured through this stack"
+  ],
+  "strengths": [
+    "MLIR-based, the same infrastructure Triton, IREE and XLA use, so pass and dialect work is shareable",
+    "Ingests three framework front ends (PyTorch, JAX, TensorFlow) plus ONNX rather than one",
+    "Lowers to TT-Metalium, so the graph compiler and the hand-written kernel layer compose instead of competing",
+    "Open source under Apache-2.0, which is unusual for a vendor compiler for non-x86 hardware"
+  ],
+  "weaknesses": [
+    "No target in this schema's vocabulary: Tenstorrent's RISC-V vector cores are not cuda/rocm/hip/tpu/metal or any listed value, so target_backends is empty rather than mislabelled - the enum has no slot for a vendor's own non-x86 accelerator",
+    "No output artifact in the enum either: TT-Forge emits TT-Metalium kernels and binaries, and amdgcn is recorded here only because it is the schema's stand-in for generated machine code, which is NOT what it emits. Treat both empty/approximate fields as enum debt",
+    "Vendor-generic by design: the vendor's own claim is 'an automated, general path ... without requiring custom kernel development', which is a statement about coverage, not about peak performance",
+    "No autotuning, so performance is bounded by whatever the operator library and the model happen to get",
+    "Younger and far smaller than Triton or XLA: 368 stars, 554 commits"
+  ],
+  "learning_curve": "high",
+  "compile_time_seconds": null,
+  "notes": "Added as the graph-compiler layer of the Tenstorrent stack that engines/niche-tt-metal covers from the kernel side, because a deployment planner choosing Tenstorrent needs both: TT-Forge to get a model down, TT-Metalium to write what it misses. The vendor's stack overview is unusually explicit about the boundaries - TT-Forge 'bridges high-level machine learning frameworks with the Tenstorrent software stack', TT-NN is the pre-packaged operator library, TT-Metalium is the low-level programming model - which is what makes the split record-able. The task framed this as 'TT-Bridge and TT-Metal'. TT-Metalium is already covered by engines/niche-tt-metal, so this record covers the compiler. On the 'TT-Bridge' name: the GitHub API has no tenstorrent/tt-bridge repository (404) and PyPI has no tt-bridge package (404), while tenstorrent/tt-forge exists, is described by its own repo as 'Tenstorrent's MLIR Based Compiler', and is the live project - so I recorded what exists rather than the name as given. It is plausible TT-Bridge is/was an internal or renamed frontend; the repo's own history would settle it, and I did not find a primary source either way, so no claim is made about the naming. output_artifacts carries amdgcn as a deliberate approximation and target_backends is empty: neither is accurate. TT-Forge emits TT-Metalium device binaries, and the schema's enums (built for CUDA/ROCm/Metal-class hardware) have no term for it. Both fields are recorded as-is rather than dropped, because leaving them empty loses the information that a real artifact is emitted somewhere - but a reader must not take amdgcn literally here. autotuning is false: nothing in the vendor's stack documentation describes a tactic search or config search in TT-Forge. If Tenstorrent adds one, this field is the thing to revisit.",
+  "sources": [
+    "w7k-tenstorrent-software-stack",
+    "niche-tt-metal-repo"
+  ],
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-05"
+}

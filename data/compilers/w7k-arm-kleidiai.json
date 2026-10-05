@@ -1,0 +1,49 @@
+{
+  "id": "w7k-arm-kleidiai",
+  "type": "compiler",
+  "name": "Arm Kleidi Libraries (KleidiAI)",
+  "repo": "gitlab.arm.com/kleidi/kleidiai (GitHub ARM-software/kleidiai is a read-only mirror)",
+  "language": "C",
+  "license": "Multiple - the README states 'KleidiAI is distributed under the software licenses in LICENSES directory'; no single SPDX id is published at the repo root (the GitHub mirror reports no license field)",
+  "first_release_year": 2025,
+  "category": "template-library",
+  "target_backends": [
+    "cpu-avx512"
+  ],
+  "input_languages": [
+    "onnx"
+  ],
+  "output_artifacts": [
+    "c"
+  ],
+  "compilation_strategy": "template-instantiation",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "Vendor states integration with PyTorch, ExecuTorch, MediaPipe, ONNX Runtime, LiteRT and llama.cpp - four of which are engines/records in this repo (local-executorch, local-onnxruntime-mobile, llama-cpp, onnxruntime-genai)",
+    "Two releases per month is the published cadence"
+  ],
+  "strengths": [
+    "Covers the Arm SIMD instruction surface the GPU toolchains in this repo never touch: Advanced SIMD/NEON, SVE, SME and SME2, with micro-kernels specialised on FEAT_DotProd and FEAT_I8MM",
+    "Embeddable by design - each micro-kernel is a standalone .c/.h pair depending only on kai_common.h, so there is nothing to link against a runtime",
+    "No dependencies, no dynamic allocation, no memory management, no scheduling: stateless and consistent API, which is what makes it safe inside someone else's inference loop",
+    "Variants are keyed by architecture, technology and computational parameter (tile size, Arm Neon vs SVE), so one API covers several micro-architectures"
+  ],
+  "weaknesses": [
+    "Not a compiler: it is a hand-tuned micro-kernel library, so this schema's 'compile time' and 'target backends' fields barely apply - target_backends carries cpu-avx512 only as the schema's stand-in for a SIMD CPU target, which is a loose fit for NEON/SVE/SME",
+    "Hand-written and hand-tuned per micro-architecture, so adding an operator means writing and tuning new variants - there is no compiler and no autotuner to do it for you",
+    "The SME and SME2 micro-kernels 'require compiler support to generate SME ABI-compliant code' and 'this is not automatically detected', so a toolchain gap surfaces as an ABI problem rather than a clear error",
+    "The experimental directory is explicitly not production quality and its API 'might change at any point in time'",
+    "No published per-kernel benchmark methodology on the vendor page, so performance claims are unquantified"
+  ],
+  "learning_curve": "low",
+  "compile_time_seconds": null,
+  "notes": "Added because the task asked for the ARM NEON intrinsics path, and the honest finding is that on Arm there is no DSL: the performant path is a vendor micro-kernel library that a runtime calls into, not code anyone compiles. That is a structurally different answer from CUDA's (compile your own kernel) and ROCm's (port your kernel), and it is the single most useful thing this record says. KleidiAI's 'no scheduling, stateless, embeddable .c/.h' constraints exist for exactly the reason a runtime integrator needs: an inference loop cannot tolerate a library that allocates or schedules. The mapping to NEON is explicit in the repo's own variant-naming scheme, which is parameterized by Arm technology (for example Arm Neon) and architecture feature (for example FEAT_DotProd), so 'the NEON intrinsics path' in practice means FEAT_DotProd and FEAT_I8MM micro-kernel variants plus the SVE/SME family above them. TWO FIELDS ARE IMPRECISE AND FLAGGED AS SUCH: target_backends carries cpu-avx512 as the schema's nearest SIMD-CPU term, which is a different ISA family from NEON/SVE/SME and is an approximation forced by the enum; and input_languages carries onnx, which is the only model-format term in the enum that KleidiAI's consumers actually bring, though the library itself accepts no model format at all. Neither is accurate and both are recorded rather than dropped so the reader can see the shape. autotuning is false: the variants are hand-tuned per architecture and tile size, which is the opposite of a search. first_release_year 2025 follows the GitHub mirror's created_at of 2025-01-23, and 2026-10-04 is a dated mirror fact rather than a guess about Arm's internal schedule. production_ready is true on named framework integrations, which is deployment evidence rather than a benchmark claim; no performance figure is asserted anywhere in this record.",
+  "sources": [
+    "w7k-kleidiai-readme",
+    "w7k-arm-kleidi-libraries"
+  ],
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-05"
+}

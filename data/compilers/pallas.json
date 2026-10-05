@@ -7,25 +7,36 @@
   "license": "Apache-2.0",
   "first_release_year": 2023,
   "category": "kernel-dsl",
-  "target_backends": ["tpu"],
-  "input_languages": ["jax"],
-  "output_artifacts": ["llvm-ir"],
+  "target_backends": [
+    "tpu",
+    "cuda"
+  ],
+  "input_languages": [
+    "jax"
+  ],
+  "output_artifacts": [
+    "llvm-ir"
+  ],
   "compilation_strategy": "jit",
   "autotuning": false,
   "production_ready": true,
   "production_evidence": [
     "Used in production for TPU-based inference at Google",
-    "Part of the JAX ecosystem, which is used for production TPU serving"
+    "Part of the JAX ecosystem, which is used for production TPU serving",
+    "GPU path: JAX publishes a fully specified Blackwell matmul benchmark for the Mosaic GPU backend (m=4096, k=4096, n=8192, f16, f32 accumulator) reaching 109.6% of cuBLAS TensorCore utilisation",
+    "GPU path is documented and reproducible (tests/pallas/mgpu_examples_test.py with BENCHMARK=True) but the API remains under jax.experimental.pallas"
   ],
   "strengths": [
     "TPU-native: the only Python DSL that targets TPUs with good performance",
     "JAX integration: seamless with JAX transformations (jit, vmap, grad)",
     "Pipelining: emit_pipeline handles double-buffering and memory/compute overlap automatically",
     "Memory space abstraction: explicit HBM/VMEM management matches TPU architecture",
-    "SparseCore support: can target TPU SparseCores for structured sparsity"
+    "SparseCore support: can target TPU SparseCores for structured sparsity",
+    "Mosaic GPU backend (jax.experimental.pallas.mosaic_gpu) targets NVIDIA GPUs, with a documented Blackwell matmul progression reaching 109.6% of cuBLAS TensorCore utilisation and 109.3% of CUTLASS - the same Pallas source language, a different programming model",
+    "Warp-specialisation, collective 2CTA MMA, persistent-kernel and cluster-launch-control primitives on the GPU backend, plus collective matmul with ring all-gather for multi-device"
   ],
   "weaknesses": [
-    "TPU-only: no NVIDIA or AMD GPU support",
+    "The Mosaic GPU backend is namespaced jax.experimental.pallas, so the import path is experimental even where the documented performance is state of the art",
     "No autotuning: block sizes and other parameters must be chosen manually",
     "Smaller community than Triton: fewer examples, less documentation",
     "JAX dependency: requires JAX, which is a heavy dependency for kernel-only use",
@@ -33,11 +44,12 @@
   ],
   "learning_curve": "moderate",
   "compile_time_seconds": 5.0,
-  "notes": "Pallas is a Python DSL for writing TPU kernels, analogous to Triton for GPUs. It is part of the JAX ecosystem and provides a higher-level abstraction than raw XLA. The key concept is the Ref (mutable array reference) which lives in a specific memory space (HBM or VMEM). Kernels operate on VMEM Refs, and data must be explicitly copied between HBM and VMEM. The emit_pipeline function handles pipelining (overlapping memory transfers with compute) automatically. The matmul tutorial shows real TPU performance: 91% FLOP/s utilization at 8192x8192x8192 with bf16, which is competitive with hand-optimized TPU kernels. Pallas is the recommended way to write custom TPU kernels, just as Triton is for NVIDIA GPUs. The main limitation is TPU-only support: there is no path to NVIDIA or AMD GPUs. For teams standardizing on TPUs, Pallas is the clear choice. For GPU-based inference, Triton is the alternative.",
+  "notes": "Pallas is a Python DSL for writing TPU kernels, analogous to Triton for GPUs. It is part of the JAX ecosystem and provides a higher-level abstraction than raw XLA. The key concept is the Ref (mutable array reference) which lives in a specific memory space (HBM or VMEM). Kernels operate on VMEM Refs, and data must be explicitly copied between HBM and VMEM. The emit_pipeline function handles pipelining (overlapping memory transfers with compute) automatically. The matmul tutorial shows real TPU performance: 91% FLOP/s utilization at 8192x8192x8192 with bf16, which is competitive with hand-optimized TPU kernels. Pallas is the recommended way to write custom TPU kernels, just as Triton is for NVIDIA GPUs. CORRECTED 2026-10-05: this record previously stated Pallas was TPU-only with 'no path to NVIDIA or AMD GPUs'. That was true of the source it cited and is no longer true of Pallas. JAX documentation now carries a full Mosaic GPU backend (jax.experimental.pallas.mosaic_gpu) with its own programming model, memory spaces and pipelining guides, and a fully specified Blackwell matmul guide showing 69.44% TensorCore utilisation - 109.6% of cuBLAS and 109.3% of CUTLASS - after six optimisation steps from a 37.62% basic kernel. No separate GPU record was added, because this IS Pallas: a second 'pallas-gpu' record would fragment one entity across two backends and make the TPU comparison harder, not easier. See source w7k-pallas-mosaic-gpu. The GPU programming model is NOT the TPU one, and that is the substantive difference: a Pallas 'thread' on GPU is a warpgroup (4 warps = 128 CUDA threads) running in lockstep, with GMEM/SMEM/TMEM memory spaces and TMEM staging on Blackwell, where the TPU backend uses HBM/VMEM with explicit copies. AMD remains unsupported - there is no ROCm backend, so 'no AMD path' is still accurate and is the surviving half of the old claim. The honest comparison for a GPU team is therefore no longer Pallas-versus-Triton: on Blackwell, documented Pallas Mosaic GPU beats cuBLAS and CUTLASS on this benchmark. Note JAX's own caveat on those numbers - 'don't believe matmul benchmarks if they don't specify input data distribution', with iid-normal fp16 described as one of the slower distributions - and that the GPU API is still under jax.experimental, so stability is the real argument for Triton over Pallas on GPU, not performance.",
   "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-04",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
   "sources": [
-    "pallas-writing-tpu-kernels-in-jax"
+    "pallas-writing-tpu-kernels-in-jax",
+    "w7k-pallas-mosaic-gpu"
   ]
 }
