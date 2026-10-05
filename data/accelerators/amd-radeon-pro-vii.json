@@ -1,43 +1,53 @@
 {
-  "id": "amd-radeon-pro-vii",
-  "type": "accelerator",
-  "name": "AMD Radeon Pro VII",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "amd-radeon-pro-vii-product-page",
-    "amd-rocm-system-requirements"
-  ],
-  "vendor": "amd",
-  "architecture": "GCN5.1 (gfx906, Vega20)",
-  "release_year": 2019,
-  "process_nm": 7,
-  "form_factors": [
-    "pcie"
-  ],
-  "vram_gb": 16,
-  "memory_type": "hbm2",
-  "memory_bus_bit": 4096,
-  "memory_bandwidth_gbps": 1024,
-  "memory_bandwidth_basis": "AMD's spec table says 'Memory Bandwidth: Up to 1024 GB/s' on a 4096-bit interface with no memory-clock figure given. 1024 GB/s at 4096 bits implies a 2.0 Gbps effective per-pin rate. The page's own prose is looser ('running over a 1 TB per second memory bus'). Use 1024 GB/s as AMD's ceiling figure; it is a maximum, not a measured or typical figure, and there is no published clock to re-derive it from.",
-  "flops": [
-    {
-      "precision": "fp32",
-      "tflops": 13.1,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "amd-radeon-pro-vii-product-page",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp32 for AMD Radeon Pro VII (source of record: 'AMD Radeon Pro VII product page (archived 2021-02-16)', kind: spec-sheet).  Recorded dense:true as printed."
-    }
-  ],
-  "tdp_w": 250,
-  "interconnect": [
-    "amd-infinity-fabric-link",
-    "pcie-gen4"
-  ],
-  "unified_memory": false,
-  "consumer": false,
-  "notes": "AUDIT 2026-10-03 (AMD convention check, no value changed): AMD's dense/sparse convention - 'Peak X Performance' = dense, 'Peak X Performance with Structured Sparsity' = sparse at exactly 2x - is established across six Instinct pages this pass (source acc2-amd-ml300-convention). The Radeon Pro VII product page predates that labelling and prints no sparsity footnote, so the single fp32 13.1 TFLOPS row is correctly dense:true. This record remains thin by design and honestly so: AMD's Radeon Pro VII page publishes ONE compute figure, no FP16 matrix rate and no INT8 rate, which is why the flops array holds a single row while its AMD Instinct siblings hold six or seven. The memory side is better documented than the compute side - 'Memory Bandwidth: Up to 1024 GB/s' on a 4096-bit HBM2 interface, i.e. 2.0 Gbps per pin - and it is the memory figure, not the compute figure, that makes this card interesting for LLM decode. The dominant fact about this card for inference remains the one already recorded here: it is gfx906 and is UNSUPPORTED by current ROCm, so the 1024 GB/s and 16 GB of HBM2 are not reachable by any shipping engine. The user-owned workstation card, so worth the detail. Vega20 (GCN5.1), TSMC 7nm, 60 CUs / 3,840 SPs, 16 GB HBM2 with ECC on a 4096-bit interface, up to 1024 GB/s, PCIe 4.0 x16, 250W TBP, active cooling, full height / 267mm / double slot.\n\nCRITICAL CAVEAT: THIS CARD IS NOT ROCm-SUPPORTED. AMD's current ROCm system-requirements table lists 'AMD Radeon PRO VII | GCN5.1 | gfx906 | Unsupported' with the explicit note that 'The current ROCm release does not support this hardware. The HIP runtime might continue to run applications for an unsupported GPU, but prebuilt ROCm libraries are not officially supported and will cause runtime errors.' Same for Radeon VII (gfx906) and Instinct MI50/MI25. The only community route is ROCm/TheRock nightly builds, which AMD explicitly says is 'not part of the official ROCm release'.\n\nThat makes gfx906 a fundamentally different proposition from every other record in this directory: it is a legacy GCN workstation card with no Matrix Cores, no FP8, no BF16 matrix path, no TF32, no sparsity - and no supported ROCm path. There is exactly ONE flops entry above (fp32, 13.1 TFLOPs) because AMD's spec table publishes nothing else for this SKU. The vector FP64 rate is not listed on this page; GCN5's 1:2 FP64:FP32 ratio would give ~6.5 TFLOPS, and the page's memory of 'Peak Double Precision (FP64) 6.5 TFLOPs' does appear in the archived page - that figure is AMD-stated but is not in the flops list because the schema enum has no fp64.\n\nNotably, this card is 1/100th of an MI300X's FP16 throughput and has 1/12th the memory bandwidth at 1/12th the capacity. For LLM inference it is bandwidth-starved: 16 GB of HBM2 at ~1 TB/s. A 7B model at fp16 does not fit in 16 GB; at 4-bit it barely does, leaving almost nothing for KV cache. Usable only for small models, aggressive quantization, or short contexts.\n\nTwo features it does have that later Instinct parts dropped: display outputs (6x, FrameLock/GenLock for broadcast via the FirePro S400 sync module), and an Infinity Fabric Link 2 bridge connector for peer-to-peer GPU-to-GPU memory pooling between two cards - AMD describes this as forming 'a combined pool of GPU memory'. For a two-card workstation that halves the PCIe path and adds a direct P2P link, which is the only scale-up story on this card.\n\nARCHITECTURE NAMING: gfx906 is shared with Radeon VII and Instinct MI50/MI50X. Do not assume a card reporting gfx906 is this SKU.\n\nSource caveat: the live AMD product URL 404s today; all figures come from a Wayback Machine capture of 2021-02-16. Confidence is 0.85 rather than higher for that reason, and because AMD never published a memory clock for this part."
+ "id": "amd-radeon-pro-vii",
+ "type": "accelerator",
+ "name": "AMD Radeon Pro VII",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "amd-radeon-pro-vii-product-page",
+  "amd-rocm-system-requirements",
+  "w5a-part2-amd-radeon-pro-vii-page-does-contain-the-figure"
+ ],
+ "vendor": "amd",
+ "architecture": "GCN5.1 (gfx906, Vega20)",
+ "release_year": 2019,
+ "process_nm": 7,
+ "form_factors": [
+  "pcie"
+ ],
+ "vram_gb": 16,
+ "memory_type": "hbm2",
+ "memory_bus_bit": 4096,
+ "memory_bandwidth_gbps": 1024,
+ "memory_bandwidth_basis": "AMD's spec table says 'Memory Bandwidth: Up to 1024 GB/s' on a 4096-bit interface with no memory-clock figure given. 1024 GB/s at 4096 bits implies a 2.0 Gbps effective per-pin rate. The page's own prose is looser ('running over a 1 TB per second memory bus'). Use 1024 GB/s as AMD's ceiling figure; it is a maximum, not a measured or typical figure, and there is no published clock to re-derive it from.",
+ "flops": [
+  {
+   "precision": "fp32",
+   "tflops": 13.1,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "amd-radeon-pro-vii-product-page",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the vendor's own fp32 for AMD Radeon Pro VII (source of record: 'AMD Radeon Pro VII product page (archived 2021-02-16)', kind: spec-sheet).  Recorded dense:true as printed."
+  },
+  {
+   "precision": "fp64",
+   "tflops": 6.5,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "amd-radeon-pro-vii-product-page",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "ADDED 2026-10-05. Vendor spec table, verbatim: 'Peak Double Precision (FP64) Performance 6.5 TFLOPs', immediately below 'Peak Single Precision (FP32) Performance 13.1 TFLOPs'. This record's own notes previously said of this figure 'The vector FP64 rate is not listed on this page ... the page's memory of Peak Double Precision (FP64) 6.5 TFLOPs does appear in the archived page - that figure is AMD-stated but is not in the flops list because the schema enum has no fp64.' Both halves of that sentence were true of an older state: the schema NOW HAS an 'fp64' member (added 2026-10-04 to stop FP64 rows being parked in 'other'), and the page does list it. So the row was omitted for a reason that has since been removed and is added here. The GCN5 1:2 FP64:FP32 ratio predicts 13.1/2 = 6.55, which is consistent with AMD's 6.5 to the rounding AMD uses, so the figure is internally coherent. Dense as printed: the page carries no sparsity footnote at all (verified - 'sparsit' and 'Structured Sparsity' return zero matches over the full 22,831-character extract). Do not halve it."
+  }
+ ],
+ "tdp_w": 250,
+ "interconnect": [
+  "amd-infinity-fabric-link",
+  "pcie-gen4"
+ ],
+ "unified_memory": false,
+ "consumer": false,
+ "notes": "AUDIT CORRECTION 2026-10-05: A PRIOR NEGATIVE FINDING ABOUT THIS RECORD WAS WRONG, AND IT IS THE BEST EXAMPLE OF THE FAILURE MODE IN THIS REPO. w4h-amd-radeon-pro-vii-product-page-dense concluded, from reading this very page: 'the rendered page as extracted contains NO TFLOPS figure, NO \"Peak ... Performance\" specification row, and no sparsity footnote. A regex sweep for \"sparsit\", \"TFLOPS\", \"TFLOP\", \"TOPS\" and \"Peak \" over the full extracted text of 18,346 characters returned ZERO matches.' That is false. The page carries a complete GPU Specifications table, and re-reading it returns: 'Peak Single Precision (FP32) Performance 13.1 TFLOPs', 'Peak Double Precision (FP64) Performance 6.5 TFLOPs', 'GPU Memory 16 GB', 'Memory Type (GPU) HBM2', 'Memory Interface 4096-bit', 'Memory Bandwidth Up to 1024 GB/s', 'Memory ECC Support Yes', 'Stream Processors 3840', 'Compute Units 60', 'Lithography TSMC 7nm FinFET', 'TBP 250W', 'Bus Type PCIe 4.0 x16'. The earlier pass's own conclusion was self-undermining and it said so: it noted the stored 13.1 was 'widely attributed to AMD' and 'should be treated as unestablished' - while attributing it to the page it had just declared to contain no compute figure at all. A probe that reports zero matches for the exact words 'Peak ' and 'TFLOPs' is not evidence of absence; it is evidence that the probe failed. Four independent methods now confirm the figures are present: (1) plain web_extract of the archived URL, full spec table located; (2) a keyword sweep over that extract returning 2 hits for 'TFLOPs', 2 for 'Peak', 0 for 'sparsit'; (3) direct regex on each stored value, giving 1 occurrence each of '13.1', '1024' and '4096'; and (4) reading the surrounding table text, which is quoted above. The sparsity question the negative was opened to answer is ALSO now settled: the page carries NO sparsity footnote and no row titled for structured sparsity ('sparsit' and 'Structured Sparsity' both return zero matches), so AMD's convention on this pre-Instinct page is that the single printed figure is dense. dense:true is correct and must not be halved. SO TWO CORRECTIONS LAND HERE: the fp32 13.1 row is confirmed as genuinely vendor-stated (it already was, and the citation now has a source record that actually quotes the table), and an fp64 6.5 row is ADDED - the notes had wrongly recorded it as unavailable 'because the schema enum has no fp64', a constraint removed on 2026-10-04 when 'fp64' was added to the enum precisely so FP64 rows would stop being parked in 'other'. MEMORY, CONFIRMED AGAINST THE SAME TABLE: 'Memory Interface 4096-bit' and 'Memory Bandwidth Up to 1024 GB/s' both appear, so the stored 4096 and 1024 are first-party. 1024 GB/s at 4096 bits implies a 2.0 Gbps effective per-pin rate, and AMD publishes no memory clock to re-derive it from, so that remains an inference - though a well-constrained one, since it follows from two printed numbers. Everything else in this record stands, including the caveat that dominates its usefulness: THIS CARD IS NOT ROCm-SUPPORTED. AMD's current ROCm requirements list 'AMD Radeon PRO VII | GCN5.1 | gfx906 | Unsupported'. So the 16 GB of HBM2 at ~1 TB/s is not reachable by any shipping engine. For LLM inference this card is bandwidth-starved regardless: a 7B model at fp16 does not fit in 16 GB, and at 4-bit barely does, leaving almost nothing for KV cache. Two features later Instinct parts dropped: display outputs (6x, FrameLock/GenLock for broadcast) and an Infinity Fabric Link 2 bridge connector for peer-to-peer GPU-to-GPU memory pooling between two cards - AMD describes it as forming 'a combined pool of GPU memory', and for a two-card workstation that is the only scale-up story here. ARCHITECTURE NAMING: gfx906 is shared with Radeon VII and Instinct MI50/MI50X. Do not assume a card reporting gfx906 is this SKU. Source caveat: the live AMD product URL 404s today, so all figures come from the 2021-02-16 Wayback capture."
 }

@@ -1,51 +1,52 @@
 {
-  "id": "rebellions-rebel100",
-  "type": "accelerator",
-  "name": "Rebellions Rebel100",
-  "vendor": "asic-other",
-  "architecture": "rebel100 (4-chiplet UCIe-Advanced)",
-  "release_year": 2025,
-  "process_nm": null,
-  "form_factors": [
-    "oam"
-  ],
-  "vram_gb": 144,
-  "memory_type": "hbm3e",
-  "memory_bus_bit": null,
-  "memory_bandwidth_gbps": 4800,
-  "memory_bandwidth_basis": "Vendor-published: 144 GB HBM3E at 4.8 TB/s. Separately, the same page claims the predictive DMA engine 'enables 2.7 TB/s effective bandwidth' for KV data - that is a different quantity (the achievable rate for KV prefetch on long-context decode) and is deliberately not recorded as the memory bandwidth figure.",
-  "flops": [
-    {
-      "precision": "fp16",
-      "tflops": 1024,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "asic-rebellions-rebel100",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp16 for Rebellions Rebel100 (source of record: 'Rebellions Rebel100 product page', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "fp8",
-      "tflops": 2048,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "asic-rebellions-rebel100",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp8 for Rebellions Rebel100 (source of record: 'Rebellions Rebel100 product page', kind: spec-sheet).  Recorded dense:true as printed."
-    }
-  ],
-  "tdp_w": 600,
-  "interconnect": [
-    "pcie-gen5",
-    "rebellions-ucie"
-  ],
-  "unified_memory": false,
-  "consumer": false,
-  "notes": "Vendor is asic-other because 'rebellions' is not in the schema enum; the real vendor is Rebellions (South Korea). Explicitly labelled 'Compute (Dense)' by the vendor, so both rows are genuinely dense. THE HIERARCHY POINT: this is one of the few parts where the inter-chiplet link, not the memory, is the architectural story. A full-chip on-chip mesh over UCIe-Advanced runs at 1 TB/s per bidirectional channel at 11 ns latency, so the four chiplets present as one virtual die with no software-visible boundary - 11 ns is roughly a register-to-register hop, which is the mechanism behind the 'no stalls in sparse or imbalanced workloads' claim. Against 4.8 TB/s of HBM3E at 144 GB, that gives 213 FLOP/byte FP16 and 427 FP8, so batch-1 decode remains memory-bound but 144 GB of capacity is enough to hold a large model resident, which is the combination large-model inference actually wants. The predictive, software-controlled DMA prefetching KV data ahead of the MXU is a software-visible optimization, so it is a tuning surface rather than a fixed property. Process node and die size are not published. Shipping status: RebelServer and RebelRack are in production with paying operators (SK Telecom's A.X K1 sovereign LLM ran on RebelServer per July 2026), and the vendor claims native PyTorch 2.x / vLLM / Triton support. Dense/sparse is not separately stated for FP8, and the vendor's own perf/watt claims (3.8x vs a current-gen GPU node) are marketing.\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). %s NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either inference is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the note above names the specific document that was read and found not to carry it, so a future pass does not have to re-establish that from scratch.\n\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). NOT back-computed despite appearing derivable, and the reason is worth recording because it looks like a free win. The Rebel100 brochure prints 'HBM3E 144GB 4.8TB/s 16Gbps 1TB/s per channel', so a reader can divide 4800 GB/s by 16 Gbps/pin and get 2400 bits. 2400 bits IS NOT A REAL HBM INTERFACE WIDTH - no HBM generation has a 2400-bit bus - which shows the brochure's '16Gbps' is NOT a DRAM pin rate: it sits next to '1TB/s per channel' and describes the external UCIe-A memory chiplet link, not the HBM interface. Dividing by it would record a fictional number. Rebellions publishes no HBM bus width in bits, so it stays null. NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the text above names the specific document read and found not to carry it, so a future pass does not have to re-establish that from scratch.",
-  "status": "verified",
-  "confidence": 0.7,
-  "updated": "2026-10-03",
-  "sources": [
-    "asic-rebellions-rebel100"
-  ]
+ "id": "rebellions-rebel100",
+ "type": "accelerator",
+ "name": "Rebellions Rebel100",
+ "vendor": "asic-other",
+ "architecture": "rebel100 (4-chiplet UCIe-Advanced)",
+ "release_year": 2025,
+ "process_nm": null,
+ "form_factors": [
+  "oam"
+ ],
+ "vram_gb": 144,
+ "memory_type": "hbm3e",
+ "memory_bus_bit": null,
+ "memory_bandwidth_gbps": 4800,
+ "memory_bandwidth_basis": "Vendor-published: 144 GB HBM3E at 4.8 TB/s. Separately, the same page claims the predictive DMA engine 'enables 2.7 TB/s effective bandwidth' for KV data - that is a different quantity (the achievable rate for KV prefetch on long-context decode) and is deliberately not recorded as the memory bandwidth figure.",
+ "flops": [
+  {
+   "precision": "fp16",
+   "tflops": 1024,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "asic-rebellions-rebel100",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Vendor block labelled 'Compute (Dense)', verbatim '1,024 TFLOPS (FP16)  2,048 TFLOPS (FP8)' - present identically in the product page and in brochure v1.6, so the label 'Dense' is the vendor's own and dense:true is correct. NOTE FOR ANY FUTURE NUMERIC MATCH: the brochure prints '1,024' with a thousands separator, so a naive search for '1024' fails on the comma and would manufacture a false citation failure - the same trap that made this record look unsupported on an early pass of this audit. See w5a-rebellions-rebel100-brochure-16gbps-is-ucie-not-hbm for the full block and for the proof that the brochure's '16Gbps' is the UCIe-A chiplet link, not a DRAM pin rate, which is why memory_bus_bit correctly stays null."
+  },
+  {
+   "precision": "fp8",
+   "tflops": 2048,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "asic-rebellions-rebel100",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Vendor block labelled 'Compute (Dense)', verbatim '1,024 TFLOPS (FP16)  2,048 TFLOPS (FP8)' - present identically in the product page and in brochure v1.6, so the label 'Dense' is the vendor's own and dense:true is correct. NOTE FOR ANY FUTURE NUMERIC MATCH: the brochure prints '1,024' with a thousands separator, so a naive search for '1024' fails on the comma and would manufacture a false citation failure - the same trap that made this record look unsupported on an early pass of this audit. See w5a-rebellions-rebel100-brochure-16gbps-is-ucie-not-hbm for the full block and for the proof that the brochure's '16Gbps' is the UCIe-A chiplet link, not a DRAM pin rate, which is why memory_bus_bit correctly stays null."
+  }
+ ],
+ "tdp_w": 600,
+ "interconnect": [
+  "pcie-gen5",
+  "rebellions-ucie"
+ ],
+ "unified_memory": false,
+ "consumer": false,
+ "notes": "memory_bus_bit CORRECTLY STAYS NULL, AND THE BROCHURE PDF NOW SUPPLIES THE PROOF. The rejection is confirmed by the document's own field grouping: brochure v1.6 prints 'Chiplet Interface (UCIe-A) | 16Gbps  1TB/s per channel' in a block SEPARATE from 'External Memory | HBM3E 144GB 4.8TB/s', and the product page repeats the identical grouping under the headings 'External Memory' and 'Chiplet Interface (UCIe-A)'. So '16Gbps' describes the external UCIe-A memory chiplet link, not the HBM3E DRAM interface. The arithmetic settles it independently: 4800 GB/s divided by 16 Gbps/pin is 2400 bits, and no HBM generation has a 2400-bit bus (HBM2, HBM2E, HBM3 and HBM3E are all 1024 bits per stack). A derivation that yields an interface width no generation of the memory it claims to describe has picked up the wrong denominator. NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH - see the standing rule below.\n\nVendor is asic-other because 'rebellions' is not in the schema enum; the real vendor is Rebellions (South Korea). Explicitly labelled 'Compute (Dense)' by the vendor, so both rows are genuinely dense. THE HIERARCHY POINT: this is one of the few parts where the inter-chiplet link, not the memory, is the architectural story. A full-chip on-chip mesh over UCIe-Advanced runs at 1 TB/s per bidirectional channel at 11 ns latency, so the four chiplets present as one virtual die with no software-visible boundary - 11 ns is roughly a register-to-register hop, which is the mechanism behind the 'no stalls in sparse or imbalanced workloads' claim. Against 4.8 TB/s of HBM3E at 144 GB, that gives 213 FLOP/byte FP16 and 427 FP8, so batch-1 decode remains memory-bound but 144 GB of capacity is enough to hold a large model resident, which is the combination large-model inference actually wants. The predictive, software-controlled DMA prefetching KV data ahead of the MXU is a software-visible optimization, so it is a tuning surface rather than a fixed property. Process node and die size are not published. Shipping status: RebelServer and RebelRack are in production with paying operators (SK Telecom's A.X K1 sovereign LLM ran on RebelServer per July 2026), and the vendor claims native PyTorch 2.x / vLLM / Triton support. Dense/sparse is not separately stated for FP8, and the vendor's own perf/watt claims (3.8x vs a current-gen GPU node) are marketing.\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). %s NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either inference is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the note above names the specific document that was read and found not to carry it, so a future pass does not have to re-establish that from scratch.\n\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). NOT back-computed despite appearing derivable, and the reason is worth recording because it looks like a free win. The Rebel100 brochure prints 'HBM3E 144GB 4.8TB/s 16Gbps 1TB/s per channel', so a reader can divide 4800 GB/s by 16 Gbps/pin and get 2400 bits. 2400 bits IS NOT A REAL HBM INTERFACE WIDTH - no HBM generation has a 2400-bit bus - which shows the brochure's '16Gbps' is NOT a DRAM pin rate: it sits next to '1TB/s per channel' and describes the external UCIe-A memory chiplet link, not the HBM interface. Dividing by it would record a fictional number. Rebellions publishes no HBM bus width in bits, so it stays null. NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the text above names the specific document read and found not to carry it, so a future pass does not have to re-establish that from scratch.",
+ "status": "verified",
+ "confidence": 0.7,
+ "updated": "2026-10-05",
+ "sources": [
+  "asic-rebellions-rebel100",
+  "w5a-rebellions-rebel100-brochure-16gbps-is-ucie-not-hbm"
+ ]
 }

@@ -1,32 +1,92 @@
 {
-  "id": "moore-threads-s4000",
-  "type": "accelerator",
-  "name": "Moore Threads MTT S4000 LLM training/inference accelerator",
-  "vendor": "asic-other",
-  "architecture": "MUSA (3rd gen) / Sudi",
-  "release_year": 2024,
-  "process_nm": null,
-  "form_factors": [
-    "pcie"
-  ],
-  "vram_gb": 48,
-  "memory_type": "gddr6",
-  "memory_bus_bit": null,
-  "memory_bandwidth_gbps": 768,
-  "memory_bandwidth_basis": "Primary vendor source states it directly: 'memory bandwidth 768 GB/s' in the product specification table. Moore Threads publishes no memory type, bus width or pin speed for the S4000, so the figure cannot be re-derived and the memory type above is left as unverified inference from the capacity and bandwidth combination - treat memory_type as provisional. Source cn-mthreads-s4000.",
-  "flops": [],
-  "tdp_w": 450,
-  "interconnect": [
-    "pcie-gen5",
-    "moore-threads-mtlink"
-  ],
-  "unified_memory": false,
-  "consumer": false,
-  "notes": "THE HIERARCHY POINT: the most interesting thing about the S4000 is what Moore Threads chose NOT to publish. The specification table lists every supported precision (FP64, FP32, TF32, FP16, BF16, INT8) and every physical parameter (48 GB, 768 GB/s, 240 GB/s I/O, PCIe 5.0 x16, MTLink, 450 W, 266 x 112 x 39 mm) and then declines to give a single TFLOPS number for any of them. Compare that to the S5000 page from the same vendor, which publishes inference tok/s under an explicit methodology - so this is not a company that cannot be specific, it is a company that chose not to be on this part. The flops array is therefore empty rather than filled with a guess, and that is the correct answer. THE MEMORY AND INTERCONNECT RATIO IS THE USABLE FINDING: 240 GB/s of card-to-card MTLink I/O against 768 GB/s of local memory is a 0.31 ratio, versus H100's 450/3350 = 0.13 and A100's 600/2039 = 0.29. At 0.31 this part has one of the healthier scale-up-to-local ratios of its generation - roughly 2.3x better than H100 - which materially changes how much tensor parallelism you can afford before the interconnect becomes the bottleneck. This is the opposite of the Ascend 910B's HCCS problem, and it is the single most useful quantitative fact in this whole slice. MTLink Bridge supports 2-, 4- and 8-card topologies and the vendor states the 240 GB/s figure is for card-to-card. Vendor also claims 91% linear scaling from 64 to 1024 cards on the KUAE cluster, and that 8x S4000 (MCCX D800 X1, dual-socket) covers training from 6B to 100B parameters. Software is the third-generation MUSA stack; MUSIFY claims automatic CUDA-to-MUSA source conversion, and the vendor lists Megatron-LM, DeepSpeed, FSDP and Colossal-AI support plus dedicated inference stacks (MUSA Serving, MT Transformer for LLMs, TensorX for image/video). Vendor is 'other' in spirit; 'asic-other' used here because 'moore-threads' is not in the schema enum - the real vendor is Moore Threads (摩尔线程), listed on the SSE STAR Market as 688795 since December 2025 and on the BIS Entity List since October 2023.\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). The vendor publishes no memory-bus width for this part, and none was back-computed from the published bandwidth. This is the correct state of the field for a part with no vendor width figure.",
-  "status": "draft",
-  "confidence": 0.6,
-  "updated": "2026-10-03",
-  "sources": [
-    "cn-mthreads-s4000"
-  ]
+ "id": "moore-threads-s4000",
+ "type": "accelerator",
+ "name": "Moore Threads MTT S4000 LLM training/inference accelerator",
+ "vendor": "asic-other",
+ "architecture": "MUSA (3rd gen) / Sudi",
+ "release_year": 2024,
+ "process_nm": null,
+ "form_factors": [
+  "pcie"
+ ],
+ "vram_gb": 48,
+ "memory_type": "gddr6",
+ "memory_bus_bit": 384,
+ "memory_bandwidth_gbps": 768,
+ "memory_bandwidth_basis": "FULLY RE-DERIVABLE ON THE VENDOR'S OWN NUMBERS, 2026-10-05. The vendor doc centre prints the whole memory row: '显存速率 16 Gbps | 显存容量 48 GB | 显存类型 GDDR6 | 显存位宽 384 bits | 显存带宽 768 GB/s'. 768 = 384/8 x 16e9 exactly, so capacity, type, bus width, pin rate and bandwidth are all first-party and mutually consistent. The previous version of this field said the type was 'unverified inference from the capacity and bandwidth combination' and left the bus width null - both were true of the PRODUCT PAGE (cn-mthreads-s4000), which publishes only 48 GB, 768 GB/s and 450 W, and neither is true of the vendor. Source w5a-mthreads-s4000-doccenter-spec-table-compute-rows.",
+ "flops": [
+  {
+   "precision": "fp32",
+   "tflops": 25,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-mthreads-s4000-doccenter-spec-table-compute-rows",
+   "basis": "vendor-spec-sheet",
+   "unit": "vector",
+   "basis_detail": "Vendor doc-centre spec table, row labelled '算力（向量）' (vector compute), verbatim 'FP32/FP16 | 25 TFLOPS'. The row is a SINGLE number printed against both FP32 and FP16, so the vector unit is symmetric between them and 25 is the value for each. 'unit' is set to 'vector' because the same document prints FP16 a second time at 100 TFLOPS under '算力（张量）' (tensor compute); without this field an FP16 row on this card is ambiguous between two hardware paths. Source w5a-mthreads-s4000-doccenter-spec-table-compute-rows. No sparsity footnote anywhere on the page, so dense:true unhalved."
+  },
+  {
+   "precision": "fp16",
+   "tflops": 25,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-mthreads-s4000-doccenter-spec-table-compute-rows",
+   "basis": "vendor-spec-sheet",
+   "unit": "vector",
+   "basis_detail": "Same vendor doc-centre row as fp32: '算力（向量） | FP32/FP16 | 25 TFLOPS'. This is the VECTOR path for FP16. A second, different FP16 figure exists on the same card - 100 TFLOPS on the tensor path - and it is recorded separately with unit 'tensor'. Both are real; the vendor prints both and conflating them would either understate the card by 4x or overstate the vector path by 4x."
+  },
+  {
+   "precision": "tf32",
+   "tflops": 50,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-mthreads-s4000-doccenter-spec-table-compute-rows",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Vendor doc-centre spec table, row labelled '算力（张量）' (tensor compute), verbatim 'TF32 | 50 TFLOPS'. Dense as printed; the page carries no sparsity footnote."
+  },
+  {
+   "precision": "fp16",
+   "tflops": 100,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-mthreads-s4000-doccenter-spec-table-compute-rows",
+   "basis": "vendor-spec-sheet",
+   "unit": "tensor",
+   "basis_detail": "Vendor doc-centre spec table, row labelled '算力（张量）', verbatim 'FP16/BF16 | 100 TFLOPS' - one number against both FP16 and BF16. This is the TENSOR path. Note the card therefore has two published FP16 rates (25 vector, 100 tensor) and the schema's 'unit' field is what keeps them apart."
+  },
+  {
+   "precision": "bf16",
+   "tflops": 100,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-mthreads-s4000-doccenter-spec-table-compute-rows",
+   "basis": "vendor-spec-sheet",
+   "unit": "tensor",
+   "basis_detail": "Same vendor doc-centre row as the tensor fp16: 'FP16/BF16 | 100 TFLOPS'. Dense as printed."
+  },
+  {
+   "precision": "int8",
+   "tflops": 200,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-mthreads-s4000-doccenter-spec-table-compute-rows",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Vendor doc-centre spec table, verbatim '算力（张量） | INT8 | 200 TOPS'. PRINTED IN TOPS, not TFLOPS; the schema field is tflops and one INT8 operation is one operation, so the value is recorded as 200. Stating the printed unit here so no reader concludes the vendor wrote '200 TFLOPS'. Dense as printed - 200 is 2x the tensor FP16 100, the ordinary INT8:BF16 ratio, so there is no sparsity inflation in this figure."
+  }
+ ],
+ "tdp_w": 450,
+ "interconnect": [
+  "pcie-gen5",
+  "moore-threads-mtlink"
+ ],
+ "unified_memory": false,
+ "consumer": false,
+ "notes": "MAJOR CORRECTION 2026-10-05: THIS RECORD HAD AN EMPTY flops ARRAY AND THAT WAS WRONG. The empty array rested on w4h-mthreads-s4000-product-page-no-figure, which recorded that the S4000 product page 'publishes NO TFLOPS, NO TOPS, no numeric compute figure of any kind'. That is TRUE of cn-mthreads-s4000 and FALSE OF MOORE THREADS. The vendor's own documentation centre (docs.mthreads.com/s4000/s4000-doc-online/product_specifications/) publishes a complete 产品规格表 including four compute rows: vector FP32/FP16 25 TFLOPS, tensor TF32 50 TFLOPS, tensor FP16/BF16 100 TFLOPS, tensor INT8 200 TOPS. The record now carries all six rows (fp32 and bf16 added because the vendor prints them inside combined labels). THE GENERAL LESSON, WHICH IS THE SAME FAILURE TWICE IN ONE REPO: a negative finding scoped to ONE URL was generalised to the vendor, and a reader who trusted it concluded this card has no published compute figure. The identical error is documented for Moore Threads S5000 in this same pass, and it is the error a negative finding invites by construction - so a negative must always name the URL it tested, never 'the vendor'. MEMORY, NOW FULLY VENDOR-SOURCED: the doc centre prints 显存速率 16 Gbps, 显存容量 48 GB, 显存类型 GDDR6, 显存位宽 384 bits, 显存带宽 768 GB/s, so memory_bus_bit 384 and memory_type gddr6 are first-party and the bandwidth re-derives exactly. Both were previously flagged provisional or null. TDP 450 W is confirmed there too ('功耗 整卡功耗 450 W'), along with 1.5 GHz core clock, chip QY102AA-800, PCIe 5.0 x16, passive cooling, 1.34 kg, 268 x 110 mm dual-slot. MTLink is specified there as 'x8 Serdes in the gold finger, Speed: up to 56Gbps PAM4' - a SerDes signalling rate, which is the interconnect and not a memory figure, so it does not feed memory_bandwidth_basis. WHAT THE VENDOR STILL DOES NOT PUBLISH: process node, absolute memory-bus-derived per-pin latency, and any measured figure. Process node stays null. THE TWO-PATH PRECISION POINT IS THE PART WORTH KEEPING: this card publishes FP16 TWICE - 25 TFLOPS on the vector path and 100 TFLOPS on the tensor path, a 4x spread - and BF16 only on the tensor path. Any comparison against a GPU's 'FP16' number is meaningless until the path is named, which is what the unit field now does. THE INTERCONNECT RATIO, restated because it is the most useful number here: 240 GB/s of card-to-card MTLink against 768 GB/s of local memory is a 0.31 ratio, versus H100's 450/3350 = 0.13 and A100's 600/2039 = 0.29. At 0.31 this part has one of the healthier scale-up-to-local ratios of its generation - roughly 2.3x better than H100 - which materially changes how much tensor parallelism you can afford before the interconnect becomes the bottleneck. Vendor context unchanged and still true: 91% linear speedup from 64 to 1024 cards on the KUAE cluster, MTLink Bridge 2/4/8-card topologies, 8x S4000 in the MCCX D800 X1 covering 6B-100B parameter training, third-generation MUSA with MUSIFY CUDA-to-MUSA conversion, Megatron-LM / DeepSpeed / FSDP / Colossal-AI plus MUSA Serving, MT Transformer and TensorX. Vendor is 'asic-other' in spirit; the real vendor is Moore Threads (摩尔线程), SSE STAR Market 688795 since December 2025, on the BIS Entity List since October 2023.",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-05",
+ "sources": [
+  "cn-mthreads-s4000",
+  "w5a-mthreads-s4000-doccenter-spec-table-compute-rows"
+ ]
 }

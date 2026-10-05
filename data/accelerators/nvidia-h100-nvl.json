@@ -1,99 +1,101 @@
 {
-  "id": "nvidia-h100-nvl",
-  "type": "accelerator",
-  "name": "NVIDIA H100 NVL",
-  "vendor": "nvidia",
-  "architecture": "hopper",
-  "release_year": 2024,
-  "process_nm": 4,
-  "form_factors": [
-    "pcie"
-  ],
-  "vram_gb": 94,
-  "memory_type": "HBM3",
-  "memory_bus_bit": 6016,
-  "memory_bandwidth_gbps": 3938,
-  "memory_bandwidth_basis": "HBM3 5,225Mbps x 6016-bit = 3,938 GB/s. The product brief Table 2 gives memory clock 2,619 MHz (= 5,238 Mbps effective data rate), 6,016-bit bus, peak 3,938 GB/s - all three are stated, so this is a derivation, not an estimate.",
-  "flops": [
-    {
-      "precision": "fp64",
-      "tflops": 30,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-h100-datasheet",
-      "notes": null,
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "H100 datasheet NVL column, 'FP64 30 TFLOPS'."
-    },
-    {
-      "precision": "fp32",
-      "tflops": 60,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-h100-datasheet",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp32 for NVIDIA H100 NVL (source of record: 'NVIDIA H100 Tensor Core GPU datasheet (H100 SXM / PCIe / NVL)', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "tf32",
-      "tflops": 417.5,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-h100-datasheet",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own tf32 for NVIDIA H100 NVL (source of record: 'NVIDIA H100 Tensor Core GPU datasheet (H100 SXM / PCIe / NVL)', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "bf16",
-      "tflops": 835.5,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-h100-datasheet",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own bf16 for NVIDIA H100 NVL (source of record: 'NVIDIA H100 Tensor Core GPU datasheet (H100 SXM / PCIe / NVL)', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "fp16",
-      "tflops": 835.5,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-h100-datasheet",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp16 for NVIDIA H100 NVL (source of record: 'NVIDIA H100 Tensor Core GPU datasheet (H100 SXM / PCIe / NVL)', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "fp8",
-      "tflops": 1670.5,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-h100-datasheet",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp8 for NVIDIA H100 NVL (source of record: 'NVIDIA H100 Tensor Core GPU datasheet (H100 SXM / PCIe / NVL)', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "int8",
-      "tflops": 1670.5,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-h100-datasheet",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own int8 for NVIDIA H100 NVL (source of record: 'NVIDIA H100 Tensor Core GPU datasheet (H100 SXM / PCIe / NVL)', kind: spec-sheet).  Recorded dense:true as printed."
-    }
-  ],
-  "tdp_w": 400,
-  "interconnect": [
-    "nvlink-4",
-    "pcie-gen5"
-  ],
-  "unified_memory": false,
-  "consumer": false,
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "nv-h100-datasheet",
-    "nv-h100-nvl-product-brief",
-    "acc2-nv-h100-datasheet-2023"
-  ],
-  "notes": "CORRECTED 2026-10-03: AUDIT 2026-10-03 (flag semantics + NVL-column basis, no value changed): NVIDIA's H100 datasheet page-2 table carries a THREE-column header (H100 SXM / H100 PCIe / H100 NVL) and footnote 1 reads 'Specifications shown for 2x H100 NVL PCIe cards paired with NVLink Bridge'. The datasheet's NVL column therefore prints PAIRED aggregates - 188GB, 7.8TB/s, TF32 1,979, BF16/FP16 3,958, FP8/INT8 7,916 - whereas NVIDIA's own H100 product page 'Product Specifications' table prints a PER-CARD H100 NVL column: 94GB, 3.9TB/s, TF32 835, BF16/FP16 1,671, FP8/INT8 3,341, footnote '\\* With sparsity'. This record's stored per-card values (94 GB / 3,938 GB/s / 417.5 TF32 / 835.5 BF16 / 1,670.5 FP8, all dense) are the correct PER-CARD figures and reconcile against the product page. Both readings are kept here because NVIDIA genuinely publishes two different NVL numbers for the same card and the difference is a card-vs-pair basis, not a contradiction. A reader who takes 188GB or 7.8TB/s as a per-accelerator figure will double the card's capacity and bandwidth. Sources acc2-nv-h100-datasheet-2023 (datasheet, 2x-pair basis) and nv-h100-product-page (per-card basis) prove both. AUDIT CORRECTION: the dense/sparse flag on the tensor rows was inverted. FP16 835.5 / FP8 1670.5 TFLOPS are DENSE; NVIDIA prints 1,671/3,341 'With sparsity'. These rows were previously flagged dense:false, which wrongly told a reader they were sparse.  The stored numbers are correct dense values. CRITICAL: datasheet prints 835 TF32 / 1,671 BF16+FP16 / 3,341 FP8+INT8 for H100 NVL, all WITH SPARITY; dense is half. Memory spec is fully primary-sourced (nv-h100-nvl-product-brief Table 2). CONFLICT on vram: the current NVIDIA product page (nv-h100-datasheet) says H100 NVL has 94GB, but the H100 NVL column there is a PER-CARD figure while the datasheet's own H100 NVL column is a 2x-paired aggregate (188GB, 7.8TB/s) - the datasheet footnote says specs for H100 NVL are 'shown for 2x H100 NVL PCIe cards paired with NVLink Bridge'. 94GB per card is the correct per-accelerator number and is what this record uses. tdp_w 400 is the >400W default from the product brief; the product page says 350-400W configurable. Notably this 94GB card has MORE bandwidth (3,938 GB/s) than the 80GB HBM3 SXM (3,350) while computing LESS. The 'other' row is FP64 30 TFLOPS (dense) - this schema's precision enum has no fp64 member."
+ "id": "nvidia-h100-nvl",
+ "type": "accelerator",
+ "name": "NVIDIA H100 NVL",
+ "vendor": "nvidia",
+ "architecture": "hopper",
+ "release_year": 2024,
+ "process_nm": 4,
+ "form_factors": [
+  "pcie"
+ ],
+ "vram_gb": 94,
+ "memory_type": "HBM3",
+ "memory_bus_bit": 6016,
+ "memory_bandwidth_gbps": 3938,
+ "memory_bandwidth_basis": "HBM3 5,225Mbps x 6016-bit = 3,938 GB/s. The product brief Table 2 gives memory clock 2,619 MHz (= 5,238 Mbps effective data rate), 6,016-bit bus, peak 3,938 GB/s - all three are stated, so this is a derivation, not an estimate.",
+ "flops": [
+  {
+   "precision": "fp64",
+   "tflops": 30,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "nv-h100-datasheet",
+   "notes": null,
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "H100 datasheet NVL column, 'FP64 30 TFLOPS'."
+  },
+  {
+   "precision": "fp32",
+   "tflops": 60,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "nv-h100-datasheet",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the vendor's own fp32 for NVIDIA H100 NVL (source of record: 'NVIDIA H100 Tensor Core GPU datasheet (H100 SXM / PCIe / NVL)', kind: spec-sheet).  Recorded dense:true as printed."
+  },
+  {
+   "precision": "tf32",
+   "tflops": 417.5,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "nv-h100-datasheet",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the vendor's own tf32 for NVIDIA H100 NVL (source of record: 'NVIDIA H100 Tensor Core GPU datasheet (H100 SXM / PCIe / NVL)', kind: spec-sheet).  Recorded dense:true as printed."
+  },
+  {
+   "precision": "bf16",
+   "tflops": 835.5,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "nv-h100-datasheet",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the vendor's own bf16 for NVIDIA H100 NVL (source of record: 'NVIDIA H100 Tensor Core GPU datasheet (H100 SXM / PCIe / NVL)', kind: spec-sheet).  Recorded dense:true as printed."
+  },
+  {
+   "precision": "fp16",
+   "tflops": 835.5,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "nv-h100-datasheet",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the vendor's own fp16 for NVIDIA H100 NVL (source of record: 'NVIDIA H100 Tensor Core GPU datasheet (H100 SXM / PCIe / NVL)', kind: spec-sheet).  Recorded dense:true as printed."
+  },
+  {
+   "precision": "fp8",
+   "tflops": 1670.5,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "nv-h100-datasheet",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the vendor's own fp8 for NVIDIA H100 NVL (source of record: 'NVIDIA H100 Tensor Core GPU datasheet (H100 SXM / PCIe / NVL)', kind: spec-sheet).  Recorded dense:true as printed."
+  },
+  {
+   "precision": "int8",
+   "tflops": 1670.5,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "nv-h100-datasheet",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the vendor's own int8 for NVIDIA H100 NVL (source of record: 'NVIDIA H100 Tensor Core GPU datasheet (H100 SXM / PCIe / NVL)', kind: spec-sheet).  Recorded dense:true as printed."
+  }
+ ],
+ "tdp_w": 400,
+ "interconnect": [
+  "nvlink-4",
+  "pcie-gen5"
+ ],
+ "unified_memory": false,
+ "consumer": false,
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "nv-h100-datasheet",
+  "nv-h100-nvl-product-brief",
+  "acc2-nv-h100-datasheet-2023",
+  "w5a-part2-h100-datasheet-nvl-column-is-a-2x-pair",
+  "w5a-part2-full-sweep-method-and-cleared-artefacts"
+ ],
+ "notes": "CORRECTED 2026-10-03: AUDIT 2026-10-03 (flag semantics + NVL-column basis, no value changed): NVIDIA's H100 datasheet page-2 table carries a THREE-column header (H100 SXM / H100 PCIe / H100 NVL) and footnote 1 reads 'Specifications shown for 2x H100 NVL PCIe cards paired with NVLink Bridge'. The datasheet's NVL column therefore prints PAIRED aggregates - 188GB, 7.8TB/s, TF32 1,979, BF16/FP16 3,958, FP8/INT8 7,916 - whereas NVIDIA's own H100 product page 'Product Specifications' table prints a PER-CARD H100 NVL column: 94GB, 3.9TB/s, TF32 835, BF16/FP16 1,671, FP8/INT8 3,341, footnote '\\* With sparsity'. This record's stored per-card values (94 GB / 3,938 GB/s / 417.5 TF32 / 835.5 BF16 / 1,670.5 FP8, all dense) are the correct PER-CARD figures and reconcile against the product page. Both readings are kept here because NVIDIA genuinely publishes two different NVL numbers for the same card and the difference is a card-vs-pair basis, not a contradiction. A reader who takes 188GB or 7.8TB/s as a per-accelerator figure will double the card's capacity and bandwidth. Sources acc2-nv-h100-datasheet-2023 (datasheet, 2x-pair basis) and nv-h100-product-page (per-card basis) prove both. AUDIT CORRECTION: the dense/sparse flag on the tensor rows was inverted. FP16 835.5 / FP8 1670.5 TFLOPS are DENSE; NVIDIA prints 1,671/3,341 'With sparsity'. These rows were previously flagged dense:false, which wrongly told a reader they were sparse.  The stored numbers are correct dense values. CRITICAL: datasheet prints 835 TF32 / 1,671 BF16+FP16 / 3,341 FP8+INT8 for H100 NVL, all WITH SPARITY; dense is half. Memory spec is fully primary-sourced (nv-h100-nvl-product-brief Table 2). CONFLICT on vram: the current NVIDIA product page (nv-h100-datasheet) says H100 NVL has 94GB, but the H100 NVL column there is a PER-CARD figure while the datasheet's own H100 NVL column is a 2x-paired aggregate (188GB, 7.8TB/s) - the datasheet footnote says specs for H100 NVL are 'shown for 2x H100 NVL PCIe cards paired with NVLink Bridge'. 94GB per card is the correct per-accelerator number and is what this record uses. tdp_w 400 is the >400W default from the product brief; the product page says 350-400W configurable. Notably this 94GB card has MORE bandwidth (3,938 GB/s) than the 80GB HBM3 SXM (3,350) while computing LESS. The 'other' row is FP64 30 TFLOPS (dense) - this schema's precision enum has no fp64 member.\n\nCITATION CLARIFIED 2026-10-05, VALUES UNCHANGED AND CONFIRMED CORRECT. Every flops row here cites nv-h100-datasheet, and a Part 2 audit confirms that NONE of the stored strings occurs anywhere in that PDF. The values are still right - they are simply not printed there, and this note says why so a future pass does not 'correct' them back to the datasheet. THE REASON IS A SECOND FOOTNOTE, AND IT STACKS WITH THE SPARSITY MARKER. Re-reading the datasheet as a layout-preserved PDF (curl + pdftotext -layout, because plain extraction collapses the table cells and hides the column structure) gives the NVL column the header 'H100 NVL(1)' and footnote 1 reading verbatim: 'Preliminary specifications. May be subject to change. Specifications shown for 2x H100 NVL PCIe cards paired with NVLink Bridge'. The TDP row in that same column says '2x 350-400W'. So the ENTIRE NVL column is a TWO-CARD AGGREGATE: it prints 188GB, 7.8TB/s, TF32 1,979, BF16/FP16 3,958, FP8/INT8 7,916 (each carrying the sparsity marker (2)), and FP64 68 / FP64-TC 134 / FP32 134. THIS RECORD'S VALUES ARE THE PER-CARD HALVES: 94GB, 3,938 GB/s, TF32 417.5, BF16/FP16 835.5, FP8/INT8 1670.5 - which is NVIDIA's per-card H100 NVL column as printed on the H100/H200 product pages, where TF32 835 and BF16/FP16 1671 and FP8/INT8 3341 appear under footnote '* With sparsity' and halve to exactly the stored figures. THE ARITHMETIC CHAIN IS THREE STEPS AND THIS IS WHERE IT GOES WRONG IF YOU TAKE TWO: pair -> card -> halve-for-sparsity. The datasheet's paired BF16 of 3,958 becomes 989.5 if you halve once and 494.5 if you halve twice; the correct per-card DENSE figure is 835.5, and 989.5 is the SXM card's dense BF16 - a plausible-looking wrong answer that belongs to a different product. The record's existing note already documented this card-vs-pair reconciliation, which is why the values were never in doubt; this entry attaches the proof, quoting the actual NVL column and footnote. PROCUREMENT CAVEAT WORTH KEEPING: NVIDIA genuinely publishes two different NVL numbers for the same card, one per-card (94GB / 3.9TB/s) and one per-pair (188GB / 7.8TB/s), and they differ by exactly 2x. Anyone reading 188GB or 7.8TB/s as a per-accelerator figure will double this card's capacity and bandwidth. See w5a-part2-h100-datasheet-nvl-column-is-a-2x-pair."
 }

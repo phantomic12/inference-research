@@ -1,86 +1,89 @@
 {
-  "id": "nvidia-l40s",
-  "type": "accelerator",
-  "name": "NVIDIA L40S",
-  "vendor": "nvidia",
-  "architecture": "ada",
-  "release_year": 2023,
-  "process_nm": 4,
-  "form_factors": [
-    "pcie"
-  ],
-  "vram_gb": 48,
-  "memory_type": "GDDR6",
-  "memory_bus_bit": 384,
-  "memory_bandwidth_gbps": 864,
-  "memory_bandwidth_basis": "GDDR6 18Gbps x 384-bit = 864 GB/s. Bus width is the standard AD102 384-bit; NVIDIA's L40 datasheet prints only the 864 GB/s aggregate.",
-  "flops": [
-    {
-      "precision": "fp32",
-      "tflops": 91.6,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-l40-datasheet",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp32 for NVIDIA L40S (source of record: 'NVIDIA L40 GPU datasheet', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "tf32",
-      "tflops": 183,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-l40-datasheet",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own tf32 for NVIDIA L40S (source of record: 'NVIDIA L40 GPU datasheet', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "bf16",
-      "tflops": 362,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-l40-datasheet",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own bf16 for NVIDIA L40S (source of record: 'NVIDIA L40 GPU datasheet', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "fp16",
-      "tflops": 362,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-l40-datasheet",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp16 for NVIDIA L40S (source of record: 'NVIDIA L40 GPU datasheet', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "fp8",
-      "tflops": 733,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-l40-datasheet",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp8 for NVIDIA L40S (source of record: 'NVIDIA L40 GPU datasheet', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "int8",
-      "tflops": 733,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "nv-l40-datasheet",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own int8 for NVIDIA L40S (source of record: 'NVIDIA L40 GPU datasheet', kind: spec-sheet).  Recorded dense:true as printed."
-    }
-  ],
-  "tdp_w": 350,
-  "interconnect": [
-    "pcie-gen4"
-  ],
-  "unified_memory": false,
-  "consumer": false,
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "nv-l40-datasheet"
-  ],
-  "notes": "AUDIT CORRECTION: the dense/sparse flag on the tensor rows was inverted. FP16 362 / FP8 733 TFLOPS are DENSE. NVIDIA L40S page prints FP16 '362.05 | 733*' and FP8 '733 | 1,466*' where *=With Sparsity; the dense value is the LEFT column. These rows were previously flagged dense:false, which wrongly told a reader they were sparse.  The stored numbers are correct dense values. CRITICAL: NVIDIA prints dense|sparse pairs explicitly on the L40 sheet, e.g. FP16 '362.05 | 733*' and FP8 '733 | 1,466*'. The DENSE values are recorded here (362 / 733) and marked dense:true; the sparse values are 733 / 1,466. This is the clearest example of the sparsity trap in the whole lineup - the marketing headline for L40S is 733 'FP8 TFLOPS' and that is already the DENSE number, while other vendors' 733 figures are sparse. FP32 91.6 and RT Core 212 are dense. NOTE the source is the L40 datasheet rather than an L40S-specific one: it marks its numbers 'preliminary, subject to change'. L40S and L40 both print 48GB / 864 GB/s but differ in power (350W vs 300W) and in CUDA count; treat the L40 sheet as L40S-family, not L40-exact. No NVLink, no MIG - GDDR6 cannot be partitioned. No 'other' row: Ada has no FP64 hardware path."
+ "id": "nvidia-l40s",
+ "type": "accelerator",
+ "name": "NVIDIA L40S",
+ "vendor": "nvidia",
+ "architecture": "ada",
+ "release_year": 2023,
+ "process_nm": 4,
+ "form_factors": [
+  "pcie"
+ ],
+ "vram_gb": 48,
+ "memory_type": "GDDR6",
+ "memory_bus_bit": 384,
+ "memory_bandwidth_gbps": 864,
+ "memory_bandwidth_basis": "GDDR6 18Gbps x 384-bit = 864 GB/s. Bus width is the standard AD102 384-bit; NVIDIA's L40 datasheet prints only the 864 GB/s aggregate.",
+ "flops": [
+  {
+   "precision": "fp32",
+   "tflops": 91.6,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "CITATION CORRECTED 2026-10-05: this row was attributed to nv-l40-datasheet, which is NVIDIA's L40 (Ada) datasheet and contains NONE of this part's figures - it prints FP32 90.5, FP16 362, FP8 362 and 300W, and a grep for both 91.6 and 733 over its layout-preserved text returns zero matches. The correct document is NVIDIA's L40S product page, verified twice (summary table and full 'NVIDIA L40S GPU Specifications' table on the same page). Vendor row, verbatim: 'FP32 | 91.6 teraFLOPS', footnote '*With Sparsity'. The printed pair is 'dense | sparse' and the STORED VALUE IS THE DENSE MEMBER, so dense:true is correct: FP32 91.6 is printed with no sparse variant at all. Source w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures."
+  },
+  {
+   "precision": "tf32",
+   "tflops": 183,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "CITATION CORRECTED 2026-10-05: this row was attributed to nv-l40-datasheet, which is NVIDIA's L40 (Ada) datasheet and contains NONE of this part's figures - it prints FP32 90.5, FP16 362, FP8 362 and 300W, and a grep for both 91.6 and 733 over its layout-preserved text returns zero matches. The correct document is NVIDIA's L40S product page, verified twice (summary table and full 'NVIDIA L40S GPU Specifications' table on the same page). Vendor row, verbatim: 'TF32 Tensor Core TFLOPS | 183 I 366*', footnote '*With Sparsity'. The printed pair is 'dense | sparse' and the STORED VALUE IS THE DENSE MEMBER, so dense:true is correct: 183 dense, 366 sparse. Source w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures."
+  },
+  {
+   "precision": "bf16",
+   "tflops": 362,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "CITATION CORRECTED 2026-10-05: this row was attributed to nv-l40-datasheet, which is NVIDIA's L40 (Ada) datasheet and contains NONE of this part's figures - it prints FP32 90.5, FP16 362, FP8 362 and 300W, and a grep for both 91.6 and 733 over its layout-preserved text returns zero matches. The correct document is NVIDIA's L40S product page, verified twice (summary table and full 'NVIDIA L40S GPU Specifications' table on the same page). Vendor row, verbatim: 'BFLOAT16 Tensor Core TFLOPS | 362.05 I 733*', footnote '*With Sparsity'. The printed pair is 'dense | sparse' and the STORED VALUE IS THE DENSE MEMBER, so dense:true is correct: 362.05 dense, 733 sparse - note the stored 362 is the L40 GPU's number; this document prints 362.05. Left at 362 rather than restated because the stored figure is the one in use across the repo and the 0.05 delta is not material; the exact printed value is recorded here and in the source record. Source w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures."
+  },
+  {
+   "precision": "fp16",
+   "tflops": 362,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "CITATION CORRECTED 2026-10-05: this row was attributed to nv-l40-datasheet, which is NVIDIA's L40 (Ada) datasheet and contains NONE of this part's figures - it prints FP32 90.5, FP16 362, FP8 362 and 300W, and a grep for both 91.6 and 733 over its layout-preserved text returns zero matches. The correct document is NVIDIA's L40S product page, verified twice (summary table and full 'NVIDIA L40S GPU Specifications' table on the same page). Vendor row, verbatim: 'FP16 Tensor Core | 362.05 I 733*', footnote '*With Sparsity'. The printed pair is 'dense | sparse' and the STORED VALUE IS THE DENSE MEMBER, so dense:true is correct: 362.05 dense, 733 sparse - same 362-vs-362.05 caveat as the bf16 row. IMPORTANT TRAP ON THIS PAGE: a second summary table prints 'FP16 | 733 teraFLOPS*', which is the SPARSE member of 366.5, NOT 733 dense. Transcribing from that table instead of the full one gives a 2x error. Source w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures."
+  },
+  {
+   "precision": "fp8",
+   "tflops": 733,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "CITATION CORRECTED 2026-10-05: this row was attributed to nv-l40-datasheet, which is NVIDIA's L40 (Ada) datasheet and contains NONE of this part's figures - it prints FP32 90.5, FP16 362, FP8 362 and 300W, and a grep for both 91.6 and 733 over its layout-preserved text returns zero matches. The correct document is NVIDIA's L40S product page, verified twice (summary table and full 'NVIDIA L40S GPU Specifications' table on the same page). Vendor row, verbatim: 'FP8 Tensor Core | 733 I 1466*', footnote '*With Sparsity'. The printed pair is 'dense | sparse' and the STORED VALUE IS THE DENSE MEMBER, so dense:true is correct: 733 dense, 1466 sparse. Note 733 is simultaneously the dense FP8 value and coincidentally 2x the dense BF16/FP16 value - so a naive match of '733' against this page cannot distinguish the two rows by number alone. Source w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures."
+  },
+  {
+   "precision": "int8",
+   "tflops": 733,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "CITATION CORRECTED 2026-10-05: this row was attributed to nv-l40-datasheet, which is NVIDIA's L40 (Ada) datasheet and contains NONE of this part's figures - it prints FP32 90.5, FP16 362, FP8 362 and 300W, and a grep for both 91.6 and 733 over its layout-preserved text returns zero matches. The correct document is NVIDIA's L40S product page, verified twice (summary table and full 'NVIDIA L40S GPU Specifications' table on the same page). Vendor row, verbatim: 'Peak INT8 Tensor TOPS 733 I 1466*', footnote '*With Sparsity'. The printed pair is 'dense | sparse' and the STORED VALUE IS THE DENSE MEMBER, so dense:true is correct: 733 dense, 1466 sparse, same row as fp8 (the page prints INT8 and INT4 on one line, both 733 I 1466*). Source w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures."
+  }
+ ],
+ "tdp_w": 350,
+ "interconnect": [
+  "pcie-gen4"
+ ],
+ "unified_memory": false,
+ "consumer": false,
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "nv-l40-datasheet",
+  "w5a-part2-nvidia-l40s-product-page-holds-the-l40s-figures",
+  "w5a-part2-l40-ada-datasheet-vs-l40s-two-different-parts",
+  "w5a-part2-full-sweep-method-and-cleared-artefacts"
+ ],
+ "notes": "CITATION CORRECTION 2026-10-05 (no value changed, dense flags were already correct): all six compute rows were attributed to nv-l40-datasheet, which is the datasheet for the L40 - a DIFFERENT GPU that shares this one's architecture and even its core counts (18,176 CUDA cores, 142 RT cores, 568 Tensor Cores, 48GB GDDR6, 864 GB/s) but not its compute table or its power. The figures are right and now cite the document that actually prints them, NVIDIA's L40S product page. The delta that made the error easy to commit: L40 prints FP32 90.5 / TF32 90.5 / BF16 181.05 / FP16 362 / FP8 362 / INT8 724 at 300W, while the L40S prints FP32 91.6 / TF32 183 / BF16 362.05 / FP16 362.05 / FP8 733 / INT8 733 at 350W. A reader who matched on the page furniture rather than the numbers would have carried 91.6/183/362/733 across and found every string absent from the L40 document. TWO SUBTLE POINTS THE L40S PAGE ITSELF SETS, both worth knowing before transcribing from it again: (1) it prints TWO tables and they disagree by construction - the summary table gives only the SPARSE member of each pair ('TF32 366*', 'FP16 733*', 'FP8 1466*') while the full GPU Specifications table gives 'dense | sparse'. Taking the summary table's FP16 733 as dense doubles the card. (2) the stored bf16 and fp16 of 362 are this vendor's L40 number, not the L40S's 362.05. Left as-is because the repo uses 362 throughout and 0.05 TFLOPS is immaterial to every comparison here, but the exact printed value is recorded in both flops rows and in the source record so the discrepancy is visible rather than lost. THE L40 DATASHEET IS RETAINED in sources deliberately, as the evidence for the mismatch rather than as the citation for the numbers - a reader who wants to see why the original citation failed can read it and find nothing."
 }

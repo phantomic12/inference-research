@@ -1,32 +1,53 @@
 {
-  "id": "huawei-atlas-300i-duo",
-  "type": "accelerator",
-  "name": "Huawei Atlas 300I Duo inference card (dual 310-series, 48/96 GB)",
-  "vendor": "asic-other",
-  "architecture": "da-vinci (310-series, dual)",
-  "release_year": 2022,
-  "process_nm": 12,
-  "form_factors": [
-    "pcie"
-  ],
-  "vram_gb": 96,
-  "memory_type": "lpddr4x",
-  "memory_bus_bit": null,
-  "memory_bandwidth_gbps": 408,
-  "memory_bandwidth_basis": "Primary source states the CARD-TOTAL figure: LPDDR4X, 48 GB or 96 GB, 'Total bandwidth (entire card): 408 GB/s', ECC. Per-processor bandwidth is not stated but follows as 408/2 = 204 GB/s, consistent with the single-processor cards' 204.8 GB/s. Source cn-huawei-atlas-300i-duo-spec. Note the schema records a single number per record, so the 48 GB bin is under-reported by this field and the per-card basis is stated here explicitly.",
-  "flops": [],
-  "tdp_w": 150,
-  "interconnect": [
-    "pcie-gen4"
-  ],
-  "unified_memory": false,
-  "consumer": false,
-  "notes": "THE HIERARCHY POINT: this card is the one that shows what Huawei actually does when memory capacity and memory bandwidth come into conflict, and the answer is instructive for anyone modelling memory-bound inference: going from one 310-series processor to two on the same board exactly doubles capacity to 96 GB while leaving bandwidth essentially flat per die at ~204 GB/s. Arithmetic intensity therefore HALVES relative to the 24 GB single card. The 96 GB bin is the only way to hold a 70B-class model in FP16 on an Ascend inference card without sharding, and the price of that capacity is a worse roofline position, not a better one - the band gets wider and no more data arrives. Compare directly to a single HBM GPU part: 96 GB at 408 GB/s is roughly 4.7x less bandwidth per byte than a same-generation 80 GB HBM card. Form factor is FHFL single-slot 10.5 inches, 150 W, 910 g, PCIe Gen4 x16, same PCI ID base (0x19E5:0xD500) with a different subsystem device ID (0x0110 vs 0x0100 on the Pro), which is a useful confirmation that these are the same NPU in a different packaging. Codec: 256-channel 1080p30 decode (or 32x 4K60), 48-channel 1080p30 encode, 4K JPEG at 1024 FPS decode. Also splits into up to 7 virtual NPUs per processor, so 14 virtual instances on one card. A community-comparative Llama 3 measurement (~150 tok/s at 96 GB versus ~220 tok/s for an RTX 4090) is the only public throughput datapoint I could find for this silicon; it is a hobbyist report, not a benchmark, and is not recorded as a benchmark record.\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). %s NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either inference is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the note above names the specific document that was read and found not to carry it, so a future pass does not have to re-establish that from scratch.\n\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). Huawei's own Atlas/Ascend spec pages and the CloudMatrix 384 whitepaper publish capacity, bandwidth and topology but no memory-bus width in bits and no per-pin rate. Not back-computed: the bandwidth figures on this family are already partly derived from secondary sources, and stacking a second inference on a derived aggregate would compound two guesses. NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the text above names the specific document read and found not to carry it, so a future pass does not have to re-establish that from scratch.",
-  "status": "verified",
-  "confidence": 0.7,
-  "updated": "2026-10-03",
-  "sources": [
-    "cn-huawei-atlas-300i-duo-spec",
-    "cn-huawei-atlas-300i-pro-spec"
-  ]
+ "id": "huawei-atlas-300i-duo",
+ "type": "accelerator",
+ "name": "Huawei Atlas 300I Duo inference card (dual 310-series, 48/96 GB)",
+ "vendor": "asic-other",
+ "architecture": "da-vinci (310-series, dual)",
+ "release_year": 2022,
+ "process_nm": 12,
+ "form_factors": [
+  "pcie"
+ ],
+ "vram_gb": 96,
+ "memory_type": "lpddr4x",
+ "memory_bus_bit": null,
+ "memory_bandwidth_gbps": 408,
+ "memory_bandwidth_basis": "Vendor-published, and the CARD basis is stated on the page itself: 'LPDDR4X 96GB或48GB，总带宽408GB/s，支持ECC' - LPDDR4X, 96 GB or 48 GB, TOTAL bandwidth (entire card) 408 GB/s, ECC. Two bins, one bandwidth figure: the 408 GB/s belongs to the card and the 48 GB bin is an alternative configuration, so a record must pick one capacity bin and say which rather than quoting both. Per-processor bandwidth is not stated but follows as 408/2 = 204 GB/s, consistent with the single-processor 300I Pro's published 204.8 GB/s. Source w5a-huawei-atlas-300i-duo-e-huawei-spec-table.",
+ "flops": [
+  {
+   "precision": "int8",
+   "tflops": 280,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-huawei-atlas-300i-duo-e-huawei-spec-table",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Huawei's own product page, 技术规格 table, verbatim '| AI算力 | 280 TOPS INT8  <br>140 TFLOPS FP16 |', repeated in 特性 as '单卡最大提供280 TOPS INT8算力'. PRINTED IN TOPS; recorded as 280 in a TFLOPS field since one INT8 op is one operation. CARD-TOTAL, not per processor: this is a dual-310 card and '单卡' means per card, so per processor it is 140 TOPS. The vendor's own 1.86 TOPS/W ratio corroborates the reading against the published 150 W (280/150 = 1.87). No sparsity footnote and no row titled for structured sparsity, so dense:true unhalved. Source w5a-huawei-atlas-300i-duo-e-huawei-spec-table."
+  },
+  {
+   "precision": "fp16",
+   "tflops": 140,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w5a-huawei-atlas-300i-duo-e-huawei-spec-table",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Same Huawei 技术规格 row: '280 TOPS INT8  <br>140 TFLOPS FP16'. Card-total like the INT8 figure, and exactly half of it, which is the ordinary FP16:INT8 ratio and confirms this is a dense pair rather than a sparse/dense pair. Dense:true, no footnote to halve."
+  }
+ ],
+ "tdp_w": 150,
+ "interconnect": [
+  "pcie-gen4"
+ ],
+ "unified_memory": false,
+ "consumer": false,
+ "notes": "flops WAS EMPTY ON THIS RECORD AND THAT WAS OVER-CORRECTED. It rested on cn-huawei-atlas-300i-duo-spec (support.huawei.com), whose own note correctly says 'Huawei does NOT publish an INT8/FP16 TOPS figure for the 310 series anywhere in this document - only core counts.' That is true of that document and was generalised to the vendor. Huawei's own enterprise product page publishes a complete 技术规格 table with 'AI算力 | 280 TOPS INT8  <br>140 TFLOPS FP16' for this exact card. This is the SECOND time in one pass that a negative finding scoped to a single URL was generalised to a vendor who does publish the figure - the first was Moore Threads S4000 - so the pattern is now documented twice and is worth naming as a rule: a negative must always name the URL it tested, never the vendor. THE CARD BASIS MATTERS AND IS NOT OPTIONAL: this is a DUAL-310 card and 280 TOPS INT8 / 140 TFLOPS FP16 are whole-card figures ('单卡最大', per card), with the 408 GB/s bandwidth likewise card-total ('总带宽'). At two processors that implies 140 TOPS INT8 per processor, which matches the 408/2 = 204 bandwidth split the sibling 300I Pro publishes as 204.8. Anyone reading 280 TOPS as a per-processor figure will halve the card twice. SCALE CALIBRATION, added this pass: Huawei's Atlas 300I A2 - a different, newer SKU with no record in data/accelerators - publishes exactly 2x these figures at '560 TOPS INT8，280 TFLOPS FP16', which is the first point in the 310 line where Huawei publishes a per-card INT8 figure at all. So the statement has to be per-SKU, not per-generation: the 300I Duo and the 300I A2 publish compute, while the 300I Pro (24GB) and 300V Pro (48GB) publish NO compute figure on any Huawei page located on this pass. See w5a-huawei-atlas-300i-a2-e-huawei-spec-table. OTHER VENDOR SPECS, verbatim: 功耗 150W; 形态 单槽位全高全长（10.5英寸）; 结构尺寸 266.7mm x 111.15mm x 18.46mm; PCIe x16 Lances, 兼容 x8/x4/x2, PCIe Gen4.0 兼容 3.0/2.0/1.0; 工作环境温度 0℃～55℃. Features: '支持 16 core * 1.9 GHz CPU计算能力', '提供 1.86 TOPS/W 超高能效比，业界领先', '支持256路高清视频实时分析'. Codec detail: H.264/H.265 256x1080P30 decode and 48x1080P30 encode, 'JPEG解码能力4K 1024FPS，编码能力4K 512FPS', max resolution 8192*8192. SPARSITY: no footnote, no '2:4', no sparsity wording. Huawei's convention here matches Intel's on these parts - the figure printed is the figure.",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-05",
+ "sources": [
+  "cn-huawei-atlas-300i-duo-spec",
+  "cn-huawei-atlas-300i-pro-spec",
+  "w5a-huawei-atlas-300i-duo-e-huawei-spec-table",
+  "w5a-huawei-atlas-300i-a2-e-huawei-spec-table"
+ ]
 }
