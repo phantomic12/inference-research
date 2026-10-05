@@ -1,32 +1,79 @@
 {
-  "id": "attn-fa3-vs-fa4-distinction",
-  "type": "flop",
-  "name": "FlashAttention-3 vs FA-4: register pressure vs shared-memory bandwidth bottleneck distinction",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "FA-3 and FA-4 attack different bottlenecks. FA-3 (Hopper): the bottleneck is SFU/matmul overlap. On H100 SXM5, tensor cores do 989 TFLOPS FP16 but only 3.9 TFLOPS of special functions (16 ops/SM/clock * 132 SM * 1.83 GHz). At head_dim 128, there are ~512x more matmul than exponential FLOPs, so without overlap, exp can take 50% of the time of the matmuls. In FP8 it gets worse because matmul doubles while exp does not. FA-3 reduces register pressure to address this: warp specialization (producer warps issue TMA, consumer warps issue WGMMA), ping-pong two warpgroups with bar.sync, 2-stage pipelining. FA-3 achieves 740 TFLOPs/s FP16 (75% of peak), 1.2 PFLOPs/s FP8. FA-4 (Blackwell): the bottleneck moves to shared-memory bandwidth in the backward pass. Per B200 SM at M=N=D=128: tensor cores 8192 ops/cycle, exponential unit 16 ops/cycle, shared memory 128 bytes/cycle. Forward per tile: 1024 tensor-core cycles vs 1024 exp cycles vs 768 SMEM cycles - forward is bound by compute AND exponential simultaneously. Backward (5 chained MMAs): 2560 tensor-core, 1024 exp, 3328 SMEM - backward is bound by SHARED-MEMORY BANDWIDTH, not FLOPs. FA-4 addresses this with: tcgen05 UMMA with TMEM accumulators (removes register pressure), 2-CTA MMA (halves operand-B SMEM traffic), emulated exp (Cody-Waite + Horner polynomial on FMA units), conditional online-softmax rescaling. FA-4 achieves 1605 TFLOPs/s BF16 on B200 (71% of 2250 TFLOPS peak).",
-  "bound_by": "both",
-  "scales_with": [
-    "head_dim (exp cost per matmul flop scales inversely with head_dim)",
-    "precision (fp8 doubles tensor-core flops but leaves SFU exp unchanged)",
-    "seqlen",
-    "batch_size"
-  ],
-  "affected_by_hardware": [
+ "id": "attn-fa3-vs-fa4-distinction",
+ "type": "flop",
+ "name": "FlashAttention-3 vs FA-4: register pressure vs shared-memory bandwidth bottleneck distinction",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "FA-3 and FA-4 attack different bottlenecks. FA-3 (Hopper): the bottleneck is SFU/matmul overlap. On H100 SXM5, tensor cores do 989 TFLOPS FP16 but only 3.9 TFLOPS of special functions (16 ops/SM/clock * 132 SM * 1.83 GHz). At head_dim 128, there are ~512x more matmul than exponential FLOPs, so without overlap, exp can take 50% of the time of the matmuls. In FP8 it gets worse because matmul doubles while exp does not. FA-3 reduces register pressure to address this: warp specialization (producer warps issue TMA, consumer warps issue WGMMA), ping-pong two warpgroups with bar.sync, 2-stage pipelining. FA-3 achieves 740 TFLOPs/s FP16 (75% of peak), 1.2 PFLOPs/s FP8. FA-4 (Blackwell): the bottleneck moves to shared-memory bandwidth in the backward pass. Per B200 SM at M=N=D=128: tensor cores 8192 ops/cycle, exponential unit 16 ops/cycle, shared memory 128 bytes/cycle. Forward per tile: 1024 tensor-core cycles vs 1024 exp cycles vs 768 SMEM cycles - forward is bound by compute AND exponential simultaneously. Backward (5 chained MMAs): 2560 tensor-core, 1024 exp, 3328 SMEM - backward is bound by SHARED-MEMORY BANDWIDTH, not FLOPs. FA-4 addresses this with: tcgen05 UMMA with TMEM accumulators (removes register pressure), 2-CTA MMA (halves operand-B SMEM traffic), emulated exp (Cody-Waite + Horner polynomial on FMA units), conditional online-softmax rescaling. FA-4 achieves 1605 TFLOPs/s BF16 on B200 (71% of 2250 TFLOPS peak).",
+ "bound_by": "both",
+ "scales_with": [
+  "head_dim (exp cost per matmul flop scales inversely with head_dim)",
+  "precision (fp8 doubles tensor-core flops but leaves SFU exp unchanged)",
+  "seqlen",
+  "batch_size"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "nvidia-b200",
+  "nvidia-b300",
+  "nvidia-gb200-nvl72"
+ ],
+ "workarounds": [
+  "FA-3: warp specialization, ping-pong warpgroups, 2-stage pipelining, FP8 with incoherent processing",
+  "FA-4: tcgen05 UMMA with TMEM, 2-CTA MMA, emulated exp (Cody-Waite + Horner), conditional rescaling, LPT scheduling"
+ ],
+ "notes": "The FA-3 vs FA-4 distinction is the key insight for attention kernel selection. FA-3's problem: on Hopper, SFU throughput (3.9 TFLOPS) is 255x lower than matmul (989 TFLOPS), so exp() dominates at head_dim 128. FA-3's solution: overlap exp with matmul via warp specialization and reduce register pressure. FA-4's problem: on Blackwell, tensor cores go to 2250 TFLOPS but SMEM bandwidth stays at 128 bytes/cycle, so backward is SMEM-bound. FA-4's solution: move accumulators to TMEM, use 2-CTA MMA to halve operand-B SMEM traffic, emulate exp on FMA units. The generational scaling asymmetry: BF16 tensor cores go from 1 to 2.25 PFLOPs H100->B200 while SFU count and SMEM bandwidth are unchanged. This is why FA-4 emulates part of the exponential in software. Measured: FA-3 740 TFLOPs/s FP16 (75%), FA-4 1605 TFLOPs/s BF16 (71%). FA-4 is 1.3x vs cuDNN 9.13, 2.7x vs Triton. Sources: arXiv 2407.08608, 2501.09294.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "attn-flashattention-3-paper",
+  "attn-flashattention-4-paper"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "FA-4 (Blackwell): the bottleneck moves to shared-memory bandwidth in the backward pass.",
+   "basis": "recorded",
+   "values_for": [
     "nvidia-h100-sxm",
     "nvidia-b200",
     "nvidia-b300",
     "nvidia-gb200-nvl72"
-  ],
-  "workarounds": [
-    "FA-3: warp specialization, ping-pong warpgroups, 2-stage pipelining, FP8 with incoherent processing",
-    "FA-4: tcgen05 UMMA with TMEM, 2-CTA MMA, emulated exp (Cody-Waite + Horner), conditional rescaling, LPT scheduling"
-  ],
-  "notes": "The FA-3 vs FA-4 distinction is the key insight for attention kernel selection. FA-3's problem: on Hopper, SFU throughput (3.9 TFLOPS) is 255x lower than matmul (989 TFLOPS), so exp() dominates at head_dim 128. FA-3's solution: overlap exp with matmul via warp specialization and reduce register pressure. FA-4's problem: on Blackwell, tensor cores go to 2250 TFLOPS but SMEM bandwidth stays at 128 bytes/cycle, so backward is SMEM-bound. FA-4's solution: move accumulators to TMEM, use 2-CTA MMA to halve operand-B SMEM traffic, emulate exp on FMA units. The generational scaling asymmetry: BF16 tensor cores go from 1 to 2.25 PFLOPs H100->B200 while SFU count and SMEM bandwidth are unchanged. This is why FA-4 emulates part of the exponential in software. Measured: FA-3 740 TFLOPs/s FP16 (75%), FA-4 1605 TFLOPs/s BF16 (71%). FA-4 is 1.3x vs cuDNN 9.13, 2.7x vs Triton. Sources: arXiv 2407.08608, 2501.09294.",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-04",
-  "sources": [
-    "attn-flashattention-3-paper",
-    "attn-flashattention-4-paper"
-  ]
+   ]
+  },
+  {
+   "parameter": "tensor_core_count",
+   "effect": "On H100 SXM5, tensor cores do 989 TFLOPS FP16 but only 3.9 TFLOPS of special functions (16 ops/SM/clock * 132 SM * 1.83 GHz).",
+   "basis": "recorded",
+   "magnitude": "989 TFLOPS; 3.9 TFLOPS",
+   "values_for": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+   ]
+  },
+  {
+   "parameter": "shared_memory_capacity",
+   "effect": "FA-4 (Blackwell): the bottleneck moves to shared-memory bandwidth in the backward pass.",
+   "basis": "recorded",
+   "values_for": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+   ]
+  },
+  {
+   "parameter": "tmem_capacity",
+   "effect": "FA-4 addresses this with: tcgen05 UMMA with TMEM accumulators (removes register pressure), 2-CTA MMA (halves operand-B SMEM traffic), emulated exp (Cody-Waite + Horner polynomial on FMA units), conditional online-softmax rescaling.",
+   "basis": "unverified",
+   "values_for": [
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+   ]
+  }
+ ]
 }

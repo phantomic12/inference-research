@@ -1,37 +1,51 @@
 {
-  "id": "tma-cp-async-bulk-tensor",
-  "type": "flop",
-  "name": "TMA (cp.async.bulk.tensor): hardware address generation and predication for global->shared copies",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "TMA reduces register pressure and address-computation work in the copy path, which is what allows larger tiles and therefore more FLOPs per byte moved from HBM. The mechanism from the PTX ISA: cp.async.bulk.tensor is a non-blocking instruction that initiates an asynchronous copy of tensor data from .src to .dst, with completion tracked either by an mbarrier (mbarrier::complete_tx::bytes) or by a bulk-group. It is the instruction that makes a tensor map (a host- or device-built descriptor of strides and extents) the unit of transfer, so the hardware does index math and bounds predication. That register saving is the quantitative claim: freed registers mean larger tiles, and larger tiles amortize each HBM byte over more MACs. Three hard scoping facts from the ISA: (1) the .shared::cluster.global direction 'is optimized for' sm_90a/sm_100a/sm_100f/sm_103a/sm_103f/sm_107a/sm_107f/sm_110a/sm_110f and 'may have substantially reduced performance on other targets' - so a cluster-scoped TMA copy on a non-Hopper-plus part is a trap; (2) sub-byte types are NOT supported for .shared::cluster.global on sm_120a, which constrains a cluster-mapped FP4 pipeline on consumer Blackwell; (3) tcgen05.commit gained a .multicast::cluster::32b qualifier and mbarrier.expect_tx gained the same, i.e. multicast completion is a 5th-gen feature. cp.async.bulk.prefetch additionally has a .level::eviction_priority qualifier and applypriority.async.bulk lets the kernel hint L2 eviction policy - the same idea Marlin uses with its immediate-eviction cache policy.",
-  "bound_by": "memory",
-  "scales_with": [
-    "architecture generation",
-    "tile size enabled by the freed registers",
-    "copy direction (global.shared::cta vs shared::cluster.global)",
-    "data element size (sub-byte types restricted on sm_120a)"
-  ],
-  "affected_by_hardware": [
+ "id": "tma-cp-async-bulk-tensor",
+ "type": "flop",
+ "name": "TMA (cp.async.bulk.tensor): hardware address generation and predication for global->shared copies",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "TMA reduces register pressure and address-computation work in the copy path, which is what allows larger tiles and therefore more FLOPs per byte moved from HBM. The mechanism from the PTX ISA: cp.async.bulk.tensor is a non-blocking instruction that initiates an asynchronous copy of tensor data from .src to .dst, with completion tracked either by an mbarrier (mbarrier::complete_tx::bytes) or by a bulk-group. It is the instruction that makes a tensor map (a host- or device-built descriptor of strides and extents) the unit of transfer, so the hardware does index math and bounds predication. That register saving is the quantitative claim: freed registers mean larger tiles, and larger tiles amortize each HBM byte over more MACs. Three hard scoping facts from the ISA: (1) the .shared::cluster.global direction 'is optimized for' sm_90a/sm_100a/sm_100f/sm_103a/sm_103f/sm_107a/sm_107f/sm_110a/sm_110f and 'may have substantially reduced performance on other targets' - so a cluster-scoped TMA copy on a non-Hopper-plus part is a trap; (2) sub-byte types are NOT supported for .shared::cluster.global on sm_120a, which constrains a cluster-mapped FP4 pipeline on consumer Blackwell; (3) tcgen05.commit gained a .multicast::cluster::32b qualifier and mbarrier.expect_tx gained the same, i.e. multicast completion is a 5th-gen feature. cp.async.bulk.prefetch additionally has a .level::eviction_priority qualifier and applypriority.async.bulk lets the kernel hint L2 eviction policy - the same idea Marlin uses with its immediate-eviction cache policy.",
+ "bound_by": "memory",
+ "scales_with": [
+  "architecture generation",
+  "tile size enabled by the freed registers",
+  "copy direction (global.shared::cta vs shared::cluster.global)",
+  "data element size (sub-byte types restricted on sm_120a)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "nvidia-b200",
+  "nvidia-rtx-4090",
+  "nvidia-rtx-5090",
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "workarounds": [
+  "Use a tensor map descriptor instead of per-thread address arithmetic so registers are not spent on indexing",
+  "Pair TMA with mbarrier (or bulk_group) completion rather than polling",
+  "Target the arch-specific list for cluster-direction copies, or measure before assuming parity on other targets",
+  "Use applypriority.async.bulk / eviction-priority prefetch for streaming weights that are read once",
+  "Fall back to cp.async (Ampere+) where TMA's arch target does not match"
+ ],
+ "notes": "cp.async (Ampere and later) is the simpler predecessor: it is per-thread async global->shared copy with commit_group/wait_group pipelining, and it is what pre-Hopper kernels used. TMA is the Hopper-generation replacement where a whole tensor tile moves by descriptor. ThunderKittens names both as the primitives it hides: 'Hide latencies with asynchronous copies and address generation with TMA'. The ISA also documents swizzling patterns for the SMEM destination and notes one copy sub-mode's swizzle is legal only when cp.async.bulk.tensor's direction is .shared::cluster.global or .shared::cta.global - a layout constraint that interacts with any 4-bit or FP8 tile where bank conflicts are already the problem.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "kern-ptx-isa",
+  "kern-flashattention-3-blog",
+  "kern-thunderkittens-github"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "l2_cache_size",
+   "effect": "cp.async.bulk.prefetch additionally has a .level::eviction_priority qualifier and applypriority.async.bulk lets the kernel hint L2 eviction policy - the same idea Marlin uses with its immediate-eviction cache policy.",
+   "basis": "recorded",
+   "values_for": [
     "nvidia-h100-sxm",
     "nvidia-b200",
     "nvidia-rtx-4090",
     "nvidia-rtx-5090",
     "nvidia-a100-80gb-sxm4"
-  ],
-  "workarounds": [
-    "Use a tensor map descriptor instead of per-thread address arithmetic so registers are not spent on indexing",
-    "Pair TMA with mbarrier (or bulk_group) completion rather than polling",
-    "Target the arch-specific list for cluster-direction copies, or measure before assuming parity on other targets",
-    "Use applypriority.async.bulk / eviction-priority prefetch for streaming weights that are read once",
-    "Fall back to cp.async (Ampere+) where TMA's arch target does not match"
-  ],
-  "notes": "cp.async (Ampere and later) is the simpler predecessor: it is per-thread async global->shared copy with commit_group/wait_group pipelining, and it is what pre-Hopper kernels used. TMA is the Hopper-generation replacement where a whole tensor tile moves by descriptor. ThunderKittens names both as the primitives it hides: 'Hide latencies with asynchronous copies and address generation with TMA'. The ISA also documents swizzling patterns for the SMEM destination and notes one copy sub-mode's swizzle is legal only when cp.async.bulk.tensor's direction is .shared::cluster.global or .shared::cta.global - a layout constraint that interacts with any 4-bit or FP8 tile where bank conflicts are already the problem.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "kern-ptx-isa",
-    "kern-flashattention-3-blog",
-    "kern-thunderkittens-github"
-  ]
+   ]
+  }
+ ]
 }

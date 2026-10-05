@@ -1,35 +1,47 @@
 {
-  "id": "bw-speculative-decoding-blackwell",
-  "type": "flop",
-  "name": "Draft-model/speculative decoding support on Blackwell",
-  "class": "speculative_draft",
-  "arithmetic_intensity": "Speculative decoding on Blackwell follows the same bandwidth-trade principle as on Hopper: the draft pass reads the draft model's weights for k tokens at once, giving AI ~k flop/byte, and is memory-bound exactly like decode_gemm at effective batch k. Blackwell's advantages for speculative decoding: (1) The 5th-gen Tensor Core's higher throughput (2500 TFLOPS BF16 dense vs 989 on H100) means the verification pass (which runs the target model on k+1 tokens) is faster, but the draft pass is still memory-bound so the speedup ratio is roughly unchanged. (2) NVLink 5's 1.8 TB/s per-GPU bandwidth in GB200/GB300 NVL72 means the KV cache transfer between draft and target models (if colocated) is faster. (3) The larger HBM3e capacity (186 GB on B200, 279 GB on B300) means both models plus KV cache can be co-resident more easily. (4) FP4/NVFP4 support means the draft model can be quantized to 4-bit, reducing its memory footprint and making the draft pass cheaper. The design condition remains: the draft's per-step latency must stay below the target model's single-token latency. The speedup is bounded by (1 + draft_cost/target_cost) and by the acceptance rate. On Blackwell, the verification pass benefits from tcgen05.mma's higher throughput, but the draft pass remains memory-bound, so the overall speedup is primarily determined by the acceptance rate and the draft model's size relative to the target.",
-  "bound_by": "memory",
-  "scales_with": [
-    "draft_k (number of speculative positions)",
-    "draft_model_size (relative to target model)",
-    "acceptance rate (determines effective speedup)",
-    "KV cache size (must fit in HBM alongside both models)"
-  ],
-  "affected_by_hardware": [
+ "id": "bw-speculative-decoding-blackwell",
+ "type": "flop",
+ "name": "Draft-model/speculative decoding support on Blackwell",
+ "class": "speculative_draft",
+ "arithmetic_intensity": "Speculative decoding on Blackwell follows the same bandwidth-trade principle as on Hopper: the draft pass reads the draft model's weights for k tokens at once, giving AI ~k flop/byte, and is memory-bound exactly like decode_gemm at effective batch k. Blackwell's advantages for speculative decoding: (1) The 5th-gen Tensor Core's higher throughput (2500 TFLOPS BF16 dense vs 989 on H100) means the verification pass (which runs the target model on k+1 tokens) is faster, but the draft pass is still memory-bound so the speedup ratio is roughly unchanged. (2) NVLink 5's 1.8 TB/s per-GPU bandwidth in GB200/GB300 NVL72 means the KV cache transfer between draft and target models (if colocated) is faster. (3) The larger HBM3e capacity (186 GB on B200, 279 GB on B300) means both models plus KV cache can be co-resident more easily. (4) FP4/NVFP4 support means the draft model can be quantized to 4-bit, reducing its memory footprint and making the draft pass cheaper. The design condition remains: the draft's per-step latency must stay below the target model's single-token latency. The speedup is bounded by (1 + draft_cost/target_cost) and by the acceptance rate. On Blackwell, the verification pass benefits from tcgen05.mma's higher throughput, but the draft pass remains memory-bound, so the overall speedup is primarily determined by the acceptance rate and the draft model's size relative to the target.",
+ "bound_by": "memory",
+ "scales_with": [
+  "draft_k (number of speculative positions)",
+  "draft_model_size (relative to target model)",
+  "acceptance rate (determines effective speedup)",
+  "KV cache size (must fit in HBM alongside both models)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-b200",
+  "nvidia-b300",
+  "nvidia-gb200-nvl72"
+ ],
+ "workarounds": [
+  "Use the cheapest possible draft: n-gram / prompt-lookup drafter needs no weights",
+  "Early-exit the draft model at a chosen layer depth",
+  "Quantize the draft model to FP4/NVFP4 to reduce its memory footprint",
+  "Use tree/multi-candidate drafting with verification-aware acceptance test",
+  "Run draft and target on the same GPU (co-resident) to avoid KV transfer overhead"
+ ],
+ "notes": "Speculative decoding is a bandwidth trade, not a compute trade. It can only pay when the target model is memory-bound (low batch, small weights). Blackwell's higher tensor-core throughput does not change this fundamental constraint because the draft pass is memory-bound. The main Blackwell-specific advantage is the larger HBM3e capacity (186-279 GB) which makes co-residency of both models more practical, and the NVLink 5 bandwidth which speeds KV transfer if models are distributed. The existing speculative-draft and speculative-verify records cover the general mechanism; this record notes the Blackwell-specific hardware context.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.75,
+ "updated": "2026-10-05",
+ "sources": [
+  "bw-nv-blackwell-ultra-blog",
+  "bw-nv-nvfp4-inference-blog",
+  "bw-nv-gb200-nvl72-blog"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "tensor_core_count",
+   "effect": "Blackwell's higher tensor-core throughput does not change this fundamental constraint because the draft pass is memory-bound.",
+   "basis": "recorded",
+   "values_for": [
     "nvidia-b200",
     "nvidia-b300",
     "nvidia-gb200-nvl72"
-  ],
-  "workarounds": [
-    "Use the cheapest possible draft: n-gram / prompt-lookup drafter needs no weights",
-    "Early-exit the draft model at a chosen layer depth",
-    "Quantize the draft model to FP4/NVFP4 to reduce its memory footprint",
-    "Use tree/multi-candidate drafting with verification-aware acceptance test",
-    "Run draft and target on the same GPU (co-resident) to avoid KV transfer overhead"
-  ],
-  "notes": "Speculative decoding is a bandwidth trade, not a compute trade. It can only pay when the target model is memory-bound (low batch, small weights). Blackwell's higher tensor-core throughput does not change this fundamental constraint because the draft pass is memory-bound. The main Blackwell-specific advantage is the larger HBM3e capacity (186-279 GB) which makes co-residency of both models more practical, and the NVLink 5 bandwidth which speeds KV transfer if models are distributed. The existing speculative-draft and speculative-verify records cover the general mechanism; this record notes the Blackwell-specific hardware context.",
-  "status": "verified",
-  "confidence": 0.75,
-  "updated": "2026-10-04",
-  "sources": [
-    "bw-nv-blackwell-ultra-blog",
-    "bw-nv-nvfp4-inference-blog",
-    "bw-nv-gb200-nvl72-blog"
-  ]
+   ]
+  }
+ ]
 }

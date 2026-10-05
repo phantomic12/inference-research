@@ -1,28 +1,28 @@
 {
-  "id": "sglang-pp-deepseek-v31-prefill-throughput-128k",
-  "type": "benchmark",
-  "name": "SGLang Chunked PP: DeepSeek-V3.1 prefill throughput 3.31x with PP4 TP8 vs TP8 on H20",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "bench-lmsys-chunked-pipeline-ttft"
-  ],
-  "engine_id": "sglang",
-  "accelerator_ids": [
-    "nvidia-h20"
-  ],
-  "interconnect_ids": [
-    "nvlink-4",
-    "nvswitch-4"
-  ],
-  "model": "DeepSeek-V3.1",
-  "format_id": null,
-  "metric": "prefill_tok_s",
-  "value": 3.31,
-  "unit": "x speedup (prefill throughput ratio, PP4 TP8 vs TP8, batch size 1)",
-  "methodology": "Hardware: H20 cluster (4 nodes, 32 GPUs total). Engine: SGLang with Chunked Pipeline Parallelism (CPP), async P2P communication, dynamic chunking. Model: DeepSeek-V3.1. Workload: batch size 1, ultra-long context prefill. Configuration: PP4 TP8 (4 pipeline stages, 8 tensor parallel per stage) with chunked prefill size 12288 (12K) and dynamic chunking smooth factor 0.65. Comparison: PP4 TP8 yields 3.31x prefill throughput vs TP8 alone, and outperforms TP32 by 30.5%. Also reports up to 67.9% TTFT reduction with 82.8% strong scaling efficiency. For Qwen3-235B-A22B-FP8 on H20 with PP8: up to 81% TTFT reduction for ultra-long prompts.",
-  "measured_by": "vendor",
-  "reproducible": true,
-  "notes": "Published by LMSYS on 2026-01-15. Demonstrates that pipeline parallelism with chunked prefill is the most effective strategy for long-context prefill at scale. The 3.31x throughput gain from PP4 TP8 vs TP8 shows that TP alone hits communication bottlenecks (all-reduce after every layer), while PP reduces communication volume by only transferring at pipeline boundaries. Dynamic chunking eliminates pipeline bubbles from fixed scheduling. Compatible with PD disaggregation and HiCache.\n\nLOAD-CONDITION AUDIT (bq- 2026-10-04).\nSCENARIO: NOT STATED by the source - absent, not inferred. A throughput figure with no scenario cannot be placed against an MLPerf Offline or Server number (they are different measurements; on identical hardware the Offline-minus-Server difference is negative in 5 of 9 systems measured).\nABSENT CONDITIONS (2 of 7 checked: model, hardware, batch-or-concurrency, input length, output length, engine version, warmup):\n  - output length: unrecoverable from bench-lmsys-chunked-pipeline-ttft - would need the run's OSL or the harness's configured max_tokens\n  - warmup: unrecoverable from bench-lmsys-chunked-pipeline-ttft - would need the raw harness log's warmup phase or the benchmark command line (loadgen min_duration/min_query_count, or trtllm-bench --warm_up N / --num_runs N)\nNone of these were filled in. A plausible value is worse than an absent one: it would be trusted."
+ "id": "sglang-pp-deepseek-v31-prefill-throughput-128k",
+ "type": "benchmark",
+ "name": "SGLang Chunked PP: DeepSeek-V3.1 prefill throughput 3.31x with PP4 TP8 vs TP8 on H20",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "bench-lmsys-chunked-pipeline-ttft"
+ ],
+ "engine_id": "sglang",
+ "accelerator_ids": [
+  "nvidia-h20"
+ ],
+ "interconnect_ids": [
+  "nvlink-4",
+  "nvswitch-4"
+ ],
+ "model": "DeepSeek-V3.1",
+ "format_id": null,
+ "metric": "speedup_ratio",
+ "value": 3.31,
+ "unit": "x speedup vs BASELINE: prefill throughput ratio of PP4 TP8 against TP8 alone (no pipeline parallelism) on the same H20 cluster, batch size 1, chunked prefill 12288, dynamic chunking smooth factor 0.65. NOT 3.31 tok/s.",
+ "methodology": "Hardware: H20 cluster (4 nodes, 32 GPUs total). Engine: SGLang with Chunked Pipeline Parallelism (CPP), async P2P communication, dynamic chunking. Model: DeepSeek-V3.1. Workload: batch size 1, ultra-long context prefill. Configuration: PP4 TP8 (4 pipeline stages, 8 tensor parallel per stage) with chunked prefill size 12288 (12K) and dynamic chunking smooth factor 0.65. Comparison: PP4 TP8 yields 3.31x prefill throughput vs TP8 alone, and outperforms TP32 by 30.5%. Also reports up to 67.9% TTFT reduction with 82.8% strong scaling efficiency. For Qwen3-235B-A22B-FP8 on H20 with PP8: up to 81% TTFT reduction for ultra-long prompts.",
+ "measured_by": "vendor",
+ "reproducible": true,
+ "notes": "Published by LMSYS on 2026-01-15. Demonstrates that pipeline parallelism with chunked prefill is the most effective strategy for long-context prefill at scale. The 3.31x throughput gain from PP4 TP8 vs TP8 shows that TP alone hits communication bottlenecks (all-reduce after every layer), while PP reduces communication volume by only transferring at pipeline boundaries. Dynamic chunking eliminates pipeline bubbles from fixed scheduling. Compatible with PD disaggregation and HiCache.\n\nLOAD-CONDITION AUDIT (bq- 2026-10-04).\nSCENARIO: NOT STATED by the source - absent, not inferred. A throughput figure with no scenario cannot be placed against an MLPerf Offline or Server number (they are different measurements; on identical hardware the Offline-minus-Server difference is negative in 5 of 9 systems measured).\nABSENT CONDITIONS (2 of 7 checked: model, hardware, batch-or-concurrency, input length, output length, engine version, warmup):\n  - output length: unrecoverable from bench-lmsys-chunked-pipeline-ttft - would need the run's OSL or the harness's configured max_tokens\n  - warmup: unrecoverable from bench-lmsys-chunked-pipeline-ttft - would need the raw harness log's warmup phase or the benchmark command line (loadgen min_duration/min_query_count, or trtllm-bench --warm_up N / --num_runs N)\nNone of these were filled in. A plausible value is worse than an absent one: it would be trusted.\n\nMETRIC CORRECTION 2026-10-05 (schema authority pass, agent w5-schema). Value UNCHANGED; `metric` moved quality -> speedup_ratio. Both members were live in this record's case and the enum forced a choice between two wrong answers: `quality` implies a score and this is a ratio, and there was no dimensionless member at all. This record is one of the five named in gotcha bench-metric-enum-hides-a-dimensionless-ratio, whose root_cause records that the `quality` catch-all was carrying accuracy deltas, PUE ratios and power ratios at once."
 }

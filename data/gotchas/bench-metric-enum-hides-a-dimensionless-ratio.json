@@ -1,32 +1,33 @@
 {
-  "id": "bench-metric-enum-hides-a-dimensionless-ratio",
-  "type": "gotcha",
-  "class": "measurement",
-  "name": "A benchmark record whose value is a speedup ratio but whose metric says decode_tok_s is selected by every filter that matters and read as a rate",
-  "severity": "major",
-  "symptom": "You pick hardware by filtering data/benchmarks/ on metric: decode_tok_s and taking the largest value, because that is the field a capacity planner reaches for. Three records in that slice are not throughputs at all. sd-medusa-batch32-degradation carries value 0 with unit speedup_ratio - the Medusa paper's finding that the speedup decays past batch 32 and can reach zero, so the 0 is the floor of a degradation curve, not a measured decode rate of zero tokens/s. sd-eagle3-throughput-sglang-batch64 carries 1.38, which is 1.38x the BASELINE at batch 64, not 1.38 output tokens/s. ev-llamacpp-spec-bench-replay-inflates carries 13.4, which is an inflation FACTOR - how many times too fast a benchmark reads when it replays one prompt instead of varying them (reported range 9.5x-16.9x). Read as rates, all three are nonsense; and the third is dangerous in the other direction, because 13.4 looks like a respectable per-GPU figure and would be quoted as one. The tell in all three is that `unit` disagrees with `metric`: the value is dimensionless and `metric` names a dimensioned rate. The schema has no speedup_ratio member in its metric enum, so a ratio has nowhere correct to live and defaults into the nearest rate.",
-  "root_cause": "The metric enum enumerates rates (decode_tok_s, prefill_tok_s, tps_aggregate, tok_s_per_user) and absolute quantities (ttft_ms, itl_ms, memory_gb, joules_per_token) plus one catch-all, quality, which is carrying PUE ratios and idle-power dynamic-range factors as well as accuracy deltas. A dimensionless ratio fits none of them, so records that measure relative change get filed under whichever rate was the thing being compared. Nothing in validation catches it: value is a plain number, the enum member is a legal token, and the disagreement lives in a free-text `unit` field that no schema rule cross-checks. The same catch-all has been carrying at least three different meanings at once in this repo - accuracy delta in percentage points, PUE as a facility-energy ratio, and idle/maximum power ratio - which means the enum cannot be trusted as a semantic filter for `quality` either.",
-  "workaround": "When selecting benchmarks for capacity planning, filter on `metric` AND assert the expected dimensionality from `unit`: a rate metric must carry a tokens/s, ms or J/token unit, and must not carry 'ratio', 'speedup', 'x ', 'multiple' or 'dimensionless'. Never take a max() over a metric slice without that check - the largest value in a slice is exactly the one most likely to be a ratio. The three records here are flagged in their own notes as of 2026-10-04; until schemas/benchmark.schema.json gains a speedup_ratio (or dimensionless_ratio) member, treat `unit` as authoritative and `metric` as a coarse hint only. A filter that cannot distinguish '13.4x inflated' from '13.4 tokens/s' is not a usable filter, and the same caution applies to every `quality`-keyed record, since that key spans accuracy deltas, PUE and power ratios.",
-  "affects": [
-    "sd-medusa-batch32-degradation",
-    "sd-eagle3-throughput-sglang-batch64",
-    "ev-llamacpp-spec-bench-replay-inflates",
-    "pue-national-average-us-all-equipment-2024-1-45",
-    "us-volume-server-idle-dynamic-range-model-0-44-floor"
-  ],
-  "concepts": [
-    "benchmark",
-    "metric",
-    "unit",
-    "capacity-planning",
-    "schema-gap"
-  ],
-  "sources": [
-    "sd-medusa-paper",
-    "sd-eagle3-paper",
-    "ev-llamacpp-issue-26100-spec-benchmark-inflates-10x"
-  ],
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-04"
+ "id": "bench-metric-enum-hides-a-dimensionless-ratio",
+ "type": "gotcha",
+ "class": "measurement",
+ "name": "A benchmark record whose value is a speedup ratio but whose metric says decode_tok_s is selected by every filter that matters and read as a rate",
+ "severity": "major",
+ "symptom": "You pick hardware by filtering data/benchmarks/ on metric: decode_tok_s and taking the largest value, because that is the field a capacity planner reaches for. Three records in that slice are not throughputs at all. sd-medusa-batch32-degradation carries value 0 with unit speedup_ratio - the Medusa paper's finding that the speedup decays past batch 32 and can reach zero, so the 0 is the floor of a degradation curve, not a measured decode rate of zero tokens/s. sd-eagle3-throughput-sglang-batch64 carries 1.38, which is 1.38x the BASELINE at batch 64, not 1.38 output tokens/s. ev-llamacpp-spec-bench-replay-inflates carries 13.4, which is an inflation FACTOR - how many times too fast a benchmark reads when it replays one prompt instead of varying them (reported range 9.5x-16.9x). Read as rates, all three are nonsense; and the third is dangerous in the other direction, because 13.4 looks like a respectable per-GPU figure and would be quoted as one. The tell in all three is that `unit` disagrees with `metric`: the value is dimensionless and `metric` names a dimensioned rate. STATUS 2026-10-05: CLOSED. schemas/benchmark.schema.json now carries speedup_ratio AND dimensionless_ratio, and all seven records named here were reclassified with their stored VALUES unchanged, so the enum no longer misfiles a ratio under a rate or under the quality catch-all. The defect as originally written is preserved below because the reasoning still applies to any future metric addition: the schema had no speedup_ratio member in its metric enum, so a ratio had nowhere correct to live and defaulted into the nearest rate.",
+ "root_cause": "The metric enum enumerates rates (decode_tok_s, prefill_tok_s, tps_aggregate, tok_s_per_user) and absolute quantities (ttft_ms, itl_ms, memory_gb, joules_per_token) plus one catch-all, quality, which is carrying PUE ratios and idle-power dynamic-range factors as well as accuracy deltas. A dimensionless ratio fits none of them, so records that measure relative change get filed under whichever rate was the thing being compared. Nothing in validation catches it: value is a plain number, the enum member is a legal token, and the disagreement lives in a free-text `unit` field that no schema rule cross-checks. The same catch-all has been carrying at least three different meanings at once in this repo - accuracy delta in percentage points, PUE as a facility-energy ratio, and idle/maximum power ratio - which means the enum cannot be trusted as a semantic filter for `quality` either.",
+ "workaround": "RESOLVED 2026-10-05, so this workaround is HISTORICAL: filter on `metric` alone is now safe for ratios, because speedup_ratio and dimensionless_ratio exist as members and every ratio record in the repo has been moved onto one of them. Kept because the underlying rule survives any future enum change: when selecting benchmarks for capacity planning, assert the expected dimensionality from `unit` alongside `metric` - a rate metric must carry a tokens/s, ms or J/token unit and must not carry 'ratio', 'speedup', 'x ', 'multiple' or 'dimensionless'. Never take a max() over a metric slice without that check; the largest value in a slice is the one most likely to be a ratio. One distinction the fix made explicit and that a future author should preserve: speedup_ratio means 'N times faster than a NAMED baseline' and MUST name that baseline in `unit`, whereas dimensionless_ratio covers ratios with no faster/slower reading (PUE, idle/max power). PUE 2.5 is not a 2.5x speedup, and routing it to speedup_ratio would have replaced one wrong answer with another.",
+ "affects": [
+  "sd-medusa-batch32-degradation",
+  "sd-eagle3-throughput-sglang-batch64",
+  "ev-llamacpp-spec-bench-replay-inflates",
+  "pue-national-average-us-all-equipment-2024-1-45",
+  "us-volume-server-idle-dynamic-range-model-0-44-floor"
+ ],
+ "concepts": [
+  "benchmark",
+  "metric",
+  "unit",
+  "capacity-planning",
+  "schema-gap"
+ ],
+ "sources": [
+  "sd-medusa-paper",
+  "sd-eagle3-paper",
+  "ev-llamacpp-issue-26100-spec-benchmark-inflates-10x"
+ ],
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "notes": "\n\nUPDATE 2026-10-05 (schema authority pass, agent w5-schema): root_cause was ACCURATE and is preserved unchanged - the enum enumerated rates plus absolute quantities plus one catch-all carrying three meanings at once, which is exactly why `quality` could not be trusted as a semantic filter. The fix added the two ratio members and reclassified 7 records: 4 to speedup_ratio (sd-medusa-batch32-degradation, sd-eagle3-throughput-sglang-batch64, ev-llamacpp-spec-bench-replay-inflates, sglang-pp-deepseek-v31-prefill-throughput-128k, alt-cerebras-hle-benchmark) and the PUE / idle-power set to dimensionless_ratio (pue-us-facilities-serving-ai-equipment-2024-1-145, us-volume-server-idle-dynamic-range-model-0-44-floor). Note the count: FIVE speedups, not the three this record originally listed - a corpus-wide sweep found two more that the same audit had missed, which is why the schema pass re-derived the set mechanically rather than patching only the reported records. The 7 other PUE records (pue-google-fleet-average, six pue-lbnl-2016-*) were found by the same sweep and moved too. `quality` is still a catch-all and still spans accuracy deltas in percentage points, perplexity deltas and acceptance lengths, so it remains the weakest key in this enum; that is a separate gap, not closed here."
 }

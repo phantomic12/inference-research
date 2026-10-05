@@ -1,48 +1,64 @@
 {
-  "id": "host-side-sampling-loop",
-  "type": "flop",
-  "name": "Host-side sampling loop: full-logits D2H transfer plus the CPU sampler chain",
-  "class": "sampling",
-  "arithmetic_intensity": "This is the same V-wide tensor the sampling record describes, but measured in HOST time rather than device bytes, and that changes the answer by four orders of magnitude. On the device the logit read is negligible - 4*128256 = 501.0 KiB per token at fp32 against a Llama-3-8B batch-1 decode step that streams 2*8.03e9 = 16.06 GB of weights, i.e. 0.0031% of the step's bytes, and ~0.15 us of H100 time at 3350 GB/s. If a sampler reads those logits from HBM on the device and never ships them anywhere, it is free. But llama.cpp's default server path moves the ENTIRE logits row to the host every decode step: at one slot the issue measures 608.3 KB per D2H copy and identifies it as exactly 152064 vocab x 4 B = 608,256 B, one complete fp32 logits row, occurring once per step (938 copies in a 10 s window at ~94 decode steps/s); at 32 slots the same per-step copy measures 16,157.4 KB, which is at most 32 rows (32 x 608,256 B = 19,464,192 B) and in practice fewer because slots are not all resident every step. Then the CPU walks it. CPU sampling of on-CPU samples landing inside >=1 ms GPU idle gaps at 32 slots attributes 45.2% to common_sampler_sample() and 12.7% to llama_token_data_array_partial_sort_inplace(), 58.6% of in-gap host time to the sampler in total. The C++ source explains why top_k does not save you: llama_token_data_array_partial_sort_inplace always walks the full candidate array (a std::partial_sort for npartial <= 128, otherwise a two-pass 128-bucket histogram over logits clamped to [-10,+10]), llama_sampler_temp_impl scans the whole array for the max even at temp = 0, and llama_sample_dist builds a std::discrete_distribution over an iterator spanning the array. Measured confirmation: top_k=1 changes throughput by nothing (711 vs 717 tok/s at 32 slots) while partial_sort is still 12.7% of in-gap CPU. So the cost model is O(n_vocab) per step, times batch, times fp32 width - with NO arithmetic-intensity saving anywhere, because the array is walked twice (once for the histogram/partition, once for the distribution) at 4 bytes per element on a single core.",
-  "bound_by": "launch_overhead",
-  "scales_with": [
-    "vocab_size n_vocab (the entire cost is O(n_vocab) per step per sequence; 152064 for Qwen2.5, 128256 for Llama-3-8B, 32000 for Llama-2 - a 4.75x spread between models that a batch-1 benchmark would otherwise look identical)",
-    "batch_size (the D2H payload and the host walk are both linear in live sequences: 608.3 KB at 1 slot, 16,157.4 KB at 32 slots - this class is the one piece of per-token work that gets WORSE with concurrency, unlike decode_gemm whose AI = B improves)",
-    "logits dtype (fp32 doubles both the transfer and the host walk versus bf16; vLLM's sampler does an unconditional logits.to(torch.float32) every step even when the model emitted bf16)",
-    "num_sampled_candidates / top_k (NOT a cost lever on the host path - llama.cpp's partition and temp scan are full-array; measured top_k=1 changes throughput by <1%)",
-    "host CPU single-core performance (this is a single-threaded host cost inside the step's critical path; the repro host was an Intel Xeon E5-2673 v4 @ 2.30 GHz)",
-    "whether sampling runs on device or on host (backend sampling removes the transfer entirely and drops the sampler's share of in-gap host time from 58.6% to 1.0%)",
-    "speculative draft_k (backend sampling must then run one graph row per OUTPUT rather than per sequence, and needs a temporary RNG so rejected tokens do not advance the rng)"
-  ],
-  "affected_by_hardware": [
+ "id": "host-side-sampling-loop",
+ "type": "flop",
+ "name": "Host-side sampling loop: full-logits D2H transfer plus the CPU sampler chain",
+ "class": "sampling",
+ "arithmetic_intensity": "This is the same V-wide tensor the sampling record describes, but measured in HOST time rather than device bytes, and that changes the answer by four orders of magnitude. On the device the logit read is negligible - 4*128256 = 501.0 KiB per token at fp32 against a Llama-3-8B batch-1 decode step that streams 2*8.03e9 = 16.06 GB of weights, i.e. 0.0031% of the step's bytes, and ~0.15 us of H100 time at 3350 GB/s. If a sampler reads those logits from HBM on the device and never ships them anywhere, it is free. But llama.cpp's default server path moves the ENTIRE logits row to the host every decode step: at one slot the issue measures 608.3 KB per D2H copy and identifies it as exactly 152064 vocab x 4 B = 608,256 B, one complete fp32 logits row, occurring once per step (938 copies in a 10 s window at ~94 decode steps/s); at 32 slots the same per-step copy measures 16,157.4 KB, which is at most 32 rows (32 x 608,256 B = 19,464,192 B) and in practice fewer because slots are not all resident every step. Then the CPU walks it. CPU sampling of on-CPU samples landing inside >=1 ms GPU idle gaps at 32 slots attributes 45.2% to common_sampler_sample() and 12.7% to llama_token_data_array_partial_sort_inplace(), 58.6% of in-gap host time to the sampler in total. The C++ source explains why top_k does not save you: llama_token_data_array_partial_sort_inplace always walks the full candidate array (a std::partial_sort for npartial <= 128, otherwise a two-pass 128-bucket histogram over logits clamped to [-10,+10]), llama_sampler_temp_impl scans the whole array for the max even at temp = 0, and llama_sample_dist builds a std::discrete_distribution over an iterator spanning the array. Measured confirmation: top_k=1 changes throughput by nothing (711 vs 717 tok/s at 32 slots) while partial_sort is still 12.7% of in-gap CPU. So the cost model is O(n_vocab) per step, times batch, times fp32 width - with NO arithmetic-intensity saving anywhere, because the array is walked twice (once for the histogram/partition, once for the distribution) at 4 bytes per element on a single core.",
+ "bound_by": "launch_overhead",
+ "scales_with": [
+  "vocab_size n_vocab (the entire cost is O(n_vocab) per step per sequence; 152064 for Qwen2.5, 128256 for Llama-3-8B, 32000 for Llama-2 - a 4.75x spread between models that a batch-1 benchmark would otherwise look identical)",
+  "batch_size (the D2H payload and the host walk are both linear in live sequences: 608.3 KB at 1 slot, 16,157.4 KB at 32 slots - this class is the one piece of per-token work that gets WORSE with concurrency, unlike decode_gemm whose AI = B improves)",
+  "logits dtype (fp32 doubles both the transfer and the host walk versus bf16; vLLM's sampler does an unconditional logits.to(torch.float32) every step even when the model emitted bf16)",
+  "num_sampled_candidates / top_k (NOT a cost lever on the host path - llama.cpp's partition and temp scan are full-array; measured top_k=1 changes throughput by <1%)",
+  "host CPU single-core performance (this is a single-threaded host cost inside the step's critical path; the repro host was an Intel Xeon E5-2673 v4 @ 2.30 GHz)",
+  "whether sampling runs on device or on host (backend sampling removes the transfer entirely and drops the sampler's share of in-gap host time from 58.6% to 1.0%)",
+  "speculative draft_k (backend sampling must then run one graph row per OUTPUT rather than per sequence, and needs a temporary RNG so rejected tokens do not advance the rng)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-5090",
+  "nvidia-rtx-4090",
+  "nvidia-l4",
+  "amd-radeon-pro-vii"
+ ],
+ "workarounds": [
+  "Move the sampler onto the device (llama.cpp --backend-sampling / -bs): removes the D2H transfer completely and raised a 32-slot server from 705.9 to 1045.8 tok/s, TPOT 41.21 -> 25.39 ms, with the sampler's share of in-gap CPU falling 58.6% -> 1.0% and byte-identical greedy output (seed 42, temperature 0)",
+  "Transfer only the sampled token ids instead of the logits matrix - with -bs the payload rounded to 0.000 GB over 16,252 copies in the same 10 s window",
+  "Fused top-k/top-p samplers that never materialise the V-wide distribution (vLLM's Triton path, or FlashInfer's JIT sampler where the arch supports it)",
+  "Replicate the sampler per output under speculative decoding rather than per sequence (llama.cpp PR #25532 adds n_sampling_outputs_per_seq_max and one backend-sampling graph row per output)",
+  "Keep logits in fp32 only where needed: vLLM casts to fp32 every step for the whole [B, V] tensor, so an fp16/bf16 logits path halves both the device traffic and the host payload",
+  "Raise concurrency only after fixing this class: the measured GPU-busy figure FALLS with concurrency on the default path (88.5% at 1 slot, 41.2% at 32 slots), which is what the host sampler looks like from the device side"
+ ],
+ "notes": "CLASSIFICATION ARGUMENT: filed under class 'sampling' with bound_by 'launch_overhead' rather than 'memory', because the arithmetic intensity that makes sampling cheap is computed on the wrong side of the PCIe bus. The device-side AI for logit processing is 1-2 flop/byte and the payload is 0.0031% of a Llama-3-8B decode step - essentially free. The host-side chain has no roofline at all: it is a single-threaded O(n_vocab) walk plus a synchronous 608 KB transfer, and it is not overlappable because the next step cannot start until the host has read the row it just synchronised on. That is a launch/dispatch-shaped cost - CPU-side, per-step, independent of how much GPU work the step contains - which is why launch_overhead is the correct bound and why the existing custom-kernel-launch-overhead record is the natural neighbour (both are 'the GPU is idle waiting for the host'). Requested enum addition, for the schema owner: a distinct 'host_logit_transfer' bound_by value would separate this from per-kernel launch overhead, since the two have different cures (device sampling vs CUDA Graphs). DESIGN CONSEQUENCE, and the part worth remembering: this is the ONLY per-token class in the taxonomy whose cost rises with batch size in absolute terms while its share of useful GPU work rises too. decode_gemm gets cheaper per token as B grows (AI = B); decode_attention and sampling's device side are batch-invariant; this class multiplies. So on a many-slot server the fix for throughput is not more FLOPS or more bandwidth - it is removing the host round trip. The same issue's control experiments make the boundary precise: disabling FlashAttention, changing perf timers, raising slot count to 64 with 64K context, and doubling HTTP threads each moved throughput by <10%, while removing the D2H+CPU sampler moved it 48%. HARDWARE READING: absolute HBM bandwidth still sets the device floor (a 5090 at 1792 GB/s beats a 4090 at 1008 GB/s at batch 1 regardless of this class), but host-interface quality - PCIe topology, single-core speed, pinned-memory paths - sets the ceiling, and a 2.5x faster GPU with a worse host path can lose. CAVEAT on the single-slot case: the same issue measured no effect at 1 slot (100.1 -> 101.4 tok/s, TPOT 9.65 -> 9.43 ms) and attributes the sampler's 5.1% there to a much smaller idle budget (0.185 s in 10 s). So this is a concurrency-regime problem, and a single-user benchmark is structurally blind to it. CAVEAT on attribution: with -bs the issue explicitly declines to quote a GPU-busy figure (cudaGraphLaunch calls rose 144 -> 502 in the same window, so the node-level trace does not cover both configurations equally). Throughput, TPOT and memcpy volume are direct measurements; the GPU-utilisation percentages are only quoted for the default path.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "flop3-llamacpp-issue-27050-backend-sampling",
+  "flop3-llamacpp-sampler-source",
+  "flop3-llamacpp-pr-25532-backend-sampling",
+  "flop3-vllm-sampler-source",
+  "flop2-llama3-8b-config",
+  "flop-nvidia-cuda-graphs",
+  "flop-roofline-williams-2008",
+  "flop-nvidia-inference-optimization",
+  "flop-speculative-sampling-deepmind"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "HARDWARE READING: absolute HBM bandwidth still sets the device floor (a 5090 at 1792 GB/s beats a 4090 at 1008 GB/s at batch 1 regardless of this class), but host-interface quality - PCIe topology, single-core speed, pinned-memory paths - sets the ceiling, and a 2.5x faster GPU with a worse host path can lose.",
+   "basis": "recorded",
+   "magnitude": "1792 GB/s; 1008 GB/s; 2.5x",
+   "values_for": [
     "nvidia-h100-sxm",
     "amd-instinct-mi300x",
     "nvidia-rtx-5090",
     "nvidia-rtx-4090",
     "nvidia-l4",
     "amd-radeon-pro-vii"
-  ],
-  "workarounds": [
-    "Move the sampler onto the device (llama.cpp --backend-sampling / -bs): removes the D2H transfer completely and raised a 32-slot server from 705.9 to 1045.8 tok/s, TPOT 41.21 -> 25.39 ms, with the sampler's share of in-gap CPU falling 58.6% -> 1.0% and byte-identical greedy output (seed 42, temperature 0)",
-    "Transfer only the sampled token ids instead of the logits matrix - with -bs the payload rounded to 0.000 GB over 16,252 copies in the same 10 s window",
-    "Fused top-k/top-p samplers that never materialise the V-wide distribution (vLLM's Triton path, or FlashInfer's JIT sampler where the arch supports it)",
-    "Replicate the sampler per output under speculative decoding rather than per sequence (llama.cpp PR #25532 adds n_sampling_outputs_per_seq_max and one backend-sampling graph row per output)",
-    "Keep logits in fp32 only where needed: vLLM casts to fp32 every step for the whole [B, V] tensor, so an fp16/bf16 logits path halves both the device traffic and the host payload",
-    "Raise concurrency only after fixing this class: the measured GPU-busy figure FALLS with concurrency on the default path (88.5% at 1 slot, 41.2% at 32 slots), which is what the host sampler looks like from the device side"
-  ],
-  "notes": "CLASSIFICATION ARGUMENT: filed under class 'sampling' with bound_by 'launch_overhead' rather than 'memory', because the arithmetic intensity that makes sampling cheap is computed on the wrong side of the PCIe bus. The device-side AI for logit processing is 1-2 flop/byte and the payload is 0.0031% of a Llama-3-8B decode step - essentially free. The host-side chain has no roofline at all: it is a single-threaded O(n_vocab) walk plus a synchronous 608 KB transfer, and it is not overlappable because the next step cannot start until the host has read the row it just synchronised on. That is a launch/dispatch-shaped cost - CPU-side, per-step, independent of how much GPU work the step contains - which is why launch_overhead is the correct bound and why the existing custom-kernel-launch-overhead record is the natural neighbour (both are 'the GPU is idle waiting for the host'). Requested enum addition, for the schema owner: a distinct 'host_logit_transfer' bound_by value would separate this from per-kernel launch overhead, since the two have different cures (device sampling vs CUDA Graphs). DESIGN CONSEQUENCE, and the part worth remembering: this is the ONLY per-token class in the taxonomy whose cost rises with batch size in absolute terms while its share of useful GPU work rises too. decode_gemm gets cheaper per token as B grows (AI = B); decode_attention and sampling's device side are batch-invariant; this class multiplies. So on a many-slot server the fix for throughput is not more FLOPS or more bandwidth - it is removing the host round trip. The same issue's control experiments make the boundary precise: disabling FlashAttention, changing perf timers, raising slot count to 64 with 64K context, and doubling HTTP threads each moved throughput by <10%, while removing the D2H+CPU sampler moved it 48%. HARDWARE READING: absolute HBM bandwidth still sets the device floor (a 5090 at 1792 GB/s beats a 4090 at 1008 GB/s at batch 1 regardless of this class), but host-interface quality - PCIe topology, single-core speed, pinned-memory paths - sets the ceiling, and a 2.5x faster GPU with a worse host path can lose. CAVEAT on the single-slot case: the same issue measured no effect at 1 slot (100.1 -> 101.4 tok/s, TPOT 9.65 -> 9.43 ms) and attributes the sampler's 5.1% there to a much smaller idle budget (0.185 s in 10 s). So this is a concurrency-regime problem, and a single-user benchmark is structurally blind to it. CAVEAT on attribution: with -bs the issue explicitly declines to quote a GPU-busy figure (cudaGraphLaunch calls rose 144 -> 502 in the same window, so the node-level trace does not cover both configurations equally). Throughput, TPOT and memcpy volume are direct measurements; the GPU-utilisation percentages are only quoted for the default path.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "flop3-llamacpp-issue-27050-backend-sampling",
-    "flop3-llamacpp-sampler-source",
-    "flop3-llamacpp-pr-25532-backend-sampling",
-    "flop3-vllm-sampler-source",
-    "flop2-llama3-8b-config",
-    "flop-nvidia-cuda-graphs",
-    "flop-roofline-williams-2008",
-    "flop-nvidia-inference-optimization",
-    "flop-speculative-sampling-deepmind"
-  ]
+   ]
+  }
+ ]
 }

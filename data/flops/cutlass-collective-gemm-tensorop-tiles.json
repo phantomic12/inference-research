@@ -1,37 +1,87 @@
 {
-  "id": "cutlass-collective-gemm-tensorop-tiles",
-  "type": "flop",
-  "name": "CUTLASS collective GEMM: the arch-tagged Tensor Core mainloop that most production GEMM kernels wrap",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "A GEMM at batch B is memory-bound below the ridge point and compute-bound above it; a tile-based mainloop does not change that crossover, it changes how close a real kernel gets to it. What CUTLASS's collective mainloop actually reduces is shared-memory traffic per FLOP: a tile of size BM x BN x BK re-reads each operand element once per tile traverse rather than once per output element, so HBM bytes per FLOP falls as 1/BN (for A) and 1/BM (for B). Tile size is bounded by the hardware: on Hopper the extended static shared memory is 228 KB per CTA (PTX ISA) versus the 48 KB per-CTA static default, which is what permits the large Hopper tiles; CUTLASS lists 328 KB shared-memory allocations for Blackwell-class targets. Register pressure bounds the other side - accumulator tiles live in registers (Hopper WGMMA) or in tensor memory (Blackwell tcgen05), and that choice determines how many pipeline stages fit before spilling.",
-  "bound_by": "both",
-  "scales_with": [
-    "tile size (BM, BN, BK)",
-    "batch_size (M dimension)",
-    "hidden_width",
-    "precision",
-    "num_SMs"
-  ],
-  "affected_by_hardware": [
+ "id": "cutlass-collective-gemm-tensorop-tiles",
+ "type": "flop",
+ "name": "CUTLASS collective GEMM: the arch-tagged Tensor Core mainloop that most production GEMM kernels wrap",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "A GEMM at batch B is memory-bound below the ridge point and compute-bound above it; a tile-based mainloop does not change that crossover, it changes how close a real kernel gets to it. What CUTLASS's collective mainloop actually reduces is shared-memory traffic per FLOP: a tile of size BM x BN x BK re-reads each operand element once per tile traverse rather than once per output element, so HBM bytes per FLOP falls as 1/BN (for A) and 1/BM (for B). Tile size is bounded by the hardware: on Hopper the extended static shared memory is 228 KB per CTA (PTX ISA) versus the 48 KB per-CTA static default, which is what permits the large Hopper tiles; CUTLASS lists 328 KB shared-memory allocations for Blackwell-class targets. Register pressure bounds the other side - accumulator tiles live in registers (Hopper WGMMA) or in tensor memory (Blackwell tcgen05), and that choice determines how many pipeline stages fit before spilling.",
+ "bound_by": "both",
+ "scales_with": [
+  "tile size (BM, BN, BK)",
+  "batch_size (M dimension)",
+  "hidden_width",
+  "precision",
+  "num_SMs"
+ ],
+ "affected_by_hardware": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "nvidia-b200",
+  "nvidia-rtx-4090",
+  "amd-instinct-mi300x"
+ ],
+ "workarounds": [
+  "Stage the mainloop with async copies so HBM->SMEM overlaps MMA (cp.async on Ampere+, cp.async.bulk/TMA on Hopper+)",
+  "Arch-specific target flags: Hopper and Blackwell PTX instructions are 'architecture-accelerated features' requiring sm_90a or sm100a - building them for the base sm_90 or sm_100 target silently loses the acceleration",
+  "Blackwell path uses umma/tcgen05 with tensor-memory accumulators; Hopper path uses wgmma with register accumulators",
+  "Blockscaled (MXFP4/NVFP4/MXFP8) GEMM kernels and 2:4 sparsity for FP4 as separate kernels rather than flags on the dense kernel"
+ ],
+ "notes": "This is the mechanism layer underneath Marlin, Machete, DeepGEMM and most hand-written GEMMs: those libraries are usually a CUTLASS collective builder plus a custom epilogue or a custom operand layout, not a new GEMM algorithm. The single most decision-relevant fact in CUTLASS's README is a portability trap: 'The NVIDIA Blackwell SM100 architecture used in the datacenter products has a different compute capability than the one underpinning NVIDIA Blackwell GeForce RTX 50 series GPUs (SM120). As a result, kernels compiled for Blackwell SM100 architecture with arch conditional features (using sm100a) are not compatible with RTX 50 series GPUs.' So a datacenter Blackwell and a consumer Blackwell are different kernel targets, and a kernel library that only ships sm100a paths leaves SM120 parts on an older path. CUTLASS 3.0 introduced CuTe (layout/tensor abstractions over threads and data); 4.0 released the CuTe DSL, a Python kernel DSL whose kernels are written in Python, lower to PTX, and are claimed to cut compile times 20-30x versus C++ templates. Blackwell entries also list extended tensor memory from 512 to 576 columns and higher-throughput FP8 (MMA_K=64) and FP4 (MMA_K=128) MMA instructions. Perf figures in the README are NVIDIA's own.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "kern-cutlass-github",
+  "kern-ptx-isa",
+  "kern-machete-vllm-source"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "shared_memory_capacity",
+   "effect": "What CUTLASS's collective mainloop actually reduces is shared-memory traffic per FLOP: a tile of size BM x BN x BK re-reads each operand element once per tile traverse rather than once per output element, so HBM bytes per FLOP falls as 1/BN (for A) and 1/BM (for B).",
+   "basis": "recorded",
+   "values_for": [
     "nvidia-a100-80gb-sxm4",
     "nvidia-h100-sxm",
     "nvidia-b200",
     "nvidia-rtx-4090",
     "amd-instinct-mi300x"
-  ],
-  "workarounds": [
-    "Stage the mainloop with async copies so HBM->SMEM overlaps MMA (cp.async on Ampere+, cp.async.bulk/TMA on Hopper+)",
-    "Arch-specific target flags: Hopper and Blackwell PTX instructions are 'architecture-accelerated features' requiring sm_90a or sm100a - building them for the base sm_90 or sm_100 target silently loses the acceleration",
-    "Blackwell path uses umma/tcgen05 with tensor-memory accumulators; Hopper path uses wgmma with register accumulators",
-    "Blockscaled (MXFP4/NVFP4/MXFP8) GEMM kernels and 2:4 sparsity for FP4 as separate kernels rather than flags on the dense kernel"
-  ],
-  "notes": "This is the mechanism layer underneath Marlin, Machete, DeepGEMM and most hand-written GEMMs: those libraries are usually a CUTLASS collective builder plus a custom epilogue or a custom operand layout, not a new GEMM algorithm. The single most decision-relevant fact in CUTLASS's README is a portability trap: 'The NVIDIA Blackwell SM100 architecture used in the datacenter products has a different compute capability than the one underpinning NVIDIA Blackwell GeForce RTX 50 series GPUs (SM120). As a result, kernels compiled for Blackwell SM100 architecture with arch conditional features (using sm100a) are not compatible with RTX 50 series GPUs.' So a datacenter Blackwell and a consumer Blackwell are different kernel targets, and a kernel library that only ships sm100a paths leaves SM120 parts on an older path. CUTLASS 3.0 introduced CuTe (layout/tensor abstractions over threads and data); 4.0 released the CuTe DSL, a Python kernel DSL whose kernels are written in Python, lower to PTX, and are claimed to cut compile times 20-30x versus C++ templates. Blackwell entries also list extended tensor memory from 512 to 576 columns and higher-throughput FP8 (MMA_K=64) and FP4 (MMA_K=128) MMA instructions. Perf figures in the README are NVIDIA's own.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "kern-cutlass-github",
-    "kern-ptx-isa",
-    "kern-machete-vllm-source"
-  ]
+   ]
+  },
+  {
+   "parameter": "tmem_capacity",
+   "effect": "Register pressure bounds the other side - accumulator tiles live in registers (Hopper WGMMA) or in tensor memory (Blackwell tcgen05), and that choice determines how many pipeline stages fit before spilling.",
+   "basis": "recorded",
+   "values_for": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-rtx-4090",
+    "amd-instinct-mi300x"
+   ]
+  },
+  {
+   "parameter": "peak_flops",
+   "effect": "A GEMM at batch B is memory-bound below the ridge point and compute-bound above it; a tile-based mainloop does not change that crossover, it changes how close a real kernel gets to it.",
+   "basis": "unverified",
+   "values_for": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-rtx-4090",
+    "amd-instinct-mi300x"
+   ]
+  },
+  {
+   "parameter": "tensor_core_count",
+   "effect": "Blackwell entries also list extended tensor memory from 512 to 576 columns and higher-throughput FP8 (MMA_K=64) and FP4 (MMA_K=128) MMA instructions.",
+   "basis": "recorded",
+   "values_for": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-rtx-4090",
+    "amd-instinct-mi300x"
+   ]
+  }
+ ]
 }

@@ -28,12 +28,14 @@ TEMPLATES = {
         "vendor": None, "architecture": None, "release_year": None, "process_nm": None,
         "form_factors": [], "vram_gb": None, "memory_type": None, "memory_bus_bit": None,
         "memory_bandwidth_gbps": None, "memory_bandwidth_basis": None,
+        "onchip_cache": None,
         "flops": [], "tdp_w": None, "interconnect": [], "unified_memory": None,
         "consumer": None, "notes": "",
     },
     "flop": {
         "class": None, "arithmetic_intensity": None, "bound_by": None,
-        "scales_with": [], "affected_by_hardware": [], "workarounds": [], "notes": "",
+        "scales_with": [], "affected_by_hardware": [], "hardware_parameters": [],
+        "workarounds": [], "notes": "",
     },
     "engine": {
         "repo": None, "languages": [], "license": None, "first_release_year": None,
@@ -55,7 +57,9 @@ TEMPLATES = {
         "engine_id": None, "accelerator_ids": [], "interconnect_ids": [],
         "model": None, "format_id": None, "metric": None, "value": None,
         "unit": None, "methodology": None, "measured_by": None,
-        "reproducible": None, "notes": "",
+        "reproducible": None, "energy_basis": None, "power_w": None,
+        "power_scope": None, "power_cap": None, "clock_lock_mhz": None,
+        "thermal_state": None, "notes": "",
     },
     "gotcha": {
         "class": None, "affects": [], "symptom": None, "root_cause": None,

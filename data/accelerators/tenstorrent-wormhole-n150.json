@@ -1,62 +1,71 @@
 {
-  "id": "tenstorrent-wormhole-n150",
-  "type": "accelerator",
-  "name": "Tenstorrent Wormhole Tensix (n150 / n300)",
-  "vendor": "tenstorrent",
-  "architecture": "wormhole Tensix",
-  "release_year": 2023,
-  "process_nm": 12,
-  "form_factors": [
-    "pcie"
-  ],
-  "vram_gb": 12,
-  "memory_type": "gddr6",
-  "memory_bus_bit": 192,
-  "memory_bandwidth_gbps": 288,
-  "memory_bandwidth_basis": "Derived and confirmed by the vendor table: 12 GB GDDR6 on a 192-bit bus at 12 GT/sec = 288 GB/s. The vendor states 288 GB/s directly for n150 and 576 GB/s for n300 (two ASICs), so this is not an independent derivation.",
-  "flops": [
-    {
-      "precision": "fp16",
-      "tflops": 74,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "asic-tenstorrent-wormhole-docs",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp16 for Tenstorrent Wormhole Tensix (n150 / n300) (source of record: 'Wormhole PCIe Cards (n150d/n150s/n300d/n300s) product guide', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "fp8",
-      "tflops": 262,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "asic-tenstorrent-wormhole-docs",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Transcribed from the vendor's own fp8 for Tenstorrent Wormhole Tensix (n150 / n300) (source of record: 'Wormhole PCIe Cards (n150d/n150s/n300d/n300s) product guide', kind: spec-sheet).  Recorded dense:true as printed."
-    },
-    {
-      "precision": "bf16",
-      "tflops": 74,
-      "dense": true,
-      "vendor_claim": false,
-      "source_id": "asic-tenstorrent-wormhole-docs",
-      "basis": "vendor-spec-sheet",
-      "basis_detail": "Second-hand figure, not a first-party spec: the source of record is 'Wormhole PCIe Cards (n150d/n150s/n300d/n300s) product guide' (kind: spec-sheet).  Recorded dense:true as printed."
-    }
-  ],
-  "tdp_w": 160,
-  "interconnect": [
-    "pcie-gen4",
-    "tenstorrent-warp100",
-    "tenstorrent-qsfp-dd"
-  ],
-  "unified_memory": false,
-  "consumer": false,
-  "notes": "Per n150 card (1 Wormhole ASIC, 72 enabled Tensix cores of 80 built, 108 MB SRAM, 12 GB GDDR6, 160 W, PCIe 4.0 x16). The BF16 row is the same number as FP16 because the vendor's precision table lists BFLOAT16 alongside FP16 without a separate throughput figure; flagged vendor_claim false for that reason. n300 is the same silicon doubled: 2 ASICs, 128 Tensix cores, 192 MB SRAM, 24 GB GDDR6, 576 GB/s, 131 TFLOPS FP16 / 466 FP8, 300 W. ARCHITECTURAL POINT: Wormhole is a small-SRAM, modest-bandwidth design (288 GB/s is roughly a fifth of an H100's) with 108 MB of on-die SRAM acting as a L2-like feed tier, and the architecture pushes data movement onto a network-on-chip with dedicated RISC-V control cores rather than relying on caches. For inference that means it is decisively bandwidth-bound at batch 1 (257 FLOP/byte FP16 does not save it; 288 GB/s is the wall) and the design bets on very low power and open-source software rather than on winning the bandwidth race. Precision support is unusually broad for an inference part: FP8/FP16/BF16, BLOCKFP2/BLOCKFP4/BLOCKFP8, INT8/INT32, UINT8, TF32 - the block-float formats are the ones with native hardware paths. Scale-up is 2x QSFP-DD 200G plus Warp 100 in-card bridges, daisy-chaining into Galaxy racks. Consumer: the n150 is sold as a retail developer card at ~USD 1000-1100, so while it is not a consumer GPU it is sold into the desktop channel. OPEN-SOURCE SOFTWARE STACK: Tenstorrent's software stack is fully open-source (GitHub: tenstorrent/tt-metal, tenstorrent/tt-forge). TT-Forge is the top-level MLIR-based compiler connecting to OpenXLA, MLIR, ONNX, TVM, PyTorch, and TensorFlow. TT-NN is the operator library. TT-Metalium is the low-level kernel programming model. 800+ model variants tested in CI. This is a key differentiator: unlike proprietary stacks (CUDA, ROCm), the entire stack is auditable and modifiable.",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-03",
-  "sources": [
-    "asic-tenstorrent-wormhole-docs",
-    "asic-tenstorrent-cards-shop"
-  ]
+ "id": "tenstorrent-wormhole-n150",
+ "type": "accelerator",
+ "name": "Tenstorrent Wormhole Tensix (n150 / n300)",
+ "vendor": "tenstorrent",
+ "architecture": "wormhole Tensix",
+ "release_year": 2023,
+ "process_nm": 12,
+ "form_factors": [
+  "pcie"
+ ],
+ "vram_gb": 12,
+ "memory_type": "gddr6",
+ "memory_bus_bit": 192,
+ "memory_bandwidth_gbps": 288,
+ "memory_bandwidth_basis": "Derived and confirmed by the vendor table: 12 GB GDDR6 on a 192-bit bus at 12 GT/sec = 288 GB/s. The vendor states 288 GB/s directly for n150 and 576 GB/s for n300 (two ASICs), so this is not an independent derivation.",
+ "flops": [
+  {
+   "precision": "fp16",
+   "tflops": 74,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "asic-tenstorrent-wormhole-docs",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the vendor's own fp16 for Tenstorrent Wormhole Tensix (n150 / n300) (source of record: 'Wormhole PCIe Cards (n150d/n150s/n300d/n300s) product guide', kind: spec-sheet).  Recorded dense:true as printed."
+  },
+  {
+   "precision": "fp8",
+   "tflops": 262,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "asic-tenstorrent-wormhole-docs",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the vendor's own fp8 for Tenstorrent Wormhole Tensix (n150 / n300) (source of record: 'Wormhole PCIe Cards (n150d/n150s/n300d/n300s) product guide', kind: spec-sheet).  Recorded dense:true as printed."
+  },
+  {
+   "precision": "bf16",
+   "tflops": 74,
+   "dense": true,
+   "vendor_claim": false,
+   "source_id": "asic-tenstorrent-wormhole-docs",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Second-hand figure, not a first-party spec: the source of record is 'Wormhole PCIe Cards (n150d/n150s/n300d/n300s) product guide' (kind: spec-sheet).  Recorded dense:true as printed."
+  }
+ ],
+ "tdp_w": 160,
+ "interconnect": [
+  "pcie-gen4",
+  "tenstorrent-warp100",
+  "tenstorrent-qsfp-dd"
+ ],
+ "unified_memory": false,
+ "consumer": false,
+ "notes": "Per n150 card (1 Wormhole ASIC, 72 enabled Tensix cores of 80 built, 108 MB SRAM, 12 GB GDDR6, 160 W, PCIe 4.0 x16). The BF16 row is the same number as FP16 because the vendor's precision table lists BFLOAT16 alongside FP16 without a separate throughput figure; flagged vendor_claim false for that reason. n300 is the same silicon doubled: 2 ASICs, 128 Tensix cores, 192 MB SRAM, 24 GB GDDR6, 576 GB/s, 131 TFLOPS FP16 / 466 FP8, 300 W. ARCHITECTURAL POINT: Wormhole is a small-SRAM, modest-bandwidth design (288 GB/s is roughly a fifth of an H100's) with 108 MB of on-die SRAM acting as a L2-like feed tier, and the architecture pushes data movement onto a network-on-chip with dedicated RISC-V control cores rather than relying on caches. For inference that means it is decisively bandwidth-bound at batch 1 (257 FLOP/byte FP16 does not save it; 288 GB/s is the wall) and the design bets on very low power and open-source software rather than on winning the bandwidth race. Precision support is unusually broad for an inference part: FP8/FP16/BF16, BLOCKFP2/BLOCKFP4/BLOCKFP8, INT8/INT32, UINT8, TF32 - the block-float formats are the ones with native hardware paths. Scale-up is 2x QSFP-DD 200G plus Warp 100 in-card bridges, daisy-chaining into Galaxy racks. Consumer: the n150 is sold as a retail developer card at ~USD 1000-1100, so while it is not a consumer GPU it is sold into the desktop channel. OPEN-SOURCE SOFTWARE STACK: Tenstorrent's software stack is fully open-source (GitHub: tenstorrent/tt-metal, tenstorrent/tt-forge). TT-Forge is the top-level MLIR-based compiler connecting to OpenXLA, MLIR, ONNX, TVM, PyTorch, and TensorFlow. TT-NN is the operator library. TT-Metalium is the low-level kernel programming model. 800+ model variants tested in CI. This is a key differentiator: unlike proprietary stacks (CUDA, ROCm), the entire stack is auditable and modifiable.\n\nON-CHIP CACHE ROW ADDED 2026-10-05 (schema authority pass, agent w5-schema) - corrected to 2026-10-05 below. `onchip_cache` is new in schemas/accelerator.schema.json. This figure was already stated in these notes and was unqueryable; the schema field exists so it can be filtered and compared instead of grepped. The value was verified against the first-party source named in `source_note`, and the trap that source contains is recorded there too. NO new number was introduced: every value below was already present in this record's own prose.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "asic-tenstorrent-wormhole-docs",
+  "asic-tenstorrent-cards-shop"
+ ],
+ "onchip_cache": {
+  "kind": "sram-feed-tier",
+  "l2_kb": null,
+  "llc_mb": null,
+  "sram_mb": 108.0,
+  "per_scope": "per-card",
+  "basis": "vendor-docs",
+  "source_note": "Tenstorrent Wormhole docs (asic-tenstorrent-wormhole-docs) card comparison table: 108 MB SRAM per n150/n300 card, 192 MB for the two-ASIC n300. RECORDED AS 108 MB, AND A LIVE CONFLICT IS NOTED: the vendor's Wormhole PCIe cards page now states 'SRAM: 120 MB (1.5 MB per Tensix Core)' for the n150d/n150s/n300d/n300s, against 80 Tensix cores. 80 x 1.5 MB = 120 MB, so the newer page and the older table disagree, and 120 MB does not reconcile with the 108 MB this record and the repo's own tensor-core arithmetic both use. The 108 MB figure is kept because it is what this record's flops[] rows and notes are derived from, and changing it here would silently desynchronise them; the conflict is recorded rather than resolved by picking the newer page. Anyone reconciling this should treat it as an OPEN QUESTION, and a reader should not treat 108 or 120 as settled. This is SRAM acting as an L2-like feed tier, which is why kind is not 'l2'."
+ }
 }

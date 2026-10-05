@@ -1,34 +1,69 @@
 {
-  "id": "tensor-memory-tmem-allocation",
-  "type": "flop",
-  "name": "Tensor Memory (TMEM): a third accumulator store, between registers and shared memory",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "TMEM changes the capacity budget of a GEMM or attention mainloop rather than the roofline. It is a dedicated on-chip scratchpad wired into the tensor cores, with structure and rules that come straight from the PTX ISA: on sm_100a/sm_100f it is a two-dimensional matrix of 512 columns and 128 lanes per CTA with 32-bit cells, addressed by a 32-bit value whose high 16 bits are the lane and low 16 bits the column; allocation is dynamic, performed by a SINGLE WARP in the CTA, in units of 32 columns with a power-of-2 column count, and every allocation must be deallocated before the kernel exits. The arithmetic consequence is about pipelining depth rather than bytes: because MMA accumulators and operands can live in TMEM instead of registers, a kernel can keep several MMAs in flight and run elementwise work on the CUDA cores concurrently. FA-4's backward pass is the concrete example - it stores S and P in TMEM in stages (S and P share one column set, dP/dS/dQ share another, because five full accumulators do not fit), stores transposed intermediates directly in TMEM in the exact operand-A layout the dV and dK MMAs consume (removing a shared-memory round trip), and notes tcgen05.mma can source operand A from TMEM.",
-  "bound_by": "both",
-  "scales_with": [
-    "TMEM column budget per CTA (512 on sm_100a, extended to 576 per CUTLASS's Blackwell/Rubin entries)",
-    "number of MMAs kept in flight",
-    "CTA group size (2-CTA MMA spans both CTAs' TMEM)"
-  ],
-  "affected_by_hardware": [
+ "id": "tensor-memory-tmem-allocation",
+ "type": "flop",
+ "name": "Tensor Memory (TMEM): a third accumulator store, between registers and shared memory",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "TMEM changes the capacity budget of a GEMM or attention mainloop rather than the roofline. It is a dedicated on-chip scratchpad wired into the tensor cores, with structure and rules that come straight from the PTX ISA: on sm_100a/sm_100f it is a two-dimensional matrix of 512 columns and 128 lanes per CTA with 32-bit cells, addressed by a 32-bit value whose high 16 bits are the lane and low 16 bits the column; allocation is dynamic, performed by a SINGLE WARP in the CTA, in units of 32 columns with a power-of-2 column count, and every allocation must be deallocated before the kernel exits. The arithmetic consequence is about pipelining depth rather than bytes: because MMA accumulators and operands can live in TMEM instead of registers, a kernel can keep several MMAs in flight and run elementwise work on the CUDA cores concurrently. FA-4's backward pass is the concrete example - it stores S and P in TMEM in stages (S and P share one column set, dP/dS/dQ share another, because five full accumulators do not fit), stores transposed intermediates directly in TMEM in the exact operand-A layout the dV and dK MMAs consume (removing a shared-memory round trip), and notes tcgen05.mma can source operand A from TMEM.",
+ "bound_by": "both",
+ "scales_with": [
+  "TMEM column budget per CTA (512 on sm_100a, extended to 576 per CUTLASS's Blackwell/Rubin entries)",
+  "number of MMAs kept in flight",
+  "CTA group size (2-CTA MMA spans both CTAs' TMEM)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-b200",
+  "nvidia-b300",
+  "nvidia-gb200-nvl72",
+  "nvidia-h100-sxm"
+ ],
+ "workarounds": [
+  "Budget TMEM columns explicitly per pipeline stage and reuse columns across stages",
+  "Let one warp own all TMEM allocation/deallocation so the allocation is serialized and correct",
+  "Store transposed intermediates in TMEM in operand-A layout to skip a shared-memory round trip",
+  "Use TMEM-resident accumulators to keep several MMAs in flight while CUDA cores do elementwise work"
+ ],
+ "notes": "This record exists because TMEM is the specific hardware reason a Blackwell kernel looks structurally different from a Hopper kernel, and because it is what makes shared-memory traffic - not FLOPs - the backward-pass bottleneck on B200 (per FA-4's feeds-and-speeds: backward needs 3328 SMEM cycles per tile versus 2560 tensor-core cycles). TMEM does not exist on Hopper; the closest Hopper analogue is keeping accumulators in shared memory, which is what wgmma's D-in-shared-memory mode allows and why Hopper register pressure is the binding constraint there. CUTLASS README lists 'Extended TMEM size from 512 COL to 576 COL' among the SM107/Rubin entries, and the FlashMLA build explicitly fails on register spilling - a reminder that both stores are finite.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "kern-ptx-isa",
+  "kern-flashattention-4-blog",
+  "kern-cutlass-github"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "tmem_capacity",
+   "effect": "TMEM changes the capacity budget of a GEMM or attention mainloop rather than the roofline.",
+   "basis": "unverified",
+   "values_for": [
     "nvidia-b200",
     "nvidia-b300",
     "nvidia-gb200-nvl72",
     "nvidia-h100-sxm"
-  ],
-  "workarounds": [
-    "Budget TMEM columns explicitly per pipeline stage and reuse columns across stages",
-    "Let one warp own all TMEM allocation/deallocation so the allocation is serialized and correct",
-    "Store transposed intermediates in TMEM in operand-A layout to skip a shared-memory round trip",
-    "Use TMEM-resident accumulators to keep several MMAs in flight while CUDA cores do elementwise work"
-  ],
-  "notes": "This record exists because TMEM is the specific hardware reason a Blackwell kernel looks structurally different from a Hopper kernel, and because it is what makes shared-memory traffic - not FLOPs - the backward-pass bottleneck on B200 (per FA-4's feeds-and-speeds: backward needs 3328 SMEM cycles per tile versus 2560 tensor-core cycles). TMEM does not exist on Hopper; the closest Hopper analogue is keeping accumulators in shared memory, which is what wgmma's D-in-shared-memory mode allows and why Hopper register pressure is the binding constraint there. CUTLASS README lists 'Extended TMEM size from 512 COL to 576 COL' among the SM107/Rubin entries, and the FlashMLA build explicitly fails on register spilling - a reminder that both stores are finite.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "kern-ptx-isa",
-    "kern-flashattention-4-blog",
-    "kern-cutlass-github"
-  ]
+   ]
+  },
+  {
+   "parameter": "tensor_core_count",
+   "effect": "This record exists because TMEM is the specific hardware reason a Blackwell kernel looks structurally different from a Hopper kernel, and because it is what makes shared-memory traffic - not FLOPs - the backward-pass bottleneck on B200 (per FA-4's feeds-and-speeds: backward needs 3328 SMEM cycles per tile versus 2560 tensor-core cycles).",
+   "basis": "recorded",
+   "values_for": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "nvidia-h100-sxm"
+   ]
+  },
+  {
+   "parameter": "shared_memory_capacity",
+   "effect": "This record exists because TMEM is the specific hardware reason a Blackwell kernel looks structurally different from a Hopper kernel, and because it is what makes shared-memory traffic - not FLOPs - the backward-pass bottleneck on B200 (per FA-4's feeds-and-speeds: backward needs 3328 SMEM cycles per tile versus 2560 tensor-core cycles).",
+   "basis": "recorded",
+   "values_for": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72",
+    "nvidia-h100-sxm"
+   ]
+  }
+ ]
 }

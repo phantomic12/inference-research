@@ -1,37 +1,88 @@
 {
-  "id": "attn-flashattention-generation-comparison",
-  "type": "flop",
-  "name": "FlashAttention 1-4 generation comparison: what each changed mechanically and measured performance",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "Each FA generation attacks a different bottleneck. FA-1 (2022): IO-aware tiling eliminates S x S HBM round trip, 2-4x wallclock vs PyTorch. FA-2 (2023): work partitioning fix, ~2x vs FA-1, 50-73% of peak FLOPs/s on A100 (FA-1 was 25-40%). FA-3 (2024): Hopper warp specialization + TMA + FP8, 1.5-2.0x vs FA-2, 740 TFLOPs/s FP16 (75% of 989 TFLOPS peak), ~1.2 PFLOPs/s FP8 on H100. FA-4 (2025): Blackwell tcgen05 UMMA + TMEM + 2-CTA MMA + emulated exp, up to 1605 TFLOPs/s BF16 on B200 (71% of 2250 TFLOPS peak). The progression: FA-1 fixes bytes, FA-2 fixes scheduling, FA-3 fixes SFU/matmul overlap, FA-4 fixes shared-memory bandwidth in backward. Each generation is arch-specific: FA-1 works on Ampere+, FA-2 adds better Ampere/Ada, FA-3 requires Hopper (wgmma + TMA), FA-4 requires Blackwell (tcgen05 + TMEM).",
-  "bound_by": "both",
-  "scales_with": [
-    "context_length (tiling efficiency scales with L)",
-    "head_dim (FA-3/4 warp specialization tuned for 128/256)",
-    "precision (FA-3 FP8 doubles tensor-core flops but SFU exp unchanged)",
-    "num_SMs (FA-2 partitioning, FA-4 2-CTA MMA needs CTA pairs)"
-  ],
-  "affected_by_hardware": [
+ "id": "attn-flashattention-generation-comparison",
+ "type": "flop",
+ "name": "FlashAttention 1-4 generation comparison: what each changed mechanically and measured performance",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "Each FA generation attacks a different bottleneck. FA-1 (2022): IO-aware tiling eliminates S x S HBM round trip, 2-4x wallclock vs PyTorch. FA-2 (2023): work partitioning fix, ~2x vs FA-1, 50-73% of peak FLOPs/s on A100 (FA-1 was 25-40%). FA-3 (2024): Hopper warp specialization + TMA + FP8, 1.5-2.0x vs FA-2, 740 TFLOPs/s FP16 (75% of 989 TFLOPS peak), ~1.2 PFLOPs/s FP8 on H100. FA-4 (2025): Blackwell tcgen05 UMMA + TMEM + 2-CTA MMA + emulated exp, up to 1605 TFLOPs/s BF16 on B200 (71% of 2250 TFLOPS peak). The progression: FA-1 fixes bytes, FA-2 fixes scheduling, FA-3 fixes SFU/matmul overlap, FA-4 fixes shared-memory bandwidth in backward. Each generation is arch-specific: FA-1 works on Ampere+, FA-2 adds better Ampere/Ada, FA-3 requires Hopper (wgmma + TMA), FA-4 requires Blackwell (tcgen05 + TMEM).",
+ "bound_by": "both",
+ "scales_with": [
+  "context_length (tiling efficiency scales with L)",
+  "head_dim (FA-3/4 warp specialization tuned for 128/256)",
+  "precision (FA-3 FP8 doubles tensor-core flops but SFU exp unchanged)",
+  "num_SMs (FA-2 partitioning, FA-4 2-CTA MMA needs CTA pairs)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "nvidia-b200",
+  "nvidia-b300",
+  "nvidia-gb200-nvl72"
+ ],
+ "workarounds": [
+  "FA-1: tiling with online softmax, recompute S in backward instead of storing",
+  "FA-2: parallelize over batch*seqlen*heads, reduce non-matmul FLOPs, better warp distribution",
+  "FA-3: warp specialization (producer TMA + consumer WGMMA), ping-pong warpgroups, 2-stage pipelining, FP8 with incoherent processing (Hadamard transform)",
+  "FA-4: tcgen05 UMMA with TMEM accumulators, 2-CTA MMA halving operand-B SMEM traffic, emulated exp (Cody-Waite + Horner polynomial on FMA), conditional online-softmax rescaling, LPT tile scheduling"
+ ],
+ "notes": "Measured performance summary (all author-reported): FA-1: 2-4x vs PyTorch, 25-40% peak. FA-2: ~2x vs FA-1, 50-73% peak on A100, 225 TFLOPs/s training (72% MFU). FA-3: 1.5-2.0x vs FA-2, 740 TFLOPs/s FP16 (75%), ~1.2 PFLOPs/s FP8 on H100. FA-4: 1605 TFLOPs/s BF16 on B200 (71%), 1.3x vs cuDNN 9.13, 2.7x vs Triton. Key insight: the bottleneck migrates from HBM bytes (FA-1) to scheduling (FA-2) to SFU/matmul overlap (FA-3) to shared-memory bandwidth (FA-4). On Hopper, SFU throughput is 3.9 TFLOPS vs 989 TFLOPS matmul, so at head_dim 128 exp() can consume ~50% of step time. FA-3 reduces register pressure to address this. FA-4 moves bottleneck to SMEM bandwidth in backward (3328 SMEM cycles vs 2560 tensor-core cycles per tile). Sources: arXiv 2205.14135, 2307.08691, 2407.08608, 2501.09294.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "attn-flashattention-paper",
+  "attn-flashattention-2-paper",
+  "attn-flashattention-3-paper",
+  "attn-flashattention-4-paper"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "The progression: FA-1 fixes bytes, FA-2 fixes scheduling, FA-3 fixes SFU/matmul overlap, FA-4 fixes shared-memory bandwidth in backward.",
+   "basis": "unverified",
+   "values_for": [
     "nvidia-a100-80gb-sxm4",
     "nvidia-h100-sxm",
     "nvidia-b200",
     "nvidia-b300",
     "nvidia-gb200-nvl72"
-  ],
-  "workarounds": [
-    "FA-1: tiling with online softmax, recompute S in backward instead of storing",
-    "FA-2: parallelize over batch*seqlen*heads, reduce non-matmul FLOPs, better warp distribution",
-    "FA-3: warp specialization (producer TMA + consumer WGMMA), ping-pong warpgroups, 2-stage pipelining, FP8 with incoherent processing (Hadamard transform)",
-    "FA-4: tcgen05 UMMA with TMEM accumulators, 2-CTA MMA halving operand-B SMEM traffic, emulated exp (Cody-Waite + Horner polynomial on FMA), conditional online-softmax rescaling, LPT tile scheduling"
-  ],
-  "notes": "Measured performance summary (all author-reported): FA-1: 2-4x vs PyTorch, 25-40% peak. FA-2: ~2x vs FA-1, 50-73% peak on A100, 225 TFLOPs/s training (72% MFU). FA-3: 1.5-2.0x vs FA-2, 740 TFLOPs/s FP16 (75%), ~1.2 PFLOPs/s FP8 on H100. FA-4: 1605 TFLOPs/s BF16 on B200 (71%), 1.3x vs cuDNN 9.13, 2.7x vs Triton. Key insight: the bottleneck migrates from HBM bytes (FA-1) to scheduling (FA-2) to SFU/matmul overlap (FA-3) to shared-memory bandwidth (FA-4). On Hopper, SFU throughput is 3.9 TFLOPS vs 989 TFLOPS matmul, so at head_dim 128 exp() can consume ~50% of step time. FA-3 reduces register pressure to address this. FA-4 moves bottleneck to SMEM bandwidth in backward (3328 SMEM cycles vs 2560 tensor-core cycles per tile). Sources: arXiv 2205.14135, 2307.08691, 2407.08608, 2501.09294.",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-04",
-  "sources": [
-    "attn-flashattention-paper",
-    "attn-flashattention-2-paper",
-    "attn-flashattention-3-paper",
-    "attn-flashattention-4-paper"
-  ]
+   ]
+  },
+  {
+   "parameter": "shared_memory_capacity",
+   "effect": "The progression: FA-1 fixes bytes, FA-2 fixes scheduling, FA-3 fixes SFU/matmul overlap, FA-4 fixes shared-memory bandwidth in backward.",
+   "basis": "unverified",
+   "values_for": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+   ]
+  },
+  {
+   "parameter": "tmem_capacity",
+   "effect": "FA-4 (2025): Blackwell tcgen05 UMMA + TMEM + 2-CTA MMA + emulated exp, up to 1605 TFLOPs/s BF16 on B200 (71% of 2250 TFLOPS peak).",
+   "basis": "recorded",
+   "magnitude": "2250 TFLOPS",
+   "values_for": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+   ]
+  },
+  {
+   "parameter": "tensor_core_count",
+   "effect": "FA-4 moves bottleneck to SMEM bandwidth in backward (3328 SMEM cycles vs 2560 tensor-core cycles per tile).",
+   "basis": "unverified",
+   "values_for": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+   ]
+  }
+ ]
 }

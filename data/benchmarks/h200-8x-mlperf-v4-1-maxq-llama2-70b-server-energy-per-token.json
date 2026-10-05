@@ -1,30 +1,36 @@
 {
-  "id": "h200-8x-mlperf-v4-1-maxq-llama2-70b-server-energy-per-token",
-  "type": "benchmark",
-  "name": "8xH200 SXM-141GB (MaxQ), MLPerf v4.1 llama2-70b Server: 23113.14 completed tok/s at 5767.2 W mean = 0.2495 J/output token",
-  "status": "verified",
-  "confidence": 0.93,
-  "updated": "2026-10-03",
-  "sources": [
-    "pwr-mlperf-v4-1-h200-maxq-l70-server-spl",
-    "pwr-mlperf-v4-1-h200-maxq-l70-server-summary",
-    "pwr-mlperf-v4-1-h200-maxq-system-json",
-    "pwr-mlperf-v4-1-nvidia-makefile-power"
-  ],
-  "engine_id": "tensorrt-llm",
-  "accelerator_ids": [
-    "nvidia-h200-sxm"
-  ],
-  "interconnect_ids": [
-    "nvlink-4"
-  ],
-  "model": "Llama 2 70B (MLPerf 'llama2-70b-99.9')",
-  "format_id": null,
-  "metric": "tps_aggregate",
-  "value": 23113.14,
-  "unit": "completed tokens/s (MLPerf 'Completed tokens per second') AT 5767.2 W MEAN WHOLE-NODE DRAW - i.e. 0.2495 J/output token; watts in the unit because the metric enum has no energy metric",
-  "methodology": "PRECISION: NOT STATED BY THE SOURCE AND DELIBERATELY NOT GUESSED. The paired measurements.json for this benchmark gives weight_data_types 'fp16', starting_weights_filename 'Original Hugginface model weights', weight_transformations 'quantization, affine fusion', input_data_types 'int32'. That says the weights began fp16 and were quantized, but it never names the served numeric format - not FP8, not INT8. format_id is therefore null rather than a guess. AGGREGATE, LATENCY-CONSTRAINED. MLPerf Inference v4.1 SERVER scenario, same closed-division submission system as the Offline record (H200-SXM-141GBx8_TRT_MaxQ), so hardware, power envelope, instrument and locked 1000 MHz clock are identical - only the load shape differs. Provenance: closed/NVIDIA/results/H200-SXM-141GBx8_TRT_MaxQ/llama2-70b-99.9/Server/performance/run_1/ (mlperf_log_summary.txt, spl.txt). LoadGen: 'Completed samples per second : 79.36', 'Completed tokens per second: 23113.14', scheduled samples/s 80.10, 'Result is : VALID', 'Performance constraints satisfied : Yes', target_qps 80, ttft 2000000000 ns, tpot 200000000 ns, min_duration 2400000 ms, min_query_count 100. POWER: same Yokogawa WT333E 3-phase, 1 Hz, via PTDaemon 1.10.0. spl.txt is 3056 samples; discarding the first 5% (152 samples, ramp) leaves 2904 samples with mean 5767.19 W (min 2455.2, max 6389.5). DERIVATION: J/token = 5767.19 / 23113.14 = 0.24952. Use 'Completed tokens per second' for this scenario - the Server and Offline summaries do NOT use the same label for their headline figure, and silently reading the Offline label out of a Server summary is an easy way to be off by a few percent.",
-  "measured_by": "vendor",
-  "reproducible": false,
-  "notes": "THE MOST DECISION-RELEVANT SINGLE NUMBER IN THIS SLICE, because Server is the scenario production serving actually resembles: a fixed arrival rate with a latency budget, not an unbounded queue. COMPARE WITH THE OFFLINE SIBLING: Server costs 0.2495 J/token against Offline's 0.2299 J/token - about 8.5% MORE energy per token - while drawing slightly LESS power (5767 vs 5807 W). The mechanism is visible in the raw traces, not inferred: the Server trace holds near its loaded plateau for essentially the whole window (post-ramp min 2455.2 W, max 6389.5 W, i.e. it stays hot), while the Offline trace spends its first ~13 minutes near 2.4 kW before climbing. Server spends that energy on latency compliance rather than on more tokens. LATENCY HEADROOM IS THIN AND THAT IS WHY: TPOT 50th percentile 138.267 ms, 99th 158.802 ms, 99.9th 174.808 ms against a 200 ms constraint; TTFT 50th 204.7 ms, 99th 519.3 ms, 99.9th 658.8 ms against 2000 ms. The 99.9th-percentile TPOT is at 87% of its limit. A power cap, a fan change or a hotter inlet eats directly into that margin - which is why DVFS and power-cap effects on tail latency are recorded as their own gotcha rather than folded in here. REPRODUCIBLE: FALSE - same private-PTDaemon reason as the Offline record."
+ "id": "h200-8x-mlperf-v4-1-maxq-llama2-70b-server-energy-per-token",
+ "type": "benchmark",
+ "name": "8xH200 SXM-141GB (MaxQ), MLPerf v4.1 llama2-70b Server: 23113.14 completed tok/s at 5767.2 W mean = 0.2495 J/output token",
+ "status": "verified",
+ "confidence": 0.93,
+ "updated": "2026-10-05",
+ "sources": [
+  "pwr-mlperf-v4-1-h200-maxq-l70-server-spl",
+  "pwr-mlperf-v4-1-h200-maxq-l70-server-summary",
+  "pwr-mlperf-v4-1-h200-maxq-system-json",
+  "pwr-mlperf-v4-1-nvidia-makefile-power"
+ ],
+ "engine_id": "tensorrt-llm",
+ "accelerator_ids": [
+  "nvidia-h200-sxm"
+ ],
+ "interconnect_ids": [
+  "nvlink-4"
+ ],
+ "model": "Llama 2 70B (MLPerf 'llama2-70b-99.9')",
+ "format_id": null,
+ "metric": "tps_aggregate",
+ "value": 23113.14,
+ "unit": "completed tokens/s (MLPerf 'Completed tokens per second') AT 5767.2 W MEAN WHOLE-NODE DRAW - i.e. 0.2495 J/output token; watts in the unit because the metric enum has no energy metric",
+ "methodology": "PRECISION: NOT STATED BY THE SOURCE AND DELIBERATELY NOT GUESSED. The paired measurements.json for this benchmark gives weight_data_types 'fp16', starting_weights_filename 'Original Hugginface model weights', weight_transformations 'quantization, affine fusion', input_data_types 'int32'. That says the weights began fp16 and were quantized, but it never names the served numeric format - not FP8, not INT8. format_id is therefore null rather than a guess. AGGREGATE, LATENCY-CONSTRAINED. MLPerf Inference v4.1 SERVER scenario, same closed-division submission system as the Offline record (H200-SXM-141GBx8_TRT_MaxQ), so hardware, power envelope, instrument and locked 1000 MHz clock are identical - only the load shape differs. Provenance: closed/NVIDIA/results/H200-SXM-141GBx8_TRT_MaxQ/llama2-70b-99.9/Server/performance/run_1/ (mlperf_log_summary.txt, spl.txt). LoadGen: 'Completed samples per second : 79.36', 'Completed tokens per second: 23113.14', scheduled samples/s 80.10, 'Result is : VALID', 'Performance constraints satisfied : Yes', target_qps 80, ttft 2000000000 ns, tpot 200000000 ns, min_duration 2400000 ms, min_query_count 100. POWER: same Yokogawa WT333E 3-phase, 1 Hz, via PTDaemon 1.10.0. spl.txt is 3056 samples; discarding the first 5% (152 samples, ramp) leaves 2904 samples with mean 5767.19 W (min 2455.2, max 6389.5). DERIVATION: J/token = 5767.19 / 23113.14 = 0.24952. Use 'Completed tokens per second' for this scenario - the Server and Offline summaries do NOT use the same label for their headline figure, and silently reading the Offline label out of a Server summary is an easy way to be off by a few percent.",
+ "measured_by": "vendor",
+ "reproducible": false,
+ "notes": "THE MOST DECISION-RELEVANT SINGLE NUMBER IN THIS SLICE, because Server is the scenario production serving actually resembles: a fixed arrival rate with a latency budget, not an unbounded queue. COMPARE WITH THE OFFLINE SIBLING: Server costs 0.2495 J/token against Offline's 0.2299 J/token - about 8.5% MORE energy per token - while drawing slightly LESS power (5767 vs 5807 W). The mechanism is visible in the raw traces, not inferred: the Server trace holds near its loaded plateau for essentially the whole window (post-ramp min 2455.2 W, max 6389.5 W, i.e. it stays hot), while the Offline trace spends its first ~13 minutes near 2.4 kW before climbing. Server spends that energy on latency compliance rather than on more tokens. LATENCY HEADROOM IS THIN AND THAT IS WHY: TPOT 50th percentile 138.267 ms, 99th 158.802 ms, 99.9th 174.808 ms against a 200 ms constraint; TTFT 50th 204.7 ms, 99th 519.3 ms, 99.9th 658.8 ms against 2000 ms. The 99.9th-percentile TPOT is at 87% of its limit. A power cap, a fan change or a hotter inlet eats directly into that margin - which is why DVFS and power-cap effects on tail latency are recorded as their own gotcha rather than folded in here. REPRODUCIBLE: FALSE - same private-PTDaemon reason as the Offline record.\n\nENERGY-FIELD BACKFILL 2026-10-05 (schema authority pass, agent w5-schema). The joules_per_token metric and the energy_basis / power_w / power_scope / power_cap / clock_lock_mhz / thermal_state fields have existed in schemas/benchmark.schema.json since they were drafted, and until this commit EVERY ONE OF THEM WAS UNUSED: zero records set power_w, power_scope or thermal_state, and joules_per_token had zero records while the watts and joules travelled as prose inside `unit`. This record's own notes were already asking for the fix ('RECOMMENDED SCHEMA CHANGE: this record wants a first-class joules_per_token metric rather than watts smuggled into the unit string'). The fields are now populated from facts this record already documented, and the stored throughput value and metric are UNCHANGED - the joules figure is recorded ALONGSIDE the throughput, not instead of it, because the throughput is independently measured and the joules are derived from it.\nnode, same reasoning as the Offline sibling: this is a whole-node instrument reading, not a per-GPU one.\nnull, NOT 700 - factory TGP is not a measured cap; see the Offline sibling and gotcha mlperf-maxq-is-not-a-watt-cap.\nsteady and MORE so than Offline: the Server trace holds near its loaded plateau for essentially the whole window (post-ramp min 2455.2 W, max 6389.5 W - it stays hot), whereas the Offline trace spends its first ~13 minutes near 2.4 kW. That difference is the mechanism behind Server costing ~8.5% more energy per token than Offline on this node.",
+ "energy_basis": "Full 1 Hz Yokogawa WT333E trace via PTDaemon 1, same closed-division submission system as the Offline sibling (H200-SXM-141GBx8_TRT_MaxQ), so hardware, instrument and locked 1000 MHz clock are identical and only the load shape differs. txt is 3056 samples; discarding the first 5% (152 samples, ramp) leaves 2904 samples with mean 5767.19 W (min 2455.2, max 6389.5). joules = 5767.19 x 2904 = 16.75 MJ over the 23113.14 completed tok/s the harness reports = 0.2495 J/output token.",
+ "power_w": 5767.19,
+ "power_scope": "node",
+ "power_cap": null,
+ "clock_lock_mhz": 1000.0,
+ "thermal_state": "steady"
 }

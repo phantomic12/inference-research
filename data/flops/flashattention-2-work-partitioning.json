@@ -1,34 +1,58 @@
 {
-  "id": "flashattention-2-work-partitioning",
-  "type": "flop",
-  "name": "FlashAttention-2 work partitioning: fixing warp-level underutilization",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "No change to bytes or FLOPs relative to FA-1. FA-2 is a pure scheduling fix: it removes idle tensor-core cycles caused by poor thread-block/warp partitioning and redundant shared-memory traffic, i.e. it converts achieved FLOPs/s toward the FLOPs the tiles already imply. The metric that moves is MMA utilization (percent of tensor-core peak), not arithmetic intensity. Recorded as custom_kernel because the mechanism is kernel-organization, not an operation class.",
-  "bound_by": "compute",
-  "scales_with": [
-    "num_SMs (partitioning determines whether all SMs get equal work)",
-    "seqlen (partition granularity relative to seqlen)",
-    "batch_size"
-  ],
-  "affected_by_hardware": [
+ "id": "flashattention-2-work-partitioning",
+ "type": "flop",
+ "name": "FlashAttention-2 work partitioning: fixing warp-level underutilization",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "No change to bytes or FLOPs relative to FA-1. FA-2 is a pure scheduling fix: it removes idle tensor-core cycles caused by poor thread-block/warp partitioning and redundant shared-memory traffic, i.e. it converts achieved FLOPs/s toward the FLOPs the tiles already imply. The metric that moves is MMA utilization (percent of tensor-core peak), not arithmetic intensity. Recorded as custom_kernel because the mechanism is kernel-organization, not an operation class.",
+ "bound_by": "compute",
+ "scales_with": [
+  "num_SMs (partitioning determines whether all SMs get equal work)",
+  "seqlen (partition granularity relative to seqlen)",
+  "batch_size"
+ ],
+ "affected_by_hardware": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a10",
+  "nvidia-h100-sxm",
+  "amd-instinct-mi300x"
+ ],
+ "workarounds": [
+  "Parallelize over batch * seqlen * num_heads rather than the FA-1 partitioning, so every CTA gets work without idle warps",
+  "Reduce non-tensor-core work per warp: fewer softmax rescale passes and less shared-memory round tripping between the MMA and softmax phases",
+  "Separate the intra-warpgroup and inter-warpgroup GEMM/softmax loops so tensor cores are never waiting on the SFU path",
+  "Smaller head-dim handling (up to 256) so the same SMEM budget gives more warps"
+ ],
+ "notes": "FA-1 reached only 25-40% of peak FLOPS/s according to the existing prefill-attention record's source chain; FA-2's stated target was roughly 2x and the changelog calls it 'Complete rewrite, 2x faster' (author claim, 2.0). Where FA-2 does NOT apply: it is Ampere-and-later only (README: Ampere, Ada or Hopper for the CUDA path, Turing via a separate repo with a feature subset), and on ROCm it ships two different backends (composable_kernel as default, plus a Triton/aiter backend) with different GPU support lists (MI200x/MI250x/MI300x/MI355x and RDNA 3/4 for the CK backend). That is the first place the same model gets different kernels per arch. Inference-relevant additions: 2.2 splits the KV-cache load across thread blocks for tiny query lengths with a separate combine kernel, 2.5 added paged KV cache, 2.6 softcapping for Gemma-2/Grok.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "flop-flashattention-2",
+  "kern-flashattention-github",
+  "flop-flashattention"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "tensor_core_count",
+   "effect": "FA-2 is a pure scheduling fix: it removes idle tensor-core cycles caused by poor thread-block/warp partitioning and redundant shared-memory traffic, i.e.",
+   "basis": "unverified",
+   "values_for": [
     "nvidia-a100-80gb-sxm4",
     "nvidia-a10",
     "nvidia-h100-sxm",
     "amd-instinct-mi300x"
-  ],
-  "workarounds": [
-    "Parallelize over batch * seqlen * num_heads rather than the FA-1 partitioning, so every CTA gets work without idle warps",
-    "Reduce non-tensor-core work per warp: fewer softmax rescale passes and less shared-memory round tripping between the MMA and softmax phases",
-    "Separate the intra-warpgroup and inter-warpgroup GEMM/softmax loops so tensor cores are never waiting on the SFU path",
-    "Smaller head-dim handling (up to 256) so the same SMEM budget gives more warps"
-  ],
-  "notes": "FA-1 reached only 25-40% of peak FLOPS/s according to the existing prefill-attention record's source chain; FA-2's stated target was roughly 2x and the changelog calls it 'Complete rewrite, 2x faster' (author claim, 2.0). Where FA-2 does NOT apply: it is Ampere-and-later only (README: Ampere, Ada or Hopper for the CUDA path, Turing via a separate repo with a feature subset), and on ROCm it ships two different backends (composable_kernel as default, plus a Triton/aiter backend) with different GPU support lists (MI200x/MI250x/MI300x/MI355x and RDNA 3/4 for the CK backend). That is the first place the same model gets different kernels per arch. Inference-relevant additions: 2.2 splits the KV-cache load across thread blocks for tiny query lengths with a separate combine kernel, 2.5 added paged KV cache, 2.6 softcapping for Gemma-2/Grok.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "flop-flashattention-2",
-    "kern-flashattention-github",
-    "flop-flashattention"
-  ]
+   ]
+  },
+  {
+   "parameter": "shared_memory_capacity",
+   "effect": "FA-2 is a pure scheduling fix: it removes idle tensor-core cycles caused by poor thread-block/warp partitioning and redundant shared-memory traffic, i.e.",
+   "basis": "unverified",
+   "values_for": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10",
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x"
+   ]
+  }
+ ]
 }

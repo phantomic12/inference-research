@@ -1,24 +1,29 @@
 {
-  "id": "apple-m4-pro-llama3-2-3b-ollama-system-joules-per-token",
-  "type": "benchmark",
-  "name": "Apple M4 Pro, Llama 3.2 3B via Ollama: 0.09 J/output token system-level (10 W system estimate), 4.4 mJ/token at the CPU+GPU package",
-  "engine_id": "ollama",
-  "accelerator_ids": [
-    "apple-m4-max"
-  ],
-  "model": "Llama 3.2 3B (Q4_K_M)",
-  "format_id": null,
-  "metric": "tps_aggregate",
-  "value": 115.2,
-  "unit": "output tokens/s; ENERGY: 0.09 J/output token SYSTEM-level and 0.0044 J/token (4.4 mJ) CPU+GPU PACKAGE-level. The metric enum has no energy member so throughput carries the value and the joules travel in the unit string - see the H200 power records for the same convention",
-  "methodology": "HARDWARE: Apple M4 Pro, 12-core CPU (10P+2E), 16-core Metal 3 GPU, 16-core Neural Engine, 48 GB unified LPDDR5X, 273 GB/s memory bandwidth, in a MacBook Pro (Model Mac16,8), macOS 15.4 Sequoia. Single machine, single user, no batching. ENGINE: Ollama v0.21.2 wrapping llama.cpp. MEASUREMENT, and this is the part that makes it usable: power came from macOS powermetrics sampled every 2 s, broken down by CPU / GPU / ANE, paired with Ollama's per-call nanosecond timing - explicitly NOT a wall-power meter and NOT a manufacturer TDP figure. ENERGY BASIS / WINDOW: energy per output token over the generation phase of each request, at package and at whole-system granularity separately, with a fixed 10 W system-level estimate added for the non-package overhead. Package power during sustained inference measured 0.47 W CPU+GPU, with 8-12 W total system. Precision/quant not stated beyond Q4_K_M in the Pareto table. Over 1500 inference runs across 5 models and 3 NLP tasks.",
-  "measured_by": "third_party",
-  "reproducible": false,
-  "notes": "THE ONLY APPLE SILICON PER-TOKEN ENERGY NUMBERS THIS SEARCH FOUND, and the first non-NVIDIA joules/token record in the repo. READ THE BASIS BEFORE COMPARING TO ANY GPU NUMBER: single-user, single-request, no batching, and the system-level figure rests on a 10 W ESTIMATE rather than a wall meter - so 0.09 J/tok is the weaker of the two numbers, while the 4.4 mJ/tok package figure is the directly measured one. The paper's own framing is 4-12 tokens per watt and 30-40x better per-token energy than datacenter GPUs, but that comparison is single-user versus batched serving and is NOT a like-for-like datacenter claim - the paper says so itself ('Datacenter GPUs justify their power draw through batching many requests at once; that option is simply not there for low-volume, local workloads'). The value here is the existence of a MEASUREMENT METHODOLOGY that separates package from system power, which is exactly the decomposition the GPU power records lack. accelerator_ids points at apple-m4-max as the nearest existing apple record because there is no apple-m4-pro accelerator record in the repo; M4 Pro (12C/16GPU, 273 GB/s) is NOT the same part as M4 Max, so treat that id as a loose family pointer, not an exact match. NOT COMPARABLE TO THE H200 MLPerf RECORDS: different precision, no batching, different measurement chain.",
-  "status": "verified",
-  "confidence": 0.78,
-  "updated": "2026-10-03",
-  "sources": [
-    "nrg2-arxiv-greenbench-apple-silicon"
-  ]
+ "id": "apple-m4-pro-llama3-2-3b-ollama-system-joules-per-token",
+ "type": "benchmark",
+ "name": "Apple M4 Pro, Llama 3.2 3B via Ollama: 0.09 J/output token system-level (10 W system estimate), 4.4 mJ/token at the CPU+GPU package",
+ "engine_id": "ollama",
+ "accelerator_ids": [
+  "apple-m4-max"
+ ],
+ "model": "Llama 3.2 3B (Q4_K_M)",
+ "format_id": null,
+ "metric": "tps_aggregate",
+ "value": 115.2,
+ "unit": "output tokens/s; ENERGY: 0.09 J/output token SYSTEM-level and 0.0044 J/token (4.4 mJ) CPU+GPU PACKAGE-level. The metric enum has no energy member so throughput carries the value and the joules travel in the unit string - see the H200 power records for the same convention",
+ "methodology": "HARDWARE: Apple M4 Pro, 12-core CPU (10P+2E), 16-core Metal 3 GPU, 16-core Neural Engine, 48 GB unified LPDDR5X, 273 GB/s memory bandwidth, in a MacBook Pro (Model Mac16,8), macOS 15.4 Sequoia. Single machine, single user, no batching. ENGINE: Ollama v0.21.2 wrapping llama.cpp. MEASUREMENT, and this is the part that makes it usable: power came from macOS powermetrics sampled every 2 s, broken down by CPU / GPU / ANE, paired with Ollama's per-call nanosecond timing - explicitly NOT a wall-power meter and NOT a manufacturer TDP figure. ENERGY BASIS / WINDOW: energy per output token over the generation phase of each request, at package and at whole-system granularity separately, with a fixed 10 W system-level estimate added for the non-package overhead. Package power during sustained inference measured 0.47 W CPU+GPU, with 8-12 W total system. Precision/quant not stated beyond Q4_K_M in the Pareto table. Over 1500 inference runs across 5 models and 3 NLP tasks.",
+ "measured_by": "third_party",
+ "reproducible": false,
+ "notes": "THE ONLY APPLE SILICON PER-TOKEN ENERGY NUMBERS THIS SEARCH FOUND, and the first non-NVIDIA joules/token record in the repo. READ THE BASIS BEFORE COMPARING TO ANY GPU NUMBER: single-user, single-request, no batching, and the system-level figure rests on a 10 W ESTIMATE rather than a wall meter - so 0.09 J/tok is the weaker of the two numbers, while the 4.4 mJ/tok package figure is the directly measured one. The paper's own framing is 4-12 tokens per watt and 30-40x better per-token energy than datacenter GPUs, but that comparison is single-user versus batched serving and is NOT a like-for-like datacenter claim - the paper says so itself ('Datacenter GPUs justify their power draw through batching many requests at once; that option is simply not there for low-volume, local workloads'). The value here is the existence of a MEASUREMENT METHODOLOGY that separates package from system power, which is exactly the decomposition the GPU power records lack. accelerator_ids points at apple-m4-max as the nearest existing apple record because there is no apple-m4-pro accelerator record in the repo; M4 Pro (12C/16GPU, 273 GB/s) is NOT the same part as M4 Max, so treat that id as a loose family pointer, not an exact match. NOT COMPARABLE TO THE H200 MLPerf RECORDS: different precision, no batching, different measurement chain.\n\nENERGY-FIELD BACKFILL 2026-10-05 (schema authority pass, agent w5-schema). energy_basis / power_w / power_scope / power_cap / clock_lock_mhz / thermal_state were all DRAFTED and shipped UNUSED: before this commit zero records in the repo set power_w, power_scope or thermal_state, and the joules figures travelled as prose inside `unit` while metric enum member joules_per_token had zero records. They are populated here from facts this record already documented.\nWHY power_w IS NULL: powermetrics reports instantaneous component power at 2 s intervals and this record never integrated it to a mean node draw, so there is no mean-W figure to record. The joules figure is what was derived; the watts were not.\nWHY power_scope IS 'node' AND NOT 'device': the 0.09 J/token figure the record leads with is explicitly SYSTEM-level. On Apple silicon the SoC package is a small fraction of system draw - the package/system ratio here is roughly 20-50x - so a package-level measurement systematically understates what a wall meter would show. Recording 'device' would attach a system number to the package scope and hide exactly the distinction this record exists to document.\nWHY thermal_state IS 'unknown': a single-user, single-request, unbatched run on a laptop is not a sustained plateau, and nothing in the record establishes a thermal steady state.",
+ "status": "verified",
+ "confidence": 0.78,
+ "updated": "2026-10-05",
+ "sources": [
+  "nrg2-arxiv-greenbench-apple-silicon"
+ ],
+ "power_scope": "node",
+ "power_w": null,
+ "power_cap": null,
+ "thermal_state": "unknown",
+ "energy_basis": "macOS powermetrics sampled every 2 s, broken down by CPU / GPU / ANE, paired with Ollama's per-call nanosecond timing - explicitly NOT a wall-power meter and NOT a manufacturer TDP figure. Energy per output token over the GENERATION PHASE of each request, at package and at whole-system granularity separately, with a fixed 10 W system-level ESTIMATE added for the non-package overhead. 0.0044 J/token (4.4 mJ) is the CPU+GPU PACKAGE measurement; 0.09 J/token is the SYSTEM figure and therefore rests on that 10 W estimate, so the package number is the directly measured one and the system number is the weaker of the two."
 }

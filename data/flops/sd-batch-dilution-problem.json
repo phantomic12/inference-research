@@ -1,35 +1,48 @@
 {
-  "id": "sd-batch-dilution-problem",
-  "type": "flop",
-  "name": "Speculative decoding batch dilution: why speedup collapses at production batch sizes",
-  "class": "speculative_verify",
-  "arithmetic_intensity": "The core problem: speculative decoding raises arithmetic intensity from 1 to k on both passes, but a real decode step at batch B already has AI = B. So a k=4 speculative step at batch B has AI = B + k - the increment shrinks as a fraction of the total. At batch 1, speculative decoding converts AI from 1 to k (a kx improvement). At batch 32, it converts AI from 32 to 36 (only 12.5% improvement). At batch 128, from 128 to 132 (3.1%). This is why speculative decoding is a LATENCY optimization, not a THROUGHPUT optimization - the idle bandwidth it converts does not exist once B is large. The Medusa paper provides direct measured evidence: 'when the batch size exceeds 32, the speedup decreases and may even have a negative effect' because linear layers shift from memory-bandwidth-bound to compute-bound. EAGLE-3 paper confirms: in SGLang framework, EAGLE-3 achieves only 1.38x throughput improvement at batch size 64 (vs 3-6.5x at batch 1). This is the single most important practical caveat for production deployment.",
-  "bound_by": "memory",
-  "scales_with": [
-    "batch_size (the dominant term: relative benefit of raising AI from 1 to k shrinks as B grows)",
-    "draft_k (the AI increment; at large B the increment is negligible)",
-    "acceptance_rate (at large batch, even high acceptance cannot overcome the AI dilution)",
-    "draft_model_size (draft cost becomes pure overhead when verify is already compute-bound)"
-  ],
-  "affected_by_hardware": [
+ "id": "sd-batch-dilution-problem",
+ "type": "flop",
+ "name": "Speculative decoding batch dilution: why speedup collapses at production batch sizes",
+ "class": "speculative_verify",
+ "arithmetic_intensity": "The core problem: speculative decoding raises arithmetic intensity from 1 to k on both passes, but a real decode step at batch B already has AI = B. So a k=4 speculative step at batch B has AI = B + k - the increment shrinks as a fraction of the total. At batch 1, speculative decoding converts AI from 1 to k (a kx improvement). At batch 32, it converts AI from 32 to 36 (only 12.5% improvement). At batch 128, from 128 to 132 (3.1%). This is why speculative decoding is a LATENCY optimization, not a THROUGHPUT optimization - the idle bandwidth it converts does not exist once B is large. The Medusa paper provides direct measured evidence: 'when the batch size exceeds 32, the speedup decreases and may even have a negative effect' because linear layers shift from memory-bandwidth-bound to compute-bound. EAGLE-3 paper confirms: in SGLang framework, EAGLE-3 achieves only 1.38x throughput improvement at batch size 64 (vs 3-6.5x at batch 1). This is the single most important practical caveat for production deployment.",
+ "bound_by": "memory",
+ "scales_with": [
+  "batch_size (the dominant term: relative benefit of raising AI from 1 to k shrinks as B grows)",
+  "draft_k (the AI increment; at large B the increment is negligible)",
+  "acceptance_rate (at large batch, even high acceptance cannot overcome the AI dilution)",
+  "draft_model_size (draft cost becomes pure overhead when verify is already compute-bound)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-b200",
+  "amd-instinct-mi300x"
+ ],
+ "workarounds": [
+  "Disable speculative decoding for throughput-oriented batches; enable only for latency-sensitive small-batch requests",
+  "Use n-gram/lookahead drafters at moderate batch sizes - zero draft cost means less overhead even when verify is compute-bound",
+  "Size decode pools in disaggregated serving to keep batch small",
+  "Adaptive draft_k - shorten the draft when acceptance rate drops (which happens naturally at large batch)"
+ ],
+ "notes": "Measured evidence: (1) Medusa paper Appendix G.3: simulated speedup for Llama-7B on A100 80GB PCIe shows speedup peaks at batch 1-16 and declines beyond batch 32, becoming negative at very high batch. (2) EAGLE-3 paper: 1.38x throughput at batch 64 in SGLang (vs 3-6.5x at batch 1). (3) The existing repo record speculative-decoding-bandwidth-trade-at-batch documents the AI math: at batch B, speculative step has AI = B+k vs B for normal decode, so the relative gain is k/B which → 0 as B → ∞. Production implication: speculative decoding should be treated as a latency optimization for small-batch requests, not a throughput optimization for large-batch serving. The batch size threshold where benefit disappears is hardware-dependent (higher on parts with more bandwidth headroom) but the qualitative behavior is universal.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "sd-medusa-paper",
+  "sd-eagle3-paper",
+  "sd-eagle2-paper"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "The Medusa paper provides direct measured evidence: 'when the batch size exceeds 32, the speedup decreases and may even have a negative effect' because linear layers shift from memory-bandwidth-bound to compute-bound.",
+   "basis": "unverified",
+   "values_for": [
     "nvidia-h100-sxm",
     "nvidia-h200-sxm",
     "nvidia-b200",
     "amd-instinct-mi300x"
-  ],
-  "workarounds": [
-    "Disable speculative decoding for throughput-oriented batches; enable only for latency-sensitive small-batch requests",
-    "Use n-gram/lookahead drafters at moderate batch sizes - zero draft cost means less overhead even when verify is compute-bound",
-    "Size decode pools in disaggregated serving to keep batch small",
-    "Adaptive draft_k - shorten the draft when acceptance rate drops (which happens naturally at large batch)"
-  ],
-  "notes": "Measured evidence: (1) Medusa paper Appendix G.3: simulated speedup for Llama-7B on A100 80GB PCIe shows speedup peaks at batch 1-16 and declines beyond batch 32, becoming negative at very high batch. (2) EAGLE-3 paper: 1.38x throughput at batch 64 in SGLang (vs 3-6.5x at batch 1). (3) The existing repo record speculative-decoding-bandwidth-trade-at-batch documents the AI math: at batch B, speculative step has AI = B+k vs B for normal decode, so the relative gain is k/B which → 0 as B → ∞. Production implication: speculative decoding should be treated as a latency optimization for small-batch requests, not a throughput optimization for large-batch serving. The batch size threshold where benefit disappears is hardware-dependent (higher on parts with more bandwidth headroom) but the qualitative behavior is universal.",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-04",
-  "sources": [
-    "sd-medusa-paper",
-    "sd-eagle3-paper",
-    "sd-eagle2-paper"
-  ]
+   ]
+  }
+ ]
 }
