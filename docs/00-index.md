@@ -705,8 +705,9 @@
 - **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (336)
+## Gotchas (339)
 
+- **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
 - **A cache hit produces different output than a cold run, with no error anywhere in the stack** (`gotchas/pd-cache-hit-silently-differs-from-cold-run`) — [blocker] framework · The disaggregated deployment looks completely healthy and still returns wrong text. Both vLLM servers start, return HTTP 200, stay healthy after the requests, report that LMCache P/D mode is enabled, 
 - **A dropped KV-transfer completion notification hangs the receiver forever at 100% CPU instead of erroring** (`gotchas/pd-completion-notification-drop-hangs-receiver`) — [blocker] framework · The decode (GEN) worker goes silent after model init with no error and no crash. The stack sits in check_gen_transfer_status, the GPU is idle, and the process spins at 100% CPU. Reproduced 100% of the
@@ -714,6 +715,7 @@
 - **A flops[] row could carry a number with no derivation: the schema gap that let eight generated values survive review** (`gotchas/flops-row-had-no-basis-field`) — [blocker] measurement · The accelerator schema's flops[] items required exactly two fields - precision and tflops - and permitted five optional ones (dense, vendor_claim, source_id, notes, unit). A row could therefore state 
 - **A hybrid model's KV cost depends entirely on how many layers are full attention, and when config gives a GROUP SIZE rather than an index list, reading the group size as the layer count inflates the KV figure several-fold** (`gotchas/mdl-gotcha-hybrid-attention-layer-count-from-a-rule-not-the-name`) — [blocker] config · ling-3-0-flash recorded kv_cache_bytes_per_token 23040, overstating the real figure 8064 by 2.86x (20 attention layers used where 7 are real). The record had attention_layer_indices and layer_types le
 - **A model's advertised context window is a license, not a capability: the gap runs 2x to 256x and nobody publishes the ratio** (`gotchas/ctx-gotcha-claimed-vs-effective-context-gap`) — [blocker] measurement · A model loads, accepts a long prompt, and returns fluent text that is wrong. No error, no truncation warning, no OOM - just a confidently incorrect answer about something that was in the prompt. The s
+- **A paginated price API that ignores its own filter will hand you a global sample and let you invent a price error** (`gotchas/w5s-api-page1-is-not-the-catalogue`) — [blocker] measurement · A price record is re-verified against what appears to be a targeted query, the queried meter is absent from the returned rows, and the record is about to be 'corrected' upward. The correction is wrong
 - **A persistent per-pod /dev/shm converts one scheduler crash into a permanent crashloop, because a container restart does not reclaim leaked segments** (`gotchas/mgpu-devshm-leak-wedges-pod-permanently`) — [blocker] framework · Measured fleet-wide on ~700 H20 GPUs with TP4 pods: a single traffic burst produced scheduler crashes, and affected pods went from 4 to 101 in about 30 minutes with none recovering without pod deletio
 - **A tensor-parallel size that does not divide the model's attention-head count fails at startup, and the message does not tell you what to use instead** (`gotchas/mgpu-tp-size-must-divide-attention-heads`) — [blocker] config · Serving a model with --tensor-parallel-size N raises at config validation. The vLLM string is: 'Total number of attention heads (40) must be divisible by tensor parallel size (6)' (reported verbatim o
 - **A vLLM SIGTERM aborts every in-flight request by default — a rolling update fails requests that were seconds from completing, with no error unless you set --shutdown-timeout** (`gotchas/ops-restart-aborts-in-flight-by-default`) — [blocker] operations · Every rolling update or scale-down fails a batch of in-flight requests. The failures land as error-status responses to clients mid-generation, typically on the pods being replaced, and cluster-level e
@@ -904,6 +906,7 @@
 - **On gfx906 vLLM, AWQ quants fail under tensor parallelism while GPTQ works, and the cause is structural: AWQ packs group scales in a way that cannot be split across TP ranks** (`gotchas/comm-gfx906-awq-tensor-parallel-breaks-gptq-works`) — [major] framework · Early on the nzly fork, 'AWQ quants dont seem to work with -tp 4. I think it has to do with how the model is split across cards, and quants groups value together for compression, so they are less flex
 - **On single-node PCIe boxes NCCL's cuMem UDS file-descriptor exchange loses a message and the engine hangs at startup in a spin-wait, intermittently, with no error** (`gotchas/mgpu-nccl-cumem-uds-fd-exchange-hangs-at-init`) — [major] driver · On a single-node 8x RTX 3090 box (no NVLink, P2P over PCIe at PXB level, NCCL 2.29.7+cuda13.2) serving a large MoE under vLLM with TP2xPP4 plus expert parallel - a layout that creates on the order of 
 - **On some gfx1201 systems the ROCm backend allocates no VRAM and streams a 30 GB model from system RAM** (`gotchas/rocm-backend-silently-serves-weights-from-host-ram-on-gfx1201`) — [major] driver · On an 8x RADEON AI Pro 9700 XT (gfx1201) host, llama.cpp's ROCm backend reports the full VRAM size in --list-devices, shows both GPUs at normal compute activity, and then allocates nothing on the GPU:
+- **One GPU, one provider, one page, several prices - and the record keeps the dearest one** (`gotchas/w5s-one-page-one-product-many-tiers`) — [major] measurement · A supply record carries a per-GPU-hour figure that is arithmetically correct for its own product and nevertheless reads as 'what this GPU costs here'. Together AI's pricing page publishes THREE tables
 - **One dead rank does not stop new KV loads to its siblings: per-port peer identity means a 30 s timeout is the only terminator** (`gotchas/pd-p2p-peer-liveness-per-rank-not-per-pod`) — [major] framework · On a disaggregated P/D deployment with multi-rank prefill pods, a source pod became unavailable mid-transfer. The consumer marked the source's rank-0 control peer down within a second - and then submi
 - **Output filtering at serve time: logit masking, post-hoc scanning and a separate guard model are three different systems with three different bills** (`gotchas/sec-output-filter-three-placement-cost`) — [major] security · An engineer asks 'add content filtering' and gets three mutually exclusive answers depending on who is asked. Logit masking inside the decode loop costs throughput; scanning completed text costs nothi
 - **Preemption costs no visible throughput and only shows up in latency, so a throughput dashboard stays green through a KV-cache collapse** (`gotchas/obs-preemption-hides-latitude-from-throughput`) — [major] measurement · Aggregate output tok/s and request-success rate look normal or even improve while users report stalling. Inter-token latency and time-to-first-token p99 climb. Nothing in the throughput panel moves, a
@@ -1048,8 +1051,9 @@ and t
 - **vLLM is Apache 2.0: the patent grant is the key differentiator from MIT, and it terminates on patent litigation** (`gotchas/meth-vllm-apache2-patent-grant`) — [minor] config · You want to use vLLM in a commercial product and assume it's 'open source' like MIT. But Apache 2.0 has a patent grant that MIT lacks, and it terminates if you sue for patent infringement.
 - **vLLM's 'Your GPU does not have native support for FP4' warning fires on weight-only NVFP4 checkpoints, and gets quoted as evidence the silicon lacks FP4 kernels** (`gotchas/nvfp4-marlin-warning-blames-gpu-for-weight-only-checkpoint`) — [minor] measurement · prepare_nvfp4_moe_layer_for_marlin() emits 'Your GPU does not have native support for FP4 computation but FP4 quantization is being used. Weight-only FP4 compression will be used leveraging the Marlin
 
-## Where to buy / source hardware (119)
+## Where to buy / source hardware (123)
 
+- **Oracle OCI bare-metal AMD Instinct MI300X / MI355X per-GPU-hour list price** (`supply/w5s-oracle-oci-amd-mi300x-mi355x-gpu-hour`) — AMD (via Oracle Cloud Infrastructure) · OCI commercial regions (the price list states one rate without a regional table) · $6.0 · in-stock · PER AMD MI300X GPU-HOUR, ON-DEMAND list price (ASKING, not realised, not committ
 - **AMD Instinct GPU server solutions via AMD's OEM and system-builder partners** (`supply/amd-instinct-oem-systems`) — AMD (via named OEM partners) · Worldwide; AMD publishes a qualified-server catalog PDF and a partner logo list · unknown · EAR 742.6(a)(6)(iii)(A) + EAR 744.23 (Entity List) + EAR 744
 - **Best Buy (US big-box) RDNA4 consumer discrete GPU channel** (`supply/bestbuy-rdna4-consumer-discrete`) — AMD board partners (Gigabyte, XFX) · United States · $869.99 · in-stock · Gigabyte Radeon RX 9070 XT Gaming OC 16GB GDDR6 PCIe 5.0 bare card, SKU 6617866, · EAR 3A001 or EAR99 (below the 3A090.a TPP / performance-dens
 - **Overclockers UK (UK enthusiast retailer) — Intel Arc B580 and RTX 5090 listings** (`supply/overclockers-uk-arc-and-rtx5090-channel`) — ASUS / NVIDIA / Intel board partners · United Kingdom · unknown · EAR 3A001 or EAR99 (below the 3A090.a TPP / performance-dens
@@ -1162,9 +1166,12 @@ and t
 - **Oracle Cloud Infrastructure BM.GPU.H100.8 / BM.GPU.H200.8** (`supply/oracle-bm-gpu-h100-h200`) — oracle · OCI commercial regions (Oracle does not itemise the regions on the price-list page) · $10.0 · unknown · per GPU per hour - Oracle's price list quotes GPU shapes PER GPU PER HOUR, not p · EAR 742.6(a)(6)(iii)(A) + EAR 744.23/744.6 (Entity, Unverifi
 - **Oracle Cloud Infrastructure BM.GPU4.8 / BM.GPU.A100-v2.8 / L40S** (`supply/oracle-bm-gpu-a100`) — oracle · OCI commercial regions · $4.0 · unknown · per GPU per hour, as quoted by Oracle: BM.GPU.A100-v2.8 (8x A100 80GB) = $4.00;  · EAR 742.6(a)(6)(iii)(A) + EAR 744.23/744.6 (Entity, Unverifi
 - **AWS Data Transfer Out - NEGATIVE: egress rates not accessible via static fetch** (`supply/ppl-sup-aws-egress-negative`) — All AWS regions · unknown · No price recorded. AWS egress pricing is JS-rendered and was not accessible via  · EAR 742.6(a)(6)(iii)(A) + EAR 744.23/744.6 (Entity, Unverifi
+- **Audit of lead_time_weeks provenance across data/supply: every numeric value states its basis, and the structural-na class is doing more work than its definition allows** (`supply/w5s-lead-time-provenance-audit-2026-10-05`) — unknown · unknown · NO price_usd: this record audits lead-time provenance and carries no money figur
 - **Cost to RUN, not to buy: US average industrial electricity price, 8.91 cents/kWh trailing-12-months to July 2026 (EIA Electric Power Monthly Table 5.3); 8.13 was the CY2024 figure** (`supply/us-electricity-industrial-tariff-2024`) — United States (national average across all 50 states and DC) · $0.0891 · in-stock · USD per kWh, INDUSTRIAL sector average retail price to ultimate customers, all U · no EAR citation: no controlled item is transferred by this t
 - **MARKET SUMMARY: GPU price bands by segment, observed 2026-10-03 (new / used / rental)** (`supply/market-gpu-price-bands-2026-10`) — global (US-weighted; hosts in NL, TH, SI, CZ, FR, CA, US) · unknown · EAR 3A090.a / 3A090.b (advanced-computing ICs) + EAR 742.6(a
 - **NEGATIVE RECORD: inference pricing that genuinely is not public (fabric, cluster rates, hyperscaler GPU list prices)** (`supply/rent-pricing-not-public-negatives-2026-10`) — global · unknown · NO price_usd, and that is the finding. Each negative below names what is missing · no EAR citation: no controlled item is transferred by this t
+- **Price re-verification sweep of the supply directory, observed 2026-10-05 against records observed 2026-10-03/04** (`supply/w5s-price-staleness-audit-2026-10-05`) — unknown · unknown · NO price_usd, deliberately, and this is the finding rather than an omission: thi
+- **Reconciliation of the 'only ~40% of throughput benchmarks are priceable' claim against the corpus as it stands on 2026-10-05** (`supply/w5s-throughput-priceable-coverage-2026-10-05`) — unknown · unknown · NO price_usd, deliberately: this is a reconciliation of the price-then-throughpu
 - **Uptime Institute PUE data - NEGATIVE: 2026 survey behind download wall** (`supply/ppl-sup-uptime-pue-negative`) — Global · unknown · No price recorded. PUE is a ratio, not a price. The Uptime Institute 2026 survey · EAR 742.6(a)(6)(iii)(A) + EAR 744.23/744.6 (Entity, Unverifi
 - **eBay used Intel Arc B580 12GB consumer cards** (`supply/ebay-used-intel-arc-b580`) — various third-party sellers on eBay · United States (eBay.com) · $290.0 · in-stock · USED / Pre-Owned, bare PCIe consumer card, as-is. $290.00 = Acer Nitro Intel Arc · EAR 3A001 or EAR99 (below the 3A090.a TPP / performance-dens
 - **eBay used bare A100 80GB PCIe cards (the mainstream ex-datacenter consumer path)** (`supply/ebay-used-a100-80gb-pcie`) — various third-party sellers on eBay · United States (eBay.com) · $12,099.0 · in-stock · USED / Pre-Owned, bare A100 80GB **PCIe** card. $12,099.00 = the lowest listing  · EAR 3A090.a / 3A090.b (advanced-computing ICs) + EAR 742.6(a
@@ -1630,7 +1637,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (1938)
+## Sources (1942)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -1819,6 +1826,7 @@ and t
 - **Azure Retail Prices API - ND96asr / ND96amsr A100 v4 (eastus)** (`sources/sup-cloud-azure-retail-prices-a100`) — database · Microsoft
 - **Azure Retail Prices API - ND96isr H100 v5 (eastus)** (`sources/sup-cloud-azure-retail-prices-h100`) — database · Microsoft
 - **Azure Retail Prices API - ND96isr H200 v5 (eastus2, westus2)** (`sources/sup-cloud-azure-retail-prices-h200`) — database · Microsoft
+- **Azure Retail Prices API — full-catalogue dump, ND96isr H200/H100 v5 re-verification 2026-10-05** (`sources/w5s-azure-retail-prices-h200-recheck`) — database · Microsoft Azure
 - **B&H Photo Video RTX 3090 search results** (`sources/noncuda-bhphoto-rtx3090-search`) — database · B&H Photo Video
 - **B&H Photo Video RTX 5090 search results** (`sources/noncuda-bhphoto-rtx5090-search`) — database · B&H Photo Video
 - **B&H Photo Video RTX PRO 6000 Blackwell search results** (`sources/noncuda-bhphoto-rtxpro6000-search`) — database · B&H Photo Video
@@ -1905,6 +1913,7 @@ and t
 - **Newegg search, Intel Arc B580, including Newegg Refreshed refurbished tier** (`sources/sup-used-newegg-refreshed-b580`) — database · Newegg
 - **OpenReview api2 note-search index (venue + venueid per forum, mirrors DBLP for older venues)** (`sources/sco-openreview-venue-search`) — database · OpenReview
 - **Oracle Cloud Infrastructure Price List** (`sources/sup-cloud-oracle-cloud-pricelist`) — database · Oracle
+- **Oracle OCI 'GPU - Accelerated Compute' price table, including AMD MI300X and MI355X per-GPU-hour rates** (`sources/w5s-oracle-gpu-accelerated-compute-table`) — database · Oracle
 - **Overclockers UK graphics card listings (new, and out-of-stock RTX 4090)** (`sources/sup-used-overclockers-uk`) — database · Overclockers UK
 - **Overclockers UK search results for Intel Arc B580** (`sources/noncuda-overclockers-uk-arc-b580-search`) — database · Overclockers UK
 - **Overclockers UK search results for RTX 3090 / RTX 4090** (`sources/noncuda-overclockers-uk-rtx3090-search`) — database · Overclockers UK
@@ -1937,6 +1946,7 @@ and t
 - **Together AI Pricing - GPU Clusters on-demand/preemptible/reserved + Dedicated Inference** (`sources/ppl-cloud-together-ai-full-pricing`) — database · Together AI
 - **Together AI as cloud orchestrator - Per-GPU-hour, per-token, and PTU billing models** (`sources/ppl-orch-together-billing-model`) — database · Together AI
 - **Together AI pricing - GPU Clusters** (`sources/sup-cloud-together-gpu-clusters-pricing`) — database · Together AI
+- **Together AI pricing page — GPU Clusters on-demand, Preemptible Compute and reserved tier table (re-read 2026-10-05)** (`sources/w5s-together-gpu-clusters-tiers-2026-10-05`) — database · Together AI
 - **US EIA Electric Power Annual Table 2.4 - Average Price of Electricity to Ultimate Customers by End-Use Sector (Cents per kWh)** (`sources/pd-eia-epa-table-2-4`) — database · US Energy Information Administration
 - **US EIA Electric Power Monthly Table 5.3 - Average Price of Electricity to Ultimate Customers by End-Use Sector, monthly series through July 2026** (`sources/pd-eia-epm-table-5-3`) — database · US Energy Information Administration
 - **USENIX NSDI '17 technical sessions (full program page)** (`sources/pap-sys-nsdi17-proceedings`) — database · USENIX Association
@@ -1944,6 +1954,7 @@ and t
 - **USENIX OSDI '23 technical sessions (full program page)** (`sources/pap-sys-osdi23-proceedings`) — database · USENIX Association
 - **USENIX OSDI '24 technical sessions (full program page)** (`sources/pap-sys-osdi24-proceedings`) — database · USENIX Association
 - **Uptime Institute Global Data Center Survey - executive summaries (2024/2025/2026): landing pages reachable, PUE figures behind membership paywall** (`sources/nrg2-uptime-institute-survey-paywalled`) — database · Uptime Institute
+- **VERIFIED NEGATIVE (methodological): the Azure Retail Prices API silently ignores the $filter parameter** (`sources/w5s-azure-api-ignores-filter-negative`) — database · Microsoft Azure
 - **Vast.ai GPU pricing** (`sources/sup-cloud-vast-ai-pricing`) — database · Vast.ai
 - **Xinference built-in embedding model catalogue** (`sources/embed-xinference-embedding-catalog`) — database · Xorbits AI
 - **Xinference built-in rerank model catalogue** (`sources/embed-xinference-rerank-catalog`) — database · Xorbits AI
@@ -3884,13 +3895,13 @@ and t
 
 ## Coverage
 
-Total records: **3837**
+Total records: **3848**
 
 | group | records |
 |---|---|
-| severity:major | 206 |
+| severity:major | 207 |
 | backend:cuda | 77 |
-| severity:blocker | 68 |
+| severity:blocker | 70 |
 | severity:minor | 61 |
 | flop bound:memory | 55 |
 | flop bound:compute | 42 |
