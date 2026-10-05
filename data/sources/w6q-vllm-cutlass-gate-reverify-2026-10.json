@@ -1,0 +1,15 @@
+{
+ "id": "w6q-vllm-cutlass-gate-reverify-2026-10",
+ "type": "source",
+ "name": "vLLM CUTLASS/quantization C++ capability gates re-read from main @ 528772a4 (2026-10-05), including the previously unrecorded cutlass_group_gemm_supported MoE gate",
+ "status": "verified",
+ "confidence": 0.95,
+ "updated": "2026-10-05",
+ "url": "https://github.com/vllm-project/vllm/blob/main/csrc/libtorch_stable/quantization/w8a8/cutlass/scaled_mm_entry.cu",
+ "publisher": "vLLM project",
+ "kind": "repo",
+ "published": null,
+ "accessed": "2026-10-05",
+ "archived_url": null,
+ "notes": "Re-read 2026-10-05 from vLLM main, commit 528772a4bf589fd52eec40bc8ca79c84d99206b5 (release v0.31.0 published 2026-10-05T06:44:55Z). This CONFIRMS every wave-4 gate verbatim and adds one gate wave 4 did not record. CONFIRMED, unchanged from wave 4: (a) cutlass_scaled_mm_supports_fp8(cc) returns CUDA_VERSION>=12000 for cc>=90 and CUDA_VERSION>=12040 for 89<=cc<90, else false, with the comment 'CUTLASS FP8 kernels need at least CUDA 12.0 on SM90 systems (Hopper) and CUDA 12.4 on SM89 systems (Lovelace)'; (b) cutlass_scaled_mm_supports_block_fp8(cc) returns CUDA_VERSION>=12080 for cc>=100, CUDA_VERSION>=12000 for 90<=cc<100, else false, commented 'CUTLASS block-quantized FP8 kernels need at least CUDA 12.0 and at least SM90 (Hopper)'; (c) cutlass_scaled_mm_supports_fp4(cc) in fp4/nvfp4_scaled_mm_entry.cu calls cudaRuntimeGetVersion and returns false unless runtimeVersion>=12080, then only for 100<=cc<120 (ENABLE_NVFP4_SM100) or 120<=cc<130 (ENABLE_NVFP4_SM120), else false, with the dispatch cutlass_scaled_fp4_mm raising STD_TORCH_CHECK_NOT_IMPLEMENTED(false, 'No compiled nvfp4 mm kernel for SM ', sm, '. Recompile with CUDA >= 12.8 and CC >= 100.'). NEW IN THIS WAVE, NOT PREVIOUSLY RECORDED: cutlass_group_gemm_supported(int64_t cuda_device_capability) — 'CUTLASS grouped FP8 kernels need at least CUDA 12.3 and SM90 (Hopper) or CUDA 12.8 and SM100 (Blackwell). Only report archs that have an actual cutlass_moe_mm dispatch compiled into this file.' It returns CUDA_VERSION>=12080 for 100<=cc<120 under ENABLE_CUTLASS_MOE_SM100, CUDA_VERSION>=12030 for 90<=cc<100 under ENABLE_CUTLASS_MOE_SM90, else false. So CUTLASS grouped/FP8 MoE is a FOURTH independent CUDA-version gate, higher than per-tensor FP8 on Hopper (12.3 vs 12.0) and equal to the Blackwell NVFP4 gate (12.8). No wave-4 record carries it. Second structural detail also confirmed: cutlass_scaled_mm() itself dispatches sm120 -> sm100 -> sm90 -> sm89 -> sm80 -> sm75 and then raises NOT_IMPLEMENTED, so the ARCH list below the capability predicate is strictly wider than the predicate (Turing and Ampere have compiled cutlass_scaled_mm kernels, but cutlass_scaled_mm_supports_fp8 returns false for both), which is exactly why an FP8 checkpoint on Ampere reaches Marlin rather than a CUTLASS FP8 kernel."
+}

@@ -1,0 +1,33 @@
+{
+ "id": "trtllm-now-has-a-marlin-nvfp4-kernel-on-ada-hopper-and-sm120",
+ "type": "gotcha",
+ "name": "TensorRT-LLM ships a Marlin NVFP4 W4A16 kernel gated to SM89, SM90-99 and SM120/121 — the exact complement of its own native FP4 on sm100/103",
+ "class": "kernel",
+ "affects": [
+  "qhw-trtllm-hardware-matrix",
+  "tensorrt-llm",
+  "nvfp4"
+ ],
+ "concepts": [
+  "marlin",
+  "nvfp4",
+  "fp4",
+  "sm120",
+  "ada-sm89",
+  "hopper-sm90",
+  "weight-only",
+  "kernel-selection"
+ ],
+ "symptom": "An NVFP4 checkpoint on an Ada, Hopper or RTX-50-series part can be served by TensorRT-LLM through a Marlin weight-only kernel rather than failing or dequantising, and the arch set is disjoint from the one where the native FP4 CUTLASS kernels exist.",
+ "root_cause": "cpp/tensorrt_llm/kernels/marlin/marlin_nvfp4.h, header comment 'Host-side header for the Marlin NVFP4 W4A16 kernels', defines `inline bool isMarlinNvfp4SmSupported(int sm) { return sm >= 89 && sm < 100; }` and `inline bool isMarlinNvfp4DenseSmSupported(int sm) { return isMarlinNvfp4SmSupported(sm) || sm == 120 || sm == 121; }`. cpp/tensorrt_llm/kernels/marlin/marlin_nvfp4_gemm.cu gates the launch: `int const sm = tensorrt_llm::common::getSMVersion(); TLLM_CHECK_WITH_INFO(isMarlinNvfp4DenseSmSupported(sm), 'Marlin NVFP4 GEMM is only supported on SM89, SM90-99, and SM120/121; current SM = %d', sm);`. A MoE sibling exists in the same directory (marlin_nvfp4_moe_gemm.cu). It is a W4A16 kernel, so serving a W4A4 checkpoint through it is the same W4A4-to-W4A16 degradation the repo records for vLLM and SGLang — but on a third engine and a different arch set.",
+ "workaround": "This is a W4A16 kernel, so do not read its availability as an FP4 compute win. Confirm which of the two you get: native FP4 CUTLASS exists only on sm100/103/sm120/sm121 in this engine (cutlass_heuristic.cpp: 'if ((FP4_ONLY) && !(BLACKWELL)) return {};' and the sm120 branch reachable only for FP4_ONLY or FP8FP4_MIXED), so on sm100/103 you get native and on sm89/sm90-99/sm120/sm121 you get Marlin W4A16.",
+ "severity": "major",
+ "notes": "This CORRECTS [[docs/23-quantization-selection]] §0 and §1.1 as read in wave 4, which stated that TensorRT-LLM 'ships no kernel for any of the four AWQ/GPTQ cells on sm120' and framed consumer Blackwell as having the newest 4-bit format available and the popular one not. The AWQ/GPTQ half is unchanged — there is still no AWQ or GPTQ kernel in the sm120 candidate list. The NVFP4 half was incomplete: the engine does have an off-Blackwell FP4 route, via Marlin, and on exactly the parts where it does not, which is the complement of where native exists. Read on NVIDIA/TensorRT-LLM main 2026-10-05.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6q-trtllm-marlin-nvfp4-2026-10",
+  "w6q-kernel-matrix-native-vs-emulated"
+ ]
+}

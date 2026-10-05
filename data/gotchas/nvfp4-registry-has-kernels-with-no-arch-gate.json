@@ -1,0 +1,33 @@
+{
+ "id": "nvfp4-registry-has-kernels-with-no-arch-gate",
+ "type": "gotcha",
+ "name": "Two NVFP4 kernels in vLLM's registry assert no architecture support at all, so 'the engine supports FP4' is not decidable from its own gate list",
+ "class": "kernel",
+ "affects": [
+  "nvfp4",
+  "qhw-vllm-kernel-capability-matrix"
+ ],
+ "concepts": [
+  "cuda",
+  "nvfp4",
+  "fp4",
+  "kernel-selection",
+  "flashinfer",
+  "sm120",
+  "hopper-sm90",
+  "ampere-sm80"
+ ],
+ "symptom": "An NVFP4 checkpoint serves on hardware that has no FP4 tensor-core path — a V100, an A100 — with no capability error at load time. The failure, if any, surfaces later and from inside FlashInfer's own dispatch rather than from vLLM's kernel gate.",
+ "root_cause": "Two classes in vllm/model_executor/kernels/linear/nvfp4/flashinfer.py have an is_supported() whose entire body is `if has_flashinfer(): return True, None` and a can_implement() whose entire body is `return True, None`: FlashInferTrtllmNvFp4LinearKernel ('NVFP4 GEMM via FlashInfer's TensorRT-LLM wrapper') and FlashInferCudnnNvFp4LinearKernel ('NVFP4 GEMM via FlashInfer's cuDNN wrapper'). Neither inspects compute_capability. Every other NVFP4 W4A4 kernel in the registry does: FlashInferCuteDslNvFp4LinearKernel requires is_device_capability_family(100); FlashInferCutlassNvFp4LinearKernel requires cutlass_fp4_supported() AND has_device_capability(100) AND has_flashinfer(); FlashInferB12xNvFp4LinearKernel requires has_device_capability(120); CutlassNvFp4LinearKernel requires cutlass_fp4_supported(); TorchNvFp4LinearKernel requires family(100) plus torch._scaled_mm and torch.float4_e2m1fn_x2. Selection is first-match-wins over the ordered list, and the two ungated entries sit at indices 6 and 7, ahead of Marlin (index 5 is weight-only, but the two ungated ones follow it), Emulation and Humming.",
+ "workaround": "Do not treat any vLLm-internal gate list as a complete answer to 'will this box run an FP4 tensor-core GEMM'. Probe the specific predicate you actually depend on — torch.ops._C.cutlass_scaled_mm_supports_fp4(capability) for native CUTLASS FP4 — AND read the kernel class name in the startup log. A FALSE from that probe tells you CUTLASS FP4 is unavailable; it does not tell you which kernel you will get, because of this record.",
+ "severity": "major",
+ "notes": "This LIMITS rather than refutes the existing repo advice. [[quantization/qhw-silent-precision-degradation]] and [[quantization/qhw-vllm-kernel-selection]] are right that Marlin is the W4A16 fallback on pre-Blackwell and that nvfp4_w4a16 in the config is the tell. What this adds is that the ungated path is a distinct third possibility: with FlashInfer installed, an SM80 part can be routed into a FlashInfer TRT-LLM or cuDNN NVFP4 kernel that asserted nothing about the architecture, so the degradation you are protected against (Marlin) is not the only one you are exposed to. Verified on vLLM main @ 528772a4, 2026-10-05, v0.31.0.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6q-vllm-nvfp4-ungated-flashinfer-2026-10",
+  "w6q-kernel-matrix-native-vs-emulated",
+  "w6q-vllm-kernel-registry-ordering-2026-10"
+ ]
+}

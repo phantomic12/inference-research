@@ -1,0 +1,33 @@
+{
+ "id": "mx-nvfp4-default-fallback-is-marlin-not-emulation",
+ "type": "gotcha",
+ "name": "'vLLM falls back to emulation' is wrong for MXFP4, MXFP8 and NVFP4 on NVIDIA — the weight-only Marlin kernel comes first in the registry and wins by default",
+ "class": "kernel",
+ "affects": [
+  "qhw-vllm-kernel-capability-matrix",
+  "mxfp4",
+  "nvfp4"
+ ],
+ "concepts": [
+  "marlin",
+  "emulation-fallback",
+  "mxfp4",
+  "mxfp8",
+  "nvfp4",
+  "kernel-selection",
+  "weight-only"
+ ],
+ "symptom": "An MXFP4, MXFP8 or NVFP4 checkpoint loads on Turing through Blackwell and runs, with the expected memory saving, at a fraction of the expected compute throughput. Nothing errors. The only clue is a logger.warning_once line that is easy to miss, or the 'MarlinMxFp4LinearKernel is a weight-only (A16) kernel; the requested activation quantization (%s) is ignored.' warning.",
+ "root_cause": "The CUDA candidate lists are ordered and selection is first-match-wins. _POSSIBLE_MXFP4_KERNELS = [FlashInfer, Marlin, Humming, B12x, Emulation]; _POSSIBLE_MXFP8_KERNELS = [FlashInferCutedsl, FlashInferCutlass, Marlin, B12x, Emulation, Humming, FlashInferTrtllm]; _POSSIBLE_NVFP4_KERNELS puts MarlinNvFp4LinearKernel at index 5 with Emulation at index 11, under the in-code comment 'Weight-only: a fallback on a W4A4-capable checkpoint, not a preference.' Marlin's own gate is only is_fp4_marlin_supported()/is_fp8_marlin_supported() = is_cuda() and has_device_capability(75), so it passes on every NVIDIA part from Turing up. Emulation is therefore the SECOND-order fallback: reached only sub-SM75, on ROCm, or for MXFP6 on ROCM. All four Emulation classes return is_supported() == (True, None) unconditionally and the NVFP4 one carries the comment 'Always available as a last-resort fallback.'",
+ "workaround": "Check the kernel class name in the startup log. Treat 'Marlin', 'Emulation', 'Triton' or 'torch' in that name as the fact that determines the capacity plan, whatever the format record says. Emulation and Marlin are not interchangeable in cost: Marlin keeps 4-bit weight storage and loses the W4A4 compute saving, whereas EmulationMxfp8LinearKernel additionally gives up the MEMORY saving — 'Dequantize MXFP8 -> BF16 ONCE here, at load time, so apply_weights runs a plain BF16 linear with no per-step dequant -- i.e. run as if from a BF16 checkpoint. The 1-byte MXFP8 weight is replaced by BF16 (2x its size...)'.",
+ "severity": "major",
+ "notes": "This CORRECTS the emphasis of [[quantization/qhw-vllm-kernel-capability-matrix]], which described the fallback as 'Marlin OR Emulation'. The degradation it identified was right; the default case was misattributed. The practical effect is that the degradation is reached on MORE hardware than 'emulation' implies, and the two failure modes are distinguishable only from the log. Verified on vLLM main @ 528772a4, 2026-10-05.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6q-vllm-kernel-registry-ordering-2026-10",
+  "w6q-kernel-matrix-native-vs-emulated",
+  "w4q-vllm-quant-kernel-source"
+ ]
+}

@@ -1,0 +1,32 @@
+{
+ "id": "sglang-blackwell-predicate-is-a-cuda-version-test",
+ "type": "gotcha",
+ "name": "SGLang's is_blackwell / is_sm100_supported / is_sm120_supported predicates all include a CUDA >= 12.8 requirement, so 'is Blackwell' in SGLang dispatch means Blackwell AND a new enough runtime",
+ "class": "config",
+ "affects": [
+  "sglang",
+  "qhw-silent-precision-degradation"
+ ],
+ "concepts": [
+  "cuda",
+  "rocm",
+  "sglang",
+  "blackwell-sm100",
+  "blackwell-sm120",
+  "nvfp4",
+  "mxfp4",
+  "toolchain-version"
+ ],
+ "symptom": "The same Blackwell GPU takes a different dispatch branch under CUDA 12.6 than under CUDA 12.8. A native FP4 or MXFP4 path silently degrades, or a hard error appears, on hardware that a support table marks as supported — and the only way to tell which is which is to know the CUDA version.",
+ "root_cause": "python/sglang/srt/utils/common.py defines these as lru_cache'd partials of _check_cuda_device_version(device_capability_majors=[...], cuda_version=(M, N)): is_blackwell_supported = is_blackwell = majors [10, 11, 12] AND cuda_version >= (12, 8); is_sm120_supported = majors [12] AND >= (12, 8); is_sm100_supported = majors [10] AND >= (12, 8); is_sm100_or_sm110_supported = majors [10, 11] AND >= (12, 8); is_sm90_supported = majors [9] AND >= (12, 3); is_sm80_supported = majors [8] AND >= (11, 0). Separately, two predicates are EXACT-match and cannot be expressed by the major-based helper, with the reason in a comment: 'GB10 (DGX Spark and OEM equivalents). Not expressible with _check_cuda_device_version, which only matches on the major.' — is_sm120() == (12,0) and is_sm121() == (12,1).",
+ "workaround": "Check the CUDA version alongside the compute capability when reading any SGLang arch claim. For native NVFP4/MXFP4 on Blackwell, CUDA 12.8 is part of the requirement, not an incidental build detail. The failure is loud on the ModelOpt dense path ('ModelOpt NVFP4 native dense GEMM backends require SM100+. Use --fp4-gemm-backend marlin on SM80-SM90.') and quiet on the MXFP4 MoE ladder.",
+ "severity": "minor",
+ "notes": "Distinct from, and complementary to, [[gotchas/cutlass-fp8-moe-needs-a-higher-cuda-than-dense-fp8-on-the-same-hopper]]: that one is a per-format CUTLASS predicate inside vLLM, this one is SGLang's own top-level arch abstraction. Same underlying class of trap — a version gate wearing an architecture gate's clothes. Read on sgl-project/sglang main 2026-10-05, release v0.5.21.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6q-sglang-quant-kernel-gates-2026-10",
+  "w6q-runtime-version-gates"
+ ]
+}
