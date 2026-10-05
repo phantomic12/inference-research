@@ -1,0 +1,15 @@
+{
+  "id": "w5s-azure-api-ignores-filter-negative",
+  "type": "source",
+  "name": "VERIFIED NEGATIVE (methodological): the Azure Retail Prices API silently ignores the $filter parameter",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-05",
+  "url": "https://prices.azure.com/api/retail/prices",
+  "publisher": "Microsoft Azure",
+  "kind": "database",
+  "published": null,
+  "accessed": "2026-10-05",
+  "archived_url": null,
+  "notes": "A NEGATIVE about the SOURCE ITSELF, established with TWO INDEPENDENT methods because a negative asserted on one probe is indistinguishable from a bug in that probe. Anyone re-verifying Azure prices in this repo will hit this and could easily file a false error against a correct record.\n\nMETHOD 1 (control-value test). Four queries were issued, each differing only in filter values, and the response inspected. `serviceName eq 'zzznotaservice' and armRegionName eq 'eastus'`, `serviceName eq 'Virtual Machines' and armRegionName eq 'zzznotaregion'`, and `serviceName eq 'Virtual Machines' and armRegionName eq 'eastus' and meterName eq 'zzznotameter'` ALL returned HTTP 200 with Count=1000, a NextPageLink, and the SAME 73-region spread of armRegionName values (southindia, taiwannorth, uksouth, brazilsouth, westus2, indonesiacentral, uaenorth, ...). A filter that worked would return zero rows for a nonsense serviceName and zero for a nonsense region. It returned the full catalogue for all three. The returned productName values for the nonsense-serviceName query included 'Virtual Machines D Series Windows' and 'Azure Container Apps', confirming no service filtering either.\n\nMETHOD 2 (cross-query row identity). The three nonsense-filter queries and the valid `serviceName eq 'Virtual Machines' and armRegionName eq 'eastus'` query returned byte-identical first-page content, and a subsequent full-catalogue walk from the unfiltered base query (879,227 unique rows, 1000 pages) contained rows for all 73 regions, not just the requested one. If armRegionName were honoured, walking the chain from a single-region filter could never yield rows for northeurope.\n\nCONCLUSION: prices.azure.com/api/retail/prices accepts $filter, returns HTTP 200, and returns a paginated 1000-row SAMPLE OF THE GLOBAL CATALOGUE regardless of the filter's contents. Any repo negative that rests on 'Azure did not return the meter I asked for' is a FALSE NEGATIVE until the whole catalogue has been walked and filtered client-side. This is precisely the failure mode that produced rent-cerebras-api-token-pricing-negative earlier in this repo's history, and it is the reason this source exists.\n\nPRACTICAL CONSEQUENCE, re-measured on 2026-10-05: during this audit an intermediate single-page probe appeared to show that Azure ND96isrH200v5 on-demand was $106.00 and that no $84.80 on-demand meter existed. The exhaustive walk in w5s-azure-retail-prices-h200-recheck showed the opposite: $84.80 IS the eastus2/westus2/westus3 on-demand Linux meter. The intermediate reading was wrong and no record was changed on its basis. Had the probe stood, the repo would have recorded a ~25% H200 price error as fact."
+}

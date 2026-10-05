@@ -1,0 +1,24 @@
+{
+  "id": "w5s-one-page-one-product-many-tiers",
+  "type": "gotcha",
+  "name": "One GPU, one provider, one page, several prices - and the record keeps the dearest one",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "price-tier",
+    "asking-vs-list-vs-spot",
+    "dedicated-inference-vs-clusters",
+    "perishable-figure"
+  ],
+  "symptom": "A supply record carries a per-GPU-hour figure that is arithmetically correct for its own product and nevertheless reads as 'what this GPU costs here'. Together AI's pricing page publishes THREE tables with three different rates for the same NVIDIA H100 GPU-hour on the same URL, and the repo's together-gpu-clusters-h100 stores only the highest of the nine rates it publishes. The stored $5.49 is correct for Together's DEDICATED INFERENCE product. The same page's GPU CLUSTERS product prices that identical H100 at $3.99 on-demand pay-as-you-go and $1.99 preemptible, and its reserved tiers at $3.69 / $3.45 / $3.19. A reader who takes $5.49 as the Together H100 rate is quoting a number 1.38x above the on-demand cluster rate and 2.76x above the preemptible rate, from the same page, on the same day.",
+  "root_cause": "A provider selling several products built on the same silicon must publish a price per product, and vendors do not reconcile them for the reader. The per-GPU-hour UNIT is identical across all of them, which is exactly what makes the trap dangerous: nothing in the number's magnitude signals that a different product is meant. The failure is not arithmetic but scoping - the record captured one table and presented its figure without naming the product, so a correct number became an unqualified claim. This is the tier dimension the repo's own cost_per_token tier column already exists to model (on-demand / spot / capacity-block / serverless / peer-to-peer-asking / base-with-multipliers), extended here to the sub-product dimension WITHIN a single vendor tier.",
+  "workaround": "When reading a vendor pricing page, enumerate every table that carries a per-GPU-hour figure before recording any of it, and record the product name in price_basis rather than the vendor name alone. For Together as of 2026-10-05 (source w5s-together-gpu-clusters-tiers-2026-10-05): Dedicated Inference H100 $5.49, B200 $8.99, H200/B300/GB200/GB300 'Contact us'; GPU Clusters on-demand H100 $3.99, H200 $5.99, B200 $8.19, B300 $9.99; GPU Clusters preemptible H100 $1.99, H200 $2.99, B200 $4.09, B300 $4.99; GPU Clusters reserved H100 $3.69/$3.45/$3.19 (7-30d/31-90d/91-180d), H200 $4.99/$4.15/$3.99, B200 $7.99/$7.79/$6.79. Note that H200, B200 and B300 are priced on the Clusters product and recorded nowhere in this repo, so three hardware generations are missing from the corpus for a reason that has nothing to do with the hardware.",
+  "severity": "major",
+  "notes": "The general rule this gotcha encodes: a per-GPU-hour figure is only interpretable together with the product that sells it. 'H100 costs $5.49/hour at Together' is false; 'H100 costs $5.49/hour on Together's Dedicated Inference product' is true and much less useful. The same pattern appears elsewhere in this directory and is handled correctly in some places and not others - oracle publishes a bare-metal BM.GPU rate AND a separate, much cheaper 'NVIDIA AI Enterprise' line ($2.50 for H100) on the same page, and rental-consumer-4090-3090-5090-vast-index deliberately keeps consumer and datacenter rental bands in separate records for the same reason. CoreWeave's record handles it best: it carries all three of its columns (on-demand, spot, and the account-gated 'Inference Single GPU' rate) and states explicitly that the third is not a rate you can walk in and buy.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
+  "sources": [
+    "w5s-together-gpu-clusters-tiers-2026-10-05"
+  ]
+}

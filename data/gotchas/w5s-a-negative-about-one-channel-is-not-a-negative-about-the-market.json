@@ -1,0 +1,29 @@
+{
+  "id": "w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market",
+  "type": "gotcha",
+  "name": "\"Nobody publishes this price\" is usually \"no OEM publishes this price\" - and that distinction hides a closable gap",
+  "class": "measurement",
+  "affects": [
+    "amd-instinct-mi300x",
+    "amd-instinct-mi355x"
+  ],
+  "concepts": [
+    "false-negative",
+    "provenance",
+    "scope-error",
+    "per-GPU-hour",
+    "amd-instinct"
+  ],
+  "symptom": "A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unpriceable' with the reason 'no supply record prices AMD Instinct per GPU-hour', names four supply records as evidence, and calls it 'the highest-value gap in the repo'. tools/cost_per_token.py gaps repeats the claim in 13 places (11 for amd-instinct-mi355x, 2 for amd-instinct-mi300x). All four records named as evidence are OEM and reseller channels - amd-instinct-oem-systems, dell-poweredge-xe-ai, hpe-proliant-compute-xd, qct-gpgpu-servers - and all four are individually correct: those channels sell configured systems and do not quote per-GPU-hour at all. The claim generalises from 'no supply record in this repo prices AMD per GPU-hour' to 'AMD is unpriceable'. As of 2026-10-05 Oracle publishes BM.GPU.MI300X.8 at $6.00 per MI300X-hour and BM.GPU.MI355X.8 at $8.60 per MI355X-hour, in the same column of the same table where it prices NVIDIA H100 at $10.00.",
+  "root_cause": "Per-GPU-hour is a CLOUD unit, not a hardware unit. OEM and reseller channels quote a price per configured system or per card, so a survey that asks those channels 'what is your per-GPU-hour rate?' correctly finds nothing and then writes down 'no supplier publishes a per-GPU-hour rate' - when the correct statement is 'no SUPPLIER OF THIS KIND publishes one, and the kind that does is a different kind of supplier'. The negative is scoped to the channels that were queried and stated as scoped to the market. Nothing in the record schema forces the distinction, because price_usd: null looks identical whether the number does not exist or was never sought in the right place.",
+  "workaround": "When recording a negative about a price, name the CHANNEL CLASS the probe covered, not just the fact of absence - 'no OEM system channel publishes a per-GPU-hour rate, because per-GPU-hour is not the unit those channels quote in'. Then ask which channel class WOULD quote that unit: for per-GPU-hour the answer is cloud providers, and for per-card it is OEM/reseller. Before filing, check whether the unit the market needs is the unit some other kind of supplier sells in. Two independent methods before asserting, as always: here the Oracle table was confirmed both from server-rendered HTML and from the live rendered DOM, and a third path - a plain-text reader - returned the shape names but dropped the price column, which would have produced another false negative. New record w5s-oracle-oci-amd-mi300x-mi355x-gpu-hour closes the gap; source w5s-oracle-gpu-accelerated-compute-table carries the table.",
+  "severity": "blocker",
+  "notes": "This is the second false negative this repo has produced from the same shape of reasoning, and the first was rent-cerebras-api-token-pricing-negative - a static probe missed a JS-rendered table, so the repo asserted Cerebras pricing was opaque when it merely renders client-side. Both were negatives asserted from one probe method and then hardened into prose. The generalisable lesson is narrower than 'be careful': it is that a negative about a MARKET is a much stronger claim than a negative about a SOURCE, and requires evidence about the market rather than about one page. When a gap is reported, the report should say which supplier types were surveyed, because the fix is almost always a different supplier type rather than a longer wait. A secondary harm worth naming: this gap was described as 'the highest-value gap in the repo' and therefore attracted repeated scrutiny in docs and tooling, so a scope error in a high-traffic negative propagates further than a scope error in a quiet one.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
+  "sources": [
+    "w5s-oracle-gpu-accelerated-compute-table",
+    "w5s-oracle-oci-amd-mi300x-mi355x-gpu-hour"
+  ]
+}
