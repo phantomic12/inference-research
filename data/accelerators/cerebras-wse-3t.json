@@ -1,0 +1,44 @@
+{
+ "id": "cerebras-wse-3t",
+ "type": "accelerator",
+ "name": "Cerebras WSE-3 Turbo (WSE-3T, the wafer inside the CS-4 system)",
+ "vendor": "cerebras",
+ "architecture": "wafer-scale engine, Turbo generation (WSE-3T)",
+ "release_year": 2025,
+ "process_nm": null,
+ "form_factors": [
+  "mdu"
+ ],
+ "vram_gb": null,
+ "memory_type": "sram (on-wafer; no DRAM tier, capacity not published for this generation)",
+ "memory_bus_bit": null,
+ "memory_bandwidth_gbps": 43200,
+ "memory_bandwidth_basis": "Vendor-published PER-WAFER figure: the CS-4 page states the WSE-3 Turbo's 'four trillion transistors and 900,000 AI cores deliver 250 PFLOPS of compute and 43.2 petabytes per second of memory bandwidth' (source w7z-cerebras-cs4-page-full). Stored as 43200 GB/s.\nTHIS IS THE SAME FALSE FRIEND AS THE WSE-3 RECORD AND IT IS NOT FIXED BY A DIFFERENT UNIT: 43.2 PB/s is on-wafer SRAM bandwidth. The WSE-3T has no DRAM tier and no memory bus, so this number is a false friend against every GPU field of the same name and must not be used as a roofline input. The correct state of a roofline question on this part is that there is none to ask in GPU terms - see notes.\nTHE PER-WAFER vs PER-SYSTEM DISTINCTION, which is the trap a reader will hit here and which is why this record exists separately from the CS-3 one: the CS-4 system contains THREE WSE-3T wafers. 43.2 PB/s and 250 PFLOPS are stated as properties of the WAFER. Cerebras publishes NO system total, so a per-system figure (129.6 PB/s, 750 PFLOPS) is not recorded here; anyone multiplying by three into a chip field has made an inference the vendor does not support.",
+ "flops": [
+  {
+   "precision": "fp16",
+   "tflops": 250000,
+   "dense": false,
+   "vendor_claim": true,
+   "source_id": "w7z-cerebras-cs4-page-full",
+   "notes": "250 PFLOPS per wafer. The 'fp16' label is a SCHEMA-ENUM PLACEHOLDER, exactly as it is on the WSE-3 (CS-3) record, and NOT a vendor claim about FP16 arithmetic: neither the CS-4 page nor the /chip page names a precision for this figure.\ndense:false, and the reasoning is worth stating because the WSE-3 record had to be corrected on exactly this point: the CS-4 page attributes the figure to '900,000 AI cores' and the CS-3 datasheet's comparable 125 PFLOPS figure carries an explicit '* FLOPS shown as sparse' footnote. Cerebras's own chip page calls the WSE-3T 'AI-optimized cores'. sparse:false is therefore recorded as 'this is the vendor's headline figure and the only one published, so a reader halving it to get a dense number is applying the repo's sparse=2x-dense convention to a figure whose sparsity label is not stated on this page'. A reader should treat 250 PFLOPS as an upper bound of unknown density, NOT as a dense peak, and NOT as 2x a dense companion that Cerebras does not publish.\nTHE FIGURE THIS RECORD IS NOT, and the error the parent record documents: 250 PFLOPS is the WSE-3T and was previously filed in this repo as the SPARSE HALF of a 125/250 dense/sparse pair on the CS-3 WSE-3. Those are two different products - the CS-3 wafer and the Turbo wafer - and Cerebras calls the Turbo 'up to 2x the speed of the previous generation', i.e. a generational step, not a density convention.",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed verbatim from the Cerebras CS-4 page (source w7z-cerebras-cs4-page-full), '250 PFLOPS of compute', attributed on the page to the wafer. No derivation."
+  }
+ ],
+ "tdp_w": null,
+ "interconnect": [
+  "cerebras-wafer-mesh"
+ ],
+ "unified_memory": false,
+ "consumer": false,
+ "notes": "ADDED 2026-10-05 to close a gap that a previous pass explicitly deferred. The repo's cerebras-wse-3 record says in its own notes: 'A separate record for CS-4 / WSE-3 Turbo should be created if needed.' The part was named in five other records - data/flops/alt-cerebras-limitations, data/flops/alt-cerebras-wafer-sram, data/interconnect/cerebras-wafer-mesh, and two source records - with no accelerator record behind it, so the 250 PFLOPS and 43.2 PB/s figures lived only in prose.\nTHIS IS A WAfer, NOT A GPU, AND THREE OF ITS FIELDS ARE STRUCTURALLY NOT APPLICABLE. Stating that plainly is the content of this record:\n  vram_gb: NULL. Cerebras publishes on-wafer SRAM CAPACITY for the CS-3 (44 GB) and NOT for the WSE-3T. Both the CS-4 page and the /chip page were read in full (sources w7z-cerebras-cs4-page-full and the pre-existing vb-cerebras-wse3t-250pf, which records the same absence) and neither states it. The 44 GB figure belongs to a different wafer and must not be carried over. A null here is the honest value; a reader who needs the capacity has to ask Cerebras.\n  memory_bus_bit: NULL, STRUCTURALLY. There is no DRAM tier and therefore no memory bus. This is not 'not published' - it is not applicable, and no figure was back-computed from the 43.2 PB/s.\n  tdp_w: NULL. No system or wafer power figure is published on either page. Note that the parent WSE-3 record's 27000 W is the CS-3 SYSTEM's 27 kW max, and the CS-4 page's power-delivery prose ('just 0.5 millimeters away from the processor ... roughly 100x closer than the roughly 50mm of conventional GPU boards') implies the WSE-3T is delivered more power than the CS-3 wafer but publishes no number for it.\nWHY THE 21 PB/s AND 43.2 PB/s FIGURES ARE NOT COMPARABLE TO A GPU BANDWIDTH, restated because this is the exact failure the parent record was corrected for and the new record must not reintroduce it in a new place: both are on-wafer SRAM bandwidth. On a GPU, memory bandwidth is the rate at which weights cross from an OFF-PACKAGE DRAM tier into the die, and it is the wall that makes batch-1 decode bandwidth-bound. On a WSE, the weights are already in on-wafer SRAM, so there is no such wall to cross - the SRAM bandwidth is an internal datapath rate between cores and local SRAM, and there is no weight-streaming cost at all for a model that fits. A roofline built from 43200 GB/s is not a slow roofline, it is a meaningless one. The genuine limit on this part is CAPACITY (a model must fit in the wafer's SRAM) plus the compile-time static scheduling, not bandwidth, and the capacity is the number Cerebras does not publish for this generation.\nVENDOR CLAIMS NOT USED AS NUMBERS: 'up to 30x faster inference compared to GPU systems', 'up to 10x more throughput per watt than CS-3', 'more than 1,000 tokens per second on models exceeding 50 trillion parameters', and 'up to 2x the speed of the previous generation'. All are marketing comparisons against an unnamed GPU baseline, and the page carries its own disclaimer: 'Performance comparisons are based on third-party benchmarking or internal testing. Observed inference speed improvements versus GPU-based systems may vary depending on workload, configuration, date and models being tested.'\nARCHITECTURE CONTEXT, from the page: three WSE-3T per CS-4 system; wafer-to-wafer interconnect latency of 2 microseconds, with the new Wafer I/O Module able to link wafers within and across racks WITHOUT A SWITCH; first system on the Cerebras Nexus Platform Architecture, with a modular Wafer-Scale Backpack folding wafer, power conversion, direct liquid cooling, I/O and control electronics into one package; and a half-millimetre power delivery distance that is what enables the doubled power delivery. 'First CS-4 shipments begin this quarter' per the page, against the repo's 2026-08-18 publication date for this source.\nWHY STATUS IS 'draft' AND NOT 'verified', given that every stored figure is first-party: the record's central capacity number is missing, its compute figure carries no vendor precision or sparsity label, its power is unpublished, and the page is a marketing product page rather than a datasheet. A complete-looking record with an invented capacity figure would be worse than this one.",
+ "status": "draft",
+ "confidence": 0.6,
+ "updated": "2026-10-05",
+ "sources": [
+  "w7z-cerebras-cs4-page-full",
+  "asic-cerebras-cs4",
+  "vb-cerebras-wse3t-250pf"
+ ]
+}

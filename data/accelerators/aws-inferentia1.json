@@ -1,0 +1,43 @@
+{
+ "id": "aws-inferentia1",
+ "type": "accelerator",
+ "name": "AWS Inferentia (first generation, Inf1)",
+ "vendor": "amazon",
+ "architecture": "NeuronCore (1st generation, 4 cores per chip)",
+ "release_year": 2020,
+ "process_nm": null,
+ "form_factors": [
+  "custom"
+ ],
+ "vram_gb": 8,
+ "memory_type": "ddr4 (plus a separate, unquantified on-chip memory tier)",
+ "memory_bus_bit": null,
+ "memory_bandwidth_gbps": null,
+ "memory_bandwidth_basis": "NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-05). The AWS Inferentia product page states 'The first-generation Inferentia has 8 GB of DDR4 memory per chip and also features a large amount of on-chip memory' and nothing else about memory: no bandwidth figure, no bus width. The Inf1 instance-type page was read in full (source w7z-aws-inf1-instance-page) and its product-details table carries NO accelerator-memory capacity column and NO bandwidth column at all - its Memory (GiB) column is HOST memory, which is why inf1.xlarge shows 8 GiB of host memory alongside exactly one Inferentia chip. Two independent first-party pages were read and neither carries a bandwidth figure, so the field stays null. It was NOT back-computed from the DDR4 technology or from a pin rate, because the repo's standing rule for this field is that a width or rate derived from an assumed per-pin rate is two inferences stacked on one number.\nTHE STRUCTURAL POINT THAT MATTERS MORE THAN THE MISSING NUMBER, and the reason this part is not comparable to the Inf2 record on the same fields: the 8 GB is DDR4, an ordinary host-memory-class tier, and it is NOT the whole memory story. AWS's own sentence puts an unquantified 'large amount of on-chip memory' alongside it, and the Inf1 page describes that on-chip memory as the thing that enables 'NeuronCore Pipeline that eliminates the need to access outside memory resources'. So this part has a THREE-TIER story (on-chip cache, DDR4, host) and vram_gb can only hold the middle one. A reader who takes 8 GB as this chip's resident-model capacity is reading it correctly; a reader who takes it as the whole memory system is not, and no field in this record can express the on-chip tier.",
+ "flops": [
+  {
+   "precision": "int8",
+   "tflops": 128,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w7z-aws-inf1-instance-page",
+   "notes": "AWS's only published per-chip throughput figure for first-generation Inferentia, and it is stated as 'up to 128 tera operations per second (TOPS)' with the supported data types named as FP16, BF16 and INT8. FILED UNDER int8 AND NOT fp16, which is the one judgement call in this row and it needs its reasoning: AWS prints ONE number for a chip that supports three precisions and gives no per-precision breakdown, so there is no first-party basis for calling it an FP16 figure, and the schema's tflops key is a FLOATING-POINT throughput field. 'up to' means a ceiling the vendor claims, not a measured peak, and no sparsity statement accompanies it, so dense:true records the absence of a sparse/dense distinction rather than asserting denseness. A reader wanting a first-party FP16 TFLOPS figure for this part does not have one and this row must not be read as one.",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the EC2 Inf1 instance-type page (source w7z-aws-inf1-instance-page), verbatim 'provides up to 128 tera operations per second (TOPS) of performance and support for FP16, BF16, and INT8 data types'. No derivation. The precision label is the repo's classification of an undifferentiated vendor figure, not a vendor claim about INT8 arithmetic specifically - see notes."
+  }
+ ],
+ "tdp_w": null,
+ "interconnect": [
+  "aws-efa"
+ ],
+ "unified_memory": false,
+ "consumer": false,
+ "notes": "ADDED 2026-10-05 to close a real gap: the repo priced Trn1/Inf1 instances in supply/aws-ec2-trn1-trn2-trainium and named 'first-generation Inferentia' in accelerators/aws-inferentia2's own comparison sentence, but no accelerator record existed for the first-generation part of EITHER line. Inf2, Trn2 and Trn3 all had records; Inf1 and Trn1 did not. That asymmetry is exactly how a reader ends up believing gen-1 Neuron was never sold.\nWHY THIS PART MATTERS AS A COMPARISON AND WHY THE FIELDS MUST NOT BE READ ACROSS FROM INFERENTIA2: the AWS Inferentia product page's own framing is 'Inferentia2 offers 32 GB of HBM per chip, increasing the total memory by 4x and memory bandwidth by 10x over Inferentia'. That 10x is a VENDOR COMPARATIVE CLAIM and it is the only bandwidth statement AWS makes about gen-1 anywhere. It is deliberately NOT used to populate memory_bandwidth_gbps here: an 'up to 10x' ratio with an unpublished gen-1 base and a 820 (or 881, see the units note on the Inf2 record) GB/s gen-2 figure yields a number that is an inference dressed as a spec. The 8 GB DDR4 figure is first-party and is stored; the bandwidth is not published and is null.\nARCHITECTURE, FIRST-PARTY: four first-generation NeuronCores per chip (against two NeuronCore-v2 on Inferentia2), and this core-count-per-chip reduction is the mechanical reason a single gen-1 chip reaches far less compute than a gen-2 chip. Up to 16 chips per Inf1 instance. Precision support is FP16, BF16 and INT8 ONLY - no FP32, no TF32, no cFP8, all three of which Inferentia2 adds. That is a capability regression to record rather than a footnote: a model or engine path that needs FP32 accumulate or configurable FP8 cannot use this part at all.\nTHE CHIP-TO-CHIP LINK IS SHAPE-DEPENDENT, which is why interconnect on this record does NOT include aws-neuronlink: the Inf1 product-details table prints the 'Inferentia chip-to-chip interconnect' column as 'N/A' for inf1.xlarge and inf1.2xlarge (both one-chip shapes) and 'Yes' from inf1.6xlarge (4 chips) upward. AWS's own framing is that NeuronCore Pipeline splits a large model across multiple Inferentia chips 'using a high-speed physical chip-to-chip interconnect'. So gen-1 scale-out exists and is named, but its bandwidth is not published on either page read, and a one-chip Inf1 instance genuinely has no such link. The repo's interconnect records are per-fabric, so aws-neuronlink is listed as the family fabric with this caveat rather than a claim that every Inf1 shape has it.\nSTATUS AND CONFIDENCE, and why this record is 'draft' rather than 'verified' despite being built from two first-party pages: two of the fields a reader most wants are null (bandwidth, bus width), the single compute figure is a ceiling covering three precisions, and process node is not published by AWS for any Neuron generation. Every stored figure is first-party; the record is incomplete rather than doubtful, and 'draft' is the honest label for that.",
+ "status": "draft",
+ "confidence": 0.6,
+ "updated": "2026-10-05",
+ "sources": [
+  "w7z-aws-inf1-instance-page",
+  "asic-aws-inferentia-product"
+ ]
+}

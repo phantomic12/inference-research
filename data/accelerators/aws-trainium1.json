@@ -1,0 +1,54 @@
+{
+ "id": "aws-trainium1",
+ "type": "accelerator",
+ "name": "AWS Trainium (first generation, Trn1 / Trn1n)",
+ "vendor": "amazon",
+ "architecture": "NeuronCore (2nd generation, 2 cores per chip)",
+ "release_year": 2020,
+ "process_nm": null,
+ "form_factors": [
+  "custom"
+ ],
+ "vram_gb": 32,
+ "memory_type": "hbm",
+ "memory_bus_bit": null,
+ "memory_bandwidth_gbps": 800,
+ "memory_bandwidth_basis": "FIRST-PARTY PER-CHIP FIGURE, from the AWS Neuron Trainium2 architecture page's own Trainium-vs-Trainium2 comparison table (source w7z-neuron-trainium2-arch-page), verbatim 'HBM Bandwidth (TB/sec) | 0.8 | 2.9 | 3.6x' - the 0.8 is the Trainium (gen 1) column. Stored as 800 GB/s.\nA GENUINE TWO-SOURCE CONFLICT IS RECORDED RATHER THAN RESOLVED, because both sides are first-party and they are not the same quantity. The Trn1 instance-type page (source w7z-aws-trn1-instance-page) states 'each Trn1 instance has 512 GB of shared accelerator memory (HBM) with 9.8 TB/s of total memory bandwidth' for a 16-chip trn1.32xlarge. 9.8 / 16 = 612.5 GB/s per chip. So AWS publishes 800 GB/s as the chip's bandwidth and an instance aggregate that divides to 612.5 GB/s. The stored value is 800 because the Neuron architecture page is a per-chip hardware table and the instance figure is a per-instance aggregate; dividing an aggregate by a chip count yields the average a 16-chip instance sustains, not the chip's peak, and on a first-generation part with per-chip variation that gap is expected rather than contradictory. A reader who needs the figure a 16-chip instance actually delivers should use 612.5, and both numbers are named here so the choice is visible.\nNO BUS WIDTH IS PUBLISHED for any Trainium generation on either page, so memory_bus_bit is null and was not back-computed from 0.8 TB/s.",
+ "flops": [
+  {
+   "precision": "fp16",
+   "tflops": 191,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w7z-neuron-trainium2-arch-page",
+   "notes": "191 TFLOPS, from the Neuron Trainium2 page's comparison table, verbatim 'BF16/FP16/TF32 (TFLOPS) | 191 | 667 | 3.4x'. THE PRECISION LABEL IS NOT A VENDOR CLAIM ABOUT FP16 SPECIFICALLY: AWS prints this number ONCE, in a row whose label covers three precisions, so 191 is one quantity spanning FP16, BF16 and TF32 and there is no first-party per-precision breakdown. It is filed as fp16 because FP16 is the precision the sibling Inf2/Trn2 records lead with and because the same table's 'up to 3 petaflops of FP16/BF16 compute power' on the Trn1 instance page describes the same figure. A reader must not read three independent confirmations into this number - it is one figure, quoted consistently. A CORROBORATING FIGURE THAT DISAGREES SLIGHTLY IS RECORDED, NOT HIDDEN: the Trn1 instance page's 3 PFLOPS over 16 chips gives 187.5 TFLOPS per chip, 1.8% below 191, for the same instance-average-versus-chip-peak reason the bandwidth shows. 191 is kept as the per-chip value. Sparse is 'Not applicable' for this generation in the same table, so no dense/sparse confusion is possible here - dense:true on that basis.",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the AWS Neuron Trainium2 architecture page's Trainium comparison column (source w7z-neuron-trainium2-arch-page), verbatim row 'BF16/FP16/TF32 (TFLOPS) 191'. No derivation. Corroborating instance-aggregate derivation 3000 TFLOPS / 16 chips = 187.5 is recorded in notes and in source w7z-aws-trn1-instance-page, not stored as a competing row."
+  },
+  {
+   "precision": "fp32",
+   "tflops": 48,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w7z-neuron-trainium2-arch-page",
+   "notes": "48 FP32 TFLOPS, verbatim from the same comparison table: 'FP32 (TFLOPS) | 48 | 181 | 3.7x'. This row did not exist anywhere in the repo before this record. It is worth having because the FP32 figure is 4x below the FP16/BF16/TF32 figure on this part, which is the opposite ratio to a GPU of the era and is a real architectural statement about what this chip is for.",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed verbatim from the Trainium column of the Neuron Trainium2 architecture page's compute comparison table (source w7z-neuron-trainium2-arch-page). No derivation."
+  }
+ ],
+ "tdp_w": null,
+ "interconnect": [
+  "aws-neuronlink",
+  "aws-efa"
+ ],
+ "unified_memory": false,
+ "consumer": false,
+ "notes": "ADDED 2026-10-05 to close the gen-1 gap on the training side. The repo priced Trn1 in supply/aws-ec2-trn1-trn2-trainium (trn1.32xlarge $21.50/h, trn1n.32xlarge $24.78/h, both 16 chips) and named Trn1 in the Neuron runtime source, and had records for Trn2 and Trn3 - but no accelerator record for the chip those instances actually run. THAT SUPPLY RECORD PRICES 'TRAINIUM' USING Trn1 INSTANCES AND POINTS ITS accelerator_ids AT aws-trainium2, which is a different part; this record is what makes that price row interpretable.\nWHY THE PER-CHIP FIGURES ARE HARDER TO GET FOR THIS PART THAN FOR INFERENTIA2, and why three of them here are second-hand-ish in a specific documented way: AWS publishes no Trainium datasheet. The per-chip figures come from the Neuron SDK's Trainium2 architecture page, which is first-party AWS hardware documentation and which carries a per-chip Trainium column in its own comparison tables. That is a better source than anything else available, but it is a comparison table written to make Trainium2 look good, so the gen-1 column is a secondary presentation of gen-1 numbers rather than a gen-1 specification. The repo's status 'draft' reflects exactly that, and it is why confidence is 0.65 rather than 0.9 despite every number being AWS's own.\nARCHITECTURE: two second-generation NeuronCores per chip, against eight NeuronCore-v3 on Trainium2. Up to 16 chips per Trn1 instance. Scale-out inside the instance is NeuronLink at up to 768 GB/s per the instance page; the Neuron page's comparison table gives the per-chip figure as 'Inter-chip Interconnect (GB/sec/chip) | 384 | 1280 | 3.3x' - note these two are different quantities (an instance-scale link budget versus a per-chip figure) and the 384 is the one stored as the per-chip truth. Six CC-Cores per chip for collectives (against 16 on Trn2 and Trn3). SBUF on-chip scratch is 48 MiB (against 224 on Trn2), which is a real memory tier and is NOT part of vram_gb.\nDATA TYPES, first-party from the instance page: FP32, TF32, BF16, FP16, UINT8 and configurable FP8 (cFP8), plus hardware support for dynamic input shapes and stochastic rounding. That is a broad list for a 2020 part and it is the reason gen-1 Trainium is still worth a record rather than a footnote.\nWHAT IS NOT PUBLISHED ANYWHERE AND IS THEREFORE NULL, named so a future pass need not re-establish it: process node (AWS publishes no node for any Neuron generation - note that the repo's aws-trainium2 record carries process_nm 5 and aws-trainium3 carries process_nm 3, and NEITHER is supported by any source in data/sources/; those two values are unsupported and this record does not repeat them), memory bus width, TDP, and any per-precision compute split for the 191 figure.\nMEMORY POOLING, which is a capability statement and not a capacity figure: the Neuron page records 'Memory Pool Size | Up to 16 chips | Up to 64 chips', meaning the HBM in an instance's chips can be pooled. Anyone reading '32 GB' as the ceiling on what a single Trn1 instance can serve is wrong by up to 16x.",
+ "status": "draft",
+ "confidence": 0.65,
+ "updated": "2026-10-05",
+ "sources": [
+  "w7z-neuron-trainium2-arch-page",
+  "w7z-aws-trn1-instance-page"
+ ]
+}
