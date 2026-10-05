@@ -73,7 +73,7 @@
 - **Intel Arc B580** (`accelerators/intel-arc-b580`) — intel battlemage (Xe2, BMG) 2024 · 12 GB gddr6 · 456 GB/s · 190 W
 - **Intel Arc Pro B60** (`accelerators/intel-arc-pro-b60`) — intel battlemage (Xe2 HPG, BMG G21) 2025 · 24 GB gddr6 · 456 GB/s · 200 W
 - **Intel Arc Pro B70** (`accelerators/intel-arc-pro-b70`) — intel battlemage (Xe2 HPG, BMG G21) 2026 · 32 GB gddr6 · 608 GB/s · 230 W
-- **Intel Data Center GPU Flex 170** (`accelerators/xpu-intel-dc-gpu-flex-170`) — intel alchemist (Xe-HPG, ACM-G11) 2022 · 16 GB gddr6 · 384 GB/s · 75 W
+- **Intel Data Center GPU Flex 170** (`accelerators/xpu-intel-dc-gpu-flex-170`) — intel alchemist (Xe-HPG, ACM-G11) 2022 · 16 GB gddr6 · 576 GB/s · 150 W
 - **Intel Data Center GPU Max 1550** (`accelerators/xpu-intel-dc-gpu-max-1550`) — intel ponte-vecchio (Xe-HPC, PVC) 2023 · 128 GB hbm2e · 3276 GB/s · 600 W
 - **Intel Gaudi 2** (`accelerators/intel-gaudi2`) — intel gaudi-2 2022 · 96 GB hbm2e · 2460 GB/s · 600 W
 - **Intel Gaudi 3 (HL-325 OAM / HL-338 PCIe)** (`accelerators/intel-gaudi3`) — intel gaudi-3 2024 · 128 GB hbm2e · 3700 GB/s · 900 W
@@ -83,7 +83,7 @@
 - **NVIDIA A100 80GB SXM4** (`accelerators/nvidia-a100-80gb-sxm4`) — nvidia ampere 2020 · 80 GB HBM2e · 2039 GB/s · 400 W
 - **NVIDIA A30** (`accelerators/nvidia-a30`) — nvidia ampere 2021 · 24 GB HBM2 · 933 GB/s · 165 W
 - **NVIDIA B200** (`accelerators/nvidia-b200`) — nvidia blackwell 2024 · 180 GB HBM3e · 7700 GB/s · 1000 W
-- **NVIDIA B300 (Blackwell Ultra)** (`accelerators/nvidia-b300`) — nvidia blackwell-ultra 2025 · 279 GB HBM3e · 8000 GB/s · 1400 W
+- **NVIDIA B300 (Blackwell Ultra)** (`accelerators/nvidia-b300`) — nvidia blackwell-ultra 2025 · 270 GB HBM3e · 7700 GB/s · 1100 W
 - **NVIDIA GB200 NVL72 (per-accelerator)** (`accelerators/nvidia-gb200-nvl72`) — nvidia blackwell 2024 · 186 GB HBM3e · 8000 GB/s · 1200 W
 - **NVIDIA GB300 (Blackwell Ultra GPU as fitted in the GB300 NVL72 rack, per-GPU figures)** (`accelerators/nvidia-gb300`) — nvidia blackwell-ultra 2025 · 279 GB hbm3e · 8000 GB/s · 1400 W
 - **NVIDIA GeForce RTX 3090** (`accelerators/nvidia-rtx-3090`) — nvidia ampere (GA102) 2020 · 24 GB gddr6x · 936 GB/s · 350 W
