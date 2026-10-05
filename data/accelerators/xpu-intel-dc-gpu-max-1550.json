@@ -1,71 +1,72 @@
 {
-  "id": "xpu-intel-dc-gpu-max-1550",
-  "type": "accelerator",
-  "name": "Intel Data Center GPU Max 1550",
-  "status": "contested",
-  "confidence": 0.85,
-  "updated": "2026-10-05",
-  "vendor": "intel",
-  "architecture": "ponte-vecchio (Xe-HPC, PVC)",
-  "release_year": 2023,
-  "process_nm": 7,
-  "form_factors": [
-    "oam",
-    "pcie"
-  ],
-  "vram_gb": 128,
-  "memory_type": "hbm2e",
-  "memory_bus_bit": 1024,
-  "memory_bandwidth_gbps": 3276,
-  "memory_bandwidth_basis": "Intel ARK spec table: 128 GB HBM2e at 3.276 TB/s. 4096-bit bus implied by HBM2e stack configuration but not explicitly stated as a single number on ARK.",
-  "flops": [
-    {
-      "precision": "fp16",
-      "tflops": 409,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "xpu-onednn-github-readme",
-      "basis": "secondary-aggregator",
-      "basis_detail": "Not an Intel figure. Intel publishes no compute number for the Max 1550 on ARK or in the product brief; these values trace to the oneDNN README, a third-party library. basis was 'vendor-docs' until 2026-10-05, which overstated their provenance."
-    },
-    {
-      "precision": "bf16",
-      "tflops": 409,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "xpu-onednn-github-readme",
-      "basis": "secondary-aggregator",
-      "basis_detail": "Not an Intel figure. Intel publishes no compute number for the Max 1550 on ARK or in the product brief; these values trace to the oneDNN README, a third-party library. basis was 'vendor-docs' until 2026-10-05, which overstated their provenance."
-    },
-    {
-      "precision": "int8",
-      "tflops": 819,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "xpu-onednn-github-readme",
-      "basis": "secondary-aggregator",
-      "basis_detail": "Not an Intel figure. Intel publishes no compute number for the Max 1550 on ARK or in the product brief; these values trace to the oneDNN README, a third-party library. basis was 'vendor-docs' until 2026-10-05, which overstated their provenance."
-    },
-    {
-      "precision": "fp32",
-      "tflops": 52,
-      "dense": true,
-      "vendor_claim": true,
-      "source_id": "xpu-onednn-github-readme",
-      "basis": "secondary-aggregator",
-      "basis_detail": "Not an Intel figure. Intel publishes no compute number for the Max 1550 on ARK or in the product brief; these values trace to the oneDNN README, a third-party library. basis was 'vendor-docs' until 2026-10-05, which overstated their provenance."
-    }
-  ],
-  "tdp_w": 600,
-  "interconnect": [
-    "pcie-gen5"
-  ],
-  "unified_memory": false,
-  "consumer": false,
-  "notes": "INTEL PUBLISHES NO COMPUTE FIGURE FOR THIS PART. Verified 2026-10-05 against Intel's own ARK page for the Max 1550: there is no TFLOPS row and no TOPS row anywhere on it, and the Flex-series product brief does not carry one either. The four flops rows (fp16/bf16 409, int8 819, fp32 52) were cited to the oneDNN GitHub README - a third-party library - while carrying basis 'vendor-docs', which misrepresented an inference as an Intel quotation. basis is now 'secondary-aggregator', the repo's term for exactly this.\n\nWHY THIS MATTERS RATHER THAN BEING COSMETIC: 409 TFLOPS is the figure a reader would size a cluster on. It is not traceable to Intel. Treat it as an unverified community estimate, not a spec.\n\nALSO CORRECTED: memory_bus_bit was 4096, an inference with no basis in any Intel document. ARK prints 1024 bit. memory_bandwidth_gbps 3276 is consistent with 1024 bit at the stated memory speed and is retained.\n\nSPARSITY: no sparsity footnote exists on any Intel document for this part, so no published figure may be halved.",
-  "sources": [
-    "w4h-intel-dc-gpu-max-1550-ark-spec-table",
-    "xpu-llamacpp-sycl-docs",
-    "xpu-onednn-github-readme"
-  ]
+ "id": "xpu-intel-dc-gpu-max-1550",
+ "type": "accelerator",
+ "name": "Intel Data Center GPU Max 1550",
+ "status": "contested",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "vendor": "intel",
+ "architecture": "ponte-vecchio (Xe-HPC, PVC)",
+ "release_year": 2023,
+ "process_nm": 7,
+ "form_factors": [
+  "oam",
+  "pcie"
+ ],
+ "vram_gb": 128,
+ "memory_type": "hbm2e",
+ "memory_bus_bit": 1024,
+ "memory_bandwidth_gbps": 3276,
+ "memory_bandwidth_basis": "Intel ARK spec table: 128 GB HBM2e at 3.276 TB/s. 4096-bit bus implied by HBM2e stack configuration but not explicitly stated as a single number on ARK.",
+ "flops": [
+  {
+   "precision": "fp16",
+   "tflops": 409,
+   "dense": true,
+   "vendor_claim": false,
+   "source_id": null,
+   "basis": "unverified",
+   "basis_detail": "CITATION WITHDRAWN 2026-10-05 - THE CITED DOCUMENT CONTAINS NO SUCH FIGURE. This row cited xpu-onednn-github-readme (the oneDNN README) on the strength of that README naming 'Intel Data Center GPU Flex Series' and 'Intel Data Center GPU Max Series' in its list of optimised GPUs. I fetched the RAW README (raw.githubusercontent.com/oneapi-src/oneDNN/master/README.md, 22,267 characters) rather than the rendered GitHub page, because the rendered page is what produced the false positive in the first place. A substring sweep over the full raw text returns ZERO occurrences of any of this record's values - '409', '819', '160', '80', '20' and '52' are all absent as figures. The GPU section of that README is a bulleted list of supported architectures with no numbers at all, and the only '52' in the document sits inside a Base64-encoded camo.githubusercontent.com image URL in the OpenSSF Scorecard badge. This number is therefore supported by NOTHING in the record's source set. vendor_claim is now false and basis 'unverified' rather than 'vendor-docs', because 'vendor-docs' asserted an Intel publication that does not contain the figure. source_id is null so the record stops asserting the false link, and the value is left in place rather than deleted: the record is already status contested with the disagreement documented, and an open contested row with its reason recorded is more useful than a deletion that reads as a settled question. Treat this number as unsupported. See w5a-part2-onednn-readme-contains-no-tflops-figure."
+  },
+  {
+   "precision": "bf16",
+   "tflops": 409,
+   "dense": true,
+   "vendor_claim": false,
+   "source_id": null,
+   "basis": "unverified",
+   "basis_detail": "CITATION WITHDRAWN 2026-10-05 - THE CITED DOCUMENT CONTAINS NO SUCH FIGURE. This row cited xpu-onednn-github-readme (the oneDNN README) on the strength of that README naming 'Intel Data Center GPU Flex Series' and 'Intel Data Center GPU Max Series' in its list of optimised GPUs. I fetched the RAW README (raw.githubusercontent.com/oneapi-src/oneDNN/master/README.md, 22,267 characters) rather than the rendered GitHub page, because the rendered page is what produced the false positive in the first place. A substring sweep over the full raw text returns ZERO occurrences of any of this record's values - '409', '819', '160', '80', '20' and '52' are all absent as figures. The GPU section of that README is a bulleted list of supported architectures with no numbers at all, and the only '52' in the document sits inside a Base64-encoded camo.githubusercontent.com image URL in the OpenSSF Scorecard badge. This number is therefore supported by NOTHING in the record's source set. vendor_claim is now false and basis 'unverified' rather than 'vendor-docs', because 'vendor-docs' asserted an Intel publication that does not contain the figure. source_id is null so the record stops asserting the false link, and the value is left in place rather than deleted: the record is already status contested with the disagreement documented, and an open contested row with its reason recorded is more useful than a deletion that reads as a settled question. Treat this number as unsupported. See w5a-part2-onednn-readme-contains-no-tflops-figure."
+  },
+  {
+   "precision": "int8",
+   "tflops": 819,
+   "dense": true,
+   "vendor_claim": false,
+   "source_id": null,
+   "basis": "unverified",
+   "basis_detail": "CITATION WITHDRAWN 2026-10-05 - THE CITED DOCUMENT CONTAINS NO SUCH FIGURE. This row cited xpu-onednn-github-readme (the oneDNN README) on the strength of that README naming 'Intel Data Center GPU Flex Series' and 'Intel Data Center GPU Max Series' in its list of optimised GPUs. I fetched the RAW README (raw.githubusercontent.com/oneapi-src/oneDNN/master/README.md, 22,267 characters) rather than the rendered GitHub page, because the rendered page is what produced the false positive in the first place. A substring sweep over the full raw text returns ZERO occurrences of any of this record's values - '409', '819', '160', '80', '20' and '52' are all absent as figures. The GPU section of that README is a bulleted list of supported architectures with no numbers at all, and the only '52' in the document sits inside a Base64-encoded camo.githubusercontent.com image URL in the OpenSSF Scorecard badge. This number is therefore supported by NOTHING in the record's source set. vendor_claim is now false and basis 'unverified' rather than 'vendor-docs', because 'vendor-docs' asserted an Intel publication that does not contain the figure. source_id is null so the record stops asserting the false link, and the value is left in place rather than deleted: the record is already status contested with the disagreement documented, and an open contested row with its reason recorded is more useful than a deletion that reads as a settled question. Treat this number as unsupported. See w5a-part2-onednn-readme-contains-no-tflops-figure."
+  },
+  {
+   "precision": "fp32",
+   "tflops": 52,
+   "dense": true,
+   "vendor_claim": false,
+   "source_id": null,
+   "basis": "unverified",
+   "basis_detail": "CITATION WITHDRAWN 2026-10-05 - THE CITED DOCUMENT CONTAINS NO SUCH FIGURE. This row cited xpu-onednn-github-readme (the oneDNN README) on the strength of that README naming 'Intel Data Center GPU Flex Series' and 'Intel Data Center GPU Max Series' in its list of optimised GPUs. I fetched the RAW README (raw.githubusercontent.com/oneapi-src/oneDNN/master/README.md, 22,267 characters) rather than the rendered GitHub page, because the rendered page is what produced the false positive in the first place. A substring sweep over the full raw text returns ZERO occurrences of any of this record's values - '409', '819', '160', '80', '20' and '52' are all absent as figures. The GPU section of that README is a bulleted list of supported architectures with no numbers at all, and the only '52' in the document sits inside a Base64-encoded camo.githubusercontent.com image URL in the OpenSSF Scorecard badge. This number is therefore supported by NOTHING in the record's source set. vendor_claim is now false and basis 'unverified' rather than 'vendor-docs', because 'vendor-docs' asserted an Intel publication that does not contain the figure. source_id is null so the record stops asserting the false link, and the value is left in place rather than deleted: the record is already status contested with the disagreement documented, and an open contested row with its reason recorded is more useful than a deletion that reads as a settled question. Treat this number as unsupported. See w5a-part2-onednn-readme-contains-no-tflops-figure."
+  }
+ ],
+ "tdp_w": 600,
+ "interconnect": [
+  "pcie-gen5"
+ ],
+ "unified_memory": false,
+ "consumer": false,
+ "notes": "INTEL PUBLISHES NO COMPUTE FIGURE FOR THIS PART. Verified 2026-10-05 against Intel's own ARK page for the Max 1550: there is no TFLOPS row and no TOPS row anywhere on it, and the Flex-series product brief does not carry one either. The four flops rows (fp16/bf16 409, int8 819, fp32 52) were cited to the oneDNN GitHub README - a third-party library - while carrying basis 'vendor-docs', which misrepresented an inference as an Intel quotation. basis is now 'secondary-aggregator', the repo's term for exactly this.\n\nWHY THIS MATTERS RATHER THAN BEING COSMETIC: 409 TFLOPS is the figure a reader would size a cluster on. It is not traceable to Intel. Treat it as an unverified community estimate, not a spec.\n\nALSO CORRECTED: memory_bus_bit was 4096, an inference with no basis in any Intel document. ARK prints 1024 bit. memory_bandwidth_gbps 3276 is consistent with 1024 bit at the stated memory speed and is retained.\n\nSPARSITY: no sparsity footnote exists on any Intel document for this part, so no published figure may be halved.\n\nCITATION WITHDRAWN 2026-10-05, THE MOST IMPORTANT CORRECTION IN THIS RECORD: every flops row here cited xpu-onednn-github-readme, and that document contains NONE of these figures. Verified by reading the raw README rather than the rendered GitHub page - the rendered page is what made a citation of this kind look reasonable in the first place. The README's GPU section is an unnumbered bulleted list of supported architectures ('Intel Data Center GPU Flex Series (formerly Arctic Sound)', 'Intel Data Center GPU Max Series (formerly Ponte Vecchio)'). It is arguably the single most plausible-looking citation an Intel GPU's compute figure could carry: same vendor ecosystem, same product-family names, machine-readable, and already present in the record's sources list. That is what makes it the worst kind of error in this repo - a citation that does not support the number, disguised as a first-party Intel document. The rows now carry basis 'unverified', vendor_claim false and source_id null, and the values stay in place under status contested so the disagreement remains open and visible rather than being deleted into a silence that looks like a settled question. WHAT WOULD SETTLE IT: Intel ARK. Prior passes established that ARK publishes no compute row for either part (w4h-intel-dc-gpu-flex-170-ark-spec-table, w4h-intel-dc-gpu-max-1550-ark-spec-table), and the Flex Series product brief gives the 170 as '16 TFLOPS (FP32) / 250 TOPS (INT8)' - a third pair, matching neither. So as of this pass there is NO Intel-published compute figure for this part and a reader should not plan on these numbers. See w5a-part2-onednn-readme-contains-no-tflops-figure.",
+ "sources": [
+  "w4h-intel-dc-gpu-max-1550-ark-spec-table",
+  "xpu-llamacpp-sycl-docs",
+  "xpu-onednn-github-readme",
+  "w5a-part2-onednn-readme-contains-no-tflops-figure"
+ ]
 }
