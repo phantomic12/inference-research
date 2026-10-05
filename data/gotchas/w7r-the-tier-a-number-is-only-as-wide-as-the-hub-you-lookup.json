@@ -1,0 +1,23 @@
+{
+ "id": "w7r-the-tier-a-number-is-only-as-wide-as-the-hub-you-lookup",
+ "type": "gotcha",
+ "name": "A hosting platform is not a vendor - putting huggingface.co in the vendor registry inflates Tier A and reads as rigor",
+ "class": "measurement",
+ "affects": [],
+ "concepts": [
+  "provenance",
+  "measurement",
+  "huggingface",
+  "first-party",
+  "vendor-primary",
+  "tiering"
+ ],
+ "symptom": "A provenance classifier that asks 'is this domain a vendor' and has huggingface.co in the vendor table returns Tier A (primary vendor document) for EVERY file on the platform - including unsloth's re-publications of Nous Research's and Meta's weights, and individual community fine-tunes. The measurement looks rigorous, validates cleanly against its gold set, and overstates first-party provenance by roughly 8 percentage points of figure weight. Nothing in the tool's own output flags it: the domain rollup prints 'huggingface.co=216' under Tier A, which reads as a healthy primary mass.",
+ "root_cause": "The classifier asked about the HOST instead of about the PUBLISHING PARTY. huggingface.co is a hosting platform: anyone with an account is first-party about their own uploads, so the domain is simultaneously Tier A (openai/gpt-oss-20b/raw/main/config.json is the model author's own artifact and genuinely primary) and Tier D (unsloth/Hermes-4-405B-GGUF is a third-party re-publication of Nous Research's weights). One lookup, two correct and opposite answers.",
+ "workaround": "Resolve the publishing org out of the URL path and judge the artifact, not the host. Then audit the Tier A mass per record, asking who actually published each one, rather than trusting the domain rollup. In this corpus that audit moved 18 Hugging Face records from A to D and moved the headline from 88.0% to 87.8% of figures.",
+ "status": "verified",
+ "confidence": 0.95,
+ "updated": "2026-10-05",
+ "sources": [],
+ "notes": "Found while building tools/provenance_tiers.py, which tiers all 1960 records in data/sources/ and then weights the tiers by how many numeric figures they actually back. The reason this bug is worth recording rather than just fixing is that it is invisible to every check that is not specifically aimed at it: the gold set's Hugging Face entries happen to be genuine author repositories (allenai/Molmo-7B-D-0924, openai/gpt-oss-20b), so agreement stayed at 100% the whole time the bug was live. See also w7r-tier-a-by-record-count-is-not-tier-a-by-figure-weight. THE SAME RULE APPLIES TO EVERY CDN IN THE CORPUS and is the reason the classifier carries an explicit CDN_VENDOR_ASSETS table rather than treating hosts generically: cdn.sanity.io serving the Cerebras CS-3 datasheet is Tier A because Cerebras authored it; cdn.prod.website-files.com serving NVIDIA's H100 datasheet is Tier A for the same reason. What makes nor-tech.com Tier D is not that the domain is a shop but that the RESELLER is the publisher - and the repo's own source record nv-blackwell-datasheet already says so, flagging itself as 'NVIDIA-authored document, reseller host' with the instruction to 'verify against resources.nvidia.com before treating as primary'. The classifier agrees with that record's own audit rather than with its publisher field."
+}

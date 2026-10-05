@@ -1,0 +1,23 @@
+{
+ "id": "w7r-tier-a-by-record-count-is-not-tier-a-by-figure-weight",
+ "type": "gotcha",
+ "name": "Tier A is 45.7% of source records but 87.8% of numeric figures - and the type that carries the figures is not the type that carries the sources",
+ "class": "measurement",
+ "affects": [],
+ "concepts": [
+  "provenance",
+  "measurement",
+  "figure-weight",
+  "tiering",
+  "first-party",
+  "model-geometry"
+ ],
+ "symptom": "Asked how much of this corpus traces to a primary vendor document, the answer you get depends entirely on which denominator you use, and the two denominators disagree by a factor of two. By source-record count, Tier A (primary vendor document) is 895 of 1960 records = 45.7%. By the numeric figures a reader would actually quote, Tier A backs 2200 of 2505 = 87.8%. Stating either number alone is misleading, and the record-count number is the one that gets quoted because it is the easier one to compute.",
+ "root_cause": "The corpus has two populations with opposite provenance profiles. SOURCE-HEAVY AND COMMUNITY-SKEWED: the 484 github.com records, the 142 forums, the 61 vendored engine repos. These are half the corpus and they are overwhelmingly Tier A (a vendor's own repository) or Tier E (an issue reporter), but they support almost no numeric figures - an engine record has no flops row and no price. FIGURE-HEAVY AND PRIMARY-SKEWED: the 158 model records carry 1328 figures between them, 53% of all figure weight, and 97.5% of those figures trace to the model author's own config.json on Hugging Face. The model type is where the numbers are AND where the provenance is best. Any tier statistic computed over data/sources/ is therefore answering a question about a population that mostly does not hold numbers.",
+ "workaround": "Weight by the figure, not the record, and report the type breakdown alongside - the per-type Tier A share ranges from 97.5% (model) to 23.8% (benchmark) and averaging that away destroys the information a reader needs. Report the FLOOR as well as the ceiling: only 71.2% of figures have nothing but Tier A sources behind them, against 87.8% that have at least one. The 16-point gap is entirely records that cite a primary document alongside something weaker, and that gap is the honest uncertainty band on the headline.",
+ "status": "verified",
+ "confidence": 0.92,
+ "updated": "2026-10-05",
+ "sources": [],
+ "notes": "Measured with tools/provenance_tiers.py over all 1960 source records and 2505 numeric figures. FULL RESULT. Records: A 895 (45.7%), B 153 (7.8%), C 612 (31.2%), D 98 (5.0%), E 202 (10.3%). Figure weight, ceiling: A 87.8%, B 3.2%, C 3.9%, D 4.3%, E 0.8%. Per-type Tier A share of figures: model 97.5% (n=1328), accelerator 88.0% (n=831), interconnect 78.2% (n=87), supply 67.8% (n=90), compiler 77.8% (n=9), benchmark 23.8% (n=160). THE WEAKEST TYPE IS THE ONE READERS TRUST MOST: benchmarks are only 23.8% Tier A, with 39.4% Tier C (MLPerf and other measured third parties), 23.8% Tier B (vendor blogs) and 12.5% Tier E (GitHub issues where somebody posted their own tok/s). A throughput number in this repo is roughly four times more likely to be a forum post than a datasheet, and a datasheet does not print tok/s at all, so this is partly structural rather than a defect. ATTRIBUTION STRENGTH IS THE REAL CAVEAT and it cuts against the headline: only 43 of 2505 figures have a source id quoted in the field's own *_basis text. The other 2061 inherit their record's entire source list, so a figure counts as Tier A here whenever AT LEAST ONE source on the record is primary - not because that source was shown to be the one the number came from. Restricted to the 437 figures with a genuine field-level citation, Tier A is 84.7%, and restricted to the 43 basis-text citations alone, 65.1%. The 87.8% should be read as 'this record cites a primary document', not as 'this number was transcribed from a primary document'. Those are different claims and only the second one is provenance. Fixing this would mean per-field source attribution, which schemas/source.schema.json does not currently support."
+}
