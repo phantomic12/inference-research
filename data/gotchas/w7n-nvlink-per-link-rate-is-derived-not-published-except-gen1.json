@@ -1,0 +1,38 @@
+{
+  "id": "w7n-nvlink-per-link-rate-is-derived-not-published-except-gen1",
+  "type": "gotcha",
+  "name": "NVIDIA publishes a per-LINK NVLink bandwidth figure for exactly one generation (NVLink 1) and none for the other five, so the per-link column in this family is arithmetic on two other numbers for Gen2-6 and looks equally well-sourced in every row",
+  "class": "hardware",
+  "affects": [
+    "nvlink-1",
+    "nvlink-2",
+    "nvlink-3",
+    "nvlink-4",
+    "nvlink-5",
+    "nvlink-6"
+  ],
+  "concepts": [
+    "nvlink",
+    "per-link",
+    "per-gpu-aggregate",
+    "bidirectional",
+    "derivation",
+    "serdes",
+    "scale-up",
+    "ingest"
+  ],
+  "symptom": "Six records each carrying a bandwidth_basis that opens with a confident 'PER LINK' assertion, and the reader cannot tell which of them NVIDIA printed and which were computed - because all six are formatted identically. nvlink-1 states '20' as a transcription ('NOW FIRST-PARTY AND VERBATIM') while nvlink-4 states '25' with the arithmetic '900 / 18 / 2' shown inline, and a consumer of the data sees the same field shape. The failure mode is not an obviously wrong number, it is that a derived value acquires the authority of a transcribed one. When nvlink-1 was first written on 2026-10-03 its basis asserted 'NVIDIA's public P100 materials do not publish a per-link rate' - that was false, the Tesla P100 architecture whitepaper states 'a single Link supports up to 40 GB/sec of bidirectional bandwidth between the endpoints' in plain text, and the whitepaper was already in data/sources/ cited by the P100 accelerator record. The record therefore carried a negative claim about vendor documentation that was checkable in one search and wrong. That is the generalisable risk: a record that claims the vendor does not publish something is a claim that needs the same evidence as a record that says the vendor publishes it.",
+  "root_cause": "The asymmetry is real in NVIDIA's document set and is a fact about the vendor, not a gap in the crawl. NVIDIA's current NVLink spec table has exactly two rows per generation - bandwidth per GPU, and maximum links per GPU - and never a per-link rate; its architecture whitepapers for Pascal and Ampere state per-link rates in prose ('A single A100 NVLink provides 25 GB/second bandwidth in each direction', 'a single Link supports up to 40 GB/sec of bidirectional bandwidth') and later ones do not. So the derived figure is the only per-link figure available for Gen4, Gen5 and Gen6, and the arithmetic is trivial enough - divide, halve - that it feels like a transcription. The per-link value is also the most decision-relevant number in the family for inference, because a tensor-parallel collective moves data over one link at a time and what bounds it is the per-link unicast rate, not the per-GPU aggregate; a record that quietly reports a derived number without labelling it is worse than one that reports no per-link number at all.",
+  "workaround": "Separate transcribed from derived in the language of bandwidth_basis, and use the same words every time so the distinction is greppable. Say VERBATIM / TRANSCRIBED and quote the sentence with the source, as nvlink-1 and nvlink-2 now do; say DERIVED and show 'vendor aggregate / link_count / 2' with both factors named, as nvlink-3, nvlink-4, nvlink-5 and nvlink-6 do. Never open a basis field with 'PER LINK' as though that settled provenance - the scope qualifier and the provenance are different facts and both belong in the sentence. Treat any claim that a vendor does NOT publish a figure as requiring its own source and its own confidence level, and prefer recording the aggregate that the vendor does publish over a per-link figure the vendor does not. Keep the identity from w7n-nvlink-per-gpu-aggregate-vs-per-link-rate as the acceptance test on a derived per-link number: link_count x per_link_unidirectional x 2 must reproduce the vendor's printed aggregate exactly, and a derived figure that does not reproduce it is wrong regardless of how the division was performed. Confidence should track provenance, so a derived per-link figure caps lower than a transcribed one for the same generation - which is why nvlink-1 sits at 0.9 with a verbatim quote while nvlink-6 sits at 0.9 on a table NVIDIA marks preliminary, for different reasons that its basis states separately.",
+  "severity": "major",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-05",
+  "sources": [
+    "link-nvlink-switch-spec",
+    "w3a-nvidia-tesla-p100-whitepaper",
+    "link2-nvidia-ampere-architecture-whitepaper",
+    "link-wikipedia-nvlink"
+  ],
+  "notes": "Filed alongside w7n-nvlink-per-gpu-aggregate-vs-per-link-rate, which covers the direction convention; this one is about provenance of the per-link column rather than which way the halving goes. The distinction matters because the two failure modes have opposite remedies: a direction error is caught by the arithmetic identity, whereas a provenance error is invisible to arithmetic - the number can be correct and still be unsourced, and re-verifying it costs a document search rather than a calculation. Per-generation provenance as audited 2026-10-05: nvlink-1 transcribed verbatim from the P100 whitepaper (40 GB/s bidirectional per link, four links, 160 GB/s aggregate); nvlink-2 and nvlink-3 transcribed verbatim from the Ampere architecture whitepaper (25 GB/s per direction per link, on BOTH generations, with 6 links on V100 against 12 on A100); nvlink-4, nvlink-5 and nvlink-6 DERIVED from the NVLink spec table's per-GPU aggregate and maximum-link-count rows, since NVIDIA publishes no per-link rate for any of them. The secondary-source structure in link-wikipedia-nvlink (a sub-link is 25 GB/s and a link is 50 GB/s bidirectional from Gen2 onward, four differential pairs per sub-link from Gen3) is the reason the derived Gen4 figure lands on the same 25 as the transcribed Gen2 and Gen3 figures, and it is corroboration rather than the source - the identity, not the Wikipedia value, is what makes Gen4 trustworthy."
+}

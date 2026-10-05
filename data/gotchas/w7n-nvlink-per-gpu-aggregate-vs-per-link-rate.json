@@ -1,0 +1,48 @@
+{
+  "id": "w7n-nvlink-per-gpu-aggregate-vs-per-link-rate",
+  "type": "gotcha",
+  "name": "NVIDIA's published NVLink figure is a bidirectional per-GPU aggregate, so every per-link or per-direction number in this family is a DERIVATION - reading the vendor number as per-direction doubles it and reading it as per-link multiplies it by the link count",
+  "class": "hardware",
+  "affects": [
+    "nvlink-1",
+    "nvlink-2",
+    "nvlink-3",
+    "nvlink-4",
+    "nvlink-5",
+    "nvlink-6",
+    "nvswitch-1",
+    "nvswitch-2",
+    "nvswitch-3",
+    "nvswitch-4",
+    "nvswitch-5",
+    "nvlink-c2c"
+  ],
+  "concepts": [
+    "nvlink",
+    "nvswitch",
+    "bidirectional",
+    "per-direction",
+    "per-link",
+    "per-gpu-aggregate",
+    "scale-up",
+    "ingest"
+  ],
+  "symptom": "TWO independent axes of error on the SAME family of numbers, differing by exactly 2x and by exactly link_count respectively, and the vendor page supports a correct reading and each of two wrong readings equally well. AXIS 1 (direction): NVIDIA's spec table row is 'NVLink Bandwidth per GPU 900 GB/s / 1,800 GB/s / 3,000 GB/s' for Gen4/5/6, and the same page's prose says 'NVLink is a 3 TB/s bidirectional, direct GPU-to-GPU interconnect'. Store 900 for nvlink-4 and every downstream read doubles the fabric rate. AXIS 2 (scope): the row is PER GPU AGGREGATE across all of that GPU's links, so a reader who takes 900 as per-link overstates one link by 18x on Gen4 and 36x on Gen6. The two errors do not cancel and they do not compose into a recognizable wrong number - halve a per-GPU aggregate that was really per-direction and you are off by 4x from the per-link truth with no internal inconsistency to detect it. The repo has already been corrupted twice by a plausible fabricated figure in adjacent work, which is why this is filed as a class rather than an incident: the generational ladder 20, 25, 25, 25, 50, 41.7 GB/s per link per direction is internally plausible and monotonically reasonable, so a wrong ladder passes review.",
+  "root_cause": "NVIDIA publishes exactly TWO numbers for a link generation - a per-GPU aggregate bandwidth and a maximum link count - and publishes them in a table whose header says 'per GPU'. Everything else is arithmetic on those two, and the arithmetic requires knowing that the aggregate is BIDIRECTIONAL. Nothing in the table says so; the word 'bidirectional' appears only in the prose two paragraphs above. The three quantities are related as per_link_unicast = aggregate_bidirectional / (2 x link_count), and each factor of 2 and each factor of link_count must be applied exactly once. Two things make this a genuine trap rather than carelessness. First, the direction convention is NOT uniform across vendors in this repo, so the habit that works elsewhere fails here: Intel's Gaudi 3 paper prints both conventions in one cell ('total bandwidth of 128 GB/sec, with 64 GB/sec available in each direction'), and PCI-SIG numbers are per-lane-per-direction, so a reader calibrated on Gaudi or PCIe reads NVIDIA's bare aggregate as per-direction. Second, NVIDIA is internally inconsistent about how much it labels: the NVLink table prints a bare '900 GB/s', the Hopper blog says '900 GB/sec TOTAL bandwidth for multi-GPU IO', the GB200 blog says '1.8 TB/s of BIDIRECTIONAL throughput per GPU', and the NVSwitch 1 blog says '300 GBps bidirectional bandwidth' for a GPU PAIR - four documents, three levels of labelling, one underlying convention. The NVSwitch records are the mirror image of the NVLink records: a switch's headline is per-GPU-pair bidirectional like the link's, so the same halving applies, but the link_count field on a switch record is the DOMAIN SIZE (8, 16, 72), not a per-GPU link count, and dividing a switch aggregate by it is meaningless.",
+  "workaround": "Read the table header, not the cell. 'NVLink Bandwidth per GPU' is a per-GPU bidirectional aggregate and must be halved once to reach per-direction and divided by link_count once more to reach per-link - never both from the vendor number and never neither. State the convention inside bandwidth_basis on every record, and include the published figure, the halving, and the division with their arithmetic shown, so a reader can re-derive rather than trust. Do not compare an NVIDIA interconnect record against an Intel or a PCI-SIG record without first checking that record's own convention, which is usually the opposite. When writing a per-link figure, mark it as derived in the basis field and never present it as something the datasheet printed - NVIDIA prints per-link bandwidth for exactly one generation in this family (NVLink 1, where the P100 whitepaper states 'a single Link supports up to 40 GB/sec of bidirectional bandwidth'), and that single exception is what makes the derived per-link column look trustworthy for the others when it is not. The internal arithmetic check that catches a wrong direction on a single record: link_count x per_link_unidirectional x 2 must equal the vendor's printed aggregate, and it does for every generation here - 4 x 20 x 2 = 160, 6 x 25 x 2 = 300, 12 x 25 x 2 = 600, 18 x 25 x 2 = 900, 18 x 50 x 2 = 1,800, 36 x 41.67 x 2 = 3,000. If a record fails this identity it is wrong regardless of how plausible it looks.",
+  "severity": "major",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
+  "sources": [
+    "link-nvlink-switch-spec",
+    "link2-nvidia-ampere-architecture-whitepaper",
+    "w3a-nvidia-tesla-p100-whitepaper",
+    "w7n-nvidia-hopper-architecture-in-depth-blog",
+    "net2-nvidia-nvswitch3-blog",
+    "bw-nv-gb200-nvl72-blog",
+    "net2-nvidia-nvswitch1-dgx2-blog",
+    "aa-gotcha-pcie-peak-bandwidth-direction-convention"
+  ],
+  "notes": "This is the NVLink-specific instance of the direction class already recorded for host links in aa-gotcha-pcie-peak-bandwidth-direction-convention; it is filed separately because NVLink adds the per-link-vs-per-GPU axis on top of direction, which the PCIe gotcha does not have - a PCIe x16 figure has a lane count but no 'aggregate across all of this device's ports' reading, so the two-axis error is unique to fabrics where one device exposes many links. The records as audited 2026-10-05 all state their convention explicitly and all satisfy link_count x per_link x 2 = printed aggregate, which is why the repo's numbers are currently sound; the gotcha exists because the next reader or the next ingest has to re-derive rather than assume. Related: w7n-nvlink-per-link-rate-is-derived-not-published-except-gen1 covers the derivation-is-not-transcription rule for the per-link column specifically. Note also that the direction convention FLIPS between two families inside this one repo: on the accelerator records a 'PCIe Gen5: 128 GB/s' figure is a bidirectional aggregate (nv-blackwell-datasheet) while the Hopper blog prints 'PCIe Gen 5 provides 128 GB/sec total bandwidth (64 GB/sec in each direction)' - NVIDIA holds both conventions in its own document set, so 'NVIDIA convention' is not a safe shorthand either."
+}

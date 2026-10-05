@@ -5,18 +5,19 @@
   "kind": "nvlink",
   "version": "5.0",
   "bandwidth_gbps": 50,
-  "bandwidth_basis": "PER LINK, UNIDIRECTIONAL. NVIDIA's spec table gives 1,800 GB/s NVLink bandwidth per GPU for the fifth generation - a BIDIRECTIONAL AGGREGATE across 18 links. Per-direction aggregate is 900 GB/s per GPU; per link per direction is 1800 / 18 / 2 = 50 GB/s, the recorded value. The NVIDIA developer blog repeats '1,800 GB/s per GPU', confirming the aggregate is not a per-direction rate.",
+  "bandwidth_basis": "PER LINK, UNIDIRECTIONAL. DERIVED, NOT PUBLISHED - NVIDIA prints no per-link rate for this generation. NVIDIA's spec table gives 1,800 GB/s NVLink bandwidth per GPU for the fifth generation - a BIDIRECTIONAL AGGREGATE across 18 links, which the NVIDIA developer blog states in those words: '1.8 TB/s of BIDIRECTIONAL throughput per GPU' (bw-nv-gb200-nvl72-blog), so the aggregate is not a per-direction rate. Per-direction aggregate is 900 GB/s per GPU; per link per direction is 1800 / 18 / 2 = 50 GB/s, the recorded value. Identity check: 18 x 50 x 2 = 1,800 exactly. The vendor table is marked preliminary and subject to change.",
   "link_count": 18,
   "topology": "Direct GPU-to-GPU links on the device, plus switch trays that extend NVLink into a 72-GPU NVLink domain (GB200/GB300 NVL72).",
   "scale_up": true,
   "scale_out": false,
   "switching": "NVLink 5 Switch supports both 8-GPU and 72-GPU domains; the 72-GPU domain is what makes NVL72 a single non-blocking fabric rather than 9 separate 8-GPU islands.",
-  "notes": "Blackwell generation. Doubles the per-link rate versus NVLink 4 at the same 18 links. Inference consequence: tensor-parallel sharding wants the highest per-direction fabric rate available, because every layer boundary ships activations across the link. The bidirectional aggregate figure that dominates marketing is not what a single collective move sees. For inference this is the generation where tensor parallelism plus expert parallelism inside one NVL72 rack becomes fabric-legal rather than a compromise: 130 TB/s total aggregate per the vendor table. Note the vendor table is marked preliminary and subject to change.",
+  "notes": "Blackwell generation. HEADLINE CAPABILITY, the third required quantity for this generation: NVLink 5 is the first generation to DOUBLE THE PER-LINK RATE, from 25 GB/s per direction on Gen4 to 50 GB/s per direction, while holding the link count at 18 - so unlike Gen3 and Gen4, this generation's gain came from the SerDes rather than from adding links. Per-GPU bidirectional aggregate therefore goes 900 -> 1,800 GB/s and per-direction per-GPU 450 -> 900 GB/s, i.e. a clean 2x across both axes simultaneously. NVIDIA's own comparative framing is a 1.7x claim at the rack level ('the fifth-generation NVLink is 12x faster than the first generation at 160 GB/s', net2-nvidia-nvswitch3-blog, and '1.7x' on the Blackwell side), which is a different quantity again and should not be read as the link-rate step.\n\nInference consequence: tensor-parallel sharding wants the highest per-direction fabric rate available, because every layer boundary ships activations across the link. The bidirectional aggregate figure that dominates marketing is not what a single collective move sees. For inference this is the generation where tensor parallelism plus expert parallelism inside one NVL72 rack becomes fabric-legal rather than a compromise: 130 TB/s total aggregate per the vendor table. PROVENANCE 2026-10-05: the per-link figure is DERIVED - NVIDIA publishes no per-link rate for this generation, only 1,800 GB/s per GPU and 18 links - so unlike nvlink-1/2/3 it is arithmetic, not transcription. See gotcha w7n-nvlink-per-link-rate-is-derived-not-published-except-gen1, and gotcha w7n-nvlink-per-gpu-aggregate-vs-per-link-rate for the direction axis. Note the vendor table is marked preliminary and subject to change, which is why confidence is 0.9 rather than higher.",
   "status": "verified",
   "confidence": 0.9,
-  "updated": "2026-10-03",
+  "updated": "2026-10-05",
   "sources": [
     "link-nvlink-switch-spec",
-    "link-nvlink-nvswitch-inference-blog"
+    "link-nvlink-nvswitch-inference-blog",
+    "bw-nv-gb200-nvl72-blog"
   ]
 }
