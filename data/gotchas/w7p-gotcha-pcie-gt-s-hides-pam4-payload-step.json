@@ -1,0 +1,39 @@
+{
+  "id": "w7p-gotcha-pcie-gt-s-hides-pam4-payload-step",
+  "type": "gotcha",
+  "name": "PCIe GT/s rate is not proportional to usable bandwidth across the PAM4 boundary: Gen5->Gen6 payload per direction rises only 1.92x, not the 2x the GT/s doubling implies, so a GT/s-based comparison concludes PCIe 6.0 is slower than it is",
+  "class": "hardware",
+  "affects": [
+    "pcie-gen1",
+    "pcie-gen2",
+    "pcie-gen3",
+    "pcie-gen4",
+    "pcie-gen5",
+    "pcie-gen6",
+    "pcie-gen7"
+  ],
+  "concepts": [
+    "pcie",
+    "pam4",
+    "nrz",
+    "flit-mode",
+    "per-direction",
+    "encoding-overhead",
+    "scale-up",
+    "ingest"
+  ],
+  "symptom": "Comparing two PCIe generations by their GT/s rate gives the wrong answer, in both directions depending on which pair is compared. Concretely, for this repo's seven generations, payload per direction at x16 is 4.0 / 8.0 / 15.75 / 31.5 / 63.0 / 121.0 / 242.0 GB/s while the GT/s ladder is 2.5 / 5.0 / 8.0 / 16.0 / 32.0 / 64.0 / 128.0 - so the ratios do NOT match. Two steps are non-2x and one of them is the one everyone hits: Gen5 -> Gen6 is 63.0 -> 121.0, a ratio of 1.92x, even though GT/s goes 32 -> 64 (exactly 2x) and even though PCI-SIG's own raw bidirectional headline goes 128 -> 256 GB/s (exactly 2x). A reader who trusts GT/s concludes PCIe 6.0 offers 'exactly double' bandwidth and then finds 121.0 in the record and assumes the record is wrong - or worse, assumes the interconnect is broken and 'corrects' 121.0 up to 126.0 by halving the bidirectional aggregate. That correction is exactly the 2x-direction error that has already corrupted this family twice. The symmetric trap sits at the other end: Gen2 -> Gen3 is 8.0 -> 15.75, a ratio of 1.97x, for the same class of reason but with the opposite encoding change.",
+  "root_cause": "GT/s counts SIGNALS PER SECOND on the wire; usable bandwidth counts PAYLOAD BYTES PER SECOND after line coding. The two diverge whenever the encoding scheme changes, and PCIe has changed encoding twice. Generations 1-2 use NRZ with 8b/10b line coding (80% efficiency). Generations 3-5 use NRZ with 128b/130b (98.46% efficiency). Generations 6-7 use PAM4 with 242B/256B flit framing (94.53% efficiency). PAM4 is the reason the familiar 'doubles every three years' holds in RAW terms but not in PAYLOAD terms at the PAM4 boundary - and the raw-vs-payload gap is invisible to anyone comparing GT/s. PCI-SIG's own explanation, verbatim: 'NRZ uses two levels of signaling, while PAM4 uses four levels. It packs two bits of information into the same amount of time on a serial channel' (source w7p-pcisig-pcie6-faq). The non-linearity has a specific shape that is worth memorising because it looks arbitrary: the FIRST step onto a new encoding scheme is always sub-linear, and every subsequent step within that scheme is exactly 2x. Gen2 -> Gen3 is sub-linear at 1.97x (stepping onto 128b/130b), then Gen3 -> Gen4 -> Gen5 are all exactly 2x (unchanged scheme). Gen5 -> Gen6 is sub-linear at 1.92x (stepping onto PAM4 flit framing), then Gen6 -> Gen7 is exactly 2x again (unchanged scheme). The step onto flit framing loses more than the step onto 128b/130b did, because 242/256 = 94.53% is worse efficiency than 128/130 = 98.46%, while 128/130 itself beat 8/10 = 80%. The same rule predicts that Gen7 -> Gen8 (256.0 GT/s, PAM4, announced 2025-08-05 for a 2028 target) should be exactly 2x, since the framing would be unchanged - but that is a prediction, not a published payload figure, and no Gen8 record exists in this repo.",
+  "workaround": "Compare generations on payload per direction, never on GT/s and never on PCI-SIG's raw bidirectional headline. Convert in this order every time: (1) take the GT/s rate from PCI-SIG; (2) multiply by the encoding efficiency for THAT generation - 0.8 for gens 1-2, 128/130 for gens 3-5, 242/256 for gens 6-7; (3) divide by 8 for Gb/s to GB/s; (4) multiply by the lane count. Never insert a factor of two in that chain, because the per-lane rate PCI-SIG publishes is already per lane per direction. Keep three numbers per generation and label each: raw per direction, payload per direction, payload bidirectional aggregate. For Gen6 those are 128.0 / 121.0 / 242.0, and for Gen7 they are 256.0 / 242.0 / 484.0. Watch for a collision that makes this actively dangerous: Gen6's payload BIDIRECTIONAL aggregate (242.0) is numerically identical to Gen7's payload PER DIRECTION (242.0), so the same four-digit number means two different things one generation apart. If a source quotes a bare GB/s figure with no direction qualifier and no rate, it cannot be placed on this ladder at all - record it as a vendor claim with the convention flagged as an assumption rather than assigning one, which is the workaround already recorded in aa-gotcha-pcie-peak-bandwidth-direction-convention.",
+  "severity": "major",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
+  "sources": [
+    "w7p-pcisig-pcie6-faq",
+    "w7p-pcisig-pcie7-release-pr",
+    "w7p-pcisig-pcie5-faq-verified",
+    "w7p-wikipedia-pcie-link-performance"
+  ],
+  "notes": "This is the SECOND systematic error mode in the PCIe family, and it is the mirror image of the first. The direction error (aa-gotcha-pcie-peak-bandwidth-direction-convention) is a 2x factor that comes from mislabelling which way the data flows; this one is a ~4% factor at one specific generation boundary that comes from comparing the wrong physical quantity entirely. They compound: a reader who halves 121.0 to reconcile it with a GT/s expectation lands at 60.5, which is neither a per-direction nor an aggregate figure for any generation - it is Gen6's per-LANE rate x8. Worth noting which sources can and cannot settle this. PCI-SIG publishes GT/s and raw bidirectional GB/s and the encoding NAMES, but does NOT publish the payload efficiency ratio on its public pages - the 242B/256B framing figure comes from w7p-wikipedia-pcie-link-performance, a secondary source. PCI-SIG's only public confirmation of the flit structure is the size, verbatim: 'PCI-SIG adopted a 256-Byte Flit structure, which includes the variable-sized Transaction Layer Packets (TLPs) and Data Link Layer Payloads (DLLPs)' (w7p-pcisig-pcie6-faq), which is consistent with a 242-byte payload but does not itself state the ratio. So the payload figures for gens 6-7 rest on a secondary source for the efficiency and a primary source for the structure, and that dependency is marked on pcie-gen6 and pcie-gen7 rather than hidden. For gens 1-5 the situation is the reverse and stronger: the GT/s rate is primary (PCI-SIG's own per-lane-per-direction ladder) and the payload efficiency for 8b/10b and 128b/130b is uncontroversial textbook material corroborated by the secondary table. Not published by PCI-SIG anywhere in this source set: a per-generation payload GB/s table, and any statement of what fraction of raw bandwidth is lost to flit framing. Also not published: any measured, as-shipped throughput for any PCIe generation - every figure in this family is a specification maximum, and real traffic on a short packet profile does not approach it."
+}

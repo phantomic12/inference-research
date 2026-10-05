@@ -1,0 +1,22 @@
+{
+  "id": "pcie-gen1",
+  "type": "interconnect",
+  "name": "PCI Express 1.0",
+  "kind": "pcie",
+  "version": "1.0 (2.5 GT/s, NRZ, 8b/10b)",
+  "bandwidth_gbps": 4.0,
+  "bandwidth_basis": "x16, PER DIRECTION, and this is the CONVENTION FOR THE WHOLE pcie-gen* FAMILY so it is stated here at full length. PCIe figures are quoted PER LANE PER DIRECTION. PCI-SIG's own wording (w7p-pcisig-pcie5-faq-verified), verbatim: 'PCIe 1.0 provided an effective 2.5 Gigabits/second/Lane/direction of raw bandwidth', and its worked example 'A PCIe 5.0 Link consisting of 32 Lanes and operating at a bit rate of 32.0 GT/s provides an effective raw bandwidth of 128.0 Gigabytes/second in each direction simultaneously' - which closes on that reading, since 32 lanes x 32 Gb/s / 8 = 128.0 with no factor of two anywhere. PCIe is dual-simplex: TX and RX are independent conductor pairs, so a per-lane-per-direction figure at a lane count IS the complete figure for that direction and must NOT be halved again. Storing 4.0 (or 8.0) as if it were an aggregate is a 2x ERROR that halves the interconnect; storing the bidirectional 8.0 as per-direction is the same error inverted. Arithmetic for this generation: 2.5 GT/s x 8/10 (8b/10b) / 8 = 0.250 GB/s per lane per direction, x16 = 4.000 GB/s PER DIRECTION; bidirectional aggregate is 8.000 GB/s. The RAW unencoded figure is 2.5 x 16 / 8 = 5.0 GB/s per direction. Per-lane and x16 raw are corroborated by PCI-SIG's '2.5 Gigabits/second/Lane/direction' and by Wikipedia's table row '1.0 | 2003 | NRZ | 8b/10b | 2.5 GT/s | 0.25 | 0.5 | 1 | 2 | 4' (w7p-wikipedia-pcie-link-performance), whose column footnote states the direction convention outright: 'In each direction (each lane is a dual simplex channel).'",
+  "link_count": 16,
+  "topology": "Point-to-point host-to-device (root complex to endpoint), up to 16 lanes. Becomes a shared fabric only via PCIe switches or host bridges.",
+  "scale_up": false,
+  "scale_out": false,
+  "switching": "Optional PCIe switch, store-and-forward, no in-network reduction.",
+  "notes": "Recorded for completeness of the generational ladder, NOT because it is deployable for inference. PCIe 1.0 (2003) predates every accelerator in this repo; no record in data/accelerators/ attaches over it. Its value here is as the anchor of the ladder and as the clearest case of the direction convention, because the number is small enough that a 2x error is unmistakable: 4.0 GB/s per direction at x16 versus 8.0 bidirectional aggregate. INFERENCE CONSEQUENCE, stated so a reader does not mistake it for a usable fabric: at 4.0 GB/s per direction this is roughly 112x below NVLink 4's 450 GB/s per direction per GPU (pcie-gen4 records that comparison for its own generation), so tensor parallelism over Gen1 is not a proposition. Historical note: Gen1's x16 slot is still the physical shape used by every later PCIe x16 card - the connector did not change, only the signalling rate - so a card in an x16 slot can be running at x1, x4 or x16 lane width, and the mechanical slot is no guide to the link width. PCIe 1.x was superseded by 1.1, which added power management and did not change the data rate; there is no separate bandwidth figure for 1.1 and this record's number applies to both.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
+  "sources": [
+    "w7p-pcisig-pcie5-faq-verified",
+    "w7p-wikipedia-pcie-link-performance"
+  ]
+}
