@@ -1,0 +1,39 @@
+{
+ "id": "w4q-vllm-mxfp4-no-native-kernel-sm120",
+ "type": "gotcha",
+ "name": "vLLM MXFP4 is native on sm100/sm120 only if an optional module is installed, and is unconditional software emulation on sm90 and below: the model loads either way and only a logger.warning_once distinguishes them",
+ "class": "kernel",
+ "affects": [
+  "vllm",
+  "qhw-vllm-kernel-capability-matrix",
+  "qhw-trtllm-hardware-matrix",
+  "qhw-mxfp4-vs-nvfp4",
+  "nvidia-rtx-5090",
+  "nvidia-rtx-pro-6000-blackwell",
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-rtx-4090"
+ ],
+ "concepts": [
+  "mxfp4",
+  "emulation-fallback",
+  "kernel-selection",
+  "sm120",
+  "sm100",
+  "block-scaling",
+  "warning-once",
+  "performance-regression"
+ ],
+ "symptom": "Nothing at all, at load time. An MXFP4 checkpoint (group 32, E8M0 scales) starts normally on an RTX 5090, an RTX PRO 6000 Blackwell, an H100 or a 4090, produces correct output, and reports a plausible tok/s. The only trace is a line that appears once in the startup log and is easy to lose in a container log: 'The current platform does not support native MXFP4 computation. Using EmulationMxfp4LinearKernel, with simulated weight dequantization and activation QDQ (quantize and dequantize), with the linear layers computed in high precision.' There is no error, no exception, and no degradation flag on the served model object. The symptom a reader actually observes is second-order: throughput that does not improve over BF16 despite a 4x smaller checkpoint, and latency that scales as if the weights were still 16-bit. The confusing part is that on the SAME part the outcome can flip with a package install - on sm120 the native FlashInfer path is one Python module away, and on sm100 and below no install brings one.",
+ "root_cause": "vLLM's MXFP4 candidate list is ordered [FlashInferMxFp4LinearKernel, MarlinMxFp4LinearKernel, HummingMxFp4LinearKernel, B12xMxFp4LinearKernel, EmulationMxfp4LinearKernel], and the selector takes the first entry whose get_min_capability() <= device cc, whose is_supported(cc) is true and whose can_implement(config) is true. Gate by gate. (a) FlashInferMxFp4LinearKernel.is_supported() is 'if current_platform.has_device_capability(100) and has_flashinfer_cutedsl(): return True, None; return False, \"FlashInfer + >=sm_100 (Blackwell) required\"'. has_device_capability is a >= comparison, so THIS GATE PASSES ON sm120 TOO - 120 >= 100 - and its own can_implement is only 'if config.activation_quant_key != kMxfp4Dynamic: return False, \"only supports MXFP4 dynamic activation\"'. So the native MXFP4 GEMM on an RTX 5090 or RTX PRO 6000 is one optional Python module (FlashInfer CuTe-DSL) away, and the misleading part is that the failure reason string says '>=sm_100 (Blackwell) required' on a part that IS >= sm_100. (b) B12xMxFp4LinearKernel requires is_device_capability_family(120) plus the optional b12x package ('Install the B12X backend with pip install vllm[b12x]'), so it is the sm120-native alternative, also package-gated. (c) MarlinMxFp4LinearKernel is weight-only - its can_implement logs 'MarlinMxFp4LinearKernel is a weight-only (A16) kernel; the requested activation quantization (%s) is ignored.' - so selecting it is the silent W4A4-to-W4A16 precision degradation already recorded elsewhere in this repo, not a native path. (d) HummingMxFp4LinearKernel requires the optional humming package at SM75+. (e) EmulationMxfp4LinearKernel.is_supported() returns (True, None) unconditionally, and its NVFP4 sibling carries the source comment 'Always available as a last-resort fallback'. The consequence: on sm100/103 and sm120/121 the outcome is decided by which optional packages happen to be installed rather than by anything visible in the checkpoint or the GPU, while on sm90 and below there is NO package that yields a native MXFP4 GEMM and Emulation is the only outcome. The deeper cause is structural: a candidate registry whose last entry can_implement() everything makes 'unsupported', 'emulated' and 'native-but-uninstalled' indistinguishable at the API boundary.",
+ "workaround": "Do not infer the kernel from the format or from the architecture alone. At startup, read the log line naming the selected MXFP4 kernel and confirm it is EmulationMxfp4LinearKernel or not. On sm120, install FlashInfer (which satisfies the has_flashinfer_cutedsl() half of the gate - the sm_100 half already passes) or the b12x extra ('pip install vllm[b12x]', which satisfies B12xMxFp4LinearKernel on device_capability_family(120)). On sm100, install FlashInfer with CuTe-DSL. On sm90 and below there is no install that helps: MXFP4 will be emulated, so choose a different format (NVFP4 served by Marlin W4A16, or INT8 W4A16 via Marlin) rather than debugging the quantization recipe. One more way the same misconfiguration presents differently: EmulationMxfp4LinearKernel.can_implement() also requires has_quark() ('amd-quark package not available'), so on a build without quark the result is a hard error instead of a slow path. When benchmarking, compare against a BF16 baseline on the same part before concluding the format is at fault; if there is no speedup and no warning in view, emulation is the first hypothesis.",
+ "severity": "major",
+ "notes": "WHY THIS IS A SEPARATE RECORD FROM THE EXISTING SILENT-DEGRADATION GOTCHA. This repo already has qhw-silent-precision-degradation for the NVFP4-served-by-Marlin case. That one is about a W4A4 checkpoint downgraded to W4A16. This one is different in kind: the fallback is a full software emulation path that quantize-dequantize-activations and then runs a high-precision matmul, so neither weights nor activations get a tensor-core speedup at all, and on the MXFP8 sibling the emulation even dequantizes at load time so the memory saving is lost too. CONFIRMED 2026-10-04 against vLLM main. VERIFIED NEGATIVE, WITH EVIDENCE, for a native MXFP4 dense GEMM in vLLM main on sm90 and below: there is no candidate in the CUDA MXFP4 list that can produce one - FlashInfer requires sm_100 (as a >= test, so effectively sm100+), B12x requires device_capability_family(120), Marlin is weight-only, and no CUTLASS MX path exists for NVIDIA at all. The negative is decidable from the code rather than merely unchecked. THE CORRECTION WORTH FLAGGING TO ANY READER OF AN EARLIER DRAFT OF THIS REPO'S OWN MATRIX: sm120 is NOT unconditionally emulated. Because has_device_capability(100) is a >= test, the FlashInfer gate admits sm120, so on consumer Blackwell MXFP4 is native-if-installed rather than always-emulated - the distinction between 'no kernel exists' and 'the kernel is behind an optional import'. Both are traps; they have different fixes, one being a pip install and the other being a format change. Cross-engine contrast: TensorRT-LLM's hardware matrix marks MXFP4 an unconditional Y on Blackwell(sm120), so the same checkpoint is unconditional-native in one engine and conditional on a Python package in the other, on identical silicon. Native MXFP4 on AMD is a separate and much narrower story - AiterMxfp4LinearKernel behind supports_mx(), which on ROCm is gfx95 or gfx1250 only, plus a required quark package - recorded in qhw-vllm-kernel-capability-matrix.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "w4q-vllm-quant-kernel-source",
+  "qhw-src-vllm-quant-docs"
+ ]
+}
