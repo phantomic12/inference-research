@@ -1,0 +1,26 @@
+{
+  "id": "w5s-api-page1-is-not-the-catalogue",
+  "type": "gotcha",
+  "name": "A paginated price API that ignores its own filter will hand you a global sample and let you invent a price error",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "price-api",
+    "pagination",
+    "false-negative",
+    "azure-retail-prices",
+    "provenance"
+  ],
+  "symptom": "A price record is re-verified against what appears to be a targeted query, the queried meter is absent from the returned rows, and the record is about to be 'corrected' upward. The correction is wrong. On 2026-10-05 an intermediate probe of prices.azure.com/api/retail/prices, filtered to armRegionName='eastus2' and meterName='ND96isrH200v5', showed on-demand meters at $106.00 / $110.24 / $111.088 / $121.264 with NO $84.80 meter, which implied azure-nd-h200-v5 understated its on-demand H200 price by ~25% ($10.60 vs $13.25 per H100-hour). Walking the API's NextPageLink chain to exhaustion - 1000 pages, 879,227 unique rows, of which 20,079 were genuinely eastus2 - showed the opposite: $84.80 IS the eastus2, westus2 AND westus3 on-demand non-Windows meter for ND96isrH200v5, alongside $89.216 for the Windows product, $16.96 Low Priority and reservations at $407,526 / $1,109,592. The stored record was right. The probe was wrong.",
+  "root_cause": "prices.azure.com/api/retail/prices accepts a $filter parameter, returns HTTP 200, sets Count and NextPageLink normally, and then IGNORES the filter entirely, returning a 1000-row sample of the global catalogue. Established with two independent methods on 2026-10-05. (1) Control values: 'serviceName eq zzznotaservice and armRegionName eq eastus', 'serviceName eq Virtual Machines and armRegionName eq zzznotaregion', and 'serviceName eq Virtual Machines and armRegionName eq eastus and meterName eq zzznotameter' each returned 1000 rows spanning all 73 regions instead of zero, with productNames including 'Virtual Machines D Series Windows' - proving no field is filtered. (2) Cross-query row identity: the nonsense-filter queries returned byte-identical first pages to the valid query, and a walk begun from a single-region query produced rows for northeurope, westus3 and 71 other regions, which is impossible if the region filter worked. The deeper cause is a matching failure between HTTP-200-plus-pagination and actual filtering: an API that validates the filter's syntax but not its semantics reports success at every layer a script checks, so the only defence is to test the filter with a value that cannot exist.",
+  "workaround": "Never treat 'the API did not return the row I asked for' as evidence the row does not exist. (a) Test the filter with a nonsense value FIRST and confirm you get zero rows; if you get 1000, the filter is decorative. (b) Walk the NextPageLink chain to exhaustion and filter client-side on the fields you care about; dedupe on meterId + type + price + tierMinimumUnits + effectiveStartDate, since pages repeat rows across regions. (c) Require two independent methods before asserting any negative about a price source - here, one control-value test plus one full-catalogue walk. (d) When a single-page probe and an exhaustive walk disagree, the walk wins and no record is edited on the partial result. Source w5s-azure-api-ignores-filter-negative carries the full probe log; the exhaustive dump is w5s-azure-retail-prices-h200-recheck.",
+  "severity": "blocker",
+  "notes": "This is the same failure mode as rent-cerebras-api-token-pricing-negative earlier in this repo's history, and it generalises past Azure. A partial page, a truncated response, a client-side-rendered table, and a text extractor that silently drops a column are all 'the probe did not show me the thing', which is NOT 'the thing is absent'. Three separate instances in this repo now prove the pattern: the Cerebras case (a JS-rendered table made a published price look absent), the Cerebras text-reader case recorded in w5s-oracle-gpu-accelerated-compute-table (a plain-text reader returned Oracle's AMD shape names and GPU counts but DROPPED the price column, which would have deepened rather than fixed the repo's false 'AMD is unpriceable' claim), and this one. The asymmetry is the whole point: a false negative is cheap to publish and expensive to discover, because it reads as a finding. A reader who trusts it will conclude a market segment is unavailable and budget accordingly. Two of these three instances occurred while AUDITING this repo rather than populating it, which is the argument for keeping this gotcha: the trap does not go away for careful readers, it just moves to whoever checks the careful reader's work.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-05",
+  "sources": [
+    "w5s-azure-api-ignores-filter-negative",
+    "w5s-azure-retail-prices-h200-recheck"
+  ]
+}
