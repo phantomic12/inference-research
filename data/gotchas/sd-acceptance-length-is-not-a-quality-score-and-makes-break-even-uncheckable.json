@@ -1,0 +1,36 @@
+{
+ "id": "sd-acceptance-length-is-not-a-quality-score-and-makes-break-even-uncheckable",
+ "type": "gotcha",
+ "name": "Ten speculative-decoding records store an acceptance LENGTH under metric=quality and state no draft length k, which is the one parameter without which the break-even arithmetic cannot be run at all",
+ "class": "measurement",
+ "affects": [
+  "vllm",
+  "sglang",
+  "sd-eagle3-paper",
+  "sd-medusa-paper"
+ ],
+ "concepts": [
+  "speculative-decoding",
+  "acceptance-rate",
+  "break-even",
+  "metric-enum",
+  "draft-length",
+  "speedup-ratio",
+  "medusa",
+  "eagle",
+  "quality-metric-abuse",
+  "misleading-precision"
+ ],
+ "symptom": "Ten records - sd-eagle1-acceptance-vicuna13b-t0, sd-eagle2-acceptance-vicuna13b-t0 and -t1, sd-eagle2-acceptance-llama2-70b-t0, sd-eagle2-acceptance-llama3-8b-t0, sd-hydra-acceptance-vicuna13b-t0, sd-medusa-acceptance-vicuna13b-t0, sd-lookahead-acceptance-vicuna13b-t0, sd-pld-acceptance-vicuna13b-t0, sd-sps-acceptance-vicuna13b-t0 - all carry metric=quality, and all ten store an average acceptance LENGTH tau in tokens per draft-verify cycle (3.82, 4.65, 4.26, 4.48, 4.53, 3.40, 2.44, 1.62, 1.69, 2.18). An acceptance length is not a quality score: it is the expected number of accepted tokens per iteration, a throughput quantity, and it reads under the quality key as though it were an accuracy result. The deeper problem is that not one of the ten states k, the number of drafted positions per verify pass, and k is the parameter the break-even formula needs. Without it the formula A_be = (1 + P_d/P_t)/k cannot be evaluated at all - not approximately, not with a guess. A reader wanting to know whether any of these speedups is real has no way to check a single one.",
+ "root_cause": "Two schema gaps compounding. First, there is no member for 'accepted tokens per speculative iteration' - the enum has speedup_ratio and dimensionless_ratio now, added 2026-10-05, but neither fits a tau, and quality was the nearest available key. The same gap the schema notes describe for joules_per_token, which has zero records for the analogous reason that one record carries one metric. Second, the underlying papers report tau and a speedup as a matched pair and treat k as an implementation detail of the particular configuration, so it never reaches the record layer even where the methodology field is otherwise thorough. The result is a family of ten records that are individually faithful transcriptions and collectively uncheckable. The distinction that makes this a measurement trap rather than a filing nit: a speedup is only interpretable against the break-even it has to beat, and break-even is 1/k in the memory-bound regime. Two schemes with the same tau=2.44 and the same 2.07x speedup can have k=4 or k=16, and those imply break-even acceptance of 25% or 6%. The reader cannot tell which, and the two are separated by a factor of four in the thing that matters.",
+ "workaround": "Never accept a speculative speedup as a result without k. The check is cheap once k is known: at k=4 with a 1e9-parameter draft on a 70B target, A_be = (1 + 1e9/68.98e9)/4 = 0.2536, and since the maximum possible acceptance is k+1 = 5, the usable window is [0.25, 5] - almost any scheme wins. At the compute-bound end A_be approaches 1.0 and the window collapses to [1.0, k+1], meaning the scheme must accept at least one token per pass merely not to regress. So the useful reader-side test on any quoted speculative speedup is not 'is 4x plausible' but 'what k would make this break even' - and the answer is a rearrangement: k_required = (1 + P_d/P_t) x T_base/T_spec, i.e. the draft length at which the measured speedup exactly pays for itself. A scheme reporting 4x at batch 1 on a memory-bound target needs k of roughly 4 or less, which is inside the range these papers use, so the speedups are plausible; a scheme reporting 4x at batch 64 needs the same a it needed at batch 1 divided by 64, which is why sd-eagle3-throughput-sglang-batch64's 1.38x is the load-bearing number and not an anomaly. Separately: do not treat a tau as a quality score. For LOSSLESS schemes with a free draft (Lookahead 1.62/1.58x, PLD 1.69/1.64x) the speedup is within 3% of tau, which is the expected signature and a useful self-consistency check; for LOSSY schemes the ratio tau/speedup runs 1.15-1.31, which is the cost of the rejected positions.",
+ "severity": "major",
+ "notes": "FOUND 2026-10-05 by the speculative-decoding arithmetic pass (agent w6-benchmarks). INSTRUMENT VALIDATED FIRST, as required: A_be = (1 + P_d/P_t)/k with P_d=1e9, P_t=68.98e9, k=4 reproduces 0.253624, matching the 0.2536 an earlier agent verified exactly, so the formula as applied here is the repo's own. THE SELF-CONSISTENCY TABLE, which is the usable output of this sweep: sd-lookahead tau 1.62 vs speedup 1.58 (tau/speedup 1.025), sd-pld 1.69 vs 1.64 (1.030) - both lossless with a near-free draft, both within 3% of the identity, both consistent. sd-eagle2-vicuna13b 4.65 vs 4.04 (1.151), sd-eagle2-llama2-70b 4.48 vs 3.51 (1.276), sd-eagle2-llama3-8b 4.53 vs 3.46 (1.309), sd-eagle1 3.82 vs 2.95 (1.295), sd-hydra 3.40 vs 2.69 (1.264), sd-medusa 2.44 vs 2.07 (1.179), sd-sps 2.18 vs 1.88 (1.160) - all above 1, i.e. every scheme kept fewer tokens than it drafted, and the ordering tracks the scheme's known lossiness. NO SPEEDUP IN THE FAMILY IS BELOW ITS OWN BREAK-EVEN: every tau is above 1.58 and the memory-bound A_be at any k the papers report is below 0.51, so the family passes; the finding is that the corpus cannot demonstrate the passing. ON THE TWO speedup_ratio RECORDS, both of which are already correctly filed and were NOT changed: sd-eagle3-throughput-sglang-batch64 is 1.38x at batch 64 with a same-size draft on an 8B target, where the compute-bound A_be = 1 + P_d/(B x P_t) = 1 + 1/64 = 1.0156 - the claimed 1.38 clears it by 36%, so it is a real if modest win and NOT a regression dressed as one, and its own notes correctly frame it as batch dilution rather than as an anomaly. sd-medusa-batch32-degradation is 0, which the record already explains as the FLOOR of the Medusa paper's documented degradation curve past batch 32 ('may even have a negative effect', Appendix G.3), not a measured zero rate - and a zero speedup at batch 32 is the honest expected sign of crossing into the compute-bound regime where speculation stops paying. Both records' existing explanations are correct and were left intact.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "sd-eagle3-paper",
+  "sd-medusa-paper"
+ ]
+}

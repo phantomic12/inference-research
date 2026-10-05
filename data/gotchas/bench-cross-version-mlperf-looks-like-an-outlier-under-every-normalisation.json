@@ -1,0 +1,34 @@
+{
+ "id": "bench-cross-version-mlperf-looks-like-an-outlier-under-every-normalisation",
+ "type": "gotcha",
+ "name": "A 4.3x per-GPU gap between two Llama 2 70B Offline records is arithmetically consistent, not a transcription error - and it is the gap a cross-record outlier sweep is most likely to report as a finding",
+ "class": "measurement",
+ "affects": [
+  "intel-gaudi2",
+  "nvidia-h200-sxm"
+ ],
+ "concepts": [
+  "mlperf",
+  "cross-version-comparison",
+  "outlier-detection",
+  "per-gpu-normalisation",
+  "offline-scenario",
+  "false-positive",
+  "roofline",
+  "quantization-regime"
+ ],
+ "symptom": "Sweep data/benchmarks/ for records that disagree with their own siblings and one group fires immediately: gaudi2-mlperf-v4-0-llama2-70b-offline-tokens at 8034.85 and bench-mlperf-v5-1-cisco-h200-tgp700w-llama2-70b-offline at 34548.2. Both are Llama 2 70B, both fp8-e4m3, both MLPerf Offline, both vendor-measured, both reproducible, and the per-GPU figures are 1004.4 against 4318.5 - a 4.30x spread in a group where the other three normalisation groups in the same corpus sit between 1.00x and 1.35x. It is the largest genuine same-model same-scenario discrepancy in the benchmark corpus, and it is entirely explicable. The two records are three MLPerf versions apart (v4.0 submitted ~April 2024, v5.1 submitted ~April 2025) and, more importantly, they were produced by DIFFERENT SUBMITTERS WITH DIFFERENT ENGINE STACKS: the Gaudi 2 row is PyTorch 2.1.1 + synapseAI 1.14.98 running a vLLM FORK, submitted in 2024; the H200 row is TensorRT 10.11 + CUDA 12.9 from 2025. Bandwidth alone does not close the gap either - 4800/2460 is only 1.95x against a measured 4.30x per-GPU - which is itself the clue, because the H200 record's own notes attribute only a fraction of the difference to the 700 W TGP declaration.",
+ "root_cause": "An outlier sweep needs a CONTROL GROUP, and Llama 2 70B Offline has no single MLPerf round as its control: the group it actually belongs to spans v4.0, v5.0, v5.1, v6.0 and v6.1, and within those rounds the same scenario moves by a factor of ten on the SAME silicon (AMD's own MI355X goes 81870.5 in v6.0 under a 1000 W cap to 106517 in v6.1 uncapped, and the H200 goes 31302.7 at v4.1 MaxP to 34548.2 at v5.1). What the sweep is really measuring across a version boundary is ENGINE MATURITY plus QUANTIZATION REGIME plus SUBMITTER IMPLEMENTATION, none of which is held constant and all of which dominate. The normalisations that make a within-round comparison trustworthy - per-GPU, per-unit-workload, same-scenario - all hold here and the gap survives every one of them, which is exactly what a real inconsistency looks like and exactly what a legitimate version gap looks like. The trap is that the two are indistinguishable from the outside: the arithmetic is identical, and only the provenance separates them. This is the general form of a failure the repo already documents for the 13x Gaudi-2-versus-MI355X reading in docs/07-benchmarking-methodology.md section 2, stated there for one pair and unstated for every other pair.",
+ "workaround": "Before reporting a cross-record outlier, check the MLPerf ROUND as a grouping key before the accelerator, because the round carries the engine stack with it and no other field in the record makes that visible. Concretely: group by (model, format, scenario, mlperf-round) and only compare within a group; a group with exactly one member cannot produce an outlier, which correctly neutralises this pair, the gaudi2-vs-H200 comparison, and the four H200 v4.1 energy records. Where a reader genuinely wants to compare across rounds, the repo already has the honest framing to use - cite both records and state the version, quantization regime and engine stack in the same sentence, as gaudi2-mlperf-v4-0-llama2-70b-offline-tokens already does in its own notes. Do NOT 'reconcile' the gap by picking a value, and do not mark either record contested: both are correctly transcribed, and a version gap is not a disagreement about a number. The parallel with the roofline is deliberate and worth keeping in view: the roofline catches a number that EXCEEDS a physical ceiling, whereas this gap is entirely below its ceilings (16.3% of the Gaudi 2 compute roof, 30.6% of the H200's), so neither instrument has any business calling it an error.",
+ "severity": "minor",
+ "notes": "FOUND 2026-10-05 during the cross-record consistency sweep (agent w6-benchmarks) and reported here as a NEGATIVE finding rather than fixed, because there is nothing to fix. The sweep's per-GPU-normalised outlier pass over (model, precision, scenario) produced exactly one group above 2x spread, and this is it; every other group came in at 1.00x-1.35x, which is itself the calibration that makes this group identifiable as the odd one. Recorded because the failure mode is asymmetric: an agent re-running this sweep WILL re-find this 4.3x and WILL be tempted to report it, and the correct answer is that it is a documented version gap rather than a transcription error. The arithmetic, for the next reader who does not want to take this on trust: 8034.85 / 8 = 1004.36 per Gaudi 2; 34548.2 / 8 = 4318.53 per H200; 4318.53 / 1004.36 = 4.30x; bandwidth ratio 4800 / 2460 = 1.95x; compute-roof utilisation 8034.85 / 49429 = 16.3% and 34548.2 / 113086 = 30.6%, both comfortably legal. THE PREDECESSOR ERROR IS ALSO RECORDED HERE so the two are not confused: bench-tok-s-derived-from-memory-bandwidth-is-not-a-benchmark documents an earlier attempt at this same family of check which compared two records running DIFFERENT MODELS and was overturned as invalid evidence. This record is the same shape of mistake one level up - a real 4.3x that is not what it appears to be - and the difference is that this one is caught by checking provenance rather than by checking arithmetic.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "bench-intel-gaudi2-mlperf-v4-0-llama2-70b",
+  "bench-mlperf-v5-1-summary-json",
+  "src5-mlperf-inference-results-v4-0",
+  "src5-mlperf-inference-results-v5"
+ ]
+}
