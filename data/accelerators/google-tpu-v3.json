@@ -1,0 +1,53 @@
+{
+  "id": "google-tpu-v3",
+  "type": "accelerator",
+  "name": "Google Cloud TPU v3",
+  "vendor": "google",
+  "architecture": "v3",
+  "release_year": 2018,
+  "process_nm": null,
+  "form_factors": [
+    "custom"
+  ],
+  "vram_gb": 32,
+  "memory_type": "hbm2",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 900,
+  "memory_bandwidth_basis": "Vendor-published per-chip HBM2 bandwidth of 900 GBps. The docs page prints capacity and bandwidth together as 'HBM2 capacity and bandwidth 32 GiB, 900 GBps'; no bus width is published and none was back-computed.",
+  "flops": [
+    {
+      "precision": "bf16",
+      "tflops": 123,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "asic-tpu-v3-specs",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Transcribed from Google's own Cloud TPU v3 spec table, which prints 'Peak compute per chip 123 teraflops (bf16)'. Recorded dense:true as printed. The same 123 also appears in Table 3 of the vendor's v2/v3 architecture paper as the TPUv3 'Peak TeraFLOPS/Chip' 16-bit figure, so the docs page and the architecture paper agree independently - this is the only TPU per-chip BF16 figure in this corpus with two first-party sources agreeing on it.",
+      "unit": "bf16-tflops"
+    },
+    {
+      "precision": "fp32",
+      "tflops": 4,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "asic-tpu-v2-paper",
+      "basis": "vendor-whitepaper",
+      "unit": "fp32-tflops",
+      "basis_detail": "Table 3 'Peak TeraFLOPS/Chip', TPUv3 column, printed as '123 (16b) / 4 (32b)'. Google's docs/v3 page publishes ONLY the 16-bit figure and gives no 32-bit row, so this number comes from the architecture paper and is filed with basis vendor-whitepaper rather than vendor-spec-sheet. Recorded dense:true. The 123 BF16 figure is deliberately NOT restated as a second source here - it is already the row above with the docs page as its source."
+    }
+  ],
+  "tdp_w": 262,
+  "interconnect": [
+    "google-tpu-ici"
+  ],
+  "unified_memory": true,
+  "consumer": false,
+  "notes": "Per-chip figures. v3 is the first liquid-cooled TPU and the first part in this repo's slice with a 1024-chip pod. The corpus referenced v3 without describing it (the vLLM tpu-inference support matrix calls v3 'experimental', and the supply pricing record notes v3 is a legacy pod), so this record fills that.\nWHAT GOOGLE DOES PUBLISH, per generation, for a multi-host deployment: HBM 32 GiB per chip at 900 GB/s; ICI 4 links per chip at 656 Gbit/s PER DIRECTION, i.e. 1312 Gbit/s bidirectional per chip = 164 GB/s bidirectional; pod scale 1024 chips. Pod-scale published figures: 126 PFLOPS BF16 per pod, all-reduce 340 TB/s per pod, bisection 6.4 TB/s per pod, 2D torus.\nTWO FIGURES FROM DIFFERENT SOURCES AND DIFFERENT KINDS - do not merge them. The 900 GB/s HBM, 123 TFLOPS BF16, 123/220/262 W power and the whole pod table come from Google's docs/v3 SPEC SHEET. The per-chip ICI LINK RATE (4 x 656 Gbit/s), the 940 MHz clock, the >12nm process, die <648 mm2 and the 4 TFLOPS FP32 peak come from Table 3 of the v2/v3 ARCHITECTURE PAPER, because Google's v3 docs page publishes NO per-chip ICI bandwidth row at all. That is a verified negative about the docs page, not a gap in the corpus.\nVERIFIED NEGATIVE - PROCESS NODE. process_nm is null. The paper gives TPUv3's technology as '>12nm' only, an upper bound, because the foundry partner is under NDA. Note this is a genuine difference from the v4/v5e/v5p/v6e records, which carry process_nm 7 - do not propagate 7 backwards from v4 to v3 or v2.\nVERIFIED NEGATIVE - MEMORY BUS WIDTH. memory_bus_bit is null; no width is published and none was back-computed from 900 GB/s.\nTWO TRAPS. (1) THE COLUMN HEADER ON GOOGLE'S OWN v3 TABLE LIES ABOUT SCOPE: the table's header cell reads 'v3 Pod values' while several of its rows are unambiguously PER CHIP (peak compute 123 teraflops, HBM2 32 GiB / 900 GBps, power 123/220/262 W). A reader who takes the header literally gets a 1024-chip pod with 32 GiB and 900 GBps, which is off by 1024x on capacity and 1024x on bandwidth. This is the same failure class as gotcha aa-gotcha-spec-table-column-mixing, and is the reason v2/v3 needed the architecture paper as a second source rather than the docs page alone. (2) tdp_w 262 IS A MEASURED MAXIMUM here, printed as Google's measured min/mean/max of 123/220/262 W. It is a different kind of number from v2's 280 W TDP, despite being lower; the older part being nominally hotter at a lower TDP is a real effect of the 128x128 MXU halves and the switch to liquid cooling, not an error.\nARCHITECTURE, for context on the compute/bandwidth pairing: two TensorCores per chip, two 128x128 MXUs per TensorCore (v2 had one), 32 MiB on-chip plus 32 GiB off-chip per the paper, 940 MHz, and 8 chips per CPU host versus v2's 4. BF16 intensity is 123e12/900e9 = 137 FLOP/byte, up from v2's 66 but still memory-bound at batch-1 decode. The paper's own framing is that v3 reaches 2.7x v2 peak from ~1.35x clock, ~1.35x ICI bandwidth, ~1.35x memory bandwidth and 2x the MXUs.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
+  "sources": [
+    "asic-tpu-v3-specs",
+    "asic-tpu-v2-paper"
+  ]
+}

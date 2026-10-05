@@ -1,0 +1,52 @@
+{
+  "id": "google-tpu-v2",
+  "type": "accelerator",
+  "name": "Google Cloud TPU v2",
+  "vendor": "google",
+  "architecture": "v2",
+  "release_year": 2017,
+  "process_nm": null,
+  "form_factors": [
+    "custom"
+  ],
+  "vram_gb": 16,
+  "memory_type": "hbm",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 700,
+  "memory_bandwidth_basis": "Vendor-published per-chip memory bandwidth of 700 GBps, from Table 3 of the v2/v3 architecture paper (row 'Memory GB/s/Chip'). The paper also states the mechanism: an interposer substrate connecting the chip via thirty-two 128-bit buses to four short stacks of HBM DRAM stacks, which is a topology description and NOT a published aggregate bus width, so memory_bus_bit stays null.",
+  "flops": [
+    {
+      "precision": "bf16",
+      "tflops": 46,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "asic-tpu-v2-paper",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Table 3 'Peak TeraFLOPS/Chip', TPUv2 column, row printed as '46 (16b)'. bfloat16 is the 16-bit input format: the paper states 'The MXU produces 32-bit FP products from 16-bit FP inputs that accumulate in 32 bits', and Google's TPU architecture page states all MXU multiplies take bfloat16 inputs with FP32 accumulation. Recorded dense:true. NOTE: Google's own Cloud TPU docs publish NO v2 specification table at all (docs/v2 is a configurations-only page, live and in the 2024-04-10 Wayback capture), so this figure is transcribed from the vendor's architecture paper rather than from a docs spec sheet - which is why basis is vendor-whitepaper and not vendor-spec-sheet.",
+      "unit": "bf16-tflops"
+    },
+    {
+      "precision": "fp32",
+      "tflops": 3,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "asic-tpu-v2-paper",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Table 3 'Peak TeraFLOPS/Chip', TPUv2 column, second figure printed as '3 (32b)' - the 32-bit path, an order of magnitude below the 16-bit path because the MXU is a 16-bit-input systolic array and 32-bit work goes around it rather than through it. Recorded dense:true. Included specifically because it is the counter-example to a TPU being a 'no FP32' part: v2 has a real but very small FP32 peak.",
+      "unit": "fp32-tflops"
+    }
+  ],
+  "tdp_w": 280,
+  "interconnect": [
+    "google-tpu-ici"
+  ],
+  "unified_memory": true,
+  "consumer": false,
+  "notes": "Per-chip figures. TPU v2 is the first generation with HBM, bfloat16 and the ICI that makes a supercomputer out of chips; the v2 supercomputer is a 16x16 2D torus of 256 chips. The corpus references v2 repeatedly (supply pricing notes call it a legacy pod alongside v3; the v3 docs page has a 'Performance benefits of TPU v3 over v2' section) but held no record for it, and this is that record.\nWHAT GOOGLE DOES PUBLISH, per generation, for a multi-host deployment: HBM capacity 16 GiB per chip at 700 GB/s; ICI 4 links per chip at 496 Gbit/s PER DIRECTION, i.e. 992 Gbit/s bidirectional per chip = 124 GB/s bidirectional; pod scale 256 chips per supercomputer. Pod-scale published numbers from the same table: 11.8 PFLOPs peak and 15.9 Tbit/s bisection bandwidth (15.9 Tbit/s is 32 links x 496 Gbit/s, which is exactly the bisection of a 16x16 torus). Clock 700 MHz, TDP 280 W per chip, 124 kW for a full 256-chip supercomputer, die <611 mm2 on a process the paper states only as '>12nm' (so process_nm is null, not a guess).\nVERIFIED NEGATIVE - PROCESS NODE. process_nm is null and that is the correct value, not a gap. The paper states the foundry partner is under NDA and gives TPUv2's technology only as '>12nm', an upper bound. Recording any specific node would be inventing a number from a bound.\nVERIFIED NEGATIVE - MEMORY BUS WIDTH. memory_bus_bit is null. The paper describes thirty-two 128-bit buses to four HBM stacks, which is a wiring description of a multi-stack HBM interface and not a single published aggregate bus width; no aggregate figure is stated, so none was back-computed from the 700 GB/s.\nTWO TRAPS SPECIFIC TO THIS RECORD. (1) ON-CHIP vs OFF-CHIP MEMORY: Table 3 prints '32MiB/16GiB' for memory size. The 32 MiB is ON-CHIP memory inside the VPU and the 16 GiB is OFF-CHIP HBM. The paper separately describes the vector memory (Vmem) itself as 32K 128x32-bit elements, which is 16 MiB - i.e. HALF the 32 MiB on-chip figure in the table, and the paper does not state what accounts for the other half (it also lists 32 2D vector registers of 128x8 32-bit elements, i.e. 4 KiB each). That decomposition is not reconciled by the source and is NOT reconstructed here; only the table's 32MiB/16GiB split is recorded, as printed. vram_gb here is the OFF-CHIP HBM only, because that is the capacity that bounds a model; the 32 MiB on-chip figure is recorded in the notes rather than in onchip_cache, which is reserved for a cache/LLC/SRAM-tier hierarchy and whose 'kind' enum no member honestly describes a TPU vector scratchpad. Do not read vram_gb as total chip-attached memory. (2) TDP IS NOT A MEASURED POWER FIGURE on this part: 280 W is the paper's TDP row for TPUv2. By contrast v3 and v4 carry Google-MEASURED min/mean/max power rows. Comparing 280 W (v2, TDP) against 262 W (v3, measured max) as though they were the same kind of number is wrong even though they are close.\nWHY THE 32b AND 16b ROWS ARE BOTH PRESENT and the reason this part is a poor fit for the compute-heavy work in this corpus: a BF16 intensity of 46e12/700e9 = 66 FLOP/byte is roughly half of v5e's and a quarter of v6e's, and the FP32 path is 3 TFLOPS. TPU v2 is dominated by infeed and rematerialization - Google's v3 docs page lists the actual v2->v3 benefits as FLOPS per TensorCore for compute-bound models, less recomputation where data did not fit v2 memory, and new model/batch shapes that did not fit at all.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-05",
+  "sources": [
+    "asic-tpu-v2-paper"
+  ]
+}
