@@ -1,0 +1,24 @@
+{
+  "id": "w5e-dynamo-dynamo-frontend-queued-requests",
+  "name": "Dynamo frontend queued-request gauge",
+  "metric_name": "dynamo_frontend_queued_requests",
+  "metric_type": "gauge",
+  "unit": "requests",
+  "labels": [
+    "model"
+  ],
+  "phase_scoped": null,
+  "notes": "Number of requests waiting in the HTTP queue BEFORE receiving the first response, per the metric's own doc comment. This is the admission-pressure signal: paired with dynamo_frontend_inflight_requests it separates 'requests are queued' from 'requests are being served but slowly', which is the distinction no single duration histogram can make. NVIDIA Dynamo main (ai-dynamo/dynamo), read 2026-10-05. IMPORTANT CONTEXT that changes how every record in this set reads: Dynamo is a serving framework that BRIDGES vendor engine registries rather than reimplementing them. components/src/dynamo/common/backend/metrics.py has engines call register_global_registry (default prometheus_client.REGISTRY) or register_engine_registry (a custom CollectorRegistry, e.g. SGLang's multiprocess one), and their vendor-prefixed series - vllm:, sglang:, trtllm_, lmcache: - appear on the SAME /metrics endpoint alongside Dynamo's own dynamo_* names. So on a Dynamo deployment you will find vLLM and SGLang metrics that are recorded in this repo against THOSE engines, and the dynamo_component / dynamo_namespace / dynamo_endpoint labels plus model and model_name are injected at scrape time by Dynamo. The names below are Dynamo's OWN, from the auto-generated prometheus_names.py (generated from lib/runtime/src/metrics/prometheus_names.rs - do not hand-edit). Prefix is dynamo_frontend.",
+  "type": "metric_exposure",
+  "status": "verified",
+  "updated": "2026-10-05",
+  "verified_negatively": null,
+  "engine_id": "nvidia-dynamo",
+  "exposure": "prometheus",
+  "confidence": 0.92,
+  "endpoint": "/metrics on the frontend service",
+  "sources": [
+    "w5e-dynamo-http-service-metrics",
+    "w5e-dynamo-prometheus-names"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "w5e-dynamo-vendor-registry-bridge",
+  "type": "source",
+  "name": "Dynamo components/src/dynamo/common/backend/metrics.py - bridging vendor engine registries into one /metrics",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-05",
+  "url": "https://github.com/ai-dynamo/dynamo/blob/main/components/src/dynamo/common/backend/metrics.py",
+  "publisher": "NVIDIA",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-05",
+  "archived_url": null,
+  "notes": "Read at main 2026-10-05. This is the mechanism a reader needs before trusting any /metrics on a Dynamo deployment: engines call register_global_registry (default prometheus_client.REGISTRY) or register_engine_registry (a custom CollectorRegistry they own, e.g. SGLang's multiprocess registry) and their VENDOR-PREFIXED series (vllm:, sglang:, trtllm_, lmcache:) are bridged into the runtime's combined output with auto-labels injected at scrape time. ensure_prometheus_multiproc_dir() sets PROMETHEUS_MULTIPROC_DIR for the engine's lifetime and the docstring notes vLLM reads it on every registry touch, so it must persist past start(). Both a prometheus expfmt callback and a typed callback are registered, so the /metrics text and the OTLP export carry the same series. Consequence for this corpus: a Dynamo /metrics endpoint shows ENGINE metrics whose names are recorded against those engines, not against Dynamo."
+}

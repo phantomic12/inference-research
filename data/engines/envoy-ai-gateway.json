@@ -2,13 +2,14 @@
   "id": "envoy-ai-gateway",
   "name": "Envoy AI Gateway (now Agent Router)",
   "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-04",
+  "confidence": 0.91,
+  "updated": "2026-10-05",
   "sources": [
     "dep-gateway-api-inference-extension-intro",
     "dep-envoy-ai-gateway-inferencepool-guide",
     "dep-llmd-envoy-ai-gateway-guide",
-    "dep-tetrate-envoy-ai-gateway-benchmarks"
+    "dep-tetrate-envoy-ai-gateway-benchmarks",
+    "w5e-envoy-ai-gateway-tracing"
   ],
   "repo": "envoyproxy/ai-gateway",
   "languages": [
@@ -68,6 +69,8 @@
     "Latency budgets where the extra hop matters more than the governance it buys (though at ~2 ms measured, that is rarely the case for LLM traffic)"
   ],
   "docs_url": "https://aigateway.envoyproxy.io/docs/",
-  "notes": "Recorded as an engine because litellm already sets the precedent that a gateway or proxy is an engine record, and because this layer has no other home in data/ - not a model, not a quantization, and nothing else describes a routing data plane. The most load-bearing fact for the topology layer is the LAYERING, stated directly by the Gateway API Inference Extension: this project 'extend[s] popular gateways like Envoy Gateway, kgateway, and GKE Gateway to become Inference Gateway', and is meant to 'integrate your self-hosted models alongside model-as-a-service providers in a higher level AI Gateways like LiteLLM, Gloo AI Gateway, or Apigee'. A production topology therefore commonly has BOTH: a k8s-native inference gateway that picks pods by cache and load, and a higher-level AI gateway doing auth, quotas and cost attribution. Two hops, two different jobs - and installing both without deciding which owns which decision is how a deployment ends up with two competing answers to 'which replica serves this request'. Accuracy caveat: the latency and control-plane figures come from Tetrate, which co-creates and commercially supports this project; the ~2 ms data-plane number is third-party (Broadcom/VMware), and the competitor characterizations on that page are vendor-attributed rather than independently measured.",
-  "type": "engine"
+  "notes": "Recorded as an engine because litellm already sets the precedent that a gateway or proxy is an engine record, and because this layer has no other home in data/ - not a model, not a quantization, and nothing else describes a routing data plane. The most load-bearing fact for the topology layer is the LAYERING, stated directly by the Gateway API Inference Extension: this project 'extend[s] popular gateways like Envoy Gateway, kgateway, and GKE Gateway to become Inference Gateway', and is meant to 'integrate your self-hosted models alongside model-as-a-service providers in a higher level AI Gateways like LiteLLM, Gloo AI Gateway, or Apigee'. A production topology therefore commonly has BOTH: a k8s-native inference gateway that picks pods by cache and load, and a higher-level AI gateway doing auth, quotas and cost attribution. Two hops, two different jobs - and installing both without deciding which owns which decision is how a deployment ends up with two competing answers to 'which replica serves this request'. Accuracy caveat: the latency and control-plane figures come from Tetrate, which co-creates and commercially supports this project; the ~2 ms data-plane number is third-party (Broadcom/VMware), and the competitor characterizations on that page are vendor-attributed rather than independently measured. TRACING VERIFIED 2026-10-05, read at main 2026-10-05. internal/tracing/ is a first-class package: tracing.go builds an sdktrace.TracerProvider configured entirely from OTEL_* env vars and installs autoprop.NewTextMapPropagator(), so propagation format is whatever OTEL_PROPAGATORS names rather than hardcoded. One typed tracer per endpoint (ChatCompletion, Completion, Embeddings, ImageGeneration, Responses, Speech, Transcription, Translation, Rerank, SystemOne, Message, Tokenize, ResponsesInputTokens, CountTokens, MCP) and TWO semantic-convention families implemented side by side, openinference/ and otelgenai/. span.go buffers streamed chunks and ends the span once, so a streaming response is one span rather than one per token. Metric side is separate and equally complete: the four gen_ai.* histograms in internal/metrics/genai.go all set EXPLICIT bucket boundaries, which is unusual - most engines inherit SDK defaults that shift between releases. per-request rather than per-phase: a gateway emits one span per proxied request and attributes token usage and latencies as attributes on it; it has no internal phases of its own to decompose.",
+  "type": "engine",
+  "tracing_support": "per-request",
+  "verified_negatively": false
 }

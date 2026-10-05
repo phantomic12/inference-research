@@ -1,0 +1,40 @@
+{
+  "id": "w5e-dynamo-dynamo-frontend-embedding-latency-seconds",
+  "name": "Dynamo frontend embedding end-to-end latency histogram",
+  "metric_name": "dynamo_frontend_embedding_latency_seconds",
+  "metric_type": "histogram",
+  "unit": "seconds",
+  "histogram_buckets": [
+    0.0,
+    0.002,
+    0.0041,
+    0.0084,
+    0.017,
+    0.035,
+    0.07,
+    0.14,
+    0.29,
+    0.59,
+    1.2,
+    2.4,
+    4.9,
+    10.0
+  ],
+  "labels": [
+    "model"
+  ],
+  "phase_scoped": false,
+  "notes": "generate_log_buckets(0.001, 10.0, 14). Exists specifically so /v1/embeddings latency is measured on its own sub-second-appropriate ladder instead of borrowing request_duration's 1..512 s bounds. Override with DYN_METRICS_EMBEDDING_LATENCY_{MIN,MAX,COUNT}. NVIDIA Dynamo main (ai-dynamo/dynamo), read 2026-10-05. IMPORTANT CONTEXT that changes how every record in this set reads: Dynamo is a serving framework that BRIDGES vendor engine registries rather than reimplementing them. components/src/dynamo/common/backend/metrics.py has engines call register_global_registry (default prometheus_client.REGISTRY) or register_engine_registry (a custom CollectorRegistry, e.g. SGLang's multiprocess one), and their vendor-prefixed series - vllm:, sglang:, trtllm_, lmcache: - appear on the SAME /metrics endpoint alongside Dynamo's own dynamo_* names. So on a Dynamo deployment you will find vLLM and SGLang metrics that are recorded in this repo against THOSE engines, and the dynamo_component / dynamo_namespace / dynamo_endpoint labels plus model and model_name are injected at scrape time by Dynamo. The names below are Dynamo's OWN, from the auto-generated prometheus_names.py (generated from lib/runtime/src/metrics/prometheus_names.rs - do not hand-edit). Prefix is dynamo_frontend.",
+  "type": "metric_exposure",
+  "status": "verified",
+  "updated": "2026-10-05",
+  "verified_negatively": null,
+  "engine_id": "nvidia-dynamo",
+  "exposure": "prometheus",
+  "confidence": 0.92,
+  "endpoint": "/metrics on the frontend service",
+  "sources": [
+    "w5e-dynamo-http-service-metrics",
+    "w5e-dynamo-prometheus-names"
+  ]
+}

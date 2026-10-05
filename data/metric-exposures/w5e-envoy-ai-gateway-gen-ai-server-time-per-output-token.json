@@ -1,0 +1,43 @@
+{
+  "id": "w5e-envoy-ai-gateway-gen-ai-server-time-per-output-token",
+  "name": "Envoy AI Gateway time-per-output-token histogram (OTel gen_ai semconv)",
+  "metric_name": "gen_ai.server.time_per_output_token",
+  "metric_type": "histogram",
+  "unit": "seconds",
+  "histogram_buckets": [
+    0.01,
+    0.025,
+    0.05,
+    0.075,
+    0.1,
+    0.15,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.75,
+    1.0,
+    2.5
+  ],
+  "labels": [
+    "gen_ai.operation.name",
+    "gen_ai.provider.name",
+    "gen_ai.request.model",
+    "gen_ai.response.model",
+    "gen_ai.original.model",
+    "gen_ai.backend"
+  ],
+  "phase_scoped": true,
+  "notes": "mustRegisterHistogram with WithDescription('Time per output token generated after the first token for successful responses.') - the 'after the first token' and 'for successful responses' qualifiers are load-bearing. The first token is excluded, so this is not simply request_duration/n_tokens, and FAILED requests contribute nothing, so a regression that manifests as errors rather than slowness does not move this series at all. 13 explicit bounds, tight around interactive decode rates. Envoy AI Gateway main (envoyproxy/ai-gateway), read 2026-10-05. Metrics go through an OpenTelemetry MeterProvider (internal/metrics/metrics.go NewMeterFromEnv), not a bare prometheus_client registry: a Prometheus reader is ALWAYS attached, and a console or OTLP exporter is added additionally when OTEL_METRICS_EXPORTER is 'console', or when it is neither 'none' nor 'prometheus' and an OTLP endpoint env var is set. OTEL_SDK_DISABLED=true turns off the extra exporters but not the Prometheus reader. That means the metric names are dotted OTel names (gen_ai.server.*), which the Prometheus exporter renders with dots replaced by underscores and a unit suffix appended - so the scraped series is NOT the literal constant in genai.go. Names follow the OpenTelemetry GenAI semantic conventions, not any engine's private scheme.",
+  "type": "metric_exposure",
+  "status": "verified",
+  "updated": "2026-10-05",
+  "verified_negatively": null,
+  "engine_id": "envoy-ai-gateway",
+  "exposure": "prometheus",
+  "confidence": 0.9,
+  "sources": [
+    "w5e-envoy-ai-gateway-metrics-genai"
+  ],
+  "endpoint": ":8080/metrics (Prometheus reader always attached)"
+}
