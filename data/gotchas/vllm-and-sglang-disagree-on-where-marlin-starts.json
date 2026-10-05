@@ -1,0 +1,31 @@
+{
+ "id": "vllm-and-sglang-disagree-on-where-marlin-starts",
+ "type": "gotcha",
+ "name": "vLLM's query_marlin_supported_quant_types returns [] below compute capability 75 and SGLang's identical-named function returns [] below 80, so on Turing the two engines disagree about whether Marlin exists",
+ "class": "framework",
+ "affects": [
+  "qhw-marlin-kernel",
+  "qhw-vllm-kernel-capability-matrix"
+ ],
+ "concepts": [
+  "marlin",
+  "turing",
+  "volta",
+  "awq",
+  "gptq",
+  "framework-difference",
+  "sm75"
+ ],
+ "symptom": "The same AWQ or GPTQ checkpoint on the same Turing GPU (T4, RTX 20-series) is served by a Marlin kernel in vLLM and by something else — Triton W4A16, or an error — in SGLang. Any statement of the form 'Marlin supports X' is ambiguous unless it names the engine.",
+ "root_cause": "Two functions with the same name and nearly the same body. vLLM marlin_utils.py: `if not current_platform.is_rocm(): ... if device_capability < 75: return []`. SGLang marlin_utils.py: `if device_capability < 80: return []`. Both then return [uint4] for zero-point quant types and [uint4b8, uint8b128] plus optionally float8_e4m3fn and float4_e2m1f for symmetric ones. Note also that the FP4 and FP8 Marlin variants are looser than either in both engines: vLLM's is_fp8_marlin_supported() is just has_device_capability(75) and is_fp4_marlin_supported() is is_cuda() and has_device_capability(75).",
+ "workaround": "State the engine whenever the Marlin floor is quoted. Do not carry '75' or '80' as a property of Marlin — it is a property of an engine's copy of the Marlin gate. For a Turing target, verify per engine rather than assuming parity.",
+ "severity": "minor",
+ "notes": "This sharpens an existing verified negative rather than contradicting it. [[quantization/qhw-vllm-kernel-capability-matrix]] records 'Volta has no Volta path: query_marlin_supported_quant_types() returns an EMPTY LIST when device_capability < 75'. That holds for vLLM on current main. This record adds that the negative is engine-scoped, and that the two engines disagree at the 75-79 band. Both re-read 2026-10-05.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6q-sglang-quant-kernel-gates-2026-10",
+  "w6q-kernel-matrix-native-vs-emulated"
+ ]
+}

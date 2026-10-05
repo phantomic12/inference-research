@@ -1,0 +1,31 @@
+{
+ "id": "cutlass-fp8-moe-needs-a-higher-cuda-than-dense-fp8-on-the-same-hopper",
+ "type": "gotcha",
+ "name": "CUTLASS grouped FP8 MoE has its own CUDA floor (12.3 on Hopper, 12.8 on Blackwell) that is higher than per-tensor FP8 (12.0 / 12.4) on the same GPU, and no vendor table expresses it",
+ "class": "toolchain",
+ "affects": [
+  "fp8-blockwise",
+  "fp8-e4m3"
+ ],
+ "concepts": [
+  "cuda",
+  "fp8",
+  "moe",
+  "cutlass",
+  "hopper-sm90",
+  "blackwell-sm100",
+  "toolchain-version"
+ ],
+ "symptom": "An FP8 MoE deployment fails its native-GEMM path on a Hopper GPU that passes every FP8 row in the vendor support matrix, while a dense FP8 model on the same GPU and the same CUDA build runs natively. Or, on Blackwell, both FP8 block-scaled and FP8 MoE fall to a weight-only kernel under CUDA 12.6 while FP8 per-tensor runs natively.",
+ "root_cause": "cutlass_group_gemm_supported() in csrc/libtorch_stable/quantization/w8a8/cutlass/scaled_mm_entry.cu returns CUDA_VERSION >= 12080 for 100 <= cc < 120 under ENABLE_CUTLASS_MOE_SM100, CUDA_VERSION >= 12030 for 90 <= cc < 100 under ENABLE_CUTLASS_MOE_SM90, else false, with the comment 'CUTLASS grouped FP8 kernels need at least CUDA 12.3 and SM90 (Hopper) or CUDA 12.8 and SM100 (Blackwell). Only report archs that have an actual cutlass_moe_mm dispatch compiled into this file.' It is a fourth independent predicate alongside cutlass_scaled_mm_supports_fp8 (12.4 on sm89, 12.0 on cc>=90), cutlass_scaled_mm_supports_block_fp8 (12.0 on 90<=cc<100, 12.8 on cc>=100) and cutlass_scaled_mm_supports_fp4 (runtime >= 12080 plus 100<=cc<120 or 120<=cc<130).",
+ "workaround": "For a Hopper MoE deployment quote CUDA 12.3, not 12.0. For any Blackwell FP8 block-scaled or NVFP4 deployment quote CUDA 12.8. Check all four predicates, not just the FP8 one your matrix row corresponds to: torch.ops._C.cutlass_scaled_mm_supports_fp8 / _block_fp8 / _fp4, plus the grouped-MoE predicate behind the FP8-MoE backend flag.",
+ "severity": "major",
+ "notes": "This gate is NOT in any existing repo record; wave 4 captured three of the four CUTLASS predicates and missed this one. It matters because dense and MoE deployments share a CUDA build and are routinely capacity-planned as if they shared a floor. Verified on vLLM main @ 528772a4, 2026-10-05.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6q-vllm-cutlass-gate-reverify-2026-10",
+  "w6q-runtime-version-gates"
+ ]
+}

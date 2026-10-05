@@ -1,0 +1,35 @@
+{
+ "id": "llamacpp-native-fp4-mmq-is-sm120-only-not-sm100",
+ "type": "gotcha",
+ "name": "llama.cpp's native FP4 MMQ kernel config is gated at CC 1200-1299, so an MXFP4 or NVFP4 GGUF on a B200/B300 runs the Ampere integer MMQ path while the same quant type on an RTX 5090 runs the Blackwell tensor-core path",
+ "class": "kernel",
+ "affects": [
+  "gguf-iq4-xs",
+  "gguf-mxfp4-moe",
+  "llama-cpp"
+ ],
+ "concepts": [
+  "cuda",
+  "gguf",
+  "mxfp4",
+  "nvfp4",
+  "mmq",
+  "blackwell-sm120",
+  "blackwell-sm100",
+  "turing",
+  "rocm",
+  "rdna"
+ ],
+ "symptom": "An MXFP4 or NVFP4 GGUF shows no Blackwell-class throughput on a B200 or B300, and does on an RTX 5090 — the inverse of every other engine in this repo. Read as 'llama.cpp does not have a native FP4 path on datacenter Blackwell', which is what the constant values say.",
+ "root_cause": "ggml/src/ggml-cuda/common.cuh defines `#define GGML_CUDA_CC_BLACKWELL 1200` with the comment 'While BW spans CC 1000, 1100 & 1200, we are integrating Tensor Core instructions available to 1200 family, see https://docs.nvidia.com/cutlass/media/docs/cpp/blackwell_functionality.html#blackwell-sm120-gemms', and `#define GGML_CUDA_CC_RUBIN 1300`. BLACKWELL_MMA_AVAILABLE is `#if !defined(GGML_USE_HIP) && __CUDA_ARCH__ >= GGML_CUDA_CC_BLACKWELL && __CUDA_ARCH__ < GGML_CUDA_CC_RUBIN`. ggml_cuda_mmq_get_config in ggml/src/ggml-cuda/mmq.cuh then routes to ggml_cuda_mmq_get_config_blackwell only when blackwell_mma_available(cc). Since the constant is 1200, sm100 and sm103 do not satisfy it and fall to ggml_cuda_mmq_get_config_ampere. This is the opposite of vLLM's cutlass_scaled_mm_supports_fp4 (native on 100<=cc<120, i.e. sm100/103, and separately on 120<=cc<130) and of TensorRT-LLM, which instantiates Sm100, Sm103 and SM120 FP4 launcher templates and refuses FP4 candidates outright off Blackwell ('FP4 is only supported on blackwell').",
+ "workaround": "On B200/B300, do not assume an FP4 GGUF gets an FP4 tensor-core path from llama.cpp. If the FP4 win matters there, it is obtained by byte reduction through the integer MMQ path, not by a Blackwell MMA. Note also that the ampersand branch is conditional on the ACTIVATION precision: `if (prec_src1 != GGML_PREC_Q4 && (type == GGML_TYPE_NVFP4 || type == GGML_TYPE_MXFP4)) return ggml_cuda_mmq_get_config_ampere(...)`, commented 'only src1 at Q4 uses the native FP4 config, higher precisions keep src1 at Q8_1' — so at Q8 activations even a 5090 drops back to the Ampere config.",
+ "severity": "major",
+ "notes": "This NARROWS an existing repo claim. [[quantization/gguf-iq4-xs]] states 'No accelerator has an i-quant or k-quant path in silicon' and [[quantization/gguf-mxfp4-moe]] that 'the scale group IS the block'. The i-quant and k-quant half of that statement remains TRUE. The MXFP4 and NVFP4 half is now FALSE on sm120-sm129 in llama.cpp: the tile layouts GGML_CUDA_MMQ_SRAM_LAYOUT_FP4 ('MXFP4 and NVFP4 on Blackwell') and GGML_CUDA_MMQ_SRAM_LAYOUT_NVFP4 ('Generic NVFP4') and MMQ_ITER_K_FP4 512 are real Blackwell paths. Two qualifications keep this from overturning the practical advice: it is a config-selected MMQ kernel rather than a CUDA-version-gated tensor-core FP4 MMA, and it is absent on sm100/sm103. Read on llama.cpp master 2026-10-05.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6q-llamacpp-mmq-fp4-blackwell-2026-10",
+  "w6q-kernel-matrix-native-vs-emulated"
+ ]
+}

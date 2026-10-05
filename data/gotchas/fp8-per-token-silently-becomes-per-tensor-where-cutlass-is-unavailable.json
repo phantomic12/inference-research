@@ -1,0 +1,32 @@
+{
+ "id": "fp8-per-token-silently-becomes-per-tensor-where-cutlass-is-unavailable",
+ "type": "gotcha",
+ "name": "vLLM silently substitutes per-tensor activation scaling for the requested per-token scaling whenever cutlass_fp8_supported() is false, losing accuracy headroom with no error",
+ "class": "framework",
+ "affects": [
+  "fp8-e4m3",
+  "qhw-silent-precision-degradation"
+ ],
+ "concepts": [
+  "fp8",
+  "e4m3",
+  "per-token",
+  "per-tensor",
+  "cutlass",
+  "ada-sm89",
+  "hopper-sm90",
+  "silent-degradation"
+ ],
+ "symptom": "An FP8 model configured for dynamic per-token activation quantization runs on hardware that cannot do it, produces correct output and the expected memory saving, and shows a throughput figure that does not match a per-token-quantised benchmark. No warning that a reader would notice.",
+ "root_cause": "Fp8LinearMethod.__init__ in vllm/model_executor/layers/quantization/fp8.py selects the activation quant key as: `if self.act_q_static: self.activation_quant_key = kFp8StaticTensorSym; elif cutlass_fp8_supported(): self.activation_quant_key = kFp8DynamicTokenSym; else: self.activation_quant_key = kFp8DynamicTensorSym` — commented 'Use per-token quantization for better perf if dynamic and cutlass'. cutlass_fp8_supported() is false below cc 89 and false on sm89/sm100/sm120 below CUDA 12.4/12.0 respectively. So the fallback is chosen silently, and the fallback is not 'the same format at lower speed' but 'a different, coarser activation scaling scheme'. The repo already records this shape elsewhere for FP8 checkpoint formats across engines; this record pins the exact line and the exact condition in current vLLM.",
+ "workaround": "Do not infer the activation scaling scheme from the checkpoint config alone on vLLM — confirm it. The gate is CUDA-version-sensitive as well as arch-sensitive (see [[gotchas/cutlass-fp8-moe-needs-a-higher-cuda-than-dense-fp8-on-the-same-hopper]]), so the same binary on the same GPU can take the per-token branch under one CUDA and the per-tensor branch under another.",
+ "severity": "minor",
+ "notes": "Related but distinct from [[quantization/qhw-silent-precision-degradation]], which is about a W4A4 CHECKPOINT being served by a W4A16 kernel. This is about a W8A8 format whose ACTIVATION scaling granularity is reduced. Both are silent and both are invisible in a support table, but they cost different things: the first loses the W4A4 compute saving, this one loses the accuracy headroom per-token scaling provides while keeping full speed. Verified on vLLM main @ 528772a4, 2026-10-05.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6q-vllm-cutlass-gate-reverify-2026-10",
+  "w6q-kernel-matrix-native-vs-emulated"
+ ]
+}

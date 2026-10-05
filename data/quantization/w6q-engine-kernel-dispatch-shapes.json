@@ -1,0 +1,44 @@
+{
+ "id": "w6q-engine-kernel-dispatch-shapes",
+ "type": "quantization",
+ "name": "Quantization KERNEL DISPATCH SHAPES across serving engines — five structurally different ways an engine picks the kernel that runs a format, which is why cross-engine format-support tables cannot be compared cell by cell",
+ "scheme": "awq",
+ "bits": "matrix record - spans GGUF k/i/MX quants, AWQ/GPTQ W4A16, FP8 block-scaled, MXFP4, MXFP6, INT8 and NVFP4",
+ "weight_group_size": null,
+ "activation_scheme": "matrix record - spans W4A4, W4A16, W8A8 and cache-only schemes",
+ "native_support": [
+  "nvidia-b200",
+  "nvidia-rtx-5090",
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "amd-instinct-mi300x"
+ ],
+ "emulated_support": [
+  "nvidia-v100-sxm2-32gb",
+  "nvidia-a10",
+  "amd-instinct-mi300a"
+ ],
+ "kernels": [
+  "vLLM ordered kernel registries",
+  "SGLang enum ladder",
+  "TensorRT-LLM per-arch tile-candidate heuristics",
+  "llama.cpp compile-time __CUDA_ARCH__ family selection",
+  "MLC-LLM TVM compiled-operator probe",
+  "TGI closed string dispatch",
+  "LMDeploy prose arch lists + QLinear"
+ ],
+ "quality_delta": null,
+ "notes": "PROXY ENUM VALUE - DECLARED 2026-10-05: a MATRIX record filed under 'awq'; use the per-format records for the formats themselves. THIS RECORD IS ABOUT A METHOD, NOT ABOUT A HARDWARE CELL. Wave 4 built per-engine support matrices for vLLM, SGLang, TensorRT-LLM, LMDeploy, TGI, Triton, llama.cpp, Xinference, TEI, Dynamo and Envoy. Reading their sources for this wave, the finding that generalizes is not any single kernel gate: it is that these engines do not agree on what a 'support matrix' even is, because they select the kernel that runs a format in five structurally different ways. Two engines can therefore both print 'supports MXFP4' for your GPU and reach different kernels, and neither is lying.\n\nTHE FIVE DISPATCH SHAPES, with what each one makes visible and what it hides.\n1. ORDERED KERNEL REGISTRIES WITH LAST-RESORT FALLBACK — vLLM. Per-format, per-platform ordered candidate lists; selection is mechanical first-match-wins, skipping kernels whose get_min_capability() exceeds the device, calling is_supported(cc) then can_implement(config); on total failure it raises ValueError with every kernel's reason joined. VISIBLE: you can read the entire candidate ladder, and the aggregated error names the gate. HIDDEN: last-match-wins means the LAST entry is what you get by default, and on the MX/NVFP4 lists that last entry is a weight-only kernel (Marlin) rather than an emulation kernel, so the default is a degradation that is correct-but-slower rather than one that errors.\n2. ENUM WITH AN IF/ELIF LADDER — SGLang. One Fp4GemmRunnerBackend enum per family and an explicit ladder; the arch window is written as an inline comparison. VISIBLE: the ladder is short and the auto-selection order is a three-line if/elif you can read in one glance, which is why the existing repo record could quote it accurately. HIDDEN: the ladder's windows are drawn from the is_sm*_supported predicates, which are CUDA-VERSION gates, so a branch that looks like 'Blackwell' is really 'Blackwell AND CUDA 12.8'; and the native ModelOpt path RAISES on non-Blackwell rather than degrading, so the same checkpoint is fatal in SGLang and merely slow in vLLM.\n3. PER-ARCH TILE-CANDIDATE HEURISTICS — TensorRT-LLM. Not a registry at all: cutlass_heuristic.cpp is a generator that takes (sm, config_type_param) and returns a list of tile configs, with hard structural refusals embedded ('FP4 is only supported on blackwell' returns an empty candidate list) and arch-conditional tile tables. VISIBLE: the structural refusals are explicit and readable. HIDDEN: the FP4 sm120 branch is reachable ONLY for FP4_ONLY or FP8FP4_MIXED ('Use the Blackwell (SM120+) specialized candidate list only for these cases'), so a format that is Blackwell-adjacent but neither of those two gets the generic Ampere-style path — a subtlety invisible at the format level.\n4. COMPILE-TIME __CUDA_ARCH__ FAMILY SELECTION — llama.cpp / GGUF. ggml_cuda_mmq_get_config dispatches on arch macros, not a runtime query: AMD first (GCN, CDNA, RDNA4, RDNA3_5, RDNA3, else RDNA2), then blackwell_mma_available(cc), then GGML_CUDA_CC_VOLTA -> ampere, GGML_CUDA_CC_DP4A -> pascal_dp4a, else pascal_older. Six families across six arch classes. VISIBLE: the arch constants and the family ladder are both in two headers. HIDDEN, AND WORSE THAN IN THE OTHER ENGINES: because the selection is a #if on __CUDA_ARCH__, a binary compiled for the wrong arch gets a different kernel family with NO runtime check and NO error — the only symptom is throughput. And the constants are not what the word suggests: GGML_CUDA_CC_BLACKWELL is 1200, not 1000, so on this engine 'Blackwell' excludes B200 and B300.\n5. CLOSED STRING DISPATCH AND SCHEME ENUMS — TGI, MLC-LLM, and to a lesser degree LMDeploy. TGI's get_loader branches on exactly four --quantize strings plus None. MLC-LLM has two dataclasses whose Literal[...] type annotations ARE the support matrix (group-quant over int3/int4/int8; block-scale over float8_e4m3fn/float8_e5m2), plus a runtime probe for a TVM-compiled-in cutlass extern. VISIBLE: the support set is exactly enumerable — this is the easiest engine in the set to reason about. HIDDEN: for MLC-LLM the kernel availability depends on how your TVM was BUILT, not on what is installed, and its own source carries '# Todo: check \"shape supported by cutlass\" for Hopper'.\n\nWHY THIS MATTERS FOR A CAPACITY PLAN. The operational consequence of having five shapes is that the phrase 'engine X supports format F on GPU G' is not a well-defined proposition. It resolves to: which candidate list, in which order, under which runtime predicate, on which compile-time arch constant, with which optional module present — and each of those five questions has a different failure mode (aggregated error, silent fallback, hard raise, wrong-family kernel, build-flag off). The only cross-engine question with a stable answer is the negative one: where NO shape finds a kernel, the load fails loudly. So the reliable reading of another engine's matrix is its blank cells, not its Y cells.\n\nENGINES CONSIDERED AND EXCLUDED, WITH REASONS, because recording a support claim without reading the kernel would be inventing one. MindIE and Firefly (Huawei): closed-source distributions with no readable kernel source; nothing further is assertable beyond the existing engine record. PaddlePaddle / vLLM-Ascend: the Ascend quantization path routes through CANN custom ops and torch_npu; the gates live outside the vllm-ascend tree and were not read in this wave. SGLang's NPU MXFP4 module exists (npu_mxfp4.py) but its gate is a CANN operator check that was not verified, so it is not claimed either way. LocalAI, GPT4All, Jan, KoboldCpp: serving wrappers or CPU-first runtimes with no quantization GEMM kernel of their own — they delegate to llama.cpp, exllamav2 or a backend library, so they have no kernel matrix to record and the honest entry is that they inherit one. ExLlamaV2: a real kernel library, but its CUDA kernels are dequantize-to-half dot products — qdq_util.cuh's dq(q, qzero, scale) is __hmul(__int2half_rn(q - qzero), scale) — so it is a W4A16-style dequant path with no arch gate in the header. Recorded here as a classification, not as a version gate.\n\nTHE FIVE-SHAPE TAXONOMY, ONE MORE TIME, AS A RULE. If you are reading a support table for an engine you did not build: count how many rungs sit between the format and the last-resort entry, because the rung count is the degradation distance. vLLM's NVFP4 list has thirteen entries; the twelfth is Emulation but the sixth is weight-only Marlin, so the practical degradation distance is six rungs and the emulation rung is not the one you will land on. SGLang's ModelOpt NVFP4 path has two branches and one of them raises. llama.cpp has one branch and it is chosen by a preprocessor. A Y in column four of the matrix is not comparable to a Y in column one.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6q-llamacpp-mmq-fp4-blackwell-2026-10",
+  "w6q-mlc-llm-quant-schemes-2026-10",
+  "w6q-tgi-gaudi-quant-dispatch-2026-10",
+  "w6q-lmdeploy-int8-fp8-arch-lists-2026-10",
+  "w6q-sglang-quant-kernel-gates-2026-10",
+  "w6q-trtllm-marlin-nvfp4-2026-10",
+  "w6q-vllm-kernel-registry-ordering-2026-10"
+ ]
+}

@@ -1,0 +1,15 @@
+{
+ "id": "w6q-tgi-gaudi-quant-dispatch-2026-10",
+ "type": "source",
+ "name": "Text Generation Inference Gaudi backend quantization dispatch: the closed set of quantize values get_loader() accepts and the HybridFP8UnquantLoader default",
+ "status": "verified",
+ "confidence": 0.95,
+ "updated": "2026-10-05",
+ "url": "https://github.com/huggingface/text-generation-inference/blob/main/backends/gaudi/server/text_generation_server/utils/quantization.py",
+ "publisher": "Hugging Face (text-generation-inference)",
+ "kind": "repo",
+ "published": null,
+ "accessed": "2026-10-05",
+ "archived_url": null,
+ "notes": "Read 2026-10-05 from huggingface/text-generation-inference main. TGI's quantizer dispatch is a closed if/elif on a --quantize string, which makes its support set exactly enumerable — and the enumeration is the finding. get_loader(quantize, model_id, revision) branches on exactly four values: 'compressed-tensors' (returns CompressedTensorsLoader), 'awq' or 'gptq' (both route to the SAME GPTQWeightsLoader, with quant_method carried inside the config to distinguish them), 'fp8' or None, and else raise ValueError(f'Unknown quantization method: {quantize}'). So the Gaudi backend's supported set is {compressed-tensors, awq, gptq, fp8} and None defaults to the FP8-capable HybridFP8UnquantLoader, not to unquantized. Consequences to record: there is NO exl2/exl3 loader in this backend despite exllama layers existing elsewhere in the tree; there is no int8 W8A8 quantize value at all; there is no nvfp4, no mxfp4, and no block-scaled-FP8 special-case — the FP8 loader is handed weight_block_size (read from config.json quantization_config.get('weight_block_size', None)) and activation_scale_ub, so block-scaled FP8 is handled inside the one FP8 loader rather than by a separate scheme. The format detection is itself worth recording because it is heuristic and config-file-order-dependent: _get_quantizer_config tries config.json first (and inside it special-cases quant_method == 'fbgemm_fp8' into a _FP8QuantizerConfig carrying activation_scale_ub), then falls back to quantize_config.json, then to quant_config.json, reading different key names in each (bits/group_size vs w_bit/q_group_size) and inferring AWQ from the presence of 'zero_point' or of version == 'GEMM'. That is three passes with no version gate, and a checkpoint whose quantization_config lacks 'bits' or 'group_size' will fall through to the next filename rather than erroring."
+}
