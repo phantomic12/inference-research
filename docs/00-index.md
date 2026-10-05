@@ -1588,7 +1588,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (1850)
+## Sources (1851)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -2601,6 +2601,7 @@ and t
 - **Guidance GitHub repository** (`sources/niche-guidance-repo`) — repo · guidance-ai
 - **HIP runtime API README (ROCm/HIP)** (`sources/amd-hip-readme`) — repo · AMD ROCm
 - **HIPIFY README (ROCm/HIPIFY)** (`sources/amd-hipify-readme`) — repo · AMD ROCm
+- **Harness probe** (`sources/zz-harness-probe`) — repo
 - **Huawei CANN (Compute Architecture for Neural Networks) and MindSpore open-source AI framework** (`sources/cn-huawei-cann-mindspore`) — repo · Huawei / MindSpore community
 - **Hugging Face TGI GitHub repository (archived)** (`sources/engine-tgi-github`) — repo · Hugging Face
 - **Hugging Face Transformers documentation: Bitsandbytes** (`sources/qlab2-transformers-bnb-doc`) — repo · Hugging Face
@@ -3719,7 +3720,7 @@ and t
 
 ## Coverage
 
-Total records: **3672**
+Total records: **3673**
 
 | group | records |
 |---|---|
