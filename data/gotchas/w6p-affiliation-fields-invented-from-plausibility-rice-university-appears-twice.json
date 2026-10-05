@@ -1,0 +1,31 @@
+{
+ "id": "w6p-affiliation-fields-invented-from-plausibility-rice-university-appears-twice",
+ "type": "gotcha",
+ "name": "Affiliation fields filled without a byline invent plausible universities - Rice University appears in two records where no author is there",
+ "class": "measurement",
+ "affects": [],
+ "concepts": [
+  "affiliation",
+  "provenance",
+  "distflashattn",
+  "megascale-infer",
+  "rice-university",
+  "arxiv-html",
+  "crossref",
+  "byline",
+  "factual-claim"
+ ],
+ "symptom": "Two paper records in this repo credit institutions that appear nowhere on the papers. distflashattn (arXiv 2310.03294) listed 'Lehigh University', 'Rice University' and 'Texas A&M University' - the paper's byline lists UC Berkeley, University of Washington, UCSD, CMU and USC, so all three recorded institutions were wrong AND all five real ones were missing. w4p-megascale-infer-disaggregated-expert-parallelism listed Rice University, which the ACM Crossref deposit for DOI 10.1145/3718958.3750506 does not contain: its eight per-author affiliation strings are one Peking University School of Computer Science and seven ByteDance sites. The common signal is that RICE UNIVERSITY is the fabricated institution in both, in records written by different agents in different waves, and neither paper has a Rice-affiliated author.",
+ "root_cause": "An affiliation array is a field the schema requires to be present but which no arXiv API response supplies - the arXiv API returns authors as bare name strings and carries no affiliation data at all. So the field has to be filled from something, and the two available sources are the paper's own byline block (arXiv HTML) and a publisher deposit (Crossref per-author array). When neither is read, the fill comes from the author's known employer, from the paper's topic, or from what a plausible ML paper's affiliation list looks like - and 'Rice University' is a high-prior guess: a large, well-known, research-active university that comes up readily for systems-and-ML papers and that is genuinely hard to disprove by inspection because it looks entirely reasonable in the field. The failure is invisible to every existing check: the field validates, the values are real institutions, they are mutually plausible, and nothing in the repo cross-checks an affiliation against a byline. It is also the most consequential kind of wrong field here, because an affiliation is a factual claim about NAMED PEOPLE rather than a measurement.",
+ "workaround": "Fill an affiliation only from the paper's own byline block, and treat a fill from memory as an unverified claim that must be marked. The cheapest sufficient check for an arXiv paper is the HTML full text - the byline sits directly under the title and carries the affiliation markers inline, as in arXiv HTML for 2601.12241 ('1AMD Research and Advanced Development', '2Department of Computer Sciences, University of Wisconsin-Madison'). Where a publisher deposit exists, prefer its per-author affiliation array, which is stronger than a byline because it is the publisher's own record rather than the authors' own typesetting: the Crossref deposit for MoE-Lightning (10.1145/3669940.3707267) attributes Stanford to one author and UC Berkeley to five, which the arXiv byline does not disambiguate at all. When a sweep cannot read a byline, say so in the record rather than leaving a plausible value in place - RAPID is the model here, since wave 6 could confirm its AMD + UW-Madison split from the byline and recorded the confirmation, making 'checked and correct' visible rather than indistinguishable from never having been checked. Do NOT deduplicate affiliation strings by city name: the MegaScale-Infer deposit contains both 'ByteDance Ltd, Seattle, China' and 'ByteDance Ltd, Seattle, USA', two different sites whose city names collide.",
+ "severity": "blocker",
+ "notes": "severity blocker, and it is the only blocker in this repo's gotcha set, for a reason that is about the repo's purpose rather than about serving: this knowledge base exists so that claims can be traced and contradicted later, and an invented affiliation is a claim about real people's employment that no reader can check without going back to the paper - which is the one thing the record was supposed to save them from. It is more damaging than a wrong performance number, because a wrong number is visibly wrong to anyone who measures while a plausible affiliation is indistinguishable from a true one. Three instances were found in one sweep of sixteen duplicate-pair papers plus two targeted checks: distflashattn's three fabricated institutions, MegaScale-Infer's Rice credit, and - after the first two established that the pattern was real rather than anecdotal - the duplicate pairs, where FOUR invented institutions turned up across lightning-attention-2 ('Nanjing University', 'University of Copenhagen', 'Tsinghua University', 'ModelBest' for a paper whose byline reads only 'OpenNLPLab'), rwkv ('University of Washington' and 'NVIDIA' for a paper with neither), simple-linear-attention ('University of Wisconsin-Madison' on one record and 'Together AI' on the other, for a paper whose third institution is the University at Buffalo), hyena ('Princeton' and 'CMU' on one record, 'NVIDIA' on the other, for a paper listing only Stanford and Mila), infini-attention and titans (each adding 'Google DeepMind' to a byline that says 'Google' and 'Google Research'), and retnet ('Microsoft Research Asia' where the paper says 'Microsoft Research'). That is roughly one record in three carrying at least one unverifiable affiliation, and in the duplicate pairs the two records usually disagreed with EACH OTHER - which is the strongest argument the repo has for consolidating them, because a disagreement is the only thing that reliably exposes an invented value. Rice appearing in two records written by different agents in different waves is the cleanest single indicator that the prior is the source rather than the paper.",
+ "status": "verified",
+ "confidence": 0.92,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6p-crossref-sigcomm25-megascale-infer-affiliations",
+  "w6p-arxiv-api-duplicate-id-confirmation",
+  "w6p-crossref-asplos25-moe-lightning"
+ ]
+}

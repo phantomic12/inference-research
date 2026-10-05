@@ -1,0 +1,33 @@
+{
+ "id": "w6p-negative-acl-arr-submission-is-not-a-negative-venue-finding",
+ "type": "gotcha",
+ "name": "An ACL ARR submission record is not a negative venue finding - the paper can still be published, and was (TurboRAG -> EMNLP 2025)",
+ "class": "toolchain",
+ "affects": [],
+ "concepts": [
+  "venue-search",
+  "acl-arr",
+  "aclanthology",
+  "emnlp",
+  "turborag",
+  "rag",
+  "kv-cache",
+  "provenance",
+  "negative-evidence",
+  "citation",
+  "openreview",
+  "crossref"
+ ],
+ "symptom": "Verifying a paper's venue by searching OpenReview finds 'ACL ARR 2025 May Submission' and, correctly, refuses it: an ARR submission is a REVIEW BATCH, not a publication, so a paper can sit in a batch indefinitely without ever appearing in a proceedings volume. Recording that as 'no venue' is defensible for one day. Wave 4 recorded TurboRAG (arXiv 2410.07590) exactly that way on 2026-10-04, with a thorough negative search - the only two OpenReview records were 'ICLR 2025 Conference Withdrawn Submission' and 'ACL ARR 2025 May Submission', and TurboRAG was absent from the ACL Anthology, PMLR v267 (ICML 2025), MLSys 2025/2026 and NeurIPS 2024. By 2026-10-05 the paper was EMNLP 2025 main, ACL Anthology 2025.emnlp-main.334, pages 6588-6601, DOI 10.18653/v1/2025.emnlp-main.334. The wave-4 record was not wrong when written; it was a statement about the state of a review pipeline, recorded in a field that reads as a permanent fact.",
+ "root_cause": "ARR exists precisely to break the coupling between review and publication timing, so an ARR record carries no information about whether the paper will appear. A venue search that treats 'submission to a review batch' as terminal evidence is making a temporal claim from a snapshot and has no way to know it is one. The second contributor is that the record's `updated` field is supposed to date the verification, and did, but a reader filtering on venue=arxiv-preprint has no way to see that the negative is three weeks old rather than structural. The same shape applies to Withdrawn_Submission, which is a terminal state but a different one, and to 'submitted to venue X' records generally.",
+ "workaround": "For an ACL-family paper, when the only venue evidence is an ARR submission record, write the negative as a DATED snapshot rather than a property of the paper - say 'no venue as of the search date; an ACL ARR 2025 May submission exists and ARR batches do not imply publication' - and re-run the ACL Anthology search before quoting the record to anyone. Do not treat ARR absence or ARR presence as either evidence for or against publication. When re-running, search the ACL Anthology directly rather than inferring from OpenReview: the Anthology is the publisher of record for ACL-family venues and OpenReview indexes ARR batches that may never become papers. Corollary for the Withdrawn case: 'Withdrawn_Submission' IS terminal for that venue, so it rules out ICLR but says nothing about whether the paper landed elsewhere - which is exactly how TurboRAG ended up at EMNLP having been withdrawn from ICLR.",
+ "severity": "major",
+ "notes": "severity major because the failure is invisible in the data: the record is self-consistent, cites its sources, passes validation, and states a claim that was TRUE. Nothing in the repo distinguishes 'verified unpublished' from 'unpublished as of last Tuesday'. This is the third distinct shape of venue-search error this repo has logged, and it is worth naming the family. The DeepGEMM gotcha is a search that returns a plausible wrong answer; the PMLR-volume gotcha is an index that returns a confidently wrong venue; this one is an index that returns a confidently EMPTY answer that later stops being true. Together they say that a venue search is evidence about the index, never about the paper - which is the same rule the repo already applies to arXiv identifiers. The paired case is in w6p-acl-or-crossref-index-misses-venue-a-negative-across-four-conference-corpora-is-not-negative, where MoE-Lightning's ASPLOS 2025 venue was missed by exactly the kind of four-corpus sweep wave 4 ran here: one negative-finding method produced one false negative here and one there, in opposite directions.",
+ "status": "verified",
+ "confidence": 0.93,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6p-aclanthology-2025-emnlp-main-334-turborag",
+  "w6p-openreview-api2-duplicate-venue-records"
+ ]
+}

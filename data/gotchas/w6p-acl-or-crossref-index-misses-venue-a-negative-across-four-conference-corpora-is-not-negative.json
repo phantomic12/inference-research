@@ -1,0 +1,33 @@
+{
+ "id": "w6p-acl-or-crossref-index-misses-venue-a-negative-across-four-conference-corpora-is-not-negative",
+ "type": "gotcha",
+ "name": "MoE-Lightning's ASPLOS 2025 venue survived a four-corpus sweep - a negative across ML conference indexes is not a negative",
+ "class": "toolchain",
+ "affects": [],
+ "concepts": [
+  "venue-search",
+  "crossref",
+  "asplos",
+  "acm",
+  "moe-lightning",
+  "negative-evidence",
+  "citation",
+  "openreview",
+  "pmlr",
+  "mlsys",
+  "neurips",
+  "icml"
+ ],
+ "symptom": "Verifying MoE-Lightning (arXiv 2411.11217) on 2026-10-04 required checking four corpora: the OpenReview note index, PMLR v267 (ICML 2025), the MLSys 2025 and 2026 indexes, and the NeurIPS 2024 index. All four were negative, the arXiv comment field was empty, and the record was filed as arxiv-preprint with an explicit warning that this was 'THE MOST LIKELY RECORD IN THE BATCH TO HAVE BEEN GIVEN AN INVENTED VENUE'. The actual venue is ASPLOS 2025 - ACM Crossref DOI 10.1145/3669940.3707267, 'Proceedings of the 30th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 1', pages 715-730, issued 2025-03-30. The wave-4 search missed it because ASPLOS proceedings are ACM-DOI-deposited and appear in none of the four places it looked.",
+ "root_cause": "A negative result is only as strong as the UNION of what the searched corpora index, and four ML-conference indexes cover a small and specific slice of the publication space: ICLR, ICML, NeurIPS, MLSys, and PMLR for ICML. They do not index ASPLOS, ASPLOS being an architecture-and-systems venue outside the ML-conference lineage. Anyone building a venue check by listing the venues they already know about will reproduce this exactly, because the list is drawn from the same distribution as the belief being tested. Note the asymmetry that makes it expensive: for a systems-paper reader ASPLOS is an OBVIOUS candidate venue and for a MoE-inference paper it is not, so the check is aimed by the reader's own priors and misses precisely the cases where the priors are wrong. The secondary cost is that the search was executed competently and documented in detail, so the negative read as well-founded - a thorough negative from the wrong four corpora is more persuasive than a shallow one, not less.",
+ "workaround": "Before recording 'no venue', ask what KIND of paper this is and pick the channel for that kind rather than the channel for the field the reader is comfortable with. For anything plausibly in a CS-systems, architecture, or HPC venue, query Crossref by bibliographic title and filter for type=proceedings-article - that single query covers ACM, IEEE and USENIX deposits, which between them index most of the venues the OpenReview/PMLR/MLSys/NeurIPS sweep misses. Do not stop at 'no OpenReview record': absence from OpenReview is the normal state for a non-ML-conference paper and carries no information. When a Crossref hit's title does not string-match, check for ACM \\textsc small-caps rendering before rejecting it - MoE-Lightning's deposit title is 'MoE-L\\n <scp>ightning</scp>\\n : High-Throughput MoE Inference on', which fails any normalised title comparison and would be easy to discard as a different paper.",
+ "severity": "major",
+ "notes": "severity major because the resulting record was not merely incomplete but actively misleading in the way this repo cares about most: it named the paper as the one most likely to receive an INVENTED venue, which invites a future pass to guess OSDI or MLSys, when the true venue was a fourth option nobody would have guessed. A guess would have been wrong; the honest negative was also wrong; only the publisher's own deposit was right. The three-venue family now reads: an index can return a confident wrong answer (PMLR volumes are not venue-ordered - v130 is AISTATS, not ICLR), a confident empty answer (this), or a plausible bait (DeepGEMM by title). The general rule is unchanged and now has three illustrations: A VENUE SEARCH IS EVIDENCE ABOUT THE INDEX, NEVER ABOUT THE PAPER. The complementary gotcha is w6p-negative-acl-arr-submission-is-not-a-negative-venue-finding, where the same kind of negative sweep produced a false negative in the OPPOSITE direction - a paper recorded as unpublished that had in fact been published - and the two together are the argument for re-running negatives rather than inheriting them, which is what wave 6 did for all eight unresolved 2026 papers.",
+ "status": "verified",
+ "confidence": 0.93,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6p-crossref-asplos25-moe-lightning",
+  "w6p-arxiv-api-duplicate-id-confirmation"
+ ]
+}

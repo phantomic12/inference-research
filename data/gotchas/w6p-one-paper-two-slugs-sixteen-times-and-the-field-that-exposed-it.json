@@ -1,0 +1,37 @@
+{
+ "id": "w6p-one-paper-two-slugs-sixteen-times-and-the-field-that-exposed-it",
+ "type": "gotcha",
+ "name": "16 papers in this repo were live under two slugs each, with contradictory venues - the affiliation field is what exposed them",
+ "class": "toolchain",
+ "affects": [],
+ "concepts": [
+  "duplicate-records",
+  "provenance",
+  "venue-conflict",
+  "consolidation",
+  "citation",
+  "affiliation",
+  "arxiv-id",
+  "slugs",
+  "mamba",
+  "s4",
+  "hyena",
+  "rwkv",
+  "based",
+  "lightning-attention",
+  "deepseek"
+ ],
+ "symptom": "Sixteen papers each had TWO live records under different slugs, so every venue-, category- and adoption-filtered query returned some papers twice. Six of the sixteen carried contradictory venues: s4 held iclr while s4-structured-state-spaces held iclr plus a notes sentence claiming JMLR 2022; mamba held colm 2024 while mamba-selective-ssm held arxiv-preprint 2023; based-simple-linear-attention held icml while simple-linear-attention held icml after a correction; and paper-lmcache/mamba-selective-ssm carried contested status purely because their twin disagreed with them. The contradiction was visible in the data, but NO existing check flagged it: validation passed, every source resolved, and the audit that found the pairs (docs/14-audit-findings.md, section D1) explicitly recorded them as 'report only - nothing deleted' and left them that way for two more waves.",
+ "root_cause": "Records are authored independently by different agents, each following the same contract - match the schema, cite sources, be honest about the venue - and nothing in that contract says two agents must not both claim the same paper. Two agents verifying Mamba and S4 correctly, on different evidence, and disagreeing about the venue, is the contract WORKING; the failure is that the disagreement had nowhere to go. The pairs are invisible to validation because a duplicate is a valid record: every field passes, every source exists, and there is no uniqueness constraint on arxiv_id in papers/. So the corpus grows toward one-record-per-agent rather than one-record-per-paper, and the pressure is structural rather than a mistake by anyone: an agent asked to verify a paper will find and update a record, not search for a second record describing the same work, because nothing tells it to. The clinching evidence that this was the root cause rather than carelessness is the AFFILIATION field, which is where the duplicates were finally detected. In eight of the sixteen pairs the two records gave DIFFERENT affiliations for the same paper, and reading both bylines showed one or both were invented. Two records that disagree cannot both be right, so the disagreement is a detector - and it is the only mechanism in this repo that found these.",
+ "workaround": "Find duplicates by GROUPING ON arxiv_id, not by title and not by eye - a title-similarity scan misses nothing here but an arxiv_id grouping is exact and takes one pass, and this repo already has wrong ids twice so the grouping must be over ids re-fetched from the arXiv API rather than ids read out of records. When a pair is found, decide same-paper-versus-different-paper on arxiv_id alone; it is decisive and no other field is. Pick the canonical slug by which record owns the better venue evidence AND has inbound references, then MERGE rather than delete: fold the twin's source ids into the canonical `sources`, take the UNION of hardware_relevance, keep whichever `mechanism` is materially fuller, and quote both records' venue claims in the canonical record's notes. Scan every field of every data/**/*.json for the retired slug before removing anything - in all sixteen cases here the retired slug had zero inbound references, because papers are cited by source id and never by slug, which is what made the consolidation safe and is worth checking rather than assuming. Do NOT average a disputed field: affiliations get resolved from the paper, adoption and category disagreements get recorded in notes with both readings, because picking the average of two invented affiliations is still an invented affiliation. Finally, re-verify every arXiv id in the pair against the API during the merge - doing so caught two live title-collision errors that no title check would have found, since 'Various Lengths, Constant Speed: Efficient Language Modeling with Lightning Attention' (arXiv 2405.17381, ICML 2024) is a DIFFERENT paper from 'Lightning Attention-2' (arXiv 2401.04658, no venue) despite the shared first author and overlapping coauthors.",
+ "severity": "blocker",
+ "notes": "severity blocker, and it is the duplicate the task brief prioritised for two waves without a fix - the strongest evidence available that a blocker label is warranted here rather than reserved for crashes. Three properties make it worse than the count suggests. First, the duplication is SILENT: a query returning S4 twice is not an error condition, so nothing anywhere reported it, and the pairs were found by an audit that deliberately declined to act on them. Second, the venue contradictions were load-bearing rather than cosmetic - mamba-selective-ssm held arxiv-preprint while mamba held COLM, so a reader filtering for peer-reviewed SSM work would silently MISS the single most consequential SSM paper in the corpus, and a reader trusting mamba-selective-ssm would think it had never been refereed. Third, the affiliation sweep only became possible once the pairs were identified, because a pair gives you two independent claims about the same author block and therefore a built-in contradiction to check. That last point inverts the usual order of operations and is the reason this gotcha is worth reading twice: THE DUPLICATES WERE THE TOOL THAT FOUND THE AFFILIATION ERRORS, so consolidating them was not tidiness - it was the precondition for the sweep that found roughly one record in three carrying an invented affiliation. See w6p-affiliation-fields-invented-from-plausibility-rice-university-appears-twice for that cascade. Sixteen pairs is also the answer to 'find EVERY such pair': the brief named five - s4, splitwise, sglang, distflashattn and hyena - and distflashattn turned out to have NO twin (it was verified COLM 2024 in this pass and is a clean singleton), while eleven pairs were unreported, including two - s4 and mamba - that the brief had already diagnosed correctly in its particulars. Both diagnoses were right: the S4 JMLR claim has no basis in any publisher deposit, and the Mamba ICLR bait is a genuine ICLR 2024 Rejected_Submission that coexists with the COLM 2024 acceptance in the same result set.",
+ "status": "verified",
+ "confidence": 0.95,
+ "updated": "2026-10-05",
+ "sources": [
+  "w6p-arxiv-api-duplicate-id-confirmation",
+  "w6p-openreview-api2-duplicate-venue-records",
+  "w6p-crossref-s4-no-jmlr-deposit"
+ ]
+}
