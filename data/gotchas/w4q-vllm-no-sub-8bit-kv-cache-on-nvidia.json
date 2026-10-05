@@ -1,0 +1,38 @@
+{
+ "id": "w4q-vllm-no-sub-8bit-kv-cache-on-nvidia",
+ "type": "gotcha",
+ "name": "vLLM has no plain 4-bit or sub-3-bit KV cache on NVIDIA: the only sub-8-bit cache dtypes are TurboQuant (research kernels) and int4_per_token_head, and there is no 2-bit KV dtype at all",
+ "class": "format",
+ "affects": [
+  "vllm",
+  "qhw-vllm-kernel-capability-matrix",
+  "qserve-kv4",
+  "kvquant",
+  "qhw-fp8-kv-cache",
+  "qhw-int8-kv-cache",
+  "nvidia-h100-sxm",
+  "nvidia-b200"
+ ],
+ "concepts": [
+  "kv-cache-quantization",
+  "turboquant",
+  "int4-per-token-head",
+  "cache-dtype-enum",
+  "fp8-kv",
+  "nvfp4-kv",
+  "verified-negative"
+ ],
+ "symptom": "A reader planning capacity for long-context serving asks for a 4-bit (or 2-bit) KV cache, finds that --kv-cache-dtype accepts only a fixed list of strings, and concludes the engine supports 8-bit and 4-bit in the same way. It does not. Every --kv-cache-dtype value vLLM accepts is enumerated in one place, and on CUDA the sub-8-bit entries are TurboQuant variants (research kernels, not a production path) plus int4_per_token_head (which changes the scaling scheme, not the bit width of a general-purpose block cache). There is no 2-bit entry of any kind. Anyone who assumes a symmetric fp8/int8/int4/int2 cache-dtype ladder exists will pick a design that cannot be configured.",
+ "root_cause": "The authoritative list is the CacheDType Literal in vllm/config/cache.py, which reads: auto, float16, bfloat16, fp8, fp8_e4m3, fp8_e5m2, fp8_inc, fp8_ds_mla, nvfp4_ds_mla, turboquant_k8v4, turboquant_4bit_nc, turboquant_k3v4_nc, turboquant_3bit_nc, int4_per_token_head, int8_per_token_head, fp8_per_token_head, nvfp4, nvfp4_4over6. Read it as three tiers. (1) BASELINE: auto, float16, bfloat16. (2) 8-bit: the fp8 family, where fp8 and fp8_e4m3 are CUDA 11.8+ and ROCm, fp8_e5m2 is CUDA 11.8+ only, fp8_inc is Gaudi, fp8_ds_mla is the DeepSeek MLA FP8 layout, and the *_per_token_head variants compute scales per (token, head) dynamically in the kernel at cache-write time - the per-head fp8 form is documented as Flash-Attention-backend-only and requiring llm-compressor calibration. (3) SUB-8-BIT: only turboquant_k8v4, turboquant_4bit_nc, turboquant_k3v4_nc, turboquant_3bit_nc and int4_per_token_head. The TurboQuant family is a Lloyd-Max-centroid codebook scheme with no-compression residuals (NCC) plus a Triton decode kernel, and this repo already records an independent reason for caution with it: the gotcha comm-turboquant-kv-ampere-arch-gate documents a user on SM86 whose TurboQuant KV cache selected a Triton FP8 path that reported itself supported below SM 89 and then failed at runtime with 'ValueError: type fp8e4nv not supported in this architecture', requiring 13 runtime monkey-patches. There is additionally a Blackwell-only 4-bit KV path, nvfp4, which is gated separately (see the sm100 trtllm-gen requirement) and is a block-scaled FP4 cache rather than an int4 cache. So the honest statement is: 8-bit is broadly available, 4-bit is available only as NVFP4 on Blackwell through a narrow backend or as TurboQuant research kernels, 3-bit exists only inside TurboQuant, and 2-bit does not exist.",
+ "workaround": "Choose from the list that actually exists. For broadly portable cache savings, fp8_e4m3 (CUDA 11.8+, ROCm) or fp8_e5m2 (CUDA 11.8+) with per-tensor or per-head scales. For Blackwell sm100/103/107 only and maximum compression, nvfp4 with per-tensor or per-head scales, accepting the trtllm-gen backend requirement, the fa2/fa3 exclusion, the non-causal-attention exclusion, and the artifactory reachability requirement. Do not plan a 2-bit KV cache on vLLM at all - for that class of saving the only routes in this repo are research kernels (KVQuant 3-bit, QServe 4-bit + SmoothAttention) rather than an engine flag. If you are evaluating TurboQuant, treat the comm-turboquant-kv-ampere-arch-gate gotcha as a gate on your evaluation, and check the ISA before the benchmark.",
+ "severity": "minor",
+ "notes": "VERIFIED NEGATIVE WITH EVIDENCE, and this is a genuine positive assertion rather than an absence of checking: the CacheDType Literal is a closed enumeration in the engine's own config, so 'there is no 2-bit KV cache dtype' and 'there is no general-purpose int4 block-quantized KV cache on CUDA other than nvfp4' are both decidable facts about vLLM main as of 2026-10-04, not gaps in anyone's research. This matters for the repo's own conclusion in qhw-accuracy-cost-summary that nothing below 3-bit KV has any engine support worth planning on: the enum independently corroborates it, because the single 3-bit entry (turboquant_k3v4_nc) lives inside a research-kernel family rather than a supported cache dtype. THE COMPLIMENTARY POSITIVE FINDING: NVFP4 KV cache on vLLM is narrower than the TensorRT-LLM matrix's sm100/103 = Y suggests. It requires supports_trtllm_attention() for both prefill and decode, which is is_device_capability_family(100) after special-casing sm90 and sm12x, so it covers cc 100-109 (including sm107) and excludes Ada, Hopper and sm120; it requires the NVIDIA artifactory to be reachable for cubins; it is disabled under VLLM_BATCH_INVARIANT; it forces the trtllm-gen backend inside the FlashInfer wrapper because 'fa2/fa3 do not support nvfp4'; and 'FlashInfer non-causal attention is not supported with NVFP4 KV cache'. Four independent conditions for one cache dtype is worth recording, because a reader who has only the architecture row will plan a config that raises ValueError at startup.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "w4q-vllm-kv-cache-arch-gates",
+  "qhw-src-vllm-quant-docs",
+  "qzgw-vllm-supported-hardware-table"
+ ]
+}
