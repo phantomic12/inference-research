@@ -1,0 +1,48 @@
+{
+  "id": "w7k-nvfuser",
+  "type": "compiler",
+  "name": "nvFuser (MosaicML fusion compiler, now under NVIDIA)",
+  "repo": "NVIDIA/Fuser",
+  "language": "C++",
+  "license": "NOASSERTION - NVIDIA's BSD-style LICENSE with bundled third-party attributions (PyTorch, Caffe2 and others); no standard SPDX id",
+  "first_release_year": 2022,
+  "category": "graph-optimizer",
+  "target_backends": [
+    "cuda"
+  ],
+  "input_languages": [
+    "pytorch"
+  ],
+  "output_artifacts": [
+    "cubin"
+  ],
+  "compilation_strategy": "jit",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "PyTorch shipped nvFuser as a torch.compile backend for years - the PyTorch foundation itself announced it as a PyTorch deep learning compiler",
+    "Published on PyPI and NVIDIA's own index (pypi.nvidia.com), with stable wheels built against PyTorch stable releases"
+  ],
+  "strengths": [
+    "Whole-subgraph fusion rather than elementwise-only fusion, which is what made it worth building before Triton existed",
+    "Handles dynamic inputs of varying shapes and strides, which is the actual difficulty in serving",
+    "Targets Volta and later, i.e. a wider floor than tools that need Hopper-era features"
+  ],
+  "weaknesses": [
+    "The binding to PyTorch is the whole problem: wheels are built against a specific PyTorch stable or nightly, so compiler and framework versions must move together",
+    "The [torch] extra 'will REPLACE your existing PyTorch installation with a compatible nightly build' - an install step that can silently downgrade a production environment",
+    "Does not support all PyTorch operations; NVIDIA's own announcement carries that caveat",
+    "Version-pinned to CUDA 12.6+ wheels, a different floor from Triton at CC 8.0+, so the two NVIDIA kernel toolchains are not interchangeable",
+    "Last push 2026-05-31 with no GitHub release object and a 406-star public mirror - the public repo is not where most of the work happens, so community support is thin"
+  ],
+  "learning_curve": "high",
+  "compile_time_seconds": null,
+  "notes": "Provenance matters here and is the reason this record exists separately from the existing torch-compile-torchinductor record: nvFuser is MosaicML's fusion compiler, announced by the PyTorch foundation in 2022 and later donated to NVIDIA, which now hosts NVIDIA/Fuser. It is a graph optimizer in the schema's sense - it fuses groups of eager PyTorch operations into generated CUDA kernels rather than exposing a language to write kernels in. The documented flow is analyze the ops running on GPU, plan parallelization, apply the strategies in generated code, runtime-compile the generated functions, then execute those CUDA kernels on subsequent iterations. autotuning is false: nvFuser applies its own planned strategies, it does not search a configuration space per kernel the way @triton.autotune does. Its optimisation is whole-subgraph, which is a different axis from per-kernel tuning, and conflating the two is the usual source of confused claims. For a planner the practical point is the coupling, not the codegen: the wheel-to-PyTorch-version binding and the [torch] extra's PyTorch replacement behaviour mean nvFuser is a build-time choice that has to be pinned deliberately, and a nightly-index install can change the PyTorch underneath an unrelated service. compile_time_seconds is null because no primary source gives a per-kernel figure for it.",
+  "sources": [
+    "w7k-nvfuser-github",
+    "w7k-pytorch-nvfuser-announcement"
+  ],
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-05"
+}

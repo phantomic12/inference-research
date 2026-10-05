@@ -1,0 +1,48 @@
+{
+  "id": "w7k-cuda-nvrtc",
+  "type": "compiler",
+  "name": "CUDA NVRTC (runtime compilation library)",
+  "repo": "NVIDIA/cuda-samples (samples); the library itself ships with the CUDA Toolkit, not as a standalone OSS repo",
+  "language": "C++",
+  "license": "NVIDIA proprietary (CUDA Toolkit EULA; ships with the CUDA Toolkit, no separate OSS license)",
+  "first_release_year": null,
+  "category": "compiler-framework",
+  "target_backends": [
+    "cuda"
+  ],
+  "input_languages": [],
+  "output_artifacts": [
+    "ptx",
+    "cubin"
+  ],
+  "compilation_strategy": "jit",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "TensorRT-LLM compiles FMHA generation kernels with NVRTC at engine startup (PR #18542)",
+    "Any host that needs CUDA C++ compiled after it starts - a shape-specialized or runtime-generated kernel - uses NVRTC rather than nvcc"
+  ],
+  "strengths": [
+    "Compiles CUDA C++ from a string at run time with no nvcc and no disk round-trip",
+    "Self-contained: does not depend on other CUDA Toolkit libraries or headers, and can run on a machine with no GPU (cross-compilation)",
+    "Emits PTX, cubin, or cuda_tile IR, so the same library serves forward-compilation and per-arch tuning",
+    "Modules can be JIT-linked with nvJitLink or cuLinkAddData, which the docs say can give 'optimizations and performance not possible in a purely offline static compilation'"
+  ],
+  "weaknesses": [
+    "It is a CUDA C++ compiler, not a DSL: you still write CUDA, so none of Triton's or Pallas's productivity applies",
+    "Compile cost lands on the critical path at process start - the measured TensorRT-LLM case is 5-11 s per kernel variant, 80-160 s in total on MLA fp8-KV configs",
+    "No autotuning and no fusion: it compiles one translation unit at a time with no graph-level view",
+    "Optimizer heuristics can change between shared-library versions, so an NVRTC upgrade can move kernel performance with no source change (stated in the User Guide's own footnotes)",
+    "Linux x86_64, Linux aarch64 and Windows x86_64 only"
+  ],
+  "learning_curve": "high",
+  "compile_time_seconds": null,
+  "notes": "Distinct from CUDA itself and from nvcc: NVRTC is the LIBRARY that lets a host program compile CUDA C++ at run time, which is what makes shape- or config-specialised kernels possible without shipping a prebuilt binary per shape. That property is load-bearing for inference engines precisely because decode is shape-variable. The cost lands on the cold-start path, and this repo already owns the measurement: ev-trtllm-pr-18542-fmha-jit-warmup records TensorRT-LLM compiling FMHA generation kernels with NVRTC synchronously inside the first warmup forward, ~5-11 s per kernel variant depending on host CPU and 80-160 s in total on DeepSeek-family MLA fp8-KV configs, with an opt-in async-warmup flag cutting an internal B200 measurement from 163 s to ~26-30 s. THREE FIELDS ARE DELIBERATELY EMPTY, and each is an honest gap rather than a missing value: (1) input_languages is empty because the schema's vocabulary enumerates model and DSL front ends (python, jax, pytorch, tensorflow, onnx, tflite, cutlass-cpp, triton, mlir, xla-hlo) and has no term for C++/CUDA C++ source - NVRTC sits BELOW that vocabulary. Inventing a term would change an existing field's meaning, which AGENTS.md forbids; the enum needs extending instead. (2) compile_time_seconds is null rather than a midpoint of the 5-11 s per-kernel range above, because that range is a single vendor-reported measurement in one engine on one class of config, and this schema has no *_basis field in which to record the derivation of a number taken from a range. (3) first_release_year is null: no reachable primary source states when NVRTC first shipped, and CUDA-version-to-year mapping is exactly the kind of inference AGENTS.md's contract exists to prevent. category is compiler-framework as the least-wrong of the six available values, but it is genuinely imprecise: NVRTC is neither a framework (it composes nothing) nor a DSL, template library, graph optimizer, or runtime. The enum describes compiler SHAPES and has no slot for a plain single-language code generator, which is what a deployment planner most needs to distinguish. autotuning is false - NVRTC compiles the program it is given and never searches tactics.",
+  "sources": [
+    "w7k-nvrtc-user-guide",
+    "w7k-trtllm-pr-18542-nvrtc-jit-warmup"
+  ],
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-05"
+}

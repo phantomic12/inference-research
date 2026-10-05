@@ -1,0 +1,44 @@
+{
+  "id": "w7k-cann-ascend-graphengine",
+  "type": "compiler",
+  "name": "CANN / Ascend GraphEngine (GE)",
+  "repo": "Ascend/graphengine",
+  "language": "C++",
+  "license": "Apache-2.0 for the GE source; the surrounding CANN toolkit is Huawei proprietary",
+  "first_release_year": 2021,
+  "category": "graph-optimizer",
+  "target_backends": [],
+  "input_languages": [],
+  "output_artifacts": [],
+  "compilation_strategy": "graph-rewrite",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "Huawei's MindIE serving stack (engines record: cn-huawei-mindie) fronts vLLM and SGLang for text generation on Ascend, so third-party engines reach Ascend through CANN",
+    "GE is a required sub-module of MindSpore, built and installed automatically with it"
+  ],
+  "strengths": [
+    "Six explicit serial stages - graph preparation, partition, optimization, compilation, loading, execution - which makes the pipeline inspectable rather than monolithic",
+    "Models Ascend's actual heterogeneity: operators are assigned between CPU and the AICORE vector units and the graph is split into per-engine sub-graphs",
+    "Lays out data in a CUBE-friendly format during subgraph optimisation specifically 'to guarantee less data handling between RAMs and CUBEs' - a real hardware-driven transform, not a generic fusion",
+    "Real-time operator compilation: the operator executable is generated at run time from the network structure, so there is no offline tactic-profiling build step"
+  ],
+  "weaknesses": [
+    "Real-time codegen moves the cost to serve time instead of build time, so Ascend cold-start is spent differently from TensorRT's and there is no way to profile tactics against hardware ahead of time",
+    "Fusion is pattern-based within a sub-graph, so an unfusable pattern silently falls back to a slower path rather than erroring",
+    "GE is 'automatically called without any exposure to the users', which makes it impossible to tune or debug directly - there is no knob a user is meant to turn",
+    "Building GE from source requires an Ascend 910 environment; the output is shared libraries meant to be linked with MindSpore, 'not meant to be used independently'",
+    "Nothing in this schema's vocabulary describes Ascend: no target backend term, no input-language term for a graph fed by MindSpore or PyTorch, no artifact term for the generated operator binaries - three empty fields"
+  ],
+  "learning_curve": "very-high",
+  "compile_time_seconds": null,
+  "notes": "The most architecturally interesting addition to this slice, and the one that most rewards reading beside the existing compilers/torch-compile-torchinductor and the new w7k-tensorrt record. TensorRT profiles tactics offline against idle hardware and emits a portable-per-arch engine; GE does real-time operator compilation at serve time and fuses with knowledge of Ascend's CUBE vector units that no generic compiler has. Both are production paths on their own hardware, and the cold-start bill simply lands in a different place - which is the practical lesson for anyone porting a serving stack between them. THREE FIELDS ARE EMPTY BECAUSE THE SCHEMA HAS NO TERMS FOR THEM: target_backends has no value for an NPU (the enum is built from CUDA/ROCm/Metal-class hardware plus TPU), input_languages has no term for a graph handed in by MindSpore or PyTorch, and output_artifacts has no term for GE's generated operator binaries. Rather than stretch 'rocm' or 'triton-ir' to fit, all three are left empty and the gap is recorded here. This is the clearest single argument in this pass for extending the compiler schema's enums. autotuning is false: GE chooses fusions and engine assignments by its own passes, with no published per-kernel configuration search. That is a different optimization strategy from autotuning, and the distinction matters when comparing the two. compile_time_seconds is null because GE's real-time codegen cost is not published per kernel. status is verified on the strength of the open-source GE README; the surrounding CANN toolkit is proprietary and its internals are not independently auditable.",
+  "sources": [
+    "w7k-ascend-graphengine-readme",
+    "cn-huawei-cann-mindspore",
+    "cn-huawei-mindie"
+  ],
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-05"
+}

@@ -1,0 +1,43 @@
+{
+  "id": "w7k-cerebras-cslc",
+  "type": "compiler",
+  "name": "Cerebras CSL compiler (cslc) and the CSL kernel language",
+  "repo": "Cerebras/sdk-examples (the compiler ships in the Cerebras SDK; the public examples repo is the closest software-stack record)",
+  "language": "C++",
+  "license": "Apache-2.0 for the examples repo; the CSL compiler and Cerebras SDK are proprietary",
+  "first_release_year": 2022,
+  "category": "kernel-dsl",
+  "target_backends": [],
+  "input_languages": [],
+  "output_artifacts": [],
+  "compilation_strategy": "aot",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "Compiled CSL binaries run on Cerebras hardware or on the FABRIC SIMULATOR, which ships with the SDK and is what makes the toolchain testable without the wafer-scale system",
+    "The existing engines/alt-cerebras-csl-sdk record already carries this stack"
+  ],
+  "strengths": [
+    "A separate language for the hardware rather than a CUDA-shaped port - the honest answer to a processor with no caches and static scheduling",
+    "The compiler reference documents its constraints explicitly, which is rare and makes planning possible",
+    "A simulator in the SDK means kernels are testable at desk scale before hardware is available",
+    "Custom fp16 option (cb16: 6-bit exponent, 9-bit mantissa, customised bias) alongside IEEE f16 and bf16"
+  ],
+  "weaknesses": [
+    "Hard architecture lock: --arch accepts only wse2 or wse3 and 'The architecture you compile for must match the system you intend to run on' - no cross-generation binary compatibility",
+    "Fabric dimensions must match the real system on hardware ('for hardware, these must match the actual fabric dimensions of your CS system')",
+    "Non-IEEE fp16 formats 'require comptime-known values', a real constraint on shape- and data-dependent kernels",
+    "Not in this schema's vocabularies at all: no target backend term for WSE, no input-language term for CSL, no output-artifact term for its ELF binaries - three empty fields where the schema should have answers",
+    "Proprietary toolchain and a language with a small user base; no autotuner, so performance is whatever the compiler's static schedule achieves"
+  ],
+  "learning_curve": "high",
+  "compile_time_seconds": null,
+  "notes": "The clearest example in this whole pass of a toolchain whose deployment constraints are architectural rather than incidental, and the compiler reference states them plainly rather than leaving them to be discovered on hardware. Two facts a reader should not have to learn the hard way: the target architecture must match the run system (wse2 vs wse3, no compatibility), and on hardware the fabric dimensions in the build must match the actual system, while any sufficiently large bounding box suffices for a simulator run. That asymmetry is why the simulator matters operationally - it is the only place the constraint is loose. THREE FIELDS ARE EMPTY ON PURPOSE: target_backends (no enum term for a wafer-scale engine), input_languages (no term for CSL, a language the repo's enum has never had to describe), and output_artifacts (no term for the ELF and build artifacts cslc actually emits; 'c' is not a faithful stand-in for a device binary, so it was left out rather than stretched). This is enum debt in the compiler schema, recorded honestly rather than papered over with a near-miss value. The same limitation is why the existing compilers/cutlass-cute record's 'cubin' is a reasonable approximation but these three are left empty. autotuning is false and this is a hardware consequence, not an omission: a compiler for a processor whose compiler statically schedules all data movement (see flops/alt-groq-compiler-constraints for the same argument on Groq, and engines/alt-groq-groqflow for the corresponding toolchain) has nothing to search over, because the schedule is decided rather than chosen. compile_time_seconds is null because no primary source publishes one.",
+  "sources": [
+    "w7k-cerebras-csl-compiler",
+    "alt-cerebras-sdk-examples"
+  ],
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-05"
+}

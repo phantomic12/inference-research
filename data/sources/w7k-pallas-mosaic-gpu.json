@@ -1,0 +1,15 @@
+{
+  "id": "w7k-pallas-mosaic-gpu",
+  "type": "source",
+  "name": "Pallas Mosaic GPU backend and the Blackwell matmul optimisation guide",
+  "status": "draft",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
+  "url": "https://docs.jax.dev/en/latest/pallas/gpu/blackwell_matmul.html",
+  "publisher": "Google / JAX",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-05",
+  "archived_url": null,
+  "notes": "DECISIVE AGAINST THE EXISTING compilers/pallas RECORD. That record claims Pallas is 'TPU-only: no NVIDIA or AMD GPU support' in both its weaknesses list and its notes, and the TPU docs it cites (pallas-writing-tpu-kernels-in-jax) do not mention GPUs. JAX documentation now carries a full Mosaic GPU backend under jax.experimental.pallas.mosaic_gpu, imported as plgpu, with its own programming model, memory spaces and pipelining guides. MEMORY MODEL, WHICH DIFFERS FROM TPU PALLAS: each Pallas 'thread' is a WARPGROUP (4 warps = 128 CUDA threads) executing in lockstep, so there are no individual threads to manage. Memory spaces are GMEM (global/HBM, large and slow), SMEM (shared, per-SM, stages data for Tensor Core ops) and TMEM (tensor memory, Blackwell only). Hopper flow is GMEM -> SMEM -> Tensor Cores -> registers -> SMEM -> GMEM; on Blackwell TMEM replaces SMEM for staging Tensor Core inputs and outputs; elementwise work bypasses both.THE BENCHMARK IS FULLY SPECIFIED, which is why it is citable where most kernel claims are not, and it also carries its own caveat. Progressive optimisation of one matmul on Blackwell, TensorCore utilisation: basic kernel 37.62% (59.4% of cuBLAS) -> warp specialisation 45.47% (71.7%) -> tiled epilogue 55.82% (88.1%) -> collective 2CTA MMA 59.41% (93.7%) -> persistent kernel 61.46% (97.0%) -> dedicated epilogue warpgroup 63.38% (100.0%) -> grid tiling 69.44% (109.6%), against a cuBLAS baseline of 63.38% and CUTLASS at 69.30% (109.3%). The cuBLAS baseline is jax.dot; the CUTLASS number is the best of a cutlass_profiler run with --dist=gaussian,mean:0,stddev:1,scale:-1, f32 accumulator, m=4096 k=4096 n=8192, kernels='*sm100*', f16 in / f16 out. JAX'S OWN CAVEAT IS THE MOST IMPORTANT SENTENCE ON THE PAGE: 'don't believe matmul benchmarks if they don't specify input data distribution', with the warning that 'All our benchmarks here use arrays with iid normal float16 entries, which turn out to be one of the slower distributions you can choose'. Reproducible by setting BENCHMARK=True in tests/pallas/mgpu_examples_test.py. Note the API is still namespaced jax.experimental.pallas - experimental in the import path, though the guide is presented as production-quality guidance and reaches 109.6% of cuBLAS on Blackwell."
+}

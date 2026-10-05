@@ -1,0 +1,52 @@
+{
+  "id": "w7k-thunderkittens",
+  "type": "compiler",
+  "name": "ThunderKittens (and the HipKittens AMD port)",
+  "repo": "HazyResearch/ThunderKittens (AMD: HazyResearch/HipKittens)",
+  "language": "C++",
+  "license": "MIT",
+  "first_release_year": 2024,
+  "category": "template-library",
+  "target_backends": [
+    "cuda",
+    "rocm"
+  ],
+  "input_languages": [
+    "cutlass-cpp"
+  ],
+  "output_artifacts": [
+    "ptx",
+    "amdgcn"
+  ],
+  "compilation_strategy": "template-instantiation",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "Project states many AI companies use it for production-scale training and inference, naming Together AI, Jump Trading and Cursor - vendor-published with no third-party measurement",
+    "HipKittens became an official AITER backend in March 2026, i.e. it ships inside AMD's own inference kernel library"
+  ],
+  "strengths": [
+    "Models the hardware rather than abstracting it: tiles no smaller than 16x16 because a modern GPU 'is a manycore processor where each core can efficiently run ~16x16 matrix multiplies'",
+    "First-class access to the newest tensor-core paths - 'asynchronous WGMMA calls on H100 GPUs and TCGEN05 calls on B200 GPUs'",
+    "Solves what actually costs performance and is usually hand-written: shared-memory bank conflicts, TMA address generation, distributed shared memory, load-store-compute overlap, NVLink/NVSwitch transfers",
+    "Embedded in CUDA rather than beside it ('natively embedded into CUDA'), so it does not block access to anything it cannot express",
+    "Keeps pace with new silicon: 2.0 added Blackwell with MXFP8 and NVFP4, and a 2026-09-10 release added Vera Rubin with new PTX instructions"
+  ],
+  "weaknesses": [
+    "It is a header/template library, not a compiler or DSL, so this schema's compile-time and strategy fields describe it only loosely (template-instantiation, no autotuner)",
+    "CUDA-only for ThunderKittens proper; AMD users need the separate HipKittens project, which is a port with different primitives, not the same codebase",
+    "2.0 restructured the repository: kernels must now be compiled individually and the top-level Python package is gone - an upgrade is a build-system change, not a version bump",
+    "Ampere support is no longer actively supported ('While ThunderKittens should still work on Ampere, we do not plan to bring further support'), so the supported floor moved twice in a year",
+    "Every performance claim is self-reported by the project, with no third-party benchmark or methodology"
+  ],
+  "learning_curve": "high",
+  "compile_time_seconds": null,
+  "notes": "The strongest answer to the task's '2025-2026 kernel DSL that has become load-bearing', reading 'DSL' as the C++-embedded kind rather than the Python kind - ThunderKittens is what a frontier lab writes when Triton is not low-level enough. It sits deliberately between Triton and raw CUDA: high-level enough to express a full attention kernel in a page, low-level enough to call WGMMA and TCGEN05 directly. Compare w7k-tilelang (Python DSL, portable across three vendors) and w7k-modular-max-mojo (Python-shaped MLIR frontend) for the other two points on that spectrum. HIPPITTENS IS INCLUDED IN THIS RECORD RATHER THAN AS ITS OWN because its most valuable content is comparative: the authors state that core tile and bulk-compute interfaces carry over from TK to HK 'but decisions around memory access patterns, scheduling compute and memory, and ordering thread blocks within the chiplet architecture differ'. Chiplet-aware thread-block ordering has no NVIDIA analogue, which is the concrete content of why a ROCm port is not a recompile. It supports CDNA3 and CDNA4 and is now an AITER backend, so on AMD it reaches production through flops/amd-rocm-aiter-kernels rather than as a standalone library. autotuning is false: performance comes from hand-written primitives matching the hardware, not from a search. input_languages carries cutlass-cpp as the schema's term for a C++-template kernel library, which is the right shape but strictly these are not CUTLASS headers - a vocabulary stretch, flagged. The production_evidence line is explicitly vendor-published and unquantified, the same standard the existing flops/tilelang record applies to DeepSeek's 'close to hardware limits'. compile_time_seconds is null: these are headers, so compile time is instantiation cost inside the consumer's build, not a per-kernel number.",
+  "sources": [
+    "w7k-thunderkittens-readme",
+    "w7k-hipkittens-readme"
+  ],
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-05"
+}
