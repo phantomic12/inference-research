@@ -1,0 +1,44 @@
+{
+  "id": "w7c-gotcha-tpu-torus-bisection-is-not-a-share-of-total",
+  "type": "gotcha",
+  "name": "TPU ICI is a 2D or 3D torus, so pod-wide bisection bandwidth is not a simple fraction of total bandwidth - Google's own all-reduce vs bisection figures differ by 32x to 53x, and a reader who assumes a uniform mesh mis-sizes the network by that factor",
+  "class": "hardware",
+  "affects": [
+    "w7c-google-tpu-ici-v3",
+    "w7c-google-tpu-ici-v4",
+    "w7c-google-tpu-ici-v5e",
+    "w7c-google-tpu-ici-v5p",
+    "w7c-google-tpu-ici-v6e",
+    "w7c-google-tpu-ici-tpu7x",
+    "google-tpu-ici"
+  ],
+  "concepts": [
+    "torus",
+    "mesh",
+    "bisection-bandwidth",
+    "all-reduce",
+    "topology",
+    "twisted-torus",
+    "collective",
+    "tensor-parallel",
+    "direction-convention",
+    "ingest"
+  ],
+  "symptom": "A reader sizing a multi-host TPU job treats the pod as a uniform mesh or as an unordered set of equivalent chips, and computes usable fabric bandwidth by dividing a pod aggregate by a chip count or by assuming any-to-any behaviour. On a torus that is wrong by the gap between Google's two published pod figures, which is large and generation-dependent: v3 all-reduce 340 TB/s against bisection 6.4 TB/s per 1024-chip pod (~53x), v5e 51.2 TB/s against 1.6 TB/s per 256-chip pod (32x), v6e 102.4 TB/s against 3.2 TB/s per 256-chip pod (32x), v4 1.1 PB/s against 24 TB/s per 4096-chip pod (~46x). The failure is silent because every individual figure the reader used is correct - they are Google's own numbers - and only the COMBINATION is invalid. The second variant of the same error is worse on v4, where the topology is conditional: Google states a v4 slice is a 3D mesh by default and becomes a 3D torus only when the shape AxBxC satisfies 2A=B=C or 2A=2B=C with each dimension a multiple of 4, so a reader who records 'v4 topology: 3D torus' and then reasons about a slice shape that does not meet the condition is reasoning about a fabric the job will not get.",
+  "root_cause": "A torus closes each axis with wrap-around edges, so traffic between distant chips must traverse wrap edges that compete for the same links as everything else, and the fabric's usable global bandwidth is bounded by the bisection cut rather than by the sum of link rates. Google publishes all-reduce and bisection bandwidth as SEPARATE rows for exactly this reason, and the gap between them is the measurement of the effect. Three further causes compound it. (1) THE RATIO IS A PROPERTY OF THE SHAPE, NOT OF THE BANDWIDTH: v5e and v6e both sit at 32x despite doubling per-chip ICI bandwidth (400 to 800 GBps bidirectional) and doubling both pod figures, so a reader who expects a generation upgrade to improve collective shape is wrong. (2) PER-POD ICI AGGREGATE IS NOT PUBLISHED for any of these generations - Google gives per-chip ICI bandwidth, per-pod all-reduce and per-pod bisection, and nothing summable into a pod total - so there is no published number to multiply, and any pod aggregate a reader constructs is derived from a per-chip figure that does not survive summation over a torus. (3) TOPOLOGY IS A FUNCTION OF SLICE SHAPE, not a fixed property: v4's mesh/torus condition, and Google's statement that twisted topologies (supported on v4 and v5p only) raise bisection bandwidth by a theoretical ~70% at 4x4x8 and ~40% at 4x8x8 over untwisted, mean the bisection number a job gets depends on which shape it was provisioned with.",
+  "workaround": "Quote Google's published all-reduce and bisection rows as the pod-level answer and never substitute a computed pod aggregate for a bisection figure; this repo's records deliberately leave per-pod ICI aggregate unstated for exactly that reason and say so in their notes. When a comparison demands a single number for the fabric, use the bisection figure and label it as such. Map tensor-parallel degree to a physical topology dimension rather than treating the pod as unordered - Google states the rule directly for v4 ('placing 4-way model parallelism on the X dimension and 256-way data parallelism on the Y and Z dimensions matches a 4x16x16 topology') and warns that a parallelism degree which matches no topology dimension is sub-optimal, which on a torus is worse than the word suggests. For a latency-sensitive path, prefer a smaller slice over a larger one: v5e serving is documented for up to 8 chips and v6e's inference-optimized slice is the 8-chip v6e-8, so the latency-sensitive deployment stays inside the scale-up domain rather than paying for cross-pod traffic. And check whether a twisted topology is available on the shape you are provisioning, since it is the only documented lever that changes bisection bandwidth without changing generation.",
+  "severity": "major",
+  "notes": "This is the interconnect-side counterpart to a compute-side claim that must not be smuggled across: raising per-chip ICI bandwidth does not raise bisection bandwidth proportionally, so 'v6e has 2x the ICI bandwidth of v5e' does not imply 'a v6e global collective costs half'. The bisection figures say 3.2 TB/s against 1.6 TB/s - exactly 2x, matching the bandwidth, so for v5e to v6e the bisection DOES scale with the per-chip figure while the all-reduce-to-bisection ratio stays pinned at 32; the trap is the ratio, not a claim that bisection is bandwidth-independent. The shape of the trap differs between the 2D generations (v3, v5e, v6e: ratio 32-53) and the 3D ones (v4 ~46, v5p and TPU7x unpublished at pod level), and the 3D generations' pod-level bisection is NOT published, so no ratio is asserted for them here. A reader comparing TPU to a GPU scale-up domain should note that nvswitch-4's 8-GPU domain is non-blocking, so at tensor-parallel degree 8 there is no equivalent penalty on NVIDIA hardware at all - the torus cost is a function of how large the scale-up domain is, and TPU scale-up domains are 256 to 9216 chips. Related: w7c-gotcha-tpu-scale-up-scale-out-is-ici-vs-dcn-not-host-vs-pod for where the scale-up boundary actually sits, and aa-gotcha-pcie-peak-bandwidth-direction-convention for the bidirectional-aggregate halving that must be applied to every ICI row before any of these figures are compared with a per-direction number.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-05",
+  "sources": [
+    "asic-tpu-v5e-specs",
+    "asic-tpu-v6e-specs",
+    "w7c-google-tpu-v3-system-architecture",
+    "asic-tpu-v4-specs",
+    "alt-tpu-system-arch",
+    "alt-tpu-inference",
+    "asic-tpu-v5p-specs"
+  ]
+}

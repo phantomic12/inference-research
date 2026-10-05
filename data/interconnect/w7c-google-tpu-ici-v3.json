@@ -1,0 +1,22 @@
+{
+  "id": "w7c-google-tpu-ici-v3",
+  "type": "interconnect",
+  "name": "Cloud TPU v3 ICI (inter-chip interconnect), 2D torus, 1024-chip pod",
+  "kind": "other",
+  "version": "TPU v3",
+  "bandwidth_gbps": null,
+  "bandwidth_basis": "NO PER-CHIP ICI BANDWIDTH IS PUBLISHED FOR v3, and none is inferred here. Google's v3 page publishes pod-level capacity and collectives only: TPU Pod size 1024 chips, all-reduce bandwidth per pod 340 TB/s, bisection bandwidth per pod 6.4 TB/s, peak compute per pod 126 PFLOPS bf16. It does not publish a per-chip ICI bandwidth, an ICI port count, or a link count - the 'interconnect topology 2D torus' row is the only interconnect detail on the page. The typed value is deliberately null rather than derived: 340 TB/s / 1024 chips would be a per-chip collective-rate artefact, not a link rate. v3 is recorded because it is the last generation before v4's optical 3D mesh, and because its 53:1 all-reduce-to-bisection ratio is the baseline the later 2D generations (v5e, v6e at 32:1) improve on.",
+  "link_count": null,
+  "topology": "2D TORUS across a 1024-chip pod, published as 'Interconnect topology: 2D torus'. Pod-level collectives as documented: all-reduce bandwidth per pod 340 TB/s against bisection bandwidth per pod 6.4 TB/s, a ratio of about 53. This is the same shape of result as v5e and v6e but worse, and it is the clearest illustration in this set that the all-reduce-to-bisection ratio is a property of the 2D torus rather than of the bandwidth: raising per-chip bandwidth on a torus does not change the ratio, and only leaving the 2D torus (v4's 3D mesh/torus, ~46:1, then v5p's 3D torus) changes it. Note that v3's published page does NOT mention twisted topologies - Google documents those for v4 and v5p only.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "ICI is the scale-up fabric and the scale-up domain is the 1024-chip POD. Google's documented boundary is ICI versus DCN, not 'scale-up'/'scale-out': ICI is 'high speed, low latency internal links that connect TPUs within a TPU Pod'; cross-slice traffic goes 'by transferring data to CPUs (hosts) which in turn transmit the data over the data-center network (DCN)', 'a higher latency, lower-throughput network (when compared with ICI)'. The booleans are this repo's mapping of that boundary. SCALE-OUT: the v3 page publishes NO per-host NIC configuration and NO DCN bandwidth figure of any kind, so nothing is recorded - v3 predates the v5-generation pod-level DCN figures in this set and this is a genuine documentation gap rather than an omission. Google's v3 page also predates the Multislice product surface (the Multislice Overview's accelerator-type definition begins at 'a TPU type (v4 or later)'), so the documented way to exceed one pod on v3 is not covered by any source in this record set.",
+  "notes": "Included for the torus ratio and for completeness of the ICI lineage, not because anyone provisions it - the v3 page lists supported accelerator types v3-8 through v3-2048 with 'Support ends' set to '(End date not yet set)' for every row, which is itself the useful fact: Google has published no end-of-support date for v3. SLICE NAMING TRAP, SAME SHAPE AS v4: v3 slice names are TensorCore-based, so v3-8 is 4 chips and v3-2048 is 1024 chips - reading the trailing number as a chip count overstates by 2x. HOST PACKING IS NOT PUBLISHED for v3: the page has no 'chips per host' row, so the number of hosts in a 1024-chip pod is not derivable from this source and is not recorded. The 32-GiB HBM2 per chip at 900 GBps is on the v3 page but is a memory figure, not an interconnect one. Sources: cloud-tpu-v3-system-architecture for every figure on this record; w7c-google-tpu-multislice-overview for the ICI/DCN definitions and for the fact that Multislice accelerator types are defined from v4 onward.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-05",
+  "sources": [
+    "w7c-google-tpu-v3-system-architecture",
+    "w7c-google-tpu-multislice-overview"
+  ]
+}
