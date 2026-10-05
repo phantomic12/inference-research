@@ -1,0 +1,45 @@
+{
+  "id": "w7c-gotcha-tpu-scale-up-scale-out-is-ici-vs-dcn-not-host-vs-pod",
+  "type": "gotcha",
+  "name": "For Cloud TPU, 'scale-up' is within a POD over ICI and 'scale-out' is between slices/pods over the DCN - Google documents this as ICI vs DCN and never uses the words scale-up/scale-out, so a reader who maps scale-up to 'chips on one host' or scale-out to 'between hosts in a pod' inverts the boundary",
+  "class": "hardware",
+  "affects": [
+    "w7c-google-tpu-ici-v3",
+    "w7c-google-tpu-ici-v4",
+    "w7c-google-tpu-ici-v5e",
+    "w7c-google-tpu-ici-v5p",
+    "w7c-google-tpu-ici-v6e",
+    "w7c-google-tpu-ici-tpu7x",
+    "google-tpu-ici"
+  ],
+  "concepts": [
+    "scale-up",
+    "scale-out",
+    "ici",
+    "dcn",
+    "pod",
+    "slice",
+    "multislice",
+    "tensor-parallel",
+    "data-parallel",
+    "direction-convention",
+    "ingest"
+  ],
+  "symptom": "Two distinct misstatements, and the first is the one this gotcha is named for. (a) HOST/POD INVERSION: treating scale-up as 'chips attached to one host' and scale-out as 'between hosts'. On TPU this is wrong in both directions at once, because the scale-up domain is the whole POD and a single host sits INSIDE it. Concretely: a v6e pod is 256 chips and Google's own table lists 'Chips per host 8' and 'TPU Pod size 256 chips', so 32 hosts share one ICI domain - all 256 chips are scale-up even though they span 32 machines. The same error on v5p puts the boundary at 4 chips (v5p's host) when the ICI domain is actually 8960 chips across 2240 hosts. Any fit or sharding decision made at the host boundary is off by three orders of magnitude. (b) THE INVERSE, which is the more common vendor-habit error carried over from GPU parts: assuming ICI's 'per-chip bandwidth' and the DCN's 'per-chip bandwidth' are the same kind of number. They are not - ICI rows are GBps (gigabytes per second, per chip, bidirectional aggregate) and DCN rows are Gbps (gigabits per second, per chip) in the SAME spec table, so a v5p record that compares '1200 GBps ICI' against '50 Gbps DCN per chip' has compared bytes to bits as well as chip-to-chip to host-to-network, and the real ICI-to-DCN ratio is worse than the printed numbers suggest by a factor of 8. The bit/byte slippage is invisible unless the reader checks the unit suffix on each row, and it survives every copy of these numbers.",
+  "root_cause": "Google never labels these two fabrics 'scale-up' and 'scale-out'. Its Cloud TPU Multislice Overview defines the boundary in its own vocabulary: 'TPU chips in each slice communicate through inter-chip-interconnect (ICI). TPU chips in different slices communicate by transferring data to CPUs (hosts) which in turn transmit the data over the data-center network (DCN)', with ICI defined as 'high speed, low latency internal links that connect TPUs within a TPU Pod' and DCN as 'a higher latency, lower-throughput network (when compared with ICI) that connects TPU slices in a Multislice configuration'. So Google's split is SLICE-INTERNAL versus SLICE-EXTERNAL, which coincides with WITHIN-POD versus BETWEEN-PODS - NOT with on-host versus off-host. 'Scale-up' and 'scale-out' are this repo's mapping onto that documented ICI/DCN boundary, and every interconnect record here says so in its own notes; treating the two vocabularies as interchangeable is the trap. A second, separable cause: the spec sheets themselves mix units within one table - v5e prints 'Bidirectional inter-chip interconnect (ICI) bandwidth (per chip) 400 GBps' alongside 'Per-host NIC configuration 2 x 100 Gbps NIC' and 'Data center network bandwidth per Pod 6.4 Tbps'. GBps and Gbps/Tbps appear in adjacent rows of the same table, so a reader scanning for a bandwidth number can pick up the wrong row's magnitude without noticing.",
+  "workaround": "When writing a TPU interconnect record, name the boundary in Google's vocabulary in the notes (ICI within a pod versus DCN between slices and pods) and state explicitly that the scale_up/scale_out booleans are this repo's mapping, not Google's wording - then a reader can check the mapping instead of trusting an undocumented equivalence. State direction on every figure: Google's ICI rows are bidirectional aggregates and must be halved to reach the per-direction value this repo types, while the DCN rows do not state a direction at all and are recorded as published and flagged unstated rather than halved. Read the unit suffix on each row: GBps on ICI rows, Gbps/Tbps on DCN rows, in the same table. And take chips-per-pod from the 'TPU Pod size' or 'Number of chips per pod' row rather than from 'Chips per host' - for v5e and v6e the two differ by 32x (256 chips per pod against 8 per host) and for v5p by 2240x (8960 against 4).",
+  "severity": "major",
+  "notes": "Why this is more dangerous on TPU than on the GPU parts in this repo: the GPU scale-up boundary is the 8-GPU NVSwitch domain, so 'one scale-up domain' and 'one machine' nearly coincide and the inversion is easy to miss. On TPU they diverge by 32x (v5e, v6e), 2240x (v5p), 4096/8 (v4, if its unpublished host count is the 8 the surrounding generations use) and 9216/4 (TPU7x), so the same mistake is not a small correction. A SECOND ORDERING HAZARD IN THE SAME FAMILY, recorded because it decides fit the same way: on several generations POD SIZE IS NOT THE SAME AS THE LARGEST SLICE YOU CAN PROVISION. v5p is 8960 chips per pod but the largest schedulable single slice is a 96-cube 6144-chip job; TPU7x is 9216 per pod with a largest documented slice shape of 2048 chips; v4's pod is 4096 chips. So 'fits in one pod' and 'fits in one ICI slice' are different questions, and the second is the one Google actually schedules against. A model that fits the pod but exceeds the largest slice must go to Multislice, i.e. onto the DCN, i.e. it leaves the scale-up domain entirely - which is exactly the boundary this gotcha is about. Related: aa-gotcha-pcie-peak-bandwidth-direction-convention covers the same halving hazard for host links, and w7c-gotcha-tpu-torus-bisection-is-not-a-share-of-total for why the ICI bandwidth per chip does not translate into usable pod-wide bandwidth.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-05",
+  "sources": [
+    "w7c-google-tpu-multislice-overview",
+    "asic-tpu-v5e-specs",
+    "asic-tpu-v6e-specs",
+    "asic-tpu-v5p-specs",
+    "asic-tpu-v4-specs",
+    "alt-tpu7x-ironwood",
+    "alt-tpu-system-arch"
+  ]
+}

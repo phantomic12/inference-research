@@ -1,0 +1,23 @@
+{
+  "id": "w7c-google-tpu-ici-v6e",
+  "type": "interconnect",
+  "name": "Cloud TPU v6e (Trillium) ICI (inter-chip interconnect), 2D torus, 256-chip pod",
+  "kind": "other",
+  "version": "TPU v6e (Trillium)",
+  "bandwidth_gbps": 400,
+  "bandwidth_basis": "PER CHIP, PER DIRECTION, PER PORT (800 GB/s per direction). Google's v6e spec table publishes 'Bidirectional inter-chip interconnect (ICI) bandwidth (per chip) 800 GBps' with 'ICI ports per chip 4'. The published figure is a BIDIRECTIONAL AGGREGATE per chip across its four ports, so the typed value is its per-direction half: 400 GB/s per direction per chip, 200 GB/s per direction per port if the ports are symmetric. This is exactly 2x v5e's per-chip figure in both directions - v6e doubles ICI bandwidth per chip relative to v5e (400 to 800 GBps bidirectional) while keeping the same 4-port count and the same 256-chip pod, so the doubling is per-port bandwidth rather than more ports. Google writes 'GBps' (gigabytes) for ICI while writing 'Gbps' and 'Tbps' (gigabits) for the DCN rows of the same table.",
+  "link_count": 4,
+  "topology": "2D TORUS across a 256-chip pod, same topology as v5e and explicitly a shared one - the v6e page states that with a 256-chip footprint per Pod, v6e shares many similarities with v5e. Google publishes the pod-level consequences as numbers, not as a derivable property: all-reduce bandwidth per pod 102.4 TB/s against bisection bandwidth per pod 3.2 TB/s, a factor of 32 - the SAME all-reduce-to-bisection ratio as v5e even though both figures doubled. That is the single most useful number in this record for a reader who plans multi-host: the ratio is a property of the 2D torus shape, not of the generation or of the bandwidth, so upgrading v5e to v6e does not improve the shape of a global collective at all. A reader who assumes a uniform mesh, or who divides pod aggregate by a chip count, will mis-size the network badly here.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "ICI is the scale-up fabric and the scale-up domain is the 256-chip POD. Google documents the boundary as ICI versus DCN rather than as 'scale-up'/'scale-out': ICI is 'high speed, low latency internal links that connect TPUs within a TPU Pod'; inter-slice traffic goes 'by transferring data to CPUs (hosts) which in turn transmit the data over the data-center network (DCN)', which is 'a higher latency, lower-throughput network (when compared with ICI)'. The booleans are this repo's mapping of that documented boundary. SCALE-OUT FIGURES AS DOCUMENTED, v6e: per-host NIC configuration 4 x 200 Gbps NIC, and data centre network bandwidth per pod 25.6 Tbps (BITS). Direction is not stated for either, so they are recorded as published and flagged unstated. Host packing differs from v5e in a way that changes the single-host decision: v6e slices are built from half-host 4-chip VMs, so a 256-chip pod is 64 VMs, with only two exceptions - the single-chip v6e-1 and the full 8-chip v6e-8 VM. The v6e-8 slice is the one Google marks optimized for inference, and the page explicitly says multi-host inference on v6e requires Pathways.",
+  "notes": "v6e is the generation where the scale-up/scale-out boundary is easiest to state wrongly, because Google documents 4-chip VMs as the default while ALSO offering an 8-chip full-host VM for inference - so 'chips per host' is 4 by default and 8 for the inference-optimized slice, and a reader who reads either number as the general case will mis-size both the single-host ceiling and the number of hosts in a pod (64 at 4-chip VMs, 32 if built from 8-chip VMs). PER-POD ICI AGGREGATE IS NOT PUBLISHED, same as v5e: only per-chip bandwidth, per-pod all-reduce and per-pod bisection are given, and the record deliberately does not multiply per-chip figures into a pod total because summing a torus's per-chip bandwidth overstates what a global collective can use. FIT DECISION: 256 chips x 32 GB HBM is the scale-up-domain memory ceiling; past it the model shards over DCN. The bisection figure of 3.2 TB/s is the number to reason from for any global-communication-heavy placement, and because the all-reduce-to-bisection ratio is unchanged from v5e, the generation-to-generation win is per-chip bandwidth and HBM, not collective shape. Sources: asic-tpu-v6e-specs for per-chip and per-pod figures, w7c-google-tpu-multislice-overview for the ICI/DCN definitions.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
+  "sources": [
+    "asic-tpu-v6e-specs",
+    "w7c-google-tpu-multislice-overview",
+    "alt-tpu-system-arch"
+  ]
+}
