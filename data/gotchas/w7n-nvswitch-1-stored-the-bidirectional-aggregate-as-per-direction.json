@@ -1,0 +1,36 @@
+{
+  "id": "w7n-nvswitch-1-stored-the-bidirectional-aggregate-as-per-direction",
+  "type": "gotcha",
+  "name": "A record whose bandwidth_basis correctly says the figure is bidirectional and must be halved, while its typed bandwidth field stores the unhalved aggregate - the prose was right and the number was 2x wrong, for two months",
+  "class": "hardware",
+  "affects": [
+    "nvswitch-1",
+    "nvswitch-2",
+    "nvswitch-3",
+    "nvswitch-4",
+    "nvswitch-5"
+  ],
+  "concepts": [
+    "nvswitch",
+    "nvlink",
+    "bidirectional",
+    "per-direction",
+    "scale-up",
+    "ingest",
+    "cross-record-audit"
+  ],
+  "symptom": "The nvswitch-1 record stated in its own bandwidth_basis that 'the recorded per-direction value is 150 GB/s per GPU' and simultaneously stored bandwidth_gbps 300. Two fields of one record, one prose sentence, disagreement of exactly 2x, and the typed field is the one every downstream consumer reads. It survived from 2026-10-03 to 2026-10-05 undetected for four reasons that are individually sufficient to hide it: (1) the number is real - 300 GB/s appears verbatim in NVIDIA's DGX-2 blog and is the V100's genuine per-GPU bidirectional aggregate, so the value is not fabricated, merely stored in the wrong convention; (2) the record was never wrong in isolation - nothing in it says 300 is per-direction unless you read the basis sentence and compare; (3) the four sibling switch records all halve correctly (nvswitch-2 300 from 600, nvswitch-3 450 from 900, nvswitch-4 450 from 900, nvswitch-5 900 from 1,800), so the family column read as internally consistent, and a consistent column makes one bad row harder to see rather than easier; (4) the comparative reading was actively misleading - 'nvswitch-1 = nvswitch-2 = 300' looks like a meaningful flat step or a coincidence, and invites a reader to conclude the switch doubled the domain size at constant per-GPU rate, when the truth is that the two records store the same number for different reasons (one unhalved, one halved) and the real per-direction figures are 150 against 300.",
+  "root_cause": "The record was written correctly - the analysis identified the bidirectional convention and computed the per-direction figure in prose - and then the typed field was populated from the vendor's printed number rather than from the analysis the same record contains. That is a transcription-from-the-wrong-line error rather than a comprehension error, and it is invisible to schema validation because 300 is a valid number of the right type, and invisible to confidence review because the sources list is correct and first-party. The deeper cause is that this schema stores one bandwidth_gbps field whose meaning is defined by convention in a sibling free-text field, so nothing enforces that the two agree. Every record in this family carries its own convention sentence, which makes the records self-documenting and also makes them free to be self-contradictory. It is the same shape as the class already filed in w7n-nvlink-per-gpu-aggregate-vs-per-link-rate, but the failure there is a misreading of a vendor page while here the vendor page was read correctly and the RESULT was dropped - which is why this instance is worth its own record rather than a line in that one.",
+  "workaround": "Do not populate a typed bandwidth field from the vendor's printed figure when the same record has already computed the convention-corrected one; populate it from the computation, and if the two differ, treat the difference as the finding. As a review routine, add a cross-record direction check over a family: read each record's bandwidth_basis for its declared convention, confirm the typed value is that convention's value, and read the resulting column as a ladder - a suspiciously flat or suspiciously round step between generations is evidence that one row is unconverted. Concretely for this family the corrected column is 150, 300, 450, 450, 900 GB/s per GPU per direction for NVSwitch 1 through 5, with the nvswitch-3/nvswitch-4 tie being the real and documented Hopper naming ambiguity rather than an error. When a record is corrected, record the correction in its notes with both values and the reason, as this one does, because a bare edit loses the fact that a wrong number was previously published in this repo. Keep preferring prose-documented conventions over implied ones, but do not let a correct prose convention stand in for the typed field.",
+  "severity": "major",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-05",
+  "sources": [
+    "net2-nvidia-nvswitch1-dgx2-blog",
+    "link2-nvidia-ampere-architecture-whitepaper",
+    "link-nvlink-switch-spec",
+    "w7n-nvlink-per-gpu-aggregate-vs-per-link-rate"
+  ],
+  "notes": "Confidence 0.92 on the correction itself: both the vendor sentence ('any GPU pair to communicate at 300 GBps bidirectional bandwidth without interference') and the record's own original analysis agree on 150 per direction, and the correction is independently corroborated by the identity 6 NVLink 2 links x 50 GB/s bidirectional per link = 300 GB/s bidirectional per GPU against nvlink-2's transcribed 25 GB/s per direction per link, so 150 is the per-direction per-GPU figure by two independent routes. Why it matters for decisions rather than tidiness: 150 GB/s per direction against the V100's 900 GB/s memory interface puts this fabric at about 1/6 of local bandwidth, which is the specific ratio the record's own inference-relevance paragraph relies on, and at 300 it would read as 1/3 and support a different conclusion about when an 8-GPU V100 node stops being a capacity play. Note the sibling nvswitch-2 record carries the same number 300 for a DIFFERENT and correct reason - A100's 600 GB/s bidirectional per GPU genuinely halves to 300 - so the two records agreeing at 300 was coincidental rather than corroborating, and that coincidence is what kept the error hidden. Related: w7n-nvlink-per-gpu-aggregate-vs-per-link-rate (the convention itself), w7n-nvlink-per-link-rate-is-derived-not-published-except-gen1 (provenance of the per-link column), and the repo-wide direction class in aa-gotcha-pcie-peak-bandwidth-direction-convention."
+}

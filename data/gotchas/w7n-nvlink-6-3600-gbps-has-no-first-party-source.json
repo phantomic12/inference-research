@@ -1,0 +1,32 @@
+{
+  "id": "w7n-nvlink-6-3600-gbps-has-no-first-party-source",
+  "type": "gotcha",
+  "name": "The widely-repeated 3.6 TB/s per-GPU figure for NVLink 6 has no first-party NVIDIA source and NVIDIA's own page says 3,000 GB/s - an unsourced secondary number is 20% high and reads as more authoritative than the vendor page it contradicts",
+  "class": "hardware",
+  "affects": [
+    "nvlink-6",
+    "nvswitch-5"
+  ],
+  "concepts": [
+    "nvlink",
+    "nvswitch",
+    "bidirectional",
+    "per-gpu-aggregate",
+    "secondary-source",
+    "preliminary",
+    "scale-up"
+  ],
+  "symptom": "Two first-party-adjacent numbers for the same quantity, differing by 20%, and the wrong one is the one that propagates. NVIDIA's NVLink product page spec table gives 'NVLink Bandwidth per GPU 3,000 GB/s' for Sixth Generation and 'NVLink Switch GPU-to-GPU Bandwidth 3,000 GB/s' with 'Total Aggregate Bandwidth 216 TB/s (NVL72)'. The same page's prose says 'The sixth-generation NVLink enables 3 TB/s of bandwidth per GPU', 'NVLink is a 3 TB/s bidirectional, direct GPU-to-GPU interconnect', 'The NVLink Switch interconnects every GPU pair at an incredible 3 TB/s' and '72 GPUs ... for a total of 216 TB/s'. Wikipedia states 3.6 TB/s bidirectional per GPU with nine switches giving 260 TB/s in an NVL72 rack. The 3.6 figure appears in NO NVIDIA document, is 20% above NVIDIA's own published value, and comes with a rack aggregate (260 TB/s) that is likewise 20% above NVIDIA's 216 TB/s - and 72 x 3.6 = 259.2, so the secondary source is at least internally consistent, which is exactly why it survives review. Note the near-miss trap: 3.6 TB/s is ALSO a real NVIDIA number for a different object, the 3.6 TB/s bisection bandwidth of an 8-GPU H100 NVSwitch system (net2-nvidia-nvswitch3-blog), so a reader who meets '3.6 TB/s' on an NVIDIA page can conclude it corroborates the per-GPU claim when it is a different quantity on a different product.",
+  "root_cause": "Two compounding causes. First, NVIDIA's sixth-generation figures are marked 'Preliminary specifications; may be subject to change' on the page that publishes them, so a secondary source that grabbed an earlier or differently-scoped number has no visible reason to have done so - the primary itself carries an explicit staleness warning, which invites secondary divergence rather than preventing it. Second, and more usefully as a rule: a secondary source that reports BOTH a per-GPU figure and a rack aggregate with a consistent internal ratio looks more rigorous than a primary source that publishes one, so the ratio-consistency check that would normally catch a fabricated number passes here. Internal consistency is not corroboration; it only excludes arithmetic errors, not divergent inputs. The 260 TB/s and 3.6 TB/s pair is the shape of a plausible-number fabrication, and the specific defence against it is a source lookup, not a plausibility test.",
+  "workaround": "Store the first-party value and reject the secondary one explicitly rather than silently omitting it, so the next reader does not re-derive it from the same Wikipedia page the record already cites for link structure. Keep both numbers visible in notes with the reason for the split, which is what this repo's disagreement rule requires: one first-party and one secondary, not a numeric conflict between equals, so it resolves by provenance rather than by preference. Do not use '3.6 TB/s' as corroboration of anything - when it appears on an NVIDIA page it is the 8-GPU H100 bisection figure from a different generation. If a future NVIDIA revision publishes 3,600 GB/s per GPU, the record should be updated from that document rather than from a secondary source that predicted it. The related direction caveat applies to any such revision: the table prints a bare '3,000 GB/s' with no direction qualifier while the prose calls the same quantity 'bidirectional', so a bare table cell on this page must be halved once before use and the per-link derivation applied only after that (see w7n-nvlink-per-gpu-aggregate-vs-per-link-rate).",
+  "severity": "major",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-05",
+  "sources": [
+    "link-nvlink-switch-spec",
+    "link-wikipedia-nvlink",
+    "net2-nvidia-nvswitch3-blog"
+  ],
+  "notes": "Filed because the nvlink-6 record cites link-wikipedia-nvlink for link-layer structure while explicitly rejecting the same source's bandwidth figure, which is a distinction a future reader cannot reconstruct from the record alone and which the disagreement rule says must be written down. Confidence 0.88 rather than higher because both sides of the comparison rest on a page NVIDIA marks preliminary: the 3,000 GB/s value is not in doubt as the published value, but neither NVIDIA nor anyone has confirmed it as final, so a future revision is possible in either direction. Practical impact if the wrong figure were stored: 20% on the per-GPU fabric rate of the newest generation, which flows straight into any TP-degree or all-reduce-crossover calculation that reads nvlink-6 - the same class of failure as the direction error but smaller in magnitude, which is why it is filed as major and not blocker."
+}
