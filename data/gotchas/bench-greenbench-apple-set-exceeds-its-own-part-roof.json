@@ -1,0 +1,36 @@
+{
+ "id": "bench-greenbench-apple-set-exceeds-its-own-part-roof",
+ "type": "gotcha",
+ "name": "The GreenBench Apple M4 Pro throughput set exceeds the batch-1 decode roof of the part it names, and the excess tracks exactly the two smallest models - which points at the bandwidth figure, not at the measurements",
+ "class": "measurement",
+ "affects": [
+  "local-apple-m4-pro",
+  "apple-m4-max",
+  "ollama",
+  "llama-cpp"
+ ],
+ "concepts": [
+  "apple-silicon",
+  "unified-memory",
+  "roofline",
+  "memory-bandwidth",
+  "batch-1-decode",
+  "moe",
+  "false-positive",
+  "q4-k-m",
+  "sampling-overhead"
+ ],
+ "symptom": "A roofline sweep of the batch-1 decode records runs the GreenBench Apple set against the part the source actually names - a MacBook Pro 14-inch M4 Pro, 273 GB/s - and one of the five models exceeds its own hard roof. Llama 3.2 3B at Q4_K_M is 1.94 GB of weights, giving roof = 273e9 / 1.94e9 = 140.9 tok/s, against a reported 175.0 tok/s: 124.2% of roof. The other four land legally - Phi-3 3.8B 91.1 against a 118.4 roof (77.0%), Qwen2.5 7B 59.0 against 59.3 (99.4%, essentially AT the ceiling), Mistral 7B 45.8 against 62.5 (73.3%), Gemma 2 9B 42.0 against 48.9 (85.8%). The ordering is the clue: the smaller the model, the closer to the roof it sits, and the smallest one passes it. That is not what a broken measurement looks like - a mis-transcribed number or an unstated batch size produces a random excursion - and it is not what a correct measurement looks like either. It is what an over-stated DIVISOR looks like. The excess is largest exactly where the model is smallest, which is where a fixed additive error in the bytes-per-token figure would have the largest relative effect.",
+ "root_cause": "The divisor is a per-token estimate, and for the smallest model it is the least well constrained. Q4_K_M is not one number: llama.cpp's per-tensor mixed-precision rules put a 3B model nearer 4.4 bpw than 4.83, which would give 1.77 GB and a roof of 154.3 tok/s - still under 175. Push further and the honest ceiling rises: at 3.21e9 parameters, hitting 175 tok/s on 273 GB/s requires the whole step to move at most 1.56 GB, i.e. an effective 3.89 bpw INCLUDING all quantization metadata, which is below what Q4_K_M can deliver on a model this size. So the violation survives a reasonable correction and the finding stands: either the reported figure for the smallest model is optimistic, or the 273 GB/s figure does not describe the memory system this number ran on, or the run was not the single-user single-stream shape the paper describes. This is the same class of ambiguity the repo already records for unified memory elsewhere - the M4 Max number 546 GB/s is itself a derived figure and the Apple-silicon numbers are known to be sensitive to which of the several published bandwidth figures is used - and the general lesson is that on unified-memory parts the roofline's divisor has more slack than on a discrete GPU, because 'weights' and 'memory system' are less cleanly separable when the CPU and GPU share one pool.",
+ "workaround": "Treat a batch-1 decode figure on Apple silicon as UNVALIDATED BY THE ROOFLINE until the exact bytes-per-token of the specific GGUF is known, and compute the roof from the measured file size rather than from a bpw assumption - the repo already has records that state the size verbatim (llamacpp-rx7900xtx-gfx1100-qwen3-27b-q4-batch1-decode-tok-s states 17.545 GB, and both gpt-oss-120b MI50 records state 59.02 GiB) and those are the ones that survive the test cleanly at 86.0% and 82.5% of roof. When the size is not stated, treat the sweep result as a prompt to state it, not as a verdict on the measurement. Do NOT report this as five findings: it is one finding about one number on one part, and the four compliant models in the same set are the evidence that the sweep instrument is calibrated on this hardware. Do not change any of the five values - the source states them, and if a number is wrong the correct response is to mark it and say why, not to edit it.",
+ "severity": "minor",
+ "notes": "FOUND 2026-10-05 by the whole-corpus roofline sweep (agent w6-benchmarks), which extended the instrument past the 11 local-* records that an earlier pass covered. The pass that found this also confirmed the instrument's calibration on the same hardware: llamacpp-radeon-r9700-gfx1201-q1-0-decode-tok-s lands at 34.0% of roof and llamacpp-rx7900xtx at 43.0% (the record's own notes independently measure 43.0% of combined DRAM peak, which is the same quantity - a satisfying external check on the divisor). FULL ARITHMETIC for the five: weights = params x 4.83/8. Llama 3.2 3B 3.21e9 -> 1.939 GB -> roof 140.9, val 175.0, 124.2%. Phi-3 3.8B 3.82e9 -> 2.306 GB -> roof 118.4, val 91.1, 77.0%. Qwen2.5 7B 7.62e9 -> 4.602 GB -> roof 59.3, val 59.0, 99.4%. Mistral 7B 7.24e9 -> 4.372 GB -> roof 62.5, val 45.8, 73.3%. Gemma 2 9B 9.24e9 -> 5.580 GB -> roof 48.9, val 42.0, 85.8%. NOTE THE ACCELERATOR POINTER IS ITSELF IMPRECISE, which is recorded here rather than fixed because the fix belongs to another slice: both GreenBench benchmark records carry accelerator_ids=['apple-m4-max'] while their own methodology names an M4 Pro, and the record's notes concede the id is 'a loose family pointer, not an exact match'. Against apple-m4-max's 546 GB/s every one of the five passes comfortably (40.9%-49.7% of roof), which is why the finding depends on reading the methodology rather than the id - and why the two records' accelerator_ids being wrong while their methodology is right is a warning about both fields rather than a fix either way. A LOCAL-ACCELERATOR FIX WAS DELIBERATELY NOT ATTEMPTED: data/accelerators/ is outside this task's scope and the correct accelerator id for an M4 Pro run is local-apple-m4-pro, which already exists with 273 GB/s recorded.",
+ "status": "verified",
+ "confidence": 0.7,
+ "updated": "2026-10-05",
+ "sources": [
+  "nrg2-arxiv-greenbench-apple-silicon",
+  "local-apple-macbook-pro-m4-pro-tech-specs",
+  "consumer-apple-macbook-pro-14-m4-max-tech-specs"
+ ]
+}

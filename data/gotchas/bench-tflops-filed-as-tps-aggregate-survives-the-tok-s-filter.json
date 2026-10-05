@@ -1,0 +1,33 @@
+{
+ "id": "bench-tflops-filed-as-tps-aggregate-survives-the-tok-s-filter",
+ "type": "gotcha",
+ "name": "A peak-FLOPS specification filed under metric=tps_aggregate is returned verbatim by a capacity planner's tokens/s filter, as four numbers that are not tokens per second",
+ "class": "measurement",
+ "affects": [
+  "alt-neuron-compiler",
+  "alt-tpu-perf-guide"
+ ],
+ "concepts": [
+  "tokens-per-second",
+  "peak-compute",
+  "metric-enum",
+  "capacity-planning",
+  "filter-miss",
+  "peak-vs-measured",
+  "tflops"
+ ],
+ "symptom": "Four records in data/benchmarks/ carry metric=tps_aggregate while their value is a peak COMPUTE figure, not a rate of tokens: alt-aws-inf2-fp16-tps is 2280 with unit 'TFLOPS FP16', alt-aws-trn2-fp8-tps is 20.8 with unit 'PFLOPS FP8', alt-tpu-v5e-bf16-tps is 197 with unit 'TFLOPS BF16', alt-tpu-v6e-bf16-tps is 918 with unit 'TFLOPS BF16'. Every one of them is a vendor spec-sheet peak for an instance or a per-chip part, and every one says so in its own notes - alt-aws-inf2-fp16-tps states plainly that the 2280 TFLOPS 'is the theoretical FP16 peak for the 12-chip Inf2.48xlarge instance' and that 'no inference throughput (tokens/sec) is published by AWS for Inferentia2'. The defect is not the number or the prose. It is the key. tps_aggregate is the member a reader selects when they want tokens per second summed over in-flight requests, which is exactly the capacity-planning query, and these four records answer it with FLOPS. 20.8 would be read as 20.8 tokens/s; 2280 as 2280 tokens/s. The last is the dangerous one, because 2280 tok/s aggregate is a plausible number for a 12-chip inference instance and would pass a sanity check.",
+ "root_cause": "The benchmark schema was built around the assumption that a benchmark record carries a measured RATE, and the enum has one member for 'tokens per second, summed over in-flight requests'. When these four spec figures were ingested there was no member for 'peak compute specification', and tps_aggregate was the nearest available key - the id prefix alt- already marks them as alternatives rather than benchmarks, but the METRIC is what a filter reads, and the id is not what a filter reads. This is the same structural gap the schema notes elsewhere document for dimensionless ratios (see gotcha bench-metric-enum-hides-a-dimensionless-ratio, which moved speedup and PUE records OFF the rate members in the same direction). The aggravating detail is that all four records carry a fully honest prose disclaimer, which creates the opposite failure: a careful reader who opens the record is told the number is not a throughput, while a reader who is QUERYING does not open the record at all. Honesty in the notes field cannot protect a key that is wrong, because the notes are only read after the filter has already selected the record.",
+ "workaround": "Do not treat a metric value as self-describing: read `unit` before treating any benchmark value as a rate, and treat a `unit` whose first token is TFLOPS, PFLOPS, TOPS, W or J as a specification rather than a measurement regardless of which metric member carries it. When sweeping the corpus for tok/s figures, filter on BOTH metric and unit - the four records here are the complete set in data/benchmarks/ whose metric is a tokens/s member and whose unit is a FLOP unit, and they are the set that a naive metric-only sweep will mis-report. The general rule: a rate and a capacity must never share a key. A peak-FLOPS figure belongs on the accelerator record that already carries it (aws-inferentia2, aws-trainium2, google-tpu-v5e and google-tpu-v6e all exist and their flops[] arrays are the correct home), so the honest structural answer is that these four records are pointers to data that is already stored correctly elsewhere, kept here only as evidence that the pointer existed.",
+ "severity": "major",
+ "notes": "FOUND 2026-10-05 by a roofline sweep of the whole benchmark corpus (agent w6-benchmarks), not by reading any single record: the sweep queries metric IN (decode_tok_s, tps_aggregate, tok_s_per_user) and got four values whose unit is a FLOP unit. All four were already flagged in prose - this gotcha records that the prose was never the problem and the key was. NOT a value error: no number was changed and none should be; all four peaks are transcribed correctly and each record's notes correctly deny that it is a throughput. The remaining defect after this record is a key that still answers the wrong query, which is why the fix named here is a reader-side filter rather than a silent re-key: re-keying to a member the schema does not have would be the same error in a new place. RELATED, and the reason this is measurement rather than schema class: gotcha bench-tok-s-derived-from-memory-bandwidth-is-not-a-benchmark covers the inverse error, where a bandwidth spec was divided by a guessed bytes-per-token to manufacture a tok/s figure. Both are the same root cause - the corpus has no home for a specification, so specifications end up under a metric that means something else.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "asic-aws-inferentia-product",
+  "asic-aws-inf2-instances",
+  "asic-tpu-v5e-specs",
+  "alt-trn2-arch"
+ ]
+}
