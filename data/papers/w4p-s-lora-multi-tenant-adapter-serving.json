@@ -1,0 +1,46 @@
+{
+ "id": "w4p-s-lora-multi-tenant-adapter-serving",
+ "type": "paper",
+ "name": "S-LoRA: Serving Thousands of Concurrent LoRA Adapters",
+ "arxiv_id": "2311.03285",
+ "venue": "arxiv-preprint",
+ "venue_track": "unknown",
+ "year": 2023,
+ "category": "serving-systems",
+ "authors": [
+  "Ying Sheng",
+  "Shiyi Cao",
+  "Dacheng Li",
+  "Coleman Hooper",
+  "Nicholas Lee",
+  "Shuo Yang",
+  "Christopher Chou",
+  "Banghua Zhu",
+  "Lianmin Zheng",
+  "Kurt Keutzer",
+  "Joseph E. Gonzalez",
+  "Ion Stoica"
+ ],
+ "affiliations": [
+  "UC Berkeley"
+ ],
+ "problem": "The pretrain-then-finetune paradigm produces a large COLLECTION of LoRA adapters over one base model, and serving them naively multiplies memory and fragmentation - yet almost nobody runs thousands of adapters for one base model in practice.",
+ "mechanism": "Keeps all adapter weights in MAIN MEMORY (host) and fetches only the adapters the currently running queries need onto the GPU. UNIFIED PAGING is the core mechanism: one memory pool manages dynamic adapter weights of DIFFERENT RANKS together with KV cache tensors of VARYING SEQUENCE LENGTH, so adapters and cache stop competing for separate fragmented regions - which is the actual reason per-adapter serving falls over at scale, not raw capacity. On top of that, a custom tensor parallelism strategy and hand-optimized CUDA kernels for HETEROGENEOUS batching of LoRA computation, so a batch containing different adapters' requests can still be executed as efficient GEMMs.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a100-40gb-sxm4"
+ ],
+ "speedup_reported": "Paper's own claim: up to 4x throughput improvement and several orders of magnitude more served adapters, versus HuggingFace PEFT and versus vLLM WITH NAIVE LoRA serving. The vLLM comparison is explicitly labelled 'naive support of LoRA serving', so the 4x is against the pre-multi-LoRA-adapter vLLM path, not against a modern adapter-aware vLLM. The number to reuse is the adapter COUNT, not the 4x.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/S-LoRA/S-LoRA",
+ "open_weights": true,
+ "status": "verified",
+ "confidence": 0.75,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-s-lora",
+  "sco-openreview-venue-search",
+  "sco-neurips-2024-index-extended"
+ ],
+ "notes": "RECORDED AS arxiv-preprint WITH venue_track 'unknown' - VENUE SEARCH EXPLICITLY NEGATIVE. The only OpenReview record for this title is the arXiv deposit (venue 'CoRR 2023'). A FULL-TEXT CASE-INSENSITIVE SWEEP of all 4493 NeurIPS 2024 entries for 'LoRA' returns only LoRA fine-tuning and training-method papers - HydraLoRA, VB-LoRA, FLoRA, FLoRA-style federated work, Safe LoRA, LoRA-GA, LoRANN, Time-Varying LoRA, LoRA finetuning dynamics, and so on - and NO S-LoRA entry. arXiv comment EMPTY. YEAR NOTE: v1 is 2023-11-06, so this is a 2023 paper that a 2026 deployment reader would still encounter in the multi-tenant-adapter literature; recorded with year 2023 because that is when the work appeared. WHY IT IS A GAP DESPITE Punica: the repo holds punica-multi-tenant-lora-serving (MLSys 2024), which is the single-adapter-per-request batched-LoRA system. S-LoRA is the ADAPTER-COUNT axis - thousands of distinct adapters resident at once, fetched on demand from host memory, with ranks heterogeneous - which is the regime a platform serving per-tenant fine-tunes actually operates in and which Punica's design does not address. The unified pool over adapters AND KV is also the direct precedent for the kind of fragmentation problem the repo's vAttention record raises."
+}

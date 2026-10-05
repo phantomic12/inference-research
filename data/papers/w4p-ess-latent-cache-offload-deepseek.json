@@ -1,0 +1,44 @@
+{
+ "id": "w4p-ess-latent-cache-offload-deepseek",
+ "type": "paper",
+ "name": "ESS: An Offload-Centric Latent-Cache Management Architecture for DeepSeek-V3.2-Exp",
+ "arxiv_id": "2512.10576",
+ "venue": "arxiv-preprint",
+ "venue_track": "unknown",
+ "year": 2025,
+ "category": "serving-systems",
+ "authors": [
+  "Xinhang Chen",
+  "Chao Zhang",
+  "Jiahuan He",
+  "Wei Liu",
+  "Jianming Zhang",
+  "Wenlong Zhou",
+  "Xiao Li",
+  "Pai Zeng",
+  "Shiyong Li",
+  "Yuanpan Qian",
+  "Dong Li",
+  "Zhaogeng Li"
+ ],
+ "affiliations": [
+  "Zhejiang University"
+ ],
+ "problem": "Even after DeepSeek Sparse Attention improves overall throughput, the DECODE stage of prefill-decode disaggregation remains a bottleneck: the Latent-Cache grows LINEARLY with sequence length while GPU memory is fixed, so feasible batch size is pinned by cache size and decode throughput collapses with it.",
+ "mechanism": "An OFFLOAD-CENTRIC design that SELECTIVELY OFFLOADS THE LATENT-CACHE TO CPU MEMORY while keeping latency-critical components resident on GPU. The selective part is the contribution: offloading everything is a latency disaster and offloading nothing does nothing, so the paper's result is a partition of the cache - which parts go to host and which stay on device - chosen for latency sensitivity. Because the offload frees GPU memory, BATCH-SIZE SCALING DECOUPLES FROM GPU MEMORY, which is the actual bottleneck being relieved: it is not a faster kernel, it is a larger feasible batch.",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-b200"
+ ],
+ "speedup_reported": "Paper's own claim, and READ THE METHOD BEFORE THE NUMBER: 'high-fidelity SIMULATIONS' show 69.4% throughput improvement at 32K context length and up to 123% at 128K. This is a SIMULATED result, not a measured one on hardware, and the percentage is relative to a DSA-enabled disaggregated baseline. The repo's own benchmarking rules (AGENTS.md, 'Adding a benchmark record') require exact engine build, model, quantization, batch size and lengths for a throughput claim; a simulation cannot supply all of those, so this number is recorded with its method attached and must not be compared against measured tok/s from any other record in this repo.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.75,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-ess-deepseek"
+ ],
+ "notes": "RECORDED AS arxiv-preprint WITH venue_track 'unknown': arXiv 2512.10576's comment field is EMPTY, there is no journal_ref, and no proceedings entry or OpenReview record was found for this title. WHY IT IS IN THE BATCH DESPICALLY OF BEING A DECEMBER-2025 PREPRINT WITH SIMULATED NUMBERS: it is the clearest published statement of the constraint that binds any disaggregated deepseek-V3.2 deployment in late 2026 - that after sparse attention, the binding limit is the DECODE stage, and that the limit is cache capacity rather than compute. That reframes prefill/decode disaggregation: disaggregation does not remove the decode cache bottleneck, it relocates it, and the relocation has to be solved with an offload policy rather than with more decode GPUs. The 123%-at-128K figure is also the honest counterweight to the repo's existing PowerInfer/InfiniGen offload records, which are measured on consumer GPUs - ESS's point is that offload pressure now also exists on datacenter parts running MoE with a latent cache. Filed as an inference-serving system record, not as an engine record, since no released engine artifact is claimed."
+}

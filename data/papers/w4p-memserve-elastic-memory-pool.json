@@ -1,0 +1,45 @@
+{
+ "id": "w4p-memserve-elastic-memory-pool",
+ "type": "paper",
+ "name": "MemServe: Context Caching for Disaggregated LLM Serving with Elastic Memory Pool",
+ "arxiv_id": "2406.17565",
+ "venue": "arxiv-preprint",
+ "venue_track": "unknown",
+ "year": 2024,
+ "category": "kv-cache",
+ "authors": [
+  "Cunchen Hu",
+  "Heyang Huang",
+  "Junhao Hu",
+  "Jiang Xu",
+  "Xusheng Chen",
+  "Tao Xie",
+  "Chenxi Wang",
+  "Sa Wang",
+  "Yungang Bao",
+  "Ninghui Sun",
+  "Yizhou Shan"
+ ],
+ "affiliations": [
+  "Shanghai Jiao Tong University"
+ ],
+ "problem": "Serving has moved from stateless to STATEFUL - context caching and disaggregated inference both extend the lifetime and reach of the KV cache - which creates an architectural problem no single existing mechanism solved: the KV cache now has to be managed as a shared, elastic resource across instances rather than as per-instance scratch.",
+ "mechanism": "Claims to combine CONTEXT CACHING with DISAGGREGATED INFERENCE for the first time in one system, unified by MemPool: an ELASTIC MEMORY POOL that manages distributed memory and the KV caches across serving instances behind a small set of APIs, so the same pool serves both roles instead of the two mechanisms each managing their own memory. A global scheduler sits on top and raises reuse with a GLOBAL PROMPT TREE locality-aware policy - a tree over prompts rather than per-instance exact-prefix matching, which is the same insight SGLang's RadixAttention brings to a single engine, here applied across the disaggregated fleet. The framing that matters for a deployment reader: disaggregation used to be a way to stop cache locality, and MemServe's claim is that you can have both if the memory tier itself is elastic.",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "speedup_reported": "Paper's own claim is qualitative and stated as such: 'significantly improves job completion time and time-to-first-time' [time-to-first-token]. No ratio, baseline, or hardware configuration is given in the abstract, so speedup_reported records the claim and the ABSENCE of a number rather than reconstructing one - the same treatment given to InfiniGen in the repo.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.75,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-memserve",
+  "sco-openreview-venue-search",
+  "sco-pmlr-icml-2025-v267"
+ ],
+ "notes": "RECORDED AS arxiv-preprint WITH venue_track 'unknown' - VENUE SEARCH WAS EXPLICITLY NEGATIVE. The ONLY OpenReview record for this title carries venue 'CoRR 2024' with venueid 'OpenReview.net/Public_Article', which is the arXiv deposit reflected back, NOT a proceedings record; that venueid class is the tell. Absent from PMLR v267 (ICML 2025) and from MLSys 2025/2026 and NeurIPS 2024 indexes. arXiv comment EMPTY. So no venue was claimed anywhere and none could be confirmed - arxiv-preprint/unknown, confidence held at 0.75 (not higher) because both the venue AND the headline numbers are unverifiable from the abstract. FLAG FOR THE READER: this paper is cited in the disaggregated-serving literature far more often than it is peer-reviewed, which makes it exactly the record where a remembered venue would be invented. If a later proceedings entry appears, this record should be corrected and set contested, not silently overwritten. WHY IT IS STILL A GAP: the repo holds Pensieve (stateful serving), Mooncake (KVCache-centric disaggregation), the semi-pd and distserve engine records, and LMCache - but no record combines a cross-instance elastic KV pool with disaggregated prefill/decode, which is the specific shape a late-2026 deployment with heterogeneous prefill and decode nodes would want."
+}

@@ -1,0 +1,41 @@
+{
+ "id": "w4p-cascade-speculative-drafting",
+ "type": "paper",
+ "name": "Cascade Speculative Drafting for Even Faster LLM Inference (CS Drafting)",
+ "arxiv_id": "2312.11462",
+ "venue": "neurips",
+ "venue_track": "main",
+ "year": 2024,
+ "category": "speculative-decoding",
+ "authors": [
+  "Ziyi Chen",
+  "Xiaocong Yang",
+  "Jiacheng Lin",
+  "Chenkai Sun",
+  "Kevin Chen-Chuan Chang",
+  "Jie Huang"
+ ],
+ "affiliations": [
+  "Google Cloud"
+ ],
+ "problem": "Speculative decoding's drafting phase is itself slow autoregressive generation and spends equal time on every draft token regardless of how much that token matters to the target's acceptance.",
+ "mechanism": "Two cascades applied to the DRAFTING phase rather than the verification phase. VERTICAL CASCADE removes autoregressive generation from the neural draft model by drafting for several future steps in ONE non-autoregressive pass (the same trick that makes parallel decoding viable), so the draft's latency stops scaling with the number of drafted positions. HORIZONTAL CASCADE reallocates drafting time across steps rather than dividing it evenly - later draft positions are verified together by one target pass, so time is shifted toward the positions with the highest expected acceptance value. The output distribution is preserved exactly; only the drafting schedule changes.",
+ "hardware_relevance": [
+  "nvidia-a10",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "Paper's own claim: 'CS Drafting achieves greater speedup compared to the baselines in our experiments, while preserving the same output distribution as the target model.' The abstract states NO numeric ratio, so speedup_reported records the qualitative claim with its baseline class (baselines = other speculative-decoding methods) rather than inventing a figure. This is a real gap in the citable record and is the reason the paper is here: the mechanism is a drafting-schedule idea, not a kernel, so no engine benchmark number exists to quote.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-cascade-spec-drafting",
+  "sco-neurips-2024-index-extended",
+  "sco-openreview-venue-search"
+ ],
+ "notes": "VENUE VERIFIED, NOT ASSUMED: exact title 'Cascade Speculative Drafting for Even Faster LLM Inference' appears in the NeurIPS 2024 conference-track index (papers.nips.cc/paper_files/paper/2024, hash 9cb5b083ba4f5ca6bd05dd307a2fb354) with the author list Ziyi Chen, Xiaocong Yang, Jiacheng Lin, Chenkai Sun, Kevin Chen-Chuan Chang, Jie Huang, matching the arXiv API author list for 2312.11462 exactly. The arXiv comment field says 'NeurIPS 2024' and is corroborated rather than trusted. arXiv v1 2023-12-18, so the paper predates its 2024 publication by a year - it is filed under year 2024 (the venue year) and this is worth knowing if the reader is sorting by recency of idea versus recency of publication. WHY IT IS STILL A GAP IN 2026: the repo already holds Medusa, EAGLE/EAGLE-2/EAGLE-3, n-gram/Sequoia, REST, Ouroboros, RSD, LayerSkip, Lookahead, MagicDec and SpecInfer, and every one of those attacks ACCEPTANCE RATE or verification. Cascade Speculative Drafting attacks the DRAFT LATENCY of the draft model instead, which is a different term in the repo's own speculative cost model (flops/fct-spec-decoding-cost-model-break-even): T_draft = max(2*P_d/BW, 2*k*P_d/PEAK). When the draft is a small neural model streamed from HBM at low batch, that first term dominates, and no amount of raising acceptance rate fixes it. Adoption is research-only: no upstream engine implements a horizontal/vertical drafting cascade; vLLM and SGLang implement tree-verification scheduling, which descends from SpecInfer, not from this."
+}

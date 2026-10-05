@@ -1,0 +1,53 @@
+{
+ "id": "w4p-megascale-infer-disaggregated-expert-parallelism",
+ "type": "paper",
+ "name": "MegaScale-Infer: Serving Mixture-of-Experts at Scale with Disaggregated Expert Parallelism",
+ "arxiv_id": "2504.02263",
+ "venue": "other",
+ "venue_track": "main",
+ "year": 2025,
+ "category": "moe",
+ "authors": [
+  "Ruidong Zhu",
+  "Ziheng Jiang",
+  "Chao Jin",
+  "Peng Wu",
+  "Cesar A. Stuardo",
+  "Dongyang Wang",
+  "Xinlei Zhang",
+  "Huaping Zhou",
+  "Haoran Wei",
+  "Yang Cheng",
+  "Jianzhe Xiao",
+  "Xinyi Zhang",
+  "Lingjun Liu",
+  "Haibin Lin",
+  "Li-Wen Chang",
+  "Jianxi Ye",
+  "Xiao Yu",
+  "Xuanzhe Liu",
+  "Xin Jin",
+  "Xin Liu"
+ ],
+ "affiliations": [
+  "Rice University"
+ ],
+ "problem": "MoE's sparsity makes inference MEMORY-intensive rather than compute-intensive at decode, which drops GPU utilization and raises operating cost - and it means the attention and FFN halves of a layer want different parallelism strategies that a single monolithic layer layout cannot give them.",
+ "mechanism": "DISAGGREGATES THE ATTENTION AND FFN MODULES WITHIN EACH LAYER, so the two are scaled independently with tailored parallelism strategies and can be deployed on HETEROGENEOUS hardware - the attention path is compute-bound and wants tensor parallelism, the FFN path is memory-bound and wants expert parallelism. The second mechanism is PING-PONG PIPELINE PARALLELISM: partition a request batch into MICRO-BATCHES and shuttle them between the attention side and the FFN side, which is what makes the disaggregation pay despite MoE sparsity - without a schedule that keeps both halves busy, splitting them just adds a hop. A high-performance M2N COMMUNICATION LIBRARY supports it, removing GPU-to-CPU data copies, group-initialization overhead and GPU synchronization that would otherwise dominate, and it exists specifically to minimize token-dispatch overhead across the disaggregation boundary.",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm"
+ ],
+ "speedup_reported": "Paper's own claim: up to 1.90x higher PER-GPU throughput than state-of-the-art solutions. The per-GPU qualifier is essential and must not be dropped: this is a utilization metric on disaggregated hardware, not an end-to-end request-latency number and not comparable to a single-node vLLM tok/s figure.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-megascale-infer",
+  "sco-openreview-venue-search"
+ ],
+ "notes": "VENUE IS 'other' BECAUSE SIGCOMM IS NOT IN THE SCHEMA ENUM - the authoritative venue is SIGCOMM 2025, from the OpenReview note with venue 'SIGCOMM 2025' and venueid 'dblp.org/conf/SIGCOMM/2025'. The enum in schemas/paper.schema.json has no sigcomm entry, so the venue cannot be recorded honestly without either (a) claiming a venue the paper was not published at or (b) editing the schema, which is outside this pass's write scope. Recorded as 'other' with venue_track 'main' and the real venue in notes; the same convention the repo already uses for ColBERT and SPLADE. A future schema extension should add sigcomm. VERIFICATION CAVEAT, RECORDED BECAUSE IT IS NOT A CLEAN TITLE MATCH: the SIGCOMM note's title reads 'MegaScale-Infer: Efficient Mixture-of-Experts Model Serving with Disaggregated Expert Parallelism' - the PRE-PRINT title, not the current arXiv title. The identification therefore rests on the shared system name plus the identical mechanism (disaggregated expert parallelism) plus author-group overlap (Xin Jin appears on both the arXiv paper and the SIGCOMM record), not on a title string equality. This is the exact situation the repo's methodology rule anticipates, and it is recorded here rather than presented as a clean index hit. WHY IT IS A GAP: the repo's MoE serving work is DeepSpeed-MoE, MegaBlocks, Tutel/Flex, DeepSeek-V2/V3, Mixtral, OLMoE, MoEQuant, EAQuant and AlphaQ - all about MODELS or quantization. None disaggregates the layer internals for serving; the repo's disaggregation records are all prefill-vs-decode. Expert-vs-attention is a third axis and it is the one that matters when FFN weights dominate HBM traffic."
+}

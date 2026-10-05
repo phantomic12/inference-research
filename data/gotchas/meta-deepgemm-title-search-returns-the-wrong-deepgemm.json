@@ -1,0 +1,30 @@
+{
+ "id": "meta-deepgemm-title-search-returns-the-wrong-deepgemm",
+ "type": "gotcha",
+ "name": "Searching arXiv for DeepGEMM by title returns a same-name paper by unrelated CPU-inference authors - reject it on author grounds",
+ "class": "toolchain",
+ "affects": [],
+ "concepts": [
+  "deepgemm",
+  "nvidia",
+  "deepseek",
+  "gemm",
+  "fp8",
+  "fp4",
+  "arxiv",
+  "provenance",
+  "citation",
+  "name-collision"
+ ],
+ "symptom": "The natural way to fill the DeepGEMM citation is a title search on the arXiv API. That search DOES return exactly one hit, it is titled 'DeepGEMM', and it looks authoritative - so it is easy to record it as NVIDIA's DeepGEMM and move on. It is a different project by entirely different authors, and attaching it would put a confident, plausible, wrong citation into the repo.",
+ "root_cause": "A NAME COLLISION between NVIDIA's DeepGEMM (the FP8/FP4 GEMM library behind DeepSeek-model serving, documented in this repo's FLOP records flops/deepgemm-grouped-masked-moe-gemm and flops/deepgemm-mqa-lightning-indexer-scoring) and arXiv 2304.09049 'DeepGEMM: Accelerated Ultra Low-Precision Inference on CPU Architectures using Lookup Tables' (2023), whose authors are an unrelated CPU lookup-table inference group: Darshan C. Ganji, Saad Ashfaq, Ehsan Saboori, Sudhakar Sah, Saptarshi Mitra, MohammadHossein AskariHemmat, Alexander Hoffman, Ahmed Hassanien, Mathieu Leonardon. There is no venue claim and no corroboration available, because the paper is not about the thing anyone would be citing it for. NVIDIA's DeepGEMM has no paper of its own.",
+ "workaround": "Do not attach an arXiv ID to DeepGEMM. Cite the repository (github.com/deepseek-ai/DeepGEMM) and NVIDIA's release notes. The repo's existing coverage is correct as it stands: the FLOP records describe the kernel behaviour with primary sources and name no paper, which is the right outcome for a project with no publication.",
+ "severity": "major",
+ "notes": "severity major rather than minor, unlike the other two negatives, because this one has an ACTIVE BAIT: the wrong answer is returned by the exact query a careful agent would run, and it is wrong in a way that survives a title-string check and fails only on an author check. That is precisely the failure mode this repo's methodology rule was written against - corroborate every venue with author overlap or abstract text - and this is the case where the corroboration step is the ONLY thing standing between the repo and a fabricated citation. It is the same shape as two other traps already logged in this repo: PMLR volume numbers not being venue-ordered (v130 is AISTATS, not ICLR) and titles being duplicated across venues (DINOv2 at both TMLR and ICLR). The generalisable lesson, and the reason this is a gotcha rather than a footnote: a title search returning a plausible result is evidence that A paper exists, never evidence that THIS paper is it. Three separate negatives are now recorded in this repo (llama.cpp, TensorRT-LLM, DeepGEMM) and each has a different shape - silent hole, empty feed, and deceptive same-name hit - which is the argument for checking rather than assuming.",
+ "status": "verified",
+ "confidence": 0.95,
+ "updated": "2026-10-04",
+ "sources": [
+  "sco-arxiv-no-paper-search-deepgemm"
+ ]
+}

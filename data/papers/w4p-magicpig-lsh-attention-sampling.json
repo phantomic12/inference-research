@@ -1,0 +1,46 @@
+{
+ "id": "w4p-magicpig-lsh-attention-sampling",
+ "type": "paper",
+ "name": "MagicPIG: LSH Sampling for Efficient LLM Generation",
+ "arxiv_id": "2410.16179",
+ "venue": "iclr",
+ "venue_track": "main",
+ "year": 2025,
+ "category": "kv-cache",
+ "authors": [
+  "Zhuoming Chen",
+  "Ranajoy Sadhukhan",
+  "Zihao Ye",
+  "Yang Zhou",
+  "Jianyu Zhang",
+  "Niklas Nolte",
+  "Yuandong Tian",
+  "Matthijs Douze",
+  "Leon Bottou",
+  "Zhihao Jia",
+  "Beidi Chen"
+ ],
+ "affiliations": [
+  "Meta",
+  "University of Cambridge"
+ ],
+ "problem": "Top-k sparse attention degrades quality on some tasks because attention is NOT always as sparse as the top-k assumption requires - when the mass is genuinely diffuse, dropping the tail is simply wrong.",
+ "mechanism": "Replaces SELECTION with SAMPLING for the attention approximation: instead of keeping the highest-scoring keys and values, sample the KV set with theoretical guarantees, which the authors argue estimates the attention output better because it does not discard small-but-real contributions. Making that practical is the actual contribution, and it is a HETEROGENEOUS system: LSH (locality-sensitive hashing) is built over the KV cache so candidate sets are found without scanning, the LSH hash tables are stored, and THE ATTENTION COMPUTATION ITSELF RUNS ON THE CPU - so what is offloaded is not weights but attention, letting the GPU keep more of the batch and more of the context. Note the FLOP consequence is inverted relative to GPU sparse attention: sampling more tokens than top-k would keep raises attention FLOPs while lowering attention BYTES, so it moves work from the memory-bound decode term toward the compute term and does not fit the usual 'sparse attention = less work' framing.",
+ "hardware_relevance": [
+  "nvidia-rtx-4090",
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "speedup_reported": "Paper's own claim: decoding throughput improved by up to 5x across various GPU hardware, and 54 ms decoding latency on a single RTX 4090 for Llama-3.1-8B-Instruct at a context of 96k tokens. The 54 ms / 96k-on-one-4090 figure is the striking one - it is the concrete demonstration that a CPU attention path plus LSH is not merely a fallback.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/Infini-AI-Lab/MagicPIG",
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-magicpig",
+  "sco-openreview-venue-search"
+ ],
+ "notes": "VENUE VERIFIED FROM THE DECISION RECORD: OpenReview forum ALzTQUgW8a, content.venue 'ICLR 2025 Spotlight', content.venueid 'ICLR.cc/2025/Conference'. Corroborated by a DBLP-mirrored note venueid dblp.org/conf/ICLR/2025. arXiv comment is EMPTY, so the Spotlight claim comes from OpenReview rather than from arXiv. arXiv v1 2024-10-21, latest v4 2024-12-18. Also recorded in the OpenReview index as an 'AFM 2024 Poster' at the NeurIPS 2024 workshop on AFM - that is the earlier workshop version, not the venue, and it is exactly the kind of second-value trap this repo's methodology rule warns about. WHY IT IS A GAP: the repo's long-context attention-approximation cluster is SnapKV, Quest, PyramidKV, MInference, DSA and MagicPIG's absence makes the SAMPLING-vs-SELECTION axis unrepresented. Every one of those selects; none of them samples, and none of them offloads attention to the CPU. This is the single most transferable idea in the batch for a reader without a datacenter GPU."
+}

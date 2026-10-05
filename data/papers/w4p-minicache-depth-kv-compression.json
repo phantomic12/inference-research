@@ -1,0 +1,39 @@
+{
+ "id": "w4p-minicache-depth-kv-compression",
+ "type": "paper",
+ "name": "MiniCache: KV Cache Compression in Depth Dimension for Large Language Models",
+ "arxiv_id": "2405.14366",
+ "venue": "neurips",
+ "venue_track": "main",
+ "year": 2024,
+ "category": "kv-cache",
+ "authors": [
+  "Akide Liu",
+  "Jing Liu",
+  "Zizheng Pan",
+  "Yefei He",
+  "Gholamreza Haffari",
+  "Bohan Zhuang"
+ ],
+ "affiliations": [
+  "Monash University"
+ ],
+ "problem": "KV cache compression is almost always done along the TOKEN dimension - drop or quantize cache entries - which throws away attention resolution. The depth dimension (across layers) is a second, largely unused axis.",
+ "mechanism": "Observes that KV cache states are HIGHLY SIMILAR BETWEEN ADJACENT LAYERS in the middle-to-deep part of an LLM, and exploits that by MERGING cache state pairs across layers rather than pruning tokens. The merge is done by DISENTANGLING each state vector into MAGNITUDE and DIRECTION: directions are interpolated between layers while magnitudes are preserved exactly, so the merged pair keeps the scale of the original rather than being dragged toward zero by averaging. A TOKEN RETENTION strategy holds back the highly distinct state pairs from being merged, at a small extra storage cost, to preserve the information that merging would destroy. Training-free, and explicitly complementary to token-wise methods rather than competing with them - it composes with quantization and with token-sparsity compression.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "Paper's own claim, on the ShareGPT dataset: LLaMA-2-7B with 4-bit MiniCache reaches a compression ratio of up to 5.02x, improves inference throughput by approximately 5x, and reduces memory footprint by 41% versus the FP16 full-cache baseline, at near-lossless quality. Read the 41% alongside the 5.02x: the compression ratio is against FP16 while the memory-footprint reduction is against a 4-bit baseline already, so quoting '5x' without the baseline overstates what a deployment that has already quantized gains. Evaluated across LLaMA-2, LLaMA-3, Phi-3, Mistral and Mixtral.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-minicache",
+  "sco-neurips-2024-index-extended"
+ ],
+ "notes": "VENUE VERIFIED WITHOUT THE arXiv COMMENT: arXiv 2405.14366's comment is a project link only ('Project is available at https://minicache.vmv.re'), with no venue claim. Venue established by exact-title match in the NeurIPS 2024 index (hash fd0705710bf01b88a60a3d479ea341d9), author list Akide Liu, Jing Liu, Zizheng Pan, Yefei He, Gholamreza Haffari, Bohan Zhuang matching arXiv exactly. THE AXIS POINT IS WHY THIS IS A GAP: every KV-compression record in the repo - H2O, Scissorhands, SnapKV, PyramidKV, Quest, ShadowKV, ZipCache, KVQuant, KIVI, CacheGen, LMCache - reduces entries along the token/sequence axis. Merging along the depth axis is a different lever with a different cost model: it removes a fraction of LAYERS' worth of cache rather than a fraction of tokens', so the bytes saved scale with model depth and the quality risk is a different failure mode (blur between layers, not loss of an individual token's resolution)."
+}

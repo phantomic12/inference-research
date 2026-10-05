@@ -1,0 +1,39 @@
+{
+ "id": "w4p-xgrammar2-dynamic-agentic-structured-generation",
+ "type": "paper",
+ "name": "XGrammar-2: Dynamic and Efficient Structured Generation Engine for Agentic LLMs",
+ "arxiv_id": "2601.04426",
+ "venue": "other",
+ "venue_track": "main",
+ "year": 2026,
+ "category": "structured-output",
+ "authors": [
+  "Linzhang Li",
+  "Yixin Dong",
+  "Guanjie Wang",
+  "Ziyi Xu",
+  "Alexander Jiang",
+  "Tianqi Chen"
+ ],
+ "affiliations": [
+  "Shanghai Jiao Tong University"
+ ],
+ "problem": "Agentic workloads need DYNAMIC structured generation - tool calls and response protocols that change both ACROSS requests and WITHIN a request - which breaks the assumption every existing structured-generation engine is built on: one fixed grammar for the whole output.",
+ "mechanism": "Extends the XGrammar design to structures that change mid-stream. Two named mechanisms: TAGDISPATCH for dynamic structural dispatching, where the current tag in the partial output selects which structure applies next, so a single decode can cross from a tool call into prose and back; and a CROSS-GRAMMAR CACHE for SUBSTRUCTURE-LEVEL reuse ACROSS grammars, so the shared primitives (a JSON key, a type declaration, a tool signature) are compiled once and reused by every structure that needs them - the reuse granularity moved from 'whole grammar' to 'substructure'. Three further efficiency mechanisms: an EARLEY-BASED ADAPTIVE TOKEN MASK CACHE, JUST-IN-TIME COMPILATION so only the parts of a grammar actually reached get compiled, and REPETITION STATE COMPRESSION for repeated structure.",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-b200"
+ ],
+ "speedup_reported": "Paper's own claim: over 6x faster compilation than prior structured-generation engines, and near-zero end-to-end overhead in modern LLM serving systems. Compilation speed is the right headline here precisely because just-in-time compilation is what makes dynamic structure affordable - the marginal cost of a NEW structure is compilation, so 6x on compilation is what determines whether an agent can use a per-request tool schema.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/sgl-project/xgrammar",
+ "open_weights": true,
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-xgrammar2",
+  "sco-crossref-cais26-xgrammar2"
+ ],
+ "notes": "VENUE 'other' BECAUSE ACM CAIS IS NOT IN THE SCHEMA ENUM - THE AUTHORITATIVE VENUE IS ACM CAIS '26, read from the PUBLISHER'S OWN DEPOSIT rather than from arXiv. Crossref for DOI 10.1145/3786335.3813124 returns container-title 'Proceedings of the ACM Conference on AI and Agentic Systems', event 'CAIS '26: ACM Conference on AI and Agentic Systems' (San Jose CA USA), published-print 2026-05-26, pages 1009-1022, publisher ACM, type proceedings-article, alternative-id 10.1145/3786335 (the CAIS '26 volume). The arXiv comment reads only the acronym string 'ACM CAIS 26' and the Atom feed carries the DOI as journal_ref; recording the venue from the Crossref deposit rather than the acronym is the point, since a bare acronym in a comment field is a claim, not a venue. Crossref also supplies author AFFILIATIONS (Linzhang Li - Shanghai Jiao Tong University; Yixin Dong - Carnegie Mellon University), which the arXiv Atom feed does not carry at all. A future schema extension should add cais. WHY IT IS THE MOST DEPLOYMENT-RELEVANT PAPER IN THIS BATCH: the repo has no record for structured output beyond a benchmark, and by late 2026 the question a reader has is no longer 'can an engine enforce a JSON schema' but 'what does it cost when the structure CHANGES during one response' - which is the agentic-tool-calling case. XGrammar-1's static-grammar answer does not cover it; this does. Adoption in-upstream-engine on the same basis as XGrammar-1: the repo holds engines/sglang, and XGrammar-2 shares the sgl-project/xgrammar codebase."
+}

@@ -1,0 +1,34 @@
+{
+ "id": "w4p-apple-ptmoe-server-model",
+ "type": "paper",
+ "name": "Apple Intelligence Foundation Language Models: Tech Report 2025 (PT-MoE server model)",
+ "arxiv_id": "2507.13575",
+ "venue": "arxiv-preprint",
+ "venue_track": "unknown",
+ "year": 2025,
+ "category": "moe",
+ "authors": [
+  "Apple"
+ ],
+ "affiliations": [
+  "Apple"
+ ],
+ "problem": "A private-cloud inference tier has different constraints from a public one: it must serve a fixed user population on fixed hardware, so cost per request matters as a first-class objective rather than as a throughput benchmark.",
+ "mechanism": "Two models. The ON-DEVICE model (~3B) is optimized for Apple silicon through architectural choices including KV-CACHE SHARING and 2-BIT QUANTIZATION-AWARE TRAINING - KV-cache sharing across layers is the serving-relevant one, because on a memory-constrained device the cache is the binding constraint. The SERVER model is built on PARALLEL-TRACK MIXTURE-OF-EXPERTS (PT-MoE): TRACK PARALLELISM combined with MoE sparse computation, plus INTERLEAVED GLOBAL-LOCAL ATTENTION, delivering quality at competitive cost on the Private Cloud Compute platform. Both are trained on multilingual multimodal data from responsible crawling, licensed corpora and synthetic data, then refined with SFT and RL on an asynchronous training platform.",
+ "hardware_relevance": [
+  "apple-m3-max",
+  "apple-m4-max",
+  "local-apple-m5-max"
+ ],
+ "speedup_reported": "Paper's own claim: in public benchmarks and human evaluations BOTH the server model and the on-device model MATCH OR SURPASS comparably sized open baselines. No tok/s, TTFT, cost-per-token, or joules-per-token figure appears in the abstract, so speedup_reported records the accuracy-relative claim and the absence of a serving metric. That absence is itself the honest deployment fact about this record: it is evidence that a 3B on-device model with 2-bit QAT and KV-cache sharing is competitive on quality, and it is NOT evidence about what either model costs to serve.",
+ "adoption": "in-production",
+ "code_url": null,
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-apple-ptmoe"
+ ],
+ "notes": "VENUE: arxiv-preprint WITH venue_track 'unknown' - comment EMPTY, OpenReview holds only the arXiv deposit (venue 'CoRR 2025') plus an archive record with a null venue. Vendor tech report, no peer review. TITLE TRAP RECORDED EXPLICITLY SO THIS IS NOT READ AS A DUPLICATE: this is arXiv 2507.13575 'Apple Intelligence Foundation Language Models: Tech Report 2025' and it is a DISTINCT report from arXiv 2407.21075 'Apple Intelligence Foundation Language Models' (v1 2024-07-29, latest v2 2026-05-27). The 2024 report covers the ~3B on-device model and the Private Cloud Compute server model; the 2025 report introduces the PT-MoE server model with track parallelism. The repo holds NEITHER, so this is a new record rather than an update to an existing one - and a reader searching 'Apple Intelligence Foundation Language Models' will hit two nearly identical titles with different architectures, which is precisely the duplicated-title hazard the repo's methodology rule flags. WHY IT IS A GAP: the repo has NO Apple silicon serving architecture record of any kind despite holding many apple-* accelerator records and an MLX/MLX-LLM engine. The transferable mechanisms are KV-CACHE SHARING across layers (a cache-size reduction that is NOT token-sparsity, NOT quantization, and NOT MQA - so it falls outside every KV-compression category the repo has) and PT-MoE track parallelism, which is a fourth MoE deployment axis alongside expert parallelism, tensor parallelism and the MegaScale-Infer attention/FFN split added in this batch. open_weights is null, not false: Apple has published neither model, so the honest value is 'unknown availability' rather than a claim that weights exist under some licence."
+}

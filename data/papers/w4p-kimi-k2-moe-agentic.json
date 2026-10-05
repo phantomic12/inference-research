@@ -1,0 +1,34 @@
+{
+ "id": "w4p-kimi-k2-moe-agentic",
+ "type": "paper",
+ "name": "Kimi K2: Open Agentic Intelligence",
+ "arxiv_id": "2507.20534",
+ "venue": "arxiv-preprint",
+ "venue_track": "unknown",
+ "year": 2025,
+ "category": "moe",
+ "authors": [
+  "Kimi Team"
+ ],
+ "affiliations": [
+  "Moonshot AI"
+ ],
+ "problem": "Open-weight MoE models large enough to be useful for agentic software work are expensive to serve, and their serving cost is dominated by FFN weight traffic rather than by attention - so the MoE total/activated split is the deployment decision, not an architecture detail.",
+ "mechanism": "A 1-TRILLION-TOTAL / 32-BILLION-ACTIVATED-parameter MoE. The training contribution named here is MUONCLIP, which adds a QK-clip technique to the Muon optimizer to address training instability while keeping Muon's token efficiency; K2 was pre-trained on 15.5T tokens with zero loss spike, then post-trained through agentic data synthesis and a joint RL stage against real and synthetic environments. For a serving reader the relevant content is the 1T/32B ratio itself: activated parameters set the per-token FLOPs while TOTAL parameters set the weight bytes that dominate decode - which is the quantity the repo's decode-gemm roofline cares about, and the reason a 1T-total model is only tractable on high-memory parts or with offload.",
+ "hardware_relevance": [
+  "nvidia-h200-sxm",
+  "nvidia-b200",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "Paper's own claim is an ACCURACY claim, not a serving claim: state-of-the-art among open non-thinking models, with 66.1 on Tau2-Bench, 76.5 on ACEBench (En), 65.8 on SWE-Bench Verified, 47.3 on SWE-Bench Multilingual, 53.7 on LiveCodeBench v6, 49.5 on AIME 2025, 75.1 on GPQA-Diamond, 27.1 on OJBench, all WITHOUT extended thinking. No throughput, TTFT, or memory-footprint figure is published in the abstract, so speedup_reported records the benchmark claim and the absence of any serving metric. Those benchmark numbers are vendor self-reported and unaudited; they are recorded because they are the model's stated capability, not as a verified performance claim.",
+ "adoption": "in-upstream-engine",
+ "code_url": null,
+ "open_weights": true,
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-kimi-k2"
+ ],
+ "notes": "VENUE: arxiv-preprint WITH venue_track 'unknown'. arXiv comment reads only 'tech report of Kimi K2, with minor updates' - a comment that names NO venue, so there was nothing to copy even if copying were acceptable. No proceedings entry and no OpenReview decision record for this title. WHY IT IS A GAP FOR AN INFERENCE REPO: Kimi Linear is present (this repo's own attention record) and Kimi Linear's sibling model, but the 1T/32B MoE is the largest open-weights model in the record set and it is the one whose DEPLOYMENT arithmetic is most consequential - total parameters dominate decode bytes while activated parameters dominate prefill FLOPs, and the ratio between those two is exactly the knob the repo's capacity-planning docs assume. Open weights ARE released (base and post-trained checkpoints), which is why adoption is in-upstream-engine rather than research-only. THE CONSUMPTION PROFILE is the practical caveat: an agentic model optimized for non-thinking inference under sustained tool use is the workload that maximises PREFIX REUSE across turns, which is the Preble / Cache-Craft / LMCache regime rather than the single-turn throughput regime most published benchmarks measure."
+}

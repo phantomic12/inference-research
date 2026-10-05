@@ -1,0 +1,42 @@
+{
+ "id": "w4p-cachecraft-rag-chunk-cache",
+ "type": "paper",
+ "name": "Cache-Craft: Managing Chunk-Caches for Efficient Retrieval-Augmented Generation",
+ "arxiv_id": "2502.15734",
+ "venue": "sigmod",
+ "venue_track": "main",
+ "year": 2025,
+ "category": "retrieval",
+ "authors": [
+  "Shubham Agarwal",
+  "Sai Sundaresan",
+  "Subrata Mitra",
+  "Debabrata Mahapatra",
+  "Archit Gupta",
+  "Rounak Sharma",
+  "Nirmal Joshua Kapu",
+  "Tong Yu",
+  "Shiv Saini"
+ ],
+ "affiliations": [
+  "Adobe Research"
+ ],
+ "problem": "In RAG the same retrieved chunk recurs across many queries, but engines cannot reuse its KV: a chunk appears at an ARBITRARY POSITION in the prompt with ARBITRARY PRECEDING CONTEXT, so there is no shared prefix to hit, and naive reuse of a chunk computed in one position degrades output quality.",
+ "mechanism": "Manages CHUNK-CACHES - precomputed KV for individual retrieved text chunks - as first-class reusable units. Three problems, three mechanisms: (1) identifying which chunk-caches are REUSABLE at all, given the positional problem above; (2) REPAIRING a reused cache by recomputing only a SMALL FRACTION of it, enough to restore output quality rather than paying for a full re-prefill; (3) STORING and EVICTING chunk-caches in hardware so that reuse is maximized while the management overhead is hidden. This is the chunk-granular middle point between whole-prefix caching (which needs an exact shared prefix) and no caching (which recomputes everything), and it is the first design in this repo's record set that treats the RAG chunk boundary as the caching unit.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "Paper's own claim, on real production workloads plus synthetic datasets: reduces redundant computation by 51% versus state-of-the-art prefix caching and 75% versus full recomputation; and with continuous batching on a real production workload, 1.6x throughput speedup and a 2x reduction in [tail latency as reported in the abstract]. Read the 51%-versus-prefix-caching number as the one that matters for a reader: it is the incremental gain over what a modern engine already does for free, which is much smaller than the 75% versus recomputation.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-cachecraft",
+  "sco-openreview-venue-search"
+ ],
+ "notes": "VENUE VERIFIED TWICE, TWO INDEPENDENT FIELDS: arXiv comment reads 'Accepted at SIGMOD 2025', AND the OpenReview index returns a note with venue 'Proceedings of the ACM on Management of Data' and venueid 'dblp.org/journals/PACMMOD/2025' (Proc. ACM Manag. Data 2025). These are different mechanisms - author claim versus proceedings mirror - so the attribution does not rest on the comment field alone. WHY IT IS THE RAG-SERVING GAP IN THE REPO: the repo's RAG-serving records are CacheBlend (arxiv-preprint) and TurboRAG (see the sibling record added in this batch), plus the LMCache and Pensieve KV-tier records. Cache-Craft is the one that solves the POSITION problem - and the position problem is precisely why a production RAG deployment cannot get the prefix-cache hit rate the engine's own docs imply it can. That connects directly to the repo's flops record eng-profile-prefix-cache-prefill-cost-per-request, which states that hit rate and reuse granularity are engine and system properties, not arithmetic."
+}
