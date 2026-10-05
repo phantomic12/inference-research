@@ -332,14 +332,54 @@ a sibling aggregate that is a **total**-tokens figure, so the pair needed for a
 per-output-token cost does not exist. Filling this needs a benchmark with both
 `tok_s_per_user` **and** an output-token `tps_aggregate` on the same accelerator.
 
-**2. Every AMD MI300X/MI325X/MI355X benchmark is unpriceable.** Seven throughput
-records, including [[benchmarks/mi355x-mlperf-v6-0-llama2-70b-wmxfp4-offline-tokens]]
-at 103,480 tok/s and [[benchmarks/llama-cpp-mi300x-deepseek-v3-671b-q4-decode-tok-s]]
-at 36.53 tok/s single-user, because **no supply record prices AMD Instinct per
-GPU-hour.** Every AMD supply record
-(`amd-instinct-oem-systems`, `dell-poweredge-xe-ai`, `hpe-proliant-compute-xd`,
-`qct-gpgpu-servers`) has `price_usd: null`. This is the highest-value gap in the
-repo: AMD publishes cloud pricing and the throughput records already exist.
+**2. AMD Instinct is now priceable, and the join still cannot use it — because the
+tool's price table has not caught up.** This correction is recorded because the
+previous version of this document asserted the opposite, and the assertion was
+wrong in a way that generalises.
+
+**What is true now.** [[supply/w5s-oracle-oci-amd-mi300x-mi355x-gpu-hour]] prices
+AMD Instinct **per GPU-hour**: MI300X at **$6.00** and MI355X at **$8.60**, read off
+Oracle's own accelerated-compute table, in the same column and on the same page as
+**NVIDIA BM.GPU.H100.8 at $10.00** ([[supply/oracle-bm-gpu-h100-h200]] prices the H100
+and H200 at $10.00). The per-GPU-hour denominator this document called impossible
+exists, it is first-party, and it sits beside the NVIDIA figure a like-for-like
+comparison needs.
+
+**What the earlier claim got wrong, and why it was not merely out of date.** It
+cited four AMD supply records — `amd-instinct-oem-systems`, `dell-poweredge-xe-ai`,
+`hpe-proliant-compute-xd`, `qct-gpgpu-servers` — all of which genuinely have
+`price_usd: null`. Those four are correct as they stand: they describe **OEM and
+reseller channels, which do not quote per-GPU-hour because per-GPU-hour is not a
+unit an OEM system sale is priced in.** The error was one of **scope**: the claim
+was stated as "AMD hardware is unpriceable" when the only thing established was
+"no supply record *in this repo* priced AMD per GPU-hour". The channel that
+publishes per-GPU-hour rates for AMD is a cloud provider, not an OEM, so the
+negative generalised across a boundary it was never tested at. This is the same
+shape of error as `rent-cerebras-api-token-pricing-negative` elsewhere in the
+repo: a negative asserted on one channel, generalised to the whole market.
+
+**What is still true, and why `gaps` still reports AMD as unpriceable.** The gap is
+closed **on the supply side and still open in the tooling**.
+`tools/cost_per_token.py` is driven by a hand-maintained `PRICE_QUOTES` table rather
+than by scanning `data/supply`, so the new record does not by itself reach the tool:
+`python tools/cost_per_token.py gaps` still lists **11 records on
+`amd-instinct-mi355x` and 2 on `amd-instinct-mi300x`** as having no priced
+per-GPU-hour supply record. Adding two entries of the form
+`dict(accel="amd-instinct-mi300x", usd=6.00, tier="on-demand", gpus=1, basis="BM.GPU.MI300X.8 = $6.00")`
+and its MI355X equivalent is an edit in `tools/`, outside this document's scope.
+The 19 AMD MI3xx throughput records in the repo — including
+[[benchmarks/mi355x-mlperf-v6-0-llama2-70b-wmxfp4-offline-tokens]] at 103,480 tok/s,
+[[benchmarks/bench-mlperf-v6-1-dell-mi355x-llama3-1-8b-offline]] at 158,458 tok/s,
+[[benchmarks/mi355x-mlperf-v6-0-gpt-oss-120b-offline-tokens]] at 95,004 tok/s and
+[[benchmarks/llama-cpp-mi300x-deepseek-v3-671b-q4-decode-tok-s]] at 36.53 tok/s
+single-user — would all become priceable on that one edit.
+
+**What it buys, stated at the limit.** $6.00 is an **on-demand asking rate** on a
+bare-metal shape with no vCPU/NRAM bundling. For a like-for-like AMD-vs-NVIDIA
+comparison use **Oracle's own H100 at $10.00**, not AWS p5's $6.88-equivalent,
+which bundles 24 vCPU and 256 GB of RAM into the GPU hour. And Oracle's
+availability on GPU shapes is unverified from any public page — its H100 record
+says so directly — so **these figures describe price, not purchasability.**
 
 **3. GB200/GB300 NVL72 racks are unpriceable per GPU.**
 [[benchmarks/sglang-deepseek-v3-gb200-nvl72-decode-tps-per-gpu]] (7,583 tok/s
@@ -390,11 +430,29 @@ joined record pairs a prefill price with a prefill rate.
 
 ## Coverage: what the join does and does not reach
 
-Of 37 throughput benchmark records with a positive value:
+Of **145** benchmark records with a positive `value`:
 
-- **15 joinable** (40.5%) — 203 rows, 17 supply records, 11 models, 13
+- **15 joinable — 10.3%.** 203 rows, 17 supply records, 11 models, 13
   hardware×model combinations, 136 provider×model pairs.
-- **22 not joinable**, for the reasons above.
+- **65 throughput records named in `--gaps`** as unpriceable, which together with
+  the 15 joined accounts for all **80** records whose `metric` is one of
+  `decode_tok_s`, `tok_s_per_user` or `tps_aggregate`.
+- **The other 65 positive-value records are not throughput records at all** and are
+  therefore outside this join's denominator by construction: 33 `quality`,
+  10 `dimensionless_ratio`, 8 `ttft_ms`, 7 `prefill_tok_s`, 4 `speedup_ratio`,
+  3 `itl_ms`.
+
+**This document names 28 of the 145 positive-value records; 117 are never
+mentioned here**, and the gap is concentrated in exactly the classes a cost
+model needs and this join cannot serve: **33 of the 51 `tps_aggregate` records
+and 17 of the 24 `decode_tok_s` records appear nowhere in this doc**, because
+they sit on hardware no price record covers (AMD Instinct, GB200/GB300 NVL72,
+Apple, consumer Radeon, Gaudi2, Arc) or on a `benchmark`-only channel with no
+accelerator id to join on. **65 positive-value records have no accelerator id
+at all** and are structurally unpriceable regardless of how many prices exist.
+Where another document carries those records, cite it; the point of stating the
+count here is that a 10.3% join is not a pricing model, it is a worked example
+on the fifth of the corpus the price records happen to reach.
 
 **Every joinable row is aggregate. There are zero single-user rows.** The join
 answers "what does a saturated fleet cost per million output tokens", which is a

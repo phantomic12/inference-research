@@ -575,14 +575,33 @@ they were is a category error.
    AMD column is a whole-column NO that "reads like a data gap" and "must not be read as
    'AMD GPUs cannot do quantized inference'" — the AMD-native route the record names is
    covered by quark and rocm-quant records that this document does not cite.
-9. **A schema gap that makes Apple advice indirect.** [[quantization/mlx-affine-quantized]]
-   is now the native format on Apple records, which **corrects
-   [04-quant-selection.md](04-quant-selection.md) §3.2** — that doc states "no native
-   quantization support recorded at all" for [[accelerators/apple-m3-max]] and
-   [[accelerators/apple-m3-ultra]], but `mlx-affine-quantized` now lists both in
-   `native_support`. MLX's own `mlx-quantized-4bit` / `mlx-quantized-8bit` engine labels
-   still have no record of their own; the MLX affine record is the closest thing, and it is
-   keyed on the affine mode with group 64 rather than on the engine's label.
+9. **A schema gap that makes Apple advice indirect, and a 04/23 consistency note.**
+   [[quantization/mlx-affine-quantized]] is the native format on Apple records and
+   lists `apple-m3-max` and `apple-m3-ultra` in `native_support`, at group 64 with
+   `emulated_support` empty. [04-quant-selection.md](04-quant-selection.md) §3.2 said
+   "no native quantization support recorded at all" for those two parts; **that text
+   has been corrected to agree with this document**, so the two no longer contradict
+   each other and the base layer and the selection layer say the same thing about
+   Apple. What remains open is not the native/emulated question but everything
+   downstream of it:
+   - **MLX's own `mlx-quantized-4bit` / `mlx-quantized-8bit` engine labels still have
+     no record of their own.** The MLX affine record is the closest thing, and it is
+     keyed on the affine mode with group 64 rather than on the engine's label.
+   - **Three benchmark records still carry `format_id: mlx-quantized-4bit`, which is
+     not a record id** — the format record's own notes name these as the dangling
+     references its existence was meant to close, and repointing them is a
+     `data/benchmarks/` edit this wave does not own.
+   - **"Native" is not "comparable".** MLX ships four modes at four group sizes
+     (affine 64, mxfp4 32, nvfp4 16, mxfp8 32), so a checkpoint recorded as "4-bit on
+     Apple" may be a 64-group affine grid or a 32-group MX grid, and those differ in
+     memory arithmetic and quality. The nvfp4 mode at 16 matches the Blackwell
+     convention in [[quantization/nvfp4]] and the mxfp4 mode at 32 matches
+     [[quantization/mxfp4]]; affine 64 matches neither.
+
+   **For the selection consequence on Apple: MLX affine 4-bit, group 64, and treat the
+   group size as a default rather than a constant** — `mlx.nn.quantize` takes
+   `group_size` per call, so the number in the record is the API's default and not a
+   property of the format.
 
 ---
 

@@ -457,7 +457,7 @@ The engine choice follows from that:
    [[benchmarks/mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-output-throughput]] and its 405B
    counterpart are valuable and there are only four such records total.
 4. **Consumer-Radeon ROCm maturity is unmeasured by the projects' own admission.**
-   [[engines/vllm-cpp]] says so explicitly; [[docs/NOTES.md]] carries "How much of the
+   [[engines/vllm-cpp]] says so explicitly; [NOTES.md](NOTES.md) carries "How much of the
    ROCm-on-consumer-Radeon story has actually been fixed upstream?" as an open question.
 5. **`xpu` is thin.** Only [[engines/vllm]], [[engines/sglang]], [[engines/vllm-pooling-models]]
    and the deprecated [[engines/text-generation-inference]] list it, and vLLM's own caveat is

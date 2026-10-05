@@ -3,9 +3,9 @@
 Every cell below cites a record id. **No cell in this document is an inference from an
 engine's general reputation.** Where a record is silent the cell reads `unknown`, and
 `unknown` is a real answer here: the repo has 71 engine records, and almost none of them
-enumerate architecture support. The three that do — [[vllm]], [[sglang]] and
-[[tensorrt-llm]] — carry the load for most of the matrix, and one of them
-([[tensorrt-llm]], via [[mdl2-trtllm-supported-models]]) is the only source in the repo that
+enumerate architecture support. The three that do — [[engines/vllm]], [[engines/sglang]] and
+[[engines/tensorrt-llm]] — carry the load for most of the matrix, and one of them
+([[engines/tensorrt-llm]], via [[sources/mdl2-trtllm-supported-models]]) is the only source in the repo that
 publishes a per-architecture *feature* matrix rather than a per-architecture support list.
 
 Section 7 lists every cell marked `unknown`, with the reason for each.
@@ -24,8 +24,8 @@ The result was three specific gaps:
    for a sliding-window or hybrid model it is the *naive* figure — the figure an engine that
    does not implement the architecture's cache structure will actually allocate. The gap
    between the two was nowhere.
-3. **Kernel choice silently determines cache format.** Not an abstraction: [[mdl2-trtllm-supported-models]]
-   and [[mdl2-llamacpp-arch-class-registry]] both show that the cache layout, page-block size
+3. **Kernel choice silently determines cache format.** Not an abstraction: [[sources/mdl2-trtllm-supported-models]]
+   and [[sources/mdl2-llamacpp-arch-class-registry]] both show that the cache layout, page-block size
    and even the cache *class* are set by the attention implementation, not by the model.
 
 Those three are §2, §4–§5 and §6 respectively. §1 sets up the families and §3 is the matrix.
@@ -50,15 +50,15 @@ doing it this way, both recorded in the affected records.
 |---|---|---|---|
 | `dense-gqa` | 39 | grouped-query attention, `gqa_ratio` > 1 | causal attention + GEMM/GEMV. Baseline: no engine in this repo records it as unsupported. |
 | `dense-mha` | 4 | `gqa_ratio` 1.0, no GQA at all | as above; the shape every paged-attention kernel was written for. |
-| `mla` | 9 | multi-head latent attention (`kv_lora_rank` present) | **MLA decode kernel.** The cache is a shared low-rank latent + a decoupled RoPE key, not per-head K/V, so a GQA kernel cannot serve it. [[mla-latent-attention]] |
-| `sliding-window` | 16 | local/windowed attention on some or all layers | **local-attention decode kernel + per-layer-type cache management.** The two layer classes have opposite scaling — a local layer's decode cost is constant in context, a global layer's grows — so one kernel serves both regimes. [[sliding-window-hybrid-attention]] |
-| `hybrid-attention-ssm` | 12 | SSM / linear-attention layers interleaved with attention | **two kernel families plus a fixed-state allocator**: a chunked SSD or delta-rule kernel *and* an attention or MLA kernel. [[ssm-recurrent-state-update]] [[ssm-sequential-scan-tensor-core-mismatch]] |
-| `ssm` | 1 | pure Mamba-2, no attention layers | chunked SSD scan only. `llm_arch_is_recurrent` in [[mdl2-llamacpp-arch-class-registry]]. |
+| `mla` | 9 | multi-head latent attention (`kv_lora_rank` present) | **MLA decode kernel.** The cache is a shared low-rank latent + a decoupled RoPE key, not per-head K/V, so a GQA kernel cannot serve it. [[flops/mla-latent-attention]] |
+| `sliding-window` | 16 | local/windowed attention on some or all layers | **local-attention decode kernel + per-layer-type cache management.** The two layer classes have opposite scaling — a local layer's decode cost is constant in context, a global layer's grows — so one kernel serves both regimes. [[flops/sliding-window-hybrid-attention]] |
+| `hybrid-attention-ssm` | 12 | SSM / linear-attention layers interleaved with attention | **two kernel families plus a fixed-state allocator**: a chunked SSD or delta-rule kernel *and* an attention or MLA kernel. [[flops/ssm-recurrent-state-update]] [[flops/ssm-sequential-scan-tensor-core-mismatch]] |
+| `ssm` | 1 | pure Mamba-2, no attention layers | chunked SSD scan only. `llm_arch_is_recurrent` in [[sources/mdl2-llamacpp-arch-class-registry]]. |
 | `recurrent` | 1 | RWKV/WKV mixer | RNN-style WKV update; **no chunk-parallel reformulation exists**, so it is the worst case for the tensor-core mismatch. |
-| `diffusion` | 1 | masked diffusion LM, `use_cache: false` | **no KV cache and no decode loop.** Needs multi-token parallel decode and a block-diffusion sampler. [[diffusion-lm-denoising-steps]] |
+| `diffusion` | 1 | masked diffusion LM, `use_cache: false` | **no KV cache and no decode loop.** Needs multi-token parallel decode and a block-diffusion sampler. [[flops/diffusion-lm-denoising-steps]] |
 | `encoder-decoder` | 2 | Whisper, cross-attention | **three distinct things in one graph**: a bidirectional encoder with no cache, a decoder self-attention KV that grows, and a decoder cross-attention KV that is *constant per request*. |
-| `bi-encoder` | 11 | bidirectional encoder, no causal mask | one full-sequence forward + pooling. No cache, no incremental state. [[embedding-batch-encoding]] |
-| `cross-encoder` | 3 | query+passage scored jointly | N independent full forwards, no cache reuse, no early exit. [[cross-encoder-reranking]] |
+| `bi-encoder` | 11 | bidirectional encoder, no causal mask | one full-sequence forward + pooling. No cache, no incremental state. [[flops/embedding-batch-encoding]] |
+| `cross-encoder` | 3 | query+passage scored jointly | N independent full forwards, no cache reuse, no early exit. [[flops/cross-encoder-reranking]] |
 | `speech-encoder` | 3 | FastConformer / NeMo ASR | conv-augmented attention forward pass. **No engine record in this repo enumerates this class.** |
 | `multimodal` | 17 | vision or audio tower + projector | encoder tower on a *separate schedule* from the decoder, plus mrope / DeepStack in the decoder where present. |
 | `undisclosed` | 5 | closed API models (Claude, GPT-4.1, o3) | none derivable. The kernel question is **moot**, not unknown: no local engine serves these. |
@@ -84,8 +84,8 @@ weights". Four families make an autoregressive serving engine the wrong *shape*.
 
 ### 2.1 MLA — the kernel decides the cache format
 
-The strongest finding in this document. [[kern-flashmla-github]] and
-[[flashmla-decode-fp8-fp4-kv]]: DeepSeek's own MLA decode kernel, at its 2026.09.30 release,
+The strongest finding in this document. [[sources/kern-flashmla-github]] and
+[[flops/flashmla-decode-fp8-fp4-kv]]: DeepSeek's own MLA decode kernel, at its 2026.09.30 release,
 
 - requires NVIDIA **SM100/SM103** and CUDA ≥ 13.1,
 - **removed Hopper support**, and removed V3, V3.2 and V4.0,
@@ -98,28 +98,28 @@ So the kernel choice determines the cache *format*, which determines what the en
 store, which determines whether the model is servable at all on that part. Three
 independent gates on top, all cited:
 
-- **Page-block size.** [[sm120-sparse-mla-block-size]] — on 8× RTX PRO 6000 (SM120) at TP8,
+- **Page-block size.** [[gotchas/sm120-sparse-mla-block-size]] — on 8× RTX PRO 6000 (SM120) at TP8,
   vLLM computes compressed-layer KV page block size as `block_size // compress_ratio` = 32 for
   a ratio-2 layer, while FlashInfer's SM120 dispatch planner hard-codes `_PAGE_BLOCK_SIZE = 64`.
   There is **no global block size that works**: 64 gives pbs=32 and crashes; 128 gives
   `No common block size for 64 (FLASHINFER_MLA_SPARSE_DSV41: [128])`. Workaround: SM100
   datacenter Blackwell, or wait for a FlashInfer planner change.
-- **Head size.** [[flashinfer-rejects-large-head-dim]] — FlashInfer's template instantiations
+- **Head size.** [[gotchas/flashinfer-rejects-large-head-dim]] — FlashInfer's template instantiations
   do not cover Gemma-4's `head_dim=256` / `global_head_dim=512`, and vLLM's backend selection
   validates head size at engine init, so the override is accepted on the CLI and only fails at
   startup. A *different* SM120 gap from the page-block one.
-- **Feature gating on hardware.** [[mdl2-trtllm-supported-models]] footnotes: chunked prefill
+- **Feature gating on hardware.** [[sources/mdl2-trtllm-supported-models]] footnotes: chunked prefill
   for MLA only enables on SM90/SM100/SM103/SM107/SM120; KV cache reuse for MLA only on
   SM90/100/103/107/120/**121** and only in BF16/FP8 KV dtype. DeepSeek-V4 is Blackwell SM100+
   only; Kimi K3 is SM100 family only.
 
-The engine-level consequence is stated in [[mla-latent-attention]]: at 68.6 KiB/token MLA moves
+The engine-level consequence is stated in [[flops/mla-latent-attention]]: at 68.6 KiB/token MLA moves
 the bottleneck off KV and onto weight streaming, so MLA-capable engines find their
 paged-attention machinery largely idle and their GQA-era cache-pressure tuning irrelevant.
 
 ### 2.2 Hybrid attention-SSM — two kernel families, and the second one fights the hardware
 
-[[ssm-sequential-scan-tensor-core-mismatch]] is the load-bearing record: a selective-SSM step
+[[flops/ssm-sequential-scan-tensor-core-mismatch]] is the load-bearing record: a selective-SSM step
 is `h_t = a_t*h_{t-1} + b_t*x_t`, a multiplicative chain over time, which tensor cores cannot
 express — they compute sums of independent products. So the scan must run sequentially, and
 the published penalty is **2–8×** between the fused associative scan and the
@@ -127,7 +127,7 @@ matrix-multiplication-reformulated SSD for *identical mathematics*. The record's
 one to carry: judge an SSM model's serving speed by measured tok/s on the target part, never by
 its flop count, and expect the deficit to be worst on prefill-heavy long-prompt workloads.
 
-**[[mdl2-llamacpp-arch-class-registry]] is the engine agreeing with the arithmetic.** Its
+**[[sources/mdl2-llamacpp-arch-class-registry]] is the engine agreeing with the arithmetic.** Its
 `llm_arch_supports_sm_tensor()` returns **false** for 30 architectures, and that list is not
 only the SSM ones — it includes `DEEPSEEK2`, `DEEPSEEK32`, `GEMMA3N`, `OLMO2`, `GROK`, `T5`,
 `MINIMAX_M2/M3`, `GLM_DSA`. That is a mainstream engine's own dispatch table saying these
@@ -143,7 +143,7 @@ write it at different times.
 
 ### 2.3 Diffusion — the wrong shape entirely
 
-[[diffusion-lm-denoising-steps]]: each denoising step is a *full* forward pass over the
+[[flops/diffusion-lm-denoising-steps]]: each denoising step is a *full* forward pass over the
 current sequence, so cost per emitted token is `S · 2N / Lg` for `S` steps and generation
 length `Lg` — a function of two user-facing hyperparameters rather than a constant. Attention
 is bidirectional, so there is no causal prefix to reuse; the model is dense, so there is no MoE
@@ -151,18 +151,18 @@ sparsity to amortise. Arithmetic intensity per step is prefill-like, so **part s
 inverts** (compute and tensor cores, not memory bandwidth), TTFT is excellent and inter-token
 latency is terrible, and the weight stream is paid `S` times.
 
-The engine evidence is structural rather than a row in a table. [[vllm]] has exactly **one**
+The engine evidence is structural rather than a row in a table. [[engines/vllm]] has exactly **one**
 diffusion row in its entire registry — `DiffusionGemmaForBlockDiffusion` — and no LLaDA and no
-Dream row ([[mdl2-vllm-supported-models-2026-10]], confirming
-[[pap-arch-vllm-supported-models]]). [[sglang]] by contrast gives diffusion its own top-level
+Dream row ([[sources/mdl2-vllm-supported-models-2026-10]], confirming
+[[sources/pap-arch-vllm-supported-models]]). [[engines/sglang]] by contrast gives diffusion its own top-level
 docs section, separate from "Large Language Models", with its own launch flags
 (`--dllm-algorithm LowConfidence|JointThreshold`, `--no-dllm-fdfo`) and **its own scheduling
 primitive**: First-Done-First-Out, "each request leaves the batch as soon as its block is
-resolved, instead of advancing in lockstep" ([[mdl2-sglang-diffusion-language-models]]). A
+resolved, instead of advancing in lockstep" ([[sources/mdl2-sglang-diffusion-language-models]]). A
 scheduler concept that does not exist on the AR path. llama.cpp carries `DREAM`, `LLADA`,
 `LLADA_MOE`, `RND1` in `llm_arch_is_diffusion` and adds two diffusion-only tensors,
 `LLM_TENSOR_MASKED_EMBD_CENTROIDS` and `LLM_TENSOR_MASKED_EMBD_ORDERING`
-([[mdl2-llamacpp-arch-class-registry]]) — a different *state structure*, not just a sampler.
+([[sources/mdl2-llamacpp-arch-class-registry]]) — a different *state structure*, not just a sampler.
 
 ### 2.4 Encoder-decoder — two structurally different KV stores
 
@@ -182,10 +182,10 @@ model's own registration is absent from a registry that otherwise enumerates its
 `—` = the engine has no serving surface for this task class at all. `?` = **no record states
 this**.
 
-Citations are per cell. The three registries are [[mdl2-vllm-supported-models-2026-10]] (vLLM),
-[[mdl2-trtllm-supported-models]] (TensorRT-LLM), and [[mdl2-sglang-generative-models]] /
-[[mdl2-sglang-embedding-rerank-models]] / [[mdl2-sglang-multimodal-language-models]] /
-[[mdl2-sglang-diffusion-language-models]] (SGLang's five pages).
+Citations are per cell. The three registries are [[sources/mdl2-vllm-supported-models-2026-10]] (vLLM),
+[[sources/mdl2-trtllm-supported-models]] (TensorRT-LLM), and [[sources/mdl2-sglang-generative-models]] /
+[[sources/mdl2-sglang-embedding-rerank-models]] / [[sources/mdl2-sglang-multimodal-language-models]] /
+[[sources/mdl2-sglang-diffusion-language-models]] (SGLang's five pages).
 
 ### 3.1 Generation engines
 
@@ -205,13 +205,13 @@ Citations are per cell. The three registries are [[mdl2-vllm-supported-models-20
 **`dense-gqa` / `dense-mha`.** Baseline — no engine record in `data/engines/` states either is
 unsupported. vLLM has `LlamaForCausalLM`, `Qwen2`, `Qwen3`, `Mistral`, `Phi3` rows
 (vllm); TRT-LLM the same rows (trtllm); SGLang's generative table names the families
-(sglang); llama.cpp via `LLM_ARCH_LLAMA` ([[pap-arch-llamacpp-arch-registry]]);
-[[exllamav3]] claims the broadest HF architecture coverage of any engine here.
-[[mlx-lm]] and [[vllm-metal]] are Apple-Silicon paths whose records state a model list but no
+(sglang); llama.cpp via `LLM_ARCH_LLAMA` ([[sources/pap-arch-llamacpp-arch-registry]]);
+[[engines/exllamav3]] claims the broadest HF architecture coverage of any engine here.
+[[engines/mlx-lm]] and [[engines/vllm-metal]] are Apple-Silicon paths whose records state a model list but no
 architecture-class support statement, hence `?` rather than `Y`. The constraint that *does*
-apply to both is model-shape, not class: [[mgpu-tp-size-must-divide-attention-heads]] (vLLM and
+apply to both is model-shape, not class: [[gotchas/mgpu-tp-size-must-divide-attention-heads]] (vLLM and
 SGLang) refuses to start unless TP divides the attention head count. And one hardware gate that
-is not about the architecture class at all: [[rdna-triton-paged-attn-decode-cliff]] — vLLM's
+is not about the architecture class at all: [[gotchas/rdna-triton-paged-attn-decode-cliff]] — vLLM's
 custom paged-attention kernel on RDNA is gated on `head_size == 128` **and** `block_size == 16`,
 so a dense GQA model with `head_dim=256` falls to the Triton 2D fallback and decode falls 12.1
 → 4.2 tok/s between 518 and 32k context, with `kernel_paged_attention_2d` growing 28.3×.
@@ -223,10 +223,10 @@ so a dense GQA model with `head_dim=256` falls to the Triton 2D fallback and dec
 than one model. SGLang names DeepSeek v1/v2/v3/R1 and Kimi K2 (sglang). llama.cpp reaches it
 through `DEEPSEEK2`/`DEEPSEEK32`/`DEEPSEEK4`, all in its `supports_sm_tensor == false` list
 (llamacpp). **All four carry the §2.1 constraints**: FlashMLA requires SM100/103 and FP8/FP4 KV
-only ([[kern-flashmla-github]]); [[sm120-sparse-mla-block-size]] blocks SM120 outright;
-[[flashinfer-rejects-large-head-dim]] blocks head_size 256/512; TRT-LLM's MLA rows are gated on
+only ([[sources/kern-flashmla-github]]); [[gotchas/sm120-sparse-mla-block-size]] blocks SM120 outright;
+[[gotchas/flashinfer-rejects-large-head-dim]] blocks head_size 256/512; TRT-LLM's MLA rows are gated on
 SM90+ for chunked prefill and SM90/100/103/107/120/121 in BF16/FP8 for KV reuse, with DeepSeek-V4
-Blackwell-only and Kimi K3 SM100-only. [[ik-llama-cpp]] records MLA as a feature that landed
+Blackwell-only and Kimi K3 SM100-only. [[engines/ik-llama-cpp]] records MLA as a feature that landed
 there first and was later upstreamed. `?` for flashinfer (a kernel library with no model
 registry), mlx-lm and vllm-metal (no architecture-class statement).
 
@@ -244,13 +244,13 @@ DeepSeek-V3/V3.2, GLM, GPT-OSS, Llama-4, Qwen3.5, Kimi-K3 and Nemotron-H row (tr
 exposes SWA as first-class KV *keys* — `%s.attention.sliding_window` and
 `%s.attention.sliding_window_pattern` are distinct per-architecture-class keys alongside SWA
 width keys, so SWA changes the cache layout rather than adding an attention flag (llamacpp).
-[[exllamav3]] vendors Flash Linear Attention kernels under `exllamav3/vendor/fla` and is
-broadest-in-coverage. [[mlx-lm]] is `Y*`: its sliding-window layers use `RotatingKVCache`, which
+[[engines/exllamav3]] vendors Flash Linear Attention kernels under `exllamav3/vendor/fla` and is
+broadest-in-coverage. [[engines/mlx-lm]] is `Y*`: its sliding-window layers use `RotatingKVCache`, which
 had **no quantized implementation**, so `--kv-bits` passes a `hasattr` presence check and raises
 `NotImplementedError: RotatingKVCache Quantization NYI` on the *first request* rather than at
-startup; the fix is [[mdl2-mlxlm-pr1584-rotating-quantized-kv]] and the commonly-recommended
+startup; the fix is [[sources/mdl2-mlxlm-pr1584-rotating-quantized-kv]] and the commonly-recommended
 monkeypatch silently drops the `max_kv_size` window bound, yielding an unbounded cache
-([[mlx-kv-bits-crashes-on-first-request-for-hybrid-attention]]). The rest of the constraints are
+([[gotchas/mlx-kv-bits-crashes-on-first-request-for-hybrid-attention]]). The rest of the constraints are
 in §4.
 
 **`hybrid-attention-ssm`.** vLLM has native rows for all of them — `MambaForCausalLM`,
@@ -274,10 +274,10 @@ also the only per-architecture feature record for this class: `Qwen3NextForCausa
 **No** and speculative decoding **No**; Kimi K3 has no MTP or EAGLE-3 head at all (DSpark only)
 and needs Blackwell SM100 with a DEP16/TEP16 recipe split; MiniMax-M3's sparse-attention path
 supports neither KV cache reuse nor MTP; DeepSeek-V4 and Step-3.7 are `Untested` for
-disaggregated serving (trtllm). [[exllamav3]] vendors the FLA chunked linear-attention prefill
+disaggregated serving (trtllm). [[engines/exllamav3]] vendors the FLA chunked linear-attention prefill
 kernels, which is the specific reason a hybrid lands early on consumer NVIDIA. llama.cpp's
-18-entry hybrid class covers most of the family (llamacpp). [[mlx-lm]] is `Y*` —
-[[eagle-prefix-cache-last-block-drop]] is not about mlx-lm but the analogous scheduler-alignment
+18-entry hybrid class covers most of the family (llamacpp). [[engines/mlx-lm]] is `Y*` —
+[[gotchas/eagle-prefix-cache-last-block-drop]] is not about mlx-lm but the analogous scheduler-alignment
 trap is documented there for vLLM. The reproduced class-level bugs are listed in §5.
 
 **`ssm`.** vLLM `MambaForCausalLM` + `Mamba2ForCausalLM` (vllm); SGLang names
@@ -285,7 +285,7 @@ trap is documented there for vLLM. The reproduced class-level bugs are listed in
 `LLM_ARCH_MAMBA2` and `llm_arch_is_recurrent` (llamacpp). **TRT-LLM `N` by omission**: no Mamba or
 Mamba2 row anywhere in its architecture table (trtllm).
 
-**`recurrent`.** The weakest column in the matrix. [[pap-arch-llamacpp-arch-registry]] records
+**`recurrent`.** The weakest column in the matrix. [[sources/pap-arch-llamacpp-arch-registry]] records
 **no `LLM_ARCH_RWKV5` entry**; llama.cpp's own registry has `RWKV6`, `RWKV6QWEN2`, `RWKV7`,
 `ARWKV7` in `llm_arch_is_recurrent`, so this checkpoint (`model_type 'rwkv5'`,
 `model_version '5_2'`) is outside the family that engine dispatches (llamacpp). vLLM's
@@ -298,7 +298,7 @@ support**, so §7 lists all nine.
 families are LLaDA2.0 (mini, flash), SDAR/JetLM (8B-Chat dense, 30B-A3B-Chat MoE) and
 DiffusionGemma — **[[models/llada-8b-instruct]] and Dream 7B are not among them** (sglang-diff).
 llama.cpp `Y` (`DREAM`, `LLADA`, `LLADA_MOE`, `RND1` plus two diffusion-only tensors)
-(llamacpp). [[exllamav3]] `Y` via `DFlash`, listed among the features that landed there first.
+(llamacpp). [[engines/exllamav3]] `Y` via `DFlash`, listed among the features that landed there first.
 TRT-LLM `?` — no diffusion *text* row, though it hosts a diffusion VisualGen pipeline for
 image/video, which is a different task.
 
@@ -309,14 +309,14 @@ similar pattern by implementing support through the plugin system", and the only
 are `BartForConditionalGeneration` and `Florence2ForConditionalGeneration` (vllm). Plus the
 ROCm caveat: the enc-dec *feature* is unsupported on ROCm, and AMD GPUs are on the `avoid_for`
 list for enc-dec models alongside multi-step scheduling, async output and Marlin
-quantizations ([[vllm]]). SGLang `Y` — `openai/whisper-large-v3` on the audio/transcriptions
+quantizations ([[engines/vllm]]). SGLang `Y` — `openai/whisper-large-v3` on the audio/transcriptions
 route (sglang-mm). TRT-LLM `Y*` with the constraints stated outright: "Use the `TRTLLM` attention
 backend for encoder-decoder models; tensor parallelism also requires attention head counts
 divisible by the tensor parallel size. **Chunked prefill is not supported for the encoder
 phase**, so the complete encoder input must fit in the iteration token budget", and "Whisper's
 feature-driven audio encoder runs eagerly" — encoder CUDA graphs cover only BART/mBART/T5
 (trtllm). llama.cpp `Y` via whisper.cpp / Whisperfile rather than the main engine
-([[llamafile]], [[koboldcpp]], [[lemonade]]).
+([[engines/llamafile]], [[engines/koboldcpp]], [[engines/lemonade]]).
 
 **`multimodal`.** vLLM `Y` — a long native list including `InternVLChatModel`,
 `LlavaOnevisionForConditionalGeneration`, `LlavaNextForConditionalGeneration`,
@@ -339,7 +339,7 @@ ships no remote code (`auto_map`) to fall back on" (trtllm). The class's own mem
 vLLM's `--language-model-only`, which sets all supported multimodal modalities to 0 "so that
 their multimodal modules will not be loaded to free up more GPU memory for KV cache" for
 Llama-4, Step3, Mistral-3 and Qwen-3.5 (vllm). llama.cpp `Y` — but
-[[llama-cpp-embedding-server]] states it cannot serve "multimodal encoders requiring a projector
+[[engines/llama-cpp-embedding-server]] states it cannot serve "multimodal encoders requiring a projector
 graph" on the embedding route.
 
 ### 3.2 Retrieval and pooling engines
@@ -360,14 +360,14 @@ itself the finding — retrieval serving in this repo is a separate set of engin
 `LlamaBidirectionalModel`, `LlamaModel`/`MistralModel`, `ModernBertModel`, `NomicBertModel`,
 `Qwen2Model`, `Qwen3Model`, `RobertaModel`, `XLMRobertaModel`, plus `--convert` for any
 generative model, with the Transformers modeling backend covering encoder-only architectures
-directly ([[vllm-pooling-models]]). TEI is the purpose-built reference and lists BERT,
+directly ([[engines/vllm-pooling-models]]). TEI is the purpose-built reference and lists BERT,
 CamemBERT, XLM-RoBERTa, NomicBERT, JinaBERT, MPNet, ModernBERT plus RoPE decoder backbones
-Mistral, Alibaba GTE, Qwen2, Qwen3, Gemma3 ([[hf-text-embeddings-inference]]). SGLang's
+Mistral, Alibaba GTE, Qwen2, Qwen3, Gemma3 ([[engines/hf-text-embeddings-inference]]). SGLang's
 embedding page: "Native encoder embedding architectures and `google/embeddinggemma-300m` are
 detected automatically. Decoder-style embedding models require `--is-embedding`"; on CUDA it
 "automatically uses breakable CUDA graph (BCG) for its full encoder prefill and **disables**
 incompatible radix-cache and chunked-prefill behavior" (sglang-embed).
-[[llama-cpp-embedding-server]] `Y*`: GGUF embedding in the same binary as LLMs is a real
+[[engines/llama-cpp-embedding-server]] `Y*`: GGUF embedding in the same binary as LLMs is a real
 operational advantage, but its record states the caveats — pooling type must match the
 checkpoint's training configuration and is not enforced, and the rerank endpoint is "newer and
 less exercised than the embeddings route".
@@ -379,34 +379,34 @@ less exercised than the embeddings route".
 (mixedbread-ai/mxbai-rerank-base-v2), `Qwen3ForSequenceClassification` (Qwen/Qwen3-Reranker-0.6B),
 `RobertaForSequenceClassification`, `XLMRobertaForSequenceClassification`
 (BAAI/bge-reranker-v2-m3) — with per-model score templates shipped for the rerankers that need a
-specific prompt format ([[vllm-pooling-models]]). TEI has reranking first-class since v0.4.0 for
+specific prompt format ([[engines/vllm-pooling-models]]). TEI has reranking first-class since v0.4.0 for
 CamemBERT, RoBERTa, XLM-RoBERTa and GTE sequence-classification cross-encoders at `/rerank`
-([[hf-text-embeddings-inference]]). SGLang `Y*`: it splits the class in two and says so —
+([[engines/hf-text-embeddings-inference]]). SGLang `Y*`: it splits the class in two and says so —
 "**Cross-encoder rerank models**: run with `--is-embedding` (embedding runner)" vs "**Decoder-only
 rerank models**: run **without** `--is-embedding` and use next-token logprob scoring (yes/no)" —
 and its `BGE-reranker-v2-m3` row carries a hard kernel constraint: "**Currently only support
 `attention-backend` `triton` and `torch_native`**", with the example launch passing
 `--attention-backend triton`, `--disable-radix-cache` and `--chunked-prefill-size -1`
-(sglang-embed). [[triton-inference-server]] `Y` with a batching trap: "Reranker batching via the
-sequence batcher requires modelling the query-document pair as state." [[colbert-reference]] is
+(sglang-embed). [[engines/triton-inference-server]] `Y` with a batching trap: "Reranker batching via the
+sequence batcher requires modelling the query-document pair as state." [[engines/colbert-reference]] is
 `—` for cross-encoders: it is a late-interaction engine, a different kernel class.
 
 **Late interaction — the class boundary that decides engine choice.** A cross-encoder is not
-ColBERT. [[colbert-reference]]: late interaction encodes each passage into a *matrix* of
+ColBERT. [[engines/colbert-reference]]: late interaction encodes each passage into a *matrix* of
 token-level embeddings and scores with MaxSim, "so query-time cost scales with corpus size and is
 bandwidth-bound on the index rather than compute-bound in the encoder", and ColBERTv2's abstract
 states late interaction "inflates the space footprint of these models by an order of magnitude"
 relative to single-vector models. Only **vLLM** serves it as a first-class endpoint —
 `token_embed` pooling plus MaxSim scoring, recorded as "the only first-class ColBERT-style
-scoring in a mainstream serving engine" ([[vllm-pooling-models]]). **TEI `N`**: "the pooling
+scoring in a mainstream serving engine" ([[engines/vllm-pooling-models]]). **TEI `N`**: "the pooling
 options are cls, mean, splade and last-token; there is no token-wise output mode, so a ColBERT
-model cannot be served correctly here" ([[hf-text-embeddings-inference]]).
+model cannot be served correctly here" ([[engines/hf-text-embeddings-inference]]).
 **llama-cpp-embedding-server `N`**: "`--pooling none` gives raw per-token output, which is a
 building block for ColBERT but not a served ColBERT". **SGLang `N`**: no ColBERT, token-embed or
 late-interaction endpoint appears on any of its five pooling pages (sglang-embed).
-[[sentence-transformers]] `Y` for *producing* the token-level embeddings — with the explicit
+[[engines/sentence-transformers]] `Y` for *producing* the token-level embeddings — with the explicit
 limit that "the library produces the token-level embeddings" and production serving means
-wrapping it yourself ([[sentence-transformers]]).
+wrapping it yourself ([[engines/sentence-transformers]]).
 
 ### 3.3 The speech-encoder column
 
@@ -414,10 +414,10 @@ wrapping it yourself ([[sentence-transformers]]).
 `[[models/parakeet-tdt-0-6b-v2]]` — FastConformer / NeMo ASR.
 
 **Every cell is `?`.** No engine record in `data/engines/` enumerates a FastConformer or NeMo ASR
-architecture. The nearest evidence is indirect and negative: [[onnxruntime-genai]]'s official
+architecture. The nearest evidence is indirect and negative: [[engines/onnxruntime-genai]]'s official
 architecture list is "language + vision + speech" and names Whisper but not NeMo; the speech
-engines recorded here ([[koboldcpp]], [[llamafile]], [[lemonade]], [[openvino-genai]],
-[[niche-h2ogpt]]) all reach Whisper specifically. **This is `unknown`, not `unsupported`** — no
+engines recorded here ([[engines/koboldcpp]], [[engines/llamafile]], [[engines/lemonade]], [[engines/openvino-genai]],
+[[engines/niche-h2ogpt]]) all reach Whisper specifically. **This is `unknown`, not `unsupported`** — no
 record asserts either way, and per the repo's own rule a wrong confident cell is worse than an
 open question.
 
@@ -501,15 +501,15 @@ derivable from the fields the schema carries — which is itself an argument for
 
 **What an engine actually does when it lacks local-attention support.** It does not fail; it
 allocates. That is what makes this table dangerous rather than merely interesting, and it is why
-[[step-3-5-flash]]'s own `notes` say outright that its 192 KiB figure "is the WORST CASE and
+[[models/step-3-5-flash]]'s own `notes` say outright that its 192 KiB figure "is the WORST CASE and
 overstates steady-state badly … A reader sizing a server should use that, not the 192 KiB figure."
 
 **Engine-side constraints that make the "supported" cell conditional, not binary:**
 
-- [[mdl2-trtllm-supported-models]]'s per-architecture SWA column: `No` for
+- [[sources/mdl2-trtllm-supported-models]]'s per-architecture SWA column: `No` for
   `Qwen3NextForCausalLM`, `Yes` for Gemma 4 and Step-3.7, `N/A` for ten rows. An engine can
   support a model and still not support its window.
-- [[flashinfer-bf16q-fp8kv-spec-decode-corrupts-swa]] (severity **blocker**): on B200, a
+- [[gotchas/flashinfer-bf16q-fp8kv-spec-decode-corrupts-swa]] (severity **blocker**): on B200, a
   50-of-60-layer SWA Gemma-4 checkpoint with `--kv-cache-dtype fp8_e4m3` and MTP speculative
   decoding (k=7) produces fluent output containing sporadic wrong tokens and short repetition
   loops once `seq_len` passes the 1024-token window. Two independent defects: flashinfer's
@@ -520,16 +520,16 @@ overstates steady-state badly … A reader sizing a server should use that, not 
   speculative decoding are not independently safe on an SWA model.** Attribution matrix from
   the reporter: fp8-Q + spec clean; bf16-Q + no spec clean; bf16-Q + spec corrupted under both
   `-O3` cudagraphs and `--enforce-eager`.
-- [[fa4-num-splits-ignored-sm90]]: vLLM 0.30.0's `vllm_flash_attn` silently ignores
+- [[gotchas/fa4-num-splits-ignored-sm90]]: vLLM 0.30.0's `vllm_flash_attn` silently ignores
   `num_splits` on SM90, costing 48% per-token decode at batch 1 and 36% at batch 4 for
   Gemma-4 26B-A4B-it at ~5.9k context. Worst on global layers (1 query token, 2 KV heads → 2 of
   an H100's 132 SMs with work). `TRITON_ATTN` recovers ~70%.
-- [[rdna-triton-paged-attn-decode-cliff]]: on RDNA, vLLM's custom paged-attention kernel is
+- [[gotchas/rdna-triton-paged-attn-decode-cliff]]: on RDNA, vLLM's custom paged-attention kernel is
   gated on `head_size == 128` **and** `block_size == 16`; anything else falls to Triton 2D.
-- [[eagle-prefix-cache-last-block-drop]]: vLLM issue #53786 asks for fine-grained prefix hits
+- [[gotchas/eagle-prefix-cache-last-block-drop]]: vLLM issue #53786 asks for fine-grained prefix hits
   for sliding-window groups, and hybrid reconciliation already caps the combined hit at the
   shorter boundary.
-- [[mlx-kv-bits-crashes-on-first-request-for-hybrid-attention]]: on Apple Silicon the SWA class
+- [[gotchas/mlx-kv-bits-crashes-on-first-request-for-hybrid-attention]]: on Apple Silicon the SWA class
   is a cache-*class* problem, not a kernel problem — `RotatingKVCache` had no quantized
   implementation.
 
@@ -564,7 +564,7 @@ single most counter-intuitive number in this document and the one most likely to
 wrongly.
 
 **The state that replaces the cache is not free, and it scales the other way.**
-[[ssm-recurrent-state-update]] states the corollary precisely: "The corollary nobody quotes: the
+[[flops/ssm-recurrent-state-update]] states the corollary precisely: "The corollary nobody quotes: the
 state is NOT free, it is a fixed per-sequence tax that stops amortising as batch grows, so at
 very large batch a pure-attention model with paged KV can hold more total tokens than a hybrid
 with 96 MiB/seq of undividable state." Concretely, at batch 256 on Nemotron-H-8B you pay
@@ -584,30 +584,30 @@ DeepSeek-V3's 68.6 KiB.**
 
 **Reproduced class-level bugs, all cited, all architecture-specific:**
 
-- [[eagle-prefix-cache-last-block-drop]] — vLLM's EAGLE `drop_eagle_block` falls back to marking
+- [[gotchas/eagle-prefix-cache-last-block-drop]] — vLLM's EAGLE `drop_eagle_block` falls back to marking
   *all* KV groups as eagle when the model has no `is_eagle_group` annotation. On dense models the
   alignment unit is a 16-token block; on a hybrid GDN/Mamba layout it is **1,648 tokens**, so the
   same protection costs ~100× more cache hit — 97.5% → 86.9–91.7%, and 30–40% batch throughput
   on prefix-reusing workloads. The reporter explicitly says other hybrid layouts must be
   evaluated by their own alignment; the 100× is layout-specific.
-- [[gated-deltanet-decode-collapse-long-context]] — llama.cpp decode collapses on hybrid
+- [[gotchas/gated-deltanet-decode-collapse-long-context]] — llama.cpp decode collapses on hybrid
   gated-deltanet GGUF models at high KV position: 33 t/s at 68K → 1.4 t/s at 91K with the model
   fully resident, surviving `--n-gpu-layers 999`, both q4_0 and q5_0 KV, and FA on or off. Only
   `-c 73728` with q8_0 KV and FA off held 33.1 t/s. Fast prefill (~1300 t/s) with collapsed decode
   rules out memory-capacity and offload. Not root-caused.
-- [[sycl-hybrid-linear-attention-arch-crash-intel-arc]] — llama.cpp's SYCL path has a regression
+- [[gotchas/sycl-hybrid-linear-attention-arch-crash-intel-arc]] — llama.cpp's SYCL path has a regression
   **specific to hybrid linear-attention graphs**: `qwen3next`/`qwen3_35`-architecture models
   crash in `ggml_sycl_op_mul_mat` or return empty output on 2× Arc Pro B60, bisected to builds
   between b8477 (works) and b9479 (fails), while dense-attention models on the same cards are
   unaffected. "Battlemage works" does not generalise across model families.
-- [[fp8-kv-cache-cudagraph-python-scatter-corruption]] — adjacent but worth naming: the fp8 KV
+- [[gotchas/fp8-kv-cache-cudagraph-python-scatter-corruption]] — adjacent but worth naming: the fp8 KV
   path for a sparse-attention MoE goes through a plain-Python advanced-index scatter that is not
   CUDA-graph-safe, so on 8× A800 (SM80, no native fp8) `--kv-cache-dtype fp8_e5m2` plus any
   CUDA-graph mode produces pure garbage while `--enforce-eager` produces coherent output at
   5.2 tok/s. The bf16 path uses a fused graph-safe op. That is a cache-*write* path bug in a
   model whose attention is sparse-indexed, and it is a different failure mode from §2.1's
   cache-*format* issue.
-- [[pd-packed-kv-layout-change-silently-breaks-external-caches]] — the external-cache
+- [[gotchas/pd-packed-kv-layout-change-silently-breaks-external-caches]] — the external-cache
   counterpart: vLLM PR #44455 changed the KV layout from `[num_blocks, 2, block_size,
   num_heads, head_size]` to a packed `[num_blocks, num_heads, block_size, 2*head_size]`, and
   LMCache's connectors encode that assumption structurally rather than as a validated field. A
@@ -623,15 +623,15 @@ Four independent mechanisms, in increasing order of how much they break a deploy
 
 | # | mechanism | kernel | what it does to the cache | record |
 |---|---|---|---|---|
-| 1 | KV *precision* is set by the kernel | FlashMLA | FP8/FP4 only; bf16 KV explicitly unsupported. V4.1 layout: 528 B/token (512 e4m3 + 16 e8m0 scales), fp4 variant 288 B/token. The 64 RoPE dims are quantized too — no bf16 part. | [[flashmla-decode-fp8-fp4-kv]] [[kern-flashmla-github]] |
-| 2 | KV *page-block size* is set by the kernel | FlashInfer sparse MLA | Planner hard-codes `_PAGE_BLOCK_SIZE = 64`; vLLM computes `block_size // compress_ratio`. No global block size satisfies both → model will not start on SM120. | [[sm120-sparse-mla-block-size]] |
-| 3 | KV *class* is set by the layer type | mlx-lm | Sliding-window layers use `RotatingKVCache`, a different class from the full-attention `QuantizedKVCache`, and only the latter had a quantized implementation. A feature that exists for one class raises `NotImplementedError` for the other — at first request, not at startup. | [[mdl2-mlxlm-pr1584-rotating-quantized-kv]] [[mlx-kv-bits-crashes-on-first-request-for-hybrid-attention]] |
-| 4 | KV *layout* is set by the engine version | vLLM + any external KV tier | Packed vs unpacked layout change silently invalidates every block written under the old layout. | [[pd-packed-kv-layout-change-silently-breaks-external-caches]] |
+| 1 | KV *precision* is set by the kernel | FlashMLA | FP8/FP4 only; bf16 KV explicitly unsupported. V4.1 layout: 528 B/token (512 e4m3 + 16 e8m0 scales), fp4 variant 288 B/token. The 64 RoPE dims are quantized too — no bf16 part. | [[flops/flashmla-decode-fp8-fp4-kv]] [[sources/kern-flashmla-github]] |
+| 2 | KV *page-block size* is set by the kernel | FlashInfer sparse MLA | Planner hard-codes `_PAGE_BLOCK_SIZE = 64`; vLLM computes `block_size // compress_ratio`. No global block size satisfies both → model will not start on SM120. | [[gotchas/sm120-sparse-mla-block-size]] |
+| 3 | KV *class* is set by the layer type | mlx-lm | Sliding-window layers use `RotatingKVCache`, a different class from the full-attention `QuantizedKVCache`, and only the latter had a quantized implementation. A feature that exists for one class raises `NotImplementedError` for the other — at first request, not at startup. | [[sources/mdl2-mlxlm-pr1584-rotating-quantized-kv]] [[gotchas/mlx-kv-bits-crashes-on-first-request-for-hybrid-attention]] |
+| 4 | KV *layout* is set by the engine version | vLLM + any external KV tier | Packed vs unpacked layout change silently invalidates every block written under the old layout. | [[gotchas/pd-packed-kv-layout-change-silently-breaks-external-caches]] |
 
 Two more that constrain the cache write path rather than its format:
-[[flashinfer-bf16q-fp8kv-spec-decode-corrupts-swa]] (a non-graph-safe fp8 KV *insert* combined
+[[gotchas/flashinfer-bf16q-fp8kv-spec-decode-corrupts-swa]] (a non-graph-safe fp8 KV *insert* combined
 with double-applied scales, corrupting SWA output silently) and
-[[fp8-kv-cache-cudagraph-python-scatter-corruption]] (the same shape on a sparse-indexed MoE).
+[[gotchas/fp8-kv-cache-cudagraph-python-scatter-corruption]] (the same shape on a sparse-indexed MoE).
 
 **The generalisation, and it is the practical point of this document:** the KV cache is not a
 function of the model alone. It is a function of (model geometry) × (attention implementation)
@@ -647,18 +647,18 @@ Counted per cell, in §3.1 and §3.2.
 
 ### 7.1 Why a whole column is unknown
 
-- **[[flashinfer]] (all 14 families).** It is a kernel library, not a serving engine: its record
+- **[[engines/flashinfer]] (all 14 families).** It is a kernel library, not a serving engine: its record
   states "Not an engine: you cannot serve a model with it alone" and `scheduling: none`. It has
   no model registry, so "which architectures does it support" has no meaning — it supports a
   *kernel*, and the model set is whatever the calling engine loads. Its relevant facts are
   architectural (§2.1, §4), not family-level.
-- **[[vllm-metal]] (all 14 families).** Its record states "Model coverage is a growing set with
+- **[[engines/vllm-metal]] (all 14 families).** Its record states "Model coverage is a growing set with
   a separate supported-models matrix, so an architecture not on that list is unsupported" — the
   matrix itself was not read into a record. Honest cell: `?`.
-- **[[mlx-lm]] (10 of 14 families).** Same reason: the record names prompt caching, rotating KV
+- **[[engines/mlx-lm]] (10 of 14 families).** Same reason: the record names prompt caching, rotating KV
   and `--kv-bits` but enumerates no architecture list.
-- **[[exllamav2]] (all families).** No architecture statement of any kind in its record, and the
-  project is archived. Its [[exllamav3]] successor claims "very broad HF architecture coverage
+- **[[engines/exllamav2]] (all families).** No architecture statement of any kind in its record, and the
+  project is archived. Its [[engines/exllamav3]] successor claims "very broad HF architecture coverage
   including multimodal (DeepSeek V4, GLM 4.7/5.3 Flash, Qwen 3.5, Gemma 4, MiMo)" and vendors
   FLA kernels, but names no `ssm`, `diffusion`, `encoder-decoder` or `recurrent` row, and records
   two explicit exclusions: Gemma 4 E2B/E4B unsupported, and MiMo-V2.6-Flash without audio.
@@ -666,18 +666,18 @@ Counted per cell, in §3.1 and §3.2.
 ### 7.2 Unknowns inside columns that are otherwise populated
 
 - **`recurrent` × 9 engines.** The only family with no positive statement anywhere.
-  [[pap-arch-llamacpp-arch-registry]] records no `LLM_ARCH_RWKV5` entry while listing RWKV6/7;
+  [[sources/pap-arch-llamacpp-arch-registry]] records no `LLM_ARCH_RWKV5` entry while listing RWKV6/7;
   vLLM, SGLang and TRT-LLM have no RWKV row at all. The checkpoint's own `notes` record that
   the transformers port is "for experimentation and demo use, not the production path". **No
   record in this repo states RWKV support.**
 - **`speech-encoder` × all engines.** FastConformer/NeMo ASR is enumerated by no engine record.
-  [[onnxruntime-genai]]'s architecture list is "language + vision + speech" naming Whisper but
+  [[engines/onnxruntime-genai]]'s architecture list is "language + vision + speech" naming Whisper but
   not NeMo. `unknown`, not `unsupported` — no record asserts either way.
-- **`cross-encoder` × [[colbert-reference]]** — not unknown but structurally out of scope: it is
+- **`cross-encoder` × [[engines/colbert-reference]]** — not unknown but structurally out of scope: it is
   a late-interaction engine, a different kernel class.
 - **`triton-inference-server` × late interaction.** Its record covers bi-encoders, cross-encoder
   rerankers and SPLADE via ONNX, and states "ColBERT indexes are not comparable to single-vector
-  indexes" (in [[niche-colbert]]), but the triton record itself makes no ColBERT claim.
+  indexes" (in [[engines/niche-colbert]]), but the triton record itself makes no ColBERT claim.
 - **`diffusion` × TRT-LLM.** The engine hosts a diffusion *VisualGen* pipeline for image/video,
   but its architecture table has no diffusion *text* row. Different task class; `?` rather than
   conflating them.
@@ -703,7 +703,7 @@ Counted per cell, in §3.1 and §3.2.
    absence. `docs/10-testing-methodology.md` exists; no test in this document was run. A cell
    that says `Y` means "a record names it", not "it was measured at N tok/s".
 2. **Per-cell citations are to registries, not to binaries.** The three registries were read on
-   2026-10-03 and both [[vllm]]'s and [[mdl2-trtllm-supported-models]]'s own notes warn the
+   2026-10-03 and both [[engines/vllm]]'s and [[sources/mdl2-trtllm-supported-models]]'s own notes warn the
    tables change as the engines evolve. Treat per-cell support as of that date.
 3. **The `?` cells are worth closing in a specific order**, because each blocks a different
    decision: `recurrent` (nothing here can serve the checkpoint on any recorded engine),
