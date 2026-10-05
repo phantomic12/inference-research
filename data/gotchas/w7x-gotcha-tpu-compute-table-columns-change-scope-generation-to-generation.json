@@ -1,0 +1,39 @@
+{
+  "id": "w7x-gotcha-tpu-compute-table-columns-change-scope-generation-to-generation",
+  "type": "gotcha",
+  "name": "Google does not use one spec-table column convention across TPU generations: the same row name means per-chip on v3, per-pod on v5e/v5p, and per-chip-summed-over-chiplets on Ironwood",
+  "class": "hardware",
+  "affects": [
+    "google-tpu-v2",
+    "google-tpu-v3",
+    "google-tpu-ironwood",
+    "google-tpu-v4",
+    "google-tpu-v5e",
+    "google-tpu-v5p",
+    "google-tpu-v6e"
+  ],
+  "concepts": [
+    "spec-table-reading",
+    "per-chip-vs-per-pod",
+    "chiplet-scope",
+    "tpu-generations",
+    "multi-host-deployment",
+    "roofline"
+  ],
+  "symptom": "Every Google per-generation spec table uses the SAME ROW LABELS - 'Peak compute per chip', 'HBM capacity per chip', 'HBM bandwidth per chip', 'TPU Pod size', 'ICI bandwidth per chip' - while the SCOPE behind each label differs per page and per generation, in three separate ways. (1) SCOPE PRETENDS TO BE POD AND IS ACTUALLY PER CHIP: the Cloud TPU v3 page's table header cell reads 'v3 Pod values' while its rows are per chip - 123 teraflops, 32 GiB, 900 GBps, 123/220/262 W. A reader who honours the header gets a 1024-chip pod with 32 GiB and 900 GBps, off by 1024x on both memory figures. (2) SCOPE IS PER CHIP BUT THE HBM FIGURE IS ALSO STATED IN POD UNITS ON THE SAME PAGE: v3's table prints both 'Peak compute per chip 123 teraflops' and 'Peak compute per Pod 126 petaflops', and v5e's prints both 'Peak compute per chip (bf16) 197 TFLOPs' and 'Peak compute per Pod 50.63 PFLOPs' and 'Peak compute per Pod 100 PetaOps (Int8)'. Reading the wrong row is a silent 256x error (v5e) or 1024x (v3), and the pod row is the one a reader scanning for capacity naturally lands on. (3) SCOPE IS PER CHIP BUT THE CHIP IS NOT ONE ADDRESS SPACE: the Ironwood table's 'HBM capacity per chip 192 GiB' is the SUM of two chiplets each carrying its own 96 GB, so per-address-space capacity is 96 GB and the two are explicitly not a unified memory space. Separately, the TFLOPS-vs-TOPS convention is not stable either: Google's TPU7x page prints 'Peak compute per chip (FP8) (TFLOPs) 4614' - a doubled FP8 rate filed under a TFLOPS label - while v5p prints FP8 identical to BF16 and v6e prints FP8 identical to BF16 with only INT8 doubled. The unit is the TFLOPS label; the semantics are TOPS.",
+  "root_cause": "Google maintains each generation's page as an independently authored document rather than generating them from one schema, so there is no cross-generation column contract, and the shared vocabulary of row labels reassures a reader that the tables agree when they do not. This is the documented failure class of gotcha aa-gotcha-spec-table-column-mixing, but at the CROSS-GENERATION scale: that record is about mixing columns within one table, this is about the same row name carrying different scopes on different pages. Nothing in the corpus's schema could have caught it either - the accelerator schema stores a flat per-part vram_gb and memory_bandwidth_gbps with no scope or provenance-of-scope field, so once transcribed, a value that was per-pod and a value that was per-chip are indistinguishable in the record. The secondary cause is the TFLOPS/TOPS conflation, which is the vendor-side root of a trap already recorded once in this repo at the benchmark layer in bench-tflops-filed-as-tps-aggregate-survives-the-tok-s-filter: Google's own page labels an integer-operation rate 'TFLOPs'. The number is right and the label is wrong, which is the hardest kind of defect to catch by reading.",
+  "workaround": "Three rules. (1) NEVER trust a Google TPU spec table's COLUMN HEADER - read the row label itself, which on v3 is the only reliable signal, and cross-check against the per-part record where pod and chip rows both appear. (2) Establish the scale by arithmetic before believing any capacity figure: if chips-per-pod x per-chip-figure does not approximately reproduce the per-pod figure on the same page, you have crossed a scope line. v3: 1024 x 123 TFLOPS = 126 PFLOPS, matches. v5e: 256 x 197 = 50.4 PFLOPS, matches the printed 50.63 within the rounding. (3) For any dual-chiplet part, halve the published HBM capacity and bandwidth to get the per-address-space figure before planning a sharding split; on Ironwood that turns 192 GiB / 7380 GB/s into 96 GiB per chiplet, which is what a single JAX device sees. On the FLOPS question specifically: this corpus records Google's TPU integer-operation rates under the flops[] rows whose precision names them (int8, fp8) and never carries a TPU number forward from one generation to another, because as v5p and v6e demonstrate, Google's own doubling behaviour differs per generation and a number that holds for v6e does not hold for v5p.",
+  "severity": "major",
+  "notes": "FOUND 2026-10-05 while adding the missing Google TPU generations (agent w7-tsm), by reading all seven generation pages plus the v2/v3 architecture paper side by side rather than one at a time. Reading any single page in isolation does not surface this - the v3 page is internally fine, the v5e page is internally fine, the Ironwood page is internally fine; only the comparison reveals that the same row label changed meaning across them. SCOPE OF THE CLAIM, so it is not overread: all seven per-part records in data/accelerators/ are internally consistent and individually verified against Google's own pages on 2026-10-05, and no value in any existing record was changed by this pass. This gotcha documents the hazard for a reader TRANSCRIBING a new TPU generation, which is the activity that produced google-tpu-v2 and google-tpu-v3 in this pass; it is not an assertion that google-tpu-v4, google-tpu-v5e, google-tpu-v5p or google-tpu-v6e contain a mis-scoped number. One thing this pass did find in an existing record, and deliberately did NOT silently change: the google-tpu-v5p and google-tpu-v6e records each carry notes that transcribe the v5p/v6e pages correctly, and google-tpu-v6e's notes already flag the FP8 row as non-doubling while google-tpu-v5p's record is the one carrying status contested on FP8 semantics. The Ironwood page's own comparison table prints v5p FP8 = 459 = v5p BF16, so the vendor's side-by-side table reproduces the same contested v5p figure next to Ironwood's clean 2x doubling - that inconsistency is recorded in google-tpu-ironwood's notes rather than resolved here, because resolving it would require choosing between two first-party vendor statements, which AGENTS.md forbids. Related: bench-tflops-filed-as-tps-aggregate-survives-the-tok-s-filter, aa-gotcha-spec-table-column-mixing, and w7x-gotcha-ironwood-is-tpu7x-not-trillium.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-05",
+  "sources": [
+    "asic-tpu-v3-specs",
+    "asic-tpu-v2-paper",
+    "alt-tpu7x-ironwood",
+    "asic-tpu-v5e-specs",
+    "asic-tpu-v6e-specs",
+    "asic-tpu-v5p-specs"
+  ]
+}

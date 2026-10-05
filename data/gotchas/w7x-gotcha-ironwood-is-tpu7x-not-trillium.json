@@ -1,0 +1,32 @@
+{
+  "id": "w7x-gotcha-ironwood-is-tpu7x-not-trillium",
+  "type": "gotcha",
+  "name": "Ironwood and Trillium are two different TPU generations, and Google's own naming hides which is which: a query for 'Ironwood' or for 'Trillium' returns half the answer",
+  "class": "hardware",
+  "affects": [
+    "google-tpu-ironwood",
+    "google-tpu-v6e",
+    "google-tpu-v5p"
+  ],
+  "concepts": [
+    "tpu-generations",
+    "part-selection",
+    "vendor-codename",
+    "pod-scale",
+    "capacity-planning"
+  ],
+  "symptom": "Google gave the two most recent TPU generations plant codenames and kept the marketing name DETACHED from the generation number in the docs: v6e is 'Trillium' and TPU7x is 'Ironwood'. The mechanical version number IS printed on every page ('TPU v6e (Trillium)', 'TPU7x (Ironwood)'), so each page is internally unambiguous - the failure only appears when someone searches the corpus by codename. A reader searching 'Ironwood' in this repo found only engine and source prose (the vLLM tpu-inference support matrix, the Ironwood performance guide, the SPMD/flops records) and NO accelerator record, because before this pass no accelerator record carried the Ironwood generation at all - the corpus had sources for TPU7x but the part itself was unrecorded, while Trillium had a full record. The mirror image is worse for planning: searching 'Trillium' finds a complete-looking 256-chip v6e record and answers the question, so the search appears to succeed. A reader who wanted the newest large-pod part and settled for what the codename search returned is now holding a 256-chip pod part, not a 9216-chip one, with no signal that the search misled them.",
+  "root_cause": "A vendor's marketing codename and its generation identifier are two names for one part, but a knowledge base is queried by identifier, and the identifier here is the one that is NOT memorable. The asymmetry in this corpus is structural: the v6e record has existed since 2026-10-03 and carries 'Trillium' in its name field and its notes, so every codename-based query for the newer generation silently resolved to the older part. Nothing in the schema enforces that a part is findable by its codename, because there is no codename field - the only place it can live is free text in `name` and `notes`, which is exactly what a filter does not read. The same class of problem already appears elsewhere in this repo where a marketing name and a part name diverge (see bench-mlperf-interactive-scenario-labels-itself-server for the scenario-name variant).",
+  "workaround": "Never select a TPU generation by codename. Select on the generation identifier - v6e or TPU7x - and treat a codename only as a cross-reference label to be verified. When reading any record in this family, check `architecture` rather than `name`: google-tpu-v6e carries architecture 'v6e (Trillium)' and google-tpu-ironwood carries 'TPU7x (Ironwood)', so the generation is readable from a typed field even though the codename is not. For capacity planning specifically, the pair of figures to compare is chips per pod and HBM per chip: 256 chips / 32 GB (v6e) against 9216 chips / 192 GB (TPU7x), which is a 36x difference in pod footprint. If a query returns only one Google part and you cannot say which generation you got, the answer is incomplete, not ambiguous.",
+  "severity": "major",
+  "notes": "FOUND 2026-10-05 while adding the missing Google accelerator generations (agent w7-tsm), during a corpus-wide sweep for TPU references. The sweep counted every 'Ironwood' and 'Trillium' occurrence in data/ and found 9 Ironwood hits, all in data/sources/, data/engines/ and data/flops/ - zero in data/accelerators/ before this pass - against 12 Trillium hits including the v6e record. That imbalance was the tell: the sources were complete and the part was missing, so a codename lookup resolved to whichever generation happened to have a record. TWO FACTS THAT MAKE THE SUBSTITUTION EXPENSIVE RATHER THAN COSMETIC, both first-party and both recorded in the records themselves: (1) the dual-chiplet architecture, where google-tpu-ironwood is two chiplets of 96 GB each rather than one unified 192 GB address space, so unified_memory is false there and true on v6e; (2) pod scale, 9216 against 256 chips. A planner who conflates the two is wrong on both memory capacity and cluster size, and the v6e record gives no hint that a larger part exists. Note this gotcha is deliberately NOT filed as a measurement defect and is not a claim that either record's numbers are wrong - both were verified against Google's own pages on 2026-10-05. The defect is discoverability. A structural fix would be a codename or alias field on the accelerator schema, which is a schema change and was therefore NOT made in this pass; it is flagged here for the schema owner. Related: the corpus already records the adjacent confusion in bench-tflops-filed-as-tps-aggregate-survives-the-tok-s-filter, where a TPU peak-compute figure was found under a tokens/s key - same family of Google-parts-are-not-interchangeable failures, different layer.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-05",
+  "sources": [
+    "alt-tpu7x-ironwood",
+    "asic-tpu-v6e-specs",
+    "asic-tpu-v5p-specs",
+    "alt-tpu-vllm-inference-readme"
+  ]
+}

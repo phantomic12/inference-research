@@ -1,0 +1,52 @@
+{
+  "id": "google-tpu-ironwood",
+  "type": "accelerator",
+  "name": "Google TPU7x (Ironwood)",
+  "vendor": "google",
+  "architecture": "TPU7x (Ironwood)",
+  "release_year": 2025,
+  "process_nm": null,
+  "form_factors": [
+    "custom"
+  ],
+  "vram_gb": 192,
+  "memory_type": "hbm",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 7380,
+  "memory_bandwidth_basis": "Vendor-published per-CHIP HBM bandwidth of 7380 GBps from the TPU7x spec table; the prose restates it as 'approximately 7.37 TB/s'. Scope warning: this 7380 and the 192 GiB are summed across BOTH chiplets of the dual-chiplet chip - each chiplet independently carries 96 GB - so the per-address-space figure a kernel actually sees is 96 GB, and per_chiplet_bandwidth is not separable from the published total. No bus width is published and none was back-computed.",
+  "flops": [
+    {
+      "precision": "bf16",
+      "tflops": 2307,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "alt-tpu7x-ironwood",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Transcribed from Google's TPU7x spec table, row 'Peak compute per chip (BF16) (TFLOPs) 2307', in a table that prints v5p / v6e / TPU7x side by side so the figure is directly comparable to the two records already in this repo. Recorded dense:true as printed. INTERNAL CONSISTENCY CHECK: 9216 chips x 2307 TFLOPS = 21.25 PFLOPS per pod at full pod scale, and the shape is exactly 2 x v5p's 459 (2307 = 459 x 5.03; the near-5x is not a clean multiple and no derivation from v5p was used - the number is as printed).",
+      "unit": "bf16-tflops"
+    },
+    {
+      "precision": "fp8",
+      "tflops": 4614,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "alt-tpu7x-ironwood",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Transcribed from Google's TPU7x spec table, row 'Peak compute per chip (FP8) (TFLOPs) 4614'. Recorded dense:true. THIS IS A GENUINE 2x AND IT IS AS PRINTED: 4614 = 2 x 2307 exactly, which is what makes TPU7x the first Google part in this repo where the FP8 row is unambiguously the doubled one. That matters because v5p's FP8 row is identical to its BF16 row and is therefore contested in google-tpu-v5p, and v6e's own spec table prints 918 for BOTH BF16 and FP8 while only its INT8 row doubles. Do not generalise 'FP8 = 2x BF16' from TPU7x back onto v5p or v6e - on those two the doubling happens at INT8 or not at all, and the three parts disagree.",
+      "unit": "fp8-tflops"
+    }
+  ],
+  "tdp_w": null,
+  "interconnect": [
+    "google-tpu-ici"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "Per-CHIP figures. TPU7x is the first release in the Ironwood family, Google's seventh-generation TPU, and the current-generation part in this repo. Google positions it as the large-pod training/inference part: 9216 chips per pod, sharing 'many similarities' with v5p. Named for a metal, like Trillium (v6e); the two codenames are DIFFERENT GENERATIONS and are not interchangeable - see gotcha w7x-gotcha-ironwood-is-tpu7x-not-trillium.\nWHAT GOOGLE DOES PUBLISH, per generation, for a multi-host deployment: HBM 192 GiB per chip at 7380 GB/s; ICI 1200 GBps bidirectional per chip, DCN 100 Gbps per chip; pod scale 9216 chips. The topology section additionally publishes 'bi-directional bandwidth of 200 GBps per axis for communication between chips within a pod' on a 3D torus - that per-axis figure and the 1200 GBps per-chip aggregate are different quantities on different axes of the same table and must not be substituted for one another. Beyond the pod, multislice extends connectivity over the DCN. Four chips per TPU7x VM, 224 vCPUs and 960 GB RAM per VM, 2 NUMA nodes.\nTHE DUAL-CHIPLET ARCHITECTURE IS THE HEADLINE AND THE MAIN SCOPE TRAP. Every earlier Google part here is a single logical core (a 'MegaCore'); TPU7x is composed of two chiplets, each with its own TensorCore, two SparseCores and its own 96 GB of HBM, connected by a die-to-die interface that Google states is six times faster than a 1D ICI link. CONSEQUENCE FOR EVERY FIGURE ABOVE: vram_gb 192 and memory_bandwidth_gbps 7380 are per CHIP and are the SUM of two independent 96 GB memories. The two are NOT one address space - Google states this is 'a departure from the unified memory space of the MegaCore architecture'. This is the ONLY Google accelerator in this repo with unified_memory=false, and a reader who treats it as unified will size a sharding plan wrong by 2x. (Across the whole repo false is the majority value for this field, so the flag alone will not flag TPU7x as unusual - it is unusual only RELATIVE to its own four predecessors, which are all true.) JAX exposes each chiplet as a separate 'device' (two devices per chip) and adds a fourth dimension to the topology tuple to select chiplets.\nVERIFIED NEGATIVE - TDP. tdp_w is null. Google's TPU7x page publishes no power row at all - not TDP, not measured min/mean/max, unlike v3 and v4 which carry measured figures and v2 which carries a paper TDP. No figure was carried across from another generation; for reference the v5p/v6e rows in the same comparison table carry no power column either, so there is no in-family value to infer from.\nVERIFIED NEGATIVE - PROCESS NODE AND BUS WIDTH. Both null: the TPU7x page publishes no process node and no memory bus width, and none was estimated or back-computed from 7380 GB/s.\nCOMPUTE-TO-BYTE, and why this part is different in kind from the ones before it: 2307e12/7380e9 = 313 FLOP/byte BF16. That is below v6e's 560 (google-tpu-v6e), so on a pure per-chip arithmetic-intensity comparison TPU7x is LESS compute-dense per byte than the smaller inference part. What changes is the absolute envelope - 192 GiB per chip and 9216 chips per pod - and Google's own framing that 'despite its size, HBM can still be a bottleneck, particularly for memory-bound vector operations'. The memory hierarchy is HBM -> Vector memory (VMEM, on-chip SRAM scratchpad whose size is a tunable parameter for Pallas kernels) -> host memory over PCIe, with host offload of activations or optimizer states as the documented pressure valve. SparseCore count is 4 per chip, same as v5p, versus 2 on v6e.\nCOMPARISON-TRAP, recorded because this table is the first place a reader will make the error: Google's own TPU7x table prints v5p FP8 = 459, identical to v5p BF16 = 459. That is the contested figure in google-tpu-v5p, and here it sits in the same row as TPU7x's own clean 2x doubling, which makes the v5p non-doubling look like an error rather than what google-tpu-v5p records it as. It is a documentation inconsistency in the vendor's own comparison table, not a transcription error.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
+  "sources": [
+    "alt-tpu7x-ironwood"
+  ]
+}
