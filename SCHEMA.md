@@ -29,17 +29,37 @@ JSON Schema per record type lives in `schemas/`. This is the human version.
     memory_bus_bit         int
     memory_bandwidth_gbps   number
     memory_bandwidth_basis  string     how the bandwidth number was arrived at
-    flops                  [ { precision: fp32|bf16|fp16|tf32|fp8|fp6|fp4|int8|int4,
-                                tflops: number, dense: bool, source_id: string } ]
+    flops                  [ { precision: fp32|tf32|bf16|fp16|fp64|fp8|fp6|fp4|
+                                               fp4_block_scaled|int8|int16|int4|other,
+                                   tflops: number, dense: bool, vendor_claim: bool,
+                                   source_id: string|null,
+                                   basis: vendor-spec-sheet|vendor-whitepaper|
+                                          vendor-docs|secondary-aggregator|derived|
+                                          unverified,
+                                   basis_detail: string,
+                                   unit: string|null } ]
     tdp_w                  number     per device or per accelerator in a package
     interconnect           [string]   interconnect ids this device exposes
     unified_memory         bool
-    consumer                bool
+    consumer               bool
     notes
 
 `flops` is a list because precision matters more than the headline number. Always
 record whether a figure is dense or sparse — sparse counts are not comparable and
 marketing conflates them.
+
+`basis` is REQUIRED on every `flops` row (added 2026-10-04). A row states which kind
+of statement its number is, and `basis_detail` carries the derivation with the
+numbers substituted, so a reader can re-run it with their own inputs. Without this a
+row could carry a TFLOPS value justified only in free-text notes, which is how eight
+generated values once survived review — see gotcha `flops-row-had-no-basis-field`.
+`unit` is only for precisions with several distinct hardware paths on one part
+(e.g. `fp64-vector` vs `fp64-tensor-core`), so two rows at one precision are never
+silently summed.
+
+`fp64` and `int16` are enum members added 2026-10-04. Before them every FP64 row was
+filed as `other`, indistinguishable from a row whose precision is unknown; `other` now
+has zero rows in the repo.
 
 ## flop
 
