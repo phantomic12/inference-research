@@ -395,12 +395,28 @@ emulated list is [[quantization/moe-mixed-precision]] and [[quantization/moe-rou
 Arc is the thinnest native-quant story in the repo. Its record also notes the capacity wall:
 12 GB at 456 GB/s, and PCIe **x8 not x16**.
 
-**Apple Silicon ([[accelerators/apple-m3-max]], [[accelerators/apple-m3-ultra]])** — **no
-native quantization support recorded at all.** The only entry anywhere is
-[[quantization/mlc-quant-q4f16]] in `emulated_support`. MLX's own formats
-([[engines/mlx-lm]]: `mlx-quantized-4bit`, `mlx-quantized-8bit`) are Metal-native by
-construction but are **not** in the quantization schema's enum, so the repo has no format
-record for them — a schema gap, recorded in §5.
+**Apple Silicon ([[accelerators/apple-m3-max]], [[accelerators/apple-m3-ultra]])** — **now
+native, and this entry previously said the opposite; the earlier text was false.**
+[[quantization/mlx-affine-quantized]] lists **both** `apple-m3-max` and
+`apple-m3-ultra` in `native_support` (alongside M4 Max, M4 Pro, M5 Max, M5 Ultra and
+M5 Pro), with **group 64** and `emulated_support` empty. [[quantization/mlc-quant-q4f16]]
+remains in `emulated_support`. The selection step and its caveats are in
+[23-quantization-selection.md](23-quantization-selection.md) §0 and §9.9 — read that
+row rather than restating it here.
+
+**What still does not resolve on Apple, and it is the reason to read 23 before
+choosing.** MLX's own formats ([[engines/mlx-lm]]: `mlx-quantized-4bit`,
+`mlx-quantized-8bit`) are Metal-native by construction but are **not** in the
+quantization schema's enum, so those two *engine labels* still have no format
+record of their own; [[quantization/mlx-affine-quantized]] is the closest thing and
+is keyed on the affine mode at group 64. Three benchmark records still point
+`format_id` at `mlx-quantized-4bit`, which is **not a record id** — a dangling
+reference the format record's own notes name. And MLX ships **four** modes at four
+different group sizes (affine 64, mxfp4 32, nvfp4 16, mxfp8 32), so a benchmark
+recorded as "4-bit on Apple" may be any of a 64-group affine grid or a 32-group MX
+grid, and those differ in both memory arithmetic and quality. **"Native on Apple"
+is now true and is still not sufficient to compare two Apple checkpoints.** §5
+records the schema gap.
 
 **The parts with no quantization story whatsoever** — [[accelerators/amd-radeon-pro-vii]]
 (1 native, 21 emulated), [[accelerators/cerebras-wse-3]], [[accelerators/groq-lpu]],
