@@ -705,10 +705,11 @@
 - **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (339)
+## Gotchas (343)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
+- **16 papers in this repo were live under two slugs each, with contradictory venues - the affiliation field is what exposed them** (`gotchas/w6p-one-paper-two-slugs-sixteen-times-and-the-field-that-exposed-it`) — [blocker] toolchain · Sixteen papers each had TWO live records under different slugs, so every venue-, category- and adoption-filtered query returned some papers twice. Six of the sixteen carried contradictory venues: s4 h
 - **A cache hit produces different output than a cold run, with no error anywhere in the stack** (`gotchas/pd-cache-hit-silently-differs-from-cold-run`) — [blocker] framework · The disaggregated deployment looks completely healthy and still returns wrong text. Both vLLM servers start, return HTTP 200, stay healthy after the requests, report that LMCache P/D mode is enabled, 
 - **A dropped KV-transfer completion notification hangs the receiver forever at 100% CPU instead of erroring** (`gotchas/pd-completion-notification-drop-hangs-receiver`) — [blocker] framework · The decode (GEN) worker goes silent after model init with no error and no crash. The stack sits in check_gen_transfer_status, the GPU is idle, and the process spins at 100% CPU. Reproduced 100% of the
 - **A failed RDMA KV transfer is reported as success: HTTP 200, valid envelope, garbage tokens** (`gotchas/pd-rdma-transfer-failure-returns-http-200-garbage`) — [blocker] hardware · On a disaggregated vLLM deployment over InfiniBand, the served model returns garbage tokens with no error at all: 'The request returns HTTP 200 with a well-formed OpenAI response envelope, populated u
@@ -719,6 +720,7 @@
 - **A persistent per-pod /dev/shm converts one scheduler crash into a permanent crashloop, because a container restart does not reclaim leaked segments** (`gotchas/mgpu-devshm-leak-wedges-pod-permanently`) — [blocker] framework · Measured fleet-wide on ~700 H20 GPUs with TP4 pods: a single traffic burst produced scheduler crashes, and affected pods went from 4 to 101 in about 30 minutes with none recovering without pod deletio
 - **A tensor-parallel size that does not divide the model's attention-head count fails at startup, and the message does not tell you what to use instead** (`gotchas/mgpu-tp-size-must-divide-attention-heads`) — [blocker] config · Serving a model with --tensor-parallel-size N raises at config validation. The vLLM string is: 'Total number of attention heads (40) must be divisible by tensor parallel size (6)' (reported verbatim o
 - **A vLLM SIGTERM aborts every in-flight request by default — a rolling update fails requests that were seconds from completing, with no error unless you set --shutdown-timeout** (`gotchas/ops-restart-aborts-in-flight-by-default`) — [blocker] operations · Every rolling update or scale-down fails a batch of in-flight requests. The failures land as error-status responses to clients mid-generation, typically on the pods being replaced, and cluster-level e
+- **Affiliation fields filled without a byline invent plausible universities - Rice University appears in two records where no author is there** (`gotchas/w6p-affiliation-fields-invented-from-plausibility-rice-university-appears-twice`) — [blocker] measurement · Two paper records in this repo credit institutions that appear nowhere on the papers. distflashattn (arXiv 2310.03294) listed 'Lehigh University', 'Rice University' and 'Texas A&M University' - the pa
 - **An FP8 KV cache write path in Python is graph-unsafe and silently corrupts attention under CUDA graphs while --enforce-eager looks fine** (`gotchas/fp8-kv-cache-cudagraph-python-scatter-corruption`) — [blocker] framework · 8x A800-80GB (SM80, no native FP8 tensor cores), TP=8, MiniMax-M3-AWQ-INT4 (weight-only int4), launched with --kv-cache-dtype fp8_e5m2 --max-model-len 1048576 --attention-backend TRITON_ATTN --block-s
 - **An engine-core worker death loses every in-flight request — there is no retry, no replication and no request log; the client gets a bare error with no indication the work was partially done** (`gotchas/ops-inflight-requests-are-lost-not-retried`) — [blocker] operations · A worker dies and every request it was serving fails at once, with no retry and no failover: the client receives a connection or 5xx error even though other healthy replicas exist, and the work alread
 - **An engine-side KV layout change silently invalidates every external KV cache written by the previous layout** (`gotchas/pd-packed-kv-layout-change-silently-breaks-external-caches`) — [blocker] framework · After upgrading vLLM to 0.26.0 with LMCache 0.5.2, a request served from the LMCache CPU tier produces different output than the same request computed from scratch, with no exception and no warning - 
@@ -813,6 +815,7 @@
 - **A translating gateway drops output-affecting request fields and returns 200: a pinned JSON-schema const arrives as type:object, stop sequences never arrive at all, and nothing in any log says so** (`gotchas/dep-gateway-silently-drops-params-with-http-200`) — [major] framework · The request succeeds, the response looks right, and the constraint you set is not in force. Six concrete cases reported against LiteLLM v1.101.0 against real provider APIs: a JSON-schema const is forw
 - **A vendor 'PCIe peak bandwidth' number may be per-direction or bidirectional aggregate, and the two differ by exactly 2x, so a spec that does not state which one silently halves or doubles every host-bandwidth number** (`gotchas/aa-gotcha-pcie-peak-bandwidth-direction-convention`) — [major] hardware · Two failure directions, both already seen in this repo. (a) DOUBLE-HALVING: a correct aggregate figure is halved because the reader assumes the sheet quotes per-direction, or is halved twice - once fo
 - **Accelerator FLOPS rows generated by repeatedly doubling a base figure instead of being read off the spec table produce a whole internally-plausible record that is wrong at every row** (`gotchas/aa-gotcha-accelerator-flops-derived-by-doubling-not-read`) — [major] hardware · A record whose flops array is a clean geometric ladder - fp32 29.4, fp16 58.7 (2x), fp8 117.4 (4x), fp4 234.8 (8x) - which is exactly the shape NVIDIA's real tables have, so it passes a 'does this loo
+- **An ACL ARR submission record is not a negative venue finding - the paper can still be published, and was (TurboRAG -> EMNLP 2025)** (`gotchas/w6p-negative-acl-arr-submission-is-not-a-negative-venue-finding`) — [major] toolchain · Verifying a paper's venue by searching OpenReview finds 'ACL ARR 2025 May Submission' and, correctly, refuses it: an ARR submission is a REVIEW BATCH, not a publication, so a paper can sit in a batch 
 - **An API key on an open-weights endpoint protects your serving capacity and quota - it never protected the model, and the weights are the thing worth stealing** (`gotchas/sec-api-key-protects-capacity-not-the-weights`) — [major] security · A team serves open weights behind vLLM with an API key and considers the model protected. An API key on your endpoint limits who can reach YOUR capacity. It does not limit what an attacker learns from
 - **An Azure Ultra managed disk at 28,000 GiB costs about $4.59/hour - 37% of the $12.29 H100-hour it is attached to, so a durable-disk inference node is never priced by its GPU rate** (`gotchas/rent-persistent-disk-can-cost-more-than-the-gpu-next-to-it`) — [major] config · You pick a GPU instance by its per-GPU-hour rate, ship to production, and the bill is 30-40% higher than the estimate with no obvious line item. On Azure ND96isr H100 v5 - 8x H100 at $12.29 per GPU-ho
 - **An MLA model's config publishes four different head widths that disagree with each other, so any single head_dim field on such a record is a guess about which one is meant** (`gotchas/mdl-gotcha-mla-single-head-dim-field-hides-four-widths`) — [major] config · glm-5-3 recorded head_dim 192, a value that appears nowhere in its config as a general head width and that corresponds to no single geometry in the stack. config publishes head_dim 64, qk_nope_head_di
@@ -883,6 +886,7 @@
 - **MLX-LM KV cache quantization disables batching: concurrency vs memory tradeoff** (`gotchas/local-mlx-kv-bits-disables-batching`) — [major] framework · Enabling KV cache quantization (4-bit or 8-bit) in MLX-LM disables batching entirely, reducing the server to single-request inference. This is a hard tradeoff: save memory or serve concurrent users, n
 - **Missing SYCL reorder optimization makes Q8_0 and IQ4_NL decode ~4x slower than Q4_0 on Battlemage** (`gotchas/sycl-quant-reorder-gap-makes-some-quants-4x-slower`) — [major] kernel · On Intel Arc Pro B70, Q8_0 and IQ4_NL decode at a fraction of the speed of Q4-family quants despite moving comparable or less data. Full sweep on Qwen3.5-27B, one GPU, 608 GB/s of theoretical bandwidt
 - **MoE all-to-all communication is the serving bottleneck** (`gotchas/moe-alltoall-serving-bottleneck`) — [major] hardware · The all-to-all communication in MoE expert parallelism is the serving bottleneck, not the expert GEMM. At decode batch B, the dispatch volume per step per layer is B*k*d*2 bytes outbound and the same 
+- **MoE-Lightning's ASPLOS 2025 venue survived a four-corpus sweep - a negative across ML conference indexes is not a negative** (`gotchas/w6p-acl-or-crossref-index-misses-venue-a-negative-across-four-conference-corpora-is-not-negative`) — [major] toolchain · Verifying MoE-Lightning (arXiv 2411.11217) on 2026-10-04 required checking four corpora: the OpenReview note index, PMLR v267 (ICML 2025), the MLSys 2025 and 2026 indexes, and the NeurIPS 2024 index. 
 - **Mooncake's TCP fallback fails the first transfer after an idle gap, and the decode side hangs until timeout** (`gotchas/pd-tcp-fallback-queue-full-hang`) — [major] framework · With the TCP transport, the first KV transfer between two engine instances succeeds, then a transfer submitted after a short idle gap (~5 s) fails: on the producer every slice of the batch is rejected
 - **Multi-GPU Intel Arc under SYCL loses P2P, then crashes or hangs in device-to-device copies** (`gotchas/sycl-multi-gpu-arc-loses-p2p-and-crashes`) — [major] hardware · Multi-card Intel Arc dGPU configurations fail in the peer-copy path in three distinct ways. (1) The OpenCL runtime has no P2P at all: ur_die with 'Experimental P2P feature is not implemented for OpenC
 - **NCCL bus bandwidth is typically 2x achieved bandwidth for inter-node collectives** (`gotchas/nic-nccl-bus-bandwidth-vs-achieved`) — [major] measurement · NCCL all-reduce performance over InfiniBand achieves only ~50-60% of the theoretical bus bandwidth, and this gap is rarely stated explicitly.
@@ -1338,7 +1342,7 @@ and t
 - **OpenHermes-2.5-Mistral-7B** (`models/openhermes-2-5-mistral-7b`) — dense 7.24175B · 131,072 B/token KV · GQA · 32,768 ctx
 - **Grok 1** (`models/grok-1`) — moe 314B · 262,144 B/token KV · GQA · 8,192 ctx
 
-## Papers (296)
+## Papers (281)
 
 - **A Length-Extrapolatable Transformer** (`papers/ntk-aware-scaled-rope`) — position-encoding · acl · 2022 · arXiv:2212.10554 · in-upstream-engine
 - **A Simple and Effective Pruning Approach for Large Language Models** (`papers/wanda`) — pruning · iclr · 2024 · arXiv:2306.11695 · research-only
@@ -1374,9 +1378,7 @@ and t
 - **Decomposing Predictive Kubernetes Autoscaling for Large Language Model Serving Under Long Startup Delays** (`papers/k8s-predictive-autoscaling-llm`) — serving-systems · arxiv · 2026 · arXiv:2609.20874 · research-only
 - **DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning** (`papers/paper-deepseek-r1`) — distillation · other · 2025 · arXiv:2501.12948 · in-production
 - **DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model** (`papers/deepseek-v2-mla`) — kv-cache · arxiv · 2024 · arXiv:2405.04434 · in-upstream-engine
-- **DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model** (`papers/paper-deepseek-v2`) — moe · arxiv · 2024 · arXiv:2405.04434 · in-production
 - **DeepSeek-V3 Technical Report** (`papers/deepseek-v3-report`) — moe · arxiv · 2024 · arXiv:2412.19437 · in-production
-- **DeepSeek-V3 Technical Report** (`papers/paper-deepseek-v3`) — moe · arxiv · 2024 · arXiv:2412.19437 · in-production
 - **DeepSeek-V3.2: Pushing the Frontier of Open Large Language Models (introducing DeepSeek Sparse Attention, DSA)** (`papers/w4p-deepseek-sparse-attention-dsa`) — attention · arxiv · 2025 · arXiv:2512.02556 · in-upstream-engine
 - **DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models** (`papers/deepseekmoe`) — moe · acl · 2024 · arXiv:2401.06066 · in-production
 - **DeepSpeed Inference: Enabling Efficient Inference of Transformer Models at Unprecedented Scale** (`papers/deepspeed-inference`) — serving-systems · other · 2022 · arXiv:2207.00032 · in-production
@@ -1399,7 +1401,6 @@ and t
 - **Efficient Memory Management for Large Language Model Serving with PagedAttention** (`papers/pagedattention-vllm`) — serving-systems · sosp · 2023 · arXiv:2309.06180 · in-production
 - **Efficient Streaming Language Models with Attention Sinks** (`papers/streamingllm`) — long-context · iclr · 2024 · arXiv:2309.17453 · research-only
 - **Efficiently Modeling Long Sequences with Structured State Spaces** (`papers/s4`) — ssm · iclr · 2022 · arXiv:2111.00396 · research-only
-- **Efficiently Modeling Long Sequences with Structured State Spaces (S4)** (`papers/s4-structured-state-spaces`) — ssm · iclr · 2022 · arXiv:2111.00396 · research-only
 - **Emformer: Efficient Memory Transformer Based Acoustic Model For Low Latency Streaming Speech Recognition** (`papers/emformer`) — speech · icassp · 2021 · arXiv:2010.10759 · in-upstream-engine
 - **Extending Context Window of Large Language Models via Positional Interpolation** (`papers/position-interpolation`) — position-encoding · arxiv · 2023 · arXiv:2306.15595 · in-upstream-engine
 - **Extreme Compression of Large Language Models via Additive Quantization** (`papers/paper-aqlm`) — quantization · icml · 2024 · arXiv:2401.06118 · in-upstream-engine
@@ -1433,7 +1434,6 @@ and t
 - **High Fidelity Neural Audio Compression (EnCodec)** (`papers/encodec`) — speech · iclr · 2024 · arXiv:2210.13438 · in-production
 - **HuBERT-EE: Early Exiting HuBERT for Efficient Speech Recognition** (`papers/hubert-ee`) — speech · interspeech · 2024 · arXiv:2204.06328 · research-only
 - **HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction of Hidden Units** (`papers/hubert`) — speech · other · 2021 · arXiv:2106.07447 · in-upstream-engine
-- **Hyena Hierarchy: Towards Larger Convolutional Language Models** (`papers/hyena-hierarchy`) — attention · icml · 2023 · arXiv:2302.10866 · research-only
 - **Hyena Hierarchy: Towards Larger Convolutional Language Models** (`papers/hyena`) — attention · icml · 2023 · arXiv:2302.10866 · research-only
 - **Inference without Interference: Disaggregate LLM Inference for Mixed Downstream Workloads (TetriInfer)** (`papers/tetriinfer`) — scheduling · arxiv · 2024 · arXiv:2401.11181 · research-only
 - **InfiniGen: Efficient Generative Inference of Large Language Models with Dynamic KV Cache Management** (`papers/infinigen`) — serving-systems · osdi · 2024 · arXiv:2406.19707 · research-only
@@ -1447,7 +1447,6 @@ and t
 - **KIVI: A Tuning-Free Asymmetric 2bit Quantization for KV Cache** (`papers/kivi`) — kv-cache · icml · 2024 · arXiv:2402.02750 · research-only
 - **KVQuant: Towards 10 Million Context Length LLM Inference with KV Cache Quantization** (`papers/paper-kvquant`) — kv-cache · neurips · 2024 · arXiv:2401.18079 · research-only
 - **Kimi K2: Open Agentic Intelligence** (`papers/w4p-kimi-k2-moe-agentic`) — moe · arxiv · 2025 · arXiv:2507.20534 · in-upstream-engine
-- **Kimi Linear: An Expressive, Efficient Attention Architecture** (`papers/kimi-linear-kda`) — attention · arxiv · 2025 · arXiv:2510.26692 · in-upstream-engine
 - **Kimi Linear: An Expressive, Efficient Attention Architecture** (`papers/kimi-linear`) — attention · arxiv · 2025 · arXiv:2510.26692 · in-upstream-engine
 - **LLM Maybe LongLM: Self-Extend LLM Context Window Without Tuning** (`papers/selfextend`) — long-context · icml · 2024 · arXiv:2401.01325 · research-only
 - **LLM in a flash: Efficient Large Language Model Inference with Limited Memory** (`papers/llm-in-a-flash-limited-memory`) — serving-systems · acl · 2024 · arXiv:2312.11514 · research-only
@@ -1457,17 +1456,15 @@ and t
 - **LLM2Vec: Large Language Models Are Secretly Powerful Text Encoders** (`papers/llm2vec`) — embedding · colm · 2024 · arXiv:2404.05961 · in-upstream-engine
 - **LLaVA-NeXT-Interleave: Tackling Multi-image, Video, and 3D in Large Multimodal Models** (`papers/llava-next`) — multimodal · arxiv · 2024 · arXiv:2407.07895 · in-production
 - **LLaVA-OneVision: Easy Visual Task Transfer** (`papers/llava-onevision`) — multimodal · arxiv · 2024 · arXiv:2408.03326 · in-production
-- **LMCache: An Efficient KV Cache Layer for Enterprise-Scale LLM Inference** (`papers/paper-lmcache`) — kv-cache · iclr · 2025 · arXiv:2510.09665 · in-upstream-engine
+- **LMCache: An Efficient KV Cache Layer for Enterprise-Scale LLM Inference** (`papers/paper-lmcache`) — kv-cache · arxiv · 2025 · arXiv:2510.09665 · in-upstream-engine
 - **LQER: Low-Rank Quantization Error Reconstruction for LLMs** (`papers/paper-lqer`) — quantization · icml · 2024 · arXiv:2402.02446 · research-only
 - **Large Language Diffusion Models (LLaDA)** (`papers/llada-large-language-diffusion-models`) — other · neurips · 2025 · arXiv:2502.09992 · in-upstream-engine
 - **Large Language Models Cannot Self-Correct Reasoning Yet** (`papers/llms-cannot-self-correct-reasoning`) — inference-time-compute · iclr · 2024 · arXiv:2310.01798 · in-production
 - **LayerSkip: Enabling Early Exit Inference and Self-Speculative Decoding** (`papers/layerskip-self-speculative`) — speculative-decoding · acl · 2024 · arXiv:2404.16710 · research-only
 - **Learning Transferable Visual Models From Natural Language Supervision (CLIP)** (`papers/clip`) — multimodal · icml · 2021 · arXiv:2103.00020 · in-production
 - **Learning to Compress Prompts with Gist Tokens** (`papers/gist-tokens`) — long-context · neurips · 2023 · arXiv:2304.08467 · research-only
-- **Leave No Context Behind: Efficient Infinite Context Transformers with Infini-attention** (`papers/infini-attention-infinite-context`) — long-context · arxiv · 2024 · arXiv:2404.07143 · research-only
 - **Leave No Context Behind: Efficient Infinite Context Transformers with Infini-attention** (`papers/infini-attention`) — long-context · arxiv · 2024 · arXiv:2404.07143 · research-only
 - **Let's Verify Step by Step** (`papers/process-supervision-prm800k`) — inference-time-compute · iclr · 2024 · arXiv:2305.20050 · in-production
-- **Lightning Attention-2: A Free Lunch for Handling Unlimited Sequence Lengths in Large Language Models** (`papers/lightning-attention-2-tiling`) — attention · arxiv · 2024 · arXiv:2401.04658 · in-production
 - **Lightning Attention-2: A Free Lunch for Handling Unlimited Sequence Lengths in Large Language Models** (`papers/lightning-attention-2`) — attention · arxiv · 2024 · arXiv:2401.04658 · abandoned
 - **Linear Transformers Are Secretly Fast Weight Programmers** (`papers/linear-transformers-fast-weight-programmers`) — attention · icml · 2021 · arXiv:2102.11174 · in-upstream-engine
 - **Linformer: Self-Attention with Linear Complexity** (`papers/linformer`) — attention · arxiv · 2020 · arXiv:2006.04768 · abandoned
@@ -1483,7 +1480,6 @@ and t
 - **MTEB: Massive Text Embedding Benchmark** (`papers/mteb`) — embedding · other · 2023 · arXiv:2210.07316 · in-production
 - **MagicDec: Breaking the Latency-Throughput Tradeoff for Long Context Generation with Speculative Decoding** (`papers/magicdec-long-context-specdec`) — speculative-decoding · iclr · 2025 · arXiv:2408.11049 · research-only
 - **MagicPIG: LSH Sampling for Efficient LLM Generation** (`papers/w4p-magicpig-lsh-attention-sampling`) — kv-cache · iclr · 2025 · arXiv:2410.16179 · research-only
-- **Mamba: Linear-Time Sequence Modeling with Selective State Spaces** (`papers/mamba-selective-ssm`) — ssm · arxiv · 2023 · arXiv:2312.00752 · in-upstream-engine
 - **Mamba: Linear-Time Sequence Modeling with Selective State Spaces** (`papers/mamba`) — ssm · colm · 2024 · arXiv:2312.00752 · in-upstream-engine
 - **MambaVision: A Hybrid Mamba-Transformer Vision Backbone** (`papers/mambavision`) — ssm · cvpr · 2025 · arXiv:2407.08083 · in-upstream-engine
 - **Masked Autoencoders Are Scalable Vision Learners** (`papers/mae`) — multimodal · cvpr · 2022 · arXiv:2111.06377 · in-upstream-engine
@@ -1505,7 +1501,7 @@ and t
 - **Mixture-of-Depths: Dynamically allocating compute in transformer-based language models** (`papers/mixture-of-depths`) — inference-time-compute · arxiv · 2024 · arXiv:2404.02258 · research-only
 - **Mixture-of-Experts with Expert Choice Routing** (`papers/expert-choice-routing`) — routing · neurips · 2022 · arXiv:2202.09368 · research-only
 - **MoBA: Mixture of Block Attention for Long-Context LLMs** (`papers/moba`) — attention · neurips · 2025 · arXiv:2502.13189 · in-production
-- **MoE-Lightning: High-Throughput MoE Inference on Memory-constrained GPUs** (`papers/w4p-moe-lightning-hierarchical-roofline`) — moe · arxiv · 2024 · arXiv:2411.11217 · research-only
+- **MoE-Lightning: High-Throughput MoE Inference on Memory-constrained GPUs** (`papers/w4p-moe-lightning-hierarchical-roofline`) — moe · asplos · 2025 · arXiv:2411.11217 · research-only
 - **MoEQuant: Enhancing Quantization for Mixture-of-Experts Large Language Models via Expert-Balanced Sampling and Affinity Guidance** (`papers/moequant`) — quantization · icml · 2025 · arXiv:2505.03804 · research-only
 - **MobileLLM: Optimizing Sub-billion Parameter Language Models for On-Device Use Cases** (`papers/mobilellm-on-device`) — other · icml · 2024 · arXiv:2402.14905 · in-production
 - **Molmo and PixMo: Open Weights and Open Data for State-of-the-Art Vision-Language Models** (`papers/molmo`) — multimodal · cvpr · 2025 · arXiv:2409.17146 · in-production
@@ -1545,12 +1541,10 @@ and t
 - **Qwen2-Audio Technical Report** (`papers/qwen2-audio`) — speech · arxiv · 2024 · arXiv:2407.10759 · in-production
 - **Qwen2-VL: Enhancing Vision-Language Model's Perception of the World at Any Resolution** (`papers/qwen2-vl-mrope`) — position-encoding · arxiv · 2024 · arXiv:2409.12191 · in-upstream-engine
 - **REST: Retrieval-Based Speculative Decoding** (`papers/rest-retrieval-speculative-decoding`) — speculative-decoding · naacl · 2024 · arXiv:2311.08252 · research-only
-- **RWKV: Reinventing RNNs for the Transformer Era** (`papers/rwkv-reinventing-rnns`) — ssm · emnlp · 2023 · arXiv:2305.13048 · in-upstream-engine
 - **RWKV: Reinventing RNNs for the Transformer Era** (`papers/rwkv`) — ssm · emnlp · 2023 · arXiv:2305.13048 · in-upstream-engine
 - **ReAct: Synergizing Reasoning and Acting in Language Models** (`papers/react-reasoning-and-acting`) — agentic · iclr · 2023 · arXiv:2210.03629 · in-production
 - **RecurrentGemma: Moving Past Transformers for Efficient Open Language Models** (`papers/recurrentgemma-griffin`) — ssm · arxiv · 2024 · arXiv:2404.07839 · research-only
 - **Recursive Speculative Decoding: Accelerating LLM Inference via Sampling Without Replacement** (`papers/recursive-speculative-decoding-rsd`) — speculative-decoding · arxiv · 2024 · arXiv:2402.14160 · research-only
-- **Retentive Network: A Successor to Transformer for Large Language Models** (`papers/retnet-retentive-network`) — attention · arxiv · 2023 · arXiv:2307.08621 · research-only
 - **Retentive Network: A Successor to Transformer for Large Language Models** (`papers/retnet`) — ssm · arxiv · 2023 · arXiv:2307.08621 · research-only
 - **Rethinking Attention with Performers** (`papers/performer`) — attention · iclr · 2021 · arXiv:2009.14794 · abandoned
 - **Ring Attention with Blockwise Transformers for Near-Infinite Context** (`papers/ring-attention`) — attention · iclr · 2024 · arXiv:2310.01889 · research-only
@@ -1559,7 +1553,6 @@ and t
 - **SALMONN: Towards Generic Hearing Abilities for Large Language Models** (`papers/salmonn`) — speech · iclr · 2024 · arXiv:2310.13289 · research-only
 - **SAM Decoding: Speculative Decoding via Suffix Automaton** (`papers/w4p-sam-decoding-suffix-automaton`) — speculative-decoding · acl · 2025 · arXiv:2411.10666 · in-upstream-engine
 - **SGLang: Efficient Execution of Structured Language Model Programs** (`papers/paper-sglang`) — serving-systems · neurips · 2024 · arXiv:2312.07104 · in-production
-- **SGLang: Efficient Execution of Structured Language Model Programs** (`papers/sglang-structured-program-runtime`) — serving-systems · neurips · 2024 · arXiv:2312.07104 · in-upstream-engine
 - **SPLADE: Sparse Lexical and Expansion Model for First Stage Ranking** (`papers/splade`) — retrieval · other · 2021 · arXiv:2107.05720 · in-production
 - **SageAttention2: Efficient Attention with Thorough Outlier Smoothing and Per-thread INT4 Quantization** (`papers/sageattention2`) — quantization · icml · 2025 · arXiv:2411.10958 · research-only
 - **SageAttention: Accurate 8-Bit Attention for Plug-and-play Inference Acceleration** (`papers/sageattention`) — quantization · iclr · 2025 · arXiv:2410.02367 · research-only
@@ -1575,7 +1568,6 @@ and t
 - **Sigmoid Loss for Language Image Pre-Training (SigLIP)** (`papers/siglip`) — multimodal · iccv · 2023 · arXiv:2303.15343 · in-production
 - **SimCSE: Simple Contrastive Learning of Sentence Embeddings** (`papers/simcse`) — embedding · emnlp · 2021 · arXiv:2104.08821 · in-production
 - **Simple linear attention language models balance the recall-throughput tradeoff** (`papers/simple-linear-attention`) — attention · icml · 2024 · arXiv:2402.18668 · research-only
-- **Simple linear attention language models balance the recall-throughput tradeoff (Based)** (`papers/based-simple-linear-attention`) — attention · icml · 2024 · arXiv:2402.18668 · research-only
 - **SliceGPT: Compress Large Language Models by Deleting Rows and Columns** (`papers/slicegpt`) — pruning · iclr · 2024 · arXiv:2401.15024 · research-only
 - **SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models** (`papers/paper-smoothquant`) — quantization · icml · 2023 · arXiv:2211.10438 · in-upstream-engine
 - **SnapKV: LLM Knows What You are Looking for Before Generation** (`papers/snapkv-paper`) — kv-cache · neurips · 2024 · arXiv:2404.14469 · research-only
@@ -1588,7 +1580,6 @@ and t
 - **SpecInfer: Accelerating Generative Large Language Model Serving with Tree-based Speculative Inference and Verification** (`papers/specinfer-tree-speculative-serving`) — speculative-decoding · asplos · 2024 · arXiv:2305.09781 · in-upstream-engine
 - **SpeechGPT: Empowering Large Language Models with Intrinsic Cross-Modal Conversational Abilities** (`papers/speechgpt`) — speech · emnlp · 2023 · arXiv:2305.11000 · research-only
 - **SpinQuant: LLM Quantization with Learned Rotations** (`papers/paper-spinquant`) — quantization · iclr · 2025 · arXiv:2405.16406 · research-only
-- **Splitwise: Efficient generative LLM inference using phase splitting** (`papers/splitwise-prefill-decode-disaggregation`) — serving-systems · isca · 2024 · arXiv:2311.18677 · research-only
 - **Splitwise: Efficient generative LLM inference using phase splitting** (`papers/splitwise`) — serving-systems · isca · 2024 · arXiv:2311.18677 · research-only
 - **SqueezeLLM: Dense-and-Sparse Quantization** (`papers/paper-squeezellm`) — quantization · icml · 2024 · arXiv:2306.07629 · research-only
 - **Stateful Large Language Model Serving with Pensieve** (`papers/paper-pensieve`) — kv-cache · eurosys · 2024 · arXiv:2312.05516 · research-only
@@ -1604,15 +1595,13 @@ and t
 - **The LLM Surgeon** (`papers/llm-surgeon`) — pruning · iclr · 2024 · arXiv:2312.17244 · research-only
 - **The Llama 3 Herd of Models** (`papers/llama-3-herd`) — distillation · arxiv · 2024 · arXiv:2407.21783 · in-production
 - **ThinQuant: Scalable Rotation Learning for Weight and Activation Quantization of LLMs** (`papers/thinquant`) — quantization · arxiv · 2026 · arXiv:2609.36120 · research-only
-- **Titans: Learning to Memorize at Test Time** (`papers/titans-test-time-memory`) — ssm · neurips · 2025 · arXiv:2501.00663 · research-only
 - **Titans: Learning to Memorize at Test Time** (`papers/titans`) — long-context · neurips · 2025 · arXiv:2501.00663 · research-only
 - **Token Latency Fairness: Performance Isolation for Multi-Tenant LLM Serving** (`papers/token-latency-fairness`) — serving-systems · arxiv · 2026 · arXiv:2609.18112 · research-only
 - **Towards General Text Embeddings with Multi-stage Contrastive Learning (GTE)** (`papers/gte`) — embedding · arxiv · 2023 · arXiv:2308.03281 · in-production
 - **TransNormerLLM: A Faster and Better Large Language Model with Improved TransNormer** (`papers/transnormerllm`) — attention · arxiv · 2023 · arXiv:2307.14995 · abandoned
 - **Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention** (`papers/linear-transformers`) — attention · icml · 2020 · arXiv:2006.16236 · research-only
-- **Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality** (`papers/mamba-2-ssd`) — ssm · icml · 2024 · arXiv:2405.21060 · in-upstream-engine
 - **Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality** (`papers/mamba-2`) — ssm · icml · 2024 · arXiv:2405.21060 · in-upstream-engine
-- **TurboRAG: Accelerating Retrieval-Augmented Generation with Precomputed KV Caches for Chunked Text** (`papers/w4p-turborag-precomputed-chunk-kv`) — retrieval · arxiv · 2024 · arXiv:2410.07590 · research-only
+- **TurboRAG: Accelerating Retrieval-Augmented Generation with Precomputed KV Caches for Chunked Text** (`papers/w4p-turborag-precomputed-chunk-kv`) — retrieval · emnlp · 2025 · arXiv:2410.07590 · research-only
 - **Turning Whisper into a Real-Time Transcription System (Whisper-Streaming)** (`papers/whisper-streaming`) — speech · other · 2023 · arXiv:2307.14743 · in-production
 - **Tutel / Flex: Adaptive Mixture-of-Experts at Scale** (`papers/tutel-flex`) — moe · mlsys · 2023 · arXiv:2206.03382 · research-only
 - **Unsupervised Dense Information Retrieval with Contrastive Learning (Contriever)** (`papers/contriever`) — retrieval · other · 2021 · arXiv:2112.09118 · in-upstream-engine
@@ -1637,7 +1626,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (1942)
+## Sources (1950)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -1843,6 +1832,7 @@ and t
 - **Colocation pricing by power density tier - Air-cooled vs liquid-cooled deployment costs** (`sources/ppl-dep-colocation-tiers`) — database · Vantage / derived from existing repo records
 - **CompuCycle corporate IT asset disposal and remarketing services** (`sources/sup-used-compucycle`) — database · CompuCycle
 - **CoreWeave Cloud pricing** (`sources/sup-cloud-coreweave-pricing`) — database · CoreWeave
+- **Crossref bibliographic query for 'Efficiently Modeling Long Sequences with Structured State Spaces' - returns NO JMLR entry (negative result)** (`sources/w6p-crossref-s4-no-jmlr-deposit`) — database · Crossref
 - **Crossref record for DOI 10.1145/3786335.3813124 - XGrammar-2** (`sources/sco-crossref-cais26-xgrammar2`) — database · Crossref
 - **Crossref records for ColBERT (SIGIR'20), SPLADE (SIGIR'21), PLAID (CIKM'22), CacheGen (SIGCOMM'24)** (`sources/w3p-crossref-sigir-cikm-sigcomm-venues`) — database · Crossref
 - **DeepSpeed-Inference Crossref record (SC22)** (`sources/pap-sys-deepspeed-inference-crossref`) — database · IEEE SC22 (via Crossref)
@@ -1911,6 +1901,8 @@ and t
 - **Newegg GPU category listing for RTX 3090** (`sources/noncuda-newegg-rtx3090-search`) — database · Newegg
 - **Newegg GPU category listing for RTX 4090** (`sources/noncuda-newegg-rtx4090-search`) — database · Newegg
 - **Newegg search, Intel Arc B580, including Newegg Refreshed refurbished tier** (`sources/sup-used-newegg-refreshed-b580`) — database · Newegg
+- **OpenReview api2 /notes/search for 'LMCache' - returns the arXiv deposit only, no ICLR record** (`sources/w6p-openreview-api2-lmcache-only-corr`) — database · OpenReview
+- **OpenReview api2 /notes/search responses for the 16 duplicate-slug papers (venue + venueid per forum)** (`sources/w6p-openreview-api2-duplicate-venue-records`) — database · OpenReview
 - **OpenReview api2 note-search index (venue + venueid per forum, mirrors DBLP for older venues)** (`sources/sco-openreview-venue-search`) — database · OpenReview
 - **Oracle Cloud Infrastructure Price List** (`sources/sup-cloud-oracle-cloud-pricelist`) — database · Oracle
 - **Oracle OCI 'GPU - Accelerated Compute' price table, including AMD MI300X and MI355X per-GPU-hour rates** (`sources/w5s-oracle-gpu-accelerated-compute-table`) — database · Oracle
@@ -1959,6 +1951,8 @@ and t
 - **Xinference built-in embedding model catalogue** (`sources/embed-xinference-embedding-catalog`) — database · Xorbits AI
 - **Xinference built-in rerank model catalogue** (`sources/embed-xinference-rerank-catalog`) — database · Xorbits AI
 - **aphrodite-engine/aphrodite-engine redirects to dphnAI/sonar** (`sources/niche-aphrodite-rename-redirect`) — database · GitHub
+- **arXiv API entry for 2510.09665 (LMCache v1/v2) - submission date makes an ICLR 2025 acceptance impossible** (`sources/w6p-arxiv-api-lmcache-timing`) — database · arXiv
+- **arXiv API id_list responses for the 16 paper records found duplicated under two slugs** (`sources/w6p-arxiv-api-duplicate-id-confirmation`) — database · arXiv
 - **arXiv API negative search: no paper for NVIDIA DeepGEMM (and a name-collision warning)** (`sources/sco-arxiv-no-paper-search-deepgemm`) — database · arXiv
 - **arXiv API negative search: no paper titled TensorRT-LLM** (`sources/sco-arxiv-no-paper-search-trtllm`) — database · arXiv
 - **arXiv API paper metadata query (export.arxiv.org/api/query)** (`sources/sco-arxiv-api-paper-metadata`) — database · arXiv
@@ -2116,6 +2110,7 @@ and t
 - **A Length-Extrapolatable Transformer** (`sources/pap-attn-ntk-aware-scaled-rope`) — paper · arXiv
 - **A Survey on Efficient Inference for Large Language Models (arXiv:2404.14294)** (`sources/mkt-efficient-inference-survey`) — paper · arXiv
 - **A Watermark for Large Language Models (Kirchenbauer et al., KGW)** (`sources/sec-arxiv-2301-10226`) — paper · The green-list/red-list scheme: hash the previous token, seed a PRNG, split the vocabulary in half, softly promote green tokens during sampling, detect with a one-proportion z-test. Section 1.2 states the low-entropy caveat explicitly - perturbing low-entropy completions produces high-perplexity unexpected tokens, and human and machine completions are near-identical there.
+- **ACL Anthology paper page 2025.emnlp-main.334 - TurboRAG: Accelerating Retrieval-Augmented Generation with Precomputed KV Caches for Chunked Text** (`sources/w6p-aclanthology-2025-emnlp-main-334-turborag`) — paper · Association for Computational Linguistics
 - **AI Application Benchmarking: Power-Aware Performance Analysis for Vision and Language Models (arXiv:2603.16164, RRZE-HPC)** (`sources/nrg2-arxiv-rrze-hpc-ai-power-limits`) — paper · arXiv
 - **AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration** (`sources/quant-awq-paper`) — paper · arXiv
 - **AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration (Lin et al., MLSys 2024)** (`sources/bench-meth-awq`) — paper · arXiv
@@ -2151,6 +2146,8 @@ and t
 - **ColBERTv2: Effective and Efficient Retrieval via Lightweight Late Interaction (arXiv:2112.01488)** (`sources/pap-mm-colbertv2`) — paper · arXiv
 - **Confidential Computing on NVIDIA Hopper GPUs: A Performance Benchmark Study** (`sources/sec-arxiv-2409-03992`) — paper · TEE overhead for LLM inference is minimal on-GPU; the penalty comes from CPU-GPU transfer over PCIe. For the majority of typical LLM queries overhead stays below 7%, and larger models and longer sequences approach zero overhead.
 - **Conformer: Convolution-augmented Transformer for Speech Recognition (arXiv:2005.08100)** (`sources/pap-mm-conformer`) — paper · arXiv
+- **Crossref deposit DOI 10.1145/3669940.3707267 - MoE-Lightning (ASPLOS '25 Vol. 1, pp. 715-730)** (`sources/w6p-crossref-asplos25-moe-lightning`) — paper · Association for Computing Machinery (ACM)
+- **Crossref deposit DOI 10.1145/3718958.3750506 - MegaScale-Infer, per-author affiliations** (`sources/w6p-crossref-sigcomm25-megascale-infer-affiliations`) — paper · Association for Computing Machinery (ACM)
 - **DINOv2: Learning Robust Visual Features (arXiv:2304.07193)** (`sources/dinov2-learning-robust-visual-features-arxiv-2304-07193`) — paper · arXiv
 - **DINOv2: Learning Robust Visual Features without Supervision (arXiv:2304.07193)** (`sources/pap-mm-dinov2`) — paper · arXiv
 - **DISTFLASHATTN: Distributed Memory-efficient Attention for Long-context LLMs Training** (`sources/pap-attn-distflashattn`) — paper · arXiv
@@ -3895,13 +3892,13 @@ and t
 
 ## Coverage
 
-Total records: **3848**
+Total records: **3845**
 
 | group | records |
 |---|---|
-| severity:major | 207 |
+| severity:major | 209 |
 | backend:cuda | 77 |
-| severity:blocker | 70 |
+| severity:blocker | 72 |
 | severity:minor | 61 |
 | flop bound:memory | 55 |
 | flop bound:compute | 42 |
