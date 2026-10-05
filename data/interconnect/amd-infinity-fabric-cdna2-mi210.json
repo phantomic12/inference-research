@@ -1,0 +1,25 @@
+{
+  "id": "amd-infinity-fabric-cdna2-mi210",
+  "type": "interconnect",
+  "name": "AMD Infinity Fabric (CDNA 2 / MI210 class: 3 links, 100 GB/s bidirectional per link, 25 GT/sec, 16 lanes)",
+  "kind": "infinity-band",
+  "version": "CDNA 2 (gfx90a, MI210 PCIe card)",
+  "bandwidth_gbps": 50.0,
+  "bandwidth_basis": "PER LINK, PER DIRECTION, 16-WIDE, stated by AMD in both halves so no derivation is needed. AMD'S OWN DERIVATION FORMULA, from the CDNA 2 white paper endnote MI200-29: 'Peak theoretical inter GDC to GDC data transport rate performance is calculated by Baud Rate * # lanes * # directions * # links / 8 = GB/s per card.' The '# directions' multiplier is AMD confirming that every figure in this endnote family is BIDIRECTIONAL, and it is the reason this record stores the PER-DIRECTION value in bandwidth_gbps while AMD's board tables print the bidirectional one. DIRECT QUOTES: the ROCm MI250 microarchitecture page says each inter-GPU link 'operates at 25 GT/sec, which corresponds to a theoretical peak transfer rate of 50 GB/sec per link (or 100 GB/sec bidirectional peak transfer bandwidth)' - AMD states BOTH the per-direction and the bidirectional figure on one line, which makes this generation the cleanest in the whole family. The MI210 board table prints 'Peak Infinity Fabric(TM) Link Bandwidth: 100 GB/s', i.e. the bidirectional half. Check against AMD's aggregates: CDNA 2 white paper endnote MI200-43 gives MI210 'three Infinity Fabric(TM) links providing up to 300 GB/s peak theoretical GPU to GPU or Peer-to-Peer (P2P) bandwidth performance per GPU card', and 300 / 3 = 100, matching. So 50 GB/s per direction per link, 100 GB/s bidirectional per link, 300 GB/s GPU-to-GPU aggregate across 3 links. HOST PATH, SEPARATE: the same endnote gives 'up to 64 GB/s peak theoretical data bandwidth from CPU to GPU per card' over PCIe Gen4, and 'an aggregate GPU card I/O peak bandwidth of up to 364 GB/s' - note 364 = 300 + 64, AMD summing the GPU-to-GPU total and the host attach, which is the clearest published example that the two are independent axes that get added rather than conflated.",
+  "link_count": 3,
+  "topology": "GPU-to-GPU: the MI210 is a PCIe card exposing three Infinity Fabric links, reaching other GPUs through direct-connect xGMI BRIDGE CARDS in adjacent PCIe slots. AMD's CDNA 2 white paper gives both hive sizes directly: 'Dual-GPU hives: One dual-GPU hive provides up to 300 GB/s peak theoretical P2P performance. Four-GPU hives: One four-GPU hive provide up to 600 GB/s peak theoretical P2P performance. Dual four GPU hives in a server provide up to 1.2 TB/s total peak theoretical direct P2P performance per server.' That is AMD publishing a LINK-COUNT x TOPOLOGY MATRIX rather than a single figure - 2-GPU, 4-GPU, and 8-GPU-per-server are three separate numbers, because the aggregate scales with the number of cards in the hive rather than with any change to the link. AMD also gives the counterfactual in the same footnote: 'AMD Infinity Fabric link technology not enabled: One four-GPU hive provide up to 256 GB/s peak theoretical P2P performance with PCIe(R) 4.0' - so the bridge cards buy 600 vs 256 GB/s, a 2.3x, which is the practical value of the fabric on this generation. HOST PATH: 64 GB/s bidirectional over PCIe Gen4 x16 per card.",
+  "scale_up": true,
+  "scale_out": false,
+  "switching": "None - direct point-to-point links plus passive bridge cards. No switch part exists at this generation.",
+  "notes": "WHY A NEW RECORD: amd-xgmi covers CDNA 2's 50 GB/s per link but is scoped as a die-to-die / accelerator-to-accelerator link record, and amd-infinity-fabric-link starts at CDNA 3. Neither carries the MI210's 3-link card topology or its 64 GB/s host attach. THE THREE FIGURES, EXPLICITLY SEPARATED: per-link 50 GB/s per direction (100 bidirectional); GPU-to-GPU 300 GB/s per card; host-to-GPU 64 GB/s. The host path is the SMALLER of the GPU-to-GPU total by 4.7x, and a reader who lifts '100 GB/s' off the board table and calls it host bandwidth is wrong by 1.6x. AMD DOES NOT PUBLISH an 'Nth Gen AMD Infinity Architecture' label for CDNA 2 - the MI210 page's Supported Technologies row says only 'AMD Infinity Architecture'. AMD DOES NOT PUBLISH per-hive figures for MI250X in this endnote (it gives 400 GB/s inter-GCD and 800 GB/s P2P, which are different quantities - see amd-infinity-fabric-cdna2-mi250x). INFERENCE RELEVANCE: at 300 GB/s of P2P against 1.6384 TB/s of HBM2e, a two-card hive supports expert parallelism and pipeline parallelism comfortably but tensor parallelism across two cards is memory-bound rather than fabric-bound.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
+  "sources": [
+    "w7a-amd-mi210-product-page-if-link-table",
+    "w7a-amd-mi250-microarch-if-25gt-and-per-gcd-host-pcie",
+    "w7a-amd-cdna2-whitepaper-endnote-if-formula-and-per-card-totals",
+    "link2-amd-rocm-mi250-microarch",
+    "amd-mi210-product-page"
+  ]
+}
