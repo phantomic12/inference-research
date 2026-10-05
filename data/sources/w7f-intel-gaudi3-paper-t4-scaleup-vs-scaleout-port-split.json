@@ -1,0 +1,15 @@
+{
+ "id": "w7f-intel-gaudi3-paper-t4-scaleup-vs-scaleout-port-split",
+ "type": "source",
+ "name": "Intel Gaudi 3 technical paper Table 4 (HL-338 PCIe card) - the ONLY place Intel states per-port scale-up and scale-out bandwidth separately: 21x 200 GbE card-to-card vs 3x 200 GbE scale-out",
+ "status": "verified",
+ "confidence": 0.95,
+ "updated": "2026-10-05",
+ "url": "https://cdrdv2.intel.com/v1/dl/getContent/817486",
+ "publisher": "Intel",
+ "kind": "whitepaper",
+ "published": null,
+ "accessed": "2026-10-05",
+ "archived_url": null,
+ "notes": "VERBATIM from https://cdrdv2.intel.com/v1/dl/getContent/817486 Table 4, 'HL-338 PCIe Key Interfaces' (paper p.6):\n'Networking: Card to Card & Scale-out • Per OAM: 24x 200 GbE (48 112 Ghz PAM4 SerDes Links) split into: • 21 x 200 GbE for OAM-to-OAM connections • 3 x 200 GbE for scale-out • Total Baseboard Scale-out: • 8 x 3 x 200 GbE = 4.8 TbE connected to 6 OSFP800 ports'\n\nTable 2, 'HL-325L OCP Accelerator Module Key Interfaces', gives the same split at module level: 'Networking: Card-to-Card & Scale-out  48 x 112 Gb/s PAM4 SerDes Links'.\n\nTable 3, 'HLB-325 Features', separates the two roles explicitly by mechanism: 'Networking / Scale-up: Card-to-Card through Top Board / Scale-out: Through Host-NIC only'.\n\nOVERVIEW PROSE (p.3), verbatim: 'The HLB-325 supports eight Intel Gaudi 3 AI accelerator cards that are passively interconnected on its PCB in a non-blocking, all-to-all configuration, using 21 NICs from each card (3x 200 GbE ports to every other of the 7 cards), as well as routing the 3 remaining 200 GbE NICs from every Intel Gaudi 3 AI accelerator card (3x8=24) to the six on-board OSFP800 connectors for scaling-out.'\n\nTable 4 also states the host link separately and it is NOT one of the 24: 'x16 PCIe Gen5 host interface per OAM'. A record that reads '24x 200 GbE' as though it were the host link is wrong by one whole generation of PCIe.\n\nThe HLTB-304 x4 top board reduces the card-to-card set: 'The HLTB-304 board allows connectivity of 4 HL-338 cards, 6x 200 GbE links from each HL-338 card to each of the other 3 HL-338 cards, 18 links of 200 GbE total per card.' So the 21-port figure is specific to the 8-way OAM baseboard and a 4-way PCIe card on the HLTB-304 gets 18 - the per-card scale-up budget is BOARD-DEPENDENT and a single number cannot describe both.\n\nWHY A NEW SOURCE FOR A PAPER ALREADY CITED: data/sources/asic-intel-gaudi3-tech-paper covers the compute/HBM table. Nothing in this repo had captured Table 4, Table 3 or the baseboard prose, and those tables are the only primary evidence that Gaudi's fabric does scale-up and scale-out over ONE port type with a per-card split - which is the actual subject of interconnect/intel-gaudi3-roce-scaleup."
+}
