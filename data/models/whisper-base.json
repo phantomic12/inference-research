@@ -20,14 +20,14 @@
  "context_scaling": null,
  "activation": "gelu",
  "attention_variant": "MHA, encoder-decoder (cross-attention)",
- "kv_cache_bytes_per_token": 40960,
+ "kv_cache_bytes_per_token": 12288,
  "flops_per_token_active": 148000000.0,
  "open_weights": true,
  "license": "apache-2.0",
- "notes": "ENCODER-DECODER. ENCODER: 6 layers, d_model 512, 8 heads, encoder_ffn_dim 2048, gelu, num_mel_bins 80, max_source_positions 1500. DECODER: 6 layers, 8 heads, decoder_ffn_dim 2048, max_target_positions 448. KV CACHE: decoder self-attention 6 * 8 * 64 * 2 * 2 = 40,960 B/token = 40 KiB/token. Cross-attention over 1500 encoder frames: 6 * 8 * 64 * 1500 * 2 * 2 = 18,432,000 B = 17.6 MiB per in-flight request. STREAMING: not natively supported (offline/batch model).",
+ "notes": "ENCODER-DECODER. ENCODER: 6 layers, d_model 512, 8 heads, encoder_ffn_dim 2048, gelu, num_mel_bins 80, max_source_positions 1500. DECODER: 6 layers, 8 heads, decoder_ffn_dim 2048, max_target_positions 448. KV CACHE: decoder self-attention 6 * 8 * 64 * 2 * 2 = 12,288 B/token = 12.0 KiB/token. Cross-attention over 1500 encoder frames: 6 * 8 * 64 * 1500 * 2 * 2 = 18,432,000 B = 17.6 MiB per in-flight request. STREAMING: not natively supported (offline/batch model).\nKV CACHE CORRECTED (2026-10-05): kv_cache_bytes_per_token was 40,960 B/token and overstated the decoder self-attention cache by 3.33x. Correct value 12,288 B/token = 12.0 KiB/token, from 2 (K and V) x 6 decoder_layers x 8 decoder_attention_heads x 64 head_dim x 2 bytes (fp16). head_dim 64 is CORRECT here and was not changed: d_model 512 / decoder_attention_heads 8 = 64 for every Whisper variant, so 64 holds across the whole family and is not the source of the error. What was wrong was the multiplication itself - this record's own derivation line read '6 * 8 * 64 * 2 * 2 = 40,960', and that expression evaluates to 12,288, not 40,960. The formula was right and the result beside it was not, which is why the error survived: nothing in validate.py evaluates a notes expression against the field it claims to derive. Cross-attention over the fixed 1500-frame encoder span was already correct and is unchanged. See gotcha mdl-gotcha-derived-figures-field-disagrees-with-its-own-note.",
  "status": "verified",
  "confidence": 0.9,
- "updated": "2026-10-04",
+ "updated": "2026-10-05",
  "sources": [
   "aud-src-whisper-base-config"
  ],

@@ -1,0 +1,30 @@
+{
+ "id": "mdl-gotcha-mla-single-head-dim-field-hides-four-widths",
+ "type": "gotcha",
+ "name": "An MLA model's config publishes four different head widths that disagree with each other, so any single head_dim field on such a record is a guess about which one is meant",
+ "class": "config",
+ "affects": [],
+ "concepts": [
+  "mla",
+  "multi-head-latent-attention",
+  "kv-cache",
+  "kv-lora-rank",
+  "head-dim",
+  "deepseek",
+  "glm",
+  "differential-privacy"
+ ],
+ "symptom": "glm-5-3 recorded head_dim 192, a value that appears nowhere in its config as a general head width and that corresponds to no single geometry in the stack. config publishes head_dim 64, qk_nope_head_dim 192, qk_rope_head_dim 64, qk_head_dim 256 and v_head_dim 256 simultaneously. The 192 is the NoPE sub-head width misfiled as the stack-level head_dim. This is the exact failure the repo has hit twice before - a sub-head or architecture-name-derived width landing in head_dim - and it is easy to miss because 192 is a real number in the same file. The KV cache figure in the same record was correct and was NOT affected, since MLA caches the latent rather than per-head K/V.",
+ "root_cause": "The schema's head_dim is documented as a single integer, but MLA does not have one. The cached quantity is a rank-512 latent plus a 64-wide decoupled RoPE key; the query is built from a 192 NoPE sub-head and a 64 RoPE sub-head (192+64 = 256 internal width); and the value path uses a 256-wide sub-head. Four widths, one field. The same collision exists across this repo's MLA records - deepseek-r1/v3/v3-2 legitimately carry head_dim 128 because DeepSeek's config does publish head_dim 128 alongside qk_nope 128 / qk_rope 64 / v 128, whereas glm-5-3 legitimately carries 64 - so the field means different widths in different records and cannot be compared across them.",
+ "workaround": "On any MLA record, treat head_dim as config's own head_dim key and never as a derived or summed value, and read the cache from kv_lora_rank + qk_rope_head_dim rather than from head_dim x num_key_value_heads. Concretely for glm-5-3 the cache is 78 x (512 + 64) x 2 = 89,856 B/token; the naive per-head figure a reader would compute from the corrected head_dim is 2 x 78 x 64 x 64 x 2 = 1,277,952 B/token, 14.2x too large. Note also that num_key_value_heads 64 in this config is the query-head count carried through for MLA expansion, not 64 independent KV heads to cache - treating it as the latter is the overstatement this gotcha exists to prevent.",
+ "severity": "major",
+ "notes": "AUDIT SCOPE: all ten records carrying kv_lora_rank were re-checked field by field against their own config.json - deepseek-r1, deepseek-v2, deepseek-v3, deepseek-v3-2, glm-4-7-flash, glm-5-3, kimi-k3, kimi-linear-48b-a3b, ling-3-0-flash and deepseek-v4-flash/pro. kv_lora_rank 512 is correct in every one of them, qk_rope_head_dim 64 likewise, and every kv_cache_bytes_per_token re-derived as num_layers_or_attention_layers x (kv_lora_rank + qk_rope_head_dim) x 2 bytes matches except ling-3-0-flash (see gotcha mdl-gotcha-hybrid-attention-layer-count-from-a-rule-not-the-name, where the latent formula was right and the layer count was not). glm-4-7-flash is worth noting because its widths are internally unusual - qk_nope 192 with qk_rope 64 and v_head_dim 256, i.e. the value sub-head is WIDER than the NoPE key sub-head - and its recorded 47 x 576 x 2 = 54,144 is confirmed correct against that config. So MLA's two sub-head widths are genuinely independent in this repo and the schema's warning that v_head_dim 'is NOT derivable from head_dim' is load-bearing, not boilerplate. deepseek-v4-flash and deepseek-v4-pro publish no kv_lora_rank at all - they use compressed/hashed KV with per-layer compress_ratios and a sparse indexer (index_topk 512, num_hash_layers 3) rather than a rank-512 latent, so their records correctly leave kv_lora_rank null and their kv_cache_bytes_per_token null; inventing a latent rank there would have been the worst possible fill.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "mbl-cfg-glm-5",
+  "arch-hf-config-deepseek-v3",
+  "arch-hf-config-kimi-linear"
+ ]
+}
