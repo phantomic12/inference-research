@@ -19,16 +19,21 @@ JSON Schema per record type lives in `schemas/`. This is the human version.
 
     vendor                 nvidia | amd | intel | qualcomm | apple | broadcom |
                           google | amazon | microsoft | meta | cerebras | groq |
-                          tenstorrent | cambricon | other
+                          tenstorrent | cambricon | samba | asic-other | other
+                          (broadcom, microsoft, meta, samba and other have zero
+                          records today; asic-other, 26 records, is the working
+                          bucket for parts with no first-party vendor page)
     architecture           e.g. hopper, blackwell, gfx1100, arc-b-series, a100, m-series
     release_year           int
     process_nm             int, die node
     form_factors           [string]   pcie | sxm | oam | mdu | mcm | socs
     vram_gb                number     per-device or per-package, unit in field name
-    memory_type            string     hbm3e | gddr6x | lpddr5x | ...
+    memory_type            string     hbm3e | gddr6x | lpddr5x, ...
     memory_bus_bit         int
     memory_bandwidth_gbps   number
     memory_bandwidth_basis  string     how the bandwidth number was arrived at
+    onchip_cache           object|null  { kind, l2_kb, llc_mb, sram_mb, per_scope,
+                               basis, source_note } - see below
     flops                  [ { precision: fp32|tf32|bf16|fp16|fp64|fp8|fp6|fp4|
                                                fp4_block_scaled|int8|int16|int4|other,
                                    tflops: number, dense: bool, vendor_claim: bool,
@@ -61,6 +66,66 @@ silently summed.
 filed as `other`, indistinguishable from a row whose precision is unknown; `other` now
 has zero rows in the repo.
 
+`onchip_cache` was added 2026-10-05: on-chip cache capacity is not `vram_gb`, and it was
+reachable only through free-text notes — which is what a wave-4 crawler was working around
+when it put an L2 size into a cross-reference field (see `flop.hardware_parameters` for
+that incident). Where the figure belongs is on the part that has it.
+
+**Scope is deliberately narrow and every sub-field is nullable, because the on-chip
+hierarchy is not comparable across vendors.** `kind` says what the number actually *is*,
+and it is the field that stops a reader treating these as interchangeable:
+
+| kind | meaning | example |
+|---|---|---|
+| `l2` | a true last-level cache, in `l2_kb` | RTX 5090: 98304 KB (96 MB) |
+| `llc-in-front-of-hbm` | package-level LLC sitting *in front of* HBM, in `llc_mb` | MI300X / MI355X: 256 MB; MI350P: 128 MB |
+| `sram-feed-tier` | on-die SRAM acting as an L2-like feed tier, in `sram_mb` | Tenstorrent Wormhole n150: 108 MB |
+
+All three kinds are in use (1 / 3 / 1 records). A fourth, `weight-resident-sram`, was drafted
+for Qualcomm AI100/AI200 and then **removed unused** — those vendor pages could not be
+re-verified first-party in this pass, and a kind no record could honestly hold is the exact
+failure mode this repo documents. Re-add it alongside a verified record, never before.
+`unknown` and `null` have zero rows and exist only so a skeleton and a record whose
+hierarchy could not be identified still validate, matching `paper.venue_track` and
+`metric_exposure.metric_type`.
+
+A hit in an `llc-in-front-of-hbm` tier is served at HBM-class latency, but on a miss the
+data has still crossed HBM — so it is a **hit-rate multiplier, not a bandwidth multiplier**,
+the opposite of what the number looks like. Never sum or compare these across vendors
+without reading `kind` first.
+
+`per_scope` is one of `per-package`, `per-die`, `per-card`, `per-xcd`, `null`, and it is
+the easiest field on this record to get wrong. AMD's MI300X and MI355X datasheets and
+brochures both print "4 MB shared L2 cache shared across CUs" *and* "256 MB Infinity Cache
+shared across 8 XCDs" — the first is **per compute die**, the second **per 8-die package**.
+They are different scopes and must never be added or compared as tiers of one cache;
+recording the die figure as the package one is a 64x error.
+
+`basis` accepts only first-party provenance (`vendor-spec-sheet`, `vendor-whitepaper`,
+`vendor-docs`). A secondary aggregator is not recorded, because a cache size copied from an
+aggregator is indistinguishable from one copied from the wrong column. **A null here means
+"not verified first-party", never "zero."** That is why only 5 of 108 accelerator records
+carry an `onchip_cache` row: AMD MI300X / MI350P / MI355X, the RTX 5090 and Tenstorrent
+Wormhole were each verified against a spec sheet or whitepaper, and every other candidate was
+left null rather than filled from a comparison table.
+
+The traps are recorded per record in `source_note`, because each is a way to get a
+plausible wrong number:
+
+- **RTX 5090: 98304 KB, not 131072 KB.** NVIDIA's Blackwell whitepaper prints 96 MB in the
+  per-SKU table and 128 MB for the full GB202 die in its appendix. The per-SKU figure is
+  correct; the full-die row overstates the card's cache by 33%.
+- **Wormhole: 108 MB vs 120 MB, unresolved.** The vendor's card table says 108 MB per n150;
+  its current PCIe-cards page says "SRAM: 120 MB (1.5 MB per Tensix Core)" against 80 cores.
+  80 × 1.5 = 120, so the two pages genuinely disagree and 120 does not reconcile with the
+  arithmetic this repo's own flops rows use. **108 MB is kept**, because this record's flops
+  rows and notes derive from it and swapping it here would silently desynchronise them. The
+  conflict is recorded as open, not resolved by picking the newer page.
+- **GB203 full-die vs SKU.** The same whitepaper prints 65536 KB for a full GB203 die while
+  the 5070 Ti's per-SKU figure is 49152 KB. Those appendix tables do not bind a column to a
+  SKU unambiguously enough to record without guessing, so `nvidia-rtx-5070-ti` and
+  `nvidia-rtx-5080` stay null.
+
 ## flop
 
 One file per operation class, e.g. `flops/prefill-attention.md`.
@@ -70,11 +135,49 @@ One file per operation class, e.g. `flops/prefill-attention.md`.
                          embedding | speculative_draft | speculative_verify |
                          kv_transfer | quantization_overhead | custom_kernel
     arithmetic_intensity  string    description of bytes moved per flop at batch 1
-    bound_by              enum      memory | compute | both | interconnect
+    bound_by              enum      memory | compute | both | interconnect |
+                         launch_overhead
     scales_with           string    which knob changes cost: batch | context_length | width | ...
-    affected_by_hardware   [string]  accelerator ids where this class behaves unusually
+    affected_by_hardware  [string]  accelerator ids where this class behaves unusually.
+                         PRODUCTS, not parameters — this is a cross-reference field
+    hardware_parameters   [ { parameter: enum, effect: string,
+                              values_for: [string]|absent,
+                              magnitude: string|null,
+                              basis: recorded | derived | unverified | null } ]
     workarounds           [string]  short-form mechanisms that reduce this class
     notes
+
+`affected_by_hardware` holds accelerator **record ids**. `hardware_parameters`, added
+2026-10-05, holds the hardware **quantities** that move the class — and it exists because a
+wave-4 crawler put `['memory_bandwidth', 'l2_cache_size', 'tensor_core_count']` into
+`affected_by_hardware`, which is a cross-reference field. Those could never resolve, and
+worse they silently consumed the dangling-reference budget that exists to catch new bad
+references. A later pass pushed them into free-text notes, which made them unqueryable
+prose; `qhw-decode-gemm-memory-bound` still carries the whole incident in its notes with
+`affected_by_hardware` left correctly empty. A part-independent dependency belongs in
+`hardware_parameters`, and that is where it went.
+
+`parameter` is one of `memory_bandwidth`, `memory_capacity`, `l2_cache_size`,
+`tensor_core_count`, `shared_memory_capacity`, `tmem_capacity`, `peak_flops`. **All seven
+are in use**: 36 / 4 / 7 / 25 / 9 / 10 / 10 rows respectively, **101 rows across 65
+records**, none empty.
+
+A row is a **claim that this parameter moves this class's cost**, not a measurement of any
+part, and two rules keep it honest:
+
+- `magnitude` reproduces figures the record **already quoted**, taken from the sentence that
+  makes the claim. Only 15 of 101 rows carry one. An earlier attempt harvested figures from a
+  wider window and misattributed them — one row picked up a tensor-core rate as a
+  shared-memory figure, another a PFLOPS number for a bandwidth claim — which is the
+  plausible-but-wrong value this repo treats as worse than an absent one.
+- `basis` is `recorded` where the record cites figures or names a concrete
+  architecture / ISA / vendor statement, and `unverified` where it asserts the effect with
+  nothing behind it. Current split: **39 recorded, 62 unverified**. The unverified majority
+  is deliberate and is the honest reading — most of these records gesture at a hardware
+  parameter in passing without sourcing it, and inflating that number would be inventing
+  provenance.
+
+Never add a row to fill a parameter member. A parameter with zero rows is a finding, not a gap.
 
 ## engine
 
@@ -107,8 +210,28 @@ so a verbatim metric name is queryable instead of buried in `notable_features`.
 
 ## quantization
 
-    scheme                awq | gptq | exl2 | gguf-q4_k_m | fp8 | nvfp4 | mxfp4 | int8 |
-                         bitsandbytes | smoothquant | hqq | quarx | spinquant | ternary | 2bit
+    scheme                68 members, listed in full in
+                         schemas/quantization.schema.json; 63 are in use and 5 are
+                         empty (gguf-fp16, quanto, gguf-iq3-xs, gguf-iq3-m,
+                         gguf-tq2-0). Families:
+                         weight-only: awq | gptq | exl2 | quarx | spinquant |
+                         smoothquant | hqq | ternary | wq4a4 | llm-fp4 | aqlm
+                         gguf k-quants: gguf-q2_k | gguf-q3_k_m | gguf-q4_0 |
+                         gguf-q4_k_m | gguf-q4_k_s | gguf-q5_k_m | gguf-q6_k |
+                         gguf-q8_0 | gguf-imatrix
+                         gguf i/t-quants: gguf-iq1-s | gguf-iq1-m | gguf-iq2-xxs |
+                         gguf-iq2-xs | gguf-iq2-s | gguf-iq2-m | gguf-iq3-xxs |
+                         gguf-iq3-s | gguf-iq4-xs | gguf-iq4-nl | gguf-tq1-0
+                         gguf legacy: gguf-q4-1 | gguf-q5-1
+                         fp8 family: fp8-e4m3 | fp8-e5m2 | fp8-blockwise | mxfp8
+                         int8 family: int8 | int8-channelwise
+                         nvidia: nvfp4 | mxfp4 | mxfp6 | modelopt
+                         research: bitnet-b158 | flute | lqer | quip | atom |
+                         squeezellm | quarot | omniquant | zeroquant | qat
+                         runtimes: bitsandbytes-nf4 | bitsandbytes-int8 |
+                         optimum-quanto | ort-matmulnbits-int4 |
+                         llmcompressor-compressed-tensors | mlc-q4f16
+                         kv-side: kv-cache-quant | kv-eviction | kv-sparsity | w4a8kv4
     bits                  string    "4", "3.2 avg", "w4a16"
     weight_group_size     number|null
     activation_scheme     string|null
@@ -121,9 +244,14 @@ so a verbatim metric name is queryable instead of buried in `notable_features`.
 ## interconnect
 
     kind                  nvlink | nvswitch | infinity-band | xgmi | uefi |
-                          infiniband | ethernet | roe | pcie | cxl | hstx | uvm
+                          infiniband | ethernet | roce | pcie | cxl | hstx |
+                          uvm | sxm-c2c | xcd | waa | other
+                          (the doc previously read `roe`; the schema member is
+                          `roce` — RDMA over Converged Ethernet — and the typo had
+                          been drifting since the member was added)
     version               string
     bandwidth_gbps        number     per link, unidirectional
+    bandwidth_basis       string     how the bandwidth figure was arrived at
     link_count            number|null
     topology              string
     scale_up              bool
@@ -138,13 +266,88 @@ so a verbatim metric name is queryable instead of buried in `notable_features`.
     interconnect_ids      [string]
     model                 string
     format_id             string|null
-    metric                enum      decode_tok_s | prefill_tok_s | ttft_ms | tps_aggregate | itl_ms | memory_gb
+    metric                enum      decode_tok_s | prefill_tok_s | ttft_ms | tps_aggregate |
+                               itl_ms | memory_gb | tok_s_per_user | quality |
+                               joules_per_token | speedup_ratio | dimensionless_ratio
     value                 number
     unit                  string
     methodology           string    batch size, prompt len, output len, concurrency
     measured_by           enum      vendor | third_party | self
     reproducible          bool
+    energy_basis          string|null   the measurement window behind a joules
+                               figure: 'post-ramp core of 3634 1Hz samples, first
+                               5% discarded'
+    power_w               number|null   mean watts underlying the joules figure
+    power_scope           enum      node | device | rack | null. An 8-GPU NODE
+                               figure is NOT a per-GPU figure. Always state which.
+                               node: 6 records, device: 2. `rack` has ZERO and that
+                               is a VERIFIED NEGATIVE — every rack-scale result here
+                               (CoreWeave GB200/GB300 NVL72, v6.1) has_power=false,
+                               so no rack draw exists to record
+    power_cap             number|null   the W cap ENFORCED during the run. NOT the
+                               datasheet TDP, and NOT an MLPerf 'MaxQ' result (see
+                               gotcha mlperf-maxq-is-not-a-watt-cap)
+    clock_lock_mhz        number|null   the -lgc value if clocks were locked; null if
+                               unlocked. A locked-clock number is not a stock-boost
+                               number
+    thermal_state         enum      steady | unknown | null. 'steady' only if the run
+                               held a thermal plateau — a short run measures the ramp
+                               and biases energy LOW
     notes
+
+`joules_per_token`, `energy_basis`, `power_w`, `power_scope`, `power_cap`, `clock_lock_mhz`
+and `thermal_state` were all drafted and shipped **unused** — zero records set them — while
+watts and joules travelled as prose inside `unit`. They were populated on 2026-10-05 from
+facts the records already documented: `energy_basis`, `power_scope` and `thermal_state` now
+appear on **8 records each**; `power_w` and `clock_lock_mhz` on **4** (the four MLPerf MaxQ
+node-scope runs, all locked at 1000 MHz); `power_cap` on **2**.
+
+`power_cap` is deliberately null on the H200 records: 700 W is the factory TGP, a static
+datasheet limit, not a measured cap, and filling it would assert the opposite of what those
+records' own notes argue.
+
+`power_w` is null wherever no mean draw was integrated. A throughput-under-a-cap submission
+declares a cap but publishes no trace, so recording that cap in `power_w` would claim the
+part drew exactly its limit — the conflation `mlperf-maxq-is-not-a-watt-cap` exists to
+prevent. A null here means "not measured", never "zero".
+
+`metric` gained `speedup_ratio` and `dimensionless_ratio` on 2026-10-05. The enum enumerates
+rates and absolute quantities plus one catch-all, so a **dimensionless ratio had nowhere to
+live** and was filed under whichever rate was the thing being compared. That is not
+cosmetic — it is selected by exactly the filter a capacity planner uses.
+`sd-medusa-batch32-degradation` carried value 0 as `decode_tok_s` (0 reads as a failed run
+when it is the floor of a documented degradation curve), and
+`ev-llamacpp-spec-bench-replay-inflates` carried 13.4 as `tps_aggregate` — an inflation factor
+that reads as a respectable per-GPU figure and would be *quoted* as one. **5 records now use
+`speedup_ratio` and 10 use `dimensionless_ratio`**, every stored value unchanged.
+
+**The two ratio members are not interchangeable.** `speedup_ratio` means "N times faster than
+a *named* baseline" and **must name that baseline in `unit`** — a bare ratio with no baseline
+is the single most misleading number in this domain, the same rule `paper.speedup_reported`
+follows. `dimensionless_ratio` covers ratios with no faster/slower reading: PUE (1.145 means
+the facility draws 14.5% more than its IT load) and idle/maximum power dynamic range. PUE 2.5
+is not a 2.5x speedup, and routing it to `speedup_ratio` would have replaced one wrong answer
+with another — which is why they are separate members and why the ten PUE and power records
+went to `dimensionless_ratio`.
+
+`quality` remains the weakest key in this enum: it is still a catch-all spanning accuracy
+deltas in percentage points, perplexity deltas and acceptance lengths. That is a separate,
+still-open gap.
+
+Two `metric` members remain unused and are documented rather than filled.
+`joules_per_token` has **zero records**, and the reason is a modelling limitation rather than
+missing data: one benchmark record carries one `(metric, value)` pair, while every joules
+figure here is measured *alongside* a throughput on the same run — the four MLPerf MaxQ
+records and the two Apple powermetrics records each state both. Re-labelling one of those
+would destroy the independently measured throughput that the throughput-at-a-cap comparison
+set depends on. The correct fix is a **second record per run** carrying the joules, and that
+was deliberately not done in a schema pass, because it means minting new record ids
+asserting derived energy figures. Until then the joules live in `energy_basis` (8 records,
+with the sample window and derivation written out) on the record that measured them.
+`memory_gb` has **zero records**: nothing here measures a peak resident footprint as its
+primary quantity — memory figures sit in `methodology` and `notes` on KV-cache records
+instead. Both were empty before this pass and are empty after it; what changed is that the
+reason is written down where the next author will read it.
 
 ## paper
 
@@ -157,7 +360,8 @@ a contribution with a method, a claim, and an adoption status.
     venue                arxiv-preprint | neurips | icml | iclr | acl | emnlp |
                          naacl | cvpr | iccv | eccv | osdi | sosp | nsdi | atc |
                          eurosys | asplos | micro | isca | mlsys | vldb | sigmod |
-                         kdd | www | interspeech | icassp | colm | other
+                         kdd | www | interspeech | icassp | colm | sigcomm |
+                         cais | other
     year                 int|null
     category             attention | kv-cache | quantization | moe | ssm |
                          speculative-decoding | serving-systems | scheduling |
@@ -193,6 +397,32 @@ that is research-only and a method merged into vLLM differ enormously in what yo
 should do, and the paper's own framing hides that. `speedup_reported` must
 always carry its baseline — self-reported speedups without a stated baseline are
 the single most misleading number in this domain.
+
+`sigcomm` and `cais` were added 2026-10-05. Before them a SIGCOMM or ACM CAIS paper had no
+honest `venue` value, and its record was forced to `other` with the real venue in free-text
+notes. Both were verified against the publisher's own Crossref deposit before being added,
+never against an arXiv comment string: SIGCOMM '25 via DOI 10.1145/3718958.3750506 (pages
+592-608, published-print 2025-09-08) and CAIS '26 via DOI 10.1145/3786335.3813124 (pages
+1009-1022, 2026-05-26). `sigcomm` is a conference and is **not** interchangeable with the
+existing `sigmod` member, which is a different ACM Special Interest Group. Three records
+were reclassified in the same commit: `w4p-megascale-infer` (SIGCOMM '25), `w4p-xgrammar2`
+(CAIS '26) and `paper-cachegen` (SIGCOMM '24, DOI 10.1145/3651890.3672274).
+
+`other` is not one state. It still holds 18 papers spanning at least nine distinct venues —
+SIGIR, CIKM, TMLR, SC22, TASLP, JMLR, FAccT, PPoPP, EACL/ENLSP, and one journal-of-record
+rather than a conference — so a reader filtering `venue=other` still cannot separate
+"published somewhere I could not name" from "venue not yet known". The survey, with a
+per-record provenance and an explicit verified / not-verified verdict for each, is recorded
+in `schemas/paper.schema.json` under `x-notes-other-venue-survey-2026-10-05` so the next
+pass does not re-derive it. The shortest version of the lesson: `other` was mostly a
+**provenance** problem, not a vocabulary one. Ten of those eighteen papers name a real,
+verifiable venue that simply had no enum member, and several of those deposits are already
+sitting in `data/sources/`. The two best-evidenced next members are `sigir` (ColBERT and
+SPLADE, both Crossref-confirmed) and `eacl` (MTEB, crossref-confirmed) — but a journal member
+(`tmlr`, `taslp`, `jmlr`) would need a decision about journals versus conferences first,
+since every current member is a conference. One record (`mooncake-kimi`) is a
+journal-of-record at ACM Transactions on Storage, not a systems conference, and the
+`osdi` '25 paper sharing its name is a different system by different authors.
 
 ## model
 
@@ -234,6 +464,15 @@ completely different hardware.
                        equal num_layers when present
     gqa_ratio           number|null    attention heads / kv heads
     max_position_embeddings int|null
+    embedding_dims       int|null    output embedding dimensionality; null for
+                         autoregressive LMs, which have no fixed output vector
+    embedding_pooling    cls | mean | last | max | none | null
+                         pooling that produces the embedding vector. Getting this
+                         wrong silently degrades retrieval quality with no error.
+                         16 records set embedding_dims; `embedding_pooling` is STILL
+                         UNUSED across all 155 model records — an open gap, since
+                         dims alone does not tell a reader whether vectors are CLS
+                         or mean pooled
     context_scaling     string|null   free text, NEVER an enum: 'verified
                        native', 'mrope', 'llama3 rope scaling' and more are in
                        100+ existing records and an enum here would break every
@@ -419,8 +658,16 @@ validates immediately. `new_record.py` seeds both with `unknown`.
     url                  string
     publisher            string
     kind                 enum      spec-sheet | whitepaper | paper | benchmark | repo |
-                              release-notes | forum | blog | interview | review
+                              release-notes | forum | blog | interview | review |
+                              database
     published            date|null
     accessed             date
     archived_url         string|null
     notes
+
+`database` (156 records) was missing from this doc until 2026-10-05 — SCHEMA.md had drifted
+from the schema, the failure this repo has already hit once. It matters because a `database`
+source is the highest-grade venue evidence available: it is how Crossref, OpenReview and DBLP
+deposits get cited, and both `paper.venue` members added in 2026-10-05 (`sigcomm`, `cais`)
+were verified against one rather than against an arXiv comment string. `interview` still has
+zero records.
