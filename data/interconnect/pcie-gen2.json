@@ -1,0 +1,22 @@
+{
+  "id": "pcie-gen2",
+  "type": "interconnect",
+  "name": "PCI Express 2.0",
+  "kind": "pcie",
+  "version": "2.0 (5.0 GT/s, NRZ, 8b/10b)",
+  "bandwidth_gbps": 8.0,
+  "bandwidth_basis": "x16, PER DIRECTION. THE CONVENTION, STATED EXPLICITLY AS THIS REPO'S REPEATED FAILURE MODE: PCIe figures are quoted PER LANE PER DIRECTION, and PCIe is dual-simplex (independent TX and RX conductor pairs), so a per-lane-per-direction figure at a given lane count is ALREADY the complete figure for that direction and must NOT be halved a second time. PCI-SIG's own ladder entry (w7p-pcisig-pcie5-faq-verified), verbatim: 'PCIe 2.0 added support for 5.0 Gigabits/second/Lane/direction of raw bandwidth' - the words 'per direction' are PCI-SIG's own, not this record's interpretation. Storing 8.0 (or 16.0) as an aggregate is a 2x ERROR that makes the interconnect look half as capable; storing the 16.0 bidirectional aggregate as per-direction is the same error inverted. Arithmetic: 5.0 GT/s x 8/10 (8b/10b) / 8 = 0.500 GB/s per lane per direction, x16 = 8.000 GB/s PER DIRECTION; bidirectional aggregate is 16.000 GB/s. RAW unencoded: 5.0 x 16 / 8 = 10.0 GB/s per direction. ENCODING: 8b/10b, same as Gen1 - PCI-SIG does not publish encoding on this page, so the citation is Wikipedia, verbatim: 'Like 1.x, PCIe 2.0 uses an 8b/10b encoding scheme, therefore delivering, per-lane, an effective 4 Gbit/s max. transfer rate from its 5 GT/s raw data rate' (w7p-wikipedia-pcie-link-performance). This matters because the Gen2 row of Wikipedia's comparison table prints NO line code of its own (only the Gen1 row carries 8b/10b), so a reader comparing rows would wrongly conclude Gen2 changed encoding; it did not. Per-lane and x16 corroborated by that table's row '2.0 | 2007 | 5.0 GT/s | 0.5 | 1 | 2 | 4 | 8' with the column footnote 'In each direction (each lane is a dual simplex channel).'",
+  "link_count": 16,
+  "topology": "Point-to-point host-to-device (root complex to endpoint), up to 16 lanes. Becomes a shared fabric only via PCIe switches or host bridges.",
+  "scale_up": false,
+  "scale_out": false,
+  "switching": "Optional PCIe switch, store-and-forward, no in-network reduction.",
+  "notes": "Recorded to complete the generational ladder; not a deployable inference interconnect in this repo and no record in data/accelerators/ attaches over it. The 8b/10b encoding is the reason Gen2 loses 20% of raw bandwidth to line-code overhead - Wikipedia, verbatim: 'resulting in a 20% (= 2/10) overhead on the raw channel bandwidth' - which is why the payload ratio from Gen1 to Gen2 is exactly 2.0x despite Gen2 doubling the line rate. INFERENCE CONSEQUENCE: at 8.0 GB/s per direction at x16 this is roughly 56x below NVLink 4's 450 GB/s per direction per GPU, so it is irrelevant to tensor-parallel planning; it appears here only so the ladder 4.0 / 8.0 / 15.75 / 31.5 / 63.0 / 121.0 / 242.0 (all PER DIRECTION at x16) is complete and auditable. DIRECTION REMINDER SPECIFIC TO THIS GENERATION: because Gen2 sits at 8.0 GB/s per direction, its bidirectional aggregate is 16.0 - and '16' is a number that also appears as Gen1's x16 PER-DIRECTION figure and as the GT/s rate of Gen4. Three different quantities, three different meanings, one repo; that collision is exactly why every pcie-gen* record states its convention in basis rather than relying on the number alone. Gen2.1 was a compatibility/revision release (minor changes only) and did not change the data rate, so this record's number applies to both.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-05",
+  "sources": [
+    "w7p-pcisig-pcie5-faq-verified",
+    "w7p-wikipedia-pcie-link-performance"
+  ]
+}
