@@ -1,0 +1,38 @@
+{
+ "id": "w4p-preble-distributed-prompt-scheduling",
+ "type": "paper",
+ "name": "Preble: Efficient Distributed Prompt Scheduling for LLM Serving",
+ "arxiv_id": "2407.00023",
+ "venue": "iclr",
+ "venue_track": "main",
+ "year": 2025,
+ "category": "scheduling",
+ "authors": [
+  "Vikranth Srivatsa",
+  "Zijian He",
+  "Reyna Abhyankar",
+  "Dongming Li",
+  "Yiying Zhang"
+ ],
+ "affiliations": [
+  "University of Michigan"
+ ],
+ "problem": "Modern prompts are largely REPETITIVE - domain instructions, tool-usage illustrations, long reference documents recur across requests - and engines can reuse that KV state, but every existing reuse mechanism is confined to a SINGLE GPU while production serving is distributed by nature, so the reuse the engine supports is not the reuse the deployment has.",
+ "mechanism": "A distributed scheduler that CO-OPTIMIZES KV state reuse and COMPUTATION LOAD BALANCING together, plus a HIERARCHICAL scheduling mechanism to make the joint decision tractable. The co-optimization is the contribution: reuse and balance pull in opposite directions - sending a request to the node that holds its cached prefix maximizes hit rate and may unbalance the cluster, while sending it to the least-loaded node balances and forfeits the hit - and the paper treats that trade as a single scheduling objective rather than resolving reuse first and load second. Evaluated with real workloads and real request arrival patterns on two open-source LLMs, which is the methodology the repo's own AGENTS.md benchmarking section demands and which few scheduling papers of this era actually follow.",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "speedup_reported": "Paper's own claim: outperforms state-of-the-art serving systems by 1.5x-14.5x on AVERAGE LATENCY and 2x-10x on P99 LATENCY, on real workloads and arrival patterns. The p99 range is the deployment-relevant one and the wider of the two, which is the expected signature of a prefix-reuse scheduler: the average improves as more requests hit cache, while the tail improves even more because a cache-hit request skips the prefill queue entirely. Baselines are production serving systems, and '2x-10x on p99' is a large enough claim that the settings should be read before quoting it standalone.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-preble",
+  "sco-openreview-venue-search"
+ ],
+ "notes": "VENUE VERIFIED FROM THE DECISION RECORD: OpenReview venueid 'ICLR.cc/2025/Conference', content.venue 'ICLR 2025 Poster'. arXiv 2407.00023's comment is EMPTY. WHY IT IS A GAP: the repo's scheduling records are Llumnix (dynamic scheduling), Sarathi-Serve (chunked prefill), a broad sched-vs-production-synthesis FLOP record, a prefill-deflection record, and the 2026 PackServe/RAPID/token-latency entries - all of which schedule WITHIN a deployment whose cache placement is given. Preble is the record for the case the repo's own flops note eng-profile-prefix-cache-prefill-cost-per-request identifies as the real gap: prompt sharing is a CLUSTER-WIDE scheduling decision, and a per-instance radix prefix (SGLang RadixAttention) or per-slot prompt cache (llama.cpp) cannot exploit a prefix that lives on another node. The author list overlaps with SpecInfer's (Reyna Abhyankar), which is a useful cross-check that this is the same Michigan serving line of work."
+}

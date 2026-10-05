@@ -1,0 +1,40 @@
+{
+ "id": "w4p-turborag-precomputed-chunk-kv",
+ "type": "paper",
+ "name": "TurboRAG: Accelerating Retrieval-Augmented Generation with Precomputed KV Caches for Chunked Text",
+ "arxiv_id": "2410.07590",
+ "venue": "arxiv-preprint",
+ "venue_track": "unknown",
+ "year": 2024,
+ "category": "retrieval",
+ "authors": [
+  "Songshuo Lu",
+  "Hua Wang",
+  "Yutian Rong",
+  "Zhi Chen",
+  "Yaohua Tang"
+ ],
+ "affiliations": [
+  "Peking University"
+ ],
+ "problem": "Conventional RAG concatenates many retrieved chunks and prefills all of them online, and since prefill is the most compute-dense step in the whole serving stack, this dominates time-to-first-token.",
+ "mechanism": "Inverts the paradigm: precompute and store each document's KV cache OFFLINE, then at inference time directly RETRIEVE the saved KV cache for prefill instead of running the prefill over the chunk text. Online KV computation is eliminated entirely. The non-obvious part is that this is not a no-op, and the paper's actual contribution is the bookkeeping: attention mask semantics (each chunk needs INDEPENDENT attention rather than joint attention over the concatenation) and POSITION ID remapping for the concatenated KV caches, because positions baked into an offline cache are contiguous-per-document and must be remapped to their real slots at query time. The authors then FINE-TUNE the LM to tolerate the resulting attention and position-ID pattern, which is the honest cost of the approach - it is not a training-free swap.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "Paper's own claim: reduces time-to-first-token by up to 9.4x versus conventional RAG systems (8.6x on average) across a suite of RAG benchmarks, while reserving comparable accuracy. Two honest qualifiers the reader needs: the baseline is a CONVENTIONAL RAG SYSTEM, not a modern engine with prefix caching enabled, and the comparable-accuracy claim requires the authors' fine-tuning - which is why the paper's own summary lists it as contribution 5 rather than an aside.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-turborag",
+  "sco-openreview-venue-search",
+  "sco-pmlr-icml-2025-v267",
+  "sco-aclanthology-2025-sam-decoding"
+ ],
+ "notes": "RECORDED AS arxiv-preprint WITH venue_track 'unknown' DESPITE BEING WIDELY CITED - and the reason is worth stating because it is the case the task's rules exist for. VENUE SEARCH RESULT: the OpenReview index holds exactly two records for this title: content.venue 'ICLR 2025 Conference Withdrawn Submission' (venueid ICLR.cc/2025/Conference/Withdrawn_Submission) and content.venue 'ACL ARR 2025 May Submission' (venueid aclweb.org/ACL/ARR/2025/May/Submission). Neither is an acceptance. An ARR submission is a REVIEW BATCH, not a publication: a paper can sit in an ARR batch indefinitely without appearing in any proceedings volume, so citing ACL ARR as its venue would be exactly the confident-wrong-answer failure this repo has shipped twice. Corpus checks, all negative: absent from ACL Anthology, absent from PMLR v267 (ICML 2025), absent from MLSys 2025 and 2026, absent from NeurIPS 2024. arXiv comment is EMPTY. So there is NO proceedings entry and NO venue claim - arxiv-preprint/unknown is the honest record, and confidence is capped at 0.8 rather than lowered further only because the arXiv metadata itself is solid. CONTRAST WITH ITS SIBLING: Cache-Craft (same problem class, same year, also by a group that ran real production workloads) DID land in Proc. ACM Manag. Data 2025. Two RAG cache papers of the same vintage, one peer-reviewed and one not, is worth keeping side by side."
+}

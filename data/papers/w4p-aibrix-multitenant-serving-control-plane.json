@@ -1,0 +1,35 @@
+{
+ "id": "w4p-aibrix-multitenant-serving-control-plane",
+ "type": "paper",
+ "name": "AIBrix: Towards Scalable, Cost-Effective Large Language Model Inference Infrastructure",
+ "arxiv_id": "2504.03648",
+ "venue": "arxiv-preprint",
+ "venue_track": "unknown",
+ "year": 2025,
+ "category": "cluster",
+ "authors": [
+  "The AIBrix Team"
+ ],
+ "affiliations": [
+  "ByteDance",
+  "vLLM project"
+ ],
+ "problem": "Existing cloud-native serving stacks are general-purpose and treat LLM inference as an ordinary workload, so every layer above the engine has to be retrofitted - which is why multi-tenant LLM deployments end up with adapter scheduling, autoscaling and routing each solved separately and badly.",
+ "mechanism": "A cloud-native control plane CO-DESIGNED with vLLM rather than layered over it, and the interesting parts are the LLM-specific primitives: HIGH-DENSITY LoRA MANAGEMENT for dynamic adapter scheduling (many tenants' adapters packed and swapped rather than one-adapter-per-replica), LLM-SPECIFIC AUTOSCALERS that scale on queueing and prefill/decode structure rather than CPU, PREFIX-AWARE LOAD-AWARE ROUTING, and a DISTRIBUTED KV CACHE that raises token reuse ACROSS NODES. Orchestration is HYBRID - Kubernetes for coarse-grained scheduling, Ray for fine-grained execution - plus an SLO-DRIVEN GPU OPTIMIZER that reallocates across heterogeneous accelerators to hold service guarantees at minimum cost, and accelerator DIAGNOSTIC tooling for automated failure detection.",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4",
+  "amd-instinct-mi300x"
+ ],
+ "speedup_reported": "Paper's own claim: the distributed KV cache produces a 50% increase in throughput and a 70% reduction in inference latency, with the remaining mechanisms described qualitatively (cost efficiency, SLO attainment) rather than as ratios. No baseline engine, model, or workload is named in the abstract, so the numbers are recorded verbatim as the authors' own claim at low confidence.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/vllm-project/aibrix",
+ "open_weights": true,
+ "status": "verified",
+ "confidence": 0.7,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-aibrix"
+ ],
+ "notes": "RECORDED AS arxiv-preprint WITH venue_track 'unknown': arXiv 2504.03648's comment is EMPTY, and the OpenReview venue index returned NO record for this title at all - not even an arXiv deposit mirror - while corpus checks against PMLR v267, MLSys 2025/2026 and NeurIPS 2024 are all negative. Confidence is held at 0.7, the lowest in this batch, for two reasons worth stating: no venue, and the headline numbers name no baseline engine, model, or workload. That is a weak evidence base for a system claim and the record says so rather than rounding it up. WHY IT IS STILL A GAP: the repo has scheduler records (Llumnix, Sarathi-Serve, PackServe, RAPID, token-latency) and multi-tenant/LoRA records (Punica, S-LoRA added in this batch), and an engine record for sglang-router, but NO record for the cluster-control-plane layer - autoscaling, cross-node KV reuse, SLO-driven reallocation across heterogeneous accelerators. That layer is where a late-2026 multi-tenant deployment actually lives, and AIBrix is the reference implementation with the widest engine surface (it lives inside the vLLM project, so adoption is in-upstream-engine on a concrete basis rather than a general one). NOTE ON AUTHOR FIELD: arXiv carries the collective 'The AIBrix Team', so the authors array records that rather than inventing a head-of-author ordering; the named team is preserved in the source record."
+}

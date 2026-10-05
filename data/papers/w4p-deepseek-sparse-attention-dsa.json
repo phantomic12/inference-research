@@ -1,0 +1,35 @@
+{
+ "id": "w4p-deepseek-sparse-attention-dsa",
+ "type": "paper",
+ "name": "DeepSeek-V3.2: Pushing the Frontier of Open Large Language Models (introducing DeepSeek Sparse Attention, DSA)",
+ "arxiv_id": "2512.02556",
+ "venue": "arxiv-preprint",
+ "venue_track": "unknown",
+ "year": 2025,
+ "category": "attention",
+ "authors": [
+  "DeepSeek-AI"
+ ],
+ "affiliations": [
+  "DeepSeek"
+ ],
+ "problem": "Long-context attention cost grows with sequence length, and the gap between a model's ADVERTISED context and what it can actually attend to cheaply is the dominant constraint on deploying a frontier open model.",
+ "mechanism": "Introduces DeepSeek Sparse Attention (DSA): an FP8-capable ReLU INDEXER scores every KV token to produce a compressed scalar logit per (query, KV) pair, then only the TOP-K of those are actually attended - so the per-query work set drops from the full context to the selected set. Two implementation details matter more than the idea and are the reason it is deployable rather than a paper claim: the indexer is itself attention-shaped, so it is a full-context pass that must be made cheap (hence FP8), and it is instantiated ON THE MQA MODE of MLA, which is what makes the latent-cache representation compatible with it at all. The report's other two contributions (a scalable RL framework and an agentic task-synthesis pipeline) are training-side and out of scope for this record; what is recorded here is the attention mechanism and the serving consequence.",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-b200",
+  "amd-instinct-mi300x"
+ ],
+ "speedup_reported": "Paper's own claim is a QUALITATIVE one in the technical report - DSA 'substantially reduces computational complexity while preserving model performance in long-context scenarios' - and the report publishes no tok/s ratio, no baseline, and no context length for an attention speedup. speedup_reported therefore records the absence explicitly rather than a reconstructed figure. THE SERVING CONSEQUENCE IS THE FINDING, NOT A NUMBER: sparse attention reduces the WORK SET but adds a full-context index pass plus non-contiguous gathers, so it can be SLOWER than dense attention despite doing less arithmetic unless selection is block-granular and group-shared. That is exactly the trap the NSA paper names ('this non-contiguous memory access prevents efficient adaptation of fast attention techniques'), and it is why DSA's indexer design and its MLA-mode instantiation are the load-bearing parts of this record.",
+ "adoption": "in-upstream-engine",
+ "code_url": null,
+ "open_weights": true,
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-deepseek-v32",
+  "sco-pmlr-icml-2025-v267"
+ ],
+ "notes": "VENUE: arxiv-preprint WITH venue_track 'unknown' - arXiv 2512.02556 has an EMPTY comment field and no journal_ref, and no proceedings entry was found for this title in PMLR v267 (ICML 2025), MLSys 2025/2026 or NeurIPS 2024. Vendor technical report; the record is for the attention mechanism, not for the benchmark comparisons against GPT-5 or Gemini-3.0-Pro in the abstract, which are unaudited vendor claims and are NOT recorded here as speedups. ADOPTION is the strongest claim in the record and the reason a 2026 deployment reader needs it: DeepSeek sparse attention is instantiated in shipped DeepSeek models with open weights, so it is the first sparse-attention mechanism with a real production conduit rather than a research artifact. THE REPO'S DSA COVERAGE WAS A HOLE: the repo's flops records describe DSA ('DeepSeek Sparse Attention, DeepSeek-V3.2': FP8 ReLU indexer, top-2048, on MLA mode) in prose inside the attention-synthesis records, but there was NO PAPER RECORD for it - the repo could analyse a mechanism it could not cite. That is now closed. RELATED RECORDS to read alongside, not duplicated here: NSA (acl 2025) is the competing block-granular sparse design; ESS (added in this batch, arxiv-preprint) is the serving system built specifically around DeepSeek-V3.2-Exp's DSA."
+}

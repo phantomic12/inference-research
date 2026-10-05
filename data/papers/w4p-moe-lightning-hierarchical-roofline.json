@@ -1,0 +1,43 @@
+{
+ "id": "w4p-moe-lightning-hierarchical-roofline",
+ "type": "paper",
+ "name": "MoE-Lightning: High-Throughput MoE Inference on Memory-constrained GPUs",
+ "arxiv_id": "2411.11217",
+ "venue": "arxiv-preprint",
+ "venue_track": "unknown",
+ "year": 2024,
+ "category": "moe",
+ "authors": [
+  "Shiyi Cao",
+  "Shu Liu",
+  "Tyler Griggs",
+  "Peter Schafhalter",
+  "Xiaoxuan Liu",
+  "Ying Sheng",
+  "Joseph E. Gonzalez",
+  "Matei Zaharia",
+  "Ion Stoica"
+ ],
+ "affiliations": [
+  "UC Berkeley"
+ ],
+ "problem": "MoE's low per-token FLOPs make it attractive on paper, but its size puts it out of reach on anything below a high-end GPU, so in practice the whole point of the architecture is unavailable to the people who would benefit most from it.",
+ "mechanism": "A CPU-GPU-I/O PIPELINING schedule called CGOPipe, paired with PAGED WEIGHTS, so that weights, CPU compute, GPU compute and I/O are all kept busy simultaneously instead of being serialized into phases. The second contribution is more useful to a reader than the system: a HIERARCHICAL ROOFLINE MODEL (HRM) that predicts achievable throughput from a memory hierarchy instead of requiring measurement, and a policy search driven by it. HRM is the transferable idea - it is the mechanism-level equivalent of the repo's existing FLOP-class records, applied to a three-level memory system, and it is why the paper can claim policies beating prior systems without a per-hardware tuning campaign. Paged weights are the enabler: they make expert weights pageable, which is what lets I/O overlap compute at all.",
+ "hardware_relevance": [
+  "nvidia-a10",
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "speedup_reported": "Paper's own claim: up to 10.3x higher throughput than state-of-the-art offloading-enabled LLM inference systems for Mixtral 8x7B on a SINGLE T4 GPU (16 GB); when theoretical throughput is GPU-memory-bound it reaches the throughput upper bound with 2-3x less CPU memory; and it supports Mixtral 8x22B and DBRX on 2-4 T4s. The 10.3x is against OFFLOADING-ENABLED baselines, which are a weak and fast-moving class - against a modern tensor-parallel deployment on one T4 the gap is smaller, and the paper's scope is not that comparison.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.75,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-moelightning",
+  "sco-openreview-venue-search",
+  "sco-pmlr-icml-2025-v267"
+ ],
+ "notes": "RECORDED AS arxiv-preprint WITH venue_track 'unknown' - VENUE SEARCH EXPLICITLY NEGATIVE, AND THIS IS THE MOST LIKELY RECORD IN THE BATCH TO HAVE BEEN GIVEN AN INVENTED VENUE. MoE-Lightning is widely cited and has an ML-systems venue history, so it is precisely the paper where 'oh that was an OSDI/MLSys paper' would be the easy wrong answer. WHAT WAS CHECKED: OpenReview holds ONE record for this title and it is the arXiv deposit itself - venue 'CoRR 2024', venueid 'dblp.org/journals/CORR/2024' - which is not a venue claim about publication. Corpus checks, all negative: PMLR v267 (ICML 2025) contains no MoE-Lightning entry; MLSys 2025 (61 papers) and MLSys 2026 (135 papers) contain none; NeurIPS 2024 (4493 papers) contains none. arXiv 2411.11217's comment field is EMPTY. So arxiv-preprint/unknown with confidence 0.75 is the honest record. WHY IT IS STILL A GAP WORTH FILLING: the repo has no MoE weight-offload paper with a performance MODEL in it, and HRM is the artifact a capacity planner could actually reuse. HARDWARE FIELD DELIBERATELY DOES NOT NAME THE PAPER'S OWN GPU: the testbed is a single NVIDIA T4 (16 GB), and this repo has NO T4 accelerator record, so rather than invent an id or substitute an H100 - which would silently misrepresent the paper's own platform - the field lists only accelerators that exist in data/accelerators/ (nvidia-a10, nvidia-a100-80gb-sxm4) and this note states the real one. Anyone adding a T4 record should repoint this field at it."
+}

@@ -1,0 +1,41 @@
+{
+ "id": "w4p-specexec-consumer-speculative",
+ "type": "paper",
+ "name": "SpecExec: Massively Parallel Speculative Decoding for Interactive LLM Inference on Consumer Devices",
+ "arxiv_id": "2406.02532",
+ "venue": "neurips",
+ "venue_track": "main",
+ "year": 2024,
+ "category": "speculative-decoding",
+ "authors": [
+  "Ruslan Svirschevski",
+  "Avner May",
+  "Zhuoming Chen",
+  "Beidi Chen",
+  "Zhihao Jia",
+  "Max Ryabinin"
+ ],
+ "affiliations": [
+  "Queen Mary University of London",
+  "Hugging Face"
+ ],
+ "problem": "Consumer GPUs cannot fit 50B+ models, so their parameters are offloaded to RAM or SSD, and with offloaded weights the engine can draft hundreds or thousands of candidate tokens for the same memory cost as one - which most speculative-decoding work ignores because it assumes datacenter GPUs where that is not true.",
+ "mechanism": "Exploits the asymmetry created by weight offloading: because the draft model's weights must be streamed once per batch regardless of batch size, drafting MANY tokens is nearly free on a consumer GPU in a way it is not on a datacenter GPU. Takes the most probable token continuation from the draft model to build a CACHE TREE for the target, then validates the whole tree in a single target pass. Two observations make the tree accurate enough: modern LLM token-probability distributions are HIGHLY SPIKY (a few tokens carry most mass), and the draft and target output distributions are HIGHLY ALIGNED. Both are properties that make long speculative rollouts viable only in the offloaded regime, which is why this is a distinct result from EAGLE/Medusa rather than another feature-level drafter.",
+ "hardware_relevance": [
+  "nvidia-rtx-4090",
+  "nvidia-rtx-3090",
+  "nvidia-a10"
+ ],
+ "speedup_reported": "Paper's own claim: SpecExec generates up to 20 tokens per target-model iteration for popular LLM families, and runs 50B+ parameter LLMs on consumer GPUs with RAM offloading at 4-6 tokens/second with 4-bit quantization or 2-3 tokens/second with 16-bit weights. The absolute tok/s are the honest number to read - single-digit tok/s is interactive-but-poor, and the 20-tokens-per-iteration figure is an acceptance/draft-depth property, not a user-visible speedup.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-specexec",
+  "sco-neurips-2024-index-extended"
+ ],
+ "notes": "VENUE VERIFIED WITHOUT THE arXiv COMMENT: arXiv 2406.02532 has an EMPTY comment field, so there was nothing to copy. Venue established by exact-title match in the NeurIPS 2024 index (hash 1d91d5689e251d27993a3c2182dddcf7), where the author list Ruslan Svirschevski, Avner May, Zhuoming Chen, Beidi Chen, Zhihao Jia, Max Ryabinin matches the arXiv API author list exactly - the author-overlap corroboration this repo requires, because the title string alone would not rule out a collision. arXiv v1 2024-06-04. WHY IT IS STILL A GAP IN 2026: the repo's speculative-decoding cluster is entirely datacenter-shaped (Medusa, EAGLE family, REST, Ouroboros, SpecInfer tree verification), and its offloading work is PowerInfer and the engine records. SpecExec is the one that says the break-even INVERTS when weights are streamed per batch rather than per token, and that same inversion is why the repo's cost model notes the draft's bytes dominate at memory-bound batch while the target's flops dominate. Hardware note: the paper's own testbed is consumer NVIDIA GPUs (RTX 4090 class, 24 GB) plus CPU RAM - do NOT read datacenter ids into this record from the surrounding cluster."
+}

@@ -1,0 +1,41 @@
+{
+ "id": "w4p-xgrammar-structured-generation-engine",
+ "type": "paper",
+ "name": "XGrammar: Flexible and Efficient Structured Generation Engine for Large Language Models",
+ "arxiv_id": "2411.15100",
+ "venue": "mlsys",
+ "venue_track": "main",
+ "year": 2025,
+ "category": "structured-output",
+ "authors": [
+  "Yixin Dong",
+  "Charlie F. Ruan",
+  "Yaxing Cai",
+  "Ruihang Lai",
+  "Ziyi Xu",
+  "Yilong Zhao",
+  "Tianqi Chen"
+ ],
+ "affiliations": [
+  "SGLang team / LMSYS"
+ ],
+ "problem": "Constrained decoding against a context-free grammar requires walking several stack states over ALL VOCABULARY TOKELS at runtime, which is non-negligible overhead on the decode critical path - so structured output costs throughput.",
+ "mechanism": "Splits the vocabulary into CONTEXT-INDEPENDENT tokens, which are prechecked against the grammar ahead of time, and CONTEXT-DEPENDENT tokens, which need interpretation at runtime; the runtime cost then scales with the second class rather than with vocabulary size. Two grammar TRANSFORMATIONS reduce the first class further: expanding the grammar context and rewriting to increase the number of tokens whose validity is context-free. A PERSISTENT STACK accelerates the context-dependent checks by avoiding re-walking the parse stack. The final and most important mechanism for deployment is CO-DESIGN WITH THE INFERENCE ENGINE TO OVERLAP GRAMMAR COMPUTATION WITH GPU EXECUTION - the mask is computed on CPU ahead of the step it constrains, so the grammar work leaves the decode critical path rather than merely being made smaller.",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "speedup_reported": "Paper's own claim: up to 100x speedup over existing solutions for context-free-grammar execution, and, when combined with an LLM inference engine, near-zero-overhead structure generation in end-to-end LLM serving. The second claim is the one a deployment reader should quote: 100x is against grammar engines, not against unconstrained decoding, whereas 'near-zero end-to-end overhead' is the claim that matters when deciding whether to enable constrained decoding in production.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/sgl-project/xgrammar",
+ "open_weights": true,
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-xgrammar",
+  "sco-mlsys-2025-proceedings",
+  "sco-openreview-venue-search"
+ ],
+ "notes": "VENUE VERIFIED BY TWO INDEPENDENT ROUTES: exact title 'XGrammar: Flexible and Efficient Structured Generation Engine for Large Language Models' appears in the MLSys 2025 proceedings index (61 papers), AND OpenReview returns content.venue 'MLSys 2025 withshepherding' with venueid 'MLSys.org/2025/Conference'. The arXiv comment says 'MLSys '25' and is corroborated rather than trusted. 'withshepherding' is a shepherd-track marker, still the MLSys 2025 main conference - mlsys has no separate Findings volume, so venue_track=main. WHY IT IS THE STRUCTURED-OUTPUT GAP: the repo holds JSONSchemaBench (a benchmark record) and engine records for Outlines and XGrammar, but NO PAPER record for the constrained-decoding engine itself. That is a real hole for a 2026 deployment: every engine now exposes grammar-constrained decoding, the perf cost is the design question, and this is the paper that answers it. Adoption is in-upstream-engine with a specific basis rather than a general one: XGrammar ships inside SGLang (the repo already holds engines/sglang), so the mechanism has a production conduit inside an engine this repo tracks."
+}

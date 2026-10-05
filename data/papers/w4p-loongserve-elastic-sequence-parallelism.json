@@ -1,0 +1,40 @@
+{
+ "id": "w4p-loongserve-elastic-sequence-parallelism",
+ "type": "paper",
+ "name": "LoongServe: Efficiently Serving Long-Context Large Language Models with Elastic Sequence Parallelism",
+ "arxiv_id": "2404.09526",
+ "venue": "sosp",
+ "venue_track": "main",
+ "year": 2024,
+ "category": "serving-systems",
+ "authors": [
+  "Bingyang Wu",
+  "Shengyu Liu",
+  "Yinmin Zhong",
+  "Peng Sun",
+  "Xuanzhe Liu",
+  "Xin Jin"
+ ],
+ "affiliations": [
+  "Tsinghua University",
+  "Mila"
+ ],
+ "problem": "Resource usage swings enormously between requests AND between the phases of a single request when contexts are long, but STATIC parallelism strategies cannot adapt - the parallelism degree is fixed at configuration time while the work per step is not.",
+ "mechanism": "Introduces ELASTIC SEQUENCE PARALLELISM (ESP), in which the degree of sequence parallelism is adjusted at RUNTIME rather than fixed, so one deployment can serve a 128K prefill and a 200-token decode on the same schedule. Three gains, stated separately by the authors and worth keeping separate: (1) computation efficiency from elastic adjustment of the parallelism degree in real time; (2) communication efficiency from REDUCED KV CACHE MIGRATION plus OVERLAPPING partial-decoding communication with computation - the second half is the important part, since elastic parallelism would be worthless if every adjustment cost a migration; (3) GPU memory efficiency from REDUCING KV CACHE FRAGMENTATION across instances, which is the term that connects this to the repo's vAttention and PagedAttention records.",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "speedup_reported": "Paper's own claim: improves MAXIMUM throughput by up to 3.85x versus chunked prefill and 5.81x versus prefill-decode DISAGGREGATION, under diverse real-world datasets. Both baselines are engine strategies the repo already has records for (the Sarathi-Serve chunked-prefill record and the DistServe/Splitwise/Mooncake disaggregation records), which makes this a like-for-like system comparison rather than a comparison against a weak baseline.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": false,
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-loongserve",
+  "sco-openreview-venue-search"
+ ],
+ "notes": "VENUE VERIFIED FROM A PROCEEDINGS MIRROR: OpenReview carries a note for this title with venueid 'dblp.org/conf/SOSP/2024' (venue 'SOSP 2024') plus a separate 'Crossref' Public_Article record for the same title. arXiv 2404.09526's comment field is EMPTY, so again nothing came from arXiv. SOSP is in the paper schema's venue enum and sosp has no Findings or workshop track in which a systems paper of this kind could appear, so venue_track=main is structural. WHERE IT SITS AGAINST THE REPO'S DISAGGREGATION RECORDS: the repo has DistServe, Splitwise, Mooncake, a semi-pd engine record, and RAPID - all of which split PREFILL from DECODE across a fixed set of workers. LoongServe attacks the same variance with a different instrument: rather than placing prefill and decode on different machines permanently, it varies sequence parallelism WITHIN the serving path. That is why the 5.81x-over-disaggregation comparison is the more informative of the two numbers - it says the disaggregation machinery was not buying what the variance actually needed. Adoption research-only: the repo holds an engine record niche-loongserve for the codebase, but no upstream engine ships elastic sequence parallelism as a scheduler feature."
+}

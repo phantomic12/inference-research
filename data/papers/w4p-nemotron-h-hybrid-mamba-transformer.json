@@ -1,0 +1,38 @@
+{
+ "id": "w4p-nemotron-h-hybrid-mamba-transformer",
+ "type": "paper",
+ "name": "Nemotron-H: A Family of Accurate and Efficient Hybrid Mamba-Transformer Models",
+ "arxiv_id": "2504.03624",
+ "venue": "arxiv-preprint",
+ "venue_track": "unknown",
+ "year": 2025,
+ "category": "ssm",
+ "authors": [
+  "Aaron Blakeman",
+  "Aarti Basant",
+  "Abhinav Khattar",
+  "Adithya Renduchintala",
+  "Akhiad Bercovich"
+ ],
+ "affiliations": [
+  "NVIDIA"
+ ],
+ "problem": "Inference-time scaling makes models larger and slower to serve, so the cost of reasoning is paid on every single token of every request - constant per-token cost is the thing worth buying.",
+ "mechanism": "Replaces the MAJORITY OF SELF-ATTENTION LAYERS with MAMBA layers that perform constant computation and require constant memory per generated token, keeping a minority of attention layers for the recall that pure SSMs lose. Three additional cost reductions: MINI PUZZLE, a new compression technique combining PRUNING AND DISTILLATION, produces Nemotron-H-47B-Base from the 56B model; and an FP8-BASED TRAINING RECIPE that reaches parity with BF16 training, so the 56B model's accuracy is not being traded for compute savings in a hidden way. Base checkpoints are released with Hugging Face and NeMo support.",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-b200",
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "speedup_reported": "Paper's own claim: better-or-on-par accuracy than similarly-sized open models (Qwen2.5-7B/72B, Llama-3.1-8B/70B) while being UP TO 3x FASTER AT INFERENCE; Nemotron-H-47B-Base reaches similar accuracy to the 56B model at 20% faster inference. The 3x is a per-token-cost claim against same-size dense Transformers and does not carry to throughput at large batch, because the repo's own ssm-decode-cost-o1-vs-attention-on record shows hybrid/SSM decode is COMPUTE-bound at batch 1 rather than memory-bound - so the constant-state advantage that gives the per-token win is partly given back once the decode GEMM is large enough.",
+ "adoption": "in-upstream-engine",
+ "code_url": null,
+ "open_weights": true,
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-nemotron-h"
+ ],
+ "notes": "VENUE: arxiv-preprint WITH venue_track 'unknown'. arXiv 2504.03624's comment field is EMPTY and there is no journal_ref. OpenReview holds only the arXiv deposit (venue 'CoRR 2025') plus one archive record whose venue is null - an archive record with a null venue is not a venue claim and must not be read as one. No conference decision record exists for this title. NVIDIA-authored; the several-hundred-author list is truncated in the authors array to the first five by arXiv order rather than fabricated. WHY IT IS A GAP: the repo's SSM/hybrid cluster is Jamba, Jamba-1.5, Zamba, RecurrentGemma/Griffin, Kimi Linear, Kimi K2's sibling territory, MiniMax-01/M1, Gated DeltaNet, Based, Mamba-2/Transformers-are-SSMs and the two diffusion records. Nemotron-H is the NVIDIA entry and it is the one that ships with BOTH a pruning-distillation compression step AND an FP8 training recipe, which is the combination a deployment reader cannot otherwise assemble from the repo's separate quantization records. Adoption in-upstream-engine on a concrete basis: base checkpoints are released with Hugging Face and NVIDIA NeMo support, both of which this repo tracks, so the constant-state advantage has a real serving path rather than being a paper-only claim. THE COST TRADE a deployment reader must not miss: the repo already documents that SSM state memory scales with BATCH (Nemotron-H's own architecture is worked through in flops/ssm-decode-cost-o1-vs-attention-on, which computes 25.8 GiB of state at batch 256 for a Nemotron-H-shaped model). Up to 3x faster at inference is a low-batch claim."
+}

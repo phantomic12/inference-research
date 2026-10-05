@@ -1,0 +1,41 @@
+{
+ "id": "w4p-sam-decoding-suffix-automaton",
+ "type": "paper",
+ "name": "SAM Decoding: Speculative Decoding via Suffix Automaton",
+ "arxiv_id": "2411.10666",
+ "venue": "acl",
+ "venue_track": "main",
+ "year": 2025,
+ "category": "speculative-decoding",
+ "authors": [
+  "Yuxuan Hu",
+  "Ke Wang",
+  "Xiaokang Zhang",
+  "Fanjin Zhang",
+  "Cuiping Li",
+  "Hong Chen",
+  "Jing Zhang"
+ ],
+ "affiliations": [
+  "Renmin University of China"
+ ],
+ "problem": "Retrieval-based (model-free) speculative drafting matches n-grams to propose drafts, but n-gram matching finds only short matches, so acceptance rates stay low; and it is domain-bound - an n-gram table built on one corpus does not generalise.",
+ "mechanism": "Uses a SUFFIX AUTOMATON as the retrieval structure for drafts, over both a static text corpus and the dynamically generated output so far. The key property versus n-gram matching is that SAM finds the EXACT LONGEST SUFFIX MATCH of the current sequence, not the longest match at one fixed n-gram order, so the draft is as long as the truly longest repeated substring allows rather than as long as some chosen n permits. Cost is O(1) amortised per generation step for both the SAM update and the suffix retrieval - which is the part that makes it usable inline in a decode loop at all. It also ADAPTIVELY SELECTS a drafting strategy by match length, so it degrades into a different method rather than failing when matches are short, and it can be composed with learned drafters (the paper combines it with EAGLE-2).",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "Paper's own claim on Spec-Bench: 18%+ faster than other retrieval-based speculative-decoding methods, and when composed with EAGLE-2 an ADDITIONAL 3.28%-11.13% speedup across various-sized LLM backbones. The second number is the deployment-relevant one: the honest reading is that SAM-Decoding is a complement to EAGLE-2 rather than a replacement, so the composite matters more than the headline.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/hyx1999/SAM-Decoding",
+ "open_weights": true,
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-sam-decoding",
+  "sco-aclanthology-2025-sam-decoding",
+  "sco-openreview-venue-search"
+ ],
+ "notes": "VENUE VERIFIED FROM THE PUBLISHER, WITH AUTHOR-OVERLAP CORROBORATION: ACL Anthology ID 2025.acl-long.595, whose ID prefix encodes both venue (acl) and track (acl-long = main conference long paper, so venue_track=main is structural, not inferred). The Anthology page's author list (Yuxuan Hu, Ke Wang, Xiaokang Zhang, Fanjin Zhang, Cuiping Li, Hong Chen, Jing Zhang) matches the arXiv API list for 2411.10666 exactly. Corroborated independently by an OpenReview DBLP-mirrored note with venueid dblp.org/conf/ACL/2025 (venue 'ACL (1) 2025'). arXiv comment is EMPTY of any venue claim, so nothing was copied from it. WHY THIS IS THE SPECULATIVE GAP IN THE REPO: the repo's retrieval-based drafting record is REST (naacl 2024) and its tree record is Sequoia. SAM-Decoding is the one that names the exact-longest-suffix property and the O(1)-per-step update, which is the difference between an n-gram table that is cheap to build and a suffix automaton that is cheap to UPDATE - and updating is what an online decode loop actually pays. Adoption in-upstream-engine is claimed on the composition point, not on the code: it is a drop-in retrieval backend alongside EAGLE-2, and the repo holds niche-eagle and niche-sequoia engine records for the learned-drafter side."
+}

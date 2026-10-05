@@ -1,0 +1,39 @@
+{
+ "id": "w4p-fiddler-cpu-gpu-moe-orchestration",
+ "type": "paper",
+ "name": "Fiddler: CPU-GPU Orchestration for Fast Inference of Mixture-of-Experts Models",
+ "arxiv_id": "2402.07033",
+ "venue": "iclr",
+ "venue_track": "main",
+ "year": 2025,
+ "category": "moe",
+ "authors": [
+  "Keisuke Kamahori",
+  "Tian Tang",
+  "Yile Gu",
+  "Kan Zhu",
+  "Baris Kasikci"
+ ],
+ "affiliations": [
+  "University of Michigan"
+ ],
+ "problem": "MoE models are too large for a single GPU, and existing CPU-offload solutions either pay enormous CPU-to-GPU data movement overhead or ignore that CPU and GPU have genuinely different strengths.",
+ "mechanism": "Uses the CPU's COMPUTE capability - not just its memory - to reduce the amount of data that must move between CPU and GPU. For MoE specifically the lever is ROUTING: only the experts a token is routed to need to be transferred and executed, so the system decides the CPU/GPU execution split per expert per token rather than moving the whole FFN. Unlike systems that optimize for one scenario (single-batch, or long prefill, or beam search), the execution strategy is chosen per workload phase, which is why the paper reports gains in all three rather than in one.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-rtx-4090",
+  "nvidia-a10"
+ ],
+ "speedup_reported": "Paper's own claim, against scenario-optimized baselines: 1.26x in single-batch inference, 1.30x in long-prefill processing, and 11.57x in BEAM SEARCH inference. The 11.57x figure is the outlier and deserves a reader's suspicion: beam search expands the candidate set, so an expert-offload system that avoids moving unselected experts benefits superlinearly as beam width grows. Treat it as a beam-search-regime result, not a general decoding result. arXiv v1 abstract additionally states Mixtral-8x7B uncompressed (>90 GB of parameters) generates over 3 tokens/second on a single 24 GB GPU.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/efeslab/fiddler",
+ "open_weights": true,
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-w4p-fiddler",
+  "sco-openreview-venue-search"
+ ],
+ "notes": "VENUE VERIFIED TWICE: arXiv comment reads 'ICLR2025', AND OpenReview holds the decision record forum N5fVv6PZGz with content.venue 'ICLR 2025 Poster', venueid 'ICLR.cc/2025/Conference', plus a separate DBLP-mirrored note crossref/conf/iclr/2025. AUTHOR OVERLAP WAS NEEDED HERE, and it is worth showing why: the arXiv v1 author list is FOUR authors (Kamahori, Gu, Zhu, Kasikci) while the OpenReview ICLR record carries FIVE (Tian Tang added). An identity established by title string alone would have been ambiguous across the two versions; the five-author match to the later arXiv version resolves it. WHY IT IS A GAP: the repo's MoE-offload picture is KTransformers (engine record) and MoE-Lightning's sibling entry in this batch, with DeepSeek-V2/V3 providing the MLA/latent-cache model side. Fiddler is the CPU-AS-COMPUTE rather than CPU-as-memory framing, and it is the only record here that reports a BEAM SEARCH inference number at all - a regime a deployment reader planning an agentic workload will actually meet."
+}
