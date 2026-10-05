@@ -1,0 +1,71 @@
+{
+ "id": "tenstorrent-grayskull-e150",
+ "type": "accelerator",
+ "name": "Tenstorrent Grayskull Tensix (e75 / e150)",
+ "vendor": "tenstorrent",
+ "architecture": "grayskull Tensix",
+ "release_year": 2021,
+ "process_nm": null,
+ "form_factors": [
+  "pcie"
+ ],
+ "vram_gb": 8,
+ "memory_type": "lpddr4",
+ "memory_bus_bit": 256,
+ "memory_bandwidth_gbps": 118,
+ "memory_bandwidth_basis": "Vendor-published per-card figure for the e150: the Grayskull specifications page prints 'Memory Bandwidth | 102 GB/sec | 118 GB/sec' for e75 and e150 respectively. Stored is the e150 value because this record is filed as e150 (the higher-bandwidth, higher-TDP, dual-slot card); the e75's 102 GB/s is recorded in notes rather than as a second row. NO DERIVATION WAS NEEDED AND NONE WAS DONE: 256-bit x 3.7 GT/sec / 8 = 118.4 GB/s, so the vendor's 118 is internally consistent with its own bus width and speed grade, and memory_bus_bit 256 is the vendor's published figure rather than a back-computation.",
+ "flops": [
+  {
+   "precision": "fp8",
+   "tflops": 332,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w7z-tenstorrent-grayskull-specs",
+   "notes": "e150 figure; the e75 prints 221. Recorded dense:true because the vendor table states no sparsity qualifier for this row, matching how the Wormhole and Blackhole records handle the same vendor's tables.",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the vendor's e75/e150 comparison table, row 'TeraFLOPS (FP8) | 221 | 332' (source w7z-tenstorrent-grayskull-specs). Recorded dense:true as printed - the table carries no sparsity footnote."
+  },
+  {
+   "precision": "fp16",
+   "tflops": 83,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w7z-tenstorrent-grayskull-specs",
+   "notes": "e150 figure; the e75 prints 55. Same number as the BLOCKFP8 row on the vendor's own table, for the same reason the Wormhole n150 record's BF16 row duplicates its FP16 row: Tenstorrent prints FP16 and BLOCKFP8 at the same throughput, so the two are one figure under two labels and not two hardware paths.",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the vendor's e75/e150 comparison table, row 'TeraFLOPS (FP16) | 55 | 83' (source w7z-tenstorrent-grayskull-specs)."
+  },
+  {
+   "precision": "fp8",
+   "tflops": 83,
+   "dense": true,
+   "vendor_claim": true,
+   "source_id": "w7z-tenstorrent-grayskull-specs",
+   "notes": "BLOCKFP8, and this row exists only to make the block-float qualifier explicit rather than leaving a reader to assume the 332 FP8 row covers it. Tenstorrent's precision-format list separates 'Floating point FP8, FP16, BFLOAT16' from 'Block floating point BLOCKFP2, BLOCKFP4, BLOCKFP8', and the throughput table prints BLOCKFP8 at the SAME value as FP16 (83), not at the 332 of plain FP8. So plain FP8 is 4x the block-float rate on this part, which is the opposite of the Blackwell-generation convention and is exactly why these must not be compared across vendors without reading the label. The schema has no 'blockfp8' precision member, so the value is filed under fp8 with the qualifier in notes; do NOT sum this row with the 332 row.",
+   "basis": "vendor-spec-sheet",
+   "basis_detail": "Transcribed from the vendor's e75/e150 comparison table, row 'TeraFLOPS (BLOCKFP8) | 55 | 83' (source w7z-tenstorrent-grayskull-specs). Filed under precision fp8 because the schema enum has no block-float member for this family; the label is BLOCKFP8 and that qualifier lives here."
+  }
+ ],
+ "tdp_w": 200,
+ "interconnect": [
+  "pcie-gen4"
+ ],
+ "unified_memory": false,
+ "consumer": false,
+ "notes": "ADDED 2026-10-05. WHY IT IS HERE: data/engines/niche-tt-metal.json lists 'tenstorrent-grayskull' in its supported_backends, so the name was in the corpus as a live backend with no accelerator record behind it. Grayskull is Tenstorrent's FIRST-GENERATION Tensix part and the predecessor of the Wormhole and Blackhole cards the repo already records, and it is the only Tenstorrent part in that engine's backend list with no record.\nWHY THIS RECORD IS 'deprecated' AND THAT IS THE POINT, NOT A DEFECT: the vendor's own specifications page opens with 'NOTE: Software support for Grayskull has been discontinued. The last supported versions of Tenstorrent's software for Grayskull are as follows: TT-System-Firmware fw_pack-80.14.0.0.fwbundle, TT-KMD ttkmd_1.31, TT-Metalium v0.55.' The silicon is fully documented and the software is end-of-life. A record that filed this part as a current option would be wrong in a way the spec table cannot show, and the niche-tt-metal engine record listing it as a supported backend is exactly that error propagating through the corpus. Every figure here is first-party and the record is complete; it is marked deprecated because nobody should buy or deploy against it.\nPER-e150 FIGURES, from the vendor's e75/e150 comparison table: 120 Tensix cores, AI clock 1.2 GHz, 120 MB SRAM, 8 GB LPDDR4 at 3.7 GT/sec on a 256-bit bus, 118 GB/s, PCIe 4.0 x16, TBP 200 W, passive cooling with the Active Cooling Kit sold separately (and the vendor warns performance is 'substantially reduced' without it). The e75 is 96 cores, 1 GHz, 96 MB SRAM, 3.2 GT/sec, 102 GB/s, 75 W, active blower, single-slot. Part numbers TC-01001 (e75) and TC-01002 (e150).\nTHE SRAM NUMBER IS THE SAME FALSE-FRIEND SHAPE AS THE WORMHOLE RECORD, and this is the third place in the corpus where it appears: 120 MB is ON-DIE SRAM acting as an L2-like feed tier, not a memory tier. The vendor's own arithmetic proves it - the page says 'SRAM: 120 MB (1MB per Tensix Core)' and the table says 120 cores, so 120 x 1 = 120 MB of on-chip capacity. It is therefore NOT in vram_gb. The 8 GB LPDDR4 IS the memory tier and is what vram_gb holds. Filed under onchip_cache with kind 'sram-feed-tier' and sram_mb 120 per-card, matching the Wormhole record's treatment.\nTHE PRECISION SUPPORT LIST IS BROADER THAN THE THROUGHPUT TABLE, and the gap matters: the vendor lists 'Floating point FP8, FP16, BFLOAT16; Block floating point BLOCKFP2, BLOCKFP4, BLOCKFP8; Vector VTF19' as supported formats, but publishes throughput for only three of them (FP8, FP16, BLOCKFP8). BF16, BLOCKFP2, BLOCKFP4 and VTF19 have NO published TFLOPS on this page and are deliberately not given inferred rows - converting one to another on this part's own ratios would be inventing figures. Note also that the 4x FP8-over-FP16 ratio on Grayskull is a vendor-specific relationship and must not be assumed to hold on Wormhole, Blackhole, or any other part.\nTHE BANDWIDTH-BOUND FRAMING IS NOT AVAILABLE HERE AND IS NOT USED, which is the same discipline the Wormhole record's 2026-10-05 correction applied. At 118 GB/s and 83 TFLOPS FP16 this part is very far to the bandwidth side of any GPU-shaped roofline, but the useful statement is not an arithmetic-intensity number: it is that a 120 MB SRAM feed tier over 8 GB of LPDDR4 means a model barely over 8 GB does not fit at all. This is a development card, not a serving part.",
+ "status": "deprecated",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "w7z-tenstorrent-grayskull-specs"
+ ],
+ "onchip_cache": {
+  "kind": "sram-feed-tier",
+  "l2_kb": null,
+  "llc_mb": null,
+  "sram_mb": 120.0,
+  "per_scope": "per-card",
+  "basis": "vendor-spec-sheet",
+  "source_note": "Tenstorrent Grayskull specifications page (source w7z-tenstorrent-grayskull-specs), verbatim 'SRAM: 120 MB (1MB per Tensix Core)' against a table figure of 120 Tensix cores on the e150. This is ON-DIE SRAM acting as an L2-like feed tier, which is why kind is 'sram-feed-tier' and not 'l2' - the same reasoning as the Wormhole n150 record. It is emphatically NOT vram_gb: the e150's memory tier is 8 GB LPDDR4. The e75 variant carries 96 MB (96 cores x 1 MB), stored here as the e150 because this record is filed as e150."
+ }
+}
