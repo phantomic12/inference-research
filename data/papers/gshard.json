@@ -1,37 +1,38 @@
 {
-  "id": "gshard",
-  "type": "paper",
-  "name": "GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-arch-2006-16668"
-  ],
-  "arxiv_id": "2006.16668",
-  "venue": "iclr",
-  "year": 2021,
-  "category": "moe",
-  "authors": [
-    "Dmitry Lepikhin",
-    "HyoukJoong Lee",
-    "Yuanzhong Xu",
-    "Dehao Chen",
-    "Orhan Firat",
-    "Yanping Huang"
-  ],
-  "affiliations": [
-    "Google Research"
-  ],
-  "problem": "Scaling MoE to hundreds of billions of parameters required hand-written expert-parallel sharding code, so no team could practically adopt sparse MoE.",
-  "mechanism": "Annotation-based automatic sharding with compiler annotations so a standard transformer containing MoE feed-forward sublayers can be partitioned across TPU pods with no hand-written sharding logic; the contraction is expressed so expert weights and expert activations shard along the same axis, so no all-to-all of weights is needed per step. Gating is top-2 with softmax-normalised top-2 weights. Load balance is an auxiliary loss N * sum_j f_j * P_j plus a z-loss. Tokens whose top-2 expert exceeds that expert's capacity are dropped, governed by capacity_factor; this token-dropping behaviour is exactly what MegaBlocks later removes. GShard established the sharded-MoE idiom later used by T5X and GSPMD. Active-vs-total for the flagship GShard model is roughly 600B total with about 100B active (about 1/6 sparse), routed top-2 of many experts plus capacity-limited dropping.",
-  "hardware_relevance": [
-    "google-tpu-v4",
-    "google-tpu-v5e"
-  ],
-  "speedup_reported": "No single speedup figure. The concrete claim is scale: sharded MoE models up to 600B parameters trained with the same per-device batch size and learning-rate schedule as dense T5 baselines, plus a reported 2-3x training speedup over a dense model of equal downstream quality on the SuperGLUE and transfer setups in the scaling section. That is a quality-matched rather than speed-matched comparison.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/google-research/large-scale-vae",
-  "open_weights": true,
-  "notes": "ICLR 2021; venue per Semantic Scholar ('International Conference on Learning Representations'). The code_url given is the authors' MoE VAE repository, not a GShard implementation, and is indicative only. GShard's top-2 gating plus auxiliary loss is the direct ancestor that DeepSeekMoE names as its strawman baseline."
+ "id": "gshard",
+ "type": "paper",
+ "name": "GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2006-16668"
+ ],
+ "arxiv_id": "2006.16668",
+ "venue": "iclr",
+ "year": 2021,
+ "category": "moe",
+ "authors": [
+  "Dmitry Lepikhin",
+  "HyoukJoong Lee",
+  "Yuanzhong Xu",
+  "Dehao Chen",
+  "Orhan Firat",
+  "Yanping Huang"
+ ],
+ "affiliations": [
+  "Google Research"
+ ],
+ "problem": "Scaling MoE to hundreds of billions of parameters required hand-written expert-parallel sharding code, so no team could practically adopt sparse MoE.",
+ "mechanism": "Annotation-based automatic sharding with compiler annotations so a standard transformer containing MoE feed-forward sublayers can be partitioned across TPU pods with no hand-written sharding logic; the contraction is expressed so expert weights and expert activations shard along the same axis, so no all-to-all of weights is needed per step. Gating is top-2 with softmax-normalised top-2 weights. Load balance is an auxiliary loss N * sum_j f_j * P_j plus a z-loss. Tokens whose top-2 expert exceeds that expert's capacity are dropped, governed by capacity_factor; this token-dropping behaviour is exactly what MegaBlocks later removes. GShard established the sharded-MoE idiom later used by T5X and GSPMD. Active-vs-total for the flagship GShard model is roughly 600B total with about 100B active (about 1/6 sparse), routed top-2 of many experts plus capacity-limited dropping.",
+ "hardware_relevance": [
+  "google-tpu-v4",
+  "google-tpu-v5e"
+ ],
+ "speedup_reported": "No single speedup figure. The concrete claim is scale: sharded MoE models up to 600B parameters trained with the same per-device batch size and learning-rate schedule as dense T5 baselines, plus a reported 2-3x training speedup over a dense model of equal downstream quality on the SuperGLUE and transfer setups in the scaling section. That is a quality-matched rather than speed-matched comparison.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/google-research/large-scale-vae",
+ "open_weights": true,
+ "notes": "ICLR 2021; venue per Semantic Scholar ('International Conference on Learning Representations'). The code_url given is the authors' MoE VAE repository, not a GShard implementation, and is indicative only. GShard's top-2 gating plus auxiliary loss is the direct ancestor that DeepSeekMoE names as its strawman baseline.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: iclr has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

@@ -1,0 +1,51 @@
+{
+ "name": "FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU",
+ "arxiv_id": "2303.06865",
+ "venue": "icml",
+ "venue_track": "main",
+ "year": 2023,
+ "category": "serving-systems",
+ "authors": [
+  "Ying Sheng",
+  "Lianmin Zheng",
+  "Binhang Yuan",
+  "Zhuohan Li",
+  "Max Ryabinin",
+  "Daniel Y. Fu",
+  "Zhiqiang Xie",
+  "Beidi Chen",
+  "Clark Barrett",
+  "Joseph E. Gonzalez",
+  "Percy Liang",
+  "Christopher Ré",
+  "Ion Stoica",
+  "Ce Zhang"
+ ],
+ "affiliations": [
+  "Stanford University",
+  "UC Berkeley",
+  "ETH Zurich",
+  "Yandex",
+  "HSE University",
+  "Meta",
+  "Carnegie Mellon University"
+ ],
+ "problem": "Serving a large model on a single commodity GPU requires offloading weights and KV cache to CPU, disk and even across GPUs, and that offloading is dominated by I/O and memory-transfer latency rather than arithmetic, so throughput collapses.",
+ "mechanism": "A constrained scheduling framework that treats a single-GPU + CPU (+ disk) hierarchy as the whole machine and solves a LINEAR PROGRAMMING problem for the best plan jointly: which GPU operators run per iteration, whether each layer's weights are prefetched / computed / discarded on the CPU, and where the attention KV cache lives. Weights and the attention cache are additionally compressed to 4 bits with their own quantization scheme so more state fits on the GPU. The plan is searched per model and device rather than hand-tuned.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "speedup_reported": "Paper's own claim: up to 4x higher throughput than HuggingFace Accelerate with a 13B model and OPT-175B on a single 16GB A100, by using a discount policy on the offloaded KV cache; and 1-4x higher effective batch size. Numbers are per-GPU and depend on the offload hierarchy.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/FMInference/FlexGen",
+ "open_weights": true,
+ "notes": "Added as the load-bearing 2023 offload-scheduling paper: the repo has PowerInfer-style consumer-GPU offload and Tetra, but nothing that formalises offload scheduling as a joint policy over compute-vs-transfer-vs-cache-placement, which is the actual mechanism behind why a single GPU can serve a big model at all. Venue ICML 2023, verified against the PMLR v202 table of contents (v202 confirmed as the 40th ICML, 23-29 July 2023, by reading the volume landing page header rather than assuming the volume-to-year mapping). AUTHOR AND AFFILIATION CORRECTION made in this pass: an earlier draft of this record carried a wrong author list and a wrong affiliation pair (University of Chicago / ETH Zürich), written from memory rather than read off the paper. Both were replaced from the actual PDF first page, whose author line and footnote block read verbatim: '1Stanford University 2UC Berkeley 3ETH Zurich 4Yandex 5HSE University 6Meta 7Carnegie Mellon University' over authors Ying Sheng, Lianmin Zheng, Binhang Yuan, Zhuohan Li, Max Ryabinin, Daniel Y. Fu, Zhiqiang Xie, Beidi Chen, Clark Barrett, Joseph E. Gonzalez, Percy Liang, Christopher Re, Ion Stoica, Ce Zhang. Recording this because it is exactly the class of error the repo's identifier discipline exists to catch, and it was caught only by reading the PDF. Note OpenAlex returns NO institutions for this paper, which is why the affiliation field could not be filled from an API and had to come from the PDF.",
+ "status": "verified",
+ "confidence": 0.9,
+ "sources": [
+  "w3p-flexgen-icml23-pmlr"
+ ],
+ "id": "flexgen-single-gpu-high-throughput",
+ "type": "paper",
+ "updated": "2026-10-04"
+}

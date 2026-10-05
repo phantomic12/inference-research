@@ -1,0 +1,63 @@
+{
+  "id": "nvidia-tesla-p100",
+  "type": "accelerator",
+  "name": "NVIDIA Tesla P100 SXM2 16GB (GP100)",
+  "vendor": "nvidia",
+  "architecture": "pascal",
+  "release_year": 2016,
+  "process_nm": 16,
+  "form_factors": [
+    "sxm"
+  ],
+  "vram_gb": 16,
+  "memory_type": "hbm2",
+  "memory_bus_bit": 4096,
+  "memory_bandwidth_gbps": 732,
+  "memory_bandwidth_basis": "732 GB/s is the DATASHEET figure (net2-nvidia-p100-datasheet, spec row 'Memory Bandwidth 732 GB/s', a single 16 GB SXM2 part). The WHITEPAPER gives the per-stack number instead (source w3a-nvidia-tesla-p100-whitepaper): 'P100 supports 180GB/sec per stack' across four HBM2 stacks = 720 GB/s. The 732-vs-720 gap is real and is not a transcription error: 732 is the datasheet's shipped-part measurement and 720 is the whitepaper's pre-silicon per-stack arithmetic. Do not reconcile them by adjusting either. THE BUS WIDTH IS PUBLISHED, which is unusual for this repo and is why this record exists: the whitepaper states it twice and unambiguously - Table 1 'Memory Interface ... 4096-bit HBM2' and the body text 'eight 512-bit memory controllers (4096 bits total)' with 'Two 512-bit memory controllers connect to each HBM2 stack for an effective 4096-bit-wide HBM2 memory interface'. So memory_bus_bit 4096 is vendor-printed, not derived. Independent consistency check: 4096-bit is also the only width consistent with 16 GB across four 4-die HBM2 stacks and with the 720-732 GB/s aggregate.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 10.6,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "net2-nvidia-p100-datasheet",
+      "notes": "Datasheet 'Single-Precision Performance 10.6 TeraFLOPS'. Same figure as the whitepaper's Table 1 'Peak FP32 GFLOPs 10600' (10.6 TFLOPS), with footnote 1 'The GFLOPS in this chart are based on GPU Boost Clocks'. DENSE with no halving: this document carries NO sparsity footnote of any kind.",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Transcribed from the vendor's own fp32 figure for NVIDIA Tesla P100 SXM2 16GB (GP100) in source of record 'NVIDIA Tesla P100 datasheet' (kind: spec-sheet / whitepaper). Recorded dense:true - NEITHER the P100 datasheet nor the GP100 whitepaper carries any sparsity footnote or sparsity notation, so no halving applies; this is also the FP64-vs-FP32 core-ratio distinction (1792 vs 3584 cores), which is a DIFFERENT halving and must not be applied to this field."
+    },
+    {
+      "precision": "fp16",
+      "tflops": 21.2,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "net2-nvidia-p100-datasheet",
+      "notes": "Datasheet 'Half-Precision Performance 21.2 TeraFLOPS'. NOT derived as 2x FP32 even though the arithmetic happens to be 10.6 x 2 = 21.2 - it is printed. DENSE: no sparsity footnote exists on either the datasheet or the whitepaper. Note this is NOT a Tensor Core figure: Pascal GP100 has no tensor cores, so this is CUDA-core FP16 throughput. Do not compare it to a Hopper/Blackwell 'FP16 Tensor TFLOPS' row as if it were the same quantity - it is roughly 4x lower than the H100's dense tensor FP16 for a reason that has nothing to do with process node.",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Transcribed from the vendor's own fp16 figure for NVIDIA Tesla P100 SXM2 16GB (GP100) in source of record 'NVIDIA Tesla P100 datasheet' (kind: spec-sheet / whitepaper). Recorded dense:true - NEITHER the P100 datasheet nor the GP100 whitepaper carries any sparsity footnote or sparsity notation, so no halving applies; this is also the FP64-vs-FP32 core-ratio distinction (1792 vs 3584 cores), which is a DIFFERENT halving and must not be applied to this field."
+    },
+    {
+      "precision": "fp64",
+      "tflops": 5.3,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "net2-nvidia-p100-datasheet",
+      "notes": "FP64 5.3 TeraFLOPS, datasheet 'Double-Precision Performance 5.3 TeraFLOPS'. Reclassified other -> fp64 on 2026-10-04: the enum now HAS an fp64 member, and 'other' was conflating genuine FP64 with genuinely-unknown precision - two states that mean opposite things to a reader deciding whether a figure is usable. The numeric value, dense flag and basis are unchanged. THE NUMBER THAT MATTERS ON THIS PART IS THE 2:1 RATIO, not the absolute value: Pascal GP100 carries 1792 FP64 CUDA cores against 3584 FP32, i.e. a deliberate one-half FP64 rate, which is what makes P100 the last NVIDIA part where FP64 was structurally throttled relative to FP32 rather than merely small in absolute terms. DENSE, no sparsity footnote exists. Whitepaper Table 1 corroborates: 'Peak FP64 GFLOPs 1680 210 5300' for K40/M40/P100.",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Transcribed from the vendor's own other figure for NVIDIA Tesla P100 SXM2 16GB (GP100) in source of record 'NVIDIA Tesla P100 datasheet' (kind: spec-sheet / whitepaper). Recorded dense:true - NEITHER the P100 datasheet nor the GP100 whitepaper carries any sparsity footnote or sparsity notation, so no halving applies; this is also the FP64-vs-FP32 core-ratio distinction (1792 vs 3584 cores), which is a DIFFERENT halving and must not be applied to this field."
+    }
+  ],
+  "tdp_w": 300,
+  "interconnect": [
+    "nvlink-1"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "net2-nvidia-p100-datasheet",
+    "w3a-nvidia-tesla-p100-whitepaper"
+  ],
+  "notes": "CREATED 2026-10-04 to resolve two dangling references that the audit classified as MISSING rather than misspelled: papers/multi-query-attention and papers/carbon-emissions-large-neural-training both carry 'nvidia-tesla-p100' in hardware_relevance. Neither paper needed a rename - data/accelerators/ simply had no P100 record at all.\n\nTHE 732 GB/s / 4096-bit PAIR IS THE HISTORICALLY IMPORTANT PART OF THIS RECORD. 732 GB/s on a 4096-bit HBM2 interface is ~1.75x the bandwidth per unit of capacity of anything that came before it, and it is why the P100 - not the V100 - is the part that made large-batch fp16 training bandwidth a first-order design constraint. It is also why this part is worth having in the repo even though it cannot run a modern serving stack: several papers in data/papers/ use it as the BASELINE that later memory hierarchies are measured against.\n\nTHE SPECS ARE ALL VENDOR-PRINTED, which for a 2016 part is unusual and is the main reason confidence is 0.9 rather than 0.7. Both reachable first-party NVIDIA documents agree with each other row by row: 16 GB, 300 W, SXM2, Pascal, 16-nm FinFET, 3584 CUDA cores, 1792 FP64 cores.\n\nWHAT THE VENDOR DOES NOT PUBLISH and is therefore absent here rather than inferred: no HBM2 per-pin data rate (so the 732 GB/s cannot be re-derived from width x rate - the 1.875 Gbps per pin implied by it is my arithmetic, not NVIDIA's), no sustained-clock figure separate from the GPU-Boost peaks, and no NVLink bandwidth beyond the 160 GB/s bidirectional aggregate already carried on the nvlink-1 interconnect record.\n\nFORM FACTOR: this record is the SXM2 16 GB module, which is the only P100 configuration NVIDIA's own datasheet covers. A PCIe P100 16 GB also shipped, on the same 4096-bit GP100 silicon, and its figures differ only in form factor and power envelope; it is NOT recorded separately here, and nothing in this record should be read as describing the PCIe card.\n\nSCALE-UP IS NVLINK 1 ONLY. interconnect holds nvlink-1 because that is the fabric this part ships on and the one source net2-nvidia-p100-datasheet documents ('NVLINK INTERCONNECT ... Bidirectional BW (GB/Sec) 160 ... K40 P100'). It also sits on PCIe Gen3 x16 to the host, and that is deliberately NOT listed: the datasheet's own spec row reads 'Interconnect NVIDIA NVLink' with no PCIe generation named, and the whitepaper mentions 'PCIe Gen 3 x16' only as the baseline NVLink is 5x faster than. Host-side PCIe generation for this part is unverified, so pcie-gen3 is not asserted.\n\nCONSUMER AND UNIFIED MEMORY: consumer=false, unified_memory=false. The whitepaper has a full Unified Memory section (page-granular migration engine, 'Addressable Memory (TB) 10,000') - that is CUDA MANAGED MEMORY, a CUDA feature, not Apple-style hardware-managed unified memory, and the field is kept at false to match how nvidia-v100-sxm2-32gb reads the same section of the same document.\n\nCITED BY TWO PAPERS IN THIS REPO, and both citations are appropriate rather than incidental: papers/multi-query-attention (Shazeer et al., ICLR 2020 preprint per its own record) evaluates MQA/GQA on TPU v3/v4 and NVIDIA V100 and A100 alongside P100-class results, and papers/carbon-emissions-large-neural-training names P100 explicitly as the contemporaneous comparison baseline for Google TPU v2 ('Google's custom TPU v2 processor runs Transformer (Big) 4.3X faster than P100 GPUs'). The second of those notes is worth keeping in view: it means P100 is load-bearing as a BASELINE in this repo's carbon-accounting record, not merely as a part that ran something."
+}

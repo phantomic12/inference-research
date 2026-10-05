@@ -1,0 +1,40 @@
+{
+  "id": "eng-profile-kv-tiering-moves-flops-to-bytes",
+  "type": "flop",
+  "name": "KV-tiering and disaggregation engines move cost from flops to bytes: the hit path is a bandwidth problem wearing a FLOP record's clothes",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "THIS IS THE CLEAREST CASE IN THE REPO WHERE A FLOP CLASS IS ACTUALLY A BYTES CLASS, AND IT IS WORTH NAMING EXPLICITLY SO A READER DOESN'T PRICE IT WRONG. Prefill-decode disaggregation and KV tiering (lmcache, mooncake, nixl, and the vLLM/SGLang disaggregated paths) do not reduce attention flops on the hit path - they AVOID re-executing them, and then pay for the KV bytes instead. So the cost migrates from the flops axis to the bytes axis, and the arithmetic intensity of the operation drops even though no arithmetic changed. The decisive numbers: a full prefix hit of length L_hit still READS the KV for those L_hit tokens, so the hit path's cost is 2*kv_bytes_per_token*L_hit/BW_effective, where BW_effective is set by RESIDENCY, not by the accelerator's HBM bandwidth. A hit served from local HBM is cheap; the same hit served from DRAM, from a remote node over RDMA, or from object storage is bandwidth-bound at whatever that tier's bandwidth is, and the quadratic flops saving from not recomputing is partially given back as a linear bytes cost. THE ENGINE-SPECIFIC PART, which is what makes this an engine profile and not a generic note: the engine determines the RESIDENCY HIERARCHY and the TRANSFER PRIMITIVE, and those two determine BW_effective. lmcache is explicitly a layer rather than an engine - it plugs into vLLM, SGLang and others, runs as a standalone daemon so KV survives an engine crash, and offers tiered offload across CPU RAM, local disk, Redis/Valkey, Mooncake, InfiniStore, S3-compatible object storage, NIXL and GDS. Two DISTINCT PATHS ARE OFTEN CONFLATED and the repo correctly separates them: (1) the PD handoff, KV transferred prefill-worker to decode-worker over NVLink, RDMA or TCP through transports like NIXL - this is a scale-UP path and its bandwidth is interconnect bandwidth; (2) tiered offload to CPU RAM / local disk / remote backends - this is a scale-OUT-or-host path and its bandwidth is the storage tier's. A reader who quotes 'KV transfer bandwidth' without saying which of the two is meant cannot price the system. THE THIRD, ENGINE-LEVEL CHOICE: NON-PREFIX REUSE. lmcache supports reuse of cached blocks at ANY prompt position, not just a shared prefix, with selective recompute for quality recovery (CacheBlend). That changes the cost model again - the hit is no longer 'skip L_hit tokens' but 'fetch a set of scattered blocks', which is a random-access pattern with worse effective bandwidth than a sequential prefix read and a different block-table cost. Engines WITHOUT this capability can only do prefix reuse and therefore only get the sequential form.",
+  "bound_by": "memory",
+  "scales_with": [
+    "kv_residency (HBM vs CPU RAM vs local disk vs remote - THE dominant term; it sets BW_effective, and the quadratic flops saving is partly given back as a linear bytes cost when residency is low)",
+    "transport_primitive (NVLink / RDMA / TCP / NIXL for the PD handoff; storage-tier bandwidth for offload - the two are different bandwidths and are routinely conflated)",
+    "prefix_hit_length (sequential read, the cheap pattern)",
+    "scattered_block_count (for non-prefix reuse: random access, worse effective bandwidth than a sequential prefix read)",
+    "serialisation_compression_ratio (lmcache's Serde interface can compress or drop tokens, changing BOTH bytes and quality)",
+    "link_bandwidth per path (784 GB/s bidirectional per NPU on Ascend 950 UB Link 2.0 is the same order as the local memory bandwidth, which is what makes a unified-address-space PD handoff viable at all)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-b200",
+    "nvidia-gb200-nvl72",
+    "huawei-ascend-950dt"
+  ],
+  "workarounds": [
+    "State which transfer path a KV-transfer figure describes - PD handoff (interconnect bandwidth) or tiered offload (storage bandwidth); they differ by orders of magnitude",
+    "Compute the hit-path cost with BW_effective at the actual residency tier, not at the accelerator's HBM bandwidth",
+    "Treat a non-prefix reuse engine as a different cost model, not a better one: scattered block access has worse effective bandwidth than a sequential prefix read",
+    "Include the Serde compression ratio in the bytes estimate and re-check quality - a compressor changes the quality/bytes trade, it does not free lunch it"
+  ],
+  "notes": "Design consequence: 'prefill-decode disaggregation reduces prefill cost' is true in flops and dangerously incomplete in bytes. The flops saving is the L_hit^2 attention term avoided; the bytes cost is reading 2*kv_bytes_per_token*L_hit at the residency tier's bandwidth. Which wins is a function of the residency tier and the transport, and the repo's own KV geometry data makes the magnitude concrete: at 70,272 bytes/token (MLA, DeepSeek-V3-class), a 32k-token prefix hit moves about 2.25 GB - which at local HBM bandwidth is a rounding error against a recompute, and over a network link or from object storage is not. THAT SUBSTITUTION IS THE ENGINE CHOICE, and it is why a KV tier is a capacity-planning decision rather than a performance toggle. THE HARDWARE-DEPENDENT TAIL, worth flagging as the strongest version of this idea in the repo: Huawei's Ascend 950 line claims 256 TB of UNIFIED GLOBAL MEMORY ADDRESSING across up to 1024 NPUs at SuperPoD scale. If real, it removes the tensor-parallel-collectives problem entirely because a KV cache can be addressed as one flat address space rather than replicated per rank - which is precisely the problem every tiered-KV system exists to work around. That is recorded as a vendor claim in the accelerator record and is NOT asserted as fact here. THE HONEST NEGATIVE, and it is the reason this record is draft: NO engine or KV-tier project in this repo publishes a measured hit-path bandwidth or a per-tier bytes/second figure. The cost model here is derived from the residency and transport facts; no measured number is offered, and none was invented. Engine records: [[engines/lmcache]], [[engines/mooncake]], [[engines/nixl]], [[engines/vllm]], [[engines/sglang]]. Related flop records: [[prefix-cache-hit-path-gemm-only]], [[prefix-cache-hit-miss]], [[kv-cache-offload-host-dram-tier]], [[lmcache-kv-tier-outside-attention]], [[prefill-decode-disaggregation-kv-handoff]], [[sched-prefill-decode-disaggregation]], [[tensor-parallel-allreduce]].",
+  "status": "draft",
+  "confidence": 0.64,
+  "updated": "2026-10-04",
+  "sources": [
+    "pd-lmcache-docs",
+    "engine-vllm-github",
+    "engine-sglang-github",
+    "cn-huawei-atlas-650e-spec"
+  ]
+}

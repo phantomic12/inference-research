@@ -1,41 +1,42 @@
 {
-  "id": "ouroboros-phrase-by-phrase-drafting",
-  "name": "Ouroboros: Generating Longer Drafts Phrase by Phrase for Faster Speculative Decoding",
-  "arxiv_id": "2402.13720",
-  "venue": "emnlp",
-  "year": 2024,
-  "category": "speculative-decoding",
-  "authors": [
-    "Weilin Zhao",
-    "Yuxiang Huang",
-    "Xu Han",
-    "Wang Xu",
-    "Chaojun Xiao",
-    "Xinrong Zhang",
-    "Yewei Fang",
-    "Kaihuo Zhang",
-    "Zhiyuan Liu",
-    "Maosong Sun"
-  ],
-  "problem": "Under the draft-then-verify framing, DRAFTING efficiency - not verification - is the bottleneck capping total speculative-decoding speedup.",
-  "mechanism": "Draft PHRASES rather than tokens, training-free. A second (draft) model is used to generate a whole draft phrase autoregressively, but the phrases are then processed so that the actual token drafting is parallelised - the draft model's phrase-level outputs are fed through the target model's layers as a batch, converting sequential drafting into a parallel one, while lengthening drafts at no extra training cost. Accepts a given prefix of the draft and continues, keeping the modified rejection-sampling exactness property.",
-  "hardware_relevance": [
-    "nvidia-a100-sxm"
-  ],
-  "speedup_reported": "Up to 2.8x OVER SPECULATIVE DECODING and 3.9x over vanilla decoding, without fine-tuning either the draft or target models, on typical text-generation tasks. Note the two different denominators: 2.8x is the improvement over an already-good speculative-decoding baseline, 3.9x is over plain decoding. The 2.8x is the number that actually characterises the contribution.",
-  "adoption": "research-only",
-  "code_url": "https://github.com/thunlp/Ouroboros",
-  "open_weights": null,
-  "notes": "ADOPTION: research-only - not in vLLM, llama.cpp, SGLang, or TensorRT-LLM as of verification. VENUE: EMNLP 2024 per the arXiv comment field; Semantic Scholar was rate-limited at verification time so this rests on the arXiv comment alone. Reading note for the cost model: this paper attacks the DRAFT side, whereas EAGLE/MagicDec attack the VERIFY side, which is why their speedups do not compose automatically - and why the honest way to read this record is as an attack on the same bottleneck from the opposite side. There is also a confusingly-named sibling, Ouroboros-2 (online speculative decoding, a different paper and a different mechanism), which was searched for and could NOT be confirmed against the arXiv API under any title query attempted; it is deliberately not recorded here rather than recorded with a guessed identifier. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). No A100 in the paper; it ran on the export-restricted Chinese A800, an 80GB A100-family part: \"All experiments are performed on 2 x NVIDIA 80GB A800 GPU with NVLINK x 8 interconnected\". Source: https://arxiv.org/pdf/2402.13720 . Left dangling rather than mapped to nvidia-a100-80gb-sxm4: A800 is a distinct SKU and there is no A800 record in the repo, so asserting A800 == A100 80GB SXM4 would be a claim about part equivalence rather than about this paper's hardware. The 'NVLINK x 8' does point at a multi-GPU SXM baseboard rather than a standalone card, which is the nearest thing to form-factor evidence here - but it is not a stated A100 variant.\n\n AFFILIATIONS FILLED 2026-10-04 (paper-verification pass): from the Semantic Scholar graph API (paper/arXiv:2402.13720), which is the only machine-readable source that carries author affiliations — the arXiv Atom feed returns author names only, and no ORCID is exposed by either API. One known upstream typo corrected: \"Tel Aviv Univesity\" -> \"Tel Aviv University\". S2 affiliation coverage is partial (120 of 249 corpus records carry any), so these lists may be incomplete rather than exhaustive.",
-  "confidence": 0.8,
-  "type": "paper",
-  "affiliations": [
-    "Tsinghua University"
-  ],
-  "status": "verified",
-  "updated": "2026-10-04",
-  "sources": [
-    "pap-eff-ouroboros",
-    "sco-arxiv-api-paper-metadata"
-  ]
+ "id": "ouroboros-phrase-by-phrase-drafting",
+ "name": "Ouroboros: Generating Longer Drafts Phrase by Phrase for Faster Speculative Decoding",
+ "arxiv_id": "2402.13720",
+ "venue": "emnlp",
+ "year": 2024,
+ "category": "speculative-decoding",
+ "authors": [
+  "Weilin Zhao",
+  "Yuxiang Huang",
+  "Xu Han",
+  "Wang Xu",
+  "Chaojun Xiao",
+  "Xinrong Zhang",
+  "Yewei Fang",
+  "Kaihuo Zhang",
+  "Zhiyuan Liu",
+  "Maosong Sun"
+ ],
+ "problem": "Under the draft-then-verify framing, DRAFTING efficiency - not verification - is the bottleneck capping total speculative-decoding speedup.",
+ "mechanism": "Draft PHRASES rather than tokens, training-free. A second (draft) model is used to generate a whole draft phrase autoregressively, but the phrases are then processed so that the actual token drafting is parallelised - the draft model's phrase-level outputs are fed through the target model's layers as a batch, converting sequential drafting into a parallel one, while lengthening drafts at no extra training cost. Accepts a given prefix of the draft and continues, keeping the modified rejection-sampling exactness property.",
+ "hardware_relevance": [
+  "nvidia-a100-sxm"
+ ],
+ "speedup_reported": "Up to 2.8x OVER SPECULATIVE DECODING and 3.9x over vanilla decoding, without fine-tuning either the draft or target models, on typical text-generation tasks. Note the two different denominators: 2.8x is the improvement over an already-good speculative-decoding baseline, 3.9x is over plain decoding. The 2.8x is the number that actually characterises the contribution.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/thunlp/Ouroboros",
+ "open_weights": null,
+ "notes": "ADOPTION: research-only - not in vLLM, llama.cpp, SGLang, or TensorRT-LLM as of verification. VENUE: EMNLP 2024 per the arXiv comment field; Semantic Scholar was rate-limited at verification time so this rests on the arXiv comment alone. Reading note for the cost model: this paper attacks the DRAFT side, whereas EAGLE/MagicDec attack the VERIFY side, which is why their speedups do not compose automatically - and why the honest way to read this record is as an attack on the same bottleneck from the opposite side. There is also a confusingly-named sibling, Ouroboros-2 (online speculative decoding, a different paper and a different mechanism), which was searched for and could NOT be confirmed against the arXiv API under any title query attempted; it is deliberately not recorded here rather than recorded with a guessed identifier. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). No A100 in the paper; it ran on the export-restricted Chinese A800, an 80GB A100-family part: \"All experiments are performed on 2 x NVIDIA 80GB A800 GPU with NVLINK x 8 interconnected\". Source: https://arxiv.org/pdf/2402.13720 . Left dangling rather than mapped to nvidia-a100-80gb-sxm4: A800 is a distinct SKU and there is no A800 record in the repo, so asserting A800 == A100 80GB SXM4 would be a claim about part equivalence rather than about this paper's hardware. The 'NVLINK x 8' does point at a multi-GPU SXM baseboard rather than a standalone card, which is the nearest thing to form-factor evidence here - but it is not a stated A100 variant.\n\n AFFILIATIONS FILLED 2026-10-04 (paper-verification pass): from the Semantic Scholar graph API (paper/arXiv:2402.13720), which is the only machine-readable source that carries author affiliations — the arXiv Atom feed returns author names only, and no ORCID is exposed by either API. One known upstream typo corrected: \"Tel Aviv Univesity\" -> \"Tel Aviv University\". S2 affiliation coverage is partial (120 of 249 corpus records carry any), so these lists may be incomplete rather than exhaustive.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass): venue_track set to 'main' from the ACL Anthology bib index (anthology.bib, 131650 entries) by normalized title match. Evidence: anthology id 2024.emnlp-main.742, booktitle 'Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing'. The Anthology id is the authoritative signal here and it is unambiguous, so this is an additive clarification of a track, not a change of venue - `venue` is untouched and no status change is implied. The reason this matters for inference readers: a Findings paper and a main-track paper at the same venue are not the same kind of evidence, and until this field existed the repo could not say which was which.",
+ "confidence": 0.8,
+ "type": "paper",
+ "affiliations": [
+  "Tsinghua University"
+ ],
+ "status": "verified",
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-eff-ouroboros",
+  "sco-arxiv-api-paper-metadata"
+ ],
+ "venue_track": "main"
 }

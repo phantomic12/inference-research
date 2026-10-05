@@ -1,33 +1,39 @@
 {
-  "id": "eagle-feature-level-speculative",
-  "name": "EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty",
-  "arxiv_id": "2401.15077",
-  "venue": "arxiv-preprint",
-  "year": 2024,
-  "category": "speculative-decoding",
-  "authors": [
-    "Yuhui Li",
-    "Fangyun Wei",
-    "Chao Zhang",
-    "Hongyang Zhang"
-  ],
-  "problem": "Token-level speculative drafting has irreducible uncertainty that caps acceptance rate; the draft model is forced to guess the next token in the same way the target does.",
-  "mechanism": "Draft in FEATURE space instead of token space. An autoregressive feature-level draft model (a single transformer layer) predicts the target's SECOND-TO-TOP-LAYER hidden feature sequence. The predicted feature is then fed through the target's frozen lm_head to yield a draft token. The key move for handling feature-level uncertainty: shift the input sequence by one time step - feed [feat_1, ..., feat_t, embed_t] rather than [embed_1, ..., embed_t] - so the draft head sees the previous token's embedding and can resolve the uncertainty the authors identify. Draft head is tiny (~one decoder layer).",
-  "hardware_relevance": [
-    "nvidia-h100-sxm",
-    "nvidia-a100-40gb-sxm4"
-  ],
-  "speedup_reported": "For LLaMA2-Chat 70B, latency speedup 2.7x-3.5x AND doubled throughput, while maintaining the exact generated-text distribution. Evaluated across the Vicuna and LLaMA2-Chat series plus Mixtral 8x7B Instruct, on dialogue, code generation, math reasoning, and instruction following. The 70B figure is a 70B target with a one-layer draft head - the draft/target size ratio is extreme, which is the point of the paper.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/SafeAILab/EAGLE",
-  "open_weights": true,
-  "notes": "ADOPTION, precisely: this is the best-engine-supported of the recent draft-model variants. vLLM ships EAGLE and EAGLE-3 as speculative methods, SGLang ships EAGLE-3, and llama.cpp has an EAGLE path; the EAGLE-3 headline throughput number is measured inside SGLang, which is itself evidence of upstream support rather than a bespoke harness. Weights are released so it is deployable without retraining the target. VENUE NOTE: Semantic Scholar gives no venue for 2401.15077 and the arXiv comment field carries none, so venue = arxiv-preprint, year = arXiv v1 (Jan 2024). Note the distinction from Medusa, also a multi-head method: Medusa predicts TOKENS from the backbone hidden state, EAGLE autoregresses over FEATURES and reuses the target's lm_head - which is why EAGLE's acceptance rate is higher and why the two are not interchangeable in a benchmark table. DANGLING REF RESOLVED 2026-10-04 by reading the paper (arXiv:2401.15077v1 PDF, section 1 and section 5.1). The paper states the A100 memory size explicitly and repeatedly: \"The training is completed in 1-2 days on 4x A100 (40G) GPUs\"; \"the Auto-regression Head is trainable within 1-2 days on an A100 40G server for the 70B models\"; and \"constrained by 4 A100 (40G) GPUs totaling 160G of CUDA memory\". Source: https://arxiv.org/pdf/2401.15077 . 40 GB is stated, so the 40 GB SXM4 record is correct; there is no 40 GB PCIe record in data/accelerators/, and 'SXM' in the old shorthand is consistent with the paper's node-based ('4x', 'server') framing.",
-  "confidence": 0.9,
-  "type": "paper",
-  "affiliations": [],
-  "status": "verified",
-  "updated": "2026-10-04",
-  "sources": [
-    "niche-eagle-paper"
-  ]
+ "id": "eagle-feature-level-speculative",
+ "name": "EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty",
+ "arxiv_id": "2401.15077",
+ "venue": "icml",
+ "year": 2024,
+ "category": "speculative-decoding",
+ "authors": [
+  "Yuhui Li",
+  "Fangyun Wei",
+  "Chao Zhang",
+  "Hongyang Zhang"
+ ],
+ "problem": "Token-level speculative drafting has irreducible uncertainty that caps acceptance rate; the draft model is forced to guess the next token in the same way the target does.",
+ "mechanism": "Draft in FEATURE space instead of token space. An autoregressive feature-level draft model (a single transformer layer) predicts the target's SECOND-TO-TOP-LAYER hidden feature sequence. The predicted feature is then fed through the target's frozen lm_head to yield a draft token. The key move for handling feature-level uncertainty: shift the input sequence by one time step - feed [feat_1, ..., feat_t, embed_t] rather than [embed_1, ..., embed_t] - so the draft head sees the previous token's embedding and can resolve the uncertainty the authors identify. Draft head is tiny (~one decoder layer).",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-a100-40gb-sxm4"
+ ],
+ "speedup_reported": "For LLaMA2-Chat 70B, latency speedup 2.7x-3.5x AND doubled throughput, while maintaining the exact generated-text distribution. Evaluated across the Vicuna and LLaMA2-Chat series plus Mixtral 8x7B Instruct, on dialogue, code generation, math reasoning, and instruction following. The 70B figure is a 70B target with a one-layer draft head - the draft/target size ratio is extreme, which is the point of the paper.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/SafeAILab/EAGLE",
+ "open_weights": true,
+ "notes": "ADOPTION, precisely: this is the best-engine-supported of the recent draft-model variants. vLLM ships EAGLE and EAGLE-3 as speculative methods, SGLang ships EAGLE-3, and llama.cpp has an EAGLE path; the EAGLE-3 headline throughput number is measured inside SGLang, which is itself evidence of upstream support rather than a bespoke harness. Weights are released so it is deployable without retraining the target. VENUE NOTE: Semantic Scholar gives no venue for 2401.15077 and the arXiv comment field carries none, so venue = arxiv-preprint, year = arXiv v1 (Jan 2024). Note the distinction from Medusa, also a multi-head method: Medusa predicts TOKENS from the backbone hidden state, EAGLE autoregresses over FEATURES and reuses the target's lm_head - which is why EAGLE's acceptance rate is higher and why the two are not interchangeable in a benchmark table. DANGLING REF RESOLVED 2026-10-04 by reading the paper (arXiv:2401.15077v1 PDF, section 1 and section 5.1). The paper states the A100 memory size explicitly and repeatedly: \"The training is completed in 1-2 days on 4x A100 (40G) GPUs\"; \"the Auto-regression Head is trainable within 1-2 days on an A100 40G server for the 70B models\"; and \"constrained by 4 A100 (40G) GPUs totaling 160G of CUDA memory\". Source: https://arxiv.org/pdf/2401.15077 . 40 GB is stated, so the 40 GB SXM4 record is correct; there is no 40 GB PCIe record in data/accelerators/, and 'SXM' in the old shorthand is consistent with the paper's node-based ('4x', 'server') framing.\n\nAFFILIATIONS BACKFILLED 2026-10-04 (paper-fields pass, agent w3p): PDF first page footnote block, identical author line to EAGLE-2 (Li, Wei, Zhang, Zhang). OpenAlex returns none. Filled from the API/PDF rather than from memory, because an affiliation is a fact about a specific paper's author block and inference from the author's employer history is how wrong affiliations get shipped.\n\nVENUE (+YEAR) CORRECTION AND VENUE_TRACK 2026-10-04 (paper-fields pass, agent w3p): venue 'arxiv-preprint' -> 'icml', venue_track 'main'. EVIDENCE: PMLR v235 (ICML 2024) table of contents contains 'EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty' verbatim. Independently corroborated by Semantic Scholar (venue 'International Conference on Machine Learning', year 2024, pages 28935-28948). BOTH VALUES RETAINED per the repo contract: the prior value was 'arxiv-preprint'. status set to contested because this changes a peer-reviewed attribution. Method note: OpenReview's api2 hard-429s under load and pre-2024 venues are unreachable through it, so these were verified against static proceedings indexes (proceedings.mlr.press for ICML, proceedings.mlsys.org for MLSys) rather than the OpenReview API.",
+ "confidence": 0.9,
+ "type": "paper",
+ "affiliations": [
+  "Peking University",
+  "Microsoft Research",
+  "University of Waterloo",
+  "Vector Institute"
+ ],
+ "status": "contested",
+ "updated": "2026-10-04",
+ "sources": [
+  "niche-eagle-paper"
+ ],
+ "venue_track": "main"
 }

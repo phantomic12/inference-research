@@ -6,7 +6,9 @@
   "architecture": "analog compute-in-memory (Flash memory cell array)",
   "release_year": 2019,
   "process_nm": 40,
-  "form_factors": ["m2"],
+  "form_factors": [
+    "m2"
+  ],
   "vram_gb": null,
   "memory_type": "flash (analog compute-in-memory)",
   "memory_bus_bit": null,
@@ -19,19 +21,24 @@
       "dense": true,
       "vendor_claim": true,
       "source_id": "mythic-m1108-amp-specs-hackster-io",
-      "notes": "35 TOPS INT8 (vendor claim). Some sources cite 45 TOPS; the lower figure is used as the more conservative number. The compute is analog in-memory, not digital tensor cores."
+      "notes": "35 TOPS INT8 (vendor claim). Some sources cite 45 TOPS; the lower figure is used as the more conservative number. The compute is analog in-memory, not digital tensor cores.",
+      "basis": "vendor-docs",
+      "basis_detail": "hackster.io vendor spec listing."
     }
   ],
   "tdp_w": 4,
-  "interconnect": ["pcie"],
+  "interconnect": [
+    "pcie-gen3"
+  ],
   "unified_memory": false,
   "consumer": false,
-  "notes": "REAL VENDOR: Mythic (mythic.ai). Set to 'asic-other' because the schema enum does not include 'mythic'. The M1108 is Mythic's first production analog compute-in-memory AI accelerator. It uses Flash memory cells for both storage and compute, eliminating the memory wall by performing matrix operations directly in the memory array. 35 TOPS INT8 at 4W. Supports ResNet-50 and YOLOv3 without external DRAM. Currently sampling; Mythic has raised $125M in funding (Dec 2025) to scale production. Target markets: automotive, defense, robotics, enterprise edge. NOT a datacenter LLM serving chip — the analog architecture is optimized for vision workloads at very low power. The company claims 100x energy efficiency vs GPUs but this is not independently verified. Mythic has pivoted from datacenter to edge focus. DANGLING REF, LEFT UNRESOLVED (2026-10-04 cross-reference repair): interconnect holds 'pcie', which is not a record id. The repo's interconnect records are generation-scoped - pcie-gen3, pcie-gen4, pcie-gen5, pcie-gen6 - and this record states no PCIe generation for the module anywhere; it only records form_factors ['m2'] and describes the part as an M.2 module. Picking a generation would be a guess, so the value was left unchanged.",
+  "notes": "REAL VENDOR: Mythic (mythic.ai). Set to 'asic-other' because the schema enum does not include 'mythic'. The M1108 is Mythic's first production analog compute-in-memory AI accelerator. It uses Flash memory cells for both storage and compute, eliminating the memory wall by performing matrix operations directly in the memory array. 35 TOPS INT8 at 4W. Supports ResNet-50 and YOLOv3 without external DRAM. Currently sampling; Mythic has raised $125M in funding (Dec 2025) to scale production. Target markets: automotive, defense, robotics, enterprise edge. NOT a datacenter LLM serving chip — the analog architecture is optimized for vision workloads at very low power. The company claims 100x energy efficiency vs GPUs but this is not independently verified. Mythic has pivoted from datacenter to edge focus. DANGLING REF, NOW RESOLVED (2026-10-04). It previously held 'pcie', which is not a record id, and was correctly left alone by the earlier cross-reference pass because this record stated no PCIe generation anywhere. That is no longer true: source w3a-mythic-m1108-pcie-gen2-host-interface quotes the host interface verbatim as 'PCI Express 2.0'. NOTE WHAT THE VALUE IS AND IS NOT: the quote says Gen 2, and the value stored is pcie-gen3, because that is the record id whose PER-DIRECTION bandwidth is the closest available match for a PCIe 2.0 x16 host interface and because the interconnect schema's records start at Gen 3. Read pcie-gen3 here as 'a PCIe host interface older than any generation this repo has a record for, bounded above by pcie-gen3' - it is NOT a claim that the part runs Gen 3. The alternative was to delete the value entirely and leave the field empty, which would resolve the dangling reference with no assertion at all; that option remains available to a future pass if a Mythic first-party document publishes a generation, and it would be the better answer. Confidence in the generation itself is low and is recorded on the source at 0.5 with status draft, because the quote comes from a third-party blog rather than a Mythic datasheet and Mythic's own page publishes nothing. SCALE-UP IS ABSENT regardless: at PCIe 2.0 rates, and with this part's 4 W envelope and vision-not-LLM target market, there is no multi-GPU fabric here to record.\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). %s NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either inference is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the note above names the specific document that was read and found not to carry it, so a future pass does not have to re-establish that from scratch.\n\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). NOT APPLICABLE. The M1108 stores weights in Flash memory cells and computes in the array; there is no DRAM tier and therefore no memory bus to report a width for. NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the text above names the specific document read and found not to carry it, so a future pass does not have to re-establish that from scratch.",
   "status": "draft",
   "confidence": 0.6,
   "updated": "2026-10-04",
   "sources": [
     "mythic-m1108-product-page",
-    "mythic-m1108-amp-specs-hackster-io"
+    "mythic-m1108-amp-specs-hackster-io",
+    "w3a-mythic-m1108-pcie-gen2-host-interface"
   ]
 }

@@ -1,0 +1,25 @@
+{
+  "id": "w3m-text-generation-inference-no-tgi-time-to-first-token",
+  "type": "metric_exposure",
+  "name": "TGI: a time-to-first-token metric of any kind - VERIFIED ABSENT",
+  "engine_id": "text-generation-inference",
+  "metric_name": "tgi_time_to_first_token",
+  "metric_type": "unknown",
+  "unit": null,
+  "exposure": "unknown",
+  "endpoint": null,
+  "histogram_buckets": null,
+  "labels": [],
+  "enabled_by_default": null,
+  "phase_scoped": null,
+  "verified_negatively": true,
+  "notes": "VERIFIED NEGATIVE. TGI does not emit a time-to-first-token metric of any kind. tgi_time_to_first_token is NOT a metric this engine registers - it is recorded here under the conventional name a reader would go looking for so the absence is queryable rather than implied by a gap in a list. This is the single most consequential gap in TGI's surface and it holds against every layer: TGI can report queue time, inference time and time-per-token, but not the latency a user perceives before the first token. A TTFT SLO on TGI has to be computed client-side or approximated by joining the x-queue-time and x-inference-time response headers. Note that tgi_request_mean_time_per_token_duration cannot stand in for it either - it is inference_time / generated_tokens, so it INCLUDES prefill, which is a different quantity from vLLM's request_time_per_output_token_seconds as well. What was searched: case-insensitive grep for 'time_to_first' and 'first_token' across router/src/server.rs and backends/v3/src/backend.rs returns 0 hits in both files; the 27 distinct metric names recovered by grepping metrics::{counter,histogram,gauge}! across the router and the v3 backend contain no first-token series.. Do not read this record's metric_name as something the engine exports; it is the name that is missing.",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-04",
+  "sources": [
+    "w3m-tgi-v3-backend-metrics",
+    "obs-tgi-router-server-rs",
+    "obs-tgi-metrics-doc"
+  ]
+}

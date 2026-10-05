@@ -1,41 +1,42 @@
 {
-  "id": "cacheblend-rag-kv-fusion",
-  "name": "CacheBlend: Fast Large Language Model Serving for RAG with Cached Knowledge Fusion",
-  "arxiv_id": "2405.16444",
-  "venue": "arxiv-preprint",
-  "year": 2024,
-  "category": "kv-cache",
-  "authors": [
-    "Jiayi Yao",
-    "Hanchen Li",
-    "Yuhan Liu",
-    "Siddhant Ray",
-    "Yihua Cheng",
-    "Qizheng Zhang",
-    "Kuntai Du",
-    "Shan Lu",
-    "Junchen Jiang"
-  ],
-  "problem": "Precomputed KV caches can only be reused when the cached text is the input PREFIX. In RAG the retrieved chunks are scattered through the prompt and are not prefixes, so precomputed caches ignore each chunk's cross-attention with preceding text and the reuse benefit is largely unrealised.",
-  "mechanism": "Reuses precomputed KV caches REGARDLESS of prefix position, then SELECTIVELY RECOMPUTES the KV values of a SMALL SUBSET of tokens to partially update each reused cache - recomputing a fraction of tokens is enough to restore the cross-attention information the reused cache missed. The small extra delay for recomputation is PIPELINED with the RETRIEVAL of the KV caches within the same job, which is the detail that makes it practical: because the recompute is hidden behind a memory fetch, KV caches can be stored on SLOWER, LARGER devices without increasing inference delay. Implemented in LMCache.",
-  "hardware_relevance": [
-    "nvidia-a100-sxm",
-    "nvidia-h100-sxm"
-  ],
-  "speedup_reported": "TTFT reduced 2.2x-3.3x and inference throughput increased 2.8x-5x versus FULL KV RECOMPUTE, without compromising generation quality. Baseline is explicitly full KV recomputation on three open-source LLMs of various sizes and four benchmark datasets. Because the baseline is KV recompute and the gain lands in TTFT, this is a prefill-side speedup and is NOT comparable to the decode-side speculative-decoding numbers elsewhere in this set.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/LMCache/LMCache",
-  "open_weights": false,
-  "notes": "ADOPTION: LMCache is a real, publicly available, widely used KV-cache layer that vLLM integrates with, and the tiering idea (fast GPU + slow large storage with pipelined fetch) is now standard practice - hence in-upstream-engine rather than research-only, though no engine ships CacheBlend's exact selective-recompute as a default. VENUE NOTE: no peer-reviewed venue verifiable via Semantic Scholar and no venue in the arXiv comment, so venue = arxiv-preprint, year = ArXiv v1 (May 2024). THE STRUCTURAL CONTRIBUTION FOR THIS SLICE is the non-prefix reuse case: prefix-cache reuse is what SGLang's RadixAttention does, and CacheBlend is the record for the harder, more common RAG case where retrieved chunks are interior to the prompt. Its pipelining insight - that recompute can hide behind a slow-device fetch - is also the general trick for offloading, which is why the tiering pattern outlived the paper. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). No A100 anywhere in the paper, and its actual cards are not A100 at all: \"We run our end-to-end experiments on Runpod GPUs with 128 GB RAM, 2 Nvidia A40 GPUs, and 1TB NVME SSD whose measured throughput is 4.8 GB/s\" (section 7.1 Setup), and \"running prefill can take three (or six) seconds for Llama-34B (or Llama-70B) on one A40 GPU\" (section 1). Source: https://arxiv.org/pdf/2405.16444 . The repo has no A40 record, so this value is left dangling rather than repointed at an A100 the paper never used; adding an A40 record is a separate decision and was not made here.\n\n AFFILIATIONS FILLED 2026-10-04 (paper-verification pass): from the Semantic Scholar graph API (paper/arXiv:2405.16444), which is the only machine-readable source that carries author affiliations — the arXiv Atom feed returns author names only, and no ORCID is exposed by either API. One known upstream typo corrected: \"Tel Aviv Univesity\" -> \"Tel Aviv University\". S2 affiliation coverage is partial (120 of 249 corpus records carry any), so these lists may be incomplete rather than exhaustive.",
-  "confidence": 0.85,
-  "type": "paper",
-  "affiliations": [
-    "Stanford University"
-  ],
-  "status": "verified",
-  "updated": "2026-10-04",
-  "sources": [
-    "pap-eff-cacheblend",
-    "sco-arxiv-api-paper-metadata"
-  ]
+ "id": "cacheblend-rag-kv-fusion",
+ "name": "CacheBlend: Fast Large Language Model Serving for RAG with Cached Knowledge Fusion",
+ "arxiv_id": "2405.16444",
+ "venue": "arxiv-preprint",
+ "year": 2024,
+ "category": "kv-cache",
+ "authors": [
+  "Jiayi Yao",
+  "Hanchen Li",
+  "Yuhan Liu",
+  "Siddhant Ray",
+  "Yihua Cheng",
+  "Qizheng Zhang",
+  "Kuntai Du",
+  "Shan Lu",
+  "Junchen Jiang"
+ ],
+ "problem": "Precomputed KV caches can only be reused when the cached text is the input PREFIX. In RAG the retrieved chunks are scattered through the prompt and are not prefixes, so precomputed caches ignore each chunk's cross-attention with preceding text and the reuse benefit is largely unrealised.",
+ "mechanism": "Reuses precomputed KV caches REGARDLESS of prefix position, then SELECTIVELY RECOMPUTES the KV values of a SMALL SUBSET of tokens to partially update each reused cache - recomputing a fraction of tokens is enough to restore the cross-attention information the reused cache missed. The small extra delay for recomputation is PIPELINED with the RETRIEVAL of the KV caches within the same job, which is the detail that makes it practical: because the recompute is hidden behind a memory fetch, KV caches can be stored on SLOWER, LARGER devices without increasing inference delay. Implemented in LMCache.",
+ "hardware_relevance": [
+  "nvidia-a100-sxm",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "TTFT reduced 2.2x-3.3x and inference throughput increased 2.8x-5x versus FULL KV RECOMPUTE, without compromising generation quality. Baseline is explicitly full KV recomputation on three open-source LLMs of various sizes and four benchmark datasets. Because the baseline is KV recompute and the gain lands in TTFT, this is a prefill-side speedup and is NOT comparable to the decode-side speculative-decoding numbers elsewhere in this set.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/LMCache/LMCache",
+ "open_weights": false,
+ "notes": "ADOPTION: LMCache is a real, publicly available, widely used KV-cache layer that vLLM integrates with, and the tiering idea (fast GPU + slow large storage with pipelined fetch) is now standard practice - hence in-upstream-engine rather than research-only, though no engine ships CacheBlend's exact selective-recompute as a default. VENUE NOTE: no peer-reviewed venue verifiable via Semantic Scholar and no venue in the arXiv comment, so venue = arxiv-preprint, year = ArXiv v1 (May 2024). THE STRUCTURAL CONTRIBUTION FOR THIS SLICE is the non-prefix reuse case: prefix-cache reuse is what SGLang's RadixAttention does, and CacheBlend is the record for the harder, more common RAG case where retrieved chunks are interior to the prompt. Its pipelining insight - that recompute can hide behind a slow-device fetch - is also the general trick for offloading, which is why the tiering pattern outlived the paper. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). No A100 anywhere in the paper, and its actual cards are not A100 at all: \"We run our end-to-end experiments on Runpod GPUs with 128 GB RAM, 2 Nvidia A40 GPUs, and 1TB NVME SSD whose measured throughput is 4.8 GB/s\" (section 7.1 Setup), and \"running prefill can take three (or six) seconds for Llama-34B (or Llama-70B) on one A40 GPU\" (section 1). Source: https://arxiv.org/pdf/2405.16444 . The repo has no A40 record, so this value is left dangling rather than repointed at an A100 the paper never used; adding an A40 record is a separate decision and was not made here.\n\n AFFILIATIONS FILLED 2026-10-04 (paper-verification pass): from the Semantic Scholar graph API (paper/arXiv:2405.16444), which is the only machine-readable source that carries author affiliations — the arXiv Atom feed returns author names only, and no ORCID is exposed by either API. One known upstream typo corrected: \"Tel Aviv Univesity\" -> \"Tel Aviv University\". S2 affiliation coverage is partial (120 of 249 corpus records carry any), so these lists may be incomplete rather than exhaustive.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'unknown'. `venue` is 'arxiv-preprint', which means no peer-reviewed venue has been established for this work as of the verification date, so the track genuinely is not known. 'unknown' is used here rather than leaving the field null or guessing 'main': the schema separates 'unknown' from 'main' precisely so that an unprereviewed preprint is not silently counted as main-track work. This annotation is what lets a downstream filter distinguish 'peer reviewed, main track' from 'not peer reviewed' without inferring it from the venue string.",
+ "confidence": 0.85,
+ "type": "paper",
+ "affiliations": [
+  "Stanford University"
+ ],
+ "status": "verified",
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-eff-cacheblend",
+  "sco-arxiv-api-paper-metadata"
+ ],
+ "venue_track": "unknown"
 }

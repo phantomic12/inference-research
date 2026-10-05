@@ -1,29 +1,30 @@
 {
-  "id": "paper-smoothquant",
-  "type": "paper",
-  "name": "SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-quant-smoothquant"
-  ],
-  "arxiv_id": "2211.10438",
-  "venue": "icml",
-  "year": 2023,
-  "category": "quantization",
-  "authors": [
-    "Xiao, Lin, Sezgin, Y..., Hajishirzi"
-  ],
-  "affiliations": [
-    "Stanford / UW / Harvard / AWS"
-  ],
-  "problem": "W8A8 activation quantization of LLMs is blocked by a small number of activation outlier channels that blow up the per-tensor dynamic range.",
-  "mechanism": "Difficulty migration via a per-input-channel smoothing factor s: X_hat = X / s and W_hat = W * s (s folded into the preceding LayerNorm / RMSNorm weights so there is no runtime cost), chosen as s_j = max(|X_j|^alpha) / max(|W_j|)^(1-alpha). Activation outliers are squeezed toward the bulk; weight outliers are made slightly worse but weights tolerate that. alpha trades accuracy for hardware ease - alpha=0.5 is the mobile-tuned default, alpha=0.8 maximizes INT8 GPU gains.",
-  "hardware_relevance": [],
-  "speedup_reported": "Paper's own claim (abstract/tables, A100-class GPUs): W8A8 INT8 quantization of OPT-175B, BLOOM-176B and GLM-130B with 'negligible' accuracy loss at up to 1.56x speedup and 2x memory reduction over FP16, using only 128 calibration samples. COMPRESSION RATIO: 4x combined (16-bit weights + 16-bit activations -> 8+8). QUALITY COST: the 175B-class results are near-lossless; the small-model INT8 results in the same paper are where the WikiText perplexity deltas become visible, and those are NOT free.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/mit-han-lab/llm-awq",
-  "open_weights": null,
-  "notes": "SLUG RENAMED 2026-10-04 (parent agent): was 'smoothquant', colliding with the quantization record of the same id, which made every bare-slug cross-reference ambiguous. Inbound refs (['format_id', 'scheme', 'supported_formats']) all mean the quantization record, so none needed repointing; papers are cited via `sources`, never by bare slug. arXiv ID 2211.10438 verified via /abs/; v7 2024-03-29. Venue ICML 2023 confirmed both by the arXiv comment field ('ICML 2023') and Semantic Scholar. Year = venue year 2023 (v1 was 2022). NOTE: the repo already has source records quant-smoothquant-paper and bench-meth-smoothq for this paper, and an empirical study of SmoothQuant integrated into TorchAO appears in 2026 - that is the evidence for adoption=in-upstream-engine rather than in-production. arXiv ID and title verified by fetching https://arxiv.org/abs/2211.10438 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2211.10438) unless the record's notes say otherwise."
+ "id": "paper-smoothquant",
+ "type": "paper",
+ "name": "SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-quant-smoothquant"
+ ],
+ "arxiv_id": "2211.10438",
+ "venue": "icml",
+ "year": 2023,
+ "category": "quantization",
+ "authors": [
+  "Xiao, Lin, Sezgin, Y..., Hajishirzi"
+ ],
+ "affiliations": [
+  "Stanford / UW / Harvard / AWS"
+ ],
+ "problem": "W8A8 activation quantization of LLMs is blocked by a small number of activation outlier channels that blow up the per-tensor dynamic range.",
+ "mechanism": "Difficulty migration via a per-input-channel smoothing factor s: X_hat = X / s and W_hat = W * s (s folded into the preceding LayerNorm / RMSNorm weights so there is no runtime cost), chosen as s_j = max(|X_j|^alpha) / max(|W_j|)^(1-alpha). Activation outliers are squeezed toward the bulk; weight outliers are made slightly worse but weights tolerate that. alpha trades accuracy for hardware ease - alpha=0.5 is the mobile-tuned default, alpha=0.8 maximizes INT8 GPU gains.",
+ "hardware_relevance": [],
+ "speedup_reported": "Paper's own claim (abstract/tables, A100-class GPUs): W8A8 INT8 quantization of OPT-175B, BLOOM-176B and GLM-130B with 'negligible' accuracy loss at up to 1.56x speedup and 2x memory reduction over FP16, using only 128 calibration samples. COMPRESSION RATIO: 4x combined (16-bit weights + 16-bit activations -> 8+8). QUALITY COST: the 175B-class results are near-lossless; the small-model INT8 results in the same paper are where the WikiText perplexity deltas become visible, and those are NOT free.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/mit-han-lab/llm-awq",
+ "open_weights": null,
+ "notes": "SLUG RENAMED 2026-10-04 (parent agent): was 'smoothquant', colliding with the quantization record of the same id, which made every bare-slug cross-reference ambiguous. Inbound refs (['format_id', 'scheme', 'supported_formats']) all mean the quantization record, so none needed repointing; papers are cited via `sources`, never by bare slug. arXiv ID 2211.10438 verified via /abs/; v7 2024-03-29. Venue ICML 2023 confirmed both by the arXiv comment field ('ICML 2023') and Semantic Scholar. Year = venue year 2023 (v1 was 2022). NOTE: the repo already has source records quant-smoothquant-paper and bench-meth-smoothq for this paper, and an empirical study of SmoothQuant integrated into TorchAO appears in 2026 - that is the evidence for adoption=in-upstream-engine rather than in-production. arXiv ID and title verified by fetching https://arxiv.org/abs/2211.10438 and reading the citation_title meta tag on 2026-10-03. Venue and year from the Semantic Scholar graph API batch endpoint (paper/arXiv:2211.10438) unless the record's notes say otherwise.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: icml has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

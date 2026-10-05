@@ -1,36 +1,37 @@
 {
-  "id": "sedd-score-entropy-discrete-diffusion",
-  "type": "paper",
-  "name": "Structured Denoising Diffusion Models in Discrete State-Spaces (SEDD)",
-  "status": "contested",
-  "confidence": 0.9,
-  "updated": "2026-10-04",
-  "sources": [
-    "pap-arch-2107-03006",
-    "sco-neurips-2021-proceedings",
-    "sco-arxiv-api-paper-metadata"
-  ],
-  "arxiv_id": "2107.03006",
-  "venue": "neurips",
-  "year": 2021,
-  "category": "other",
-  "authors": [
-    "Alex Lou",
-    "Chenlin Meng",
-    "Stefano Ermon"
-  ],
-  "affiliations": [
-    "Stanford University"
-  ],
-  "problem": "Diffusion models were defined in continuous Euclidean space, where adding Gaussian noise and denoising is well defined; text lives in a discrete state space, so naively applying diffusion to tokens is ill-posed.",
-  "mechanism": "Defines absorbing-state discrete diffusion where the forward process replaces each token with the special MASK token with probability increasing to 1 as t grows, giving a clean absorbing state; and a uniform-state variant where tokens are replaced by uniformly random tokens. The generative model is expressed as an absorbing diffusion that scores the denoising log-ratio, and crucially the paper derives the ELBO and parameterisations for both a 'score entropy' (denoising cross-entropy) objective and the denoising score matching objective, showing that one of these is asymptotically consistent for likelihood while the other is not. The practical consequences are (a) a training objective that actually optimises likelihood, which earlier discrete-diffusion text work lacked, and (b) flexible transition matrices allowing absorbing, uniform, and general time-dependent kernels within one framework. Generation runs T mask-predictor forward passes over the full length-L sequence, so FLOP count is set by T as in any masked diffusion LM; the paper shows sample quality is competitive with AR models at controlled compute, with T chosen per-sample.",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm"
-  ],
-  "speedup_reported": "Reports competitive likelihood and sample quality against autoregressive baselines, and introduces annealed / self-conditioned sampling to reduce the number of denoising steps needed. No decoding throughput speedup ratio is published. The paper's contribution is likelihood-correctness of the training objective, not serving throughput, so there is no speedup number to record with baseline and settings.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/loubarrd/SEDD",
-  "open_weights": true,
-  "notes": "ICML 2024 per the arXiv comment field; no journal-ref on the abs page. Method is abbreviated SEDD. This is the theoretical grounding for masked diffusion LMs: LLaDA and most 2025 masked diffusion models are absorbing-state diffusion in this sense, so when someone says a diffusion LM is 'SEDD-style' they mean exactly this transition kernel. The lint engine adoptions are indirect: SEDD's own code was absorbed into the diffusion ecosystem that llama.cpp and vLLM now serve, but SEDD itself is not a released model. Worth recording because it is the paper that established that discrete diffusion can optimise likelihood at all.\n\nVENUE CORRECTED 2026-10-04 (paper-verification pass): venue/year icml 2024 -> neurips 2021. EVIDENCE: NeurIPS 2021 conference-track proceedings index contains \"Structured Denoising Diffusion Models in Discrete State-Spaces\" (https://proceedings.neurips.cc/paper_files/paper/2021/hash/958c530554f78bcd8e97125b70e6973d-Abstract.html). It is NOT in PMLR v235 (ICML 2024), which I checked for the exact title. The record's own note said \"ICML 2024 per the arXiv comment field\" — that is false: arXiv 2107.03006 has NO venue in its comment field and no journal_ref (comment reads only \"10 pages plus references and appendices. First two authors contributed equally\"). The venue appears to have been guessed. SEDD is the theoretical grounding cited by every masked diffusion LM, so a wrong venue here propagates. NOT rejected at ICML — simply never there. Both values retained here deliberately; status set to contested because a peer-reviewed attribution changed. arxiv_id unchanged (2107.03006)."
+ "id": "sedd-score-entropy-discrete-diffusion",
+ "type": "paper",
+ "name": "Structured Denoising Diffusion Models in Discrete State-Spaces (SEDD)",
+ "status": "contested",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2107-03006",
+  "sco-neurips-2021-proceedings",
+  "sco-arxiv-api-paper-metadata"
+ ],
+ "arxiv_id": "2107.03006",
+ "venue": "neurips",
+ "year": 2021,
+ "category": "other",
+ "authors": [
+  "Alex Lou",
+  "Chenlin Meng",
+  "Stefano Ermon"
+ ],
+ "affiliations": [
+  "Stanford University"
+ ],
+ "problem": "Diffusion models were defined in continuous Euclidean space, where adding Gaussian noise and denoising is well defined; text lives in a discrete state space, so naively applying diffusion to tokens is ill-posed.",
+ "mechanism": "Defines absorbing-state discrete diffusion where the forward process replaces each token with the special MASK token with probability increasing to 1 as t grows, giving a clean absorbing state; and a uniform-state variant where tokens are replaced by uniformly random tokens. The generative model is expressed as an absorbing diffusion that scores the denoising log-ratio, and crucially the paper derives the ELBO and parameterisations for both a 'score entropy' (denoising cross-entropy) objective and the denoising score matching objective, showing that one of these is asymptotically consistent for likelihood while the other is not. The practical consequences are (a) a training objective that actually optimises likelihood, which earlier discrete-diffusion text work lacked, and (b) flexible transition matrices allowing absorbing, uniform, and general time-dependent kernels within one framework. Generation runs T mask-predictor forward passes over the full length-L sequence, so FLOP count is set by T as in any masked diffusion LM; the paper shows sample quality is competitive with AR models at controlled compute, with T chosen per-sample.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "Reports competitive likelihood and sample quality against autoregressive baselines, and introduces annealed / self-conditioned sampling to reduce the number of denoising steps needed. No decoding throughput speedup ratio is published. The paper's contribution is likelihood-correctness of the training objective, not serving throughput, so there is no speedup number to record with baseline and settings.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/loubarrd/SEDD",
+ "open_weights": true,
+ "notes": "ICML 2024 per the arXiv comment field; no journal-ref on the abs page. Method is abbreviated SEDD. This is the theoretical grounding for masked diffusion LMs: LLaDA and most 2025 masked diffusion models are absorbing-state diffusion in this sense, so when someone says a diffusion LM is 'SEDD-style' they mean exactly this transition kernel. The lint engine adoptions are indirect: SEDD's own code was absorbed into the diffusion ecosystem that llama.cpp and vLLM now serve, but SEDD itself is not a released model. Worth recording because it is the paper that established that discrete diffusion can optimise likelihood at all.\n\nVENUE CORRECTED 2026-10-04 (paper-verification pass): venue/year icml 2024 -> neurips 2021. EVIDENCE: NeurIPS 2021 conference-track proceedings index contains \"Structured Denoising Diffusion Models in Discrete State-Spaces\" (https://proceedings.neurips.cc/paper_files/paper/2021/hash/958c530554f78bcd8e97125b70e6973d-Abstract.html). It is NOT in PMLR v235 (ICML 2024), which I checked for the exact title. The record's own note said \"ICML 2024 per the arXiv comment field\" — that is false: arXiv 2107.03006 has NO venue in its comment field and no journal_ref (comment reads only \"10 pages plus references and appendices. First two authors contributed equally\"). The venue appears to have been guessed. SEDD is the theoretical grounding cited by every masked diffusion LM, so a wrong venue here propagates. NOT rejected at ICML — simply never there. Both values retained here deliberately; status set to contested because a peer-reviewed attribution changed. arxiv_id unchanged (2107.03006).\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: neurips has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

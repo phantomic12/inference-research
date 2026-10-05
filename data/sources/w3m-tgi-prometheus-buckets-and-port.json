@@ -1,0 +1,15 @@
+{
+  "id": "w3m-tgi-prometheus-buckets-and-port",
+  "type": "source",
+  "name": "TGI router/src/server.rs - PrometheusBuilder bucket config and prometheus_port",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "url": "https://github.com/huggingface/text-generation-inference/blob/main/router/src/server.rs",
+  "publisher": "huggingface/text-generation-inference",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "router/src/server.rs on main, read 2026-10-04. The Prometheus recorder is built at line 1974 with PrometheusBuilder::new().with_http_listener(p_addr) where p_addr is the server address with the port replaced by prometheus_port, then per-metric bucket overrides: duration_matcher = Matcher::Suffix(\"duration\") with 35 buckets formed geometrically from 0.0001 x 1.5^n (so EVERY metric whose name ends in 'duration' shares one bucket ladder, in seconds, starting at 0.00015); input_length_matcher = Matcher::Full(\"tgi_request_input_length\") with 100 linear buckets to max_input_tokens; generated_tokens_matcher and max_new_tokens_matcher are Matcher::Full on tgi_request_generated_tokens / tgi_request_max_new_tokens with 100 linear buckets to max_total_tokens; batch_size_matcher = Matcher::Full(\"tgi_batch_next_size\") with buckets 1..1024. The skipped-tokens override is commented out, citing metrics-rs issue 467. The CLI default is prometheus_port 9000 (backends/v3/src/main.rs: #[clap(default_value = \"9000\", long, short, env)]). Note the practical consequence: a bucket ladder whose first bound is 0.00015 s cannot be quoted as a fixed list without naming max_input_tokens, and tgi_batch_next_size is a Histogram despite reading like a gauge."
+}

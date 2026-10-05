@@ -1,28 +1,28 @@
 {
- "id": "quarot-kv4",
- "type": "quantization",
- "name": "QuaRot KV cache 4-bit (rotated KV, no retained outlier channels)",
- "scheme": "kv-cache-quant",
- "bits": "4-bit KV cache (keys and values), obtained after Hadamard rotation; part of the w4a4kv4 configuration",
- "weight_group_size": null,
- "activation_scheme": "Not an activation scheme - the KV cache is rotated with the same orthogonal transforms as the rest of the network, using computational invariance, so the cache can be 4-bit with NO channels retained at higher precision.",
- "native_support": [],
- "emulated_support": [
-  "nvidia-h100-sxm",
-  "nvidia-a100-80gb-sxm4",
-  "nvidia-l40s",
-  "amd-instinct-mi300x",
-  "nvidia-rtx-4090"
- ],
- "kernels": [
-  "spcl/QuaRot kernels."
- ],
- "quality_delta": null,
- "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: this scheme quantizes the KV cache, not the weights, so there are no weight groups to size. A number in this field would be a category error. (Where the underlying method has a real grouping - e.g. KIVI per-channel keys, KVQuant per-channel - that lives in the method's own record, not in weight_group_size.) Separate KV record for the rotation family's KV claim, for the same reason as llm-qat-kv-cache: 'does this method quantize the KV cache, and at what bit width with what outlier handling' is a question the schema forces into notes and the answer differs per method (KIVI: 2/4 asymmetric per-channel/per-token; QuaRot: 4/4 rotated, no outliers retained; LLM-QAT: 4/4 trained; QServe: 4-bit with SmoothAttention). Making that a first-class field rather than a note would be a schema change worth considering. SpinQuant inherits this same 4-bit KV result; between QuaRot and SpinQuant the KV story is effectively one result reported twice, with SpinQuant's rotations learned rather than fixed. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'spinquant' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. ",
- "status": "verified",
- "confidence": 0.7,
- "updated": "2026-10-04",
- "sources": [
-  "qlab-quarot-paper"
- ]
+  "id": "quarot-kv4",
+  "type": "quantization",
+  "name": "QuaRot KV cache 4-bit (rotated KV, no retained outlier channels)",
+  "scheme": "kv-cache-quant",
+  "bits": "4-bit KV cache (keys and values), obtained after Hadamard rotation; part of the w4a4kv4 configuration",
+  "weight_group_size": null,
+  "activation_scheme": "Not an activation scheme - the KV cache is rotated with the same orthogonal transforms as the rest of the network, using computational invariance, so the cache can be 4-bit with NO channels retained at higher precision.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "spcl/QuaRot kernels."
+  ],
+  "quality_delta": null,
+  "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: this scheme quantizes the KV cache, not the weights, so there are no weight groups to size. A number in this field would be a category error. (Where the underlying method has a real grouping - e.g. KIVI per-channel keys, KVQuant per-channel - that lives in the method's own record, not in weight_group_size.) Separate KV record for the rotation family's KV claim, for the same reason as llm-qat-kv-cache: 'does this method quantize the KV cache, and at what bit width with what outlier handling' is a question the schema forces into notes and the answer differs per method (KIVI: 2/4 asymmetric per-channel/per-token; QuaRot: 4/4 rotated, no outliers retained; LLM-QAT: 4/4 trained; QServe: 4-bit with SmoothAttention). Making that a first-class field rather than a note would be a schema change worth considering. SpinQuant inherits this same 4-bit KV result; between QuaRot and SpinQuant the KV story is effectively one result reported twice, with SpinQuant's rotations learned rather than fixed. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'spinquant' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. \nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: KV-CACHE-ONLY, SO STRUCTURALLY ABSENT. The bits field records that no bits-per-value change: the scheme reduces WHICH positions are retained, fetched or reallocated, so it runs on whatever precision path the accelerator already has for the KV cache. A KV-position policy can never be a hardware format. Consequence for a reader: nothing further to verify - this is a cache-management policy, not a numeric format. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-04",
+  "sources": [
+    "qlab-quarot-paper"
+  ]
 }

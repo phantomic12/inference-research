@@ -1,47 +1,48 @@
 {
-  "id": "specinfer-tree-speculative-serving",
-  "name": "SpecInfer: Accelerating Generative Large Language Model Serving with Tree-based Speculative Inference and Verification",
-  "arxiv_id": "2305.09781",
-  "venue": "asplos",
-  "year": 2024,
-  "category": "speculative-decoding",
-  "authors": [
-    "Xupeng Miao",
-    "Gabriele Oliaro",
-    "Zhihao Zhang",
-    "Xinhao Cheng",
-    "Zeyu Wang",
-    "Zhengxin Zhang",
-    "Rae Ying Yee Wong",
-    "Alan Zhu",
-    "Lijie Yang",
-    "Xiaoxiang Shi",
-    "Chunan Shi",
-    "Zhuoming Chen",
-    "Daiyaan Arfeen",
-    "Reyna Abhyankar",
-    "Zhihao Jia"
-  ],
-  "problem": "Small speculative models exist and predict well, but single-sequence drafting wastes their capacity, and sequential verification of drafts leaves latency on the table.",
-  "mechanism": "Multiple small speculative models (built from the same base LLM by selecting different numbers of transformer layers, plus optionally further pruned) produce a TOKEN TREE whose nodes are candidate token sequences. A novel tree-based PARALLEL DECODING mechanism verifies every candidate path in the tree simultaneously in one target forward pass, using the target as a token-tree VERIFIER rather than an incremental decoder. Provably preserves model quality. Implemented inside the FlexFlow system, which is the actual deliverable.",
-  "hardware_relevance": [
-    "nvidia-h100-sxm",
-    "nvidia-a10"
-  ],
-  "speedup_reported": "1.5x-2.8x over existing LLM serving systems for DISTRIBUTED LLM inference, and 2.6x-3.5x for OFFLOADING-BASED inference, while preserving the same generative performance. Both ranges are against serving-system baselines (vLLM/Orca-style), not against plain decoding - the distinction matters because the offloading figure is against a different and slower baseline than the distributed figure.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/flexflow/FlexFlow",
-  "open_weights": false,
-  "notes": "ADOPTION: the system is publicly available in FlexFlow, but adoption in mainstream inference engines is via the GENERIC idea (tree verification masks) rather than this codebase - vLLM, llama.cpp, and SGLang all implement tree-structured speculative verification that descends from this line of work, not from SpecInfer's code. Marked in-upstream-engine on that basis rather than in-production, because no production deployment runs SpecInfer itself. VENUE: ASPLOS'24 per the arXiv comment field AND the DOI 10.1145/3620666.3651335 which is the ASPLOS 2024 proceedings - this one is corroborated by two independent fields, so venue confidence is high. The paper is the peer-reviewed systems counterpart to the arXiv-only draft-method papers around it. DANGLING REF RESOLVED 2026-10-04 by reading the paper (arXiv:2305.09781v4, section 6.1 'Experimental Setup'), and IT OVERTURNS THE REF: THIS PAPER NEVER RAN ON AN A100. The platform paragraph reads \"The experiments were conducted on two AWS g5.12xlarge instances, each of which is equipped with four NVIDIA A10 24GB GPUs, 48 CPU cores, and 192 GB DRAM.\" Source: https://arxiv.org/pdf/2305.09781 . The value has therefore been repointed to nvidia-a10, which exists in data/accelerators/. THE A100 MENTIONS IN THIS PAPER ARE NOT ITS OWN HARDWARE and must not be re-read as such: both are illustrative GPT-3 sizing examples in the introduction, \"the largest GPT-3 architecture has 175 billion parameters, which requires more than eight NVIDIA 40GB A100 GPUs to store in half-precision floating points\" and \"requires more than 16 NVIDIA A100-40GB GPUs to store the model parameters in single-precision floating points\". That 40 GB figure is a worked example about someone else's cluster, not SpecInfer's testbed; taking it as this record's hardware would be exactly the wrong-pick failure this repair was meant to avoid. This is the one record in the batch where I changed the accelerator FAMILY, not just the variant, and it should be sanity-checked by a second reader.\n\n AFFILIATIONS FILLED 2026-10-04 (paper-verification pass): from the Semantic Scholar graph API (paper/arXiv:2305.09781), which is the only machine-readable source that carries author affiliations — the arXiv Atom feed returns author names only, and no ORCID is exposed by either API. One known upstream typo corrected: \"Tel Aviv Univesity\" -> \"Tel Aviv University\". S2 affiliation coverage is partial (120 of 249 corpus records carry any), so these lists may be incomplete rather than exhaustive.",
-  "confidence": 0.9,
-  "type": "paper",
-  "affiliations": [
-    "Princeton University"
-  ],
-  "status": "verified",
-  "updated": "2026-10-04",
-  "sources": [
-    "pap-eff-specinfer",
-    "sco-arxiv-api-paper-metadata"
-  ]
+ "id": "specinfer-tree-speculative-serving",
+ "name": "SpecInfer: Accelerating Generative Large Language Model Serving with Tree-based Speculative Inference and Verification",
+ "arxiv_id": "2305.09781",
+ "venue": "asplos",
+ "year": 2024,
+ "category": "speculative-decoding",
+ "authors": [
+  "Xupeng Miao",
+  "Gabriele Oliaro",
+  "Zhihao Zhang",
+  "Xinhao Cheng",
+  "Zeyu Wang",
+  "Zhengxin Zhang",
+  "Rae Ying Yee Wong",
+  "Alan Zhu",
+  "Lijie Yang",
+  "Xiaoxiang Shi",
+  "Chunan Shi",
+  "Zhuoming Chen",
+  "Daiyaan Arfeen",
+  "Reyna Abhyankar",
+  "Zhihao Jia"
+ ],
+ "problem": "Small speculative models exist and predict well, but single-sequence drafting wastes their capacity, and sequential verification of drafts leaves latency on the table.",
+ "mechanism": "Multiple small speculative models (built from the same base LLM by selecting different numbers of transformer layers, plus optionally further pruned) produce a TOKEN TREE whose nodes are candidate token sequences. A novel tree-based PARALLEL DECODING mechanism verifies every candidate path in the tree simultaneously in one target forward pass, using the target as a token-tree VERIFIER rather than an incremental decoder. Provably preserves model quality. Implemented inside the FlexFlow system, which is the actual deliverable.",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-a10"
+ ],
+ "speedup_reported": "1.5x-2.8x over existing LLM serving systems for DISTRIBUTED LLM inference, and 2.6x-3.5x for OFFLOADING-BASED inference, while preserving the same generative performance. Both ranges are against serving-system baselines (vLLM/Orca-style), not against plain decoding - the distinction matters because the offloading figure is against a different and slower baseline than the distributed figure.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/flexflow/FlexFlow",
+ "open_weights": false,
+ "notes": "ADOPTION: the system is publicly available in FlexFlow, but adoption in mainstream inference engines is via the GENERIC idea (tree verification masks) rather than this codebase - vLLM, llama.cpp, and SGLang all implement tree-structured speculative verification that descends from this line of work, not from SpecInfer's code. Marked in-upstream-engine on that basis rather than in-production, because no production deployment runs SpecInfer itself. VENUE: ASPLOS'24 per the arXiv comment field AND the DOI 10.1145/3620666.3651335 which is the ASPLOS 2024 proceedings - this one is corroborated by two independent fields, so venue confidence is high. The paper is the peer-reviewed systems counterpart to the arXiv-only draft-method papers around it. DANGLING REF RESOLVED 2026-10-04 by reading the paper (arXiv:2305.09781v4, section 6.1 'Experimental Setup'), and IT OVERTURNS THE REF: THIS PAPER NEVER RAN ON AN A100. The platform paragraph reads \"The experiments were conducted on two AWS g5.12xlarge instances, each of which is equipped with four NVIDIA A10 24GB GPUs, 48 CPU cores, and 192 GB DRAM.\" Source: https://arxiv.org/pdf/2305.09781 . The value has therefore been repointed to nvidia-a10, which exists in data/accelerators/. THE A100 MENTIONS IN THIS PAPER ARE NOT ITS OWN HARDWARE and must not be re-read as such: both are illustrative GPT-3 sizing examples in the introduction, \"the largest GPT-3 architecture has 175 billion parameters, which requires more than eight NVIDIA 40GB A100 GPUs to store in half-precision floating points\" and \"requires more than 16 NVIDIA A100-40GB GPUs to store the model parameters in single-precision floating points\". That 40 GB figure is a worked example about someone else's cluster, not SpecInfer's testbed; taking it as this record's hardware would be exactly the wrong-pick failure this repair was meant to avoid. This is the one record in the batch where I changed the accelerator FAMILY, not just the variant, and it should be sanity-checked by a second reader.\n\n AFFILIATIONS FILLED 2026-10-04 (paper-verification pass): from the Semantic Scholar graph API (paper/arXiv:2305.09781), which is the only machine-readable source that carries author affiliations — the arXiv Atom feed returns author names only, and no ORCID is exposed by either API. One known upstream typo corrected: \"Tel Aviv Univesity\" -> \"Tel Aviv University\". S2 affiliation coverage is partial (120 of 249 corpus records carry any), so these lists may be incomplete rather than exhaustive.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: asplos has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "confidence": 0.9,
+ "type": "paper",
+ "affiliations": [
+  "Princeton University"
+ ],
+ "status": "verified",
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-eff-specinfer",
+  "sco-arxiv-api-paper-metadata"
+ ],
+ "venue_track": "main"
 }

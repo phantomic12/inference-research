@@ -1,33 +1,37 @@
 {
-  "id": "joule-point-energy-optimal-power-cap",
-  "type": "paper",
-  "name": "The Joule Point: an Energy-Optimal Operating Point for AI Inference",
-  "arxiv_id": "2609.27926",
-  "venue": "arxiv-preprint",
-  "year": 2026,
-  "category": "serving-systems",
-  "authors": [
-    "Alexander Apartsin",
-    "Yehudit Aperstein"
-  ],
-  "affiliations": [],
-  "problem": "Data centres run GPU inference at full power by default, which maximises throughput but wastes energy per inference - and the inefficiency is a scheduling choice rather than a hardware limit.",
-  "mechanism": "Characterises the GPU power-performance curve empirically: for a given workload, board power rises SUPERLINEARLY with the operating point, on top of a fixed power floor paid for as long as the job runs. Energy per inference is therefore U-shaped in the operating point (GPU, power cap), with a minimum the authors name the Joule Point at a cap of 43-46% of rated power. Because the optimum is nearly a per-card-type constant under load, a single static cap per card type captures nearly all of the saving, collapsing the online per-job search prior systems perform into a one-time characterisation.",
-  "hardware_relevance": [
-    "nvidia-h100-sxm",
-    "nvidia-h200-sxm",
-    "nvidia-b200",
-    "nvidia-b300"
-  ],
-  "speedup_reported": "Capping to the Joule Point cuts energy per inference by roughly a quarter to a third versus uncapped operation, at a cost of each request running about 1.2x slower and holding aggregate throughput requiring that same ~1.2x factor more cards. Grounded in ELF, a dense power-cap dataset sweeping 20 inference models across 4 GPUs; replaying ELF in a fleet simulation under a power budget and capping each job to the least power meeting its deadline spends 18-45% less energy per served job. A single static cap per card type carries a mean penalty under one per cent versus the per-job optimum.",
-  "adoption": "research-only",
-  "code_url": null,
-  "open_weights": null,
-  "notes": "REGARDLESS OF VENDOR AFFILIATION, THIS PAPER IS THE QUANTITATIVE COUNTERWEIGHT TO THE STANDARD 'RUN IT HOTTER, IT IS FASTER' ASSUMPTION IN AI-INFERENCE COST MODELS, and it is the single most decision-relevant measurement result in the power slice. Distinctive angle: it is a power-DELIVERY/power-cap physics characterisation (superlinear power-performance curve, fixed power floor), not an algorithmic efficiency result, and not a carbon-accounting or carbon-intensity study - so it sits in the datacentre-systems power-delivery line rather than the green-computing/energy-carbon literature. Caveats a reader must carry: the 43-46% figure is measured on 4 GPU types across 20 models and the authors themselves frame it as needing per-card-type characterisation; 'energy per inference' is measured, but the fleet-simulated 18-45% is a simulation replay rather than a deployed fleet. The 1.2x-latency-for-1.2x-cards tradeoff is the part that changes capital planning, because it says energy efficiency at this operating point is bought with hardware, not with software. Read alongside gotchas/idle-and-underbatched-fleet-can-cost-more-than-busy-fleet and gotchas/power-cap-cliff-at-300w-for-decode.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "pwr2-arxiv-joule-point"
-  ]
+ "id": "joule-point-energy-optimal-power-cap",
+ "type": "paper",
+ "name": "The Joule Point: an Energy-Optimal Operating Point for AI Inference",
+ "arxiv_id": "2609.27926",
+ "venue": "arxiv-preprint",
+ "year": 2026,
+ "category": "serving-systems",
+ "authors": [
+  "Alexander Apartsin",
+  "Yehudit Aperstein"
+ ],
+ "affiliations": [
+  "AMD Research and Advanced Development",
+  "University of Wisconsin-Madison"
+ ],
+ "problem": "Data centres run GPU inference at full power by default, which maximises throughput but wastes energy per inference - and the inefficiency is a scheduling choice rather than a hardware limit.",
+ "mechanism": "Characterises the GPU power-performance curve empirically: for a given workload, board power rises SUPERLINEARLY with the operating point, on top of a fixed power floor paid for as long as the job runs. Energy per inference is therefore U-shaped in the operating point (GPU, power cap), with a minimum the authors name the Joule Point at a cap of 43-46% of rated power. Because the optimum is nearly a per-card-type constant under load, a single static cap per card type captures nearly all of the saving, collapsing the online per-job search prior systems perform into a one-time characterisation.",
+ "hardware_relevance": [
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-b200",
+  "nvidia-b300"
+ ],
+ "speedup_reported": "Capping to the Joule Point cuts energy per inference by roughly a quarter to a third versus uncapped operation, at a cost of each request running about 1.2x slower and holding aggregate throughput requiring that same ~1.2x factor more cards. Grounded in ELF, a dense power-cap dataset sweeping 20 inference models across 4 GPUs; replaying ELF in a fleet simulation under a power budget and capping each job to the least power meeting its deadline spends 18-45% less energy per served job. A single static cap per card type carries a mean penalty under one per cent versus the per-job optimum.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": null,
+ "notes": "REGARDLESS OF VENDOR AFFILIATION, THIS PAPER IS THE QUANTITATIVE COUNTERWEIGHT TO THE STANDARD 'RUN IT HOTTER, IT IS FASTER' ASSUMPTION IN AI-INFERENCE COST MODELS, and it is the single most decision-relevant measurement result in the power slice. Distinctive angle: it is a power-DELIVERY/power-cap physics characterisation (superlinear power-performance curve, fixed power floor), not an algorithmic efficiency result, and not a carbon-accounting or carbon-intensity study - so it sits in the datacentre-systems power-delivery line rather than the green-computing/energy-carbon literature. Caveats a reader must carry: the 43-46% figure is measured on 4 GPU types across 20 models and the authors themselves frame it as needing per-card-type characterisation; 'energy per inference' is measured, but the fleet-simulated 18-45% is a simulation replay rather than a deployed fleet. The 1.2x-latency-for-1.2x-cards tradeoff is the part that changes capital planning, because it says energy efficiency at this operating point is bought with hardware, not with software. Read alongside gotchas/idle-and-underbatched-fleet-can-cost-more-than-busy-fleet and gotchas/power-cap-cliff-at-300w-for-decode.\n\nAFFILIATIONS BACKFILLED 2026-10-04 (paper-fields pass, agent w3p): PDF footnote block: '1AMD Research and Advanced Development 2Department of Computer Sciences, University of Wisconsin-Madison'. OpenAlex instead reports 'Afeka College of Engineering' and 'Holon Institute of Technology', which do not appear in the paper - a metadata error upstream, so the PDF wins. Filled from the API/PDF rather than from memory, because an affiliation is a fact about a specific paper's author block and inference from the author's employer history is how wrong affiliations get shipped.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'unknown'. `venue` is 'arxiv-preprint', which means no peer-reviewed venue has been established for this work as of the verification date, so the track genuinely is not known. 'unknown' is used here rather than leaving the field null or guessing 'main': the schema separates 'unknown' from 'main' precisely so that an unprereviewed preprint is not silently counted as main-track work. This annotation is what lets a downstream filter distinguish 'peer reviewed, main track' from 'not peer reviewed' without inferring it from the venue string.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pwr2-arxiv-joule-point"
+ ],
+ "venue_track": "unknown"
 }

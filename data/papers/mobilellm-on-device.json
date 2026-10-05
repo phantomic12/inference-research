@@ -1,43 +1,44 @@
 {
-  "id": "mobilellm-on-device",
-  "name": "MobileLLM: Optimizing Sub-billion Parameter Language Models for On-Device Use Cases",
-  "arxiv_id": "2402.14905",
-  "venue": "icml",
-  "year": 2024,
-  "category": "other",
-  "authors": [
-    "Zechun Liu",
-    "Changsheng Zhao",
-    "Forrest Iandola",
-    "Chen Lai",
-    "Yuandong Tian",
-    "Igor Fedorov",
-    "Yunyang Xiong",
-    "Ernie Chang",
-    "Yangyang Shi",
-    "Raghuraman Krishnamoorthi",
-    "Liangzhen Lai",
-    "Vikas Chandra"
-  ],
-  "problem": "Growing cloud cost and latency concerns push LLMs on-device, which means sub-billion parameters, a scale where prevailing belief says data and parameter quantity dominate model quality.",
-  "mechanism": "ARCHITECTURE rather than data, on the explicit finding that architecture matters more at sub-billion scale. Uses DEEP AND THIN architectures (many layers, few channels) plus EMBEDDING SHARING and GROUPED-QUERY ATTENTION (GQA). Also proposes an immediate BLOCK-WISE WEIGHT-SHARING scheme with no increase in model size and only marginal latency overhead, yielding the MobileLLM-LS variants.",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4"
-  ],
-  "speedup_reported": "2.7%/4.3% accuracy boost over preceding 125M/350M state-of-the-art models. Block-wise weight sharing (MobileLLM-LS) adds a further 0.7%/0.8% over MobileLLM 125M/350M, at the stated cost of NO model-size increase and only MARGINAL LATENCY OVERHEAD. Baselines are the previous sub-billion SOTA models. No tok/s figure is given in the abstract, so the accuracy deltas are what is recorded.",
-  "adoption": "in-production",
-  "code_url": "https://github.com/facebookresearch/MobileLLM",
-  "open_weights": true,
-  "notes": "ADOPTION: weights and code are open (open_weights true) and the models are on-device artifacts, so this is deployed as a model family even though the architectural recipe is not a serving-engine feature. VENUE: ICML 2024, corroborated by the arXiv comment field ('ICML 2024. Code is available at ...') - so venue rests on the primary source. WHY THIS MATTERS FOR THE INFERENCE SLICE SPECIFICALLY: GQA is the mechanism that cuts KV-cache size and decode-time KV bandwidth per token, which is the exact resource that constrains decode; the paper attributes its gains partly to GQA rather than treating it as a training trick. The block-wise weight-sharing contribution is the more unusual idea - reusing the same weights across blocks to get accuracy without parameters or meaningful latency - and it is the one with no upstream-engine equivalent. Deployed on phones means the relevant hardware is mobile SoCs, which the repo's accelerator list may not cover, so hardware_relevance names the datacenter part used for training-side experiments rather than claiming a mobile accelerator id. DANGLING REF RESOLVED 2026-10-04 by reading the paper (arXiv:2402.14905v1). Training setup: \"Our experiments are conducted on 32 A100 GPUs, with each GPU having a batch size of 32\" (section 2.1), repeated in section 3.1, and Appendix H states it with the memory size: \"All models are trained on 32 A100 80G GPUs with a batch size of 32 for 120k iterations\". Source: https://arxiv.org/pdf/2402.14905 . 80 GB stated.\n\n AFFILIATIONS FILLED 2026-10-04 (paper-verification pass): from the Semantic Scholar graph API (paper/arXiv:2402.14905), which is the only machine-readable source that carries author affiliations — the arXiv Atom feed returns author names only, and no ORCID is exposed by either API. One known upstream typo corrected: \"Tel Aviv Univesity\" -> \"Tel Aviv University\". S2 affiliation coverage is partial (120 of 249 corpus records carry any), so these lists may be incomplete rather than exhaustive.",
-  "confidence": 0.85,
-  "type": "paper",
-  "affiliations": [
-    "Meta"
-  ],
-  "status": "verified",
-  "updated": "2026-10-04",
-  "sources": [
-    "pap-eff-mobilellm",
-    "sco-arxiv-api-paper-metadata"
-  ]
+ "id": "mobilellm-on-device",
+ "name": "MobileLLM: Optimizing Sub-billion Parameter Language Models for On-Device Use Cases",
+ "arxiv_id": "2402.14905",
+ "venue": "icml",
+ "year": 2024,
+ "category": "other",
+ "authors": [
+  "Zechun Liu",
+  "Changsheng Zhao",
+  "Forrest Iandola",
+  "Chen Lai",
+  "Yuandong Tian",
+  "Igor Fedorov",
+  "Yunyang Xiong",
+  "Ernie Chang",
+  "Yangyang Shi",
+  "Raghuraman Krishnamoorthi",
+  "Liangzhen Lai",
+  "Vikas Chandra"
+ ],
+ "problem": "Growing cloud cost and latency concerns push LLMs on-device, which means sub-billion parameters, a scale where prevailing belief says data and parameter quantity dominate model quality.",
+ "mechanism": "ARCHITECTURE rather than data, on the explicit finding that architecture matters more at sub-billion scale. Uses DEEP AND THIN architectures (many layers, few channels) plus EMBEDDING SHARING and GROUPED-QUERY ATTENTION (GQA). Also proposes an immediate BLOCK-WISE WEIGHT-SHARING scheme with no increase in model size and only marginal latency overhead, yielding the MobileLLM-LS variants.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "speedup_reported": "2.7%/4.3% accuracy boost over preceding 125M/350M state-of-the-art models. Block-wise weight sharing (MobileLLM-LS) adds a further 0.7%/0.8% over MobileLLM 125M/350M, at the stated cost of NO model-size increase and only MARGINAL LATENCY OVERHEAD. Baselines are the previous sub-billion SOTA models. No tok/s figure is given in the abstract, so the accuracy deltas are what is recorded.",
+ "adoption": "in-production",
+ "code_url": "https://github.com/facebookresearch/MobileLLM",
+ "open_weights": true,
+ "notes": "ADOPTION: weights and code are open (open_weights true) and the models are on-device artifacts, so this is deployed as a model family even though the architectural recipe is not a serving-engine feature. VENUE: ICML 2024, corroborated by the arXiv comment field ('ICML 2024. Code is available at ...') - so venue rests on the primary source. WHY THIS MATTERS FOR THE INFERENCE SLICE SPECIFICALLY: GQA is the mechanism that cuts KV-cache size and decode-time KV bandwidth per token, which is the exact resource that constrains decode; the paper attributes its gains partly to GQA rather than treating it as a training trick. The block-wise weight-sharing contribution is the more unusual idea - reusing the same weights across blocks to get accuracy without parameters or meaningful latency - and it is the one with no upstream-engine equivalent. Deployed on phones means the relevant hardware is mobile SoCs, which the repo's accelerator list may not cover, so hardware_relevance names the datacenter part used for training-side experiments rather than claiming a mobile accelerator id. DANGLING REF RESOLVED 2026-10-04 by reading the paper (arXiv:2402.14905v1). Training setup: \"Our experiments are conducted on 32 A100 GPUs, with each GPU having a batch size of 32\" (section 2.1), repeated in section 3.1, and Appendix H states it with the memory size: \"All models are trained on 32 A100 80G GPUs with a batch size of 32 for 120k iterations\". Source: https://arxiv.org/pdf/2402.14905 . 80 GB stated.\n\n AFFILIATIONS FILLED 2026-10-04 (paper-verification pass): from the Semantic Scholar graph API (paper/arXiv:2402.14905), which is the only machine-readable source that carries author affiliations — the arXiv Atom feed returns author names only, and no ORCID is exposed by either API. One known upstream typo corrected: \"Tel Aviv Univesity\" -> \"Tel Aviv University\". S2 affiliation coverage is partial (120 of 249 corpus records carry any), so these lists may be incomplete rather than exhaustive.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: icml has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "confidence": 0.85,
+ "type": "paper",
+ "affiliations": [
+  "Meta"
+ ],
+ "status": "verified",
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-eff-mobilellm",
+  "sco-arxiv-api-paper-metadata"
+ ],
+ "venue_track": "main"
 }

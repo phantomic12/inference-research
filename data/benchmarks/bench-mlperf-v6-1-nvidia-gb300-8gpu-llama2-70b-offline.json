@@ -13,7 +13,10 @@
   "accelerator_ids": [
     "nvidia-b300"
   ],
-  "interconnect_ids": [],
+  "interconnect_ids": [
+    "nvlink-5",
+    "pcie-gen6"
+  ],
   "model": "Llama 2 70B (MLPerf v6.1 submission, FP4 weights)",
   "format_id": "nvfp4",
   "metric": "tps_aggregate",
@@ -23,5 +26,5 @@
   "measured_by": "vendor",
   "reproducible": true,
   "power_cap": null,
-  "notes": "THE DECISION-RELEVANT NUMBER IN THE v6.1 SET, AND IT POINTS THE OPPOSITE WAY FROM THE HEADLINE. NVIDIA's own 8-GPU slice of a GB300 NVL72 delivers 16433 tok/s per GPU; CoreWeave's full 72-GPU rack of the same platform delivers 15779 tok/s per GPU. Nine times the GPUs for 8.6x the throughput. The NVL72's scale-up fabric buys almost nothing at Llama 2 70B FP4 because a single 8-GPU node already holds the entire quantized model and is not bandwidth-starved on weights. Note also that this 8-GPU slice is 20% FASTER per GPU than the 8-GPU B300 SXM node (13660/GPU, 109277 tok/s) despite both having 270GB and the same TensorRT-LLM 10.14 stack - GB300's 288GB and newer memory are worth having, but a rack of them is not worth having for this workload."
+  "notes": "THE DECISION-RELEVANT NUMBER IN THE v6.1 SET, AND IT POINTS THE OPPOSITE WAY FROM THE HEADLINE. NVIDIA's own 8-GPU slice of a GB300 NVL72 delivers 16433 tok/s per GPU; CoreWeave's full 72-GPU rack of the same platform delivers 15779 tok/s per GPU. Nine times the GPUs for 8.6x the throughput. The NVL72's scale-up fabric buys almost nothing at Llama 2 70B FP4 because a single 8-GPU node already holds the entire quantized model and is not bandwidth-starved on weights. Note also that this 8-GPU slice is 20% FASTER per GPU than the 8-GPU B300 SXM node (13660/GPU, 109277 tok/s) despite both having 270GB and the same TensorRT-LLM 10.14 stack - GB300's 288GB and newer memory are worth having, but a rack of them is not worth having for this workload.\nINTERCONNECT IDS FILLED 2026-10-04: interconnect_ids was empty; it now carries the interconnect list of the accelerator record(s) this run names (nvidia-b300). BASIS AND ITS LIMITS, stated because this field is easy to over-read: it records the FABRIC PRESENT IN THE HARDWARE CONFIGURATION, which is how every previously-filled record in this repo reads it, not traffic measured over that fabric. The clearest evidence for that convention is that single-GPU records already carry a scale-up fabric here - trtllm-llama31-8b-fp8-h100-1k1k-tps is 1x H100 at TP=1 and carries ['nvlink-4','nvswitch-4'] - and that host-link-only records carry a PCIe value (arc-pro-b70-mlperf-v6-1-llama2-70b-offline-tokens carries ['pcie-gen5'] on 4x Arc Pro B70, which has no GPU-to-GPU fabric at all). So a value here does NOT mean the interconnect was exercised by this particular workload, and must not be cited as evidence that it was. Whether the run actually crossed that fabric is a question about TP/EP/PP size, which this repo records in methodology, not here. NOT INVENTED: nothing was filled where the accelerator record itself carries no interconnect, so this field stays empty for any part whose own record has none - which is the honest state for a single-socket Apple sOC and for parts whose vendor publishes no host interface."
 }

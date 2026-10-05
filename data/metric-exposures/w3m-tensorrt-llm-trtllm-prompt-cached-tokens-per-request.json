@@ -1,0 +1,39 @@
+{
+  "id": "w3m-tensorrt-llm-trtllm-prompt-cached-tokens-per-request",
+  "type": "metric_exposure",
+  "name": "TensorRT-LLM cached-prompt-tokens-per-request histogram",
+  "engine_id": "tensorrt-llm",
+  "metric_name": "trtllm_prompt_cached_tokens_per_request",
+  "metric_type": "histogram",
+  "unit": "tokens",
+  "exposure": "prometheus",
+  "endpoint": ":8000/prometheus/metrics",
+  "histogram_buckets": [
+    0,
+    64,
+    128,
+    256,
+    512,
+    1024,
+    2048,
+    4096,
+    8192
+  ],
+  "labels": [
+    "model_name",
+    "engine_type"
+  ],
+  "enabled_by_default": false,
+  "phase_scoped": null,
+  "verified_negatively": null,
+  "notes": "TensorRT-LLM main, MetricsCollector in tensorrt_llm/metrics/collector.py, read 2026-10-04. collector.py line 32 carries the header comment 'Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0rc1/vllm/engine/metrics.py#L30', so this is a vLLM fork with the prefix swapped to trtllm_. NOT ON BY DEFAULT: the collector is only constructed and /prometheus/metrics only mounted when --return_perf-metrics is set (llm_args default False). Endpoint is :8000/prometheus/metrics - NOT /metrics, and the server's own GET /metrics serves a JSON iteration-stats snapshot, so a scraper pointed at /metrics gets JSON rather than exposition text. Labels are model_name and engine_type. Hard-coded buckets including an explicit 0 lower bound, so unlike every other token histogram in this repo it distinguishes a zero-cache-hit request from a one-token hit.",
+  "status": "verified",
+  "confidence": 0.94,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-trtllm-metrics-collector",
+    "w3m-trtllm-prometheus-endpoint-gate",
+    "w3m-trtllm-return-perf-metrics-default",
+    "w3m-trtllm-metrics-no-preempt-search"
+  ]
+}

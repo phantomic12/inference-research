@@ -1,27 +1,27 @@
 {
- "id": "spinquant",
- "type": "quantization",
- "name": "SpinQuant (learned rotations + W4A4KV4)",
- "scheme": "spinquant",
- "bits": "w4a4 (weights AND activations at 4-bit; also quantizes the KV cache to 4-bit)",
- "weight_group_size": null,
- "activation_scheme": "learned rotation matrices (R1, R2, R3, R4) applied offline to weights and activations so the quantized network is output-equivalent in full precision; then per-group INT4 asymmetric quantization of weights, activations and KV cache. Also reported at W4A8.",
- "native_support": [],
- "emulated_support": [
-  "nvidia-h100-sxm",
-  "nvidia-l40s",
-  "amd-instinct-mi300x"
- ],
- "kernels": [
-  "SpinQuant/Triton INT4 GEMM kernels (research code)",
-  "fake-quant in the paper's evaluation harness"
- ],
- "quality_delta": "From the paper (quant-spinquant-paper): W4A4KV4 on LLaMA-2 7B gives an average zero-shot reasoning accuracy of 64.0, a 2.9-point gap from full precision; LLM-QAT is 22.0 points behind under identical precision, SmoothQuant 25.0 points behind. W4A8 on Mistral-7B reduces the gap to full precision from 12.1 to 1.6 points on zero-shot commonsense reasoning. The paper also reports that merely switching between *random* rotation seeds changes zero-shot accuracy by up to 13 points, which is the finding that motivates learning the rotations.",
- "notes": "GROUP SIZE LEFT NULL 2026-10-04: SpinQuant LEARNS the rotation matrices and then applies a W4A4 grid. As with QuaRot, the grouping belongs to the post-rotation grid, and the paper's contribution is the learned rotation rather than a group width. Two things make SpinQuant the best single illustration of the w4a16-vs-w4a4 confusion. First, it is genuinely W4A4 - both weights and activations quantized to 4-bit - and its accuracy claim rests on rotations that make it possible. AWQ/GPTQ/NF4 are w4a16 and cannot make this claim at all. Second, and critically: there is NO hardware INT4 tensor-core path. Its W4A4 numbers come from research Triton kernels plus fake quantization, not from silicon. On current NVIDIA parts 4-bit x 4-bit is not a tensor-core op; compare nvfp4, which is W4A4 *and* native, on Blackwell. weight_group_size is null because 'per-group' is in the paper's abstract but the group width is a config detail I could not verify from the abstract - refusing to guess 128. UPGRADE (2026-10-03): cross-checked against the paper abstract and the QuaRot record now in this repo. Three additions worth keeping. (1) FAMILY PLACEMENT: SpinQuant is the learned-rotation member of a three-way family with QuIP# and QuaRot. All three exploit computational invariance - y = Wx = (W Q^T)(Q x) for orthogonal Q - to remove outliers from the hidden state without changing the network's output. The real axis of disagreement is the ROTATION, not the idea: QuaRot uses a randomized Hadamard (fixed, fast, theoretically optimal worst-case coherence), QuIP# uses a randomized Hadamard plus lattice codebooks, and SpinQuant LEARNS the rotations. SpinQuant's own reported finding - that changing only the random seed moves zero-shot accuracy by up to 13 points - is the evidence that the rotation is the thing being learned, and it is why SpinQuant beats the fixed-Hadamard methods at W4A4. (2) SCOPE: SpinQuant inherits QuaRot's KV-cache 4-bit result, so it belongs in the KV-quantization family too, not only the weight/activation one. (3) SCHEMA: the enum has a 'spinquant' value, so unlike QuaRot and QuIP# this record has no enum mismatch - but note the enum is asymmetric: it privileges one member of a three-paper family. If the parent adds rotation-family enum values, add them alongside spinquant rather than replacing it.",
- "status": "verified",
- "confidence": 0.75,
- "updated": "2026-10-04",
- "sources": [
-  "quant-spinquant-paper"
- ]
+  "id": "spinquant",
+  "type": "quantization",
+  "name": "SpinQuant (learned rotations + W4A4KV4)",
+  "scheme": "spinquant",
+  "bits": "w4a4 (weights AND activations at 4-bit; also quantizes the KV cache to 4-bit)",
+  "weight_group_size": null,
+  "activation_scheme": "learned rotation matrices (R1, R2, R3, R4) applied offline to weights and activations so the quantized network is output-equivalent in full precision; then per-group INT4 asymmetric quantization of weights, activations and KV cache. Also reported at W4A8.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-l40s",
+    "amd-instinct-mi300x"
+  ],
+  "kernels": [
+    "SpinQuant/Triton INT4 GEMM kernels (research code)",
+    "fake-quant in the paper's evaluation harness"
+  ],
+  "quality_delta": "From the paper (quant-spinquant-paper): W4A4KV4 on LLaMA-2 7B gives an average zero-shot reasoning accuracy of 64.0, a 2.9-point gap from full precision; LLM-QAT is 22.0 points behind under identical precision, SmoothQuant 25.0 points behind. W4A8 on Mistral-7B reduces the gap to full precision from 12.1 to 1.6 points on zero-shot commonsense reasoning. The paper also reports that merely switching between *random* rotation seeds changes zero-shot accuracy by up to 13 points, which is the finding that motivates learning the rotations.",
+  "notes": "GROUP SIZE LEFT NULL 2026-10-04: SpinQuant LEARNS the rotation matrices and then applies a W4A4 grid. As with QuaRot, the grouping belongs to the post-rotation grid, and the paper's contribution is the learned rotation rather than a group width. Two things make SpinQuant the best single illustration of the w4a16-vs-w4a4 confusion. First, it is genuinely W4A4 - both weights and activations quantized to 4-bit - and its accuracy claim rests on rotations that make it possible. AWQ/GPTQ/NF4 are w4a16 and cannot make this claim at all. Second, and critically: there is NO hardware INT4 tensor-core path. Its W4A4 numbers come from research Triton kernels plus fake quantization, not from silicon. On current NVIDIA parts 4-bit x 4-bit is not a tensor-core op; compare nvfp4, which is W4A4 *and* native, on Blackwell. weight_group_size is null because 'per-group' is in the paper's abstract but the group width is a config detail I could not verify from the abstract - refusing to guess 128. UPGRADE (2026-10-03): cross-checked against the paper abstract and the QuaRot record now in this repo. Three additions worth keeping. (1) FAMILY PLACEMENT: SpinQuant is the learned-rotation member of a three-way family with QuIP# and QuaRot. All three exploit computational invariance - y = Wx = (W Q^T)(Q x) for orthogonal Q - to remove outliers from the hidden state without changing the network's output. The real axis of disagreement is the ROTATION, not the idea: QuaRot uses a randomized Hadamard (fixed, fast, theoretically optimal worst-case coherence), QuIP# uses a randomized Hadamard plus lattice codebooks, and SpinQuant LEARNS the rotations. SpinQuant's own reported finding - that changing only the random seed moves zero-shot accuracy by up to 13 points - is the evidence that the rotation is the thing being learned, and it is why SpinQuant beats the fixed-Hadamard methods at W4A4. (2) SCOPE: SpinQuant inherits QuaRot's KV-cache 4-bit result, so it belongs in the KV-quantization family too, not only the weight/activation one. (3) SCHEMA: the enum has a 'spinquant' value, so unlike QuaRot and QuIP# this record has no enum mismatch - but note the enum is asymmetric: it privileges one member of a three-paper family. If the parent adds rotation-family enum values, add them alongside spinquant rather than replacing it.\nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: W4A4/W8A8 RESEARCH FORMAT - this empty list is a REAL FINDING about the absence of a silicon path, not a tautology. its own record states there is NO hardware INT4 tensor-core path and that the W4A4 numbers come from research Triton kernels plus fake quantization. Consequence for a reader: this is the class where a vendor could in principle have shipped something later, so it is the only class worth re-checking against a new hardware release. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-04",
+  "sources": [
+    "quant-spinquant-paper"
+  ]
 }

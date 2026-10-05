@@ -1,38 +1,39 @@
 {
-  "id": "diffusion-lm",
-  "type": "paper",
-  "name": "Diffusion-LM Improves Controllable Text Generation",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-arch-2205-14217"
-  ],
-  "arxiv_id": "2205.14217",
-  "venue": "neurips",
-  "year": 2022,
-  "category": "other",
-  "authors": [
-    "Xiang Lisa Li",
-    "John Thickstun",
-    "Ishaan Gulrajani",
-    " Percy Liang",
-    "Tatsunori Borshaghi"
-  ],
-  "affiliations": [
-    "Stanford University",
-    "Salesforce Research"
-  ],
-  "problem": "Autoregressive text generation is strictly left-to-right, so a language model cannot revise or control a span it has already emitted; controllability was limited to steering generation forward from a prefix.",
-  "mechanism": "Trains a Transformer to predict, at each step, a noisy version of the whole sentence rather than the next token. Forward process: at diffusion step t each token is corrupted toward a special [MASK] symbol with a learned per-token categorical noise schedule, so the input progressively becomes all-masks. Reverse process: the model predicts the full clean-sentence distribution at each step, and a step is decoded by taking an argmax over each position's predicted tokens (not by sampling an autoregressively extended sequence). Text quality is recovered by training the diffusion Transformer with a mixture that also includes a standard left-to-right LM objective so the model retains local fluency. FLOP CONSEQUENCE for serving: generating L tokens takes T forward passes over the FULL length-L sequence rather than L sequential passes over growing prefixes, so the whole-sequence compute is O(T * L) attention+MLP on the full tensor, and generation time is set by T (the number of denoising steps) rather than by L. It is not automatically faster: the speedup only materialises because the step count T is far smaller than L and because steps within a step cannot be pipelined the way autoregressive decode batches.",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm",
-    "nvidia-l40s"
-  ],
-  "speedup_reported": "The paper reports human evaluations favouring Diffusion-LM over a GPT-2 baseline on fluency and in-orthogonalisation (controllability versus topic, sentiment, and style), plus competitive perplexity. No decoding throughput ratio is claimed, which is expected since the model was small (roughly 100M parameters) and the paper's objective is controllability rather than serving speed.",
-  "adoption": "research-only",
-  "code_url": "https://github.com/XiangLi1999/Diffusion-LM",
-  "open_weights": true,
-  "notes": "NeurIPS 2022 per the arXiv comment field; no journal-ref on the abs page. This is the foundational diffusion-text paper that made the idea credible, but it is NOT the modern diffusion language model and should not be cited as such: at 100M scale with a continuous-space-inspired formulation it shares almost no implementation surface with LLaDA, Dream, or block diffusion. Its lasting contribution is the demonstration that full-sentence parallel refinement beats left-to-right decoding for controllability. Diffusion LMs only became practically large from 2025 (LLaDA, Dream), which is the same year llama.cpp added LLM_ARCH_LLADA and LLM_ARCH_DREAM."
+ "id": "diffusion-lm",
+ "type": "paper",
+ "name": "Diffusion-LM Improves Controllable Text Generation",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2205-14217"
+ ],
+ "arxiv_id": "2205.14217",
+ "venue": "neurips",
+ "year": 2022,
+ "category": "other",
+ "authors": [
+  "Xiang Lisa Li",
+  "John Thickstun",
+  "Ishaan Gulrajani",
+  " Percy Liang",
+  "Tatsunori Borshaghi"
+ ],
+ "affiliations": [
+  "Stanford University",
+  "Salesforce Research"
+ ],
+ "problem": "Autoregressive text generation is strictly left-to-right, so a language model cannot revise or control a span it has already emitted; controllability was limited to steering generation forward from a prefix.",
+ "mechanism": "Trains a Transformer to predict, at each step, a noisy version of the whole sentence rather than the next token. Forward process: at diffusion step t each token is corrupted toward a special [MASK] symbol with a learned per-token categorical noise schedule, so the input progressively becomes all-masks. Reverse process: the model predicts the full clean-sentence distribution at each step, and a step is decoded by taking an argmax over each position's predicted tokens (not by sampling an autoregressively extended sequence). Text quality is recovered by training the diffusion Transformer with a mixture that also includes a standard left-to-right LM objective so the model retains local fluency. FLOP CONSEQUENCE for serving: generating L tokens takes T forward passes over the FULL length-L sequence rather than L sequential passes over growing prefixes, so the whole-sequence compute is O(T * L) attention+MLP on the full tensor, and generation time is set by T (the number of denoising steps) rather than by L. It is not automatically faster: the speedup only materialises because the step count T is far smaller than L and because steps within a step cannot be pipelined the way autoregressive decode batches.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "nvidia-l40s"
+ ],
+ "speedup_reported": "The paper reports human evaluations favouring Diffusion-LM over a GPT-2 baseline on fluency and in-orthogonalisation (controllability versus topic, sentiment, and style), plus competitive perplexity. No decoding throughput ratio is claimed, which is expected since the model was small (roughly 100M parameters) and the paper's objective is controllability rather than serving speed.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/XiangLi1999/Diffusion-LM",
+ "open_weights": true,
+ "notes": "NeurIPS 2022 per the arXiv comment field; no journal-ref on the abs page. This is the foundational diffusion-text paper that made the idea credible, but it is NOT the modern diffusion language model and should not be cited as such: at 100M scale with a continuous-space-inspired formulation it shares almost no implementation surface with LLaDA, Dream, or block diffusion. Its lasting contribution is the demonstration that full-sentence parallel refinement beats left-to-right decoding for controllability. Diffusion LMs only became practically large from 2025 (LLaDA, Dream), which is the same year llama.cpp added LLM_ARCH_LLADA and LLM_ARCH_DREAM.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: neurips has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

@@ -12,18 +12,14 @@
     "num_layers",
     "num_experts (MoE)"
   ],
-  "affected_by_hardware": [
-    "memory_bandwidth",
-    "l2_cache_size",
-    "tensor_core_count"
-  ],
+  "affected_by_hardware": [],
   "workarounds": [
     "Weight-only quantization (INT4, FP4) reduces bytes per weight, directly improving memory-bound throughput",
     "Batching increases arithmetic intensity but reduces throughput for interactive workloads",
     "Speculative decoding increases effective batch size for the target model",
     "MoE routing reduces active parameters per token"
   ],
-  "notes": "This is the fundamental reason why weight-only quantization (W4A16) works: at decode time with batch size 1, the GEMM is memory-bound, so reducing weight bytes directly increases tokens/s. The Marlin kernel achieves near-ideal 4x speedup because it reduces weight bytes by 4x (from FP16 to INT4). This is also why the SGLang kernel selection issue is so impactful: when NVFP4 is served with Marlin (W4A16) on pre-Blackwell hardware, the weight bytes are reduced but the activation bytes are not, so the speedup is less than the theoretical maximum. The decode GEMM is the dominant cost at batch size 1, which is the common case for interactive inference. MIXED-BUCKET VALUE, LEFT UNCHANGED (2026-10-04 cross-reference repair): affected_by_hardware holds 'memory_bandwidth', 'l2_cache_size' and 'tensor_core_count', which are ACCELERATOR SPEC FIELD NAMES, not record ids. (Note the spelling: underscores here, hyphen in 'memory-bandwidth' elsewhere in the same type - the same concept written two ways.) This flop class depends on those three hardware QUANTITIES, not on any particular card, so no id rewrite is possible and none was attempted. Needs a sibling field for hardware quantities.",
+  "notes": "HARDWARE PARAMETERS, NOT RECORD IDS. 2026-10-04: affected_by_hardware previously held ['memory_bandwidth', 'l2_cache_size', 'tensor_core_count'] - hardware quantities, not products. They could never resolve, so the repo was carrying permanent false debt against a budget that exists to catch NEW bad references. Moved into this note; the field is now EMPTY and that is the correct value, not a gap. Why: These were hardware PARAMETERS (memory_bandwidth, l2_cache_size, tensor_core_count), not products. The record is part-independent too - it is a kernel-level argument citing the Marlin repo, so naming a GPU would invent a dependency it does not claim. The record's own point is that memory bandwidth, L2 size and tensor-core count are the variables that SET the ridge point on any part.",
   "status": "verified",
   "confidence": 0.9,
   "updated": "2026-10-04",

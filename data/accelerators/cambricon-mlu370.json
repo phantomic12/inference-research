@@ -20,35 +20,45 @@
       "tflops": 192,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "asic-cambricon-mlu370-s4"
+      "source_id": "asic-cambricon-mlu370-s4",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Transcribed from the vendor's own int8 for Cambricon MLU370 (Siyuan 370) AIDC accelerators (source of record: 'Cambricon AIDC MLU370-S4/S8 product page', kind: spec-sheet).  Recorded dense:true as printed."
     },
     {
       "precision": "int4",
       "tflops": 192,
       "dense": true,
       "vendor_claim": false,
-      "source_id": "asic-cambricon-mlu370-s4"
+      "source_id": "asic-cambricon-mlu370-s4",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Second-hand figure, not a first-party spec: the source of record is 'Cambricon AIDC MLU370-S4/S8 product page' (kind: spec-sheet).  Recorded dense:true as printed."
     },
     {
       "precision": "fp16",
       "tflops": 72,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "asic-cambricon-mlu370-s4"
+      "source_id": "asic-cambricon-mlu370-s4",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Transcribed from the vendor's own fp16 for Cambricon MLU370 (Siyuan 370) AIDC accelerators (source of record: 'Cambricon AIDC MLU370-S4/S8 product page', kind: spec-sheet).  Recorded dense:true as printed."
     },
     {
       "precision": "bf16",
       "tflops": 72,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "asic-cambricon-mlu370-s4"
+      "source_id": "asic-cambricon-mlu370-s4",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Transcribed from the vendor's own bf16 for Cambricon MLU370 (Siyuan 370) AIDC accelerators (source of record: 'Cambricon AIDC MLU370-S4/S8 product page', kind: spec-sheet).  Recorded dense:true as printed."
     },
     {
       "precision": "fp32",
       "tflops": 18,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "asic-cambricon-mlu370-s4"
+      "source_id": "asic-cambricon-mlu370-s4",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Transcribed from the vendor's own fp32 for Cambricon MLU370 (Siyuan 370) AIDC accelerators (source of record: 'Cambricon AIDC MLU370-S4/S8 product page', kind: spec-sheet).  Recorded dense:true as printed."
     }
   ],
   "tdp_w": 75,
@@ -58,7 +68,7 @@
   ],
   "unified_memory": false,
   "consumer": false,
-  "notes": "THE HIERARCHY POINT, and the reason this part is in a memory-bound inference study at all: MLU370 is LPDDR5 with NO HBM. At 48 GB and 307.2 GB/s the arithmetic intensity ceiling is 234 FLOP/byte even at INT8, which is roughly a third of what a same-generation HBM GPU offers. So the roofline for this part sits far left of every other record here: weight streaming dominates, the usable batch size for large models is small, and the part is realistically a high-density inference card (S4 is half-height, half-length, single-slot, 75 W passive, designed for maximum cards per server) rather than a large-model serving part. The die-level 256 TOPS INT8 quoted by the chip overview is a die figure for the 2-chiplet configuration and is 2x the S4/S8 card number, so card and die figures must not be compared. Variants: S4/S8 are inference-oriented (192 TOPS INT8 card); X4 and X8 are dual-die train+infer parts using MLU-Link. The INT4 row is flagged vendor_claim false: the vendor lists INT4 as a supported precision but publishes no separate INT4 throughput, so the 192 TOPS INT8 figure is carried over as an upper bound and must not be read as an INT4 measurement. MLU-Link provides 200 GB/s of chip-to-chip bandwidth per chip - respectable relative to its HBM-less position, and the ratio of scale-up to local bandwidth is inverted versus GPUs. Software is NeuWare plus the MagicMind MLIR-based inference engine, integrated with PyTorch and TensorFlow.",
+  "notes": "THE HIERARCHY POINT, and the reason this part is in a memory-bound inference study at all: MLU370 is LPDDR5 with NO HBM. At 48 GB and 307.2 GB/s the arithmetic intensity ceiling is 234 FLOP/byte even at INT8, which is roughly a third of what a same-generation HBM GPU offers. So the roofline for this part sits far left of every other record here: weight streaming dominates, the usable batch size for large models is small, and the part is realistically a high-density inference card (S4 is half-height, half-length, single-slot, 75 W passive, designed for maximum cards per server) rather than a large-model serving part. The die-level 256 TOPS INT8 quoted by the chip overview is a die figure for the 2-chiplet configuration and is 2x the S4/S8 card number, so card and die figures must not be compared. Variants: S4/S8 are inference-oriented (192 TOPS INT8 card); X4 and X8 are dual-die train+infer parts using MLU-Link. The INT4 row is flagged vendor_claim false: the vendor lists INT4 as a supported precision but publishes no separate INT4 throughput, so the 192 TOPS INT8 figure is carried over as an upper bound and must not be read as an INT4 measurement. MLU-Link provides 200 GB/s of chip-to-chip bandwidth per chip - respectable relative to its HBM-less position, and the ratio of scale-up to local bandwidth is inverted versus GPUs. Software is NeuWare plus the MagicMind MLIR-based inference engine, integrated with PyTorch and TensorFlow.\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). %s NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either inference is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the note above names the specific document that was read and found not to carry it, so a future pass does not have to re-establish that from scratch.\n\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). Cambricon's Siyuan 370 and Siyuan 590 product pages publish capacity, bandwidth and TDP but no memory-bus width and no pin speed, so the bandwidth cannot be re-derived arithmetically from vendor figures. NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the text above names the specific document read and found not to carry it, so a future pass does not have to re-establish that from scratch.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-03",

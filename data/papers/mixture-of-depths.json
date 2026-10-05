@@ -1,35 +1,38 @@
 {
-  "id": "mixture-of-depths",
-  "name": "Mixture-of-Depths: Dynamically allocating compute in transformer-based language models",
-  "arxiv_id": "2404.02258",
-  "venue": "arxiv-preprint",
-  "year": 2024,
-  "category": "inference-time-compute",
-  "authors": [
-    "David Raposo",
-    "Sam Ritter",
-    "Blake Richards",
-    "Timothy Lillicrap",
-    "Peter Conway Humphreys",
-    "Adam Santoro"
-  ],
-  "problem": "Transformers spread FLOPs UNIFORMLY across all input positions and all layers, so easy tokens and hard tokens cost the same - compute is not allocated where it is needed.",
-  "mechanism": "Per layer, cap the number of tokens that may participate in the self-attention and MLP computation at a fixed budget k chosen A PRIORI; a learned router selects the top-k tokens by an auxiliary predictor, and non-selected tokens' residual stream is carried forward untouched. Because k is fixed in advance the computation graph is STATIC with known tensor shapes - unlike other conditional-computation methods - so it does not break batching or kernels - while the IDENTITY of the k tokens stays fluid, making allocation dynamic and context-sensitive per token. Total compute is predictable; the distribution across time and depth is not.",
-  "hardware_relevance": [
-    "nvidia-a100-sxm",
-    "nvidia-h100-sxm"
-  ],
-  "speedup_reported": "Models match baseline performance FOR EQUIVALENT FLOPS AND WALL-CLOCK TRAINING TIME, but require a FRACTION OF THE FLOPs PER FORWARD PASS, and can be upwards of 50% faster to step during post-training sampling. The 50%-faster figure is about the TRAINING/sampling step, not decode latency, and the FLOPs reduction is the durable result.",
-  "adoption": "research-only",
-  "code_url": null,
-  "open_weights": null,
-  "notes": "ADOPTION: research-only. IMPORTANT CLASSIFICATION NOTE, recorded deliberately: this is categorised inference-time-compute rather than speculative-decoding because it changes WHICH tokens are computed, not how many tokens are produced per step - it is per-token adaptive depth/width, not speculation, and conflating the two would misattribute the speedup mechanism. Its static-shape property is what makes it usable at all in a serving system, and that is the single most transferable engineering fact in this record. VENUE NOTE: no venue verifiable via Semantic Scholar and the arXiv comment carries no venue, so venue = arxiv-preprint, year = ArXiv v1 (Apr 2024). Note the claim is parity at equal FLOPs plus lower FLOPs per forward pass - NOT a standalone speedup over a deployed baseline, and there is no serving-system evaluation in the paper. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). No A100, no GPU and no memory figure anywhere in the paper. Its hardware content is abstract and non-specific: \"general formulations of this challenge may not work well with existing hardware constraints\", \"hardware efficiency gains such as reduced memory footprint\", \"we measured as steps per second when training on equivalent hardware\". Source: https://arxiv.org/pdf/2404.02258 . Left dangling.",
-  "confidence": 0.85,
-  "type": "paper",
-  "affiliations": [],
-  "status": "verified",
-  "updated": "2026-10-04",
-  "sources": [
-    "pap-eff-mixture-of-depths"
-  ]
+ "id": "mixture-of-depths",
+ "name": "Mixture-of-Depths: Dynamically allocating compute in transformer-based language models",
+ "arxiv_id": "2404.02258",
+ "venue": "arxiv-preprint",
+ "year": 2024,
+ "category": "inference-time-compute",
+ "authors": [
+  "David Raposo",
+  "Sam Ritter",
+  "Blake Richards",
+  "Timothy Lillicrap",
+  "Peter Conway Humphreys",
+  "Adam Santoro"
+ ],
+ "problem": "Transformers spread FLOPs UNIFORMLY across all input positions and all layers, so easy tokens and hard tokens cost the same - compute is not allocated where it is needed.",
+ "mechanism": "Per layer, cap the number of tokens that may participate in the self-attention and MLP computation at a fixed budget k chosen A PRIORI; a learned router selects the top-k tokens by an auxiliary predictor, and non-selected tokens' residual stream is carried forward untouched. Because k is fixed in advance the computation graph is STATIC with known tensor shapes - unlike other conditional-computation methods - so it does not break batching or kernels - while the IDENTITY of the k tokens stays fluid, making allocation dynamic and context-sensitive per token. Total compute is predictable; the distribution across time and depth is not.",
+ "hardware_relevance": [
+  "nvidia-a100-sxm",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "Models match baseline performance FOR EQUIVALENT FLOPS AND WALL-CLOCK TRAINING TIME, but require a FRACTION OF THE FLOPs PER FORWARD PASS, and can be upwards of 50% faster to step during post-training sampling. The 50%-faster figure is about the TRAINING/sampling step, not decode latency, and the FLOPs reduction is the durable result.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": null,
+ "notes": "ADOPTION: research-only. IMPORTANT CLASSIFICATION NOTE, recorded deliberately: this is categorised inference-time-compute rather than speculative-decoding because it changes WHICH tokens are computed, not how many tokens are produced per step - it is per-token adaptive depth/width, not speculation, and conflating the two would misattribute the speedup mechanism. Its static-shape property is what makes it usable at all in a serving system, and that is the single most transferable engineering fact in this record. VENUE NOTE: no venue verifiable via Semantic Scholar and the arXiv comment carries no venue, so venue = arxiv-preprint, year = ArXiv v1 (Apr 2024). Note the claim is parity at equal FLOPs plus lower FLOPs per forward pass - NOT a standalone speedup over a deployed baseline, and there is no serving-system evaluation in the paper. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). No A100, no GPU and no memory figure anywhere in the paper. Its hardware content is abstract and non-specific: \"general formulations of this challenge may not work well with existing hardware constraints\", \"hardware efficiency gains such as reduced memory footprint\", \"we measured as steps per second when training on equivalent hardware\". Source: https://arxiv.org/pdf/2404.02258 . Left dangling.\n\nAFFILIATIONS BACKFILLED 2026-10-04 (paper-fields pass, agent w3p): OpenAlex institutions field (McGill). Filled from the API/PDF rather than from memory, because an affiliation is a fact about a specific paper's author block and inference from the author's employer history is how wrong affiliations get shipped.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'unknown'. `venue` is 'arxiv-preprint', which means no peer-reviewed venue has been established for this work as of the verification date, so the track genuinely is not known. 'unknown' is used here rather than leaving the field null or guessing 'main': the schema separates 'unknown' from 'main' precisely so that an unprereviewed preprint is not silently counted as main-track work. This annotation is what lets a downstream filter distinguish 'peer reviewed, main track' from 'not peer reviewed' without inferring it from the venue string.",
+ "confidence": 0.85,
+ "type": "paper",
+ "affiliations": [
+  "McGill University"
+ ],
+ "status": "verified",
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-eff-mixture-of-depths"
+ ],
+ "venue_track": "unknown"
 }

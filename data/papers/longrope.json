@@ -1,36 +1,37 @@
 {
-  "id": "longrope",
-  "type": "paper",
-  "name": "LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-attn-longrope"
-  ],
-  "arxiv_id": "2402.13753",
-  "venue": "icml",
-  "year": 2024,
-  "category": "position-encoding",
-  "authors": [
-    "Ding, Yiran",
-    "Zhang, Li Lyna",
-    "Zhang, Chengruidong",
-    "Xu, Yuanyuan"
-  ],
-  "affiliations": [
-    "Microsoft Research"
-  ],
-  "problem": "Extending a 4K-context model to 2M tokens by uniform positional interpolation needs non-uniform treatment of RoPE frequencies, and naive uniform scaling wastes short-context quality.",
-  "mechanism": "Non-uniform positional interpolation. Split RoPE dimensions into a high-frequency group and a low-frequency group; keep the high-frequency group close to the original (short) positions so local resolution is preserved, and apply aggressive interpolation to the low-frequency group where the long-range structure lives. Adds a progressive extension strategy: first fine-tune at 256k, then apply a SECOND positional interpolation to reach 2048k; and finally readjust LongRoPE at 8k to recover short-context performance. Only the positional embedding changes - architecture is untouched.",
-  "hardware_relevance": [
-    "nvidia-a100-40gb-sxm4",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm"
-  ],
-  "speedup_reported": "NOT A THROUGHPUT CLAIM. The abstract's quantitative claims are about CONTEXT LENGTH and quality: an 8x extension in non-fine-tuning scenarios, and a 2048k context window via the two-stage progressive strategy, with models retaining the original architecture and reusing most pre-existing optimisations. The serving-relevant property is that reuse: because only the position encoding changes, no engine or kernel work is needed to deploy it.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/microsoft/LongRoPE",
-  "open_weights": true,
-  "notes": "arXiv ID 2402.13753 verified via abs-page meta tags on 2026-10-03; title matches. Venue icml verified twice: OpenReview returns venueid='ICML.cc/2024/Conference' with venue 'ICML 2024' for the exact title, and DBLP independently lists venue='ICML 2024'. CORRECTION TO THE SOURCE RECORD: pap-attn-longrope says 'arXiv preprint; no journal_ref' - wrong; the paper is ICML 2024. adoption=in-upstream-engine verified in source: transformers lists \"longrope\" in ROPE_INIT_FUNCTIONS (mapping to _compute_longrope_parameters) and special-cases rope_type in ['llama3','yarn','longrope']; vLLM ships Phi3LongRoPEScaledRotaryEmbedding (LongRoPE is the technique Phi-3-mini used) and imports LongRoPE from deepseek_scaling_rope. Two engines, both reference libraries. open_weights=true - LongRoPE is the position encoding of the released Phi-3-mini models. Note the naming collision risk with longrope2 in this same repo: different papers, different mechanisms (non-uniform frequency split vs evolutionary-search rescaling plus mixed-context training)."
+ "id": "longrope",
+ "type": "paper",
+ "name": "LongRoPE: Extending LLM Context Window Beyond 2 Million Tokens",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-attn-longrope"
+ ],
+ "arxiv_id": "2402.13753",
+ "venue": "icml",
+ "year": 2024,
+ "category": "position-encoding",
+ "authors": [
+  "Ding, Yiran",
+  "Zhang, Li Lyna",
+  "Zhang, Chengruidong",
+  "Xu, Yuanyuan"
+ ],
+ "affiliations": [
+  "Microsoft Research"
+ ],
+ "problem": "Extending a 4K-context model to 2M tokens by uniform positional interpolation needs non-uniform treatment of RoPE frequencies, and naive uniform scaling wastes short-context quality.",
+ "mechanism": "Non-uniform positional interpolation. Split RoPE dimensions into a high-frequency group and a low-frequency group; keep the high-frequency group close to the original (short) positions so local resolution is preserved, and apply aggressive interpolation to the low-frequency group where the long-range structure lives. Adds a progressive extension strategy: first fine-tune at 256k, then apply a SECOND positional interpolation to reach 2048k; and finally readjust LongRoPE at 8k to recover short-context performance. Only the positional embedding changes - architecture is untouched.",
+ "hardware_relevance": [
+  "nvidia-a100-40gb-sxm4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "NOT A THROUGHPUT CLAIM. The abstract's quantitative claims are about CONTEXT LENGTH and quality: an 8x extension in non-fine-tuning scenarios, and a 2048k context window via the two-stage progressive strategy, with models retaining the original architecture and reusing most pre-existing optimisations. The serving-relevant property is that reuse: because only the position encoding changes, no engine or kernel work is needed to deploy it.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/microsoft/LongRoPE",
+ "open_weights": true,
+ "notes": "arXiv ID 2402.13753 verified via abs-page meta tags on 2026-10-03; title matches. Venue icml verified twice: OpenReview returns venueid='ICML.cc/2024/Conference' with venue 'ICML 2024' for the exact title, and DBLP independently lists venue='ICML 2024'. CORRECTION TO THE SOURCE RECORD: pap-attn-longrope says 'arXiv preprint; no journal_ref' - wrong; the paper is ICML 2024. adoption=in-upstream-engine verified in source: transformers lists \"longrope\" in ROPE_INIT_FUNCTIONS (mapping to _compute_longrope_parameters) and special-cases rope_type in ['llama3','yarn','longrope']; vLLM ships Phi3LongRoPEScaledRotaryEmbedding (LongRoPE is the technique Phi-3-mini used) and imports LongRoPE from deepseek_scaling_rope. Two engines, both reference libraries. open_weights=true - LongRoPE is the position encoding of the released Phi-3-mini models. Note the naming collision risk with longrope2 in this same repo: different papers, different mechanisms (non-uniform frequency split vs evolutionary-search rescaling plus mixed-context training).\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: icml has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

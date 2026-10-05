@@ -4,14 +4,20 @@
   "name": "Audio input token count explodes relative to text output",
   "class": "custom_kernel",
   "bound_by": "memory",
-  "scales_with": ["audio_duration", "sample_rate", "mel_bins", "encoder_layers", "encoder_hidden_size"],
-  "affected_by_hardware": ["gpu-vram", "memory-bandwidth"],
+  "scales_with": [
+    "audio_duration",
+    "sample_rate",
+    "mel_bins",
+    "encoder_layers",
+    "encoder_hidden_size"
+  ],
+  "affected_by_hardware": [],
   "workarounds": [
     "Use 30-second windowing (Whisper's max_source_positions=1500 at 50Hz mel frame rate)",
     "Use VAD to skip non-speech segments",
     "Use streaming ASR for long audio (with quality tradeoff)"
   ],
-  "notes": "A 1-hour recording at 16kHz is 57,600,000 samples. After the log-mel frontend (80 or 128 mel bins, 100Hz frame rate for Whisper), this becomes 360,000 mel frames. Whisper's encoder uses 30-second windowing (max_source_positions=1500 at 50Hz after 2x subsampling), so a 1-hour recording is processed as 120 separate 30-second windows. Each window produces 1,500 encoder positions. The encoder is bidirectional with full attention, so the compute cost per window is O(1500^2 * d_model * num_layers). For large-v3 (d_model=1280, 32 layers), this is approximately 1500^2 * 1280 * 32 * 2 * 2 = 368 GFLOP per window, or 44 TFLOP for the full hour. The decoder then generates text tokens autoregressively, but the encoder dominates the compute. This is fundamentally different from text-to-text models where input and output token counts are comparable. MIXED-BUCKET VALUE, LEFT UNCHANGED (2026-10-04 cross-reference repair): affected_by_hardware holds 'gpu-vram' and 'memory-bandwidth', which are CONCEPT names, not record ids. Nothing in the record points at a particular card - the dependency is on VRAM capacity and memory bandwidth as quantities, which holds for every accelerator. This is the same failure mode as gotcha.affects being a free-text bucket: one field carrying both ids and concepts, which makes a dangling-ref count meaningless. Left unchanged deliberately - a concept name must not be rewritten into a record id. Needs a sibling field for concepts.",
+  "notes": "HARDWARE PARAMETERS, NOT RECORD IDS. 2026-10-04: affected_by_hardware previously held ['gpu-vram', 'memory-bandwidth'] - hardware quantities, not products. They could never resolve, so the repo was carrying permanent false debt against a budget that exists to catch NEW bad references. Moved into this note; the field is now EMPTY and that is the correct value, not a gap. Why: These were hardware PARAMETERS ('gpu-vram', 'memory-bandwidth'), not products. But the record is ALSO part-independent - it is derived from Whisper model configs across five model sizes, so naming any GPU would INVENT a hardware dependency it does not claim.",
   "status": "verified",
   "confidence": 0.9,
   "updated": "2026-10-04",

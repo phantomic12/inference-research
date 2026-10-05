@@ -1,33 +1,39 @@
 {
-  "id": "eagle-2-dynamic-draft-trees",
-  "name": "EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees",
-  "arxiv_id": "2406.16858",
-  "venue": "arxiv-preprint",
-  "year": 2024,
-  "category": "speculative-decoding",
-  "authors": [
-    "Yuhui Li",
-    "Fangyun Wei",
-    "Chao Zhang",
-    "Hongyang Zhang"
-  ],
-  "problem": "Static draft trees (as in EAGLE-1, SpecInfer) implicitly assume a draft token's acceptance rate depends only on its POSITION in the tree, which is false.",
-  "mechanism": "Context-AWARE dynamic draft tree. Uses EAGLE's observation that the draft model's confidence scores approximate acceptance rates with small error (i.e. the draft model is well-calibrated) to expand the draft tree at each step according to the draft model's own confidences rather than a fixed topology: expand the highest-confidence node, allocate tree nodes by predicted acceptance rate, and prune low-value branches. Reranking of the verified candidates also uses the draft confidence. Output distribution provably unchanged - lossless.",
-  "hardware_relevance": [
-    "nvidia-a100-sxm",
-    "nvidia-h100-sxm"
-  ],
-  "speedup_reported": "3.05x-4.26x speedup, which is 20%-40% faster than EAGLE-1, across three LLM series and six tasks. Model pairs follow EAGLE-1 (Vicuna/LLaMA2-Chat family, feature-level draft head). The 20-40% figure is the like-for-like delta against EAGLE-1 on the same backbone, which is the more honest comparison than the 3.05-4.26x against vanilla decoding.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/SafeAILab/EAGLE",
-  "open_weights": true,
-  "notes": "ADOPTION: EAGLE-2 is reachable in vLLM and SGLang, and the EAGLE-3 follow-up (pap-eff-eagle-3) is what engines actually default to, so EAGLE-2 is best described as shipped-but-superseded rather than actively preferred. VENUE NOTE: no venue verifiable via Semantic Scholar, arXiv comment empty, so venue = arxiv-preprint, year = arXiv v1 (Jun 2024). IMPORTANT REPRODUCTION CAVEAT, stated by the authors themselves: this paper's premise is that acceptance rate is context-dependent. Any reimplementation that reuses a static tree from EAGLE-1 while citing EAGLE-2's numbers has not implemented EAGLE-2. The claimed gain is a change of tree TOPOLOGY per input, not a cheaper verify kernel - so the speedup will not transfer across models whose confidence distributions differ from the tested ones. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). No A100, no GPU and no memory figure anywhere in the paper. Its only hardware sentence is a negative statement: \"The speedup ratio is hardware-dependent, so we tested different methods on the same devices to ensure fairness\", plus the Appendix A implementation list (Huggingface transformers, PyTorch backend, pre-allocated KV cache). Source: https://arxiv.org/pdf/2406.16858 . The devices are never named. Left dangling: nothing in the paper licenses any A100 variant.",
-  "confidence": 0.9,
-  "type": "paper",
-  "affiliations": [],
-  "status": "verified",
-  "updated": "2026-10-04",
-  "sources": [
-    "pap-eff-eagle-2"
-  ]
+ "id": "eagle-2-dynamic-draft-trees",
+ "name": "EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees",
+ "arxiv_id": "2406.16858",
+ "venue": "emnlp",
+ "year": 2024,
+ "category": "speculative-decoding",
+ "authors": [
+  "Yuhui Li",
+  "Fangyun Wei",
+  "Chao Zhang",
+  "Hongyang Zhang"
+ ],
+ "problem": "Static draft trees (as in EAGLE-1, SpecInfer) implicitly assume a draft token's acceptance rate depends only on its POSITION in the tree, which is false.",
+ "mechanism": "Context-AWARE dynamic draft tree. Uses EAGLE's observation that the draft model's confidence scores approximate acceptance rates with small error (i.e. the draft model is well-calibrated) to expand the draft tree at each step according to the draft model's own confidences rather than a fixed topology: expand the highest-confidence node, allocate tree nodes by predicted acceptance rate, and prune low-value branches. Reranking of the verified candidates also uses the draft confidence. Output distribution provably unchanged - lossless.",
+ "hardware_relevance": [
+  "nvidia-a100-sxm",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "3.05x-4.26x speedup, which is 20%-40% faster than EAGLE-1, across three LLM series and six tasks. Model pairs follow EAGLE-1 (Vicuna/LLaMA2-Chat family, feature-level draft head). The 20-40% figure is the like-for-like delta against EAGLE-1 on the same backbone, which is the more honest comparison than the 3.05-4.26x against vanilla decoding.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/SafeAILab/EAGLE",
+ "open_weights": true,
+ "notes": "ADOPTION: EAGLE-2 is reachable in vLLM and SGLang, and the EAGLE-3 follow-up (pap-eff-eagle-3) is what engines actually default to, so EAGLE-2 is best described as shipped-but-superseded rather than actively preferred. VENUE NOTE: no venue verifiable via Semantic Scholar, arXiv comment empty, so venue = arxiv-preprint, year = arXiv v1 (Jun 2024). IMPORTANT REPRODUCTION CAVEAT, stated by the authors themselves: this paper's premise is that acceptance rate is context-dependent. Any reimplementation that reuses a static tree from EAGLE-1 while citing EAGLE-2's numbers has not implemented EAGLE-2. The claimed gain is a change of tree TOPOLOGY per input, not a cheaper verify kernel - so the speedup will not transfer across models whose confidence distributions differ from the tested ones. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). No A100, no GPU and no memory figure anywhere in the paper. Its only hardware sentence is a negative statement: \"The speedup ratio is hardware-dependent, so we tested different methods on the same devices to ensure fairness\", plus the Appendix A implementation list (Huggingface transformers, PyTorch backend, pre-allocated KV cache). Source: https://arxiv.org/pdf/2406.16858 . The devices are never named. Left dangling: nothing in the paper licenses any A100 variant.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass): venue_track set to 'main' from the ACL Anthology bib index (anthology.bib, 131650 entries) by normalized title match. Evidence: anthology id 2024.emnlp-main.422, booktitle 'Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing'. The Anthology id is the authoritative signal here and it is unambiguous, so this is an additive clarification of a track, not a change of venue - `venue` is untouched and no status change is implied. The reason this matters for inference readers: a Findings paper and a main-track paper at the same venue are not the same kind of evidence, and until this field existed the repo could not say which was which.\n\nVENUE CORRECTION + VENUE_TRACK 2026-10-04 (paper-fields pass, agent w3p): venue 'arxiv-preprint' -> 'emnlp', venue_track 'main'. EVIDENCE: the ACL Anthology bib index (anthology.bib, 131650 entries, fetched 2026-10-04) contains this exact title as anthology id 2024.emnlp-main.422 with booktitle 'Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing'. That is a proceedings record, so 'no venue found' was an under-claim, not a fact. BOTH VALUES RETAINED HERE PER THE REPO CONTRACT: the prior value was 'arxiv-preprint'. status set to contested because this changes a peer-reviewed attribution. arxiv_id unchanged (2406.16858).\n\nAFFILIATIONS BACKFILLED 2026-10-04 (paper-fields pass, agent w3p): PDF first page footnote block: Peking University, Microsoft Research, University of Waterloo, Vector Institute. OpenAlex returns no institutions for this arXiv ID, so the PDF is the source. Filled from the API/PDF rather than from memory, because an affiliation is a fact about a specific paper's author block and inference from the author's employer history is how wrong affiliations get shipped.",
+ "confidence": 0.9,
+ "type": "paper",
+ "affiliations": [
+  "Peking University",
+  "Microsoft Research",
+  "University of Waterloo",
+  "Vector Institute"
+ ],
+ "status": "contested",
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-eff-eagle-2"
+ ],
+ "venue_track": "main"
 }

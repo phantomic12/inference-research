@@ -1,39 +1,40 @@
 {
-  "id": "sageattention2",
-  "type": "paper",
-  "name": "SageAttention2: Efficient Attention with Thorough Outlier Smoothing and Per-thread INT4 Quantization",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-attn-sageattention2"
-  ],
-  "arxiv_id": "2411.10958",
-  "venue": "icml",
-  "year": 2025,
-  "category": "quantization",
-  "authors": [
-    "Zhang, Jintao",
-    "Huang, Haofeng",
-    "Zhang, Pengle",
-    "Wei, Jia"
-  ],
-  "affiliations": [
-    "Tsinghua University",
-    "ModelBest"
-  ],
-  "problem": "SageAttention's INT8 path works, but pushing attention quantisation to INT4 needs a per-thread (rather than per-tensor or per-block) scale to represent the input distribution, and the FP8 PV matmul accumulates error that destroys quality.",
-  "mechanism": "Three components. (1) SMOOTHING Q - applying the same max-folding trick to the query instead of only to K and P. (2) Per-thread INT4 quantisation with scales kept in registers, giving each warp thread its own scale so the low-bit grid adapts locally. (3) A two-level accumulation strategy for the FP8 PV matmul to recover the accuracy that FP8 accumulation loses.",
-  "hardware_relevance": [
-    "nvidia-a100-40gb-sxm4",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm",
-    "nvidia-h200-sxm",
-    "nvidia-rtx-4090"
-  ],
-  "speedup_reported": "Paper's own claims (abstract): OPS surpass FlashAttention2 by about 3x and xformers by about 4.5x ON RTX4090, and MATCHES the speed of FlashAttention3(fp8) on Hopper GPUs while delivering much higher accuracy; negligible end-to-end metrics loss on language, image and video generation. Note the hardware split: the 3x/4.5x figures are RTX4090 (Ada, consumer) while the FA3-parity claim is on Hopper.",
-  "adoption": "research-only",
-  "code_url": "https://github.com/thu-ml/SageAttention",
-  "open_weights": null,
-  "notes": "arXiv ID 2411.10958 verified via abs-page citation_title/citation_date on 2026-10-03; the abs page title is 'SageAttention2: Efficient attention with thorough outlier smoothing and per-thread int4 quantization' (sentence case) vs the record's title case - same paper. VENUE - again the strongest available evidence: arXiv journal_ref reads 'Proceedings of the 42nd International Conference on Machine Learning, PMLR 267, 2025 (ICML 2025)', and the arXiv comment carries BibTeX with booktitle 'International Conference on Machine Learning (ICML)'. Corroborated by OpenReview, which returns TWO records: venue='ICML 2025 poster', venueid='ICML.cc/2025/Conference' for the arXiv-title version, and venue='SCOPE - ICLR 2025 Oral' (an ICLR 2025 workshop) for an earlier variant titled 'SageAttention2: Efficient Attention with Smoothing Q and Per-thread INT4 Quantization'. venue=icml is the archival venue; the workshop variant is not. adoption=research-only for the same reason as sageattention and stated identically: no sageattention path in vLLM's 8562-file tree; present in SGLang only under the multimodal_gen diffusion runtime, absent from the LLM serving path. The record is kept separate from sageattention because the mechanism and the precision are genuinely different (INT8 + K/P smoothing vs INT4 + Q smoothing + two-level accumulation) and both have distinct venues."
+ "id": "sageattention2",
+ "type": "paper",
+ "name": "SageAttention2: Efficient Attention with Thorough Outlier Smoothing and Per-thread INT4 Quantization",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-attn-sageattention2"
+ ],
+ "arxiv_id": "2411.10958",
+ "venue": "icml",
+ "year": 2025,
+ "category": "quantization",
+ "authors": [
+  "Zhang, Jintao",
+  "Huang, Haofeng",
+  "Zhang, Pengle",
+  "Wei, Jia"
+ ],
+ "affiliations": [
+  "Tsinghua University",
+  "ModelBest"
+ ],
+ "problem": "SageAttention's INT8 path works, but pushing attention quantisation to INT4 needs a per-thread (rather than per-tensor or per-block) scale to represent the input distribution, and the FP8 PV matmul accumulates error that destroys quality.",
+ "mechanism": "Three components. (1) SMOOTHING Q - applying the same max-folding trick to the query instead of only to K and P. (2) Per-thread INT4 quantisation with scales kept in registers, giving each warp thread its own scale so the low-bit grid adapts locally. (3) A two-level accumulation strategy for the FP8 PV matmul to recover the accuracy that FP8 accumulation loses.",
+ "hardware_relevance": [
+  "nvidia-a100-40gb-sxm4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-rtx-4090"
+ ],
+ "speedup_reported": "Paper's own claims (abstract): OPS surpass FlashAttention2 by about 3x and xformers by about 4.5x ON RTX4090, and MATCHES the speed of FlashAttention3(fp8) on Hopper GPUs while delivering much higher accuracy; negligible end-to-end metrics loss on language, image and video generation. Note the hardware split: the 3x/4.5x figures are RTX4090 (Ada, consumer) while the FA3-parity claim is on Hopper.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/thu-ml/SageAttention",
+ "open_weights": null,
+ "notes": "arXiv ID 2411.10958 verified via abs-page citation_title/citation_date on 2026-10-03; the abs page title is 'SageAttention2: Efficient attention with thorough outlier smoothing and per-thread int4 quantization' (sentence case) vs the record's title case - same paper. VENUE - again the strongest available evidence: arXiv journal_ref reads 'Proceedings of the 42nd International Conference on Machine Learning, PMLR 267, 2025 (ICML 2025)', and the arXiv comment carries BibTeX with booktitle 'International Conference on Machine Learning (ICML)'. Corroborated by OpenReview, which returns TWO records: venue='ICML 2025 poster', venueid='ICML.cc/2025/Conference' for the arXiv-title version, and venue='SCOPE - ICLR 2025 Oral' (an ICLR 2025 workshop) for an earlier variant titled 'SageAttention2: Efficient Attention with Smoothing Q and Per-thread INT4 Quantization'. venue=icml is the archival venue; the workshop variant is not. adoption=research-only for the same reason as sageattention and stated identically: no sageattention path in vLLM's 8562-file tree; present in SGLang only under the multimodal_gen diffusion runtime, absent from the LLM serving path. The record is kept separate from sageattention because the mechanism and the precision are genuinely different (INT8 + K/P smoothing vs INT4 + Q smoothing + two-level accumulation) and both have distinct venues.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: icml has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

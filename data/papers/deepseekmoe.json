@@ -1,38 +1,39 @@
 {
-  "id": "deepseekmoe",
-  "type": "paper",
-  "name": "DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-arch-2401-06066"
-  ],
-  "arxiv_id": "2401.06066",
-  "venue": "arxiv-preprint",
-  "year": 2024,
-  "category": "moe",
-  "authors": [
-    "Damai Dai",
-    "Chengqi Deng",
-    "Chenggang Zhao",
-    "R.X. Xu",
-    "Huazuo Gao",
-    "Deli Chen"
-  ],
-  "affiliations": [
-    "DeepSeek"
-  ],
-  "problem": "GShard-style top-k-of-N MoE keeps experts overlapping and redundant, so DeepSeekMoE 16B merely matched a 2.9B GShard and still lost to a same-size dense model instead of beating it.",
-  "mechanism": "Two changes to the MoE block. (1) Fine-grained experts: split N experts into mN experts of intermediate size 1/m each and activate mK of them instead of K of N, which decouples expert granularity from activation count and enlarges the space of expert combinations at identical FLOPs. (2) Shared experts: isolate K_s experts that every token always passes through and that receive no routed tokens, so they absorb common knowledge, reduce redundancy among routed experts, and let the router specialise. Every token therefore activates mK routed experts plus K_s shared experts. Routing is token-choice top-k with an auxiliary load-balance loss, the same family as Switch and GShard; it is the shared-expert addition that makes the fine-grained split pay off. Shipped ratios: DeepSeek-V2 236B total / 21B active (about 8.9 percent); DeepSeek-V3 671B total / 37B active (about 5.5 percent).",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm",
-    "amd-instinct-mi300x"
-  ],
-  "speedup_reported": "At 2B scale and equal training compute, DeepSeekMoE 2B matches GShard 2.9B even though the GShard baseline has 1.5x the expert parameters and 1.5x the expert FLOPs. At 16B scale, DeepSeekMoE 16B matches LLaMA2 7B using only about 40 percent of its FLOPs. At 145B scale, DeepSeekMoE 145B matches DeepSeek 67B using only 28.5 percent of the computation, or 18.2 percent against the dense bound it is extrapolated from. All are quality-matched FLOP comparisons on H800-class GPUs, not throughput measurements.",
-  "adoption": "in-production",
-  "code_url": "https://github.com/deepseek-ai/DeepSeek-V2",
-  "open_weights": true,
-  "notes": "Load balancing here is the AUXILIARY-LOSS kind inherited from GShard. DeepSeek-V3 later replaced it with the auxiliary-loss-free bias term, so citing DeepSeekMoE as the source of load balancing is wrong; cite DeepSeek-V3 for that. The shared-expert plus fine-grained-split recipe is now the de facto default for new open MoE models and is the most copied architectural contribution in this slice."
+ "id": "deepseekmoe",
+ "type": "paper",
+ "name": "DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models",
+ "status": "contested",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2401-06066"
+ ],
+ "arxiv_id": "2401.06066",
+ "venue": "acl",
+ "year": 2024,
+ "category": "moe",
+ "authors": [
+  "Damai Dai",
+  "Chengqi Deng",
+  "Chenggang Zhao",
+  "R.X. Xu",
+  "Huazuo Gao",
+  "Deli Chen"
+ ],
+ "affiliations": [
+  "DeepSeek"
+ ],
+ "problem": "GShard-style top-k-of-N MoE keeps experts overlapping and redundant, so DeepSeekMoE 16B merely matched a 2.9B GShard and still lost to a same-size dense model instead of beating it.",
+ "mechanism": "Two changes to the MoE block. (1) Fine-grained experts: split N experts into mN experts of intermediate size 1/m each and activate mK of them instead of K of N, which decouples expert granularity from activation count and enlarges the space of expert combinations at identical FLOPs. (2) Shared experts: isolate K_s experts that every token always passes through and that receive no routed tokens, so they absorb common knowledge, reduce redundancy among routed experts, and let the router specialise. Every token therefore activates mK routed experts plus K_s shared experts. Routing is token-choice top-k with an auxiliary load-balance loss, the same family as Switch and GShard; it is the shared-expert addition that makes the fine-grained split pay off. Shipped ratios: DeepSeek-V2 236B total / 21B active (about 8.9 percent); DeepSeek-V3 671B total / 37B active (about 5.5 percent).",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "amd-instinct-mi300x"
+ ],
+ "speedup_reported": "At 2B scale and equal training compute, DeepSeekMoE 2B matches GShard 2.9B even though the GShard baseline has 1.5x the expert parameters and 1.5x the expert FLOPs. At 16B scale, DeepSeekMoE 16B matches LLaMA2 7B using only about 40 percent of its FLOPs. At 145B scale, DeepSeekMoE 145B matches DeepSeek 67B using only 28.5 percent of the computation, or 18.2 percent against the dense bound it is extrapolated from. All are quality-matched FLOP comparisons on H800-class GPUs, not throughput measurements.",
+ "adoption": "in-production",
+ "code_url": "https://github.com/deepseek-ai/DeepSeek-V2",
+ "open_weights": true,
+ "notes": "Load balancing here is the AUXILIARY-LOSS kind inherited from GShard. DeepSeek-V3 later replaced it with the auxiliary-loss-free bias term, so citing DeepSeekMoE as the source of load balancing is wrong; cite DeepSeek-V3 for that. The shared-expert plus fine-grained-split recipe is now the de facto default for new open MoE models and is the most copied architectural contribution in this slice.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass): venue_track set to 'main' from the ACL Anthology bib index (anthology.bib, 131650 entries) by normalized title match. Evidence: anthology id 2024.acl-long.70, booktitle 'Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)'. The Anthology id is the authoritative signal here and it is unambiguous, so this is an additive clarification of a track, not a change of venue - `venue` is untouched and no status change is implied. The reason this matters for inference readers: a Findings paper and a main-track paper at the same venue are not the same kind of evidence, and until this field existed the repo could not say which was which.\n\nVENUE CORRECTION + VENUE_TRACK 2026-10-04 (paper-fields pass, agent w3p): venue 'arxiv-preprint' -> 'acl', venue_track 'main'. EVIDENCE: the ACL Anthology bib index (anthology.bib, 131650 entries, fetched 2026-10-04) contains this exact title as anthology id 2024.acl-long.70 with booktitle 'Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)'. That is a proceedings record, so 'no venue found' was an under-claim, not a fact. BOTH VALUES RETAINED HERE PER THE REPO CONTRACT: the prior value was 'arxiv-preprint'. status set to contested because this changes a peer-reviewed attribution. arxiv_id unchanged (2401.06066).",
+ "venue_track": "main"
 }

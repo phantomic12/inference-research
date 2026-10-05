@@ -1,33 +1,33 @@
 {
- "id": "moe-mixed-precision",
- "type": "quantization",
- "name": "MoE mixed-precision expert bit allocation (expert-level bit-width, not one fixed precision)",
- "scheme": "modelopt",
- "bits": "per-expert or per-expert-group bit widths. The published endpoints span 2.25-bit (MxMoE), ~2-bit (MoQE, AlphaQ, EAQuant W2A4) and 4-bit W8A8-style expert weights; AutoScheme generates mixed-bit recipes in minutes",
- "weight_group_size": null,
- "activation_scheme": "the interesting cases are genuinely low-precision: EAQuant evaluates W4A4 / W3A4 / W3A3 / W2A4; MxMoE reports 5-bit weight-activation quantization with mixed precision",
- "native_support": [],
- "emulated_support": [
-  "nvidia-h100-sxm",
-  "amd-instinct-mi300x",
-  "intel-gaudi3"
- ],
- "kernels": [
-  "mixed-precision GroupGEMM - MxMoE's key systems contribution is that it automatically generates GroupGEMM kernels that execute GEMMs of DIFFERENT precisions in parallel; without such a kernel, mixed precision is a memory win only and may lose throughput",
-  "per-expert static scales in a compressed-tensors checkpoint; llama.cpp's llama_tensor_get_type_impl special-cases 8-expert (Mixtral) models"
- ],
- "quality_delta": "The only figures in this cluster with a named model, benchmark and delta are from MxMoE (qlab2-arxiv-mxmoe): 2.4 lower Wikitext-2 perplexity than GPTQ at 2.25-bit, up to 3.4x speedup over full precision, and up to 29.4% speedup over uniform quantization at equivalent accuracy with 5-bit weight-activation quantization. Model architectures are not named in the abstract, so treat as paper-claim-grade. MoQE (qlab2-arxiv-moqe) reports an INT2-mixed DeepSeek-R1-sized MoE at 79.6% model-size reduction vs fp16 and 1.24x A100 speed-up with an optimized runtime, but gives no benchmark name.",
- "notes": "NOT A PROXY BUT A NEAR MISS, DECLARED 2026-10-04: expert-level bit allocation is not a ModelOpt recipe - the sources are seven independent arXiv papers (AlphaQ, EAQuant, MoEQuant, MoE, MXMoE, QuantMoEBench, VSRAQ). 'modelopt' is defensible only in that ModelOpt is the common production path for this, but a query for ModelOpt returns a literature record that has no ModelOpt source. The grouping axis (per-expert) is genuinely different from every other record here, which is the more useful distinction. GROUP SIZE LEFT NULL 2026-10-04: the bit allocation here is per-EXPERT or per-expert-group, i.e. the axis is the expert, not a contiguous run of weights in one tensor. Different experts carry different bit widths, so a single weight group size does not exist for the model. THE CENTRAL FINDING, and the reason this is a distinct record rather than a note on the gptq/awq records: generic PTQ applies ONE fixed precision to the whole MoE, and that is what breaks. QuantMoE-Bench (qlab2-arxiv-quantmoebench) states the mechanism precisely - MoE's sparse routing produces DIFFERENT activation patterns, because shared experts are accessed by ALL tokens while token-conditioned experts are selectively activated, so the two do not have the same quantization requirement, and consistently-activated shared experts potentially need HIGHER precision to hold model quality. MxMoE adds a second, independent axis: divergent expert activation FREQUENCIES create heterogeneous computational characteristics, so mixed-precision choice must be co-designed with hardware rather than chosen for accuracy alone. DIRECTION OF THE EXPERT BIT ALLOCATION - note this is not uniform, and the papers disagree about which experts to favour, which is worth flagging rather than smoothing over. AlphaQ (qlab2-arxiv-alphaq), which is calibration-free, allocates MORE bits to experts whose weight spectra are more heavy-tailed, on the theory that heavy-tailed means better-trained. Colla-Q instead balances activation entropy across experts so no single expert collapses. QuantMoE-Bench argues the structurally correct answer is more bits for shared/always-on experts. These are three different selection criteria; none is established as the default. WHY CALIBRATION IS THE HARD PART, and it is the practical blocker: MoEQuant (qlab2-arxiv-moequant) names two distinct failures. INTER-EXPERT IMBALANCE: uneven sample distribution across experts leaves infrequently-used experts with insufficient and biased calibration. INTRA-EXPERT IMBALANCE: MoE's aggregation mechanism makes different samples correlate differently with their assigned expert. AlphaQ's motivation is the deployment version of the same problem - frontier MoE models are trained on proprietary data, so any calibration set is an imperfect surrogate and misestimates expert utilization. This connects directly to the imatrix record: a llama.cpp imatrix built from a corpus that under-exercises rarely-routed experts inherits exactly this bias. ECONOMICS, and it explains the whole subfield: MoE deployment is memory-bound because ALL expert weights must be resident even though only k are used per token, so precision reduction buys residency while the FLOPs stayed flat. MoQE's framing is that 2-bit expert weights can still beat the dense model trained on the same dataset - robustness of expert layers to quantization is doing real work here.",
- "status": "verified",
- "confidence": 0.75,
- "updated": "2026-10-04",
- "sources": [
-  "qlab2-arxiv-alphaq",
-  "qlab2-arxiv-eaquant",
-  "qlab2-arxiv-moequant",
-  "qlab2-arxiv-moqe",
-  "qlab2-arxiv-mxmoe",
-  "qlab2-arxiv-quantmoebench",
-  "qlab2-arxiv-vsraq"
- ]
+  "id": "moe-mixed-precision",
+  "type": "quantization",
+  "name": "MoE mixed-precision expert bit allocation (expert-level bit-width, not one fixed precision)",
+  "scheme": "modelopt",
+  "bits": "per-expert or per-expert-group bit widths. The published endpoints span 2.25-bit (MxMoE), ~2-bit (MoQE, AlphaQ, EAQuant W2A4) and 4-bit W8A8-style expert weights; AutoScheme generates mixed-bit recipes in minutes",
+  "weight_group_size": null,
+  "activation_scheme": "the interesting cases are genuinely low-precision: EAQuant evaluates W4A4 / W3A4 / W3A3 / W2A4; MxMoE reports 5-bit weight-activation quantization with mixed precision",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "intel-gaudi3"
+  ],
+  "kernels": [
+    "mixed-precision GroupGEMM - MxMoE's key systems contribution is that it automatically generates GroupGEMM kernels that execute GEMMs of DIFFERENT precisions in parallel; without such a kernel, mixed precision is a memory win only and may lose throughput",
+    "per-expert static scales in a compressed-tensors checkpoint; llama.cpp's llama_tensor_get_type_impl special-cases 8-expert (Mixtral) models"
+  ],
+  "quality_delta": "The only figures in this cluster with a named model, benchmark and delta are from MxMoE (qlab2-arxiv-mxmoe): 2.4 lower Wikitext-2 perplexity than GPTQ at 2.25-bit, up to 3.4x speedup over full precision, and up to 29.4% speedup over uniform quantization at equivalent accuracy with 5-bit weight-activation quantization. Model architectures are not named in the abstract, so treat as paper-claim-grade. MoQE (qlab2-arxiv-moqe) reports an INT2-mixed DeepSeek-R1-sized MoE at 79.6% model-size reduction vs fp16 and 1.24x A100 speed-up with an optimized runtime, but gives no benchmark name.",
+  "notes": "NOT A PROXY BUT A NEAR MISS, DECLARED 2026-10-04: expert-level bit allocation is not a ModelOpt recipe - the sources are seven independent arXiv papers (AlphaQ, EAQuant, MoEQuant, MoE, MXMoE, QuantMoEBench, VSRAQ). 'modelopt' is defensible only in that ModelOpt is the common production path for this, but a query for ModelOpt returns a literature record that has no ModelOpt source. The grouping axis (per-expert) is genuinely different from every other record here, which is the more useful distinction. GROUP SIZE LEFT NULL 2026-10-04: the bit allocation here is per-EXPERT or per-expert-group, i.e. the axis is the expert, not a contiguous run of weights in one tensor. Different experts carry different bit widths, so a single weight group size does not exist for the model. THE CENTRAL FINDING, and the reason this is a distinct record rather than a note on the gptq/awq records: generic PTQ applies ONE fixed precision to the whole MoE, and that is what breaks. QuantMoE-Bench (qlab2-arxiv-quantmoebench) states the mechanism precisely - MoE's sparse routing produces DIFFERENT activation patterns, because shared experts are accessed by ALL tokens while token-conditioned experts are selectively activated, so the two do not have the same quantization requirement, and consistently-activated shared experts potentially need HIGHER precision to hold model quality. MxMoE adds a second, independent axis: divergent expert activation FREQUENCIES create heterogeneous computational characteristics, so mixed-precision choice must be co-designed with hardware rather than chosen for accuracy alone. DIRECTION OF THE EXPERT BIT ALLOCATION - note this is not uniform, and the papers disagree about which experts to favour, which is worth flagging rather than smoothing over. AlphaQ (qlab2-arxiv-alphaq), which is calibration-free, allocates MORE bits to experts whose weight spectra are more heavy-tailed, on the theory that heavy-tailed means better-trained. Colla-Q instead balances activation entropy across experts so no single expert collapses. QuantMoE-Bench argues the structurally correct answer is more bits for shared/always-on experts. These are three different selection criteria; none is established as the default. WHY CALIBRATION IS THE HARD PART, and it is the practical blocker: MoEQuant (qlab2-arxiv-moequant) names two distinct failures. INTER-EXPERT IMBALANCE: uneven sample distribution across experts leaves infrequently-used experts with insufficient and biased calibration. INTRA-EXPERT IMBALANCE: MoE's aggregation mechanism makes different samples correlate differently with their assigned expert. AlphaQ's motivation is the deployment version of the same problem - frontier MoE models are trained on proprietary data, so any calibration set is an imperfect surrogate and misestimates expert utilization. This connects directly to the imatrix record: a llama.cpp imatrix built from a corpus that under-exercises rarely-routed experts inherits exactly this bias. ECONOMICS, and it explains the whole subfield: MoE deployment is memory-bound because ALL expert weights must be resident even though only k are used per token, so precision reduction buys residency while the FLOPs stayed flat. MoQE's framing is that 2-bit expert weights can still beat the dense model trained on the same dataset - robustness of expert layers to quantization is doing real work here.\nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: WEIGHT-ONLY, SO STRUCTURALLY ABSENT. The bits field keeps activations in FP16, so execution is dequantize-to-FP16 then an FP16 tensor-core GEMM; there is no INT4-x-INT4 (or sub-8-bit x sub-8-bit) silicon instruction for it to target. This is a statement about the arithmetic, not an absence of investigation. Consequence for a reader: nothing further to verify - no silicon path is possible for this format as defined. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-04",
+  "sources": [
+    "qlab2-arxiv-alphaq",
+    "qlab2-arxiv-eaquant",
+    "qlab2-arxiv-moequant",
+    "qlab2-arxiv-moqe",
+    "qlab2-arxiv-mxmoe",
+    "qlab2-arxiv-quantmoebench",
+    "qlab2-arxiv-vsraq"
+  ]
 }

@@ -1,27 +1,27 @@
 {
- "id": "gguf-mxfp4-moe",
- "type": "quantization",
- "name": "GGUF MXFP4_MOE (llama.cpp MoE-specific ftype: MXFP4 for experts, Q8_0 for everything else)",
- "scheme": "mxfp4",
- "bits": "MXFP4 (4-bit E2M1 + shared E8M0 scale) on expert tensors, Q8_0 on non-expert tensors",
- "weight_group_size": 32,
- "activation_scheme": "none - weight-only; activations promoted to q8_K/q8_0 for the dot product",
- "native_support": [],
- "emulated_support": [
-  "nvidia-rtx-4090",
-  "nvidia-rtx-5090",
-  "amd-instinct-mi300x"
- ],
- "kernels": [
-  "ggml dequantize_block_mxfp4"
- ],
- "quality_delta": null,
- "notes": "ADDED FOR COVERAGE: llama.cpp ships LLAMA_FTYPE_MOSTLY_MXFP4_MOE as a distinct ftype and this repo had MXFP4 records but no record for the MoE-specific variant, which is the form most current MoE GGUF conversions actually produce.\n\nTHE MAPPING, from src/llama-quant.cpp verbatim: `if (ftype == LLAMA_FTYPE_MOSTLY_MXFP4_MOE) { new_type = GGML_TYPE_Q8_0; }` in the output-tensor branch, and in the main branch 'MoE tensors -> MXFP4 / other tensors -> Q8_0', with the expert test being explicit about 3-D tensors and BailingMoE3: 'MLA projection tensors are also 3D, so match expert tensor roles explicitly' via `tensor->ne[2] > 1 && (arch != LLM_ARCH_BAILINGMOE3 || is_bailingmoe3_expert)`.\n\nGROUP SIZE 32 IS THE MX BLOCK, NOT A CHOICE: ggml-common.h defines `#define QK_MXFP4 32` and `block_mxfp4 = { uint8_t e; /* E8M0 */ uint8_t qs[QK_MXFP4/2]; }` - 1 byte shared power-of-two scale plus 16 bytes of packed 4-bit E2M1 for 32 values. This matches the OCP MX definition and the MXFP4 records already in this repo, and unlike GGUF's k-quants there is no separate super-block/scale-group distinction: for MX formats the scale group IS the block.\n\nTHE PART THAT ACTUALLY CHANGES THE ARITHMETIC, and the reason this is worth its own record: 'other tensors -> Q8_0' means the embedding, output head, and any non-expert projection are stored at 8.5 bpw while the experts sit at 4.25. So the whole-model bpw of an MXFP4_MOE model is NOT 4.25, and for a model with a large non-expert fraction the gap is material - this is the GGUF-side instance of a pattern already recorded in the k-quant family, where a mixture name silently ships a wider model than its label implies. Note the contrast with the k-quant mixtures, which promote to Q5_K/Q6_K: this one promotes all the way to Q8_0, which is a much larger width gap.\n\nPROXY-FREE: unlike the i-quant records in this repo, scheme 'mxfp4' is EXACTLY right here - MXFP4_MOE is MXFP4, differing only in which tensors receive it. No proxy, no enum change requested.\n\nBACKEND CAVEAT THAT APPLIES AS IT DOES TO EVERY GGUF TYPE HERE: the size-optimized CUDA library shipped in llamafile releases omits the IQ-quant kernels, and no accelerator has a GGUF path in silicon at all, so native_support is deliberately empty.",
- "status": "verified",
- "confidence": 0.85,
- "updated": "2026-10-04",
- "sources": [
-  "qzgw-llama-quant-cpp",
-  "qlab2-ggml-common-header"
- ]
+  "id": "gguf-mxfp4-moe",
+  "type": "quantization",
+  "name": "GGUF MXFP4_MOE (llama.cpp MoE-specific ftype: MXFP4 for experts, Q8_0 for everything else)",
+  "scheme": "mxfp4",
+  "bits": "MXFP4 (4-bit E2M1 + shared E8M0 scale) on expert tensors, Q8_0 on non-expert tensors",
+  "weight_group_size": 32,
+  "activation_scheme": "none - weight-only; activations promoted to q8_K/q8_0 for the dot product",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-rtx-4090",
+    "nvidia-rtx-5090",
+    "amd-instinct-mi300x"
+  ],
+  "kernels": [
+    "ggml dequantize_block_mxfp4"
+  ],
+  "quality_delta": null,
+  "notes": "ADDED FOR COVERAGE: llama.cpp ships LLAMA_FTYPE_MOSTLY_MXFP4_MOE as a distinct ftype and this repo had MXFP4 records but no record for the MoE-specific variant, which is the form most current MoE GGUF conversions actually produce.\n\nTHE MAPPING, from src/llama-quant.cpp verbatim: `if (ftype == LLAMA_FTYPE_MOSTLY_MXFP4_MOE) { new_type = GGML_TYPE_Q8_0; }` in the output-tensor branch, and in the main branch 'MoE tensors -> MXFP4 / other tensors -> Q8_0', with the expert test being explicit about 3-D tensors and BailingMoE3: 'MLA projection tensors are also 3D, so match expert tensor roles explicitly' via `tensor->ne[2] > 1 && (arch != LLM_ARCH_BAILINGMOE3 || is_bailingmoe3_expert)`.\n\nGROUP SIZE 32 IS THE MX BLOCK, NOT A CHOICE: ggml-common.h defines `#define QK_MXFP4 32` and `block_mxfp4 = { uint8_t e; /* E8M0 */ uint8_t qs[QK_MXFP4/2]; }` - 1 byte shared power-of-two scale plus 16 bytes of packed 4-bit E2M1 for 32 values. This matches the OCP MX definition and the MXFP4 records already in this repo, and unlike GGUF's k-quants there is no separate super-block/scale-group distinction: for MX formats the scale group IS the block.\n\nTHE PART THAT ACTUALLY CHANGES THE ARITHMETIC, and the reason this is worth its own record: 'other tensors -> Q8_0' means the embedding, output head, and any non-expert projection are stored at 8.5 bpw while the experts sit at 4.25. So the whole-model bpw of an MXFP4_MOE model is NOT 4.25, and for a model with a large non-expert fraction the gap is material - this is the GGUF-side instance of a pattern already recorded in the k-quant family, where a mixture name silently ships a wider model than its label implies. Note the contrast with the k-quant mixtures, which promote to Q5_K/Q6_K: this one promotes all the way to Q8_0, which is a much larger width gap.\n\nPROXY-FREE: unlike the i-quant records in this repo, scheme 'mxfp4' is EXACTLY right here - MXFP4_MOE is MXFP4, differing only in which tensors receive it. No proxy, no enum change requested.\n\nBACKEND CAVEAT THAT APPLIES AS IT DOES TO EVERY GGUF TYPE HERE: the size-optimized CUDA library shipped in llamafile releases omits the IQ-quant kernels, and no accelerator has a GGUF path in silicon at all, so native_support is deliberately empty.\nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: LLAMA.CPP INTEGER STORAGE TYPE, SO STRUCTURALLY ABSENT. Every GGUF type here is a packed integer block format read by a dequant kernel (dequantize_row_*) and then executed as FP16; ggml publishes no int4 or sub-8-bit tensor-core path that consumes these blocks directly. The llama.cpp CUDA and Vulkan backends both run these formats by dequantizing. Consequence for a reader: nothing further to verify - and note the contrast with nvfp4/mxfp4/mxfp8 in this repo, which ARE hardware formats on Blackwell and carry populated native_support lists, so '4-bit' alone does not predict this field. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "qzgw-llama-quant-cpp",
+    "qlab2-ggml-common-header"
+  ]
 }

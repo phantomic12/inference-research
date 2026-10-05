@@ -1,0 +1,15 @@
+{
+  "id": "w3m-trtllm-prometheus-endpoint-gate",
+  "type": "source",
+  "name": "TensorRT-LLM serve/openai_server.py - the /prometheus/metrics route and the flag that mounts it",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "url": "https://github.com/NVIDIA/TensorRT-LLM/blob/main/tensorrt_llm/serve/openai_server.py",
+  "publisher": "NVIDIA/TensorRT-LLM",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "tensorrt_llm/serve/openai_server.py on main, 2026-10-04. The MetricsCollector is constructed at line 917 inside `if self.generator.args.return_perf_metrics:` with labels {'model_name': self.model, 'engine_type': args.backend or 'unknown'} and per-family bucket overrides pulled from args.prometheus_metrics_config. mount_metrics() at line 1316 appends Mount('/prometheus/metrics', make_asgi_app(registry=...)) plus a prometheus_fastapi_instrumentator layer, and is itself called only under the same `return_perf_metrics` guard at line 1316-1317. Note the path is NOT /metrics: it is /prometheus/metrics. Separately, GET /metrics exists on the server and is registered separately (lines 1208, 1347, 1522) but serves a JSON iteration-stats snapshot, not Prometheus exposition text - a scraper pointed at /metrics gets JSON, not a time series."
+}

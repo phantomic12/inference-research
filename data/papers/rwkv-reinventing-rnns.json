@@ -1,40 +1,41 @@
 {
-  "id": "rwkv-reinventing-rnns",
-  "type": "paper",
-  "name": "RWKV: Reinventing RNNs for the Transformer Era",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-arch-2305-13048"
-  ],
-  "arxiv_id": "2305.13048",
-  "venue": "emnlp",
-  "year": 2023,
-  "category": "ssm",
-  "authors": [
-    "Bo Peng",
-    "Eric Alcaide",
-    "Quentin Anthony",
-    "Alon Albalak",
-    "Samuel Arcadinho",
-    "Stella Biderman",
-    "Huanqi Cao",
-    "Xin Cheng"
-  ],
-  "affiliations": [
-    "EleutherAI"
-  ],
-  "problem": "Transformers have quadratic memory and compute in sequence length; RNNs are linear but cannot be parallelised during training, which is why they lost to attention.",
-  "mechanism": "Recurrent Weighted Key Value (RWKV) is formulated so the same model computes three ways: as a Transformer (parallel training), as an RNN (constant-cost sequential inference), and as a chunkwise-recurrent hybrid. The layer replaces softmax attention with a data-dependent exponential decay: for the time-mixing sublayer, WKV_t = (sum_i e^{-(t-1-i)w + k_i v_i^T) / (sum_i e^{-(t-1-i)w + k_i}) + D u_t, where w is a learned per-channel decay rate, so the attention weight at distance d is e^{-wd}, a fixed exponential window rather than a learned softmax. The channel-mixing sublayer is a standard position-wise feed-forward with squared ReLU. State is a fixed-size vector per channel of W per token, CONSTANT in sequence length, so there is no KV cache; RWKV was one of the first open architectures to make that concrete for LLMs, and its inference cost is genuinely independent of context length. Version lineage matters: RWKV-4 is the LSTM-style version above, RWKV-5 (Eagle) and RWKV-6 (Finch) change the mixing formulas, and RWKV-7 'Goose' moves to a delta-rule-style state update.",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-rtx-4090",
-    "nvidia-l40s"
-  ],
-  "speedup_reported": "The paper claims comparable or better performance to Transformers of similar size at 14B scale while being 10x faster at inference, with memory independent of sequence length. Hardware was A100/RTX-class GPUs. Important caveat that survived contact with practice: the '10x faster' figures come from the authors' own kernels and small-batch settings, and the sequential scan has the same fundamental character as Mamba's, so engine support and tuned throughput are much weaker than the paper implies.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/BlinkDL/RWKV-LM",
-  "open_weights": true,
-  "notes": "Findings of EMNLP 2023 per the arXiv comment field; no journal-ref on the abs page. Engine support is narrower and more version-fragmented than Mamba's: llama.cpp's arch registry carries LLM_ARCH_RWKV6, LLM_ARCH_RWKV6QWEN2, LLM_ARCH_RWKV7 and LLM_ARCH_ARWKV7, all inside llm_arch_is_recurrent(), with a separate conversion/rwkv.py. That enumerates v6/v7 only, so RWKV-4/5 support is not evidenced there. No native RWKV row in the vLLM supported-models list consulted. Adoption is real but shallow: llama.cpp only, and only for recent versions."
+ "id": "rwkv-reinventing-rnns",
+ "type": "paper",
+ "name": "RWKV: Reinventing RNNs for the Transformer Era",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2305-13048"
+ ],
+ "arxiv_id": "2305.13048",
+ "venue": "emnlp",
+ "year": 2023,
+ "category": "ssm",
+ "authors": [
+  "Bo Peng",
+  "Eric Alcaide",
+  "Quentin Anthony",
+  "Alon Albalak",
+  "Samuel Arcadinho",
+  "Stella Biderman",
+  "Huanqi Cao",
+  "Xin Cheng"
+ ],
+ "affiliations": [
+  "EleutherAI"
+ ],
+ "problem": "Transformers have quadratic memory and compute in sequence length; RNNs are linear but cannot be parallelised during training, which is why they lost to attention.",
+ "mechanism": "Recurrent Weighted Key Value (RWKV) is formulated so the same model computes three ways: as a Transformer (parallel training), as an RNN (constant-cost sequential inference), and as a chunkwise-recurrent hybrid. The layer replaces softmax attention with a data-dependent exponential decay: for the time-mixing sublayer, WKV_t = (sum_i e^{-(t-1-i)w + k_i v_i^T) / (sum_i e^{-(t-1-i)w + k_i}) + D u_t, where w is a learned per-channel decay rate, so the attention weight at distance d is e^{-wd}, a fixed exponential window rather than a learned softmax. The channel-mixing sublayer is a standard position-wise feed-forward with squared ReLU. State is a fixed-size vector per channel of W per token, CONSTANT in sequence length, so there is no KV cache; RWKV was one of the first open architectures to make that concrete for LLMs, and its inference cost is genuinely independent of context length. Version lineage matters: RWKV-4 is the LSTM-style version above, RWKV-5 (Eagle) and RWKV-6 (Finch) change the mixing formulas, and RWKV-7 'Goose' moves to a delta-rule-style state update.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-rtx-4090",
+  "nvidia-l40s"
+ ],
+ "speedup_reported": "The paper claims comparable or better performance to Transformers of similar size at 14B scale while being 10x faster at inference, with memory independent of sequence length. Hardware was A100/RTX-class GPUs. Important caveat that survived contact with practice: the '10x faster' figures come from the authors' own kernels and small-batch settings, and the sequential scan has the same fundamental character as Mamba's, so engine support and tuned throughput are much weaker than the paper implies.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/BlinkDL/RWKV-LM",
+ "open_weights": true,
+ "notes": "Findings of EMNLP 2023 per the arXiv comment field; no journal-ref on the abs page. Engine support is narrower and more version-fragmented than Mamba's: llama.cpp's arch registry carries LLM_ARCH_RWKV6, LLM_ARCH_RWKV6QWEN2, LLM_ARCH_RWKV7 and LLM_ARCH_ARWKV7, all inside llm_arch_is_recurrent(), with a separate conversion/rwkv.py. That enumerates v6/v7 only, so RWKV-4/5 support is not evidenced there. No native RWKV row in the vLLM supported-models list consulted. Adoption is real but shallow: llama.cpp only, and only for recent versions.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass): venue_track set to 'findings' from the ACL Anthology bib index (anthology.bib, 131650 entries) by normalized title match. Evidence: anthology id 2023.findings-emnlp.936, booktitle 'Findings of the Association for Computational Linguistics: EMNLP 2023'. The Anthology id is the authoritative signal here and it is unambiguous, so this is an additive clarification of a track, not a change of venue - `venue` is untouched and no status change is implied. The reason this matters for inference readers: a Findings paper and a main-track paper at the same venue are not the same kind of evidence, and until this field existed the repo could not say which was which.",
+ "venue_track": "findings"
 }

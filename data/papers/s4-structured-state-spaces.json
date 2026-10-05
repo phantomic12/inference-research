@@ -1,35 +1,36 @@
 {
-  "id": "s4-structured-state-spaces",
-  "type": "paper",
-  "name": "Efficiently Modeling Long Sequences with Structured State Spaces (S4)",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-arch-2111-00396"
-  ],
-  "arxiv_id": "2111.00396",
-  "venue": "other",
-  "year": 2022,
-  "category": "ssm",
-  "authors": [
-    "Albert Gu",
-    "Karan Goel",
-    "Christopher Ré"
-  ],
-  "affiliations": [
-    "Stanford University"
-  ],
-  "problem": "RNNs, CNNs and Transformers all have variants for long dependencies but struggle to scale to sequences of 10,000 steps or more, and no single model handled sequence data across modalities and tasks.",
-  "mechanism": "Resurrects the structured state space model x'(t) = A x(t) + B u(t), y(t) = C x(t) + D u(t), realised as a CNN layer, and shows that when the state matrix A is HiPPO-structured the resulting kernel is computed in O(L log L) with FFTs instead of O(L^2) with attention. The HiPPO construction makes A = -1/2 * B C^T - i sqrt(B C^T) for a well-chosen (B, C), producing the 'S4D' real variant and 'S4' complex variant. Crucially the parameters here are FIXED (not a function of the input), which is precisely the weakness Mamba later identifies and fixes. State is fixed-size and constant in sequence length, so like all SSMs there is no KV cache; this was demonstrated at long context before selective SSMs existed.",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-a100-80gb-pcie",
-    "google-tpu-v4"
-  ],
-  "speedup_reported": "The paper's headline is that a single architecture with a single set of parameters matches or exceeds specialist models across long-range sequence benchmarks (LRA, Long Range Arena) including sequential CIFAR, Path-x, Path-256, and it reaches near state of the art on audio classification and LM tasks while being substantially faster than attention at long length. Numbers are relative perplexities and accuracy, not tokens/second, so there is no clean speedup ratio to quote; the FFT-based O(L log L) formulation is the structural efficiency claim.",
-  "adoption": "research-only",
-  "code_url": "https://github.com/state-spaces/s4",
-  "open_weights": true,
-  "notes": "Venue is JMLR 2022, confirmed via Semantic Scholar, but the paper schema's venue enum has no JMLR entry so this is recorded as 'other'; the authoritative venue is in notes.  Title on arXiv has no 'S4' in it, so search by 'S4' alone will return many unrelated papers. Fixed-parameter (non-selective) recurrence: this is why Mamba-1 supersedes it, and why no 2024-2026 production model is a pure S4. Historical importance only; the serving-side lesson it established (constant state, no KV cache) is carried forward by every Mamba descendant. Not present in llama.cpp's arch registry and not a row in vLLM's native list."
+ "id": "s4-structured-state-spaces",
+ "type": "paper",
+ "name": "Efficiently Modeling Long Sequences with Structured State Spaces (S4)",
+ "status": "contested",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2111-00396"
+ ],
+ "arxiv_id": "2111.00396",
+ "venue": "iclr",
+ "year": 2022,
+ "category": "ssm",
+ "authors": [
+  "Albert Gu",
+  "Karan Goel",
+  "Christopher Ré"
+ ],
+ "affiliations": [
+  "Stanford University"
+ ],
+ "problem": "RNNs, CNNs and Transformers all have variants for long dependencies but struggle to scale to sequences of 10,000 steps or more, and no single model handled sequence data across modalities and tasks.",
+ "mechanism": "Resurrects the structured state space model x'(t) = A x(t) + B u(t), y(t) = C x(t) + D u(t), realised as a CNN layer, and shows that when the state matrix A is HiPPO-structured the resulting kernel is computed in O(L log L) with FFTs instead of O(L^2) with attention. The HiPPO construction makes A = -1/2 * B C^T - i sqrt(B C^T) for a well-chosen (B, C), producing the 'S4D' real variant and 'S4' complex variant. Crucially the parameters here are FIXED (not a function of the input), which is precisely the weakness Mamba later identifies and fixes. State is fixed-size and constant in sequence length, so like all SSMs there is no KV cache; this was demonstrated at long context before selective SSMs existed.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a100-80gb-pcie",
+  "google-tpu-v4"
+ ],
+ "speedup_reported": "The paper's headline is that a single architecture with a single set of parameters matches or exceeds specialist models across long-range sequence benchmarks (LRA, Long Range Arena) including sequential CIFAR, Path-x, Path-256, and it reaches near state of the art on audio classification and LM tasks while being substantially faster than attention at long length. Numbers are relative perplexities and accuracy, not tokens/second, so there is no clean speedup ratio to quote; the FFT-based O(L log L) formulation is the structural efficiency claim.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/state-spaces/s4",
+ "open_weights": true,
+ "notes": "Venue is JMLR 2022, confirmed via Semantic Scholar, but the paper schema's venue enum has no JMLR entry so this is recorded as 'other'; the authoritative venue is in notes.  Title on arXiv has no 'S4' in it, so search by 'S4' alone will return many unrelated papers. Fixed-parameter (non-selective) recurrence: this is why Mamba-1 supersedes it, and why no 2024-2026 production model is a pure S4. Historical importance only; the serving-side lesson it established (constant state, no KV cache) is carried forward by every Mamba descendant. Not present in llama.cpp's arch registry and not a row in vLLM's native list.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. Peer-reviewed venue confirmed as ICLR 2022 (venue CAN be corrected here - ICLR is in the enum). This is an additive track annotation; `venue` is changed other -> iclr and no status change is implied by the track alone.\n\nDUPLICATE-SLUG CONTRADICTION RESOLVED 2026-10-04 (paper-fields pass, agent w3p): venue 'other' 2022 -> 'iclr' 2022, venue_track 'main', status contested. THE PROBLEM: this repo holds S4 TWICE - papers/s4.json (venue iclr 2022, status verified, conf 0.9) and this record papers/s4-structured-state-spaces.json (venue 'other' 2022, claiming 'Venue is JMLR 2022, confirmed via Semantic Scholar'). Same arXiv ID 2111.00396, same three authors. Two records for one paper that disagreed about the venue, which is worse than either being wrong alone. THE RESOLUTION: ICLR 2022 is correct and the JMLR claim is not supported. Three independent checks: (1) the static ICLR 2022 proceedings listing (iclr.cc/virtual/2022/papers.html?filter=titles, 1116 titles) contains 'Efficiently Modeling Long Sequences with Structured State Spaces' at /virtual/2022/poster/6959; (2) that page's schema.org JSON-LD asserts creditText 'ICLR 2022' with authors Albert Gu, Karan Goel, Christopher Re, matching this record's author list; (3) the arXiv comment field for 2111.00396 reads 'ICLR 2022 (Outstanding Paper HM)'. The JMLR claim was NOT merely unverified, it is contradicted: re-querying Semantic Scholar for arXiv:2111.00396 on 2026-10-04 returns venue 'International Conference on Learning Representations' with journal {'name':'ArXiv'} - NOT JMLR. So the note's 'confirmed via Semantic Scholar' was wrong about what S2 says. S2's year field returns 2021, which is also wrong (ICLR 2022 happened July 2022; arXiv posting was Nov 2021) and is a good example of why S2's year field is not trusted in this pass. BOTH VALUES RETAINED: prior field value was venue 'other' 2022 with the JMLR claim; the concurrent record papers/s4.json already said iclr 2022 and remains consistent. arxiv_id unchanged (2111.00396). DEFERRED, NOT FIXED: the duplicate slug itself is out of scope for this pass - collapsing s4 and s4-structured-state-spaces into one record is a structural decision for the parent agent, since other slug pairs in this repo (splitwise, sglang, distflashattn, hyena) have the same shape. Flagged rather than silently merged.",
+ "venue_track": "main"
 }

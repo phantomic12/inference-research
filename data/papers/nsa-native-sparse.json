@@ -1,39 +1,40 @@
 {
-  "id": "nsa-native-sparse",
-  "type": "paper",
-  "name": "Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-attn-nsa-native-sparse"
-  ],
-  "arxiv_id": "2502.11089",
-  "venue": "arxiv-preprint",
-  "year": 2025,
-  "category": "attention",
-  "authors": [
-    "Yuan, Jingyang",
-    "Gao, Huazuo",
-    "Dai, Damai",
-    "Luo, Junyu"
-  ],
-  "affiliations": [
-    "Alibaba Group",
-    "Zhejiang University"
-  ],
-  "problem": "Existing sparse-attention methods either lack the arithmetic intensity to run fast on real hardware (they degrade memory-bound kernels into launch-bound ones) or cannot be trained end-to-end for pretraining - so they are post-hoc accelerators that require already-trained dense checkpoints.",
-  "mechanism": "Natively trainable sparse attention with three components: (1) a hardware-aligned TILE-SPARSE attention pattern sized to the SRAM capacity of the target GPU so selected tiles actually fit; (2) an ARITHMETIC-INTENSITY-BALANCED algorithm design with implementation optimisations for modern hardware; (3) auxiliary loss terms that keep the compressed/selected representation faithful, enabling end-to-end pretraining rather than post-hoc pruning.",
-  "hardware_relevance": [
-    "nvidia-a100-40gb-sxm4",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm",
-    "nvidia-h200-sxm",
-    "nvidia-b200"
-  ],
-  "speedup_reported": "PARTIAL - direction only, no multiple. The abstract states NSA achieves substantial speedups over FULL ATTENTION on 64k-length sequences across DECODING, forward propagation and backward propagation, and that a model pretrained with NSA maintains or exceeds Full-Attention models on general benchmarks, long-context tasks and instruction reasoning. No multiplier, no baseline settings, no hardware named in the abstract. What IS precise and useful is the claim's shape: speedups on all three phases (decode, fwd, bwd), not just prefill.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/NSA-dp/NSA",
-  "open_weights": true,
-  "notes": "arXiv ID 2502.11089 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. venue=arxiv-preprint on evidence: the arXiv comment is empty, and an OpenReview search for the exact title returns only an unrelated workshop paper ('NOSA: Native and Offloadable Sparse Attention', AdaptFM Poster). Per the rules, no venue claim means arxiv-preprint. adoption=in-upstream-engine verified in source, and unusually strongly for a recent paper: SGLang ships a dedicated python/sglang/srt/layers/attention/nsa/ package with ten files including nsa_indexer.py, triton_kernel.py, tilelang_kernel.py, quant_k_cache.py, dequant_k_cache.py and nsa_backend_mtp_precompute.py. The separate 'nsa' package under SGLang's attention directory is NSA support, not a name collision. open_weights=true: the paper releases pretrained checkpoints."
+ "id": "nsa-native-sparse",
+ "type": "paper",
+ "name": "Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention",
+ "status": "contested",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-attn-nsa-native-sparse"
+ ],
+ "arxiv_id": "2502.11089",
+ "venue": "acl",
+ "year": 2025,
+ "category": "attention",
+ "authors": [
+  "Yuan, Jingyang",
+  "Gao, Huazuo",
+  "Dai, Damai",
+  "Luo, Junyu"
+ ],
+ "affiliations": [
+  "Alibaba Group",
+  "Zhejiang University"
+ ],
+ "problem": "Existing sparse-attention methods either lack the arithmetic intensity to run fast on real hardware (they degrade memory-bound kernels into launch-bound ones) or cannot be trained end-to-end for pretraining - so they are post-hoc accelerators that require already-trained dense checkpoints.",
+ "mechanism": "Natively trainable sparse attention with three components: (1) a hardware-aligned TILE-SPARSE attention pattern sized to the SRAM capacity of the target GPU so selected tiles actually fit; (2) an ARITHMETIC-INTENSITY-BALANCED algorithm design with implementation optimisations for modern hardware; (3) auxiliary loss terms that keep the compressed/selected representation faithful, enabling end-to-end pretraining rather than post-hoc pruning.",
+ "hardware_relevance": [
+  "nvidia-a100-40gb-sxm4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-b200"
+ ],
+ "speedup_reported": "PARTIAL - direction only, no multiple. The abstract states NSA achieves substantial speedups over FULL ATTENTION on 64k-length sequences across DECODING, forward propagation and backward propagation, and that a model pretrained with NSA maintains or exceeds Full-Attention models on general benchmarks, long-context tasks and instruction reasoning. No multiplier, no baseline settings, no hardware named in the abstract. What IS precise and useful is the claim's shape: speedups on all three phases (decode, fwd, bwd), not just prefill.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/NSA-dp/NSA",
+ "open_weights": true,
+ "notes": "arXiv ID 2502.11089 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. venue=arxiv-preprint on evidence: the arXiv comment is empty, and an OpenReview search for the exact title returns only an unrelated workshop paper ('NOSA: Native and Offloadable Sparse Attention', AdaptFM Poster). Per the rules, no venue claim means arxiv-preprint. adoption=in-upstream-engine verified in source, and unusually strongly for a recent paper: SGLang ships a dedicated python/sglang/srt/layers/attention/nsa/ package with ten files including nsa_indexer.py, triton_kernel.py, tilelang_kernel.py, quant_k_cache.py, dequant_k_cache.py and nsa_backend_mtp_precompute.py. The separate 'nsa' package under SGLang's attention directory is NSA support, not a name collision. open_weights=true: the paper releases pretrained checkpoints.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass): venue_track set to 'main' from the ACL Anthology bib index (anthology.bib, 131650 entries) by normalized title match. Evidence: anthology id 2025.acl-long.1126, booktitle 'Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)'. The Anthology id is the authoritative signal here and it is unambiguous, so this is an additive clarification of a track, not a change of venue - `venue` is untouched and no status change is implied. The reason this matters for inference readers: a Findings paper and a main-track paper at the same venue are not the same kind of evidence, and until this field existed the repo could not say which was which.\n\nVENUE CORRECTION + VENUE_TRACK 2026-10-04 (paper-fields pass, agent w3p): venue 'arxiv-preprint' -> 'acl', venue_track 'main'. EVIDENCE: the ACL Anthology bib index (anthology.bib, 131650 entries, fetched 2026-10-04) contains this exact title as anthology id 2025.acl-long.1126 with booktitle 'Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)'. That is a proceedings record, so 'no venue found' was an under-claim, not a fact. BOTH VALUES RETAINED HERE PER THE REPO CONTRACT: the prior value was 'arxiv-preprint'. status set to contested because this changes a peer-reviewed attribution. arxiv_id unchanged (2502.11089).",
+ "venue_track": "main"
 }

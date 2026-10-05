@@ -1,33 +1,37 @@
 {
-  "id": "rest-retrieval-speculative-decoding",
-  "name": "REST: Retrieval-Based Speculative Decoding",
-  "arxiv_id": "2311.08252",
-  "venue": "naacl",
-  "year": 2024,
-  "category": "speculative-decoding",
-  "authors": [
-    "Zhenyu He",
-    "Zexuan Zhong",
-    "Tianle Cai",
-    "Jason D. Lee",
-    "Di He"
-  ],
-  "problem": "Draft models are needed just to make speculative decoding work; they require training, storage, and maintenance, and are hard to obtain for arbitrary target models.",
-  "mechanism": "DRAFT WITH RETRIEVAL instead of with a model. Maintains a datastore of text-to-token-index continuations (Suffix-Array-based self-drafting datastore built from the target model's own training corpus, plus a tree-structured retrieval). At each step the datastore is queried by matching the last few generated tokens against its keys and retrieving the most frequent continuations as draft candidates; the target model verifies them in parallel under the standard modified rejection sampling rule. Plug-and-play, training-free, and adds no draft-model weights.",
-  "hardware_relevance": [
-    "nvidia-a100-sxm"
-  ],
-  "speedup_reported": "1.62x-2.36x on code or text generation, measured on 7B and 13B models in a SINGLE-BATCH setting, with no draft-model training. Baseline is plain autoregressive decoding of the same model. Both the single-batch caveat and the model size are load-bearing: this is the only record here whose baseline needs no extra model at all, so the speedup is attributable purely to draft quality.",
-  "adoption": "research-only",
-  "code_url": "https://github.com/FasterDecoding/REST",
-  "open_weights": null,
-  "notes": "ADOPTION, honestly: NOT in any production engine. It is a neat and much-cited idea (drafting from a retrieval datastore rather than a model) but the datastore must be built per-corpus and the speedup is 1.6-2.4x where EAGLE-3 reports up to 6.5x, so it has been superseded in practice by learned draft models. Included because it is the only clean test of 'how much of speculative decoding's gain is the draft model?' - the answer being about half of EAGLE-3's headline. VENUE: NAACL 2024 per the arXiv comment field ('NAACL 2024, camera ready'); Semantic Scholar could not be reached at verification time due to rate limiting, so venue rests on the arXiv comment alone. Note that these two venues disagree in year: arXiv v1 is Nov 2023, NAACL 2024 is the venue year, and the recorded year is the venue year as the contract requires. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). No A100 in the paper; it ran entirely on an A6000: \"All the experiments are conducted on a single NVIDIA A6000 GPU and 96 CPU cores with a batch size of 1\", repeated in the appendix. Source: https://arxiv.org/pdf/2311.08252 . The repo has no A6000 record. Left dangling rather than repointed at an A100 variant it never used.",
-  "confidence": 0.85,
-  "type": "paper",
-  "affiliations": [],
-  "status": "verified",
-  "updated": "2026-10-04",
-  "sources": [
-    "pap-eff-rest-speculative"
-  ]
+ "id": "rest-retrieval-speculative-decoding",
+ "name": "REST: Retrieval-Based Speculative Decoding",
+ "arxiv_id": "2311.08252",
+ "venue": "naacl",
+ "year": 2024,
+ "category": "speculative-decoding",
+ "authors": [
+  "Zhenyu He",
+  "Zexuan Zhong",
+  "Tianle Cai",
+  "Jason D. Lee",
+  "Di He"
+ ],
+ "problem": "Draft models are needed just to make speculative decoding work; they require training, storage, and maintenance, and are hard to obtain for arbitrary target models.",
+ "mechanism": "DRAFT WITH RETRIEVAL instead of with a model. Maintains a datastore of text-to-token-index continuations (Suffix-Array-based self-drafting datastore built from the target model's own training corpus, plus a tree-structured retrieval). At each step the datastore is queried by matching the last few generated tokens against its keys and retrieving the most frequent continuations as draft candidates; the target model verifies them in parallel under the standard modified rejection sampling rule. Plug-and-play, training-free, and adds no draft-model weights.",
+ "hardware_relevance": [
+  "nvidia-a100-sxm"
+ ],
+ "speedup_reported": "1.62x-2.36x on code or text generation, measured on 7B and 13B models in a SINGLE-BATCH setting, with no draft-model training. Baseline is plain autoregressive decoding of the same model. Both the single-batch caveat and the model size are load-bearing: this is the only record here whose baseline needs no extra model at all, so the speedup is attributable purely to draft quality.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/FasterDecoding/REST",
+ "open_weights": null,
+ "notes": "ADOPTION, honestly: NOT in any production engine. It is a neat and much-cited idea (drafting from a retrieval datastore rather than a model) but the datastore must be built per-corpus and the speedup is 1.6-2.4x where EAGLE-3 reports up to 6.5x, so it has been superseded in practice by learned draft models. Included because it is the only clean test of 'how much of speculative decoding's gain is the draft model?' - the answer being about half of EAGLE-3's headline. VENUE: NAACL 2024 per the arXiv comment field ('NAACL 2024, camera ready'); Semantic Scholar could not be reached at verification time due to rate limiting, so venue rests on the arXiv comment alone. Note that these two venues disagree in year: arXiv v1 is Nov 2023, NAACL 2024 is the venue year, and the recorded year is the venue year as the contract requires. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). No A100 in the paper; it ran entirely on an A6000: \"All the experiments are conducted on a single NVIDIA A6000 GPU and 96 CPU cores with a batch size of 1\", repeated in the appendix. Source: https://arxiv.org/pdf/2311.08252 . The repo has no A6000 record. Left dangling rather than repointed at an A100 variant it never used.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass): venue_track set to 'main' from the ACL Anthology bib index (anthology.bib, 131650 entries) by normalized title match. Evidence: anthology id 2024.naacl-long.88, booktitle 'Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers)'. The Anthology id is the authoritative signal here and it is unambiguous, so this is an additive clarification of a track, not a change of venue - `venue` is untouched and no status change is implied. The reason this matters for inference readers: a Findings paper and a main-track paper at the same venue are not the same kind of evidence, and until this field existed the repo could not say which was which.\n\nAFFILIATIONS BACKFILLED 2026-10-04 (paper-fields pass, agent w3p): OpenAlex institutions field (Peking, Princeton), matching the author line He/Zhong/Cai/Lee/He. Filled from the API/PDF rather than from memory, because an affiliation is a fact about a specific paper's author block and inference from the author's employer history is how wrong affiliations get shipped.",
+ "confidence": 0.85,
+ "type": "paper",
+ "affiliations": [
+  "Peking University",
+  "Princeton University"
+ ],
+ "status": "verified",
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-eff-rest-speculative"
+ ],
+ "venue_track": "main"
 }

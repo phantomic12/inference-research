@@ -1,36 +1,37 @@
 {
-  "id": "mamba-2-ssd",
-  "type": "paper",
-  "name": "Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality",
-  "status": "verified",
-  "confidence": 0.95,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-arch-2405-21060"
-  ],
-  "arxiv_id": "2405.21060",
-  "venue": "icml",
-  "year": 2024,
-  "category": "ssm",
-  "authors": [
-    "Tri Dao",
-    "Albert Gu"
-  ],
-  "affiliations": [
-    "Princeton University",
-    "Carnegie Mellon University"
-  ],
-  "problem": "Mamba-1's selective scan was correct but ran as a slow sequential recurrence with a small state (d_state=16), so it lost to attention on recall tasks and its kernel could not use tensor cores effectively.",
-  "mechanism": "Establishes state space duality (SSD): a large class of structured matrices are semiseparable and can be decomposed either as an SSM recurrence or as an attention-like sum, so SSMs and attention variants are two views of the same object rather than competing families. Exploiting this yields Mamba-2, whose core layer is a refinement of the Mamba selective SSM in two ways that matter for hardware. (1) It moves to a much larger state, d_state=128 instead of 16, grouped into heads, which is what recovers recall. (2) It replaces the scalar-per-head recurrence with a matrix recurrence expressible as a single SSD algorithm: within a chunk compute the attention-like form, across chunks apply the semiseparable decay matrix. This turns the scan into block-parallel matmuls that DO map onto tensor cores, so the sequential-scan bottleneck is largely removed. State remains fixed-size per layer (batch, n_heads, head_dim, d_state), so as with Mamba-1 there is still no KV cache and still no length-dependent decode memory growth.",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm",
-    "amd-instinct-mi300x",
-    "nvidia-b200"
-  ],
-  "speedup_reported": "The Mamba-2 core layer is 2-8x faster than the Mamba-1 selective SSM while remaining a drop-in replacement and remaining competitive on upstream tasks. Measured on A100 GPUs against the authors' own Mamba-1 reference implementation. This is a kernel-level statement about one layer, not an end-to-end model throughput number, and the 2-8x range is wide because it varies with sequence length and batch size.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/state-spaces/mamba",
-  "open_weights": true,
-  "notes": "ICML 2024; venue per the arXiv comment field (no journal-ref on the abs page). The SSD insight is what makes SSM training hardware-coherent rather than a sequential-loop curiosity, and it is the reason Mamba-2 kernel work (vLLM's 'SSD' CI job, llama.cpp's Mamba-2 Metal scan optimization) exists at all. Engine support verified: vLLM has native Mamba2ForCausalLM; llama.cpp has LLM_ARCH_MAMBA2 inside llm_arch_is_recurrent()."
+ "id": "mamba-2-ssd",
+ "type": "paper",
+ "name": "Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality",
+ "status": "verified",
+ "confidence": 0.95,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2405-21060"
+ ],
+ "arxiv_id": "2405.21060",
+ "venue": "icml",
+ "year": 2024,
+ "category": "ssm",
+ "authors": [
+  "Tri Dao",
+  "Albert Gu"
+ ],
+ "affiliations": [
+  "Princeton University",
+  "Carnegie Mellon University"
+ ],
+ "problem": "Mamba-1's selective scan was correct but ran as a slow sequential recurrence with a small state (d_state=16), so it lost to attention on recall tasks and its kernel could not use tensor cores effectively.",
+ "mechanism": "Establishes state space duality (SSD): a large class of structured matrices are semiseparable and can be decomposed either as an SSM recurrence or as an attention-like sum, so SSMs and attention variants are two views of the same object rather than competing families. Exploiting this yields Mamba-2, whose core layer is a refinement of the Mamba selective SSM in two ways that matter for hardware. (1) It moves to a much larger state, d_state=128 instead of 16, grouped into heads, which is what recovers recall. (2) It replaces the scalar-per-head recurrence with a matrix recurrence expressible as a single SSD algorithm: within a chunk compute the attention-like form, across chunks apply the semiseparable decay matrix. This turns the scan into block-parallel matmuls that DO map onto tensor cores, so the sequential-scan bottleneck is largely removed. State remains fixed-size per layer (batch, n_heads, head_dim, d_state), so as with Mamba-1 there is still no KV cache and still no length-dependent decode memory growth.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "amd-instinct-mi300x",
+  "nvidia-b200"
+ ],
+ "speedup_reported": "The Mamba-2 core layer is 2-8x faster than the Mamba-1 selective SSM while remaining a drop-in replacement and remaining competitive on upstream tasks. Measured on A100 GPUs against the authors' own Mamba-1 reference implementation. This is a kernel-level statement about one layer, not an end-to-end model throughput number, and the 2-8x range is wide because it varies with sequence length and batch size.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/state-spaces/mamba",
+ "open_weights": true,
+ "notes": "ICML 2024; venue per the arXiv comment field (no journal-ref on the abs page). The SSD insight is what makes SSM training hardware-coherent rather than a sequential-loop curiosity, and it is the reason Mamba-2 kernel work (vLLM's 'SSD' CI job, llama.cpp's Mamba-2 Metal scan optimization) exists at all. Engine support verified: vLLM has native Mamba2ForCausalLM; llama.cpp has LLM_ARCH_MAMBA2 inside llm_arch_is_recurrent().\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: icml has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

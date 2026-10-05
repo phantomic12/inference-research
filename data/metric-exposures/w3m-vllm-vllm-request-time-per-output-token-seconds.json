@@ -1,0 +1,49 @@
+{
+  "id": "w3m-vllm-vllm-request-time-per-output-token-seconds",
+  "type": "metric_exposure",
+  "name": "vLLM per-request time-per-output-token (TPOT) histogram",
+  "engine_id": "vllm",
+  "metric_name": "vllm:request_time_per_output_token_seconds",
+  "metric_type": "histogram",
+  "unit": "seconds",
+  "exposure": "prometheus",
+  "endpoint": ":8000/metrics",
+  "histogram_buckets": [
+    0.01,
+    0.025,
+    0.05,
+    0.075,
+    0.1,
+    0.15,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.75,
+    1.0,
+    2.5,
+    5.0,
+    7.5,
+    10.0,
+    20.0,
+    40.0,
+    80.0
+  ],
+  "labels": [
+    "model_name",
+    "engine"
+  ],
+  "enabled_by_default": true,
+  "phase_scoped": true,
+  "verified_negatively": null,
+  "notes": "vLLM main, PrometheusStatLogger in vllm/v1/metrics/loggers.py, read 2026-10-04. On by default (EngineArgs.disable_log_stats defaults False); served at :8000/metrics. Bucket family name in --custom-histogram-buckets: inter_token_latency (shared ladder). One sample per finished request, so it is the right basis for a per-user TPOT SLO where inter_token_latency is the right basis for a fleet stall detector.",
+  "status": "verified",
+  "confidence": 0.94,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-vllm-v1-metrics-loggers",
+    "w3m-vllm-buckets-module",
+    "w3m-vllm-observe-latency-declaration",
+    "obs-vllm-production-metrics-doc"
+  ]
+}

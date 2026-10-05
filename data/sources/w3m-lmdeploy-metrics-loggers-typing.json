@@ -1,0 +1,15 @@
+{
+  "id": "w3m-lmdeploy-metrics-loggers-typing",
+  "type": "source",
+  "name": "LMDeploy metrics/loggers.py - PrometheusStatLogger, its bucket literals and label scheme",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "url": "https://github.com/InternLM/lmdeploy/blob/main/lmdeploy/metrics/loggers.py",
+  "publisher": "InternLM/lmdeploy",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "lmdeploy/metrics/loggers.py on main, read 2026-10-04. PrometheusStatLogger.__init__ takes (model_name, max_model_len, dp_rank) and uses labelnames = ['model_name', 'engine'] with labelvalues [model_name, str(dp_rank)] on every metric. Bucket literals read directly from the source: time_to_first_token_seconds uses the vLLM TTFT list (0.001 .. 2560.0, 22 bounds); time_per_output_token_seconds and iter_token_latency use the vLLM ITL list (0.005 .. 80.0, 19 bounds, note this differs from vLLM's own ITL list which starts at 0.01); e2e/queue/inference/prefill/decode share one request_latency list (0.3 .. 7680.0, 21 bounds); request_prompt_tokens, request_generation_tokens and request_cached_tokens use build_1_2_5_buckets(max_model_len); request_cache_hit_ratio uses [0.0 .. 1.0] in 0.1 steps; iteration_tokens_total uses [1, 8, 16, ... 16384]. record_iteration() observes TTFT, TPOT and ITL; record_finish() observes the full per-request set. A grep for 'preempt' across this file returns 0 hits - the missing preemption metric, established at source rather than by absence of documentation."
+}

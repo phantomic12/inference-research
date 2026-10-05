@@ -1,0 +1,52 @@
+{
+  "id": "w3m-sglang-sglang-time-to-first-token-seconds",
+  "type": "metric_exposure",
+  "name": "SGLang time-to-first-token histogram (is_streaming split)",
+  "engine_id": "sglang",
+  "metric_name": "sglang:time_to_first_token_seconds",
+  "metric_type": "histogram",
+  "unit": "seconds",
+  "exposure": "prometheus",
+  "endpoint": ":30000/metrics",
+  "histogram_buckets": [
+    0.1,
+    0.2,
+    0.4,
+    0.6,
+    0.8,
+    1,
+    2,
+    4,
+    6,
+    8,
+    10,
+    20,
+    40,
+    60,
+    80,
+    100,
+    200,
+    400
+  ],
+  "labels": [
+    "model_name",
+    "engine_type",
+    "tp_rank",
+    "pp_rank",
+    "moe_ep_rank",
+    "is_streaming"
+  ],
+  "enabled_by_default": false,
+  "phase_scoped": true,
+  "verified_negatively": null,
+  "notes": "SGLang main, python/sglang/srt/observability/metrics_collector.py, read 2026-10-04. NOT ON BY DEFAULT: nothing is exported unless --enable-metrics (ServerArgs default False), which is also the only thing that mounts /metrics on the server port. Label keys are model_name, engine_type, tp_rank, pp_rank, moe_ep_rank (plus dp_rank under data parallelism, priority under priority scheduling, and anything in extra_metric_labels). Bucket ladders are overridable per histogram via get_histogram_conf_from_env. Carries an is_streaming label that vLLM has no equivalent of. The source comment explains the name: 'stream' is a reserved thrift keyword, so downstream storage columns cannot carry it. Definition from the docs: time from request creation in the API server to the first token, and for streaming requests it ends when the first output arrives AFTER detokenization - so a detokenizer stall lands inside TTFT.",
+  "status": "verified",
+  "confidence": 0.94,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-sglang-metrics-collector",
+    "obs-sglang-production-metrics-doc",
+    "w3m-sglang-prometheus-middleware",
+    "w3m-sglang-observability-arg-defaults"
+  ]
+}

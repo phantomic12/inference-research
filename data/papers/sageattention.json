@@ -1,40 +1,41 @@
 {
-  "id": "sageattention",
-  "type": "paper",
-  "name": "SageAttention: Accurate 8-Bit Attention for Plug-and-play Inference Acceleration",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-attn-sageattention"
-  ],
-  "arxiv_id": "2410.02367",
-  "venue": "iclr",
-  "year": 2025,
-  "category": "quantization",
-  "authors": [
-    "Zhang, Jintao",
-    "Wei, Jia",
-    "Huang, Haofeng",
-    "Zhang, Pengle"
-  ],
-  "affiliations": [
-    "Tsinghua University",
-    "ModelBest"
-  ],
-  "problem": "Attention itself can be quantised to cut the memory traffic of the QK^T and PV matmuls, but naive INT8 quantisation of attention loses accuracy because the softmax output contains large channel-wise outliers that a single per-tensor scale cannot represent.",
-  "mechanism": "Two-level smoothing. Smooth K by moving a per-channel maximum out of the value matrices and folding it into the following scale, and smooth P similarly using a property of the softmax (x - max(x) = softmax(x) >= 0), so both operands have quantisation-friendly distributions. Then quantise the smoothed QK^T and PV matmuls to INT8 with per-tensor scales. The smoothing folds are algebraically absorbed into the surrounding weights, so the model is not retrained.",
-  "hardware_relevance": [
-    "nvidia-a100-40gb-sxm4",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm",
-    "nvidia-h200-sxm",
-    "nvidia-rtx-4090",
-    "nvidia-l40s"
-  ],
-  "speedup_reported": "Paper's own claims (abstract): OPS outperform FlashAttention2 by about 2.1x and xformers by about 2.7x, with superior accuracy to FlashAttention3, and almost no end-to-end metrics loss across language, image and video generation models. Baseline class named (FA2, xformers); OPS is the paper's own throughput metric for attention, not decode tok/s.",
-  "adoption": "research-only",
-  "code_url": "https://github.com/thu-ml/SageAttention",
-  "open_weights": null,
-  "notes": "arXiv ID 2410.02367 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. VENUE - the strongest venue evidence in the whole batch: the arXiv journal_ref reads verbatim 'The Thirteenth International Conference on Learning Representations (ICLR 2025)', and the arXiv comment carries the full BibTeX with booktitle 'International Conference on Learning Representations (ICLR)', year 2025. Independently corroborated by OpenReview venue='ICLR 2025'. venue=iclr, year=2025. ADOPTION CORRECTED DOWN after a careful check - this is the one place I had to reverse an assumption. SageAttention is NOT in vLLM: a full recursive listing of vllm-project/vllm@main (8562 paths) contains no sageattention path, and no sage-related kernel. It IS present in SGLang, but ONLY under python/sglang/srt/multimodal_gen/runtime/layers/attention/backends/sage_attn.py - the multimodal_gen (diffusion/video) runtime, whose own header credits https://github.com/hao-ai-lab/FastVideo - and NOT in the LLM serving path python/sglang/srt/layers/attention/. So the accurate status is research-only with a narrow exception noted here: shipped for SGLang's diffusion image/video generation path, not for LLM serving. The thu-ml/SageAttention repo is actively maintained (pushed 2026-01-17, ~4k stars), so research-only rather than abandoned is the right call."
+ "id": "sageattention",
+ "type": "paper",
+ "name": "SageAttention: Accurate 8-Bit Attention for Plug-and-play Inference Acceleration",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-attn-sageattention"
+ ],
+ "arxiv_id": "2410.02367",
+ "venue": "iclr",
+ "year": 2025,
+ "category": "quantization",
+ "authors": [
+  "Zhang, Jintao",
+  "Wei, Jia",
+  "Huang, Haofeng",
+  "Zhang, Pengle"
+ ],
+ "affiliations": [
+  "Tsinghua University",
+  "ModelBest"
+ ],
+ "problem": "Attention itself can be quantised to cut the memory traffic of the QK^T and PV matmuls, but naive INT8 quantisation of attention loses accuracy because the softmax output contains large channel-wise outliers that a single per-tensor scale cannot represent.",
+ "mechanism": "Two-level smoothing. Smooth K by moving a per-channel maximum out of the value matrices and folding it into the following scale, and smooth P similarly using a property of the softmax (x - max(x) = softmax(x) >= 0), so both operands have quantisation-friendly distributions. Then quantise the smoothed QK^T and PV matmuls to INT8 with per-tensor scales. The smoothing folds are algebraically absorbed into the surrounding weights, so the model is not retrained.",
+ "hardware_relevance": [
+  "nvidia-a100-40gb-sxm4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-rtx-4090",
+  "nvidia-l40s"
+ ],
+ "speedup_reported": "Paper's own claims (abstract): OPS outperform FlashAttention2 by about 2.1x and xformers by about 2.7x, with superior accuracy to FlashAttention3, and almost no end-to-end metrics loss across language, image and video generation models. Baseline class named (FA2, xformers); OPS is the paper's own throughput metric for attention, not decode tok/s.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/thu-ml/SageAttention",
+ "open_weights": null,
+ "notes": "arXiv ID 2410.02367 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. VENUE - the strongest venue evidence in the whole batch: the arXiv journal_ref reads verbatim 'The Thirteenth International Conference on Learning Representations (ICLR 2025)', and the arXiv comment carries the full BibTeX with booktitle 'International Conference on Learning Representations (ICLR)', year 2025. Independently corroborated by OpenReview venue='ICLR 2025'. venue=iclr, year=2025. ADOPTION CORRECTED DOWN after a careful check - this is the one place I had to reverse an assumption. SageAttention is NOT in vLLM: a full recursive listing of vllm-project/vllm@main (8562 paths) contains no sageattention path, and no sage-related kernel. It IS present in SGLang, but ONLY under python/sglang/srt/multimodal_gen/runtime/layers/attention/backends/sage_attn.py - the multimodal_gen (diffusion/video) runtime, whose own header credits https://github.com/hao-ai-lab/FastVideo - and NOT in the LLM serving path python/sglang/srt/layers/attention/. So the accurate status is research-only with a narrow exception noted here: shipped for SGLang's diffusion image/video generation path, not for LLM serving. The thu-ml/SageAttention repo is actively maintained (pushed 2026-01-17, ~4k stars), so research-only rather than abandoned is the right call.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: iclr has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

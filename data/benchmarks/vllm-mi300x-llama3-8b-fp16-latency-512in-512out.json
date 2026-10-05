@@ -12,7 +12,11 @@
   "accelerator_ids": [
     "amd-instinct-mi300x"
   ],
-  "interconnect_ids": [],
+  "interconnect_ids": [
+    "amd-infinity-fabric-link",
+    "amd-xgmi",
+    "pcie-gen5"
+  ],
   "model": "Meta-Llama-3-8B-Instruct",
   "format_id": null,
   "metric": "itl_ms",
@@ -21,5 +25,5 @@
   "methodology": "PER-REQUEST average latency, batch size 1, 10 iterations. Fully re-runnable: python3 benchmarks/benchmark_latency.py --input-len 512 --output-len 512 --num-iters 10 --model meta-llama/Meta-Llama-3-8B-Instruct with PYTORCH_TUNABLEOP_ENABLED=0 (the untuned control arm). Single MI300X. ROCm 6.2, rocm/vllm:latest prebuilt container, FP16 weights (no FP8 quantization, no FP8 KV cache, no GEMM tuning). The tuned arm of the same experiment printed 'Avg latency: 4.3067230121872855 seconds', which the source rounds to 'over 4.60 seconds' for the untuned arm. OMITTED BY SOURCE: batch size is implied 1 by benchmark_latency.py but never stated; vLLM and PyTorch versions; driver version; whether CUDA graphs were enabled.",
   "measured_by": "vendor",
   "reproducible": true,
-  "notes": "Recorded as the control arm of a three-way ROCm 6.2 vLLM optimization experiment, all three arms on one MI300X with identical command shape: FP16 untuned >4.60 s; FP16 GEMM-tuned 4.307 s (-6.5%); FP8 quantized 4.13 s (-10%); FP8 + GEMM tuned '<3.40 s' (-~26%). That is a clean, self-contained, fully re-runnable demonstration of what ROCm 6.2 stack work buys on MI300X, and it is one of very few such numbers published outside a marketing deck. Value is stored as 4600 ms because the source only says 'over 4.60 seconds' - this is a LOWER BOUND, not a measurement, hence confidence 0.7. The FP8+tuned arm's 'under 3.40 s' is likewise a bound and is deliberately NOT recorded as a point value."
+  "notes": "Recorded as the control arm of a three-way ROCm 6.2 vLLM optimization experiment, all three arms on one MI300X with identical command shape: FP16 untuned >4.60 s; FP16 GEMM-tuned 4.307 s (-6.5%); FP8 quantized 4.13 s (-10%); FP8 + GEMM tuned '<3.40 s' (-~26%). That is a clean, self-contained, fully re-runnable demonstration of what ROCm 6.2 stack work buys on MI300X, and it is one of very few such numbers published outside a marketing deck. Value is stored as 4600 ms because the source only says 'over 4.60 seconds' - this is a LOWER BOUND, not a measurement, hence confidence 0.7. The FP8+tuned arm's 'under 3.40 s' is likewise a bound and is deliberately NOT recorded as a point value.\nINTERCONNECT IDS FILLED 2026-10-04: interconnect_ids was empty; it now carries the interconnect list of the accelerator record(s) this run names (amd-instinct-mi300x). BASIS AND ITS LIMITS, stated because this field is easy to over-read: it records the FABRIC PRESENT IN THE HARDWARE CONFIGURATION, which is how every previously-filled record in this repo reads it, not traffic measured over that fabric. The clearest evidence for that convention is that single-GPU records already carry a scale-up fabric here - trtllm-llama31-8b-fp8-h100-1k1k-tps is 1x H100 at TP=1 and carries ['nvlink-4','nvswitch-4'] - and that host-link-only records carry a PCIe value (arc-pro-b70-mlperf-v6-1-llama2-70b-offline-tokens carries ['pcie-gen5'] on 4x Arc Pro B70, which has no GPU-to-GPU fabric at all). So a value here does NOT mean the interconnect was exercised by this particular workload, and must not be cited as evidence that it was. Whether the run actually crossed that fabric is a question about TP/EP/PP size, which this repo records in methodology, not here. NOT INVENTED: nothing was filled where the accelerator record itself carries no interconnect, so this field stays empty for any part whose own record has none - which is the honest state for a single-socket Apple sOC and for parts whose vendor publishes no host interface."
 }

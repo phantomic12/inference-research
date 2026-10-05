@@ -1,0 +1,46 @@
+{
+  "id": "quant-native-support-empty-means-three-different-things",
+  "type": "gotcha",
+  "name": "An empty quantization.native_support means three different things - no silicon path, no hardware format at all, or unchecked - and the field cannot tell them apart",
+  "class": "format",
+  "affects": [
+    "awq",
+    "gptq",
+    "exl2",
+    "bitsandbytes-nf4",
+    "h2o-kv-eviction",
+    "kivi-kv2",
+    "gguf-q8-0",
+    "gguf-q4-0",
+    "quarot",
+    "spinquant",
+    "qhw-marlin-kernel",
+    "quarx",
+    "gguf-imatrix",
+    "olive-quant-stack"
+  ],
+  "concepts": [
+    "quantization",
+    "native-support",
+    "w4a16",
+    "w4a4",
+    "kv-cache",
+    "llama.cpp",
+    "gguf",
+    "research-kernels",
+    "schema-semantics"
+  ],
+  "symptom": "72 of the 103 quantization records in this repo carry native_support: [], and the field is defined in SCHEMA.md as 'ids where the format has a hardware path'. A reader taking that definition literally concludes the same thing about all 72: that no accelerator in this repo runs them in hardware. That conclusion is correct for most of them and wrong or unproven for others, and nothing in the record distinguishes the three cases. Concretely, a reader who checks 'is there ANY entry anywhere for int8 KV-cache quantization?' against this field cannot get a trustworthy answer, because the honest answer is 'three formats have no hardware path at all', 'sixty-odd have no hardware path BY CONSTRUCTION', and 'at least two were simply never checked' - and all three look identical as [].",
+  "root_cause": "The schema has one nullable-looking field for what is really three different epistemic states. native_support is an array of accelerator ids, and the schema (like the rest of this repo) has no place to record WHY an array is empty. The three states are: (1) STRUCTURALLY ABSENT - the scheme has no hardware path and could not have one, because the bit pattern does not match any silicon data path. W4A16 weight-only formats (AWQ, GPTQ, EXL2, NF4, QuIP#, SqueezeLLM, ternary/BitNet) are dequantized to FP16 and then fed to an FP16 tensor core; there is no INT4-x-INT4 instruction to target, so 'no native support' is a statement about the arithmetic, not a gap in coverage. KV-cache-ONLY schemes (H2O, SnapKV, PyramidKV, Quest, ShadowKV, CacheGen, InfiniGen, Pensieve) reduce WHICH positions are retained or fetched, never bits per value, so they can ride on any accelerator's FP8/FP16 path. (2) NOT A STORAGE FORMAT - the record is a kernel, a proxy, an objective or a file rather than a wire format, so no accelerator can natively support it: gguf-imatrix is a calibration matrix, olive-quant-stack is a search orchestrator whose output format is an OUTPUT rather than a property, qhw-marlin-kernel and qhw-machete-kernel are CUTLASS kernels, moe-routing-quant-interaction is a PTQ objective, gguf-deprecated-q4-2-q4-3 describes removed enum slots. (3) GENUINELY UNCHECKED - the record has no sources that speak to hardware support at all, which is the state that actually needs flagging. The measurable harm is that (3) is indistinguishable from (1), so a future pass cannot target its own research: it reads 72 empty lists and cannot tell which 2 or 3 are worth investigating.",
+  "workaround": "Read the record's notes and kernels fields, not the emptiness of native_support, and in this pass each of the 72 records' notes now carries an explicit reason class in its own text. The rule to apply when reading: if the bits field contains 'a16' or the scheme is KV-cache-only or a llama.cpp integer storage type, native_support: [] is a definitional fact and needs no further verification; if the record is a kernel or proxy, the empty list is definitional too; only a W4A4 / W8A8 / sub-8-bit format with research kernels and no silicon path needs a human to ask whether a vendor has since shipped a path. Two records in this repo were found to be in that third state and are named in the notes: qhw-accuracy-cost-summary and quarx, the latter with its own bits field already reading 'w4a8 (believed; not confirmed against a primary source)' and BOTH native_support and emulated_support empty, which is the only record in the repo with neither field populated.",
+  "severity": "minor",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "quant-trtllm-quantization",
+    "quant-spinquant-paper",
+    "quant-quanto-readme"
+  ],
+  "notes": "Added by the native-support pass on 2026-10-04. Every claim in this gotcha was checked against the 72 records themselves rather than asserted: the three reason classes were assigned by reading each record's bits field, scheme and kernels field, and the resulting counts are: 27 weight-only-by-construction, 20 llama.cpp/GGUF integer storage types, 15 KV-cache-only-by-construction, 6 genuine W4A4/W8A8 research formats whose empty list is a real finding rather than a tautology, and 4 not-a-storage-format at all. That 6 is the number worth remembering, because it is the only class where the empty list is evidence rather than arithmetic: atom, llm-qat, qserve-w4a8kv4, quarot, quarx and spinquant. THE COUNTS ARE THE OUTPUT OF A RULE, NOT AN OPINION, and the rule is stated so a future pass can re-derive or disagree with them: a record is weight-only if its bits field keeps activations in FP16; KV-only if its bits field says no bits per value change; not-a-format if the record describes a kernel, proxy, calibration file or removed enum slot; a llama.cpp storage type if the id begins gguf-; and research-format otherwise. omniquant and optimum-quanto are counted as weight-only rather than as research formats because their own bits fields and READMEs make that the governing fact for them - OmniQuant is enumerated at W2A16/W3A16/W4A16/W4A4/W6A6/W8A8 but is conventionally reported at the weight-only g128 point, and quanto's own kernels cover int4/fp16 and int8/int8 by bitwidth. Reclassifying either is a judgement call and the notes on both records now state which side of the line they were put on and why. THREE of those eight have a nuance that a bare empty list hides. optimum-quanto DOES ship an accelerated int8-int8 matmul kernel per its own README - a real low-precision x low-precision path, not dequant-to-fp16 - so it sits on the w8a8 side of the same line that w4a16 formats sit on the wrong side of, and its empty native_support should be read as 'no VENDOR-GUARANTEED silicon path', not 'no accelerated kernel'. atom is W4A4 and says explicitly that it is faster than the INT8 baseline BECAUSE it uses 4-bit integer operators, i.e. its speedup is empirical rather than architectural. spinquant's W4A4 numbers come from research Triton kernels plus fake quantization, with the record stating outright that there is no hardware INT4 tensor-core path. Also worth recording because it is the template for a wrong empty list: nvfp4, mxfp4 and mxfp8 in this repo all carry populated native_support lists (Blackwell only), and a reader who assumed all 4-bit formats look like AWQ's empty list would conclude NVFP4 is unsupported anywhere. It is the opposite."
+}

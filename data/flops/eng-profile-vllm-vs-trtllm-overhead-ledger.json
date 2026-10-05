@@ -1,0 +1,36 @@
+{
+  "id": "eng-profile-vllm-vs-trtllm-overhead-ledger",
+  "type": "flop",
+  "name": "Engine choice changes the overhead ledger, not just the constant: vLLM vs TensorRT-LLM",
+  "class": "norm_softmax",
+  "arithmetic_intensity": "INHERITS the ledger from fct-overhead-flop-ledger unchanged in form - the arithmetic intensities of RMSNorm, residual add, SwiGLU, RoPE and softmax are properties of the MATHEMATICS, identical on both engines. What differs is how many of those terms ever reach HBM. The ledger's unfused SwiGLU byte cost is 3*d*I*s per layer (11,289 MB vs 6.28 MB fused on Llama-3-8B, a ~1800x byte ratio); whether the engine pays that 3*d*I*s or the fused 1 pass is an ENGINE decision, so the SAME model on the SAME GPU has two different overhead ledgers. TensorRT-LLM's documented CUDA Graph capture (up to 22% end-to-end on some models, per its own README) and its Overlap Scheduler (on by default, launches GPU work for step n+1 while the CPU processes step n) attack the LAUNCH term specifically - the ledger's per-kernel launch and dispatch bytes are largely removed by graph capture, which is why a graph-capturing engine can show a 22% end-to-end gain while its flops are identical. The form is model-determined; the magnitude is engine-determined. Consequence: the ledger in fct-overhead-flop-ledger is NOT portable across engines as a set of numbers, only as a set of terms to be counted.",
+  "bound_by": "launch_overhead",
+  "scales_with": [
+    "fusion granularity in the engine's kernel set (the dominant lever: fused vs unfused is a ~1800x byte ratio on SwiGLU)",
+    "cuda_graph_capture (converts per-kernel launch cost into one replay; TRT-LLM documents up to 22% end-to-end)",
+    "cpu_gpu_overlap_depth (TRT-LLM's Overlap Scheduler defaults on and adds one step of pipeline depth)",
+    "num_kernels_per_layer (the launch-count multiplier on everything else)",
+    "hidden_width d and intermediate_size I (linear in every norm/residual/rope term)",
+    "vocab_size (the sampler and its fp32 cast, the one term that grows with output vocabulary)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x"
+  ],
+  "workarounds": [
+    "Enable CUDA graph capture where the engine supports it - it targets the launch term, which is the only ledger term a kernel rewrite cannot remove",
+    "Run the engine's own fused-SwiGLU path rather than a generic elementwise fallback; verify by profiling bytes moved per layer, not by reading the feature list",
+    "Budget the residual unfused terms explicitly: a reader planning capacity should subtract the engine's own fused set from the full ledger before sizing HBM traffic",
+    "Treat any published 'FLOPs per token' figure as engine-INDEPENDENT and any published HBM-bytes-per-token figure as engine-DEPENDENT - only the first is portable"
+  ],
+  "notes": "Design consequence, and the gap this record fills: the repo's FLOP map has a thorough overhead ledger but it is written from the MATHEMATICS side, as if one engine's kernel set applied to all of them. It does not. Two engines serving the identical model and the identical weights have different ledgers because fusion and graph capture are engine properties. The distinction that matters for a capacity planner: flops per token is a property of the model and is identical across engines, so it can be compared freely; BYTES per token is a property of the model AND the engine, so a figure copied from one engine's profile into another engine's capacity plan is wrong by up to the ~1800x fusion ratio on the largest single term. THE HONEST LIMIT OF THIS RECORD: no per-engine fused-kernel inventory is published as a byte table by either project, so the magnitudes here are the SHAPE of the difference, not measured byte counts. What is cited is each engine's own statement of the mechanisms it implements (TRT-LLM: CUDA graph capture worth up to 22%, Overlap Scheduler on by default; vLLM: fusion- and capture-based torch.compile paths). The specific claim that is fully supported is the qualitative one - vLLM's fused set is assembled at runtime by torch.compile/Inductor and therefore depends on the compile cache state, while TRT-LLM's is baked at engine-build time, so the same vLLM version can have a DIFFERENT overhead ledger on a warm cache than a cold one. That asymmetry (build-time-fixed vs runtime-assembled) is the finding, and it is sourced on both sides. Engine records: [[engines/vllm]], [[engines/tensorrt-llm]]. Ledger terms and the 11,289 MB / 6.28 MB figures: [[fct-overhead-flop-ledger]].",
+  "status": "draft",
+  "confidence": 0.62,
+  "updated": "2026-10-04",
+  "sources": [
+    "engine-trtllm-github",
+    "engine-vllm-github"
+  ]
+}

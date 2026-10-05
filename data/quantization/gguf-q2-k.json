@@ -1,37 +1,37 @@
 {
- "id": "gguf-q2-k",
- "type": "quantization",
- "name": "GGUF Q2_K / Q2_K_S (2-bit K-quant)",
- "scheme": "gguf-q2_k",
- "bits": "2.625 effective bpw for block_q2_K (source comment); 2.9697 measured avg for Q2_K_S and 3.1593 for plain Q2_K on Llama-3.1-8B (llama.cpp quantize README)",
- "weight_group_size": 16,
- "activation_scheme": null,
- "native_support": [],
- "emulated_support": [
-  "nvidia-h100-sxm",
-  "nvidia-h100-nvl",
-  "nvidia-l40s",
-  "nvidia-l4",
-  "nvidia-a100-80gb-sxm4",
-  "nvidia-a10"
- ],
- "kernels": [
-  "ggml dequantize_row_q2_K + get_rows",
-  "ggml-cuda mul_mat_vec_q / dequantize_mul_mat_vec + convert_mul_mat (per-type, not mixed-type aware)"
- ],
- "quality_delta": "Only the unified Llama-3.1-8B-Instruct study was found for the 2-bit K-quant tier. The closest measured point is Q3_K_S (3.9960 bpw, same family): WikiText-2 ppl 8.96 vs 7.32 FP16, GSM8K 68.31 vs 77.63, IFEval 71.87 vs 78.93, unweighted 5-benchmark mean 65.49 vs 69.47 (quant-gguf-kquant-study). No published perplexity for plain Q2_K/Q2_K_S was located, so none recorded.",
- "notes": "CORRECTED 2026-10-04: was 256. 256 is the SUPER-BLOCK size (QK_K), not the scale-sharing group. dequantize_row_q2_K applies one (scale,min) pair per 16 values (`dl = d*(sc & 0xF); ml = min*(sc>>4); for l<16`), 16 sub-blocks per 256-value super-block, each sub-block's 4-bit scale and 4-bit min themselves sitting on the fp16 d/dmin super-block scales. Q2_K is the plain (non-mixed) 2-bit k-quant; Q2_K_S is the mixed variant. BIT LAYOUT, verified from ggml/src/ggml-common.h (not from any blog): the K-quant super-block is QK_K = 256 values. block_q2_K = { uint8_t scales[QK_K/16];  // 16 scales AND 16 mins, 4-bit each, packed 2 per byte = 16 bytes uint8_t qs[QK_K/4];      // 64 bytes of 2-bit quants ggml_half d;            // super-block scale FOR THE QUANTIZED SCALES ggml_half dmin; }       // super-block scale FOR THE QUANTIZED MINS }.  So it is 16 blocks of 16 elements, each block x = a*q + b with a and b both 4-bit quantized and themselves scaled by fp16 d/dmin: 64 bytes quants + 16 bytes scales/mins + 4 bytes fp16 = 84 bytes per 256 values = 2.625 bpw, matching the header comment. This is the two-level-scale design that distinguishes the k-quants: the per-16 scale is not fp16 like legacy q4_0, it is 4-bit and sits on a second fp16 scale. MIXTURE (from src/llama-quant.cpp): Q2_K is not a single type. attn_v -> Q4_K if n_gqa>=4 else Q3_K; ffn_down -> Q3_K; attn_output -> Q3_K. Q2_K_S additionally bumps ffn_down in the first n_layer/8 layers to Q4_K and, if n_gqa>=4, attn_v to Q4_K. For the plain Q2_K, ffn_down is forced to Q3_K and attn_output to Q3_K - i.e. 'Q2_K' is genuinely ~3.16 bpw despite the name. Weight-only: activations stay fp16/bf16 at runtime, so there is no 2-bit-activation hardware claim to make. ggml has a bespoke dequantize_row_q2_K + mul_mat kernel per backend but no accelerator has a GGUF k-quant path in silicon; everything is dequantized on the fly. vLLM labels its GGUF support experimental/under-optimized and positions it as a memory-footprint tool.",
- "status": "verified",
- "confidence": 0.85,
- "updated": "2026-10-04",
- "sources": [
-  "qlab2-ggml-common-header",
-  "qlab2-llama-quant-cpp",
-  "qlab2-quantize-options-table",
-  "quant-ggml-header",
-  "quant-gguf-kquant-study",
-  "quant-llamacpp-quantize-readme",
-  "quant-vllm-gguf-doc",
-  "qzgw-ggml-quants-kernel"
- ]
+  "id": "gguf-q2-k",
+  "type": "quantization",
+  "name": "GGUF Q2_K / Q2_K_S (2-bit K-quant)",
+  "scheme": "gguf-q2_k",
+  "bits": "2.625 effective bpw for block_q2_K (source comment); 2.9697 measured avg for Q2_K_S and 3.1593 for plain Q2_K on Llama-3.1-8B (llama.cpp quantize README)",
+  "weight_group_size": 16,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl",
+    "nvidia-l40s",
+    "nvidia-l4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10"
+  ],
+  "kernels": [
+    "ggml dequantize_row_q2_K + get_rows",
+    "ggml-cuda mul_mat_vec_q / dequantize_mul_mat_vec + convert_mul_mat (per-type, not mixed-type aware)"
+  ],
+  "quality_delta": "Only the unified Llama-3.1-8B-Instruct study was found for the 2-bit K-quant tier. The closest measured point is Q3_K_S (3.9960 bpw, same family): WikiText-2 ppl 8.96 vs 7.32 FP16, GSM8K 68.31 vs 77.63, IFEval 71.87 vs 78.93, unweighted 5-benchmark mean 65.49 vs 69.47 (quant-gguf-kquant-study). No published perplexity for plain Q2_K/Q2_K_S was located, so none recorded.",
+  "notes": "CORRECTED 2026-10-04: was 256. 256 is the SUPER-BLOCK size (QK_K), not the scale-sharing group. dequantize_row_q2_K applies one (scale,min) pair per 16 values (`dl = d*(sc & 0xF); ml = min*(sc>>4); for l<16`), 16 sub-blocks per 256-value super-block, each sub-block's 4-bit scale and 4-bit min themselves sitting on the fp16 d/dmin super-block scales. Q2_K is the plain (non-mixed) 2-bit k-quant; Q2_K_S is the mixed variant. BIT LAYOUT, verified from ggml/src/ggml-common.h (not from any blog): the K-quant super-block is QK_K = 256 values. block_q2_K = { uint8_t scales[QK_K/16];  // 16 scales AND 16 mins, 4-bit each, packed 2 per byte = 16 bytes uint8_t qs[QK_K/4];      // 64 bytes of 2-bit quants ggml_half d;            // super-block scale FOR THE QUANTIZED SCALES ggml_half dmin; }       // super-block scale FOR THE QUANTIZED MINS }.  So it is 16 blocks of 16 elements, each block x = a*q + b with a and b both 4-bit quantized and themselves scaled by fp16 d/dmin: 64 bytes quants + 16 bytes scales/mins + 4 bytes fp16 = 84 bytes per 256 values = 2.625 bpw, matching the header comment. This is the two-level-scale design that distinguishes the k-quants: the per-16 scale is not fp16 like legacy q4_0, it is 4-bit and sits on a second fp16 scale. MIXTURE (from src/llama-quant.cpp): Q2_K is not a single type. attn_v -> Q4_K if n_gqa>=4 else Q3_K; ffn_down -> Q3_K; attn_output -> Q3_K. Q2_K_S additionally bumps ffn_down in the first n_layer/8 layers to Q4_K and, if n_gqa>=4, attn_v to Q4_K. For the plain Q2_K, ffn_down is forced to Q3_K and attn_output to Q3_K - i.e. 'Q2_K' is genuinely ~3.16 bpw despite the name. Weight-only: activations stay fp16/bf16 at runtime, so there is no 2-bit-activation hardware claim to make. ggml has a bespoke dequantize_row_q2_K + mul_mat kernel per backend but no accelerator has a GGUF k-quant path in silicon; everything is dequantized on the fly. vLLM labels its GGUF support experimental/under-optimized and positions it as a memory-footprint tool.\nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: LLAMA.CPP INTEGER STORAGE TYPE, SO STRUCTURALLY ABSENT. Every GGUF type here is a packed integer block format read by a dequant kernel (dequantize_row_*) and then executed as FP16; ggml publishes no int4 or sub-8-bit tensor-core path that consumes these blocks directly. The llama.cpp CUDA and Vulkan backends both run these formats by dequantizing. Consequence for a reader: nothing further to verify - and note the contrast with nvfp4/mxfp4/mxfp8 in this repo, which ARE hardware formats on Blackwell and carry populated native_support lists, so '4-bit' alone does not predict this field. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "qlab2-ggml-common-header",
+    "qlab2-llama-quant-cpp",
+    "qlab2-quantize-options-table",
+    "quant-ggml-header",
+    "quant-gguf-kquant-study",
+    "quant-llamacpp-quantize-readme",
+    "quant-vllm-gguf-doc",
+    "qzgw-ggml-quants-kernel"
+  ]
 }

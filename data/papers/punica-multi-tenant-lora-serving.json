@@ -1,0 +1,39 @@
+{
+ "name": "Punica: Multi-Tenant LoRA Serving",
+ "arxiv_id": "2310.18547",
+ "venue": "mlsys",
+ "venue_track": "main",
+ "year": 2024,
+ "category": "serving-systems",
+ "authors": [
+  "Lequn Chen",
+  "Zihao Ye",
+  "Yongji Wu",
+  "Danyang Zhuo",
+  "Luis Ceze",
+  "Arvind Krishnamurthy"
+ ],
+ "affiliations": [
+  "University of Washington",
+  "Duke University"
+ ],
+ "problem": "Serving many LoRA adapters over one shared base model wastes GPU memory (a copy of the base per adapter) and, worse, cannot batch: each adapter's low-rank matrices have different shapes, so GPU operations for different adapters cannot be combined and each runs at its own tiny batch.",
+ "mechanism": "Two coupled pieces. (1) A CUDA kernel design that expresses the LoRA computation as batched multiplications - 'SGMV' and 'GLoRA' grouped GEMM - so the base weight matrix is held ONCE in GPU memory and multiple adapters' low-rank matrices are gathered into that one operation, giving the effect of a larger batch without a larger base. (2) A scheduler that consolidates multi-tenant LoRA requests across a cluster and performs model swapping across the memory hierarchy.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "speedup_reported": "Paper's own claim: 12x higher throughput than SGLang when serving multiple LoRA models at the same GPU resource budget, measured on NVIDIA A100 clusters with 7B, 13B and 70B backbones (settings per the paper; baseline is SGLang).",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/PunicaLLM/Punica",
+ "open_weights": true,
+ "notes": "Added because the repo covers base-model serving thoroughly (PagedAttention, Orca, DistServe, Splitwise) but had NO record for multi-tenant adapter serving, which is the actual production shape of serving once you have per-tenant fine-tunes - and the paper a reader would name alongside PagedAttention and Orca in that sentence. Venue MLSys 2024, confirmed on the static proceedings.mlsys.org 2024 index (no OpenReview). The 'in-upstream-engine' adoption is not a guess about this paper: it follows from the repo's own engine sources showing SGLang as the base, and SGLang's multi-LoRA path is a GLoRA-derivative. Affiliations from the PDF footnote: 1 University of Washington, 2 Duke University (Lequn Chen and Zihao Ye are equal contribution).",
+ "status": "verified",
+ "confidence": 0.9,
+ "sources": [
+  "w3p-punica-mlsys24-proceedings",
+  "engine-sglang-github"
+ ],
+ "id": "punica-multi-tenant-lora-serving",
+ "type": "paper",
+ "updated": "2026-10-04"
+}

@@ -106,7 +106,8 @@
         "type": "object",
         "required": [
           "precision",
-          "tflops"
+          "tflops",
+          "basis"
         ],
         "properties": {
           "precision": {
@@ -115,14 +116,17 @@
               "tf32",
               "bf16",
               "fp16",
+              "fp64",
               "fp8",
               "fp6",
               "fp4",
               "int8",
               "int4",
               "fp4_block_scaled",
+              "int16",
               "other"
-            ]
+            ],
+            "description": "'fp64' added 2026-10-04: previously every FP64 row was filed as 'other', indistinguishable from a row whose precision nobody knows. 'int16' added the same day for the one Cambricon INT16 TOPS row, which was the other half of the same conflation. 'other' currently has ZERO rows (2026-10-04 audit cleared all 19), and that is the point of the audit rather than a reason to delete the member: it is the only bucket available for a row whose precision is genuinely undetermined, which is a real state - the horizon-journey-6p source states 560 TOPS without naming a precision. It is KEPT for that case. What must not happen is 'other' being used as a parking space for a precision the enum is missing, which is exactly what it was doing for all 16 FP64 rows before 'fp64' was added."
           },
           "tflops": {
             "type": "number"
@@ -140,6 +144,31 @@
               "string",
               "null"
             ]
+          },
+          "basis": {
+            "enum": [
+              "vendor-spec-sheet",
+              "vendor-whitepaper",
+              "vendor-docs",
+              "secondary-aggregator",
+              "derived",
+              "unverified"
+            ],
+            "description": "REQUIRED on every row. Which kind of statement the number is. This is the per-row *basis* field the repo lacked: a flops[] item used to be able to carry a tflops value with only free-text notes, which is how eight generated values survived review. See basis_detail for the derivation itself. NOTE ON THE ABSENT mlperf-submission VALUE: an 'mlperf-submission' member was drafted here and then REMOVED unused, deliberately. MLPerf Inference submissions report ACHIEVED THROUGHPUT under a named scenario (Offline, Server, Interactive) - they do not report vendor peak tensor-core TFLOPS, which is what a flops[] row holds. The repo holds 49 MLPerf sources and 32 of kind 'benchmark', and NOT ONE of them backs an accelerator flops row, because none of them can. Adding the value would have produced the exact documented failure mode in this repo: an enum member recognised by zero records. Achieved MLPerf throughput belongs in data/benchmarks/, which is where those 32 records already live."
+          },
+          "basis_detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The derivation in words, with the numbers substituted: 'HGX B200 column, FP8 row prints 9 PFLOPS under footnote 2 (sparse); dense is one-half -> 4.5 PFLOPS recorded as 4500'. A reader must be able to re-run this with their own numbers."
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Only when one precision has several distinct hardware paths, e.g. 'fp64-tensor-core' vs 'fp64-vector'. A100 prints both 9.7 and 19.5 TFLOPS FP64 and they are NOT the same path."
           }
         }
       }

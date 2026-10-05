@@ -1,36 +1,37 @@
 {
-  "id": "switch-transformers",
-  "type": "paper",
-  "name": "Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-arch-2101-03961"
-  ],
-  "arxiv_id": "2101.03961",
-  "venue": "other",
-  "year": 2022,
-  "category": "moe",
-  "authors": [
-    "William Fedus",
-    "Barret Zoph",
-    "Noam Shazeer"
-  ],
-  "affiliations": [
-    "Google Brain"
-  ],
-  "problem": "MoE scales parameters at constant FLOPs, but adoption was blocked by routing complexity, expert communication cost, and training instability.",
-  "mechanism": "Sparse encoder-decoder (T5) where each Transformer FFN block is replaced by N experts and a single scalar gating network sends each token to the top-1 expert only. Gating computes a router projection followed by softmax over N experts, and the layer dispatches the token to argmax only; dropping the second expert halves the expert-weight bytes read per token versus top-2 MoE. Load balance is an auxiliary loss f = N * sum_i f_i * P_i (importance probability P, routed-token fraction f) added to the LM loss at alpha=1e-2, plus a z-loss on the logits. Enables bfloat16 mixed precision at scale via stochastic rounding of the residual add. Active-vs-total: Switch-Base 15B total / 11B active (about 73 percent); Switch-Extra Huge 1.6T total / roughly 140B active. Serving consequence: only the active experts are computed, but all expert weights must stay resident in HBM, so the 1.6T model cannot be served on a single device regardless of the low active count; weights are expert-sharded and activations move all-to-all each layer.",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-a100-80gb-pcie",
-    "google-tpu-v4",
-    "google-tpu-v5e"
-  ],
-  "speedup_reported": "Up to 7x faster pre-training than T5-Base at matched compute and step count, and 4x faster than T5-XXL at matched compute; switching from top-2 to top-1 gating also roughly doubled training throughput at matched quality in the authors' own ablation. Original experiments ran on TPU pods (32 TPU v3/v4 devices in the reported configurations). These are compute-matched rather than wall-clock-matched comparisons, so 7x is not 7x less wall time.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/google-research/switch-transformers",
-  "open_weights": true,
-  "notes": "Venue is JMLR 2022, confirmed via Semantic Scholar ('Journal of machine learning research'), but the paper schema's venue enum has no JMLR entry so this is recorded as 'other'; the authoritative venue is in notes.  Load balancing here is auxiliary-loss based, NOT auxiliary-loss-free; DeepSeek-V3's bias-term contribution is explicitly contrasted against this. Token-choice top-1 gating of this form is the shape vLLM's sparse MoE block expects: an experts module receiving hidden_states, top_k_index and top_k_weights."
+ "id": "switch-transformers",
+ "type": "paper",
+ "name": "Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2101-03961"
+ ],
+ "arxiv_id": "2101.03961",
+ "venue": "other",
+ "year": 2022,
+ "category": "moe",
+ "authors": [
+  "William Fedus",
+  "Barret Zoph",
+  "Noam Shazeer"
+ ],
+ "affiliations": [
+  "Google Brain"
+ ],
+ "problem": "MoE scales parameters at constant FLOPs, but adoption was blocked by routing complexity, expert communication cost, and training instability.",
+ "mechanism": "Sparse encoder-decoder (T5) where each Transformer FFN block is replaced by N experts and a single scalar gating network sends each token to the top-1 expert only. Gating computes a router projection followed by softmax over N experts, and the layer dispatches the token to argmax only; dropping the second expert halves the expert-weight bytes read per token versus top-2 MoE. Load balance is an auxiliary loss f = N * sum_i f_i * P_i (importance probability P, routed-token fraction f) added to the LM loss at alpha=1e-2, plus a z-loss on the logits. Enables bfloat16 mixed precision at scale via stochastic rounding of the residual add. Active-vs-total: Switch-Base 15B total / 11B active (about 73 percent); Switch-Extra Huge 1.6T total / roughly 140B active. Serving consequence: only the active experts are computed, but all expert weights must stay resident in HBM, so the 1.6T model cannot be served on a single device regardless of the low active count; weights are expert-sharded and activations move all-to-all each layer.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a100-80gb-pcie",
+  "google-tpu-v4",
+  "google-tpu-v5e"
+ ],
+ "speedup_reported": "Up to 7x faster pre-training than T5-Base at matched compute and step count, and 4x faster than T5-XXL at matched compute; switching from top-2 to top-1 gating also roughly doubled training throughput at matched quality in the authors' own ablation. Original experiments ran on TPU pods (32 TPU v3/v4 devices in the reported configurations). These are compute-matched rather than wall-clock-matched comparisons, so 7x is not 7x less wall time.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/google-research/switch-transformers",
+ "open_weights": true,
+ "notes": "Venue is JMLR 2022, confirmed via Semantic Scholar ('Journal of machine learning research'), but the paper schema's venue enum has no JMLR entry so this is recorded as 'other'; the authoritative venue is in notes.  Load balancing here is auxiliary-loss based, NOT auxiliary-loss-free; DeepSeek-V3's bias-term contribution is explicitly contrasted against this. Token-choice top-1 gating of this form is the shape vLLM's sparse MoE block expects: an experts module receiving hidden_states, top_k_index and top_k_weights.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. Peer-reviewed venue confirmed as JMLR 2022 (same). This is an additive track annotation; `venue` is unchanged at 'other' and no status change is implied by the track alone.",
+ "venue_track": "main"
 }

@@ -1,0 +1,27 @@
+{
+  "id": "w3m-triton-inference-server-nv-inference-pending-request-count",
+  "type": "metric_exposure",
+  "name": "Triton pending-request gauge",
+  "engine_id": "triton-inference-server",
+  "metric_name": "nv_inference_pending_request_count",
+  "metric_type": "gauge",
+  "unit": "requests",
+  "exposure": "prometheus",
+  "endpoint": ":8002/metrics",
+  "histogram_buckets": null,
+  "labels": [
+    "model",
+    "version"
+  ],
+  "enabled_by_default": true,
+  "phase_scoped": null,
+  "verified_negatively": null,
+  "notes": "Triton main, docs/user_guide/metrics.md, read 2026-10-04. On by default: 'By default, these metrics are available at http://localhost:8002/metrics', and the endpoint is pure pull - 'not pushed or published to any remote server'. tritonserver --allow-metrics=false turns the whole thing off. Labels are model and version, and crucially the LATENCY families are per MODEL, per request-update - not per-request observations as in vLLM/SGLang/TGI. The honest queue-depth metric, and the docs define it precisely: 'incremented when a request is enqueued to the server (TRITONSERVER_ServerInferAsync) and is decremented when a backend is about to start executing the request'. The docs also enumerate where a request CAN be pending (default scheduler backlog, dynamic batcher queue, sequence batcher queues, rate limiter queues) and where it will NOT (ensemble scheduler, frontends) - so the number's meaning depends on which features are on.",
+  "status": "verified",
+  "confidence": 0.94,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-triton-metrics-doc",
+    "obs-triton-trace-doc"
+  ]
+}

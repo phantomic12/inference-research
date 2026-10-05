@@ -1,28 +1,28 @@
 {
- "id": "quest-kv-sparsity",
- "type": "quantization",
- "name": "Quest (query-aware KV page sparsity) - NOT KV quantization",
- "scheme": "kv-sparsity",
- "bits": "none - no bits reduced. Only the top-K critical KV pages are LOADED for attention; the rest stay in memory but are not read.",
- "weight_group_size": null,
- "activation_scheme": "None. Page-level min and max Key values are tracked in the KV cache pages; a query vector estimates each page's criticality and only the top-K pages are fetched for attention. Sparsity, not quantization.",
- "native_support": [],
- "emulated_support": [
-  "nvidia-h100-sxm",
-  "nvidia-a100-80gb-sxm4",
-  "nvidia-l40s",
-  "amd-instinct-mi300x",
-  "nvidia-rtx-4090"
- ],
- "kernels": [
-  "Quest implementation (mit-han-lab/Quest); designed to reduce the KV-cache LOADING cost that dominates attention at long context."
- ],
- "quality_delta": "From the abstract: up to 2.23x self-attention speedup, reducing inference latency by 7.03x, 'while performing well on tasks with long dependencies with negligible accuracy loss'. The 7.03x is inference latency, not attention latency - the attention number is 2.23x.",
- "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: page/head-level selection of which KV to keep or prefetch. No weights are re-gridded. Recorded to mark the boundary again, and it is a sharp one: Quest is the method that most clearly shows why KV quantization and KV sparsity are different tools. Quest's insight is that token criticality is QUERY-DEPENDENT - a fixed eviction policy like H2O or SnapKV commits in advance to which tokens matter, while Quest picks per query and therefore keeps information that a static policy would have discarded. Consequence for a serving system: quantization is unconditional and always applies, sparsity is selective and only pays off at long context. Both are recorded in the KV family because both answer 'does this request fit', which is why this problem matters as much as weight quantization. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'spinquant' (a proxy recorded while the enum lacked a legal value) and is now 'kv-sparsity'. ",
- "status": "verified",
- "confidence": 0.8,
- "updated": "2026-10-04",
- "sources": [
-  "qlab-quest-paper"
- ]
+  "id": "quest-kv-sparsity",
+  "type": "quantization",
+  "name": "Quest (query-aware KV page sparsity) - NOT KV quantization",
+  "scheme": "kv-sparsity",
+  "bits": "none - no bits reduced. Only the top-K critical KV pages are LOADED for attention; the rest stay in memory but are not read.",
+  "weight_group_size": null,
+  "activation_scheme": "None. Page-level min and max Key values are tracked in the KV cache pages; a query vector estimates each page's criticality and only the top-K pages are fetched for attention. Sparsity, not quantization.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "Quest implementation (mit-han-lab/Quest); designed to reduce the KV-cache LOADING cost that dominates attention at long context."
+  ],
+  "quality_delta": "From the abstract: up to 2.23x self-attention speedup, reducing inference latency by 7.03x, 'while performing well on tasks with long dependencies with negligible accuracy loss'. The 7.03x is inference latency, not attention latency - the attention number is 2.23x.",
+  "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: page/head-level selection of which KV to keep or prefetch. No weights are re-gridded. Recorded to mark the boundary again, and it is a sharp one: Quest is the method that most clearly shows why KV quantization and KV sparsity are different tools. Quest's insight is that token criticality is QUERY-DEPENDENT - a fixed eviction policy like H2O or SnapKV commits in advance to which tokens matter, while Quest picks per query and therefore keeps information that a static policy would have discarded. Consequence for a serving system: quantization is unconditional and always applies, sparsity is selective and only pays off at long context. Both are recorded in the KV family because both answer 'does this request fit', which is why this problem matters as much as weight quantization. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'spinquant' (a proxy recorded while the enum lacked a legal value) and is now 'kv-sparsity'. \nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: KV-CACHE-ONLY, SO STRUCTURALLY ABSENT. The bits field records that no bits-per-value change: the scheme reduces WHICH positions are retained, fetched or reallocated, so it runs on whatever precision path the accelerator already has for the KV cache. A KV-position policy can never be a hardware format. Consequence for a reader: nothing further to verify - this is a cache-management policy, not a numeric format. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "qlab-quest-paper"
+  ]
 }

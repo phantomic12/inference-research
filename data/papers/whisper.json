@@ -1,37 +1,38 @@
 {
-  "id": "whisper",
-  "type": "paper",
-  "name": "Whisper: Robust Speech Recognition via Large-Scale Weak Supervision",
-  "arxiv_id": "2212.04356",
-  "venue": "icml",
-  "year": 2022,
-  "category": "speech",
-  "authors": [
-    "Alec Radford",
-    "Jong Wook Kim",
-    "Tao Xu",
-    "Greg Brockman",
-    "Christine McLeavey",
-    "Ilya Sutskever"
-  ],
-  "affiliations": [
-    "OpenAI"
-  ],
-  "problem": "Supervised ASR requires per-domain labelled audio, so one model cannot cover many domains and noisy conditions without retraining.",
-  "mechanism": "Multitask encoder-decoder Transformer trained on 680k hours of weakly labelled internet audio with a multitask 'tokens, timestamp, language' objective: the decoder is conditioned on a detected source language, which forces it to also act as a language identifier and produces per-language training data for free. Trained with 30s windows of log-Mel spectrogram at 16 kHz, so inference always operates on a fixed 30s context regardless of the true utterance length.",
-  "hardware_relevance": [
-    "nvidia-a10",
-    "nvidia-l4"
-  ],
-  "speedup_reported": null,
-  "adoption": "in-production",
-  "code_url": "https://github.com/openai/whisper",
-  "open_weights": true,
-  "notes": "Venue confirmed against the PMLR v202 table of contents: 'Proceedings of the 40th International Conference on Machine Learning, PMLR 202:28492-28518'. arXiv posted Dec 2022, venue 2023. This is the highest-adoption speech model in the repo: shipped as the OpenAI speech-to-text API, vendored by Apple (iOS/macOS dictation), Unity, and reachable from most cloud STT wrappers. INFERENCE-COST NOTE that matters more than the accuracy numbers: the fixed 30s context means short utterances pay for the whole window. Encoder prefill is over 3000 mel frames regardless of utterance length, so a 1-second utterance and a 30-second utterance cost nearly the same. Chunked long-form inference (30s slices) plus local agreement (Whisper-Streaming, 2307.14743) or chunk-aware batching is the standard mitigation. Decoder output token count, not audio length, is what varies. The paper reports no wall-clock latency or hardware throughput numbers, hence speedup_reported is null.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-mm-whisper"
-  ]
+ "id": "whisper",
+ "type": "paper",
+ "name": "Whisper: Robust Speech Recognition via Large-Scale Weak Supervision",
+ "arxiv_id": "2212.04356",
+ "venue": "icml",
+ "year": 2023,
+ "category": "speech",
+ "authors": [
+  "Alec Radford",
+  "Jong Wook Kim",
+  "Tao Xu",
+  "Greg Brockman",
+  "Christine McLeavey",
+  "Ilya Sutskever"
+ ],
+ "affiliations": [
+  "OpenAI"
+ ],
+ "problem": "Supervised ASR requires per-domain labelled audio, so one model cannot cover many domains and noisy conditions without retraining.",
+ "mechanism": "Multitask encoder-decoder Transformer trained on 680k hours of weakly labelled internet audio with a multitask 'tokens, timestamp, language' objective: the decoder is conditioned on a detected source language, which forces it to also act as a language identifier and produces per-language training data for free. Trained with 30s windows of log-Mel spectrogram at 16 kHz, so inference always operates on a fixed 30s context regardless of the true utterance length.",
+ "hardware_relevance": [
+  "nvidia-a10",
+  "nvidia-l4"
+ ],
+ "speedup_reported": null,
+ "adoption": "in-production",
+ "code_url": "https://github.com/openai/whisper",
+ "open_weights": true,
+ "notes": "Venue confirmed against the PMLR v202 table of contents: 'Proceedings of the 40th International Conference on Machine Learning, PMLR 202:28492-28518'. arXiv posted Dec 2022, venue 2023. This is the highest-adoption speech model in the repo: shipped as the OpenAI speech-to-text API, vendored by Apple (iOS/macOS dictation), Unity, and reachable from most cloud STT wrappers. INFERENCE-COST NOTE that matters more than the accuracy numbers: the fixed 30s context means short utterances pay for the whole window. Encoder prefill is over 3000 mel frames regardless of utterance length, so a 1-second utterance and a 30-second utterance cost nearly the same. Chunked long-form inference (30s slices) plus local agreement (Whisper-Streaming, 2307.14743) or chunk-aware batching is the standard mitigation. Decoder output token count, not audio length, is what varies. The paper reports no wall-clock latency or hardware throughput numbers, hence speedup_reported is null.\n\nYEAR FIELD CORRECTION 2026-10-04 (paper-fields pass, agent w3p): year 2022 -> 2023. The record's own notes already said the venue year is 2023 ('PMLR 202:28492-28518') while the field carried 2022, so the field and the note disagreed and the note was right. EVIDENCE re-checked 2026-10-04 against the static PMLR table of contents: v202 is the 40th ICML, 23-29 July 2023 (read off the volume landing page header, not assumed), and the volume contains the title verbatim. BOTH VALUES RETAINED per the repo contract: 2022 was the previous field value and is the arXiv posting year (published 2022-12-17), which is still a true statement about the preprint. arxiv_id unchanged (2212.04356). status set to contested because this changes a published attribution.",
+ "status": "contested",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-mm-whisper"
+ ],
+ "venue_track": "main"
 }

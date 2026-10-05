@@ -1,0 +1,15 @@
+{
+  "id": "w3m-sglang-prometheus-middleware",
+  "type": "source",
+  "name": "SGLang add_prometheus_middleware() - the /metrics mount and the flag that gates it",
+  "status": "verified",
+  "confidence": 0.93,
+  "updated": "2026-10-04",
+  "url": "https://github.com/sgl-project/sglang/blob/main/python/sglang/srt/utils/common.py",
+  "publisher": "sgl-project/sglang",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "add_prometheus_middleware(app) at line 2738 of python/sglang/srt/utils/common.py on main, 2026-10-04: builds a fresh CollectorRegistry, attaches a multiprocess.MultiProcessCollector, and appends Mount(\"/metrics\", make_asgi_app(registry=registry)) with path_regex '^/metrics(?P<path>.*)$' as a workaround for a 307 redirect. Its only call site is python/sglang/srt/entrypoints/http_server.py line 297, inside `if get_observability().enable_metrics:` - so the endpoint is on the main HTTP server port and does not exist at all unless the flag is set. A second middleware, add_prometheus_track_response_middleware, is installed at line 2627 under the same condition. This is the primary-source basis for endpoint='/metrics' and enabled_by_default=false on every SGLang metric_exposure record."
+}

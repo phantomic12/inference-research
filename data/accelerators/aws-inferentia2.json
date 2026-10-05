@@ -20,7 +20,9 @@
       "tflops": 190,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "asic-aws-inferentia-product"
+      "source_id": "asic-aws-inferentia-product",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Transcribed from the vendor's own fp16 for AWS Inferentia2 (source of record: 'AWS Inferentia product page', kind: spec-sheet).  Recorded dense:true as printed."
     },
     {
       "precision": "fp8",
@@ -28,7 +30,9 @@
       "dense": true,
       "vendor_claim": true,
       "source_id": "asic-aws-inferentia-product",
-      "notes": "380 TFLOPS FP8 is inferred as 2x the vendor's 190 TFLOPS FP16 per-chip figure (source: asic-aws-inferentia-product). AWS does not publish a per-chip FP8 figure; this is a direct inference from the vendor's FP16 spec. Treated as a vendor claim because it is a simple 2x derivation from a vendor number."
+      "notes": "380 TFLOPS FP8 is inferred as 2x the vendor's 190 TFLOPS FP16 per-chip figure (source: asic-aws-inferentia-product). AWS does not publish a per-chip FP8 figure; this is a direct inference from the vendor's FP16 spec. Treated as a vendor claim because it is a simple 2x derivation from a vendor number.",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "Transcribed from the vendor's own fp8 for AWS Inferentia2 (source of record: 'AWS Inferentia product page', kind: spec-sheet).  Recorded dense:true as printed. Full reasoning for this row retained verbatim in notes."
     }
   ],
   "tdp_w": null,
@@ -38,7 +42,7 @@
   ],
   "unified_memory": false,
   "consumer": false,
-  "notes": "The only per-chip published compute number is 190 TFLOPS FP16 (vendor page). The FP8 row at 380 TFLOPS is an INFERENCE from the 2.3 PFLOPS 'up to' instance aggregate over 12 chips, and is flagged vendor_claim false and dense because AWS never states whether that aggregate is dense or sparse; treat it as an upper bound, not a measured dense peak. Inf2 supports FP32, TF32, BF16, FP16, UINT8 and configurable FP8 (cFP8); AWS's autocast path takes high-precision FP32/FP16 models and casts them down, with stochastic rounding available to protect accuracy. Two NeuronCores per chip (versus four on gen 1) is the reason a single chip reaches 190 TFLOPS where gen 1 spread its cores wider. NeuronLink at 192 GB/s lets data move chip-to-chip without touching the CPU, which is what makes multi-chip tensor parallelism viable for models that do not fit one 32 GB part. Contrast with Trainium2: same vendor, same NeuronLink, but Inferentia2 is inference-only and 32 GB, while Trainium2 is 96 GB and mixed-use.",
+  "notes": "The only per-chip published compute number is 190 TFLOPS FP16 (vendor page). The FP8 row at 380 TFLOPS is an INFERENCE from the 2.3 PFLOPS 'up to' instance aggregate over 12 chips, and is flagged vendor_claim false and dense because AWS never states whether that aggregate is dense or sparse; treat it as an upper bound, not a measured dense peak. Inf2 supports FP32, TF32, BF16, FP16, UINT8 and configurable FP8 (cFP8); AWS's autocast path takes high-precision FP32/FP16 models and casts them down, with stochastic rounding available to protect accuracy. Two NeuronCores per chip (versus four on gen 1) is the reason a single chip reaches 190 TFLOPS where gen 1 spread its cores wider. NeuronLink at 192 GB/s lets data move chip-to-chip without touching the CPU, which is what makes multi-chip tensor parallelism viable for models that do not fit one 32 GB part. Contrast with Trainium2: same vendor, same NeuronLink, but Inferentia2 is inference-only and 32 GB, while Trainium2 is 96 GB and mixed-use.\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). %s NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either inference is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the note above names the specific document that was read and found not to carry it, so a future pass does not have to re-establish that from scratch.\n\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). AWS publishes no memory-bus width for Inferentia or Trainium. The Neuron hardware documentation and the EC2 instance-type pages give capacity and aggregate bandwidth only. Not back-computed: Trainium2's published figure is a per-instance aggregate across a 16-chip pod, not a per-chip number, so dividing it by chip count yields a pod figure rather than a bus width. NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the text above names the specific document read and found not to carry it, so a future pass does not have to re-establish that from scratch.",
   "status": "verified",
   "confidence": 0.7,
   "updated": "2026-10-03",

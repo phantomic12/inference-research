@@ -1,0 +1,51 @@
+{
+  "id": "w3m-tensorrt-llm-trtllm-request-inference-time-seconds",
+  "type": "metric_exposure",
+  "name": "TensorRT-LLM total inference duration histogram",
+  "engine_id": "tensorrt-llm",
+  "metric_name": "trtllm_request_inference_time_seconds",
+  "metric_type": "histogram",
+  "unit": "seconds",
+  "exposure": "prometheus",
+  "endpoint": ":8000/prometheus/metrics",
+  "histogram_buckets": [
+    0.3,
+    0.5,
+    0.8,
+    1.0,
+    1.5,
+    2.0,
+    2.5,
+    5.0,
+    10.0,
+    15.0,
+    20.0,
+    30.0,
+    40.0,
+    50.0,
+    60.0,
+    120.0,
+    240.0,
+    480.0,
+    960.0,
+    1920.0,
+    7680.0
+  ],
+  "labels": [
+    "model_name",
+    "engine_type"
+  ],
+  "enabled_by_default": false,
+  "phase_scoped": true,
+  "verified_negatively": null,
+  "notes": "TensorRT-LLM main, MetricsCollector in tensorrt_llm/metrics/collector.py, read 2026-10-04. collector.py line 32 carries the header comment 'Adapted from https://github.com/vllm-project/vllm/blob/v0.10.0rc1/vllm/engine/metrics.py#L30', so this is a vLLM fork with the prefix swapped to trtllm_. NOT ON BY DEFAULT: the collector is only constructed and /prometheus/metrics only mounted when --return_perf-metrics is set (llm_args default False). Endpoint is :8000/prometheus/metrics - NOT /metrics, and the server's own GET /metrics serves a JSON iteration-stats snapshot, so a scraper pointed at /metrics gets JSON rather than exposition text. Labels are model_name and engine_type. The docstrings give the intervals explicitly, which is the useful part: prefill is (first_token_time - first_scheduled_time), decode is (last_token_time - first_token_time), inference is (last_token_time - first_scheduled_time). Prefill's ladder is finer at the low end (starts 0.001, steps 0.025) than the shared request ladder.",
+  "status": "verified",
+  "confidence": 0.94,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-trtllm-metrics-collector",
+    "w3m-trtllm-prometheus-endpoint-gate",
+    "w3m-trtllm-return-perf-metrics-default",
+    "w3m-trtllm-metrics-no-preempt-search"
+  ]
+}

@@ -1,28 +1,28 @@
 {
- "id": "llm-fp4",
- "type": "quantization",
- "name": "LLM-FP4 (4-bit floating-point W4A4 PTQ, pre-Blackwell)",
- "scheme": "llm-fp4",
- "bits": "w4a4 (both weights and activations quantized to 4-bit FLOATING POINT, post-training)",
- "weight_group_size": null,
- "activation_scheme": "FP4 rather than INT4: exponent-bit count and clipping range are searched for optimality per layer, which the paper argues is what determines FP-quantization performance. Activation handling is the notable part - the paper identifies high INTER-channel variance and low INTRA-channel variance in activation distributions as consistent across LLMs, BERT and ViTs, and applies PER-CHANNEL activation quantization, then REPARAMETERIZES the extra per-channel scales as exponential biases of the weights at negligible cost.",
- "native_support": [],
- "emulated_support": [
-  "nvidia-h100-sxm",
-  "nvidia-a100-80gb-sxm4",
-  "nvidia-l40s",
-  "amd-instinct-mi300x",
-  "nvidia-rtx-4090"
- ],
- "kernels": [
-  "nbasyl/LLM-FP4 research code. No hardware FP4 path existed when this was written (Oct 2023) - FP4 tensor cores arrived with Blackwell in 2024."
- ],
- "quality_delta": "From the abstract: quantizes both weights and activations of LLaMA-13B to 4-bit, achieving an average score of 63.1 on commonsense zero-shot reasoning tasks, 'only 5.8 lower than the full-precision model' and 'significantly outperforming the previous state-of-the-art by 12.7 points'. Authors' own numbers; no independent replication located.",
- "notes": "GROUP SIZE LEFT NULL 2026-10-04: LLM-FP4 (arXiv 2310.16836) is a per-channel FP4 research PTQ format - per-channel activation scales folded into the weights as exponential biases. The grouping axis is the channel, and the paper's own construction has no shared-scale group over a contiguous weight run. Also do not confuse this record with nvfp4, which is a different format with a 16-element sub-block. IMPORTANT NAME COLLISION WARNING: this is 'LLM-FP4' (arXiv 2310.16836), NOT NVFP4. The repo already has an nvfp4 record for NVIDIA's Blackwell block-scaled E2M1 format. They share a bit width and a float element format but nothing else - different era, different authors, different format, and only one of them has hardware behind it. Do not let anyone merge these two records. Included here because it is the clearest pre-Blackwell demonstration that genuine W4A4 (4-bit weights AND 4-bit activations) was achievable before any 4-bit tensor core existed, which is exactly the regime that the w4a16-vs-w4a4 distinction turns on: LLM-FP4's arithmetic was emulated, so it was a compression win, not a compute win, and would not necessarily run faster than fp16 on the hardware available to it. The per-channel activation scales folded into the weights as exponential biases is the same reparameterization trick as OmniQuant's LET and SmoothQuant's migration - three independent papers converging on 'make the weights absorb the activation difficulty'. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'wq4a4' (a proxy recorded while the enum lacked a legal value) and is now 'llm-fp4'. ",
- "status": "verified",
- "confidence": 0.8,
- "updated": "2026-10-04",
- "sources": [
-  "qlab-llm-fp4-paper"
- ]
+  "id": "llm-fp4",
+  "type": "quantization",
+  "name": "LLM-FP4 (4-bit floating-point W4A4 PTQ, pre-Blackwell)",
+  "scheme": "llm-fp4",
+  "bits": "w4a4 (both weights and activations quantized to 4-bit FLOATING POINT, post-training)",
+  "weight_group_size": null,
+  "activation_scheme": "FP4 rather than INT4: exponent-bit count and clipping range are searched for optimality per layer, which the paper argues is what determines FP-quantization performance. Activation handling is the notable part - the paper identifies high INTER-channel variance and low INTRA-channel variance in activation distributions as consistent across LLMs, BERT and ViTs, and applies PER-CHANNEL activation quantization, then REPARAMETERIZES the extra per-channel scales as exponential biases of the weights at negligible cost.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "nbasyl/LLM-FP4 research code. No hardware FP4 path existed when this was written (Oct 2023) - FP4 tensor cores arrived with Blackwell in 2024."
+  ],
+  "quality_delta": "From the abstract: quantizes both weights and activations of LLaMA-13B to 4-bit, achieving an average score of 63.1 on commonsense zero-shot reasoning tasks, 'only 5.8 lower than the full-precision model' and 'significantly outperforming the previous state-of-the-art by 12.7 points'. Authors' own numbers; no independent replication located.",
+  "notes": "GROUP SIZE LEFT NULL 2026-10-04: LLM-FP4 (arXiv 2310.16836) is a per-channel FP4 research PTQ format - per-channel activation scales folded into the weights as exponential biases. The grouping axis is the channel, and the paper's own construction has no shared-scale group over a contiguous weight run. Also do not confuse this record with nvfp4, which is a different format with a 16-element sub-block. IMPORTANT NAME COLLISION WARNING: this is 'LLM-FP4' (arXiv 2310.16836), NOT NVFP4. The repo already has an nvfp4 record for NVIDIA's Blackwell block-scaled E2M1 format. They share a bit width and a float element format but nothing else - different era, different authors, different format, and only one of them has hardware behind it. Do not let anyone merge these two records. Included here because it is the clearest pre-Blackwell demonstration that genuine W4A4 (4-bit weights AND 4-bit activations) was achievable before any 4-bit tensor core existed, which is exactly the regime that the w4a16-vs-w4a4 distinction turns on: LLM-FP4's arithmetic was emulated, so it was a compression win, not a compute win, and would not necessarily run faster than fp16 on the hardware available to it. The per-channel activation scales folded into the weights as exponential biases is the same reparameterization trick as OmniQuant's LET and SmoothQuant's migration - three independent papers converging on 'make the weights absorb the activation difficulty'. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'wq4a4' (a proxy recorded while the enum lacked a legal value) and is now 'llm-fp4'. \nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: WEIGHT-ONLY, SO STRUCTURALLY ABSENT. The bits field keeps activations in FP16, so execution is dequantize-to-FP16 then an FP16 tensor-core GEMM; there is no INT4-x-INT4 (or sub-8-bit x sub-8-bit) silicon instruction for it to target. This is a statement about the arithmetic, not an absence of investigation. Consequence for a reader: nothing further to verify - no silicon path is possible for this format as defined. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "qlab-llm-fp4-paper"
+  ]
 }

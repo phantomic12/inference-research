@@ -1,29 +1,29 @@
 {
- "id": "omniquant",
- "type": "quantization",
- "name": "OmniQuant (learnable weight clipping + equivalent transformation)",
- "scheme": "omniquant",
- "bits": "reported at w2a16, w3a16, w4a16, w4a4, w6a6 and w8a8 (paper enumerates these configurations)",
- "weight_group_size": 128,
- "activation_scheme": "Learnable Equivalent Transformation (LET) folds an activation-only affine transform into the adjacent weights so activation outliers are handled without changing the network function in full precision; Learnable Weight Clipping (LWC) optimizes the per-tensor clipping threshold. Both are optimized by block-wise error minimization over 128 calibration samples - hence OmniQuant is a PTQ/calibration method, not data-free.",
- "native_support": [],
- "emulated_support": [
-  "nvidia-h100-sxm",
-  "nvidia-a100-80gb-sxm4",
-  "nvidia-l40s",
-  "amd-instinct-mi300x",
-  "intel-arc-b580",
-  "nvidia-rtx-4090"
- ],
- "kernels": [
-  "Research-only; no shipping kernel in the paper."
- ],
- "quality_delta": "Paper states LLaMA-2 7B-70B is processed within 1-16 hours on a single A100-40G using 128 samples, and validates across w2a16/w3a16/w4a16/w4a4/w6a6 without naming a headline accuracy number in the abstract. No numeric quality delta recorded.",
- "notes": "FILLED 2026-10-04 from the paper (arXiv 2308.13137v3), via its own notation: 'W4A16g128 means 3-bit weight-only quantization with a 128-group size'. OmniQuant is the standard low-bit weight-only baseline and is conventionally reported at g128; this is the paper's notation, not a kernel constant, and OmniQuant also reports non-grouped variants. Enum mismatch: 'smoothquant' is the nearest existing value because LET is structurally the same idea as SmoothQuant - an offline, calibration-driven migration of quantization difficulty from activations into weights that leaves full-precision behaviour unchanged. The difference is that SmoothQuant's migration parameter alpha is hand-chosen per layer while OmniQuant learns it. Request the parent add 'omniquant'. Worth keeping separate from smoothquant because OmniQuant is the standard W2A16/W3A16 baseline: those low-bit weight-only configurations collapse under round-to-nearest and OmniQuant is one of the few PTQ methods that survives them. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'smoothquant' (a proxy recorded while the enum lacked a legal value) and is now 'omniquant'. ",
- "status": "verified",
- "confidence": 0.8,
- "updated": "2026-10-04",
- "sources": [
-  "qlab-omniquant-paper"
- ]
+  "id": "omniquant",
+  "type": "quantization",
+  "name": "OmniQuant (learnable weight clipping + equivalent transformation)",
+  "scheme": "omniquant",
+  "bits": "reported at w2a16, w3a16, w4a16, w4a4, w6a6 and w8a8 (paper enumerates these configurations)",
+  "weight_group_size": 128,
+  "activation_scheme": "Learnable Equivalent Transformation (LET) folds an activation-only affine transform into the adjacent weights so activation outliers are handled without changing the network function in full precision; Learnable Weight Clipping (LWC) optimizes the per-tensor clipping threshold. Both are optimized by block-wise error minimization over 128 calibration samples - hence OmniQuant is a PTQ/calibration method, not data-free.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "intel-arc-b580",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "Research-only; no shipping kernel in the paper."
+  ],
+  "quality_delta": "Paper states LLaMA-2 7B-70B is processed within 1-16 hours on a single A100-40G using 128 samples, and validates across w2a16/w3a16/w4a16/w4a4/w6a6 without naming a headline accuracy number in the abstract. No numeric quality delta recorded.",
+  "notes": "FILLED 2026-10-04 from the paper (arXiv 2308.13137v3), via its own notation: 'W4A16g128 means 3-bit weight-only quantization with a 128-group size'. OmniQuant is the standard low-bit weight-only baseline and is conventionally reported at g128; this is the paper's notation, not a kernel constant, and OmniQuant also reports non-grouped variants. Enum mismatch: 'smoothquant' is the nearest existing value because LET is structurally the same idea as SmoothQuant - an offline, calibration-driven migration of quantization difficulty from activations into weights that leaves full-precision behaviour unchanged. The difference is that SmoothQuant's migration parameter alpha is hand-chosen per layer while OmniQuant learns it. Request the parent add 'omniquant'. Worth keeping separate from smoothquant because OmniQuant is the standard W2A16/W3A16 baseline: those low-bit weight-only configurations collapse under round-to-nearest and OmniQuant is one of the few PTQ methods that survives them. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'smoothquant' (a proxy recorded while the enum lacked a legal value) and is now 'omniquant'. \nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: WEIGHT-ONLY, SO STRUCTURALLY ABSENT. The bits field keeps activations in FP16, so execution is dequantize-to-FP16 then an FP16 tensor-core GEMM; there is no INT4-x-INT4 (or sub-8-bit x sub-8-bit) silicon instruction for it to target. This is a statement about the arithmetic, not an absence of investigation. Consequence for a reader: nothing further to verify - no silicon path is possible for this format as defined. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "qlab-omniquant-paper"
+  ]
 }

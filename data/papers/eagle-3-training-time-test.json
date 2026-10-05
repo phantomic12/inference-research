@@ -1,33 +1,39 @@
 {
-  "id": "eagle-3-training-time-test",
-  "name": "EAGLE-3: Scaling up Inference Acceleration of Large Language Models via Training-Time Test",
-  "arxiv_id": "2503.01840",
-  "venue": "arxiv-preprint",
-  "year": 2025,
-  "category": "speculative-decoding",
-  "authors": [
-    "Yuhui Li",
-    "Fangyun Wei",
-    "Chao Zhang",
-    "Hongyang Zhang"
-  ],
-  "problem": "EAGLE and EAGLE-2 gain little from more draft-model training data, because feature prediction puts a ceiling on how much the draft model can learn.",
-  "mechanism": "Two changes. (1) Abandon feature prediction in favour of DIRECT token prediction, removing the feature-prediction constraint that capped data scaling. (2) Replace reliance on top-layer features with MULTI-LAYER feature fusion, obtained by a technique the authors call 'training-time test' - during training the model attends to its own future-derived representations so that at inference it has learned to combine features from several depths rather than only the last. Together these let the draft head benefit from training-data scaling.",
-  "hardware_relevance": [
-    "nvidia-a100-sxm",
-    "nvidia-h100-sxm"
-  ],
-  "speedup_reported": "Speedup ratio up to 6.5x, about 1.4x over EAGLE-2, evaluated on five tasks across chat models AND reasoning models. Separately and more usefully, 1.38x THROUGHPUT improvement at batch size 64 measured inside the SGLang framework. The batch-64 throughput figure is the one to trust for serving: it is the only one here that is not a batch-1 latency number.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/SafeAILab/EAGLE",
-  "open_weights": true,
-  "notes": "ADOPTION, precisely: EAGLE-3 is the CURRENT default in the EAGLE family for real engines - vLLM's EAGLE-3 support and SGLang's EAGLE-3 path both exist, and this paper's throughput claim is itself an SGLang measurement, so it is an upstream-engine number rather than a bespoke-harness number. VENUE NOTE: no peer-reviewed venue verifiable; arXiv comment has no venue, so venue = arxiv-preprint, year = arXiv v1 (Mar 2025). Headline-claim caveat to flag: the 'up to 6.5x' is a best-case batch-1 latency figure and the honest serving number in the same paper is 1.38x throughput at batch 64 - roughly a 4.5x gap between the marketing number and the production number, caused by nothing more than batch size. Read both, or the 6.5x will be quoted out of context. Also note the reasoning-model evaluations: acceptance rate on reasoning models is a different regime from chat, and the two are averaged in the headline. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). The paper names A100 exactly once, in a table caption, with no memory size: \"Table 5: Throughput improvement under different batch sizes on A100 and LLaMA-Instruct 3.1 8B for the MT-Bench dataset\". Source: https://arxiv.org/pdf/2503.01840 . Every other hardware statement in the paper is H100 (\"on a single H100 GPU\", \"1x H100\", the SGLang-team tables name H100 throughout), so the A100 mention is a single unelaborated caption: no VRAM count, no SXM/PCIe, no GPU count for that run. Left dangling: a bare 'A100' is exactly the case not to infer from.",
-  "confidence": 0.9,
-  "type": "paper",
-  "affiliations": [],
-  "status": "verified",
-  "updated": "2026-10-04",
-  "sources": [
-    "pap-eff-eagle-3"
-  ]
+ "id": "eagle-3-training-time-test",
+ "name": "EAGLE-3: Scaling up Inference Acceleration of Large Language Models via Training-Time Test",
+ "arxiv_id": "2503.01840",
+ "venue": "neurips",
+ "year": 2025,
+ "category": "speculative-decoding",
+ "authors": [
+  "Yuhui Li",
+  "Fangyun Wei",
+  "Chao Zhang",
+  "Hongyang Zhang"
+ ],
+ "problem": "EAGLE and EAGLE-2 gain little from more draft-model training data, because feature prediction puts a ceiling on how much the draft model can learn.",
+ "mechanism": "Two changes. (1) Abandon feature prediction in favour of DIRECT token prediction, removing the feature-prediction constraint that capped data scaling. (2) Replace reliance on top-layer features with MULTI-LAYER feature fusion, obtained by a technique the authors call 'training-time test' - during training the model attends to its own future-derived representations so that at inference it has learned to combine features from several depths rather than only the last. Together these let the draft head benefit from training-data scaling.",
+ "hardware_relevance": [
+  "nvidia-a100-sxm",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "Speedup ratio up to 6.5x, about 1.4x over EAGLE-2, evaluated on five tasks across chat models AND reasoning models. Separately and more usefully, 1.38x THROUGHPUT improvement at batch size 64 measured inside the SGLang framework. The batch-64 throughput figure is the one to trust for serving: it is the only one here that is not a batch-1 latency number.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/SafeAILab/EAGLE",
+ "open_weights": true,
+ "notes": "ADOPTION, precisely: EAGLE-3 is the CURRENT default in the EAGLE family for real engines - vLLM's EAGLE-3 support and SGLang's EAGLE-3 path both exist, and this paper's throughput claim is itself an SGLang measurement, so it is an upstream-engine number rather than a bespoke-harness number. VENUE NOTE: no peer-reviewed venue verifiable; arXiv comment has no venue, so venue = arxiv-preprint, year = arXiv v1 (Mar 2025). Headline-claim caveat to flag: the 'up to 6.5x' is a best-case batch-1 latency figure and the honest serving number in the same paper is 1.38x throughput at batch 64 - roughly a 4.5x gap between the marketing number and the production number, caused by nothing more than batch size. Read both, or the 6.5x will be quoted out of context. Also note the reasoning-model evaluations: acceptance rate on reasoning models is a different regime from chat, and the two are averaged in the headline. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). The paper names A100 exactly once, in a table caption, with no memory size: \"Table 5: Throughput improvement under different batch sizes on A100 and LLaMA-Instruct 3.1 8B for the MT-Bench dataset\". Source: https://arxiv.org/pdf/2503.01840 . Every other hardware statement in the paper is H100 (\"on a single H100 GPU\", \"1x H100\", the SGLang-team tables name H100 throughout), so the A100 mention is a single unelaborated caption: no VRAM count, no SXM/PCIe, no GPU count for that run. Left dangling: a bare 'A100' is exactly the case not to infer from.\n\nVENUE CORRECTION + VENUE_TRACK 2026-10-04 (paper-fields pass, agent w3p): venue 'arxiv-preprint' -> 'neurips', venue_track 'main'. EVIDENCE: the STATIC proceedings index for this venue lists this exact title. Venue 'NEURIPS' paper page: NeurIPS 2025 poster 119930. The listing was corroborated by author overlap, not by title alone, because these titles are duplicated across venues and years and a title-only match is exactly the kind of thing that produced this repo's two previously-shipped wrong arXiv IDs. BOTH VALUES RETAINED PER THE REPO CONTRACT: the prior value was 'arxiv-preprint'. status set to contested because this changes a peer-reviewed attribution. arxiv_id unchanged (2503.01840). Method note: OpenReview's api2 hard-429s under load and pre-2024 venues are unreachable through it, so these were checked against static proceedings indexes (iclr.cc/virtual/<year>/papers.html and neurips.cc/virtual/<year>/papers.html, with the per-paper JSON-LD creditText field as the venue-year assertion).\n\nAFFILIATIONS BACKFILLED 2026-10-04 (paper-fields pass, agent w3p): OpenAlex institutions field (it is the one EAGLE record that has them): Microsoft Research Asia (China), Peking University, Tsinghua University, University of Waterloo. Note this is broader than the EAGLE-1/2 author affiliation set, which is the paper's own claim about later-generation drafts. Filled from the API/PDF rather than from memory, because an affiliation is a fact about a specific paper's author block and inference from the author's employer history is how wrong affiliations get shipped.",
+ "confidence": 0.88,
+ "type": "paper",
+ "affiliations": [
+  "Peking University",
+  "Microsoft Research Asia",
+  "Tsinghua University",
+  "University of Waterloo"
+ ],
+ "status": "contested",
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-eff-eagle-3"
+ ],
+ "venue_track": "main"
 }

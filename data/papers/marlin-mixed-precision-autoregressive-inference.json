@@ -1,0 +1,41 @@
+{
+ "name": "MARLIN: Mixed-Precision Auto-Regressive Parallel Inference on Large Language Models",
+ "arxiv_id": "2408.11743",
+ "venue": "other",
+ "venue_track": "main",
+ "year": 2024,
+ "category": "quantization",
+ "authors": [
+  "Elias Frantar",
+  "Roberto L. Castro",
+  "Jiale Chen",
+  "Torsten Hoefler",
+  "Dan Alistarh"
+ ],
+ "affiliations": [
+  "Institute of Science and Technology Austria (ISTA)",
+  "ETH Zurich",
+  "CITIC, Universidade da Coruña",
+  "Neural Magic, Inc."
+ ],
+ "problem": "4-bit weight quantization speeds up single-stream decoding because it cuts memory traffic, but the speedup evaporates once you batch many concurrent clients, which is the regime real serving runs in - the batch becomes compute-bound and the low-precision tensor-core path is not used.",
+ "mechanism": "A mixed-precision (FP16 x INT4) weight-only quantized GEMM kernel that keeps FP16 activations and FP16 accumulate in the tensor cores and dequantizes INT4 weights on the fly in shared memory, using a fused lookup-table dequant scheme so the extra ALU work overlaps with tensor-core work instead of serializing. The K dimension is processed in tiles so the kernel holds its speedup at batch 16-32 rather than degrading.",
+ "hardware_relevance": [
+  "nvidia-a10"
+ ],
+ "speedup_reported": "Paper's own claim: ~4x speedup over FP16 PyTorch on an inference-optimized NVIDIA A10 GPU for large matrices at batch sizes up to 16-32, decaying to ~1.5x at batch size 128 as the problem becomes compute-bound. Sparse-MARLIN (a separate variant) improves further at high sparsity.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/IST-DASLab/marlin",
+ "open_weights": true,
+ "notes": "Identifier discipline: arXiv 2408.11743 taken from the export.arxiv.org API response for the exact title, NOT from memory. The repo has shipped a wrong Marlin ID before and this paper has no arXiv journal_ref, so the API response is the only authoritative source for the ID; it returned 2408.11743v1, published 2024-08-21. VENUE: PPoPP 2024 ('Proceedings of the 30th ACM SIGPLAN Annual Symposium on Principles and Practice of Parallel Programming') per Semantic Scholar. PPoPP is NOT a member of this schema's venue enum, so venue='other' with the real venue named here. This is a genuine venue, not a fallback: the ACM DL proceedings page returns HTTP 403 to automated clients, so PPoPP membership rests on the Semantic Scholar record plus an exact title match and was NOT independently confirmed against the PPoPP proceedings listing - flagged rather than papered over. This record fills a real gap: the repo already had Marlin REPO sources (qhw-src-marlin-repo, quant-marlin-repo) and flop/gotcha records mentioning Marlin, but no paper record for the method. Affiliations from the PDF footnote block: ISTA Klosterneuburg; CITIC Universidade da Coruña; D-INFK ETH Zurich; Neural Magic Inc.\n\nHARDWARE RELEVANCE ID CORRECTED 2026-10-04: the id was written as 'nvidia-a10-24gb' on the first write of this record, which is not an accelerator record id in this repo - the correct id is 'nvidia-a10'. The paper's hardware claim (an inference-optimized NVIDIA A10) is unchanged; only the id string was wrong, and validate.py caught it. Recording it because a hardware_relevance entry that names a non-existent accelerator is precisely the kind of dangling reference that makes a record look hardware-grounded when it is not.",
+ "status": "verified",
+ "confidence": 0.85,
+ "sources": [
+  "w3p-marvin-2408-11743-arxiv",
+  "w3p-marvin-ppopp24-venue",
+  "qhw-src-marlin-repo"
+ ],
+ "id": "marlin-mixed-precision-autoregressive-inference",
+ "type": "paper",
+ "updated": "2026-10-04"
+}

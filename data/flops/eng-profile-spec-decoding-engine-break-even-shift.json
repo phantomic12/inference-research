@@ -1,0 +1,38 @@
+{
+  "id": "eng-profile-spec-decoding-engine-break-even-shift",
+  "type": "flop",
+  "name": "Engine choice moves the speculative-decoding break-even, because the engine sets which term dominates it",
+  "class": "speculative_verify",
+  "arithmetic_intensity": "THE BREAK-EVEN FORMULA IS THE SAME ONE IN fct-spec-decoding-cost-model-break-even - A_be = T_spec/(k*T_base) memory-bound, A_be = 1 + P_d/(B*P_t) compute-bound - and it is a property of the MODEL and the HARDWARE, not of the engine. What the engine changes is WHERE a given (k, B, P_d) configuration lands on that formula, by determining the overlap that makes T_spec a max() rather than a sum. The formula's serial form adds T_draft + T_verify; the engine's implementation choice decides whether the draft weight stream and the target weight stream are co-scheduled on one memory system (the tighter max() bound) or issued back-to-back (the sum). These are different answers by up to 2x on the whole speculative step, and no amount of reading the model config tells you which you have. THE DOMINANT FLOP CLASS FOR AN ENGINE'S TYPICAL SPECULATIVE WORKLOAD is therefore target-verify GEMM, not draft: the draft model P_d is typically 1-10% of P_t, so at the k positions verified the target does B*k rows of work while the draft does k rows of a much smaller model, and at memory-bound batch the DRAFT'S BYTES DOMINATE while the target's flops dominate. An engine that co-schedules hides the draft behind the target's weight stream and can win even at low acceptance; an engine that serialises cannot. This is the concrete sense in which the engine changes the break-even rather than the constant.",
+  "bound_by": "both",
+  "scales_with": [
+    "overlap_achieved between draft and target weight streams (serial sum vs bandwidth-shared max; an engine property, a measurement, not a derivation)",
+    "draft_k (A_be falls as 1/k memory-bound; nearly free in that regime)",
+    "acceptance_rate (the a in S = a*T_base/T_spec)",
+    "draft_model_size P_d (the term that serialisation cannot hide)",
+    "batch_size B (ABSENT from the memory-bound A_be, decisive in the compute-bound one)",
+    "num_method_families the engine implements (changes the draft cost per position, not the verify cost)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "workarounds": [
+    "Compute A_be for your own (B, k, P_d, P_t, hardware) before enabling speculation; if A_be lands near 1, the method is unavailable rather than merely slow",
+    "Measure overlap rather than assuming it - serial vs co-scheduled is worth up to 2x on the whole speculative step and is not visible in any config",
+    "Prefer tree/multi-head drafts only when the engine's verify path batches the tree into one target forward pass; a serialised per-node verify throws the tree's advantage away",
+    "Read an engine's speculative throughput claim as a claim about ITS overlap implementation, not about the method family"
+  ],
+  "notes": "Design consequence: 'speculative decoding has break-even acceptance rate A_be' is a property of the model-plus-hardware pair, and the widely-cited numbers for it are therefore portable; 'engine X gets Nx speedup with method Y' is a claim about one engine's overlap implementation and is NOT portable to another engine on the same hardware. The repo previously had the formula (fct-spec-decoding-cost-model-break-even) and the engine feature lists (thirteen methods in vLLM, six families in SGLang, eleven algorithms across three families in llama.cpp) but nothing joining them, so a reader comparing engines had no way to learn that method COUNT is the weakest of the differentiators and OVERLAP is the strongest. The sourced per-engine difference: SGLang is the only engine in this repo with a controlled within-engine A/B on speculative decoding (DSPARK on 8x RTX PRO 6000, prose decode 36.4-36.5 to 76.5-78.9 tok/s, structured 36.5 to 120.3-120.5 at block_size=2, acceptance 3.0 vs 1.0 tokens/step) - that A/B varies the METHOD at fixed engine, which bounds the method's contribution but says nothing about the overlap term, since it is held constant. HONEST NEGATIVE, stated because it is the load-bearing gap: NO engine in this repo publishes its speculative overlap implementation or an overlap_achieved number. The max() vs sum distinction above is therefore derived from the cost model in fct-spec-decoding-cost-model-break-even, which lists overlap_achieved as 'a measurement, not a derivation' - this record does not convert it into a measured value and asserts no per-engine overlap number. Engine records: [[engines/sglang]], [[engines/vllm]], [[engines/llama-cpp]], [[engines/niche-sequoia]]. Formula and A_be definitions: [[fct-spec-decoding-cost-model-break-even]]. The bandwidth trade at high batch: [[speculative-decoding-bandwidth-trade-at-batch]].",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-04",
+  "sources": [
+    "engine-sglang-github",
+    "engine-vllm-github",
+    "engine-llamacpp-github"
+  ]
+}

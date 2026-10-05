@@ -1,0 +1,32 @@
+{
+  "id": "w3m-triton-inference-server-nv-inference-first-response-histogram-ms",
+  "type": "metric_exposure",
+  "name": "Triton time-to-first-RESPONSE histogram",
+  "engine_id": "triton-inference-server",
+  "metric_name": "nv_inference_first_response_histogram_ms",
+  "metric_type": "histogram",
+  "unit": "milliseconds",
+  "exposure": "prometheus",
+  "endpoint": ":8002/metrics",
+  "histogram_buckets": [
+    100,
+    500,
+    2000,
+    5000
+  ],
+  "labels": [
+    "model",
+    "version"
+  ],
+  "enabled_by_default": false,
+  "phase_scoped": null,
+  "verified_negatively": null,
+  "notes": "Triton main, docs/user_guide/metrics.md, read 2026-10-04. On by default: 'By default, these metrics are available at http://localhost:8002/metrics', and the endpoint is pure pull - 'not pushed or published to any remote server'. tritonserver --allow-metrics=false turns the whole thing off. Labels are model and version, and crucially the LATENCY families are per MODEL, per request-update - not per-request observations as in vLLM/SGLang/TGI. OFF BY DEFAULT - requires --metrics-config. NOT ON BY DEFAULT: needs --metrics-config histogram_latencies=true. Default buckets are the four bounds visible in the docs' own sample output (100, 500, 2000, 5000 ms) and are overridable per family via model_metrics[].metric_control[] in config.pbtxt, with model reload required. This is NOT time to first token - see the verified-absence record for why that distinction matters.",
+  "status": "verified",
+  "confidence": 0.94,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-triton-metrics-doc",
+    "obs-triton-trace-doc"
+  ]
+}

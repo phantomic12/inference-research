@@ -1,0 +1,34 @@
+{
+  "id": "w3m-sglang-sglang-utilization",
+  "type": "metric_exposure",
+  "name": "SGLang utilization gauge - DOCUMENTED BUT PERMANENTLY ZERO ON MAIN",
+  "engine_id": "sglang",
+  "metric_name": "sglang:utilization",
+  "metric_type": "gauge",
+  "unit": "1",
+  "exposure": "prometheus",
+  "endpoint": ":30000/metrics",
+  "histogram_buckets": null,
+  "labels": [
+    "model_name",
+    "engine_type",
+    "tp_rank",
+    "pp_rank",
+    "moe_ep_rank"
+  ],
+  "enabled_by_default": false,
+  "phase_scoped": null,
+  "verified_negatively": null,
+  "notes": "Structurally dead on current main and this is a verified reading of the source, not an inference. metrics_reporter._calculate_utilization reads 'TODO: max_running_requests_under_SLO has no setter - sglang:utilization stuck at 0 (regressed #22713)' and only assigns when max_under_slo is not None and > 0, which it never is. Under --disaggregation-mode prefill the same method assigns -1 instead. So the series exists, is exported, and carries either 0 or -1. DO NOT build an autoscaling or saturation rule on it: on a prefill worker 'utilization above 1' would fire on the sentinel value -1 inverted, and elsewhere it never fires at all.",
+  "status": "verified",
+  "confidence": 0.94,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-sglang-metrics-collector",
+    "obs-sglang-production-metrics-doc",
+    "w3m-sglang-prometheus-middleware",
+    "w3m-sglang-observability-arg-defaults",
+    "w3m-sglang-metrics-reporter-dead-utilization",
+    "obs-sglang-utilization-regression"
+  ]
+}

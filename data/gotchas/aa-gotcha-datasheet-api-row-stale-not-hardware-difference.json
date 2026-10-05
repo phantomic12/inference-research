@@ -1,0 +1,33 @@
+{
+  "id": "aa-gotcha-datasheet-api-row-stale-not-hardware-difference",
+  "type": "gotcha",
+  "name": "Two parts of the same architecture shipping different 'Compute APIs' / 'Graphics APIs' rows on their datasheets is a vendor template-revision artifact, and reading it as a capability difference fabricates a hardware constraint",
+  "class": "hardware",
+  "affects": [
+    "nvidia-rtx-pro-6000-blackwell",
+    "nvidia-rtx-pro-4500-blackwell",
+    "nvidia-rtx-6000-ada",
+    "local-nvidia-rtx-5070"
+  ],
+  "concepts": [
+    "spec-table",
+    "documentation-artifact",
+    "driver-version",
+    "vulkan",
+    "cuda",
+    "silently-revised",
+    "ingest"
+  ],
+  "symptom": "An accelerator record asserts a software-support ceiling - 'CUDA 11.6', 'Vulkan 1.33' - for one part, while a sibling part of the SAME architecture in the same product family and the same shipping wave reports 'CUDA 12.8' / 'Vulkan 1.43'. The records look like they disagree about hardware capability, and the tempting fix is to mark them contested and keep both numbers. Both numbers are vendor-accurate for their own sheet, so the contest framing is wrong too. Confirmed instance: NVIDIA RTX PRO 6000 Blackwell Workstation Edition datasheet doc 3519208 (Mar25) prints 'CUDA 11.6' and 'Vulkan 1.33'; the RTX PRO 4500 Blackwell datasheet doc 5108623 (Apr26) prints 'CUDA 12.8' and 'Vulkan 1.43' for the same 'NVIDIA Blackwell' architecture with 5th Gen Tensor Cores and 4th Gen RT Cores in both. PROVENANCE OF THE STALE ROW, which is what makes this diagnosable rather than merely puzzling: the RTX 6000 ADA Generation datasheet (doc 2504660) prints the IDENTICAL 'Compute APIs CUDA 11.6, OpenCL 3.0, DirectCompute'. Two Ada-and-Blackwell-era sheets carrying the same string means the row was copied forward from an Ada-era template and not updated when the part changed generation - a documentation defect with a tell, not a silent hardware revision.",
+  "notes": "WHY IT MATTERS HERE SPECIFICALLY: a driver-version row is the one spec field a reader will actually act on, because it decides whether a kernel builds. Encoding it as a hardware attribute propagates a vendor copy-paste error into every downstream inference and capacity decision, and marks two correct records contested for a reason that is knowable and known. DIAGNOSIS, three steps, each cheap. (1) Does a sibling sheet with the same architecture print a different value? If yes, suspect the template before the hardware. (2) Find a sheet from the PREVIOUS generation and check whether it carries the same string - that identifies the copy-paste direction. (3) Only if both fail, treat the difference as real and set status contested. THE CONVERSE HAZARD IS WORSE AND EASY TO MISS: this class runs the other way too, newer sheet first. A datasheet published later is not thereby correct about an EARLIER part's capabilities, and a sheet can be revised silently in either direction with no version marker beyond its footer code. So 'prefer the newer source' - the rule AGENTS.md gives for numeric conflicts - is UNSAFE for this field class, because here the newer sheet is the one carrying the anomaly. For driver and API support levels, cite the vendor's driver release notes rather than any datasheet; the datasheet row is boilerplate vendors demonstrably forget to update. WHERE THE EVIDENCE LIVES: w3s-nv-rtx-pro-6000-and-4500-api-row-stale-in-6000-sheet holds the side-by-side exact-digit reading - note the sheets print 4.63 / 1.43 / 1.33, not the rounded 4.6 / 1.4 / 1.3 an earlier repo note recorded, and the trailing digit IS the finding. CORROBORATING METHOD: found by re-downloading every PDF source in the repo, extracting the text layer, and diffing each record's transcribed figures against the live document - see w3s-silent-revision-class-vendor-spec-and-pricing-pages. That sweep found no other instance of a true content revision across spec sheets, MLPerf tables and pricing pages, which is itself the useful negative: this class is RARE, it is not a general state of vendor documentation, and it is cheap to check for. Related: aa-gotcha-accelerator-flops-derived-by-doubling-not-read, the other way a spec table silently produces wrong rows.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "consumer-nvidia-rtx-pro-6000-blackwell-datasheet",
+    "consumer-nvidia-rtx-6000-ada-datasheet",
+    "vb-nv-rtx-pro-4500-blackwell-datasheet-spec-table",
+    "vb-nv-rtx-pro-6000-blackwell-datasheet-spec-table",
+    "w3s-nv-rtx-pro-6000-and-4500-api-row-stale-in-6000-sheet"
+  ]
+}

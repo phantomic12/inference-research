@@ -1,30 +1,30 @@
 {
- "id": "gguf-iq4-xs",
- "type": "quantization",
- "name": "GGUF IQ4_XS (non-linear 4-bit, 256-value super-block with 6-bit sub-block scales)",
- "scheme": "gguf-iq4-xs",
- "bits": "4.4597 measured avg (llama.cpp quantize README, Llama-3.1-8B); official tool string '4.25 bpw non-linear quantization'. block_iq4_xs = { ggml_half d; uint16_t scales_h; uint8_t scales_l[QK_K/64]; uint8_t qs[QK_K/2]; } = 2 + 2 + 4 + 128 = 136 bytes / 256 = 4.25 bpw",
- "weight_group_size": 32,
- "activation_scheme": null,
- "native_support": [],
- "emulated_support": [
-  "nvidia-rtx-4090",
-  "intel-arc-b580",
-  "intel-arc-pro-b60"
- ],
- "kernels": [
-  "ggml dequantize_row_iq4_xs + get_rows",
-  "ggml-cuda dequantize_mul_mat_vec / convert_mul_mat"
- ],
- "quality_delta": "Official tool string '4.25 bpw non-linear quantization' (qlab2-quantize-options-table); no controlled fp16 perplexity delta published in any primary source found. Null + note.",
- "notes": "CORRECTED 2026-10-04: was 32 (correct) - now with a kernel basis. dequantize_row_iq4_xs applies one 6-bit scale per 32 values over ib < QK_K/32, reconstructed as `ls = (scales_l[ib/2] >> 4*(ib%2) & 0xf) | ((scales_h >> 2*ib) & 3) << 4`. The two-level packing (low 4 bits in scales_l, high 2 bits in the single scales_h uint16) is why it reaches 4.25 bpw rather than the 4.5 a flat fp16-per-32 layout would cost. SCHEMA MISMATCH: there is no ggml/iq* value in the quantization scheme enum, so this record uses the closest existing value 'gguf-q4_k_m' (or 'gguf-q2_k') and puts the true type in `name` and `bits`. Requested enum additions are listed in the task report. Weight-only by construction: activations are promoted to q8_K (an intermediate dot-product format, not a storage format) and the matmul runs at fp16/bf16, so native_support is deliberately EMPTY and the whole accelerator ecosystem is emulated_support. No accelerator has an i-quant or k-quant path in silicon. COMMON TO ALL IQ-QUANTS, verified from ggml/src/ggml-common.h: they use the QK_K = 256 super-block like the K-quants, but instead of a UNIFORM integer grid they quantize to indices into a per-block CODEBOOK of 256 learned non-uniform 4-bit values (the 'i' in i-quant is for the codebook grid / i-quant from the ik_llama.cpp lineage). The index lookup is table-driven at dequant time, which is why they compress better than K-quants at the same nominal bits and why they dequantize more slowly - the dot product needs a gather from the codebook. This is a real throughput trade, not a free win. BACKEND SITUATION, verified: the CUDA library shipped in llamafile releases is size-optimized and OMITS the IQ-quant kernels (IQ1_*, IQ2_*, IQ3_*, IQ4_*); offloading an IQ-quantized model to an NVIDIA GPU therefore leaves those layers on the CPU with correct output but no GPU acceleration (qlab2-llamafile-support-docs). The Metal and ROCm builds are NOT size-optimized and include full IQ-quant GPU support - so an RX 7900 XTX on ROCm/HIP is in a materially better IQ position than an RTX 4090 on a stock llamafile build. Vulkan has no dedicated IQ-quant path. Upstream llama.cpp has per-type dequant kernels; ik_llama.cpp additionally ships the Trellis family (IQ1_KT/IQ2_KT/IQ3_KT/IQ4_KT, integer-base trellis, CUDA PR 113 / Metal PR 475 / NEON PR 471 / CPU PR 441) and _R4/_R16 row-interleaved variants. IQ4_XS is the one i-quant that is structurally a K-quant: it uses the full QK_K = 256 super-block, uniform 4-bit codebook indices in qs[QK_K/2] (128 bytes), and a TWO-LEVEL scale - a single fp16 d plus a packed 6-bit scale per 32-element sub-block stored as scales_l[QK_K/64] (4 bytes, low bits) and scales_h (uint16_t, the high bits of all 8 sub-blocks at once). That packing is why it reaches 4.25 bpw rather than the 4.5 bpw that a flat fp16-per-32-scale layout would cost, and it is the closest analogue in the i-quant family to the q4_K design. MIXTURE: base iq4_xs, promoted to Q5_K in the first n_layer/8 ffn_down layers only when no imatrix is present (same !has_imatrix guard as IQ4_NL), attn_v -> Q5_K when n_gqa >= 4, Q8_0 on 8-expert models, and Q5_K on attn_output for Mixtral. On the 70B path attn_v q3_K/q4_K -> Q5_K. The official string says 4.25 bpw but the measured whole-model figure is 4.4597 - the gap is the promoted tensors plus embeddings/output that stay wider. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'gguf-q4_k_m' (a proxy recorded while the enum lacked a legal value) and is now 'gguf-iq4-xs'. ",
- "status": "verified",
- "confidence": 0.8,
- "updated": "2026-10-04",
- "sources": [
-  "qlab2-ggml-common-header",
-  "qlab2-quantize-options-table",
-  "qlab2-llamafile-support-docs",
-  "qzgw-ggml-quants-kernel"
- ]
+  "id": "gguf-iq4-xs",
+  "type": "quantization",
+  "name": "GGUF IQ4_XS (non-linear 4-bit, 256-value super-block with 6-bit sub-block scales)",
+  "scheme": "gguf-iq4-xs",
+  "bits": "4.4597 measured avg (llama.cpp quantize README, Llama-3.1-8B); official tool string '4.25 bpw non-linear quantization'. block_iq4_xs = { ggml_half d; uint16_t scales_h; uint8_t scales_l[QK_K/64]; uint8_t qs[QK_K/2]; } = 2 + 2 + 4 + 128 = 136 bytes / 256 = 4.25 bpw",
+  "weight_group_size": 32,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-rtx-4090",
+    "intel-arc-b580",
+    "intel-arc-pro-b60"
+  ],
+  "kernels": [
+    "ggml dequantize_row_iq4_xs + get_rows",
+    "ggml-cuda dequantize_mul_mat_vec / convert_mul_mat"
+  ],
+  "quality_delta": "Official tool string '4.25 bpw non-linear quantization' (qlab2-quantize-options-table); no controlled fp16 perplexity delta published in any primary source found. Null + note.",
+  "notes": "CORRECTED 2026-10-04: was 32 (correct) - now with a kernel basis. dequantize_row_iq4_xs applies one 6-bit scale per 32 values over ib < QK_K/32, reconstructed as `ls = (scales_l[ib/2] >> 4*(ib%2) & 0xf) | ((scales_h >> 2*ib) & 3) << 4`. The two-level packing (low 4 bits in scales_l, high 2 bits in the single scales_h uint16) is why it reaches 4.25 bpw rather than the 4.5 a flat fp16-per-32 layout would cost. SCHEMA MISMATCH: there is no ggml/iq* value in the quantization scheme enum, so this record uses the closest existing value 'gguf-q4_k_m' (or 'gguf-q2_k') and puts the true type in `name` and `bits`. Requested enum additions are listed in the task report. Weight-only by construction: activations are promoted to q8_K (an intermediate dot-product format, not a storage format) and the matmul runs at fp16/bf16, so native_support is deliberately EMPTY and the whole accelerator ecosystem is emulated_support. No accelerator has an i-quant or k-quant path in silicon. COMMON TO ALL IQ-QUANTS, verified from ggml/src/ggml-common.h: they use the QK_K = 256 super-block like the K-quants, but instead of a UNIFORM integer grid they quantize to indices into a per-block CODEBOOK of 256 learned non-uniform 4-bit values (the 'i' in i-quant is for the codebook grid / i-quant from the ik_llama.cpp lineage). The index lookup is table-driven at dequant time, which is why they compress better than K-quants at the same nominal bits and why they dequantize more slowly - the dot product needs a gather from the codebook. This is a real throughput trade, not a free win. BACKEND SITUATION, verified: the CUDA library shipped in llamafile releases is size-optimized and OMITS the IQ-quant kernels (IQ1_*, IQ2_*, IQ3_*, IQ4_*); offloading an IQ-quantized model to an NVIDIA GPU therefore leaves those layers on the CPU with correct output but no GPU acceleration (qlab2-llamafile-support-docs). The Metal and ROCm builds are NOT size-optimized and include full IQ-quant GPU support - so an RX 7900 XTX on ROCm/HIP is in a materially better IQ position than an RTX 4090 on a stock llamafile build. Vulkan has no dedicated IQ-quant path. Upstream llama.cpp has per-type dequant kernels; ik_llama.cpp additionally ships the Trellis family (IQ1_KT/IQ2_KT/IQ3_KT/IQ4_KT, integer-base trellis, CUDA PR 113 / Metal PR 475 / NEON PR 471 / CPU PR 441) and _R4/_R16 row-interleaved variants. IQ4_XS is the one i-quant that is structurally a K-quant: it uses the full QK_K = 256 super-block, uniform 4-bit codebook indices in qs[QK_K/2] (128 bytes), and a TWO-LEVEL scale - a single fp16 d plus a packed 6-bit scale per 32-element sub-block stored as scales_l[QK_K/64] (4 bytes, low bits) and scales_h (uint16_t, the high bits of all 8 sub-blocks at once). That packing is why it reaches 4.25 bpw rather than the 4.5 bpw that a flat fp16-per-32-scale layout would cost, and it is the closest analogue in the i-quant family to the q4_K design. MIXTURE: base iq4_xs, promoted to Q5_K in the first n_layer/8 ffn_down layers only when no imatrix is present (same !has_imatrix guard as IQ4_NL), attn_v -> Q5_K when n_gqa >= 4, Q8_0 on 8-expert models, and Q5_K on attn_output for Mixtral. On the 70B path attn_v q3_K/q4_K -> Q5_K. The official string says 4.25 bpw but the measured whole-model figure is 4.4597 - the gap is the promoted tensors plus embeddings/output that stay wider. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'gguf-q4_k_m' (a proxy recorded while the enum lacked a legal value) and is now 'gguf-iq4-xs'. \nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: LLAMA.CPP INTEGER STORAGE TYPE, SO STRUCTURALLY ABSENT. Every GGUF type here is a packed integer block format read by a dequant kernel (dequantize_row_*) and then executed as FP16; ggml publishes no int4 or sub-8-bit tensor-core path that consumes these blocks directly. The llama.cpp CUDA and Vulkan backends both run these formats by dequantizing. Consequence for a reader: nothing further to verify - and note the contrast with nvfp4/mxfp4/mxfp8 in this repo, which ARE hardware formats on Blackwell and carry populated native_support lists, so '4-bit' alone does not predict this field. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "qlab2-ggml-common-header",
+    "qlab2-quantize-options-table",
+    "qlab2-llamafile-support-docs",
+    "qzgw-ggml-quants-kernel"
+  ]
 }

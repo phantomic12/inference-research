@@ -1,28 +1,28 @@
 {
- "id": "gguf-iq2-xs",
- "type": "quantization",
- "name": "GGUF IQ2_XS (2-bit non-linear, 256 super-block with a 32-element sub-block scale plane)",
- "scheme": "gguf-iq2-xs",
- "bits": "2.3125 bpw (ggml header: '2.3125 bpw quants')",
- "weight_group_size": 32,
- "activation_scheme": "none - weight-only; activations promoted to q8_K for the dot product, matmul at fp16/bf16",
- "native_support": [],
- "emulated_support": [
-  "nvidia-rtx-4090",
-  "nvidia-rtx-5090",
-  "amd-instinct-mi300x"
- ],
- "kernels": [
-  "ggml dequantize_row_iq2_xs"
- ],
- "quality_delta": null,
- "notes": "ADDED FOR COVERAGE: the enum already had a legal value 'gguf-iq2-xs' that NO record used, while its siblings iq2_xxs, iq2_s and iq2_m all had records. The enum was widened and the backfill missed this one - the exact 'added the value, recognised by 0 records' failure mode this repo's history warns about.\n\nBLOCK LAYOUT, verified from ggml/src/ggml-common.h: `typedef struct { ggml_half d; uint16_t qs[QK_K/8]; uint8_t scales[QK_K/32]; } block_iq2_xs;` with `static_assert(sizeof(block_iq2_xs) == sizeof(ggml_half) + QK_K/8*sizeof(uint16_t) + QK_K/32)`. That is 2 + 64 + 8 = 74 bytes per 256 values, and the header comment states '2.3125 bpw quants'. It sits between iq2_xxs (2.0625, no sub-block scale plane) and iq2_s (2.5625, four-bit sub-block scales) in both size and quality - iq2_xs has the LEAST sub-block scale information of the three, one 8-bit scale per 32 values with no nibble packing.\n\nGROUP SIZE 32 FROM THE KERNEL: dequantize_row_iq2_xs iterates `for (ib32 = 0; ib32 < QK_K/32; ++ib32)` applying TWO sub-scales per 32 values (`db[0]` from the low nibble, `db[1]` from the high nibble, each `d * (0.5 + nibble) * 0.25`), i.e. one scales byte per 32 values and 8 sub-blocks per super-block. Note the kernel reads the codebook index as `x[i].qs[4*ib32 + l] & 511` - nine index bits - with the sign carried separately in bit 9 of the same word via `ksigns_iq2xs[... >> 9]`, which is why qs is uint16 rather than uint8.\n\nWHERE IT SITS IN THE PROMOTION LADDER, from src/llama-quant.cpp: IQ2_XS is grouped with IQ2_XXS, IQ1_S and IQ1_M for the token-embedding branch, where the embedding is promoted to Q2_K; and in the attn_v branch, IQ2_XS/IQ2_XXS/IQ1_S/IQ1_M promote to Q4_K when n_gqa >= 4 or n_expert >= 4, else to Q2_K - whereas IQ2_S and IQ2_M promote to IQ3_S in the same position. The output tensor for all of these ftypes is promoted to Q5_K.\n\nBACKEND CAVEAT (identical across the i-quant family, recorded rather than repeated per record): the size-optimized CUDA library in llamafile releases OMITS the IQ-quant kernels, so offloading an IQ-quantized model to an NVIDIA GPU leaves those layers on the CPU with correct output but no acceleration; the Metal and ROCm builds are not size-optimized and do include full IQ-quant GPU support; Vulkan has no dedicated IQ path. ik_llama.cpp additionally ships the Trellis family (IQ1_KT/IQ2_KT/IQ3_KT/IQ4_KT), a different lineage, deliberately not conflated here.",
- "status": "verified",
- "confidence": 0.85,
- "updated": "2026-10-04",
- "sources": [
-  "qlab2-ggml-common-header",
-  "qzgw-ggml-quants-kernel",
-  "qzgw-llama-quant-cpp"
- ]
+  "id": "gguf-iq2-xs",
+  "type": "quantization",
+  "name": "GGUF IQ2_XS (2-bit non-linear, 256 super-block with a 32-element sub-block scale plane)",
+  "scheme": "gguf-iq2-xs",
+  "bits": "2.3125 bpw (ggml header: '2.3125 bpw quants')",
+  "weight_group_size": 32,
+  "activation_scheme": "none - weight-only; activations promoted to q8_K for the dot product, matmul at fp16/bf16",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-rtx-4090",
+    "nvidia-rtx-5090",
+    "amd-instinct-mi300x"
+  ],
+  "kernels": [
+    "ggml dequantize_row_iq2_xs"
+  ],
+  "quality_delta": null,
+  "notes": "ADDED FOR COVERAGE: the enum already had a legal value 'gguf-iq2-xs' that NO record used, while its siblings iq2_xxs, iq2_s and iq2_m all had records. The enum was widened and the backfill missed this one - the exact 'added the value, recognised by 0 records' failure mode this repo's history warns about.\n\nBLOCK LAYOUT, verified from ggml/src/ggml-common.h: `typedef struct { ggml_half d; uint16_t qs[QK_K/8]; uint8_t scales[QK_K/32]; } block_iq2_xs;` with `static_assert(sizeof(block_iq2_xs) == sizeof(ggml_half) + QK_K/8*sizeof(uint16_t) + QK_K/32)`. That is 2 + 64 + 8 = 74 bytes per 256 values, and the header comment states '2.3125 bpw quants'. It sits between iq2_xxs (2.0625, no sub-block scale plane) and iq2_s (2.5625, four-bit sub-block scales) in both size and quality - iq2_xs has the LEAST sub-block scale information of the three, one 8-bit scale per 32 values with no nibble packing.\n\nGROUP SIZE 32 FROM THE KERNEL: dequantize_row_iq2_xs iterates `for (ib32 = 0; ib32 < QK_K/32; ++ib32)` applying TWO sub-scales per 32 values (`db[0]` from the low nibble, `db[1]` from the high nibble, each `d * (0.5 + nibble) * 0.25`), i.e. one scales byte per 32 values and 8 sub-blocks per super-block. Note the kernel reads the codebook index as `x[i].qs[4*ib32 + l] & 511` - nine index bits - with the sign carried separately in bit 9 of the same word via `ksigns_iq2xs[... >> 9]`, which is why qs is uint16 rather than uint8.\n\nWHERE IT SITS IN THE PROMOTION LADDER, from src/llama-quant.cpp: IQ2_XS is grouped with IQ2_XXS, IQ1_S and IQ1_M for the token-embedding branch, where the embedding is promoted to Q2_K; and in the attn_v branch, IQ2_XS/IQ2_XXS/IQ1_S/IQ1_M promote to Q4_K when n_gqa >= 4 or n_expert >= 4, else to Q2_K - whereas IQ2_S and IQ2_M promote to IQ3_S in the same position. The output tensor for all of these ftypes is promoted to Q5_K.\n\nBACKEND CAVEAT (identical across the i-quant family, recorded rather than repeated per record): the size-optimized CUDA library in llamafile releases OMITS the IQ-quant kernels, so offloading an IQ-quantized model to an NVIDIA GPU leaves those layers on the CPU with correct output but no acceleration; the Metal and ROCm builds are not size-optimized and do include full IQ-quant GPU support; Vulkan has no dedicated IQ path. ik_llama.cpp additionally ships the Trellis family (IQ1_KT/IQ2_KT/IQ3_KT/IQ4_KT), a different lineage, deliberately not conflated here.\nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: LLAMA.CPP INTEGER STORAGE TYPE, SO STRUCTURALLY ABSENT. Every GGUF type here is a packed integer block format read by a dequant kernel (dequantize_row_*) and then executed as FP16; ggml publishes no int4 or sub-8-bit tensor-core path that consumes these blocks directly. The llama.cpp CUDA and Vulkan backends both run these formats by dequantizing. Consequence for a reader: nothing further to verify - and note the contrast with nvfp4/mxfp4/mxfp8 in this repo, which ARE hardware formats on Blackwell and carry populated native_support lists, so '4-bit' alone does not predict this field. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "qlab2-ggml-common-header",
+    "qzgw-ggml-quants-kernel",
+    "qzgw-llama-quant-cpp"
+  ]
 }

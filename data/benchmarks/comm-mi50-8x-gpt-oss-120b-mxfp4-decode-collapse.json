@@ -6,7 +6,10 @@
   "accelerator_ids": [
     "amd-radeon-instinct-mi50x"
   ],
-  "interconnect_ids": [],
+  "interconnect_ids": [
+    "amd-infinity-fabric-link",
+    "pcie-gen4"
+  ],
   "model": "gpt-oss-120b MXFP4 MoE (59.02 GiB)",
   "format_id": null,
   "metric": "decode_tok_s",
@@ -15,7 +18,7 @@
   "methodology": "Same command and session as comm-mi50-2x-gpt-oss-120b-mxfp4-tensor-split-decode (-p 16384 -n 8192 -b 2048 -ub 1024 -ngl 99 -mmp 0 -dio 1 -fa 1 -o md -r 3 -sm tensor), scaled by HIP_VISIBLE_DEVICES. Series: 2 GPU tg8192 71.22 +/- 2.78 (pp16384 882.18), 4 GPU tg8192 33.89 +/- 1.53 (pp16384 1079.23), 6 GPU tg8192 21.32 +/- 0.29 (pp16384 1140.89), 8 GPU tg8192 14.32 +/- 0.36 (pp16384 1006.68). MI50 has no GPU-to-GPU interconnect; these are PCIe-attached. Clock/power state not stated by the reporter.",
   "measured_by": "third_party",
   "reproducible": null,
-  "notes": "COMMUNITY-REPORTED. This is the most decision-relevant number in this slice for anyone planning an MI50 cluster, and it runs against the intuition that more cards means more throughput. Prefill rises 882 -> 1079 -> 1141 then FALLS to 1007 at 8 cards while decode falls monotonically and roughly by half per doubling - the signature of a PCIe all-reduce sitting in the critical path of a memory-bound decode step. Because all four points come from one session on one machine, the shape of the curve is much more trustworthy than any single point. Pair with the fork maintainer's counter-measure in comm-gfx906-tensor-split-garbage-and-pcie-degradation (-tps N, PLE shard), which recovers most of the loss at 8 GPUs (TG 26.9 at -tps 4 vs 20.9 for -sm layer).",
+  "notes": "COMMUNITY-REPORTED. This is the most decision-relevant number in this slice for anyone planning an MI50 cluster, and it runs against the intuition that more cards means more throughput. Prefill rises 882 -> 1079 -> 1141 then FALLS to 1007 at 8 cards while decode falls monotonically and roughly by half per doubling - the signature of a PCIe all-reduce sitting in the critical path of a memory-bound decode step. Because all four points come from one session on one machine, the shape of the curve is much more trustworthy than any single point. Pair with the fork maintainer's counter-measure in comm-gfx906-tensor-split-garbage-and-pcie-degradation (-tps N, PLE shard), which recovers most of the loss at 8 GPUs (TG 26.9 at -tps 4 vs 20.9 for -sm layer).\nINTERCONNECT IDS FILLED 2026-10-04: interconnect_ids was empty; it now carries the interconnect list of the accelerator record(s) this run names (amd-radeon-instinct-mi50x). BASIS AND ITS LIMITS, stated because this field is easy to over-read: it records the FABRIC PRESENT IN THE HARDWARE CONFIGURATION, which is how every previously-filled record in this repo reads it, not traffic measured over that fabric. The clearest evidence for that convention is that single-GPU records already carry a scale-up fabric here - trtllm-llama31-8b-fp8-h100-1k1k-tps is 1x H100 at TP=1 and carries ['nvlink-4','nvswitch-4'] - and that host-link-only records carry a PCIe value (arc-pro-b70-mlperf-v6-1-llama2-70b-offline-tokens carries ['pcie-gen5'] on 4x Arc Pro B70, which has no GPU-to-GPU fabric at all). So a value here does NOT mean the interconnect was exercised by this particular workload, and must not be cited as evidence that it was. Whether the run actually crossed that fabric is a question about TP/EP/PP size, which this repo records in methodology, not here. NOT INVENTED: nothing was filled where the accelerator record itself carries no interconnect, so this field stays empty for any part whose own record has none - which is the honest state for a single-socket Apple sOC and for parts whose vendor publishes no host interface.",
   "status": "draft",
   "confidence": 0.55,
   "updated": "2026-10-04",

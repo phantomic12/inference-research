@@ -1,0 +1,39 @@
+{
+  "id": "eng-profile-moe-and-ssm-engine-split",
+  "type": "flop",
+  "name": "Engines split the FLOP map differently for MoE and SSM: routing, expert-parallel dispatch, and the recurrent-scan mismatch",
+  "class": "moe_routing",
+  "arithmetic_intensity": "FOR MoE, THE ENGINE DECIDES WHETHER THE ROUTING TERMS ARE A ROUNDING ERROR OR A DOMINANT CLASS, and the mechanism is specific. A dense model has no routing cost at all. An MoE model has top-k selection over E experts plus the all-to-all dispatch and combine that moves each token's hidden vector to its k chosen experts and back. On ONE device with experts resident in HBM, routing is negligible against the expert GEMMs and the dense model default holds. Once an engine shards experts ACROSS devices (expert parallelism), every dispatched token crosses the interconnect twice per MoE layer - out and back - and the routing terms stop being free. The engine-specific question is therefore not 'is this model MoE' but 'does this engine shard experts across ranks, and with what dispatch primitive'. The arithmetic that matters for a capacity plan: expert GEMM flops scale with tokens_routed = B*S*k, not with B*S, so per-token expert flops are k times a dense layer's, while ROUTING flops (the top-k logits, a single E-wide matmul per token) stay at B*S*E and do NOT scale with k. An engine that fuses routing into the expert GEMM epilogue removes the separate launch and the materialised router output; an engine that does not pays it as a distinct kernel per layer. THE SSM CASE INVERTS AGAIN, for a different reason. A recurrent/linear-attention layer's state update is a fixed-size state written once per token - O(1) in context length, with zero flops in the KV write that dominates the attention ledger - but the SEQUENTIAL SCAN that produces it is a recurrence, and recurrences do not parallelise the way the default model assumes. The repo's own flop record for this (ssm-sequential-scan-tensor-core-mismatch) is the statement of the problem. So for an SSM the dominant FLOP class is NOT decode_gemm and NOT decode_attention in the usual sense; it is the state-update and scan term, whose cost is set by how the engine parallelises the recurrence (chunked scan vs sequential, and whether it reaches a tensor core at all). The hybrid case compounds both: a model with N attention layers and M linear layers has TWO different per-token cost structures and TWO different dominant classes, and the ratio N:M is a model property while the scan parallelisation is an engine property.",
+  "bound_by": "both",
+  "scales_with": [
+    "num_experts E and experts_per_token k (expert GEMM flops = B*S*k times a dense layer; routing flops = B*S*E and do NOT scale with k - the two terms have different exponents)",
+    "expert_parallel_degree (the dispatch and combine all-to-all is zero at EP=1 and grows with EP; this is the engine's choice, not the model's)",
+    "dispatch_primitive (a fused epilogue-routed grouped GEMM vs separate dispatch + GEMM + combine kernels)",
+    "num_attention_layers vs num_linear_attention_layers in a hybrid (two different per-token cost structures and two different dominant FLOP classes in one model)",
+    "scan_parallelisation strategy (chunked vs sequential recurrence; determines whether an SSM layer reaches a tensor core at all)",
+    "state_size (the SSM state is fixed per token, which is why SSM KV cost is O(1) in context and not O(L))"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-b200",
+    "google-tpu-v4",
+    "aws-trainium2"
+  ],
+  "workarounds": [
+    "Check the engine's expert-parallel degree before sizing interconnect - at EP=1 the routing terms are negligible and at EP>1 they are not, for the same model",
+    "Prefer an engine with a fused routed/grouped MoE GEMM (one kernel per layer) over one that issues dispatch, GEMM and combine separately",
+    "For an SSM model, validate the scan kernel reaches the tensor cores; a sequential fallback makes the layer cost scale with sequence length in the worst way",
+    "For a hybrid, budget the two layer types separately - a single tok/s-derived number for a hybrid model is meaningless because the two layer types have different dominant classes"
+  ],
+  "notes": "Design consequence, and the specific gap: the repo had a strong MoE FLOP map (moe-routing, moe-experts, moe-inference-serving-level, deepgemm-grouped-masked-moe-gemm, deepep-expert-parallel-dispatch-combine, tilelang-tile-dsl-moe-routing-quant, sched-expert-parallelism) and a strong SSM map (ssm-decode-cost-o1-vs-attention-on, ssm-recurrent-state-update, ssm-sequential-scan-tensor-core-mismatch, attn-sliding-window-ssm-fixed-state-cost, hybrid-attn-ssm-kv-cache-sizing) - but every one of them was written from the MODEL side. What was missing is that the ENGINE decides the k-exponent question: whether the routing terms are a rounding error against expert GEMMs is a function of the engine's expert-parallel degree and dispatch primitive, and at EP=1 it is emphatically a rounding error. The repo also had NO record joining MoE and SSM as the two halves of the same engine-dependent-split problem, though they are the same phenomenon: in both cases the model determines WHICH terms exist and the engine determines their MAGNITUDE. THE MODEL GEOMETRY CONSEQUENCE, which is a genuine serviceability limit rather than a performance note: the model records show how far the attention KV formula departs from L*H*D*2*2 once the model is not plain GQA. DeepSeek-V3 stores 70,272 bytes/token against a naive 3,997,696 - a 57x compression from MLA's kv_lora_rank 512 latent, which is why a serving plan that sizes KV from num_layers x num_kv_heads x head_dim over-provisions that model by ~57x. Hybrid-attention models land between: granite-4-0-h-tiny is 8,192 bytes/token because only 4 of 40 layers carry GQA KV while 36 are Mamba-2 with fixed state, and that ratio (attn layers / total layers) is the number a planner needs and the naive formula cannot give. THE HONEST NEGATIVE: no per-engine per-layer FLOP measurement was performed in this pass. Every figure above is a formula or a sourced architectural statement; none is a measured per-engine FLOP count, and none is asserted as one. Engine records for the same split: [[engines/tensorrt-llm]] (TP/PP/DP/EP/CP plus Wide-EP with an expert-parallel load balancer), [[engines/vllm]], [[engines/sglang]]. Existing flop records: [[moe-routing]], [[moe-experts]], [[deepep-expert-parallel-dispatch-combine]], [[deepgemm-grouped-masked-moe-gemm]], [[ssm-sequential-scan-tensor-core-mismatch]], [[ssm-decode-cost-o1-vs-attention-on]], [[hybrid-attn-ssm-kv-cache-sizing]], [[mla-latent-attention]].",
+  "status": "draft",
+  "confidence": 0.68,
+  "updated": "2026-10-04",
+  "sources": [
+    "engine-trtllm-github",
+    "engine-vllm-github",
+    "engine-sglang-github"
+  ]
+}

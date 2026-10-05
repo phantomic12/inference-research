@@ -1,0 +1,28 @@
+{
+  "id": "w3m-text-generation-inference-tgi-request-failure",
+  "type": "metric_exposure",
+  "name": "TGI failed-request counter by error class",
+  "engine_id": "text-generation-inference",
+  "metric_name": "tgi_request_failure",
+  "metric_type": "counter",
+  "unit": "requests",
+  "exposure": "prometheus",
+  "endpoint": ":9000/metrics",
+  "histogram_buckets": null,
+  "labels": [
+    "err"
+  ],
+  "enabled_by_default": true,
+  "phase_scoped": null,
+  "verified_negatively": null,
+  "notes": "TGI main, router/src/server.rs plus backends/v3/src/{backend,queue,lib}.rs, read 2026-10-04. On by default: the Prometheus recorder is built unconditionally with PrometheusBuilder and an HTTP listener on prometheus_port, default 9000, so nothing has to be opted into. Label keys are method (prefill|decode) on the batch families, err on tgi_request_failure, and reason on tgi_batch_concat - there are no model or engine labels, so every series is fleet-wide.  err in {validation, incomplete, dropped}. This is also the closest TGI comes to a preemption signal - a dropped request is an admission failure, and the recompute cost is never counted.",
+  "status": "verified",
+  "confidence": 0.94,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-tgi-metrics-doc",
+    "obs-tgi-router-server-rs",
+    "w3m-tgi-v3-backend-metrics",
+    "w3m-tgi-prometheus-buckets-and-port"
+  ]
+}

@@ -1,35 +1,38 @@
 {
-  "id": "where-does-the-energy-go-blackwell-profiling",
-  "type": "paper",
-  "name": "Where Does the Energy Go? Profiling LLM Agent Inference on Blackwell GPUs",
-  "arxiv_id": "2609.29707",
-  "venue": "arxiv-preprint",
-  "year": 2026,
-  "category": "serving-systems",
-  "authors": [
-    "Qi Luo",
-    "Kunlin Li",
-    "Ziwen Wang",
-    "Dongsheng Wang",
-    "Yun Chen"
-  ],
-  "affiliations": [],
-  "problem": "How LLM energy is distributed across hardware components and workload phases in agentic inference is poorly understood, because measuring it requires simultaneous visibility into component-level power AND phase-level execution.",
-  "mechanism": "Full-stack energy profiling combining NVML GPU counters, Intel RAPL CPU/DRAM counters and IPMI system-level sensors simultaneously, profiled over three representative workloads with Qwen3.8-27B, with thinking-enabled and thinking-disabled variants compared for mathematical reasoning.",
-  "hardware_relevance": [
-    "nvidia-rtx-pro-6000-blackwell",
-    "nvidia-b200",
-    "nvidia-b300"
-  ],
-  "speedup_reported": "Not a speedup paper - the load-bearing findings are measurement-based. GPU-only telemetry misses 41-45% of system energy across all three workloads, with non-GPU components accounting for the remainder. The sequential agent workload consumes 63x more system energy per output token than saturated serving, reflecting absence of batching, context growth across turns and tool-induced idle periods. Extended thinking generates 21-75% more tokens per problem while per-token energy differs by LESS THAN 1% between modes within each dataset - so the extra energy is driven by output volume, not by a change in per-token efficiency. Continuous batching improves system-level energy efficiency by 3.2x from 1 to 16 requests per second as GPU power plateaus while throughput keeps increasing with batching depth. For the memory-bandwidth-bound reasoning workload, throughput is UNCHANGED under per-GPU power caps of 400-600 W but drops sharply at 300 W.",
-  "adoption": "research-only",
-  "code_url": null,
-  "open_weights": null,
-  "notes": "THE DISTINCTIVE CONTRIBUTION IN THIS SLICE IS THE 41-45% GAP AND THE MEASUREMENT METHODOLOGY THAT PRODUCES IT. A single-platform measurement paper, so it should not be over-read, but the methodological claim is the transferable part: NVML alone is not a system energy measurement, and any cost-per-token model derived from GPU board power is understating by roughly half. The 400-600 W flat band plus the sharp 300 W cliff is the most immediately actionable free lunch in the whole power slice - a wide cap range that costs nothing in throughput for memory-bandwidth-bound decode. The 'less than 1% per-token difference between thinking-enabled and thinking-disabled' result is the useful corrective to intuition: extended thinking does not make each token more expensive, it just produces more of them. The 63x agentic figure is the under-batching trap that breaks naive cost-per-token arithmetic on agentic traffic. Distinctive angle: this is component-level and phase-level power MEASUREMENT on datacenter parts, which is the datacentre-systems measurement line, not the algorithmic-efficiency or carbon-accounting line. Measured on 2x RTX PRO 6000 Blackwell - workstation-class parts, not rack-scale - so percentages transfer more safely than absolute watts. Read alongside gotchas/short-benchmark-not-representative-of-sustained-serving and gotchas/idle-and-underbatched-fleet-can-cost-more-than-busy-fleet.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "pwr2-arxiv-where-does-energy-go"
-  ]
+ "id": "where-does-the-energy-go-blackwell-profiling",
+ "type": "paper",
+ "name": "Where Does the Energy Go? Profiling LLM Agent Inference on Blackwell GPUs",
+ "arxiv_id": "2609.29707",
+ "venue": "arxiv-preprint",
+ "year": 2026,
+ "category": "serving-systems",
+ "authors": [
+  "Qi Luo",
+  "Kunlin Li",
+  "Ziwen Wang",
+  "Dongsheng Wang",
+  "Yun Chen"
+ ],
+ "affiliations": [
+  "University of Hong Kong"
+ ],
+ "problem": "How LLM energy is distributed across hardware components and workload phases in agentic inference is poorly understood, because measuring it requires simultaneous visibility into component-level power AND phase-level execution.",
+ "mechanism": "Full-stack energy profiling combining NVML GPU counters, Intel RAPL CPU/DRAM counters and IPMI system-level sensors simultaneously, profiled over three representative workloads with Qwen3.8-27B, with thinking-enabled and thinking-disabled variants compared for mathematical reasoning.",
+ "hardware_relevance": [
+  "nvidia-rtx-pro-6000-blackwell",
+  "nvidia-b200",
+  "nvidia-b300"
+ ],
+ "speedup_reported": "Not a speedup paper - the load-bearing findings are measurement-based. GPU-only telemetry misses 41-45% of system energy across all three workloads, with non-GPU components accounting for the remainder. The sequential agent workload consumes 63x more system energy per output token than saturated serving, reflecting absence of batching, context growth across turns and tool-induced idle periods. Extended thinking generates 21-75% more tokens per problem while per-token energy differs by LESS THAN 1% between modes within each dataset - so the extra energy is driven by output volume, not by a change in per-token efficiency. Continuous batching improves system-level energy efficiency by 3.2x from 1 to 16 requests per second as GPU power plateaus while throughput keeps increasing with batching depth. For the memory-bandwidth-bound reasoning workload, throughput is UNCHANGED under per-GPU power caps of 400-600 W but drops sharply at 300 W.",
+ "adoption": "research-only",
+ "code_url": null,
+ "open_weights": null,
+ "notes": "THE DISTINCTIVE CONTRIBUTION IN THIS SLICE IS THE 41-45% GAP AND THE MEASUREMENT METHODOLOGY THAT PRODUCES IT. A single-platform measurement paper, so it should not be over-read, but the methodological claim is the transferable part: NVML alone is not a system energy measurement, and any cost-per-token model derived from GPU board power is understating by roughly half. The 400-600 W flat band plus the sharp 300 W cliff is the most immediately actionable free lunch in the whole power slice - a wide cap range that costs nothing in throughput for memory-bandwidth-bound decode. The 'less than 1% per-token difference between thinking-enabled and thinking-disabled' result is the useful corrective to intuition: extended thinking does not make each token more expensive, it just produces more of them. The 63x agentic figure is the under-batching trap that breaks naive cost-per-token arithmetic on agentic traffic. Distinctive angle: this is component-level and phase-level power MEASUREMENT on datacenter parts, which is the datacentre-systems measurement line, not the algorithmic-efficiency or carbon-accounting line. Measured on 2x RTX PRO 6000 Blackwell - workstation-class parts, not rack-scale - so percentages transfer more safely than absolute watts. Read alongside gotchas/short-benchmark-not-representative-of-sustained-serving and gotchas/idle-and-underbatched-fleet-can-cost-more-than-busy-fleet.\n\nAFFILIATIONS BACKFILLED 2026-10-04 (paper-fields pass, agent w3p): OpenAlex institutions field (HKU). Filled from the API/PDF rather than from memory, because an affiliation is a fact about a specific paper's author block and inference from the author's employer history is how wrong affiliations get shipped.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'unknown'. `venue` is 'arxiv-preprint', which means no peer-reviewed venue has been established for this work as of the verification date, so the track genuinely is not known. 'unknown' is used here rather than leaving the field null or guessing 'main': the schema separates 'unknown' from 'main' precisely so that an unprereviewed preprint is not silently counted as main-track work. This annotation is what lets a downstream filter distinguish 'peer reviewed, main track' from 'not peer reviewed' without inferring it from the venue string.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pwr2-arxiv-where-does-energy-go"
+ ],
+ "venue_track": "unknown"
 }

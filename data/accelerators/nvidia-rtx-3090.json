@@ -24,23 +24,30 @@
       "tflops": 35.6,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Transcribed from the vendor's own fp32 for NVIDIA GeForce RTX 3090 (source of record: 'NVIDIA RTX Blackwell GPU Architecture whitepaper (GeForce RTX 50 series)', kind: whitepaper).  Recorded dense:true as printed."
     },
     {
       "precision": "fp16",
       "tflops": 71.2,
       "dense": true,
       "vendor_claim": true,
-      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper"
+      "source_id": "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Transcribed from the vendor's own fp16 for NVIDIA GeForce RTX 3090 (source of record: 'NVIDIA RTX Blackwell GPU Architecture whitepaper (GeForce RTX 50 series)', kind: whitepaper).  Recorded dense:true as printed."
     }
   ],
-  "interconnect": [],
+  "interconnect": [
+    "pcie-gen4"
+  ],
   "unified_memory": false,
   "consumer": true,
-  "notes": "Consumer card, Ampere GA102, Samsung 8N, 10496 CUDA cores, 350 W TGP.\n\nBandwidth: recorded as 936 GB/s (19.5 Gbps part). Note that the RTX 3090 Ti in the SAME NVIDIA whitepaper table is 21 Gbps / 1008 GB/sec. The two 24 GB cards are not interchangeable on bandwidth; recommendations that quote '24 GB RTX 3090' from a Ti benchmark silently overstate this card.\n\nTensor precision: FP16 tensor with FP32 accumulate is 71.2 TFLOPS dense (the Ada whitepaper's GA102 column shows 'Peak FP16 Tensor TFLOPS with FP16 Accumulate 142.3/284.6', i.e. double with FP16 accumulate, and half again in sparse). LLM inference kernels normally accumulate in FP32, so 71.2 is the practically relevant figure. FP8/INT8/INT4 tensor throughput for GA102 was NOT verified against a primary document in this pass and is deliberately omitted rather than estimated.\n\nFor LLM inference: 24 GB is a hard ceiling on resident weights. Compare against Apple unified-memory parts on both capacity AND addressability - see the Apple records, where a 128 GB unified pool is not 5x a 24 GB VRAM pool.",
+  "notes": "Consumer card, Ampere GA102, Samsung 8N, 10496 CUDA cores, 350 W TGP.\n\nBandwidth: recorded as 936 GB/s (19.5 Gbps part). Note that the RTX 3090 Ti in the SAME NVIDIA whitepaper table is 21 Gbps / 1008 GB/sec. The two 24 GB cards are not interchangeable on bandwidth; recommendations that quote '24 GB RTX 3090' from a Ti benchmark silently overstate this card.\n\nTensor precision: FP16 tensor with FP32 accumulate is 71.2 TFLOPS dense (the Ada whitepaper's GA102 column shows 'Peak FP16 Tensor TFLOPS with FP16 Accumulate 142.3/284.6', i.e. double with FP16 accumulate, and half again in sparse). LLM inference kernels normally accumulate in FP32, so 71.2 is the practically relevant figure. FP8/INT8/INT4 tensor throughput for GA102 was NOT verified against a primary document in this pass and is deliberately omitted rather than estimated.\n\nFor LLM inference: 24 GB is a hard ceiling on resident weights. Compare against Apple unified-memory parts on both capacity AND addressability - see the Apple records, where a 128 GB unified pool is not 5x a 24 GB VRAM pool.\nINTERCONNECT FILLED 2026-10-04: interconnect was empty; it now reads ['pcie-gen4'], from the vendor's own spec table (source the GeForce RTX 3090 family product page's 'Technology Support' row). SCALE-UP IS ABSENT AND THAT IS THE POINT: this part has no NVLink and no other GPU-to-GPU fabric, so the host link is the ONLY interconnect a multi-GPU deployment has. Do not infer a fabric from the presence of a PCIe value, and do not read the Gen number as a multi-GPU capability.",
   "sources": [
     "consumer-nvidia-rtx-3090-family-product-page",
     "consumer-nvidia-rtx-blackwell-gpu-architecture-whitepaper",
-    "consumer-nvidia-ada-gpu-architecture-whitepaper"
+    "consumer-nvidia-ada-gpu-architecture-whitepaper",
+    "w3a-pcie-generation-host-interface-spec-tables"
   ]
 }

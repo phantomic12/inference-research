@@ -1,34 +1,35 @@
 {
-  "id": "flashattention-2",
-  "type": "paper",
-  "name": "FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning",
-  "status": "verified",
-  "confidence": 0.93,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-attn-flashattention-2"
-  ],
-  "arxiv_id": "2307.08691",
-  "venue": "iclr",
-  "year": 2024,
-  "category": "attention",
-  "authors": [
-    "Tri Dao"
-  ],
-  "affiliations": [
-    "Princeton University"
-  ],
-  "problem": "FlashAttention reached only 25-40% of peak FLOP/s because its work partitioning across thread blocks and warps caused low occupancy and redundant shared-memory traffic.",
-  "mechanism": "Same IO-aware exact algorithm, different schedule. Three changes: (1) additionally parallelise the non-matmul FLOPs (the softmax rescaling) across thread blocks, not just the matmuls, so fewer of them are serialised; (2) parallelise the attention computation ACROSS thread blocks even for a single query head, raising occupancy; (3) within a thread block, distribute work between warps to cut shared-memory read/write traffic. Ships as a CUDA extension with a separate backward kernel.",
-  "hardware_relevance": [
-    "nvidia-a100-40gb-sxm4",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-a100-80gb-pcie",
-    "nvidia-a30"
-  ],
-  "speedup_reported": "Paper's own claim (abstract): ~2x speedup vs FlashAttention, reaching 50-73% of theoretical maximum FLOP/s on A100 and getting close to GEMM efficiency; end-to-end GPT-style training at up to 225 TFLOPs/s per A100 (72% model FLOPs utilisation). Baseline is FlashAttention v1, not a naive implementation.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/Dao-AILab/flash-attention",
-  "open_weights": null,
-  "notes": "arXiv ID 2307.08691 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. CORRECTION TO THE SOURCE RECORD: pap-attn-flashattention-2 says 'no comment naming a venue, not asserting a venue'. That is true of the arXiv COMMENT field but wrong about the venue - OpenReview api2 note mZn2Xyh9Ec returns venue='ICLR 2024 poster', venueid='ICLR.cc/2024/Conference' for the exact title and single author Tri Dao. venue=iclr, year=2024 (conference year, not the 2023-07-17 v1 date). adoption=in-upstream-engine: vLLM has vllm/v1/attention/backends/flash_attn.py (85 KB) and triton_flash_attn.py; SGLang ships flashattention_backend.py; Dao-AILab/flash-attention actively maintained. Hardware relevance restricted to A100/A30 - the paper's 50-73% of peak figure is an A100 measurement and the partitioning argument depends on Ampere-era SM count and SRAM, so carrying Hopper/Blackwell ids here would overstate the evidence."
+ "id": "flashattention-2",
+ "type": "paper",
+ "name": "FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning",
+ "status": "verified",
+ "confidence": 0.93,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-attn-flashattention-2"
+ ],
+ "arxiv_id": "2307.08691",
+ "venue": "iclr",
+ "year": 2024,
+ "category": "attention",
+ "authors": [
+  "Tri Dao"
+ ],
+ "affiliations": [
+  "Princeton University"
+ ],
+ "problem": "FlashAttention reached only 25-40% of peak FLOP/s because its work partitioning across thread blocks and warps caused low occupancy and redundant shared-memory traffic.",
+ "mechanism": "Same IO-aware exact algorithm, different schedule. Three changes: (1) additionally parallelise the non-matmul FLOPs (the softmax rescaling) across thread blocks, not just the matmuls, so fewer of them are serialised; (2) parallelise the attention computation ACROSS thread blocks even for a single query head, raising occupancy; (3) within a thread block, distribute work between warps to cut shared-memory read/write traffic. Ships as a CUDA extension with a separate backward kernel.",
+ "hardware_relevance": [
+  "nvidia-a100-40gb-sxm4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a100-80gb-pcie",
+  "nvidia-a30"
+ ],
+ "speedup_reported": "Paper's own claim (abstract): ~2x speedup vs FlashAttention, reaching 50-73% of theoretical maximum FLOP/s on A100 and getting close to GEMM efficiency; end-to-end GPT-style training at up to 225 TFLOPs/s per A100 (72% model FLOPs utilisation). Baseline is FlashAttention v1, not a naive implementation.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/Dao-AILab/flash-attention",
+ "open_weights": null,
+ "notes": "arXiv ID 2307.08691 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. CORRECTION TO THE SOURCE RECORD: pap-attn-flashattention-2 says 'no comment naming a venue, not asserting a venue'. That is true of the arXiv COMMENT field but wrong about the venue - OpenReview api2 note mZn2Xyh9Ec returns venue='ICLR 2024 poster', venueid='ICLR.cc/2024/Conference' for the exact title and single author Tri Dao. venue=iclr, year=2024 (conference year, not the 2023-07-17 v1 date). adoption=in-upstream-engine: vLLM has vllm/v1/attention/backends/flash_attn.py (85 KB) and triton_flash_attn.py; SGLang ships flashattention_backend.py; Dao-AILab/flash-attention actively maintained. Hardware relevance restricted to A100/A30 - the paper's 50-73% of peak figure is an A100 measurement and the partitioning argument depends on Ampere-era SM count and SRAM, so carrying Hopper/Blackwell ids here would overstate the evidence.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: iclr has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

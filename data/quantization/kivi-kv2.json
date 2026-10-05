@@ -1,28 +1,28 @@
 {
- "id": "kivi-kv2",
- "type": "quantization",
- "name": "KIVI (2-bit key / 4-bit value KV cache, per-channel keys, per-token values)",
- "scheme": "kv-cache-quant",
- "bits": "2-bit keys / 4-bit values - ASYMMETRIC, and the asymmetry is the paper's central finding",
- "weight_group_size": null,
- "activation_scheme": "Not an activation scheme - this quantizes the KV CACHE. Keys are quantized PER-CHANNEL (grouping along the channel dimension), values PER-TOKEN. The asymmetry is empirical, not arbitrary: the paper measured the element distribution of the KV cache in popular LLMs and found keys have strong per-channel structure (a few channels carry the outliers, so grouping across tokens mixes incompatible scales) while values have strong per-token structure.",
- "native_support": [],
- "emulated_support": [
-  "nvidia-h100-sxm",
-  "nvidia-a100-80gb-sxm4",
-  "nvidia-l40s",
-  "amd-instinct-mi300x",
-  "nvidia-rtx-4090"
- ],
- "kernels": [
-  "KIVI reference implementation (jy-yuan/KIVI) with hardware-friendly kernels; grouping is designed to match what the GPU can do cheaply."
- ],
- "quality_delta": "From the abstract: KIVI lets Llama, Falcon and Mistral maintain 'almost the same quality' while using 2.6x less peak memory (INCLUDING model weight), which enables up to 4x larger batch size and brings 2.35x-3.47x throughput on a real LLM inference workload. No perplexity figure in the abstract; 'almost the same quality' is qualitative and unquantified here.",
- "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: this scheme quantizes the KV cache, not the weights, so there are no weight groups to size. A number in this field would be a category error. (Where the underlying method has a real grouping - e.g. KIVI per-channel keys, KVQuant per-channel - that lives in the method's own record, not in weight_group_size.) THE KEY/VALUE ASYMMETRY RECORD. The repo has no enum value for KV-cache quantization at all - this is the closest thing to one, and it is wrong in a way that matters (bitsandbytes-nf4 is a WEIGHT format). Request the parent add a 'kv-cache-2bit' or similar value. The two things to carry forward: (1) keys and values have different distribution structure and must be quantized along different axes - per-channel for keys, per-token for values. Every later KV-quantization paper either follows this or argues against it explicitly (KVQuant's per-channel key quantization independently confirms KIVI's key finding and adds pre-RoPE key quantization). (2) 2-bit keys + 4-bit values beats the symmetric alternative because keys feed a softmax: a key error that changes the pre-softmax dot product corrupts the attention distribution multiplicatively, whereas a value error is averaged linearly through it. That is why the key side is the one that needs care, and why most systems settle at 4-bit keys even when going lower on values. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. ",
- "status": "verified",
- "confidence": 0.85,
- "updated": "2026-10-04",
- "sources": [
-  "qlab-kivi-paper"
- ]
+  "id": "kivi-kv2",
+  "type": "quantization",
+  "name": "KIVI (2-bit key / 4-bit value KV cache, per-channel keys, per-token values)",
+  "scheme": "kv-cache-quant",
+  "bits": "2-bit keys / 4-bit values - ASYMMETRIC, and the asymmetry is the paper's central finding",
+  "weight_group_size": null,
+  "activation_scheme": "Not an activation scheme - this quantizes the KV CACHE. Keys are quantized PER-CHANNEL (grouping along the channel dimension), values PER-TOKEN. The asymmetry is empirical, not arbitrary: the paper measured the element distribution of the KV cache in popular LLMs and found keys have strong per-channel structure (a few channels carry the outliers, so grouping across tokens mixes incompatible scales) while values have strong per-token structure.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-l40s",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "kernels": [
+    "KIVI reference implementation (jy-yuan/KIVI) with hardware-friendly kernels; grouping is designed to match what the GPU can do cheaply."
+  ],
+  "quality_delta": "From the abstract: KIVI lets Llama, Falcon and Mistral maintain 'almost the same quality' while using 2.6x less peak memory (INCLUDING model weight), which enables up to 4x larger batch size and brings 2.35x-3.47x throughput on a real LLM inference workload. No perplexity figure in the abstract; 'almost the same quality' is qualitative and unquantified here.",
+  "notes": "GROUP SIZE NOT APPLICABLE BY CONSTRUCTION: this scheme quantizes the KV cache, not the weights, so there are no weight groups to size. A number in this field would be a category error. (Where the underlying method has a real grouping - e.g. KIVI per-channel keys, KVQuant per-channel - that lives in the method's own record, not in weight_group_size.) THE KEY/VALUE ASYMMETRY RECORD. The repo has no enum value for KV-cache quantization at all - this is the closest thing to one, and it is wrong in a way that matters (bitsandbytes-nf4 is a WEIGHT format). Request the parent add a 'kv-cache-2bit' or similar value. The two things to carry forward: (1) keys and values have different distribution structure and must be quantized along different axes - per-channel for keys, per-token for values. Every later KV-quantization paper either follows this or argues against it explicitly (KVQuant's per-channel key quantization independently confirms KIVI's key finding and adds pre-RoPE key quantization). (2) 2-bit keys + 4-bit values beats the symmetric alternative because keys feed a softmax: a key error that changes the pre-softmax dot product corrupts the attention distribution multiplicatively, whereas a value error is averaged linearly through it. That is why the key side is the one that needs care, and why most systems settle at 4-bit keys even when going lower on values. SCHEME RECLASSIFIED (parent agent, 2026-10-03): scheme was 'bitsandbytes-nf4' (a proxy recorded while the enum lacked a legal value) and is now 'kv-cache-quant'. \nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: KV-CACHE-ONLY, SO STRUCTURALLY ABSENT. The bits field records that no bits-per-value change: the scheme reduces WHICH positions are retained, fetched or reallocated, so it runs on whatever precision path the accelerator already has for the KV cache. A KV-position policy can never be a hardware format. Consequence for a reader: nothing further to verify - this is a cache-management policy, not a numeric format. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "qlab-kivi-paper"
+  ]
 }

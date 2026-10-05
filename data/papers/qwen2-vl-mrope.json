@@ -1,37 +1,38 @@
 {
-  "id": "qwen2-vl-mrope",
-  "type": "paper",
-  "name": "Qwen2-VL: Enhancing Vision-Language Model's Perception of the World at Any Resolution",
-  "status": "verified",
-  "confidence": 0.87,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-attn-qwen2-vl-mrope"
-  ],
-  "arxiv_id": "2409.12191",
-  "venue": "arxiv-preprint",
-  "year": 2024,
-  "category": "position-encoding",
-  "authors": [
-    "Wang, Peng",
-    "Bai, Shuai",
-    "Tan, Sinan",
-    "Wang, Shijie"
-  ],
-  "affiliations": [
-    "Alibaba Cloud"
-  ],
-  "problem": "A single 1-D RoPE position index cannot express the 2-D/3-D spatial structure of an image or video, and naive per-modality index assignment degrades cross-modal alignment - so a VLM cannot exploit high native resolution without losing accuracy on text.",
-  "mechanism": "M-RoPE (Multimodal Rotary Position Embedding). Decompose the rotary embedding head_dim into three sections and assign each section a different position index: temporal for video frames, height for image rows, width for image columns (text reuses the temporal slot). Section sizes are per-model-config (Qwen2-VL ships mrope_section [16,24,24] for head_dim 64), and multimodal position ids are precomputed by a get_rope_index pass. Qwen2-VL itself is native-resolution: dynamic resolution tokenisation, no resizing or cropping to a fixed bucket.",
-  "hardware_relevance": [
-    "nvidia-a100-40gb-sxm4",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm",
-    "nvidia-h200-sxm"
-  ],
-  "speedup_reported": "NOT A PERFORMANCE CLAIM. The abstract reports quality and capability results only: Qwen2-VL-72B achieves results comparable to GPT-4o and Claude3.5-Sonnet across multimodal benchmarks, scaling studied at 2B/8B/72B. No throughput, latency or memory figure. The serving-relevant consequence is architectural: M-RoPE's section split means the rotary computation is a per-section gather, so it must be implemented rather than assumed by a serving engine.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/QwenLM/Qwen2-VL",
-  "open_weights": true,
-  "notes": "arXiv ID 2409.12191 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. venue=arxiv-preprint: no venue claim in the arXiv comment and OpenReview returns only DBLP 'CoRR 2024' for the exact title. Note the arXiv admin flag recorded in the source: 'text overlap with arXiv:2408.15262 by other authors' - relevant if anyone compares this with the LLaVA-style concurrent-resolution work. adoption=in-upstream-engine verified in source: transformers ships src/transformers/models/qwen2_vl/ with modeling_qwen2_vl.py implementing mrope_section, get_rope_index and the split-freq concatenation; vLLM ships mrope.py, MRotaryEmbedding, BailingMRotaryEmbedding and MRotaryEmbeddingInterleaved in vllm/model_executor/layers/rotary_embedding/. So M-RoPE is implemented in BOTH the reference library and the engine - one of the few position-encoding records here where the full stack is present. open_weights=true: model weights are released."
+ "id": "qwen2-vl-mrope",
+ "type": "paper",
+ "name": "Qwen2-VL: Enhancing Vision-Language Model's Perception of the World at Any Resolution",
+ "status": "verified",
+ "confidence": 0.87,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-attn-qwen2-vl-mrope"
+ ],
+ "arxiv_id": "2409.12191",
+ "venue": "arxiv-preprint",
+ "year": 2024,
+ "category": "position-encoding",
+ "authors": [
+  "Wang, Peng",
+  "Bai, Shuai",
+  "Tan, Sinan",
+  "Wang, Shijie"
+ ],
+ "affiliations": [
+  "Alibaba Cloud"
+ ],
+ "problem": "A single 1-D RoPE position index cannot express the 2-D/3-D spatial structure of an image or video, and naive per-modality index assignment degrades cross-modal alignment - so a VLM cannot exploit high native resolution without losing accuracy on text.",
+ "mechanism": "M-RoPE (Multimodal Rotary Position Embedding). Decompose the rotary embedding head_dim into three sections and assign each section a different position index: temporal for video frames, height for image rows, width for image columns (text reuses the temporal slot). Section sizes are per-model-config (Qwen2-VL ships mrope_section [16,24,24] for head_dim 64), and multimodal position ids are precomputed by a get_rope_index pass. Qwen2-VL itself is native-resolution: dynamic resolution tokenisation, no resizing or cropping to a fixed bucket.",
+ "hardware_relevance": [
+  "nvidia-a100-40gb-sxm4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm"
+ ],
+ "speedup_reported": "NOT A PERFORMANCE CLAIM. The abstract reports quality and capability results only: Qwen2-VL-72B achieves results comparable to GPT-4o and Claude3.5-Sonnet across multimodal benchmarks, scaling studied at 2B/8B/72B. No throughput, latency or memory figure. The serving-relevant consequence is architectural: M-RoPE's section split means the rotary computation is a per-section gather, so it must be implemented rather than assumed by a serving engine.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/QwenLM/Qwen2-VL",
+ "open_weights": true,
+ "notes": "arXiv ID 2409.12191 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. venue=arxiv-preprint: no venue claim in the arXiv comment and OpenReview returns only DBLP 'CoRR 2024' for the exact title. Note the arXiv admin flag recorded in the source: 'text overlap with arXiv:2408.15262 by other authors' - relevant if anyone compares this with the LLaVA-style concurrent-resolution work. adoption=in-upstream-engine verified in source: transformers ships src/transformers/models/qwen2_vl/ with modeling_qwen2_vl.py implementing mrope_section, get_rope_index and the split-freq concatenation; vLLM ships mrope.py, MRotaryEmbedding, BailingMRotaryEmbedding and MRotaryEmbeddingInterleaved in vllm/model_executor/layers/rotary_embedding/. So M-RoPE is implemented in BOTH the reference library and the engine - one of the few position-encoding records here where the full stack is present. open_weights=true: model weights are released.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'unknown'. `venue` is 'arxiv-preprint', which means no peer-reviewed venue has been established for this work as of the verification date, so the track genuinely is not known. 'unknown' is used here rather than leaving the field null or guessing 'main': the schema separates 'unknown' from 'main' precisely so that an unprereviewed preprint is not silently counted as main-track work. This annotation is what lets a downstream filter distinguish 'peer reviewed, main track' from 'not peer reviewed' without inferring it from the venue string.",
+ "venue_track": "unknown"
 }

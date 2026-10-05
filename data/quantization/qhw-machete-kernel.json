@@ -1,26 +1,26 @@
 {
- "id": "qhw-machete-kernel",
- "type": "quantization",
- "name": "Machete Hopper-optimized mixed-precision GEMM kernel (CUTLASS-based)",
- "scheme": "awq",
- "bits": "w4a16 (4-bit weights, FP16 activations) - same precision as Marlin but optimized for Hopper SM90",
- "weight_group_size": 128,
- "activation_scheme": "FP16 activations, no quantization. Weights are INT4 with per-group FP16 scales. Dequantizes to FP16 in registers before tensor-core multiply, same as Marlin.",
- "native_support": [],
- "emulated_support": [
-  "nvidia-h100-sxm",
-  "nvidia-h100-nvl"
- ],
- "kernels": [
-  "Machete CUTLASS-based kernel (vllm-project/vllm csrc/quantization/machete)",
-  "vLLM machete backend (AWQ and GPTQ paths)"
- ],
- "quality_delta": null,
- "notes": "PROXY ENUM VALUE - DECLARED 2026-10-04: Machete is a KERNEL (CUTLASS-based, SM90/Hopper), not a format, filed under 'awq' because it serves AWQ-packed weights. Same defect shape as the Marlin record: a query for AWQ returns a kernel record, and a reader may treat Machete as a format. Worth stating plainly because Machete and Marlin produce IDENTICAL output precision (both FP16 x FP16 W4A16) while being different kernels for different architectures - if the enum is the only thing a reader has, Machete under 'awq' and Marlin under 'gptq' will look like two different precisions when they are the same one. REQUESTED ENUM ADDITION: a 'machete' value. Machete is the Hopper-optimized successor to Marlin for W4A16 quantization. Built on CUTLASS, it targets SM90 (Hopper) specifically. The GPTQModel repo references it as a kernel option alongside Marlin and Swordfish. KEY DISTINCTION: Machete and Marlin produce the same numerical results (both dequantize INT4 weights to FP16 before the multiply), but Machete is optimized for Hopper's tensor core architecture and memory hierarchy. On Hopper, Machete should be preferred over Marlin. The vLLM quantization docs list Machete as a supported backend for AWQ and GPTQ on Hopper. No independent quality delta recorded - the kernel is numerically equivalent to Marlin for the same quantized weights, so the Marlin quality figures apply. SELECTION LOGIC: vLLM uses Machete when the GPU is SM90 (Hopper) and the quantization method is AWQ or GPTQ. On Ampere/Ada, Marlin is used instead. This is a hardware-dependent kernel selection that is transparent to the user but affects performance significantly.",
- "status": "verified",
- "confidence": 0.8,
- "updated": "2026-10-04",
- "sources": [
-  "qhw-src-gptqmodel-repo"
- ]
+  "id": "qhw-machete-kernel",
+  "type": "quantization",
+  "name": "Machete Hopper-optimized mixed-precision GEMM kernel (CUTLASS-based)",
+  "scheme": "awq",
+  "bits": "w4a16 (4-bit weights, FP16 activations) - same precision as Marlin but optimized for Hopper SM90",
+  "weight_group_size": 128,
+  "activation_scheme": "FP16 activations, no quantization. Weights are INT4 with per-group FP16 scales. Dequantizes to FP16 in registers before tensor-core multiply, same as Marlin.",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl"
+  ],
+  "kernels": [
+    "Machete CUTLASS-based kernel (vllm-project/vllm csrc/quantization/machete)",
+    "vLLM machete backend (AWQ and GPTQ paths)"
+  ],
+  "quality_delta": null,
+  "notes": "PROXY ENUM VALUE - DECLARED 2026-10-04: Machete is a KERNEL (CUTLASS-based, SM90/Hopper), not a format, filed under 'awq' because it serves AWQ-packed weights. Same defect shape as the Marlin record: a query for AWQ returns a kernel record, and a reader may treat Machete as a format. Worth stating plainly because Machete and Marlin produce IDENTICAL output precision (both FP16 x FP16 W4A16) while being different kernels for different architectures - if the enum is the only thing a reader has, Machete under 'awq' and Marlin under 'gptq' will look like two different precisions when they are the same one. REQUESTED ENUM ADDITION: a 'machete' value. Machete is the Hopper-optimized successor to Marlin for W4A16 quantization. Built on CUTLASS, it targets SM90 (Hopper) specifically. The GPTQModel repo references it as a kernel option alongside Marlin and Swordfish. KEY DISTINCTION: Machete and Marlin produce the same numerical results (both dequantize INT4 weights to FP16 before the multiply), but Machete is optimized for Hopper's tensor core architecture and memory hierarchy. On Hopper, Machete should be preferred over Marlin. The vLLM quantization docs list Machete as a supported backend for AWQ and GPTQ on Hopper. No independent quality delta recorded - the kernel is numerically equivalent to Marlin for the same quantized weights, so the Marlin quality figures apply. SELECTION LOGIC: vLLM uses Machete when the GPU is SM90 (Hopper) and the quantization method is AWQ or GPTQ. On Ampere/Ada, Marlin is used instead. This is a hardware-dependent kernel selection that is transparent to the user but affects performance significantly.\nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: WEIGHT-ONLY, SO STRUCTURALLY ABSENT. The bits field keeps activations in FP16, so execution is dequantize-to-FP16 then an FP16 tensor-core GEMM; there is no INT4-x-INT4 (or sub-8-bit x sub-8-bit) silicon instruction for it to target. This is a statement about the arithmetic, not an absence of investigation. Consequence for a reader: nothing further to verify - no silicon path is possible for this format as defined. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "qhw-src-gptqmodel-repo"
+  ]
 }

@@ -1,29 +1,29 @@
 {
- "id": "exl2",
- "type": "quantization",
- "name": "EXL2 (GPTQ with mixed per-tensor bitrate)",
- "scheme": "exl2",
- "bits": "2-8 adjustable (target average bits-per-weight, e.g. 2.5 / 3.0 / 4.0 / 5.0 bpw builds)",
- "weight_group_size": null,
- "activation_scheme": null,
- "native_support": [],
- "emulated_support": [
-  "nvidia-h100-sxm",
-  "nvidia-l40s",
-  "nvidia-a10",
-  "amd-instinct-mi300x"
- ],
- "kernels": [
-  "exllamav2 EXL2 GEMM / dequantize kernels",
-  "exllamav2 Q4/Q6/Q8 KV-cache modes"
- ],
- "quality_delta": null,
- "notes": "GROUP SIZE LEFT NULL 2026-10-04 and this is a CATEGORY point, not a gap. LEFT NULL 2026-10-04 and this is a CATEGORY point, not a gap. EXL2 mixes quantization levels within a model AND can apply multiple levels to each individual linear layer to hit a target average bitrate, so there is no single group size to record. The upstream benchmark table makes this explicit by printing grpsz 128 for the GPTQ rows and '-' (not applicable) for every EXL2 row. A number here would be actively misleading. EXL2 uses the same optimization method as GPTQ and supports 2,3,4,5,6,8-bit, but mixes quantization levels within a model - and, per the upstream README, can apply multiple quantization levels to each individual linear layer - to hit any target average bitrate between 2 and 8 bpw (quant-exl2-readme). That mixed-precision layout is why it needs its own kernels and cannot be served by the Marlin/AWQ path. Weight-only: activations are 16-bit. The upstream repo is now archived with development moved to ExLlamaV3, so this record describes a format that is in maintenance, not in active development. No quality delta recorded: the README publishes throughput (Llama2-7B EXL2 4.0 bpw at 185 tok/s on a 3090 Ti, 211 on a 4090) but no perplexity or benchmark deltas vs fp16, and none was found elsewhere.",
- "status": "draft",
- "confidence": 0.6,
- "updated": "2026-10-04",
- "sources": [
-  "quant-exl2-readme",
-  "quant-gptq-paper"
- ]
+  "id": "exl2",
+  "type": "quantization",
+  "name": "EXL2 (GPTQ with mixed per-tensor bitrate)",
+  "scheme": "exl2",
+  "bits": "2-8 adjustable (target average bits-per-weight, e.g. 2.5 / 3.0 / 4.0 / 5.0 bpw builds)",
+  "weight_group_size": null,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-l40s",
+    "nvidia-a10",
+    "amd-instinct-mi300x"
+  ],
+  "kernels": [
+    "exllamav2 EXL2 GEMM / dequantize kernels",
+    "exllamav2 Q4/Q6/Q8 KV-cache modes"
+  ],
+  "quality_delta": null,
+  "notes": "GROUP SIZE LEFT NULL 2026-10-04 and this is a CATEGORY point, not a gap. LEFT NULL 2026-10-04 and this is a CATEGORY point, not a gap. EXL2 mixes quantization levels within a model AND can apply multiple levels to each individual linear layer to hit a target average bitrate, so there is no single group size to record. The upstream benchmark table makes this explicit by printing grpsz 128 for the GPTQ rows and '-' (not applicable) for every EXL2 row. A number here would be actively misleading. EXL2 uses the same optimization method as GPTQ and supports 2,3,4,5,6,8-bit, but mixes quantization levels within a model - and, per the upstream README, can apply multiple quantization levels to each individual linear layer - to hit any target average bitrate between 2 and 8 bpw (quant-exl2-readme). That mixed-precision layout is why it needs its own kernels and cannot be served by the Marlin/AWQ path. Weight-only: activations are 16-bit. The upstream repo is now archived with development moved to ExLlamaV3, so this record describes a format that is in maintenance, not in active development. No quality delta recorded: the README publishes throughput (Llama2-7B EXL2 4.0 bpw at 185 tok/s on a 3090 Ti, 211 on a 4090) but no perplexity or benchmark deltas vs fp16, and none was found elsewhere.\nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: WEIGHT-ONLY, SO STRUCTURALLY ABSENT. The bits field keeps activations in FP16, so execution is dequantize-to-FP16 then an FP16 tensor-core GEMM; there is no INT4-x-INT4 (or sub-8-bit x sub-8-bit) silicon instruction for it to target. This is a statement about the arithmetic, not an absence of investigation. Consequence for a reader: nothing further to verify - no silicon path is possible for this format as defined. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "draft",
+  "confidence": 0.6,
+  "updated": "2026-10-04",
+  "sources": [
+    "quant-exl2-readme",
+    "quant-gptq-paper"
+  ]
 }

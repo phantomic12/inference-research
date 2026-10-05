@@ -12,7 +12,10 @@
   "accelerator_ids": [
     "nvidia-b200"
   ],
-  "interconnect_ids": [],
+  "interconnect_ids": [
+    "nvlink-5",
+    "pcie-gen5"
+  ],
   "model": "Qwen3-8B BF16 (unquantized reference)",
   "format_id": null,
   "metric": "quality",
@@ -21,5 +24,5 @@
   "methodology": "Qwen3-8B BF16 on the same 8x B200 (SM100) vLLM deployment, evaluated on AIME-24, AIME-25, GSM8K and MATH-500 with the same system prompts, sampling configuration and evaluation harness as the MXFP4 W4A16 rows. Component scores: AIME-24 75.00, AIME-25 62.71, GSM8K 95.15, MATH-500 96.60.",
   "measured_by": "third_party",
   "reproducible": true,
-  "notes": "Included because the baseline choice is the point: this comparison uses the model's OWN bf16 weights as the reference on the same harness, which is what makes the two MXFP4 rows interpretable. Component spread worth noting - AIME moves far more than GSM8K (AIME-25 -13.63 pp BF16 to W4A4 kernel, GSM8K -1.29 pp), so a GSM8K-only quality check would have MISSED this bug entirely. That is the practical argument for including a hard reasoning benchmark in any quantization quality gate. Sibling: mxfp4-w4a16-on-w4a4-kernel-aime-math-gsm8k-avg (70.58) and mxfp4-w4a16-on-w4a16-marlin-aime-math-gsm8k-avg (78.16)."
+  "notes": "Included because the baseline choice is the point: this comparison uses the model's OWN bf16 weights as the reference on the same harness, which is what makes the two MXFP4 rows interpretable. Component spread worth noting - AIME moves far more than GSM8K (AIME-25 -13.63 pp BF16 to W4A4 kernel, GSM8K -1.29 pp), so a GSM8K-only quality check would have MISSED this bug entirely. That is the practical argument for including a hard reasoning benchmark in any quantization quality gate. Sibling: mxfp4-w4a16-on-w4a4-kernel-aime-math-gsm8k-avg (70.58) and mxfp4-w4a16-on-w4a16-marlin-aime-math-gsm8k-avg (78.16).\nINTERCONNECT IDS FILLED 2026-10-04: interconnect_ids was empty; it now carries the interconnect list of the accelerator record(s) this run names (nvidia-b200). BASIS AND ITS LIMITS, stated because this field is easy to over-read: it records the FABRIC PRESENT IN THE HARDWARE CONFIGURATION, which is how every previously-filled record in this repo reads it, not traffic measured over that fabric. The clearest evidence for that convention is that single-GPU records already carry a scale-up fabric here - trtllm-llama31-8b-fp8-h100-1k1k-tps is 1x H100 at TP=1 and carries ['nvlink-4','nvswitch-4'] - and that host-link-only records carry a PCIe value (arc-pro-b70-mlperf-v6-1-llama2-70b-offline-tokens carries ['pcie-gen5'] on 4x Arc Pro B70, which has no GPU-to-GPU fabric at all). So a value here does NOT mean the interconnect was exercised by this particular workload, and must not be cited as evidence that it was. Whether the run actually crossed that fabric is a question about TP/EP/PP size, which this repo records in methodology, not here. NOT INVENTED: nothing was filled where the accelerator record itself carries no interconnect, so this field stays empty for any part whose own record has none - which is the honest state for a single-socket Apple sOC and for parts whose vendor publishes no host interface."
 }

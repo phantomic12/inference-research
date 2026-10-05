@@ -1,35 +1,35 @@
 {
- "id": "gguf-q8-0",
- "type": "quantization",
- "name": "GGUF Q8_0 (legacy block-8 symmetric)",
- "scheme": "gguf-q8_0",
- "bits": "8.5008 avg (llama.cpp measured, Llama-3.1-8B)",
- "weight_group_size": 32,
- "activation_scheme": null,
- "native_support": [],
- "emulated_support": [
-  "nvidia-h100-sxm",
-  "nvidia-h100-nvl",
-  "nvidia-l40s",
-  "nvidia-l4",
-  "nvidia-a100-80gb-sxm4",
-  "nvidia-a10"
- ],
- "kernels": [
-  "ggml dequantize_row_q8_0 + get_rows",
-  "ggml-cuda mul_mat_vec_q8_0_q8_1 / mul_mat_q8_0_q8_1"
- ],
- "quality_delta": "Llama-3.1-8B-Instruct (quant-gguf-kquant-study): WikiText-2 ppl 7.33 vs 7.32 F16 (+0.01); unweighted mean 69.41 vs 69.47 (-0.09% AvgLoss); size 8138 MiB (-46.87%). This is the reference-ish GGUF baseline: 8.5008 bpw includes block scales, so it is genuinely close to lossless.",
- "notes": "CONFIRMED 2026-10-04 against the kernel: QK8_0 = 32, block_q8_0 is `{ ggml_half d; int8_t qs[QK8_0]; }`, and dequantize_row_q8_0 applies that one d across the whole 32-value block. Legacy symmetric block-8, no hierarchy. The practical near-lossless GGUF point and the format llama.cpp still recommends for multimodal projectors, for --leave-output-tensor, and for any tensor you do not want degraded (its quantize README advises keeping mmproj in bf16 or q8_0 because projector quality directly affects generation). Weight-only: activations stay in FP16/BF16 at runtime, so there is no '4-bit activations with hardware support' claim to make here. ggml has bespoke dequantize+gemm kernels per type, but no accelerator has a GGUF/k-quant path in silicon; everything is dequantized on the fly. vLLM explicitly labels its GGUF support experimental and under-optimized and positions it as a memory-footprint tool (quant-vllm-gguf-doc). Q8_0 is also the activation format ggml uses internally: quantized k-quant GEMMs quantize the activation to Q8_0 inside the kernel (quant-gguf-kquant-study). That is the one place a GGUF type touches a matrix multiply with a non-fp16 operand, and it is still a software-side requantization, not an INT8 hardware path. LEGACY BLOCK LAYOUT, verified from ggml/src/ggml-common.h: QK4_0 = 32 values per block, block_q4_0 = { ggml_half d; uint8_t qs[QK4_0/2]; } = 2 + 16 = 18 bytes / 32 values = 4.5 bpw, symmetric (delta only, no zero point). QK8_0 = 32, block_q8_0 = { ggml_half d; int8_t qs[QK8_0]; } = 2 + 32 = 34 bytes / 32 = 8.5 bpw. Both are 32-value blocks with a single fp16 scale - that is the entire difference from the K-quants, which use 256-value super-blocks with quantized sub-block scales.",
- "status": "verified",
- "confidence": 0.8,
- "updated": "2026-10-04",
- "sources": [
-  "qlab2-ggml-common-header",
-  "quant-ggml-header",
-  "quant-gguf-kquant-study",
-  "quant-llamacpp-quantize-readme",
-  "quant-vllm-gguf-doc",
-  "qzgw-ggml-quants-kernel"
- ]
+  "id": "gguf-q8-0",
+  "type": "quantization",
+  "name": "GGUF Q8_0 (legacy block-8 symmetric)",
+  "scheme": "gguf-q8_0",
+  "bits": "8.5008 avg (llama.cpp measured, Llama-3.1-8B)",
+  "weight_group_size": 32,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl",
+    "nvidia-l40s",
+    "nvidia-l4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10"
+  ],
+  "kernels": [
+    "ggml dequantize_row_q8_0 + get_rows",
+    "ggml-cuda mul_mat_vec_q8_0_q8_1 / mul_mat_q8_0_q8_1"
+  ],
+  "quality_delta": "Llama-3.1-8B-Instruct (quant-gguf-kquant-study): WikiText-2 ppl 7.33 vs 7.32 F16 (+0.01); unweighted mean 69.41 vs 69.47 (-0.09% AvgLoss); size 8138 MiB (-46.87%). This is the reference-ish GGUF baseline: 8.5008 bpw includes block scales, so it is genuinely close to lossless.",
+  "notes": "CONFIRMED 2026-10-04 against the kernel: QK8_0 = 32, block_q8_0 is `{ ggml_half d; int8_t qs[QK8_0]; }`, and dequantize_row_q8_0 applies that one d across the whole 32-value block. Legacy symmetric block-8, no hierarchy. The practical near-lossless GGUF point and the format llama.cpp still recommends for multimodal projectors, for --leave-output-tensor, and for any tensor you do not want degraded (its quantize README advises keeping mmproj in bf16 or q8_0 because projector quality directly affects generation). Weight-only: activations stay in FP16/BF16 at runtime, so there is no '4-bit activations with hardware support' claim to make here. ggml has bespoke dequantize+gemm kernels per type, but no accelerator has a GGUF/k-quant path in silicon; everything is dequantized on the fly. vLLM explicitly labels its GGUF support experimental and under-optimized and positions it as a memory-footprint tool (quant-vllm-gguf-doc). Q8_0 is also the activation format ggml uses internally: quantized k-quant GEMMs quantize the activation to Q8_0 inside the kernel (quant-gguf-kquant-study). That is the one place a GGUF type touches a matrix multiply with a non-fp16 operand, and it is still a software-side requantization, not an INT8 hardware path. LEGACY BLOCK LAYOUT, verified from ggml/src/ggml-common.h: QK4_0 = 32 values per block, block_q4_0 = { ggml_half d; uint8_t qs[QK4_0/2]; } = 2 + 16 = 18 bytes / 32 values = 4.5 bpw, symmetric (delta only, no zero point). QK8_0 = 32, block_q8_0 = { ggml_half d; int8_t qs[QK8_0]; } = 2 + 32 = 34 bytes / 32 = 8.5 bpw. Both are 32-value blocks with a single fp16 scale - that is the entire difference from the K-quants, which use 256-value super-blocks with quantized sub-block scales.\nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: LLAMA.CPP INTEGER STORAGE TYPE, SO STRUCTURALLY ABSENT. Every GGUF type here is a packed integer block format read by a dequant kernel (dequantize_row_*) and then executed as FP16; ggml publishes no int4 or sub-8-bit tensor-core path that consumes these blocks directly. The llama.cpp CUDA and Vulkan backends both run these formats by dequantizing. Consequence for a reader: nothing further to verify - and note the contrast with nvfp4/mxfp4/mxfp8 in this repo, which ARE hardware formats on Blackwell and carry populated native_support lists, so '4-bit' alone does not predict this field. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "qlab2-ggml-common-header",
+    "quant-ggml-header",
+    "quant-gguf-kquant-study",
+    "quant-llamacpp-quantize-readme",
+    "quant-vllm-gguf-doc",
+    "qzgw-ggml-quants-kernel"
+  ]
 }

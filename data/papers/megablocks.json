@@ -1,36 +1,37 @@
 {
-  "id": "megablocks",
-  "type": "paper",
-  "name": "MegaBlocks: Efficient Sparse Training with Mixture-of-Experts",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-arch-2211-15841"
-  ],
-  "arxiv_id": "2211.15841",
-  "venue": "arxiv-preprint",
-  "year": 2022,
-  "category": "moe",
-  "authors": [
-    "Trevor Gale",
-    "Deepak Narayanan",
-    "Cliff Young",
-    "Matei Zaharia"
-  ],
-  "affiliations": [
-    "Stanford University",
-    "Databricks"
-  ],
-  "problem": "MoE GPU stacks force a choice between dropping tokens that overflow an expert's capacity or computing over a padded batch, so realistic routing distributions pay a real quality or efficiency tax.",
-  "mechanism": "Recasts MoE computation as block-sparse matrix multiplication, a sparse GEMM built from two dense fixed-size blocks rather than a gather/scatter over ragged token lists, and writes fused block-sparse GPU kernels for it. Because the block-sparse layout is fixed-shape, token assignment never overflows and no token is ever dropped; capacity that would have overflowed is simply unused compute. Kernels are layout-aware and fuse gather-scatter into the matmul so each expert reads its weights directly in the blocked format. Load balancing is unchanged from the routed model (token-choice top-k with auxiliary loss); the paper changes the execution substrate, not the gate. This is a training-system contribution, so it has no direct decode-time analogue.",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-a100-80gb-pcie"
-  ],
-  "speedup_reported": "End-to-end MoE training speedup of up to 40 percent over MoEs trained with the then state-of-the-art Tutel library, and 2.4x over dense (DNN) models trained with the highly-optimised Megatron-LM, at matched quality. Measured on A100-class GPUs; the block-sparse kernels target Ampere-generation tensor cores. Note the 2.4x is against a DENSE baseline, so it conflates MoE sparsity with the kernel improvement and must not be quoted as a kernel-only speedup.",
-  "adoption": "research-only",
-  "code_url": "https://github.com/databricks/megablocks",
-  "open_weights": false,
-  "notes": "arXiv preprint only; the authors subsequently formed the MegaBlocks company. megablocks has not been upstreamed into vLLM or SGLang as an MoE kernel, and both now ship their own fused MoE paths (vLLM fused MoE kernels, SGLang grouped-GEMM/deep-EP). MegaBlocks benchmarks Tutel as the prior state of the art rather than building on it, which is the clearest evidence that the Tutel path was superseded rather than extended."
+ "id": "megablocks",
+ "type": "paper",
+ "name": "MegaBlocks: Efficient Sparse Training with Mixture-of-Experts",
+ "status": "contested",
+ "confidence": 0.85,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2211-15841"
+ ],
+ "arxiv_id": "2211.15841",
+ "venue": "mlsys",
+ "year": 2023,
+ "category": "moe",
+ "authors": [
+  "Trevor Gale",
+  "Deepak Narayanan",
+  "Cliff Young",
+  "Matei Zaharia"
+ ],
+ "affiliations": [
+  "Stanford University",
+  "Databricks"
+ ],
+ "problem": "MoE GPU stacks force a choice between dropping tokens that overflow an expert's capacity or computing over a padded batch, so realistic routing distributions pay a real quality or efficiency tax.",
+ "mechanism": "Recasts MoE computation as block-sparse matrix multiplication, a sparse GEMM built from two dense fixed-size blocks rather than a gather/scatter over ragged token lists, and writes fused block-sparse GPU kernels for it. Because the block-sparse layout is fixed-shape, token assignment never overflows and no token is ever dropped; capacity that would have overflowed is simply unused compute. Kernels are layout-aware and fuse gather-scatter into the matmul so each expert reads its weights directly in the blocked format. Load balancing is unchanged from the routed model (token-choice top-k with auxiliary loss); the paper changes the execution substrate, not the gate. This is a training-system contribution, so it has no direct decode-time analogue.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-a100-80gb-pcie"
+ ],
+ "speedup_reported": "End-to-end MoE training speedup of up to 40 percent over MoEs trained with the then state-of-the-art Tutel library, and 2.4x over dense (DNN) models trained with the highly-optimised Megatron-LM, at matched quality. Measured on A100-class GPUs; the block-sparse kernels target Ampere-generation tensor cores. Note the 2.4x is against a DENSE baseline, so it conflates MoE sparsity with the kernel improvement and must not be quoted as a kernel-only speedup.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/databricks/megablocks",
+ "open_weights": false,
+ "notes": "arXiv preprint only; the authors subsequently formed the MegaBlocks company. megablocks has not been upstreamed into vLLM or SGLang as an MoE kernel, and both now ship their own fused MoE paths (vLLM fused MoE kernels, SGLang grouped-GEMM/deep-EP). MegaBlocks benchmarks Tutel as the prior state of the art rather than building on it, which is the clearest evidence that the Tutel path was superseded rather than extended.\n\nVENUE (+YEAR) CORRECTION AND VENUE_TRACK 2026-10-04 (paper-fields pass, agent w3p): venue 'arxiv-preprint' -> 'mlsys', venue_track 'main'. EVIDENCE: The static proceedings.mlsys.org 2023 index contains 'MegaBlocks: Efficient Sparse Training with Mixture-of-Experts' verbatim. Semantic Scholar independently returns venue 'Conference on Machine Learning and Systems', year 2022 - which is the arXiv posting year (2022-12-01), not the venue year. BOTH VALUES RETAINED per the repo contract: the prior value was 'arxiv-preprint'. status set to contested because this changes a peer-reviewed attribution. Method note: OpenReview's api2 hard-429s under load and pre-2024 venues are unreachable through it, so these were verified against static proceedings indexes (proceedings.mlr.press for ICML, proceedings.mlsys.org for MLSys) rather than the OpenReview API. Year also changed 2022 -> 2023; the prior value 2022 is the arXiv posting year and remains true of the preprint.",
+ "venue_track": "main"
 }

@@ -1,37 +1,38 @@
 {
-  "id": "streamingllm",
-  "type": "paper",
-  "name": "Efficient Streaming Language Models with Attention Sinks",
-  "status": "verified",
-  "confidence": 0.87,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-attn-streamingllm"
-  ],
-  "arxiv_id": "2309.17453",
-  "venue": "iclr",
-  "year": 2024,
-  "category": "long-context",
-  "authors": [
-    "Xiao, Guangxuan",
-    "Tian, Yuandong",
-    "Chen, Beidi",
-    "Han, Song"
-  ],
-  "affiliations": [
-    "MIT",
-    "NVIDIA"
-  ],
-  "problem": "Streaming applications (multi-round dialogue) need bounded KV memory, but simply keeping the most recent KVs - sliding-window attention - FAILS once the text exceeds the cache size, and popular LLMs cannot generalise past their training length.",
-  "mechanism": "Identify the ATTENTION SINK phenomenon: attention scores are strongly biased toward the initial tokens even though they are not semantically important, and keeping the KV of just those initial tokens largely recovers sliding-window performance. StreamingLLM therefore keeps a fixed budget of the first few tokens PLUS a rolling recent window, and assigns positions so the window does not drift outside the trained range. Also shows that adding a dedicated placeholder sink token during PRE-TRAINING improves streaming deployment further.",
-  "hardware_relevance": [
-    "nvidia-a100-40gb-sxm4",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm"
-  ],
-  "speedup_reported": "Paper's own claims (abstract): enables Llama-2, MPT, Falcon and Pythia to do stable and efficient language modelling with up to 4 MILLION tokens and more; in streaming settings it outperforms the sliding-window RECOMPUTATION baseline by up to 22.2x speedup. The baseline is explicit (sliding-window recomputation) and the 22.2x is large because recomputation re-reads the whole context - it is not comparable to a paged-attention engine's number.",
-  "adoption": "research-only",
-  "code_url": "https://github.com/mit-han-lab/streaming-llm",
-  "open_weights": null,
-  "notes": "arXiv ID 2309.17453 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. Venue confirmed twice: arXiv comment 'ICLR 2024' and OpenReview venue='ICLR 2024 poster', venueid='ICLR.cc/2024/Conference'. adoption=research-only verified by absence: no StreamingLLM path in vLLM's tree, none in SGLang's tree, and no StreamingLLM class among the 24 cache classes in transformers cache_utils.py - the shipped equivalent is DynamicSlidingWindowLayer / StaticSlidingWindowLayer, which do NOT implement the sink-plus-window layout. mit-han-lab/streaming-llm was last pushed 2024-07-11 (7.3k stars) - highly cited, not dead, just not integrated. IMPORTANT CONCEPTUAL NOTE for anyone pairing this with the other KV-cache records: attention sinks are the same phenomenon as the 'massive activations / attention sink' that pyramidkv-paper identifies in its upper layers - the two records should be read together, since one explains what the sink is and the other allocates budget around it."
+ "id": "streamingllm",
+ "type": "paper",
+ "name": "Efficient Streaming Language Models with Attention Sinks",
+ "status": "verified",
+ "confidence": 0.87,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-attn-streamingllm"
+ ],
+ "arxiv_id": "2309.17453",
+ "venue": "iclr",
+ "year": 2024,
+ "category": "long-context",
+ "authors": [
+  "Xiao, Guangxuan",
+  "Tian, Yuandong",
+  "Chen, Beidi",
+  "Han, Song"
+ ],
+ "affiliations": [
+  "MIT",
+  "NVIDIA"
+ ],
+ "problem": "Streaming applications (multi-round dialogue) need bounded KV memory, but simply keeping the most recent KVs - sliding-window attention - FAILS once the text exceeds the cache size, and popular LLMs cannot generalise past their training length.",
+ "mechanism": "Identify the ATTENTION SINK phenomenon: attention scores are strongly biased toward the initial tokens even though they are not semantically important, and keeping the KV of just those initial tokens largely recovers sliding-window performance. StreamingLLM therefore keeps a fixed budget of the first few tokens PLUS a rolling recent window, and assigns positions so the window does not drift outside the trained range. Also shows that adding a dedicated placeholder sink token during PRE-TRAINING improves streaming deployment further.",
+ "hardware_relevance": [
+  "nvidia-a100-40gb-sxm4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "Paper's own claims (abstract): enables Llama-2, MPT, Falcon and Pythia to do stable and efficient language modelling with up to 4 MILLION tokens and more; in streaming settings it outperforms the sliding-window RECOMPUTATION baseline by up to 22.2x speedup. The baseline is explicit (sliding-window recomputation) and the 22.2x is large because recomputation re-reads the whole context - it is not comparable to a paged-attention engine's number.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/mit-han-lab/streaming-llm",
+ "open_weights": null,
+ "notes": "arXiv ID 2309.17453 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. Venue confirmed twice: arXiv comment 'ICLR 2024' and OpenReview venue='ICLR 2024 poster', venueid='ICLR.cc/2024/Conference'. adoption=research-only verified by absence: no StreamingLLM path in vLLM's tree, none in SGLang's tree, and no StreamingLLM class among the 24 cache classes in transformers cache_utils.py - the shipped equivalent is DynamicSlidingWindowLayer / StaticSlidingWindowLayer, which do NOT implement the sink-plus-window layout. mit-han-lab/streaming-llm was last pushed 2024-07-11 (7.3k stars) - highly cited, not dead, just not integrated. IMPORTANT CONCEPTUAL NOTE for anyone pairing this with the other KV-cache records: attention sinks are the same phenomenon as the 'massive activations / attention sink' that pyramidkv-paper identifies in its upper layers - the two records should be read together, since one explains what the sink is and the other allocates budget around it.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: iclr has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

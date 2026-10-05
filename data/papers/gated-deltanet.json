@@ -1,36 +1,37 @@
 {
-  "id": "gated-deltanet",
-  "type": "paper",
-  "name": "Gated Delta Networks: Improving Mamba2 with Delta Rule",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-arch-2412-06464"
-  ],
-  "arxiv_id": "2412.06464",
-  "venue": "iclr",
-  "year": 2025,
-  "category": "attention",
-  "authors": [
-    "Songlin Yang",
-    "Jan Kautz",
-    "Ali Hatamizadeh"
-  ],
-  "affiliations": [
-    "NVIDIA"
-  ],
-  "problem": "Linear Transformers underperformed attention on retrieval and long-context tasks; prior work separately proposed gating for memory control and the delta rule for precise updates, but neither alone was sufficient.",
-  "mechanism": "Combines the two mechanisms explicitly: the delta rule supplies precise, targeted memory modification while the gate supplies fast memory erasure, and the paper's observation is that they are complementary rather than competing. The layer is a gated delta rule S_t = S_{t-1} (alpha_t (I - beta_t k_t k_t^T)) + beta_t v_t k_t^T, i.e. the state decays by an input-dependent alpha_t and is corrected by a delta-rule write, giving both forgetting and precise update in one operator. Critically it also develops a PARALLEL training algorithm specialised for modern hardware (the WY-representation / UT transform), because a naive delta rule is not computable in parallel and would have reintroduced the sequential-scan problem Mamba-2 had just solved. The state is fixed-size per layer (n_heads, head_k_dim, head_v_dim), CONSTANT in sequence length, so there is no KV cache; decode memory does not grow with context.",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm",
-    "nvidia-b200",
-    "amd-instinct-mi300x"
-  ],
-  "speedup_reported": "Consistently outperforms existing models including Mamba2 and the pure delta rule on in-context recall and long-context benchmarks, and matches attention-based models on those tasks while keeping a constant-size state. Reported as accuracy and perplexity at matched state size rather than a throughput ratio; training throughput for the parallel algorithm is reported against a sequential-reference implementation on A100/H100-class GPUs.",
-  "adoption": "in-upstream-engine",
-  "code_url": "https://github.com/NVIDIA/TransformerEngine",
-  "open_weights": true,
-  "notes": "ICLR 2025 per the arXiv comment field; no journal-ref on the abs page. This is the mechanism that actually shipped: it is inside Qwen3-Next (the gated delta network half of that hybrid), inside Kimi Delta Attention, and inside NVIDIA's own hybrid open models. Verified in llama.cpp: LLM_ARCH_QWEN3NEXT is present and appears in llm_arch_is_hybrid(), and vLLM has a native Qwen3NextForCausalLM row. So the delta-rule lineage from this paper is genuinely in-production via its descendants."
+ "id": "gated-deltanet",
+ "type": "paper",
+ "name": "Gated Delta Networks: Improving Mamba2 with Delta Rule",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2412-06464"
+ ],
+ "arxiv_id": "2412.06464",
+ "venue": "iclr",
+ "year": 2025,
+ "category": "attention",
+ "authors": [
+  "Songlin Yang",
+  "Jan Kautz",
+  "Ali Hatamizadeh"
+ ],
+ "affiliations": [
+  "NVIDIA"
+ ],
+ "problem": "Linear Transformers underperformed attention on retrieval and long-context tasks; prior work separately proposed gating for memory control and the delta rule for precise updates, but neither alone was sufficient.",
+ "mechanism": "Combines the two mechanisms explicitly: the delta rule supplies precise, targeted memory modification while the gate supplies fast memory erasure, and the paper's observation is that they are complementary rather than competing. The layer is a gated delta rule S_t = S_{t-1} (alpha_t (I - beta_t k_t k_t^T)) + beta_t v_t k_t^T, i.e. the state decays by an input-dependent alpha_t and is corrected by a delta-rule write, giving both forgetting and precise update in one operator. Critically it also develops a PARALLEL training algorithm specialised for modern hardware (the WY-representation / UT transform), because a naive delta rule is not computable in parallel and would have reintroduced the sequential-scan problem Mamba-2 had just solved. The state is fixed-size per layer (n_heads, head_k_dim, head_v_dim), CONSTANT in sequence length, so there is no KV cache; decode memory does not grow with context.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "nvidia-b200",
+  "amd-instinct-mi300x"
+ ],
+ "speedup_reported": "Consistently outperforms existing models including Mamba2 and the pure delta rule on in-context recall and long-context benchmarks, and matches attention-based models on those tasks while keeping a constant-size state. Reported as accuracy and perplexity at matched state size rather than a throughput ratio; training throughput for the parallel algorithm is reported against a sequential-reference implementation on A100/H100-class GPUs.",
+ "adoption": "in-upstream-engine",
+ "code_url": "https://github.com/NVIDIA/TransformerEngine",
+ "open_weights": true,
+ "notes": "ICLR 2025 per the arXiv comment field; no journal-ref on the abs page. This is the mechanism that actually shipped: it is inside Qwen3-Next (the gated delta network half of that hybrid), inside Kimi Delta Attention, and inside NVIDIA's own hybrid open models. Verified in llama.cpp: LLM_ARCH_QWEN3NEXT is present and appears in llm_arch_is_hybrid(), and vLLM has a native Qwen3NextForCausalLM row. So the delta-rule lineage from this paper is genuinely in-production via its descendants.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: iclr has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

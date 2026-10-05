@@ -1,32 +1,33 @@
 {
-  "id": "paper-deepseek-v2",
-  "type": "paper",
-  "name": "DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-arch-2405-04434"
-  ],
-  "arxiv_id": "2405.04434",
-  "venue": "arxiv-preprint",
-  "year": 2024,
-  "category": "moe",
-  "authors": [
-    "DeepSeek-AI"
-  ],
-  "affiliations": [
-    "DeepSeek"
-  ],
-  "problem": "DeepSeekMoE proved MoE FLOPs scale, but the KV cache still grew with context, so long-context serving of a 236B MoE model was bound by cache memory rather than by the experts.",
-  "mechanism": "Combines two independent mechanisms. (1) DeepSeekMoE: fine-grained mN experts with mK activated plus K_s always-on shared experts; 236B total, 21B activated per token, 128K context. (2) Multi-head Latent Attention (MLA): instead of caching K and V per KV head, project the hidden state once per token down to a low-dimensional latent, cache ONLY that latent, then up-project to per-head K and V at attention time, with decoupled RoPE applied to a separate small vector so positional information survives the down-projection. Per-token KV cache becomes O(d_c) instead of O(L * d_h * d_k) and, crucially, INDEPENDENT of the number of KV heads, so raising head count for quality no longer multiplies cache size. MLA is the mechanism that changes the serving memory bottleneck; the MoE block alone does not.",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm"
-  ],
-  "speedup_reported": "Saves 42.5 percent of training cost relative to DeepSeek 67B while substantially improving quality (21B versus 67B active parameters). The inference-side MLA claim is reported as a KV-cache size reduction rather than a tokens/second number, so there is no serving throughput figure to quote. Reported on H800 GPUs, a China-market SKU close to H100 SXM compute.",
-  "adoption": "in-production",
-  "code_url": "https://github.com/deepseek-ai/DeepSeek-V2",
-  "open_weights": true,
-  "notes": "SLUG RENAMED 2026-10-04 (parent agent): was 'deepseek-v2', colliding with the models record of the same id, which made every bare-slug cross-reference ambiguous. Inbound refs (['family']) all mean the models record, so none needed repointing; papers are cited via `sources`, never by bare slug. MLA, not the MoE block, is this paper's durable contribution and the reason DeepSeek served well; it is the only MoE paper in this slice that changes the serving memory bottleneck. vLLM implements DeepSeek-V2 and V3 MLA natively with FP8 KV cache, and that MLA plus FP8 combination is the best-supported open MoE serving stack today."
+ "id": "paper-deepseek-v2",
+ "type": "paper",
+ "name": "DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2405-04434"
+ ],
+ "arxiv_id": "2405.04434",
+ "venue": "arxiv-preprint",
+ "year": 2024,
+ "category": "moe",
+ "authors": [
+  "DeepSeek-AI"
+ ],
+ "affiliations": [
+  "DeepSeek"
+ ],
+ "problem": "DeepSeekMoE proved MoE FLOPs scale, but the KV cache still grew with context, so long-context serving of a 236B MoE model was bound by cache memory rather than by the experts.",
+ "mechanism": "Combines two independent mechanisms. (1) DeepSeekMoE: fine-grained mN experts with mK activated plus K_s always-on shared experts; 236B total, 21B activated per token, 128K context. (2) Multi-head Latent Attention (MLA): instead of caching K and V per KV head, project the hidden state once per token down to a low-dimensional latent, cache ONLY that latent, then up-project to per-head K and V at attention time, with decoupled RoPE applied to a separate small vector so positional information survives the down-projection. Per-token KV cache becomes O(d_c) instead of O(L * d_h * d_k) and, crucially, INDEPENDENT of the number of KV heads, so raising head count for quality no longer multiplies cache size. MLA is the mechanism that changes the serving memory bottleneck; the MoE block alone does not.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm"
+ ],
+ "speedup_reported": "Saves 42.5 percent of training cost relative to DeepSeek 67B while substantially improving quality (21B versus 67B active parameters). The inference-side MLA claim is reported as a KV-cache size reduction rather than a tokens/second number, so there is no serving throughput figure to quote. Reported on H800 GPUs, a China-market SKU close to H100 SXM compute.",
+ "adoption": "in-production",
+ "code_url": "https://github.com/deepseek-ai/DeepSeek-V2",
+ "open_weights": true,
+ "notes": "SLUG RENAMED 2026-10-04 (parent agent): was 'deepseek-v2', colliding with the models record of the same id, which made every bare-slug cross-reference ambiguous. Inbound refs (['family']) all mean the models record, so none needed repointing; papers are cited via `sources`, never by bare slug. MLA, not the MoE block, is this paper's durable contribution and the reason DeepSeek served well; it is the only MoE paper in this slice that changes the serving memory bottleneck. vLLM implements DeepSeek-V2 and V3 MLA natively with FP8 KV cache, and that MLA plus FP8 combination is the best-supported open MoE serving stack today.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'unknown'. `venue` is 'arxiv-preprint', which means no peer-reviewed venue has been established for this work as of the verification date, so the track genuinely is not known. 'unknown' is used here rather than leaving the field null or guessing 'main': the schema separates 'unknown' from 'main' precisely so that an unprereviewed preprint is not silently counted as main-track work. This annotation is what lets a downstream filter distinguish 'peer reviewed, main track' from 'not peer reviewed' without inferring it from the venue string.",
+ "venue_track": "unknown"
 }

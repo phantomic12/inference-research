@@ -1,41 +1,42 @@
 {
-  "id": "pagedattention-vllm",
-  "type": "paper",
-  "name": "Efficient Memory Management for Large Language Model Serving with PagedAttention",
-  "status": "verified",
-  "confidence": 0.95,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-attn-pagedattention-vllm"
-  ],
-  "arxiv_id": "2309.06180",
-  "venue": "sosp",
-  "year": 2023,
-  "category": "serving-systems",
-  "authors": [
-    "Kwon, Woosuk",
-    "Li, Zhuohan",
-    "Zhuang, Siyuan",
-    "Sheng, Ying"
-  ],
-  "affiliations": [
-    "University of California Berkeley",
-    "Stanford University",
-    "Princeton University"
-  ],
-  "problem": "Existing serving systems reserve a large, fixed, CONTIGUOUS maximum sequence-length block of KV memory per request, so most of that memory is wasted whenever the actual sequence is shorter - capping throughput well below what the hardware could reach.",
-  "mechanism": "Borrow virtual memory paging. The KV cache is divided into fixed-size blocks that need not be contiguous; a block table per request records which physical blocks belong to it, and attention kernels read through the block table. Logical blocks are what the scheduler allocates and what the block hash identifies, so a request only consumes as many blocks as it has actually filled. The same indirection enables sharing a prefix across requests (copy-on-write) and within a request (beam/parallel sampling).",
-  "hardware_relevance": [
-    "nvidia-a100-40gb-sxm4",
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm",
-    "nvidia-h200-sxm",
-    "nvidia-a10",
-    "nvidia-v100-sxm2-32gb"
-  ],
-  "speedup_reported": "Paper's own claims (abstract): vLLM improves throughput of popular LLMs by 2-4x AT THE SAME LEVEL OF LATENCY vs state-of-the-art systems (named: FasterTransformer and Orca), with the improvement more pronounced for longer sequences, larger models and more complex decoding algorithms. This is the strongest and most-cited serving claim in the batch and the baseline is named.",
-  "adoption": "in-production",
-  "code_url": "https://github.com/vllm-project/vllm",
-  "open_weights": null,
-  "notes": "arXiv ID 2309.06180 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. Venue sosp upgraded beyond the source note's 'comment-field evidence, the SOSP proceedings entry was not independently checked': the check has now been done - OpenReview returns a DBLP mirror with venue='SOSP 2023' for the exact title. venue=sosp, year=2023. adoption=in-production, the highest in the batch: vLLM IS the artifact of this paper and PagedAttention is its core memory manager - vllm/v1/core/kv_cache_utils.py is 118 KB of block-management code, and the block table is present in every attention backend. vLLM is deployed at very large scale, which is also why vattention (the alternative memory manager) is recorded research-only. This record is the single most consequential entry in the batch for anyone making a serving decision. RESOLVED (2026-10-04 cross-reference repair): 'nvidia-tesla-v100' -> nvidia-v100-sxm2-32gb. data/accelerators/ holds exactly one V100 record, so it is the only possible target - but note the capacity and form factor (32 GB, SXM2) are properties of that record, not claims this paper makes, so do not read the entry as a statement that the paper used a 32 GB SXM2 module."
+ "id": "pagedattention-vllm",
+ "type": "paper",
+ "name": "Efficient Memory Management for Large Language Model Serving with PagedAttention",
+ "status": "verified",
+ "confidence": 0.95,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-attn-pagedattention-vllm"
+ ],
+ "arxiv_id": "2309.06180",
+ "venue": "sosp",
+ "year": 2023,
+ "category": "serving-systems",
+ "authors": [
+  "Kwon, Woosuk",
+  "Li, Zhuohan",
+  "Zhuang, Siyuan",
+  "Sheng, Ying"
+ ],
+ "affiliations": [
+  "University of California Berkeley",
+  "Stanford University",
+  "Princeton University"
+ ],
+ "problem": "Existing serving systems reserve a large, fixed, CONTIGUOUS maximum sequence-length block of KV memory per request, so most of that memory is wasted whenever the actual sequence is shorter - capping throughput well below what the hardware could reach.",
+ "mechanism": "Borrow virtual memory paging. The KV cache is divided into fixed-size blocks that need not be contiguous; a block table per request records which physical blocks belong to it, and attention kernels read through the block table. Logical blocks are what the scheduler allocates and what the block hash identifies, so a request only consumes as many blocks as it has actually filled. The same indirection enables sharing a prefix across requests (copy-on-write) and within a request (beam/parallel sampling).",
+ "hardware_relevance": [
+  "nvidia-a100-40gb-sxm4",
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-a10",
+  "nvidia-v100-sxm2-32gb"
+ ],
+ "speedup_reported": "Paper's own claims (abstract): vLLM improves throughput of popular LLMs by 2-4x AT THE SAME LEVEL OF LATENCY vs state-of-the-art systems (named: FasterTransformer and Orca), with the improvement more pronounced for longer sequences, larger models and more complex decoding algorithms. This is the strongest and most-cited serving claim in the batch and the baseline is named.",
+ "adoption": "in-production",
+ "code_url": "https://github.com/vllm-project/vllm",
+ "open_weights": null,
+ "notes": "arXiv ID 2309.06180 verified via abs-page citation_title/citation_date on 2026-10-03; title matches. Venue sosp upgraded beyond the source note's 'comment-field evidence, the SOSP proceedings entry was not independently checked': the check has now been done - OpenReview returns a DBLP mirror with venue='SOSP 2023' for the exact title. venue=sosp, year=2023. adoption=in-production, the highest in the batch: vLLM IS the artifact of this paper and PagedAttention is its core memory manager - vllm/v1/core/kv_cache_utils.py is 118 KB of block-management code, and the block table is present in every attention backend. vLLM is deployed at very large scale, which is also why vattention (the alternative memory manager) is recorded research-only. This record is the single most consequential entry in the batch for anyone making a serving decision. RESOLVED (2026-10-04 cross-reference repair): 'nvidia-tesla-v100' -> nvidia-v100-sxm2-32gb. data/accelerators/ holds exactly one V100 record, so it is the only possible target - but note the capacity and form factor (32 GB, SXM2) are properties of that record, not claims this paper makes, so do not read the entry as a statement that the paper used a 32 GB SXM2 module.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: sosp has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

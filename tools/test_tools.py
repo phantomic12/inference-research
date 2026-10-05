@@ -92,7 +92,9 @@ class Harness(unittest.TestCase):
             "memory_bus_bit": 5120, "memory_bandwidth_gbps": 3000.0,
             "memory_bandwidth_basis": "HBM3e 6Gbps x 5120-bit",
             "flops": [{"precision": "fp8", "tflops": 4000.0, "dense": True,
-                       "vendor_claim": True, "source_id": "acme-spec"}],
+                       "vendor_claim": True, "source_id": "acme-spec",
+                       "basis": "vendor-spec-sheet",
+                       "basis_detail": "Acme spec sheet, FP8 row, as printed."}],
             "tdp_w": 700.0, "interconnect": ["nvlink"], "unified_memory": False,
             "consumer": False, "notes": "",
         }

@@ -1,44 +1,45 @@
 {
-  "id": "based-simple-linear-attention",
-  "type": "paper",
-  "name": "Simple linear attention language models balance the recall-throughput tradeoff (Based)",
-  "status": "contested",
-  "confidence": 0.8,
-  "updated": "2026-10-04",
-  "sources": [
-    "pap-arch-2402-18668",
-    "sco-pmlr-icml-2024-v235",
-    "sco-arxiv-api-paper-metadata"
-  ],
-  "arxiv_id": "2402.18668",
-  "venue": "icml",
-  "year": 2024,
-  "category": "attention",
-  "authors": [
-    "Simran Arora",
-    "Sabri Eyuboglu",
-    "Michael Zhang",
-    "Aman Timalsina",
-    "Silas Alberti",
-    "Dylan Zinsley",
-    "James Zou",
-    "Atri Rudra"
-  ],
-  "affiliations": [
-    "Stanford University",
-    "Together AI"
-  ],
-  "problem": "Linear attention and SSMs hold a fixed-size recurrent state and therefore have small inference memory, but they are measurably bad at recall, which is the ability to ground generations in tokens seen earlier in context.",
-  "mechanism": "Names and measures the tradeoff explicitly, then takes the pragmatic route: SLiM attention with a gated retainable feature map plus a sliding-window (local) attention stack, running several linear-attention layers and then a few sliding-window attention layers. Sliding-window attention is added back precisely because it is the cheap way to buy exact local recall while keeping the recurrent state small. State size is a tunable knob: varying the sliding-window width and the linear-attention feature dimension walks the Pareto frontier between state size and recall, from near-full-attention quality down to the small state of pure SSMs. The state is fixed-size and constant in sequence length, so the model still has no KV cache in the attention layers (the sliding-window part is bounded by the window, hence constant in total context). The paper also supplies IO-aware algorithms, which matters because linear attention is otherwise slower than optimized FlashAttention.",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm",
-    "nvidia-l40s",
-    "amd-instinct-mi300x"
-  ],
-  "speedup_reported": "IO-aware algorithms give 24x higher throughput than FlashAttention-2 when generating 1024 tokens with 1.3B-parameter models, on the authors' GPU hardware (A100-class). Also matches the strongest sub-quadratic models such as Mamba on perplexity and beats them by 6.22 accuracy points on recall-intensive real-world tasks. The 24x is against FlashAttention-2 at a specific generation length and is a kernel-algorithm comparison; it does not carry over to models of other sizes or to engine-integrated paths.",
-  "adoption": "research-only",
-  "code_url": "https://github.com/stanford-futuredata/lingo",
-  "open_weights": false,
-  "notes": "ICLR 2024 per the arXiv comment field; no journal-ref on the abs page. 'Based' is the name of the architecture, not in the title, which is why this paper is hard to find by model name. Valuable in this knowledge base for the opposite reason to most entries: it is the paper that documents the fixed-state-versus-recall tradeoff as a measured frontier, which is the honest framing for any 'SSMs have a tiny KV cache' claim. No Based entry exists in llama.cpp's arch registry and no native row appears in the vLLM supported-models list, so the 24x figure has had no production conduit.\n\nVENUE CORRECTED 2026-10-04 (paper-verification pass): venue/year iclr 2024 -> icml 2024. EVIDENCE: The underlying paper (arXiv 2402.18668, \"Simple linear attention language models balance the recall-throughput tradeoff\") is in PMLR v235 at score 1.0 and is NOT in the ICLR 2024 accepted-paper index. Its twin record papers/simple-linear-attention already carries icml/2024 correctly, so the repo contradicted itself for one arXiv ID. Duplicate-record problem, not an independent venue claim: this and papers/simple-linear-attention are the same arXiv ID under two slugs (already logged in docs/14-audit-findings.md as D1). I have NOT deleted either — that is report-only by prior decision. Recording the correct venue on both so the contradiction is visible. Both values retained here deliberately; status set to contested because a peer-reviewed attribution changed. arxiv_id unchanged (2402.18668)."
+ "id": "based-simple-linear-attention",
+ "type": "paper",
+ "name": "Simple linear attention language models balance the recall-throughput tradeoff (Based)",
+ "status": "contested",
+ "confidence": 0.8,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2402-18668",
+  "sco-pmlr-icml-2024-v235",
+  "sco-arxiv-api-paper-metadata"
+ ],
+ "arxiv_id": "2402.18668",
+ "venue": "icml",
+ "year": 2024,
+ "category": "attention",
+ "authors": [
+  "Simran Arora",
+  "Sabri Eyuboglu",
+  "Michael Zhang",
+  "Aman Timalsina",
+  "Silas Alberti",
+  "Dylan Zinsley",
+  "James Zou",
+  "Atri Rudra"
+ ],
+ "affiliations": [
+  "Stanford University",
+  "Together AI"
+ ],
+ "problem": "Linear attention and SSMs hold a fixed-size recurrent state and therefore have small inference memory, but they are measurably bad at recall, which is the ability to ground generations in tokens seen earlier in context.",
+ "mechanism": "Names and measures the tradeoff explicitly, then takes the pragmatic route: SLiM attention with a gated retainable feature map plus a sliding-window (local) attention stack, running several linear-attention layers and then a few sliding-window attention layers. Sliding-window attention is added back precisely because it is the cheap way to buy exact local recall while keeping the recurrent state small. State size is a tunable knob: varying the sliding-window width and the linear-attention feature dimension walks the Pareto frontier between state size and recall, from near-full-attention quality down to the small state of pure SSMs. The state is fixed-size and constant in sequence length, so the model still has no KV cache in the attention layers (the sliding-window part is bounded by the window, hence constant in total context). The paper also supplies IO-aware algorithms, which matters because linear attention is otherwise slower than optimized FlashAttention.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "nvidia-l40s",
+  "amd-instinct-mi300x"
+ ],
+ "speedup_reported": "IO-aware algorithms give 24x higher throughput than FlashAttention-2 when generating 1024 tokens with 1.3B-parameter models, on the authors' GPU hardware (A100-class). Also matches the strongest sub-quadratic models such as Mamba on perplexity and beats them by 6.22 accuracy points on recall-intensive real-world tasks. The 24x is against FlashAttention-2 at a specific generation length and is a kernel-algorithm comparison; it does not carry over to models of other sizes or to engine-integrated paths.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/stanford-futuredata/lingo",
+ "open_weights": false,
+ "notes": "ICLR 2024 per the arXiv comment field; no journal-ref on the abs page. 'Based' is the name of the architecture, not in the title, which is why this paper is hard to find by model name. Valuable in this knowledge base for the opposite reason to most entries: it is the paper that documents the fixed-state-versus-recall tradeoff as a measured frontier, which is the honest framing for any 'SSMs have a tiny KV cache' claim. No Based entry exists in llama.cpp's arch registry and no native row appears in the vLLM supported-models list, so the 24x figure has had no production conduit.\n\nVENUE CORRECTED 2026-10-04 (paper-verification pass): venue/year iclr 2024 -> icml 2024. EVIDENCE: The underlying paper (arXiv 2402.18668, \"Simple linear attention language models balance the recall-throughput tradeoff\") is in PMLR v235 at score 1.0 and is NOT in the ICLR 2024 accepted-paper index. Its twin record papers/simple-linear-attention already carries icml/2024 correctly, so the repo contradicted itself for one arXiv ID. Duplicate-record problem, not an independent venue claim: this and papers/simple-linear-attention are the same arXiv ID under two slugs (already logged in docs/14-audit-findings.md as D1). I have NOT deleted either — that is report-only by prior decision. Recording the correct venue on both so the contradiction is visible. Both values retained here deliberately; status set to contested because a peer-reviewed attribution changed. arxiv_id unchanged (2402.18668).\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'main'. This is STRUCTURAL rather than researched: icml has no Findings volume and no workshop track in which a paper could appear, so 'main' is the only possible honest value and no per-paper evidence was needed. The field is annotated here so that 'findings' and 'workshop' remain MEANINGFUL - a filter for findings=true must return only the papers that actually are findings, which requires every other paper to be explicitly NOT findings.",
+ "venue_track": "main"
 }

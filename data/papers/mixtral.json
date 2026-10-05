@@ -1,35 +1,36 @@
 {
-  "id": "mixtral",
-  "type": "paper",
-  "name": "Mixtral of Experts",
-  "status": "verified",
-  "confidence": 0.95,
-  "updated": "2026-10-03",
-  "sources": [
-    "pap-arch-2401-04088"
-  ],
-  "arxiv_id": "2401.04088",
-  "venue": "arxiv-preprint",
-  "year": 2024,
-  "category": "moe",
-  "authors": [
-    "Albert Jiang",
-    "Titouan Gabriel",
-    "Hugo Touvron"
-  ],
-  "affiliations": [
-    "Mistral AI"
-  ],
-  "problem": "Sparse MoE quality was available only in very large or gated research models; Mixtral targeted dense-7B serving cost while beating 70B-class dense models.",
-  "mechanism": "Architecture is Mistral 7B with each Transformer FFN replaced by 8 parallel feed-forward blocks (experts). A linear router selects top-2 of 8 experts per token per layer and the two outputs are weight-summed, softmax-normalised over the chosen two. No auxiliary load-balancing loss is described in the paper: balance is handled by the top-2 gating itself plus the large expert pool. Active-vs-total: 46.7B total parameters of which only 12.9B are active per token, so each token has access to 47B parameters' worth of experts while computing only 2 of 8 FFN blocks per layer. Trained at 32K context. Apache 2.0 for both base and Instruct. Serving consequence: per-token FLOPs are close to Mistral 7B, but all 46.7B of expert weights must remain resident in HBM, so the win is quality per active parameter and not memory footprint.",
-  "hardware_relevance": [
-    "nvidia-a100-80gb-sxm4",
-    "nvidia-h100-sxm",
-    "nvidia-h200-sxm"
-  ],
-  "speedup_reported": "No speedup number. Quality claims only: Mixtral 8x7B matches or outperforms Llama 2 70B and GPT-3.5 across evaluated benchmarks while using 12.9B active parameters, and Mixtral 8x7B-Instruct surpasses GPT-3.5 Turbo, Claude-2.1, Gemini Pro and Llama 2 70B-Chat on human evaluation. Any tokens/second figure for Mixtral is a serving-system measurement, not a claim of this paper.",
-  "adoption": "in-production",
-  "code_url": "https://mistral.ai/news/announcing-mixtral-8x7b",
-  "open_weights": true,
-  "notes": "The most-deployed MoE shape in open serving stacks: Mistral, Ministral 3 and much European enterprise deployment are Mixtral-shaped. Verified natively supported in vLLM, and present in llama.cpp as a mistral.py variant so it needs no separate arch entry. The 'no auxiliary loss' detail matters because Mixtral is the common counterexample used when arguing auxiliary-loss-free balancing is unnecessary, though DeepSeek-V3 introduced the bias trick precisely because relying on gating alone proved fragile at 671B scale."
+ "id": "mixtral",
+ "type": "paper",
+ "name": "Mixtral of Experts",
+ "status": "verified",
+ "confidence": 0.95,
+ "updated": "2026-10-04",
+ "sources": [
+  "pap-arch-2401-04088"
+ ],
+ "arxiv_id": "2401.04088",
+ "venue": "arxiv-preprint",
+ "year": 2024,
+ "category": "moe",
+ "authors": [
+  "Albert Jiang",
+  "Titouan Gabriel",
+  "Hugo Touvron"
+ ],
+ "affiliations": [
+  "Mistral AI"
+ ],
+ "problem": "Sparse MoE quality was available only in very large or gated research models; Mixtral targeted dense-7B serving cost while beating 70B-class dense models.",
+ "mechanism": "Architecture is Mistral 7B with each Transformer FFN replaced by 8 parallel feed-forward blocks (experts). A linear router selects top-2 of 8 experts per token per layer and the two outputs are weight-summed, softmax-normalised over the chosen two. No auxiliary load-balancing loss is described in the paper: balance is handled by the top-2 gating itself plus the large expert pool. Active-vs-total: 46.7B total parameters of which only 12.9B are active per token, so each token has access to 47B parameters' worth of experts while computing only 2 of 8 FFN blocks per layer. Trained at 32K context. Apache 2.0 for both base and Instruct. Serving consequence: per-token FLOPs are close to Mistral 7B, but all 46.7B of expert weights must remain resident in HBM, so the win is quality per active parameter and not memory footprint.",
+ "hardware_relevance": [
+  "nvidia-a100-80gb-sxm4",
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm"
+ ],
+ "speedup_reported": "No speedup number. Quality claims only: Mixtral 8x7B matches or outperforms Llama 2 70B and GPT-3.5 across evaluated benchmarks while using 12.9B active parameters, and Mixtral 8x7B-Instruct surpasses GPT-3.5 Turbo, Claude-2.1, Gemini Pro and Llama 2 70B-Chat on human evaluation. Any tokens/second figure for Mixtral is a serving-system measurement, not a claim of this paper.",
+ "adoption": "in-production",
+ "code_url": "https://mistral.ai/news/announcing-mixtral-8x7b",
+ "open_weights": true,
+ "notes": "The most-deployed MoE shape in open serving stacks: Mistral, Ministral 3 and much European enterprise deployment are Mixtral-shaped. Verified natively supported in vLLM, and present in llama.cpp as a mistral.py variant so it needs no separate arch entry. The 'no auxiliary loss' detail matters because Mixtral is the common counterexample used when arguing auxiliary-loss-free balancing is unnecessary, though DeepSeek-V3 introduced the bias trick precisely because relying on gating alone proved fragile at 671B scale.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass, agent w3p): venue_track 'unknown'. `venue` is 'arxiv-preprint', which means no peer-reviewed venue has been established for this work as of the verification date, so the track genuinely is not known. 'unknown' is used here rather than leaving the field null or guessing 'main': the schema separates 'unknown' from 'main' precisely so that an unprereviewed preprint is not silently counted as main-track work. This annotation is what lets a downstream filter distinguish 'peer reviewed, main track' from 'not peer reviewed' without inferring it from the venue string.",
+ "venue_track": "unknown"
 }

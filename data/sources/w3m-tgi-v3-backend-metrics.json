@@ -1,0 +1,15 @@
+{
+  "id": "w3m-tgi-v3-backend-metrics",
+  "type": "source",
+  "name": "TGI backends/v3/src/backend.rs - batch-level metrics, their method labels, and the absence of TTFT/KV usage",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "url": "https://github.com/huggingface/text-generation-inference/blob/main/backends/v3/src/backend.rs",
+  "publisher": "huggingface/text-generation-inference",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-04",
+  "archived_url": null,
+  "notes": "backends/v3/src/backend.rs on main, 2026-10-04. Grepping metrics::{counter,histogram,gauge}! across router/src/server.rs plus backends/v3/src/{backend,queue,lib,block_allocator}.rs yields 27 distinct names, six of which are absent from the published docs table: tgi_batch_concat, tgi_batch_concat_duration, tgi_batch_inference_failure, tgi_batch_max_total_tokens, tgi_batch_total_tokens (and tgi_request_failure). Label keys are explicit at the call sites: 'method' => 'prefill'|'decode' on every batch duration/count family, 'reason' => 'backpressure'|'chunking'|'wait_exceeded' on tgi_batch_concat, 'err' => 'validation'|'incomplete' on tgi_request_failure. Two zero-hit searches on the same files establish the LLM gaps: grep -ci 'time_to_first|first_token' returns 0 for router/src/server.rs and backends/v3/src/backend.rs, and grep -rci 'cache_usage|kv_cache_usage' returns 0 for server.rs, backend.rs and block_allocator.rs."
+}

@@ -4,12 +4,27 @@
   "name": "Gaudi HPU Graphs: Static Shape Capture and Replay",
   "class": "custom_kernel",
   "bound_by": "launch_overhead",
-  "scales_with": ["batch_size", "sequence_length", "num_layers", "hidden_size"],
-  "affected_by_hardware": ["intel-gaudi2", "intel-gaudi3", "hpu"],
-  "workarounds": ["Use torch.compile with mode='reduce-overhead' to enable HPU graphs", "Use static shapes (fixed batch size and sequence length) to avoid graph recompilation", "Use the vLLM Gaudi plugin's custom graph caching for fast warm-up"],
-  "notes": "HPU graphs are Gaudi's equivalent of CUDA graphs: they capture a sequence of kernel launches into a single graph that can be replayed with minimal launch overhead. This is critical for LLM inference where many small kernel launches (attention, FFN, sampling) would otherwise be launch-bound. The vLLM Gaudi plugin implements custom graph caching for fast warm-up and efficient memory use. torch.compile with mode='reduce-overhead' enables HPU graphs automatically. The key constraint is static shapes: the batch size and sequence length must be fixed at capture time, so any change triggers recompilation. This is why vLLM on Gaudi uses a bucketing mechanism to group requests into fixed-size buckets. The HabanaAI/vllm-fork reached EOL at v1.23.0; the vllm-gaudi plugin is the production path. HPU graphs are not portable to CUDA or ROCm; they are a Gaudi-specific feature that requires the Habana runtime (torch-hpu). RESOLVED (2026-10-04 cross-reference repair): affected_by_hardware values 'gaudi-2' -> intel-gaudi2 and 'gaudi-3' -> intel-gaudi3. Each value is the architecture string of exactly one accelerator record and this repo holds one card per Gaudi generation, so the mapping is forced - note it is forced by the repo's contents, not by the source document. STILL LEFT UNRESOLVED in the same field: 'hpu', which names the Habana Processing Unit device class rather than any card, is redundant with the two Gaudi entries, and would resolve to either intel-gaudi2 or intel-gaudi3. Left unchanged rather than guessed.",
+  "scales_with": [
+    "batch_size",
+    "sequence_length",
+    "num_layers",
+    "hidden_size"
+  ],
+  "affected_by_hardware": [
+    "intel-gaudi2",
+    "intel-gaudi3"
+  ],
+  "workarounds": [
+    "Use torch.compile with mode='reduce-overhead' to enable HPU graphs",
+    "Use static shapes (fixed batch size and sequence length) to avoid graph recompilation",
+    "Use the vLLM Gaudi plugin's custom graph caching for fast warm-up"
+  ],
+  "notes": "HPU graphs are Gaudi's equivalent of CUDA graphs: they capture a sequence of kernel launches into a single graph that can be replayed with minimal launch overhead. This is critical for LLM inference where many small kernel launches (attention, FFN, sampling) would otherwise be launch-bound. The vLLM Gaudi plugin implements custom graph caching for fast warm-up and efficient memory use. torch.compile with mode='reduce-overhead' enables HPU graphs automatically. The key constraint is static shapes: the batch size and sequence length must be fixed at capture time, so any change triggers recompilation. This is why vLLM on Gaudi uses a bucketing mechanism to group requests into fixed-size buckets. The HabanaAI/vllm-fork reached EOL at v1.23.0; the vllm-gaudi plugin is the production path. HPU graphs are not portable to CUDA or ROCm; they are a Gaudi-specific feature that requires the Habana runtime (torch-hpu). RESOLVED (2026-10-04 cross-reference repair): affected_by_hardware values 'gaudi-2' -> intel-gaudi2 and 'gaudi-3' -> intel-gaudi3. Each value is the architecture string of exactly one accelerator record and this repo holds one card per Gaudi generation, so the mapping is forced - note it is forced by the repo's contents, not by the source document. RESOLVED 2026-10-04 by DELETION, not by repointing, and the deletion is the correct action rather than a dodge. 'hpu' names the Habana Processing Unit - the DEVICE CLASS spanning every Gaudi generation - not any card. This field already carried BOTH real targets, intel-gaudi2 and intel-gaudi3, before this pass, so 'hpu' was a third entry adding no hardware scope that was not already claimed. It was NOT repointed to either Gaudi record because the referring context does not choose between them: all three of these records are sourced to the vLLM Gaudi plugin README and plugin-system documentation (sources xpu-vllm-gaudi-readme, xpu-vllm-gaudi-plugin-system), which are CURRENT-GENERATION-AGNOSTIC - the plugin supports Gaudi 2 and Gaudi 3 with the same hpu_* custom ops and the same HPU-graph mechanism on both. Choosing intel-gaudi3 would have been a guess dressed as a fix, and it would have added a SECOND Gaudi 3 reference to a field that already had one, implying a specificity the source does not have. The cost of deleting rather than repointing is nil in this field, because the coverage 'hpu' was standing in for - 'this applies to Gaudi hardware' - is already carried by the two sibling entries. The concept itself is NOT lost: it remains in gotchas xpu-gaudi-fork-after-driver-init and xpu-gaudi-fork-eol, whose concepts arrays carry 'hpu' as free-text scope, which is where a device-CLASS name belongs since concepts are explicitly not id-resolved. A future reader who wants the device-class grouping should look for it there, not in an id field that can only hold card ids.",
   "status": "verified",
   "confidence": 0.85,
   "updated": "2026-10-04",
-  "sources": ["xpu-vllm-gaudi-readme", "xpu-vllm-gaudi-plugin-system"]
+  "sources": [
+    "xpu-vllm-gaudi-readme",
+    "xpu-vllm-gaudi-plugin-system"
+  ]
 }

@@ -1,26 +1,26 @@
 {
- "id": "exl3",
- "type": "quantization",
- "name": "EXL3 (ExLlamaV3 format, QTIP-based trellis quantization) - the successor to the archived EXL2",
- "scheme": "exl2",
- "bits": "target average bpw, fractional (e.g. 2.0-8.0; benchmark chart spans 1.75-8.0)",
- "weight_group_size": 256,
- "activation_scheme": "none - weight-only; the README advertises '2-8 bit cache quantization' as a SEPARATE capability, not part of EXL3 weights",
- "native_support": [],
- "emulated_support": [
-  "nvidia-rtx-4090",
-  "nvidia-rtx-5090"
- ],
- "kernels": [
-  "EXL3 trellis (Viterbi-encoded)"
- ],
- "quality_delta": null,
- "notes": "ADDED FOR COVERAGE: the coverage audit found the repo has exl2 but NOT its successor, and EXL2's own record already says the upstream repo is archived with development moved to ExLlamaV3. An archived-format record with no successor record is a coverage hole that will read as 'EXL2 is current'.\n\nWHAT IT IS: per the README, 'EXL3 quantization is a streamlined variant of QTIP from Cornell RelaxML. It aims to make SOTA quantization available to users on consumer hardware.' Conversion 'requires only an input model (in HF format) and a target bitrate', and 'By computing Hessians on the fly and thanks to a fused Viterbi kernel, the quantizer can convert a model in a single step', taking minutes for small models up to hours for 70B+ on a single high-end consumer GPU. So EXL3 is a LATTICE-CODED, Hessian-calibrated format in the QuIP#/QTIP lineage, not a grid quantizer.\n\nGROUP SIZE 256 IS THE PUBLISHED FIGURE and it is specifically about the embedding: doc/convert.md says 'Each embedding is split into 256-wide groups that are rotated and trellis-coded without calibration, and the following layers are calibrated against the quantized table.' Read that sentence carefully - the 256-wide grouping is stated for the embedding, and the subsequent layers are calibrated AGAINST the quantized embedding table, which is not the same as saying every weight tensor is grouped at 256. This is the honest limit of what is published: 256 is documented, and the per-layer grouping is not. Recorded as 256 with that caveat rather than left null, because unlike the KV and rotation-based records here there IS a published group width for the part of the model that dominates.\n\nCODEBOOK IS A CONFIGURATION, NOT A CONSTANT: -cb/--codebook accepts 'mul1' (default), 'mcg' or '3inst', and 'The mul1 codebook is required by some optimized inference paths' - i.e. the default is the one the fast paths need, which is the opposite of the usual 'default is the safe one' pattern. -rcp/--recipe gives a PER-TENSOR bitrate recipe. -hq keeps attention at higher precision and 'Final model size will be slightly larger than the 4.00 bpw requested', for MoE typically +0.05-0.10 bpw 'for a disproportionately large increase in model fidelity'.\n\nPROXY NOTE, STATED EXPLICITLY: this record uses scheme 'exl2' because the quantization scheme enum has no EXL3 value. 'exl2' is a NEAR MISS here rather than a wrong target - both are ExLlama-family mixed/fractional-bpw weight formats and neither quantizes the KV cache or activations - but it is NOT accurate and the true format name is in `name` and `bits`. Unlike the historical proxy failures in this repo (KV-cache methods filed under weight formats), nothing about EXL3 is misrepresented by this value: a query for EXL2-family weight formats should return this. REQUESTED ENUM ADDITION: 'exl3'.\n\nHARDWARE: the README frames the whole project as consumer-GPU/local-inference ('an inference library for running local LLMs on modern consumer GPUs', 'SOTA quantization available to users on consumer hardware', with AVX2/AVX512 CPU-offload support and TabbyAPI as the recommended server). native_support is deliberately EMPTY and emulated_support carries the consumer parts: as with every other record in this family, EXL3 has no silicon path anywhere - the trellis decode is a GPU kernel, not a hardware format. The upstream acknowledges Marlin in its credits, which is the route by which EXL3 output can reach Marlin-class kernels on other parts.",
- "status": "verified",
- "confidence": 0.8,
- "updated": "2026-10-04",
- "sources": [
-  "qzgw-exl3-readme",
-  "qzgw-exl3-convert"
- ]
+  "id": "exl3",
+  "type": "quantization",
+  "name": "EXL3 (ExLlamaV3 format, QTIP-based trellis quantization) - the successor to the archived EXL2",
+  "scheme": "exl2",
+  "bits": "target average bpw, fractional (e.g. 2.0-8.0; benchmark chart spans 1.75-8.0)",
+  "weight_group_size": 256,
+  "activation_scheme": "none - weight-only; the README advertises '2-8 bit cache quantization' as a SEPARATE capability, not part of EXL3 weights",
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-rtx-4090",
+    "nvidia-rtx-5090"
+  ],
+  "kernels": [
+    "EXL3 trellis (Viterbi-encoded)"
+  ],
+  "quality_delta": null,
+  "notes": "ADDED FOR COVERAGE: the coverage audit found the repo has exl2 but NOT its successor, and EXL2's own record already says the upstream repo is archived with development moved to ExLlamaV3. An archived-format record with no successor record is a coverage hole that will read as 'EXL2 is current'.\n\nWHAT IT IS: per the README, 'EXL3 quantization is a streamlined variant of QTIP from Cornell RelaxML. It aims to make SOTA quantization available to users on consumer hardware.' Conversion 'requires only an input model (in HF format) and a target bitrate', and 'By computing Hessians on the fly and thanks to a fused Viterbi kernel, the quantizer can convert a model in a single step', taking minutes for small models up to hours for 70B+ on a single high-end consumer GPU. So EXL3 is a LATTICE-CODED, Hessian-calibrated format in the QuIP#/QTIP lineage, not a grid quantizer.\n\nGROUP SIZE 256 IS THE PUBLISHED FIGURE and it is specifically about the embedding: doc/convert.md says 'Each embedding is split into 256-wide groups that are rotated and trellis-coded without calibration, and the following layers are calibrated against the quantized table.' Read that sentence carefully - the 256-wide grouping is stated for the embedding, and the subsequent layers are calibrated AGAINST the quantized embedding table, which is not the same as saying every weight tensor is grouped at 256. This is the honest limit of what is published: 256 is documented, and the per-layer grouping is not. Recorded as 256 with that caveat rather than left null, because unlike the KV and rotation-based records here there IS a published group width for the part of the model that dominates.\n\nCODEBOOK IS A CONFIGURATION, NOT A CONSTANT: -cb/--codebook accepts 'mul1' (default), 'mcg' or '3inst', and 'The mul1 codebook is required by some optimized inference paths' - i.e. the default is the one the fast paths need, which is the opposite of the usual 'default is the safe one' pattern. -rcp/--recipe gives a PER-TENSOR bitrate recipe. -hq keeps attention at higher precision and 'Final model size will be slightly larger than the 4.00 bpw requested', for MoE typically +0.05-0.10 bpw 'for a disproportionately large increase in model fidelity'.\n\nPROXY NOTE, STATED EXPLICITLY: this record uses scheme 'exl2' because the quantization scheme enum has no EXL3 value. 'exl2' is a NEAR MISS here rather than a wrong target - both are ExLlama-family mixed/fractional-bpw weight formats and neither quantizes the KV cache or activations - but it is NOT accurate and the true format name is in `name` and `bits`. Unlike the historical proxy failures in this repo (KV-cache methods filed under weight formats), nothing about EXL3 is misrepresented by this value: a query for EXL2-family weight formats should return this. REQUESTED ENUM ADDITION: 'exl3'.\n\nHARDWARE: the README frames the whole project as consumer-GPU/local-inference ('an inference library for running local LLMs on modern consumer GPUs', 'SOTA quantization available to users on consumer hardware', with AVX2/AVX512 CPU-offload support and TabbyAPI as the recommended server). native_support is deliberately EMPTY and emulated_support carries the consumer parts: as with every other record in this family, EXL3 has no silicon path anywhere - the trellis decode is a GPU kernel, not a hardware format. The upstream acknowledges Marlin in its credits, which is the route by which EXL3 output can reach Marlin-class kernels on other parts.\nNATIVE_SUPPORT CLASSIFIED 2026-10-04: this field is still [] and that is CORRECT, but the empty list used to be ambiguous between three different states and now is not. Reason class on this record: WEIGHT-ONLY, SO STRUCTURALLY ABSENT. The bits field keeps activations in FP16, so execution is dequantize-to-FP16 then an FP16 tensor-core GEMM; there is no INT4-x-INT4 (or sub-8-bit x sub-8-bit) silicon instruction for it to target. This is a statement about the arithmetic, not an absence of investigation. Consequence for a reader: nothing further to verify - no silicon path is possible for this format as defined. The full statement of the three-way distinction, and the worked list of all 72 empty records by class, is in gotcha quant-native-support-empty-means-three-different-things. Rule of thumb for this field everywhere in the repo: if the bits field carries an 'a16', or the scheme is KV-cache-only or a llama.cpp integer storage type, an empty native_support is a DEFINITION and needs no verification; only a W4A4/W8A8/sub-8-bit format with research kernels can have an empty list that is a real finding.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "qzgw-exl3-readme",
+    "qzgw-exl3-convert"
+  ]
 }

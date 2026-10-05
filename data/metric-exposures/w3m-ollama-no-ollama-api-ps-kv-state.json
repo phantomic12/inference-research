@@ -1,0 +1,24 @@
+{
+  "id": "w3m-ollama-no-ollama-api-ps-kv-state",
+  "type": "metric_exposure",
+  "name": "Ollama: a KV-cache or occupancy state metric on the server side - VERIFIED ABSENT",
+  "engine_id": "ollama",
+  "metric_name": "ollama_api_ps_kv_state",
+  "metric_type": "unknown",
+  "unit": null,
+  "exposure": "unknown",
+  "endpoint": null,
+  "histogram_buckets": null,
+  "labels": [],
+  "enabled_by_default": null,
+  "phase_scoped": null,
+  "verified_negatively": true,
+  "notes": "VERIFIED NEGATIVE. Ollama does not emit a KV-cache or occupancy state metric on the server side. ollama_api_ps_kv_state is NOT a metric this engine registers - it is recorded here under the conventional name a reader would go looking for so the absence is queryable rather than implied by a gap in a list. GET /api/ps is the only state endpoint and its ProcessModelResponse carries name, model, size, size_vram, context_length and expires_at - you can see what is resident and how much VRAM it holds, but nothing about KV occupancy, queue depth, or timing. And because Ollama's scheduler decides which models stay resident in VRAM rather than batching sequences, even a hypothetical 'running requests' count would not mean what it means in vLLM. What was searched: ProcessModelResponse fields read from server/routes.go and the API docs: no timing, no queue depth, no KV usage.. Do not read this record's metric_name as something the engine exports; it is the name that is missing.",
+  "status": "verified",
+  "confidence": 0.92,
+  "updated": "2026-10-04",
+  "sources": [
+    "obs-ollama-routes-go",
+    "obs-ollama-api-docs"
+  ]
+}
