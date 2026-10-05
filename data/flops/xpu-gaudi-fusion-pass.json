@@ -1,28 +1,39 @@
 {
-  "id": "xpu-gaudi-fusion-pass",
-  "type": "flop",
-  "name": "Gaudi Fusion Pass: Operator Fusion on SynapseAI",
-  "class": "custom_kernel",
-  "bound_by": "memory",
-  "scales_with": [
-    "num_layers",
-    "hidden_size",
-    "ffn_hidden_size"
-  ],
-  "affected_by_hardware": [
+ "id": "xpu-gaudi-fusion-pass",
+ "type": "flop",
+ "name": "Gaudi Fusion Pass: Operator Fusion on SynapseAI",
+ "class": "custom_kernel",
+ "bound_by": "memory",
+ "scales_with": [
+  "num_layers",
+  "hidden_size",
+  "ffn_hidden_size"
+ ],
+ "affected_by_hardware": [
+  "intel-gaudi2",
+  "intel-gaudi3"
+ ],
+ "workarounds": [
+  "Use torch.compile to trigger automatic fusion",
+  "Use the vLLM Gaudi plugin's custom fused kernels (hpu_fused_moe, hpu_layernorm)"
+ ],
+ "notes": "The SynapseAI compiler on Gaudi performs operator fusion automatically when shapes are static. Common fusions include: LayerNorm + Linear, MatMul + Bias + Activation, and attention kernel fusion. The vLLM Gaudi plugin registers custom fused kernels: hpu_fused_moe (fused Mixture-of-Experts), hpu_layernorm (fused layer normalization), hpu_rotary_embedding (fused RoPE), hpu_mamba_mixer2 (fused Mamba mixer). These custom ops are not available on CUDA or ROCm. The fusion pass is most effective when combined with HPU graphs: the graph captures the fused kernels as a single unit, eliminating both launch overhead and intermediate memory traffic. For llama.cpp on Intel GPUs, the SYCL backend uses oneDNN for GEMM operations and performs fusion at the graph level via oneDNN Graph API. The fusion pass is a key reason Gaudi can achieve competitive inference throughput despite lower peak TFLOPS than NVIDIA: by reducing memory traffic and launch overhead, the effective throughput approaches the memory bandwidth limit. RESOLVED (2026-10-04 cross-reference repair): affected_by_hardware values 'gaudi-2' -> intel-gaudi2 and 'gaudi-3' -> intel-gaudi3. Each value is the architecture string of exactly one accelerator record and this repo holds one card per Gaudi generation, so the mapping is forced - note it is forced by the repo's contents, not by the source document. RESOLVED 2026-10-04 by DELETION, not by repointing, and the deletion is the correct action rather than a dodge. 'hpu' names the Habana Processing Unit - the DEVICE CLASS spanning every Gaudi generation - not any card. This field already carried BOTH real targets, intel-gaudi2 and intel-gaudi3, before this pass, so 'hpu' was a third entry adding no hardware scope that was not already claimed. It was NOT repointed to either Gaudi record because the referring context does not choose between them: all three of these records are sourced to the vLLM Gaudi plugin README and plugin-system documentation (sources xpu-vllm-gaudi-readme, xpu-vllm-gaudi-plugin-system), which are CURRENT-GENERATION-AGNOSTIC - the plugin supports Gaudi 2 and Gaudi 3 with the same hpu_* custom ops and the same HPU-graph mechanism on both. Choosing intel-gaudi3 would have been a guess dressed as a fix, and it would have added a SECOND Gaudi 3 reference to a field that already had one, implying a specificity the source does not have. The cost of deleting rather than repointing is nil in this field, because the coverage 'hpu' was standing in for - 'this applies to Gaudi hardware' - is already carried by the two sibling entries. The concept itself is NOT lost: it remains in gotchas xpu-gaudi-fork-after-driver-init and xpu-gaudi-fork-eol, whose concepts arrays carry 'hpu' as free-text scope, which is where a device-CLASS name belongs since concepts are explicitly not id-resolved. A future reader who wants the device-class grouping should look for it there, not in an id field that can only hold card ids.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-05",
+ "sources": [
+  "xpu-vllm-gaudi-readme",
+  "xpu-vllm-gaudi-plugin-system"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "The fusion pass is a key reason Gaudi can achieve competitive inference throughput despite lower peak TFLOPS than NVIDIA: by reducing memory traffic and launch overhead, the effective throughput approaches the memory bandwidth limit.",
+   "basis": "recorded",
+   "values_for": [
     "intel-gaudi2",
     "intel-gaudi3"
-  ],
-  "workarounds": [
-    "Use torch.compile to trigger automatic fusion",
-    "Use the vLLM Gaudi plugin's custom fused kernels (hpu_fused_moe, hpu_layernorm)"
-  ],
-  "notes": "The SynapseAI compiler on Gaudi performs operator fusion automatically when shapes are static. Common fusions include: LayerNorm + Linear, MatMul + Bias + Activation, and attention kernel fusion. The vLLM Gaudi plugin registers custom fused kernels: hpu_fused_moe (fused Mixture-of-Experts), hpu_layernorm (fused layer normalization), hpu_rotary_embedding (fused RoPE), hpu_mamba_mixer2 (fused Mamba mixer). These custom ops are not available on CUDA or ROCm. The fusion pass is most effective when combined with HPU graphs: the graph captures the fused kernels as a single unit, eliminating both launch overhead and intermediate memory traffic. For llama.cpp on Intel GPUs, the SYCL backend uses oneDNN for GEMM operations and performs fusion at the graph level via oneDNN Graph API. The fusion pass is a key reason Gaudi can achieve competitive inference throughput despite lower peak TFLOPS than NVIDIA: by reducing memory traffic and launch overhead, the effective throughput approaches the memory bandwidth limit. RESOLVED (2026-10-04 cross-reference repair): affected_by_hardware values 'gaudi-2' -> intel-gaudi2 and 'gaudi-3' -> intel-gaudi3. Each value is the architecture string of exactly one accelerator record and this repo holds one card per Gaudi generation, so the mapping is forced - note it is forced by the repo's contents, not by the source document. RESOLVED 2026-10-04 by DELETION, not by repointing, and the deletion is the correct action rather than a dodge. 'hpu' names the Habana Processing Unit - the DEVICE CLASS spanning every Gaudi generation - not any card. This field already carried BOTH real targets, intel-gaudi2 and intel-gaudi3, before this pass, so 'hpu' was a third entry adding no hardware scope that was not already claimed. It was NOT repointed to either Gaudi record because the referring context does not choose between them: all three of these records are sourced to the vLLM Gaudi plugin README and plugin-system documentation (sources xpu-vllm-gaudi-readme, xpu-vllm-gaudi-plugin-system), which are CURRENT-GENERATION-AGNOSTIC - the plugin supports Gaudi 2 and Gaudi 3 with the same hpu_* custom ops and the same HPU-graph mechanism on both. Choosing intel-gaudi3 would have been a guess dressed as a fix, and it would have added a SECOND Gaudi 3 reference to a field that already had one, implying a specificity the source does not have. The cost of deleting rather than repointing is nil in this field, because the coverage 'hpu' was standing in for - 'this applies to Gaudi hardware' - is already carried by the two sibling entries. The concept itself is NOT lost: it remains in gotchas xpu-gaudi-fork-after-driver-init and xpu-gaudi-fork-eol, whose concepts arrays carry 'hpu' as free-text scope, which is where a device-CLASS name belongs since concepts are explicitly not id-resolved. A future reader who wants the device-class grouping should look for it there, not in an id field that can only hold card ids.",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-04",
-  "sources": [
-    "xpu-vllm-gaudi-readme",
-    "xpu-vllm-gaudi-plugin-system"
-  ]
+   ]
+  }
+ ]
 }

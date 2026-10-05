@@ -65,6 +65,7 @@ FIELD_META: dict[str, list[tuple[str, str]]] = {
         ("memory_type", "Memory type"), ("memory_bus_bit", "Memory bus (bit)"),
         ("memory_bandwidth_gbps", "Memory bandwidth (GB/s)"),
         ("memory_bandwidth_basis", "Bandwidth basis"),
+        ("onchip_cache", "On-chip cache"),
         ("flops", "Peak FLOPS"), ("tdp_w", "TDP (W)"),
         ("interconnect", "Interconnect"), ("unified_memory", "Unified memory"),
         ("consumer", "Consumer part"),
@@ -74,6 +75,7 @@ FIELD_META: dict[str, list[tuple[str, str]]] = {
         ("arithmetic_intensity", "Arithmetic intensity"),
         ("scales_with", "Scales with"),
         ("affected_by_hardware", "Hardware-dependent"),
+        ("hardware_parameters", "Hardware parameters"),
         ("workarounds", "Workarounds"),
     ],
     "engine": [
@@ -107,6 +109,9 @@ FIELD_META: dict[str, list[tuple[str, str]]] = {
         ("accelerator_ids", "Accelerators"), ("interconnect_ids", "Interconnect"),
         ("format_id", "Format"), ("methodology", "Methodology"),
         ("measured_by", "Measured by"), ("reproducible", "Reproducible"),
+        ("energy_basis", "Energy basis"), ("power_w", "Mean power (W)"),
+        ("power_scope", "Power scope"), ("power_cap", "Power cap (W)"),
+        ("clock_lock_mhz", "Clock lock (MHz)"), ("thermal_state", "Thermal state"),
     ],
     "gotcha": [
         ("class", "Class"), ("severity", "Severity"), ("affects", "Affects"),

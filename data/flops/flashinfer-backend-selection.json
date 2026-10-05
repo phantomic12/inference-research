@@ -1,35 +1,49 @@
 {
-  "id": "flashinfer-backend-selection",
-  "type": "flop",
-  "name": "FlashInfer: a kernel-selection layer over FlashAttention, cuDNN, CUTLASS and TensorRT-LLM",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "FlashInfer is not itself an arithmetic mechanism; it is the layer where backend choice decides which arithmetic is done. Recorded as custom_kernel because the engine-level effect is a discrete change in the kernels executing the same math. Its kernels change the bytes/FLOPs trade by adding: paged and ragged KV-cache layouts (so decode reads a gathered block table instead of a dense cache - same FLOPs, different access pattern and potentially more uncoalesced reads), cascade attention (a hierarchical pass that reads a shared prefix KV once and reuses it across requests rather than per-request, which cuts HBM bytes for shared prefixes), POD-attention (fused prefill+decode for a mixed batch, saving a kernel boundary and the re-read of the shared prefix), block-sparse and variable block-sparse plans, and FP8/FP4 GEMM and MoE paths (per-tensor, groupwise, NVFP4 and MXFP4 block-scaled) which do change the FLOP cost by doubling or quadrupling tensor-core throughput.",
-  "bound_by": "memory",
-  "scales_with": [
-    "batch_size (decode vs prefill vs mixed-batch kernel selection)",
-    "context_length",
-    "prefix sharing rate (cascade attention's benefit)",
-    "num_kv_heads and head_dim"
-  ],
-  "affected_by_hardware": [
+ "id": "flashinfer-backend-selection",
+ "type": "flop",
+ "name": "FlashInfer: a kernel-selection layer over FlashAttention, cuDNN, CUTLASS and TensorRT-LLM",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "FlashInfer is not itself an arithmetic mechanism; it is the layer where backend choice decides which arithmetic is done. Recorded as custom_kernel because the engine-level effect is a discrete change in the kernels executing the same math. Its kernels change the bytes/FLOPs trade by adding: paged and ragged KV-cache layouts (so decode reads a gathered block table instead of a dense cache - same FLOPs, different access pattern and potentially more uncoalesced reads), cascade attention (a hierarchical pass that reads a shared prefix KV once and reuses it across requests rather than per-request, which cuts HBM bytes for shared prefixes), POD-attention (fused prefill+decode for a mixed batch, saving a kernel boundary and the re-read of the shared prefix), block-sparse and variable block-sparse plans, and FP8/FP4 GEMM and MoE paths (per-tensor, groupwise, NVFP4 and MXFP4 block-scaled) which do change the FLOP cost by doubling or quadrupling tensor-core throughput.",
+ "bound_by": "memory",
+ "scales_with": [
+  "batch_size (decode vs prefill vs mixed-batch kernel selection)",
+  "context_length",
+  "prefix sharing rate (cascade attention's benefit)",
+  "num_kv_heads and head_dim"
+ ],
+ "affected_by_hardware": [
+  "nvidia-b200",
+  "nvidia-h100-sxm",
+  "nvidia-l4",
+  "nvidia-l40s",
+  "nvidia-rtx-4090"
+ ],
+ "workarounds": [
+  "Backend selection by compute capability: README lists support from SM75 (Turing) through SM90 (Hopper), SM100/SM103 (Blackwell), SM110 (Jetson Thor) and SM120/SM121 (RTX 50, DGX Spark) - and warns 'Not all features are supported across all compute capabilities'",
+  "Sorting-free top-k / top-p / min-p sampling to remove a sort from the sampling path",
+  "Pre-compiled cubin wheels (flashinfer-cubin) plus a JIT cache so per-arch kernel selection does not become a cold-start compile",
+  "Low-latency and high-throughput variants of the same op, chosen by workload"
+ ],
+ "notes": "There is already an engine record for FlashInfer (engines/flashinfer presumably) - this flop record deliberately records the kernels rather than duplicating the engine. The decision-relevant fact: because FlashInfer wraps other people's kernels, a benchmark on 'FlashInfer' is a benchmark on whichever backend it selected for that arch, and that differs per GPU. Features that are CUDA-only versus features that need a specific arch are not the same list. Sampling note: the sorting-free sampler is documented in a 2025-03-10 FlashInfer blog. Verified against the repo README only; no performance number is taken from here.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-05",
+ "sources": [
+  "kern-flashinfer-github",
+  "flop-flashinfer"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "tensor_core_count",
+   "effect": "Its kernels change the bytes/FLOPs trade by adding: paged and ragged KV-cache layouts (so decode reads a gathered block table instead of a dense cache - same FLOPs, different access pattern and potentially more uncoalesced reads), cascade attention (a hierarchical pass that reads a shared prefix KV once and reuses it across requests rather than per-request, which cuts HBM bytes for shared prefixes), POD-attention ...",
+   "basis": "unverified",
+   "values_for": [
     "nvidia-b200",
     "nvidia-h100-sxm",
     "nvidia-l4",
     "nvidia-l40s",
     "nvidia-rtx-4090"
-  ],
-  "workarounds": [
-    "Backend selection by compute capability: README lists support from SM75 (Turing) through SM90 (Hopper), SM100/SM103 (Blackwell), SM110 (Jetson Thor) and SM120/SM121 (RTX 50, DGX Spark) - and warns 'Not all features are supported across all compute capabilities'",
-    "Sorting-free top-k / top-p / min-p sampling to remove a sort from the sampling path",
-    "Pre-compiled cubin wheels (flashinfer-cubin) plus a JIT cache so per-arch kernel selection does not become a cold-start compile",
-    "Low-latency and high-throughput variants of the same op, chosen by workload"
-  ],
-  "notes": "There is already an engine record for FlashInfer (engines/flashinfer presumably) - this flop record deliberately records the kernels rather than duplicating the engine. The decision-relevant fact: because FlashInfer wraps other people's kernels, a benchmark on 'FlashInfer' is a benchmark on whichever backend it selected for that arch, and that differs per GPU. Features that are CUDA-only versus features that need a specific arch are not the same list. Sampling note: the sorting-free sampler is documented in a 2025-03-10 FlashInfer blog. Verified against the repo README only; no performance number is taken from here.",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "kern-flashinfer-github",
-    "flop-flashinfer"
-  ]
+   ]
+  }
+ ]
 }

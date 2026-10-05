@@ -1,37 +1,51 @@
 {
-  "id": "block-scaled-tensor-core-fp4-fp8",
-  "type": "flop",
-  "name": "Block-scaled FP8/FP4 tensor cores: MXFP and NVFP formats inside the MMA instruction",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "This is the mechanism by which precision reduction becomes FLOPs rather than a dequantization tax. From the PTX ISA shape tables: warp-level mma has .e4m3/.e5m2 at .m16n8k32 (PTX 8.4) and .m16n8k16 (8.7); .e3m2/.e2m3/.e2m1 at .m16n8k32 (8.7); and BLOCK-SCALED forms where the multiplicand type is .e4m3/.e5m2/.e3m2/.e2m3/.e2m1 times a .ue8m0 scale at .m16n8k32, and .e2m1 times (.ue8m0 or .ue4m3) at .m16n8k64 (8.7). The key point: the scale is part of the MMA OPERAND, not a separate kernel, so a 32-element scale block is applied inside the tensor-core pipeline and the activation quantization no longer needs a fused dequant pass. wgmma mirrors this at warpgroup level - fp8 at .m64nNk32. tcgen05 goes further with distinct .kind values (f16, f8f6f4, mxf8f6f4, mxf4, mxf4nvf4, tf32, i8, ti16) plus .decompress::lut::b and .collector::b::* qualifiers, and CUTLASS lists higher-throughput FP8 (MMA_K=64) and FP4 (MMA_K=128) MMA instructions for Blackwell. The arithmetic win is the FLOP-per-byte ratio: at fp8 the tensor-core rate doubles (H100: 989 -> 1978 TFLOPS) and at fp4 it doubles again, but the SFU exponential rate does NOT change - which is precisely why FA-3 and FA-4 both had to solve the softmax bottleneck separately.",
-  "bound_by": "compute",
-  "scales_with": [
-    "scale block size (16/32-element blocks for ue8m0 vs ue4m3)",
-    "precision (fp8 -> fp4 doubles then quadruples tensor-core throughput)",
-    "architecture generation (wmma-level vs wgmma-level vs tcgen05 .kind)"
-  ],
-  "affected_by_hardware": [
+ "id": "block-scaled-tensor-core-fp4-fp8",
+ "type": "flop",
+ "name": "Block-scaled FP8/FP4 tensor cores: MXFP and NVFP formats inside the MMA instruction",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "This is the mechanism by which precision reduction becomes FLOPs rather than a dequantization tax. From the PTX ISA shape tables: warp-level mma has .e4m3/.e5m2 at .m16n8k32 (PTX 8.4) and .m16n8k16 (8.7); .e3m2/.e2m3/.e2m1 at .m16n8k32 (8.7); and BLOCK-SCALED forms where the multiplicand type is .e4m3/.e5m2/.e3m2/.e2m3/.e2m1 times a .ue8m0 scale at .m16n8k32, and .e2m1 times (.ue8m0 or .ue4m3) at .m16n8k64 (8.7). The key point: the scale is part of the MMA OPERAND, not a separate kernel, so a 32-element scale block is applied inside the tensor-core pipeline and the activation quantization no longer needs a fused dequant pass. wgmma mirrors this at warpgroup level - fp8 at .m64nNk32. tcgen05 goes further with distinct .kind values (f16, f8f6f4, mxf8f6f4, mxf4, mxf4nvf4, tf32, i8, ti16) plus .decompress::lut::b and .collector::b::* qualifiers, and CUTLASS lists higher-throughput FP8 (MMA_K=64) and FP4 (MMA_K=128) MMA instructions for Blackwell. The arithmetic win is the FLOP-per-byte ratio: at fp8 the tensor-core rate doubles (H100: 989 -> 1978 TFLOPS) and at fp4 it doubles again, but the SFU exponential rate does NOT change - which is precisely why FA-3 and FA-4 both had to solve the softmax bottleneck separately.",
+ "bound_by": "compute",
+ "scales_with": [
+  "scale block size (16/32-element blocks for ue8m0 vs ue4m3)",
+  "precision (fp8 -> fp4 doubles then quadruples tensor-core throughput)",
+  "architecture generation (wmma-level vs wgmma-level vs tcgen05 .kind)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "nvidia-b200",
+  "nvidia-b300",
+  "nvidia-gb200-nvl72",
+  "nvidia-rtx-5090"
+ ],
+ "workarounds": [
+  "Put the block scale in the MMA operand rather than in a preceding dequant pass",
+  "Choose the scale format to match the block: .ue8m0 for power-of-two blocks (MX-style), .ue4m3 for finer-grained scales (NVFP-style)",
+  "On SM100 expect packed scale formats (DeepGEMM requires packed UE8M0, four per int, while SM90 wants fp32) - this changes the engine's required data layout",
+  "Fix the non-tensor-core bottleneck separately: if softmax exp is the limit, more MMA throughput buys nothing"
+ ],
+ "notes": "The generation-specific detail that bites in practice: DeepGEMM documents that SM90 requires scaling factors in FP32 while SM100 requires them packed in UE8M0 with four packed into a single int, and that the LHS scale must have a TMA-aligned transposed layout for both. So switching an FP8 model from H100 to B200 changes the memory layout the engine must produce, not just the kernel it calls. PTX ISA 9.4 also adds UE5M3 as a scale type for tcgen05.mma and tcgen05.mma.sp and supports the .kind::ti16 qualifier, so the block-scaled MMA surface is still expanding. Note also that 'incoherent processing' (FA-3's random-sign Hadamard on Q and K) is the numerical counterweight: block scaling is only usable if outliers are tamed, and FA-3 reports a 2.6x quantization-error reduction from the Hadamard step.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "kern-ptx-isa",
+  "kern-deepgemm-github",
+  "kern-cutlass-github",
+  "kern-flashattention-3-blog",
+  "kern-flashmla-github"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "tensor_core_count",
+   "effect": "tcgen05 goes further with distinct .kind values (f16, f8f6f4, mxf8f6f4, mxf4, mxf4nvf4, tf32, i8, ti16) plus .decompress::lut::b and .collector::b::* qualifiers, and CUTLASS lists higher-throughput FP8 (MMA_K=64) and FP4 (MMA_K=128) MMA instructions for Blackwell.",
+   "basis": "recorded",
+   "values_for": [
     "nvidia-h100-sxm",
     "nvidia-b200",
     "nvidia-b300",
     "nvidia-gb200-nvl72",
     "nvidia-rtx-5090"
-  ],
-  "workarounds": [
-    "Put the block scale in the MMA operand rather than in a preceding dequant pass",
-    "Choose the scale format to match the block: .ue8m0 for power-of-two blocks (MX-style), .ue4m3 for finer-grained scales (NVFP-style)",
-    "On SM100 expect packed scale formats (DeepGEMM requires packed UE8M0, four per int, while SM90 wants fp32) - this changes the engine's required data layout",
-    "Fix the non-tensor-core bottleneck separately: if softmax exp is the limit, more MMA throughput buys nothing"
-  ],
-  "notes": "The generation-specific detail that bites in practice: DeepGEMM documents that SM90 requires scaling factors in FP32 while SM100 requires them packed in UE8M0 with four packed into a single int, and that the LHS scale must have a TMA-aligned transposed layout for both. So switching an FP8 model from H100 to B200 changes the memory layout the engine must produce, not just the kernel it calls. PTX ISA 9.4 also adds UE5M3 as a scale type for tcgen05.mma and tcgen05.mma.sp and supports the .kind::ti16 qualifier, so the block-scaled MMA surface is still expanding. Note also that 'incoherent processing' (FA-3's random-sign Hadamard on Q and K) is the numerical counterweight: block scaling is only usable if outliers are tamed, and FA-3 reports a 2.6x quantization-error reduction from the Hadamard step.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "kern-ptx-isa",
-    "kern-deepgemm-github",
-    "kern-cutlass-github",
-    "kern-flashattention-3-blog",
-    "kern-flashmla-github"
-  ]
+   ]
+  }
+ ]
 }

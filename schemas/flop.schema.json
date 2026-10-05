@@ -71,6 +71,57 @@
         "type": "string"
       }
     },
+    "hardware_parameters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "parameter",
+          "effect"
+        ],
+        "properties": {
+          "parameter": {
+            "enum": [
+              "memory_bandwidth",
+              "memory_capacity",
+              "l2_cache_size",
+              "tensor_core_count",
+              "shared_memory_capacity",
+              "tmem_capacity",
+              "peak_flops"
+            ]
+          },
+          "effect": {
+            "type": "string"
+          },
+          "values_for": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "bare accelerator ids, only where the record commits to named parts"
+          },
+          "magnitude": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "the figures the record itself quotes for this parameter, verbatim"
+          },
+          "basis": {
+            "enum": [
+              "recorded",
+              "derived",
+              "unverified",
+              null
+            ],
+            "description": "where the claimed effect comes from: recorded = the record cites a source or vendor/architecture statement for it; derived = it follows from the record's own arithmetic; unverified = asserted but not sourced at the part level. null = not established. NEVER fill this to make a row look better sourced than it is."
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "The hardware QUANTITIES that change this class's cost, as opposed to affected_by_hardware, which holds the PRODUCTS (accelerator record ids). Added 2026-10-05. WHY THIS FIELD EXISTS, and the failure it fixes: affected_by_hardware is a cross-reference field, so a wave-4 crawler put ['memory_bandwidth', 'l2_cache_size', 'tensor_core_count'] into it - hardware PARAMETERS, not products. They could never resolve, and worse they silently consumed the dangling-reference budget that exists to catch NEW bad references. A later pass removed them from that field and pushed them into free-text notes, which made them unqueryable prose; qhw-decode-gemm-memory-bound still carries the incident in its notes with affected_by_hardware left EMPTY, which is correct (it is part-independent) but loses the fact that bandwidth, L2 size and tensor-core count are the variables that SET the ridge point. This field is where a part-independent dependency belongs. A row here is a CLAIM that this parameter moves this class; it is not a measurement of any part, and `magnitude` carries the figures the record already quotes rather than a new number. NEVER invent a value here: if the effect is not sourced, set basis 'unverified' or leave the row out."
+    },
     "workarounds": {
       "type": "array",
       "items": {

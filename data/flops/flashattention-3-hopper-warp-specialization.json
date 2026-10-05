@@ -1,38 +1,52 @@
 {
-  "id": "flashattention-3-hopper-warp-specialization",
-  "type": "flop",
-  "name": "FlashAttention-3 (Hopper): warp specialization, TMA, and FP8 to overlap matmul with softmax",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "Three different reductions, worth keeping separate. (1) Bytes: TMA (cp.async.bulk.tensor) does address generation and out-of-bounds predication in hardware, freeing registers, which lets the tile be larger - larger tiles amortize each HBM->SMEM byte over more FLOPs. (2) Occupancy of non-tensor units: the binding change is that softmax exponentials run on the SFU/MUFU path in the shadow of tensor-core work via warp specialization (producer warps issue TMA, consumer warps issue WGMMA) and ping-pong / 2-stage interleaving. On H100 SXM5 the tensor cores do 989 TFLOPS FP16 but only 3.9 TFLOPS of special functions (16 ops/SM/clock * 132 SM * 1.83 GHz), and at head_dim 128 there are ~512x more matmul than exponential FLOPs - so without overlap, exp can take 50% of the time of the matmuls, and in FP8 it gets worse because matmul doubles while exp does not. (3) FLOPs/precision: FP8 doubles tensor-core throughput (1978 vs 989 TFLOPS on H100), and incoherent processing (Hadamard transform with random signs, O(d log d), fusable into the RoPE pass) cuts FP8 quantization error 2.6x in the author's synthetic-outlier test.",
-  "bound_by": "both",
-  "scales_with": [
-    "head_dim (exp cost per matmul flop scales inversely with head_dim)",
-    "precision (fp8 doubles tensor-core flops but leaves SFU exp unchanged)",
-    "seqlen",
-    "num_SMs (warp specialization needs enough warps per CTA to split roles)"
-  ],
-  "affected_by_hardware": [
+ "id": "flashattention-3-hopper-warp-specialization",
+ "type": "flop",
+ "name": "FlashAttention-3 (Hopper): warp specialization, TMA, and FP8 to overlap matmul with softmax",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "Three different reductions, worth keeping separate. (1) Bytes: TMA (cp.async.bulk.tensor) does address generation and out-of-bounds predication in hardware, freeing registers, which lets the tile be larger - larger tiles amortize each HBM->SMEM byte over more FLOPs. (2) Occupancy of non-tensor units: the binding change is that softmax exponentials run on the SFU/MUFU path in the shadow of tensor-core work via warp specialization (producer warps issue TMA, consumer warps issue WGMMA) and ping-pong / 2-stage interleaving. On H100 SXM5 the tensor cores do 989 TFLOPS FP16 but only 3.9 TFLOPS of special functions (16 ops/SM/clock * 132 SM * 1.83 GHz), and at head_dim 128 there are ~512x more matmul than exponential FLOPs - so without overlap, exp can take 50% of the time of the matmuls, and in FP8 it gets worse because matmul doubles while exp does not. (3) FLOPs/precision: FP8 doubles tensor-core throughput (1978 vs 989 TFLOPS on H100), and incoherent processing (Hadamard transform with random signs, O(d log d), fusable into the RoPE pass) cuts FP8 quantization error 2.6x in the author's synthetic-outlier test.",
+ "bound_by": "both",
+ "scales_with": [
+  "head_dim (exp cost per matmul flop scales inversely with head_dim)",
+  "precision (fp8 doubles tensor-core flops but leaves SFU exp unchanged)",
+  "seqlen",
+  "num_SMs (warp specialization needs enough warps per CTA to split roles)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "nvidia-h100-pcie",
+  "nvidia-h100-nvl",
+  "nvidia-h200-sxm"
+ ],
+ "workarounds": [
+  "WGMMA instead of mma.sync: without wgmma the older mma.sync reaches only about 2/3 of Hopper tensor-core peak",
+  "TMA for global->shared copies so address math and predication stop consuming registers",
+  "Warp specialization: separate producer warps (TMA) and consumer warps (WGMMA)",
+  "Ping-pong two warpgroups with a bar.sync so warpgroup 1's softmax overlaps warpgroup 2's GEMM",
+  "2-stage pipelining inside one warpgroup so part of softmax runs during that warpgroup's own GEMMs (costs registers)",
+  "FP8 with incoherent processing (random-sign Hadamard on Q and K) to make FP8 numerically usable"
+ ],
+ "notes": "The hardware requirement is stated in the repo, not inferred: FA-3 beta is 'optimized for Hopper GPUs (e.g. H100)', requires H100/H800 and CUDA >= 12.3 (CUDA 12.8 recommended), and currently releases FP16/BF16 forward+backward and FP8 forward only. This is a real decision input: on Ada or Ampere there is no wgmma and no TMA, so the FA-3 techniques are unavailable and FA-2 (or cuDNN/Triton) is the path; on Blackwell the 5th-gen tensor core changes the picture again (see the FA-4 and tcgen05 records). Claimed numbers, all author-reported: FA-2 achieved only 35% of H100 theoretical peak; FA-3 is 1.5-2.0x faster than FA-2 in FP16, up to 740 TFLOPS = 75% of peak, close to 1.2 PFLOPS in FP8; ping-pong alone took FP16 forward from ~570 to ~620 TFLOPS and 2-stage pipelining to ~640-660 TFLOPS at head_dim 128 / seqlen 8K. The single most transferable mechanism is the feed-and-speeds observation that exp throughput, not matmul, is the attention bottleneck once FLOPs double - that argument applies to any precision increase.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "kern-flashattention-3-blog",
+  "kern-flashattention-github",
+  "kern-ptx-isa",
+  "kern-cutlass-github"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "tensor_core_count",
+   "effect": "On H100 SXM5 the tensor cores do 989 TFLOPS FP16 but only 3.9 TFLOPS of special functions (16 ops/SM/clock * 132 SM * 1.83 GHz), and at head_dim 128 there are ~512x more matmul than exponential FLOPs - so without overlap, exp can take 50% of the time of the matmuls, and in FP8 it gets worse because matmul doubles while exp does not.",
+   "basis": "recorded",
+   "magnitude": "989 TFLOPS; 3.9 TFLOPS; 512x",
+   "values_for": [
     "nvidia-h100-sxm",
     "nvidia-h100-pcie",
     "nvidia-h100-nvl",
     "nvidia-h200-sxm"
-  ],
-  "workarounds": [
-    "WGMMA instead of mma.sync: without wgmma the older mma.sync reaches only about 2/3 of Hopper tensor-core peak",
-    "TMA for global->shared copies so address math and predication stop consuming registers",
-    "Warp specialization: separate producer warps (TMA) and consumer warps (WGMMA)",
-    "Ping-pong two warpgroups with a bar.sync so warpgroup 1's softmax overlaps warpgroup 2's GEMM",
-    "2-stage pipelining inside one warpgroup so part of softmax runs during that warpgroup's own GEMMs (costs registers)",
-    "FP8 with incoherent processing (random-sign Hadamard on Q and K) to make FP8 numerically usable"
-  ],
-  "notes": "The hardware requirement is stated in the repo, not inferred: FA-3 beta is 'optimized for Hopper GPUs (e.g. H100)', requires H100/H800 and CUDA >= 12.3 (CUDA 12.8 recommended), and currently releases FP16/BF16 forward+backward and FP8 forward only. This is a real decision input: on Ada or Ampere there is no wgmma and no TMA, so the FA-3 techniques are unavailable and FA-2 (or cuDNN/Triton) is the path; on Blackwell the 5th-gen tensor core changes the picture again (see the FA-4 and tcgen05 records). Claimed numbers, all author-reported: FA-2 achieved only 35% of H100 theoretical peak; FA-3 is 1.5-2.0x faster than FA-2 in FP16, up to 740 TFLOPS = 75% of peak, close to 1.2 PFLOPS in FP8; ping-pong alone took FP16 forward from ~570 to ~620 TFLOPS and 2-stage pipelining to ~640-660 TFLOPS at head_dim 128 / seqlen 8K. The single most transferable mechanism is the feed-and-speeds observation that exp throughput, not matmul, is the attention bottleneck once FLOPs double - that argument applies to any precision increase.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "kern-flashattention-3-blog",
-    "kern-flashattention-github",
-    "kern-ptx-isa",
-    "kern-cutlass-github"
-  ]
+   ]
+  }
+ ]
 }

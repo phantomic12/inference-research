@@ -100,6 +100,73 @@
       ],
       "description": "How the bandwidth figure was derived, e.g. 'GDDR6 28Gbps x 384-bit'."
     },
+    "onchip_cache": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "On-chip cache/SRAM capacity, which is NOT the same quantity as vram_gb and was previously reachable only through free-text notes. Added 2026-10-05 as a structured field because a wave-4 crawler put L2 size into flop.affected_by_hardware - a cross-reference field that could never resolve - and a later pass pushed it back into prose, which made it unqueryable. Where the figure belongs is HERE, on the part that has it. SCOPE IS DELIBERATELY NARROW, and every sub-field is nullable because the on-chip hierarchy is not comparable across vendors: AMD's Infinity Cache is a package-level LLC sitting in FRONT of HBM, NVIDIA's L2 is a true last-level cache, Tenstorrent's figure is SRAM acting as an L2-like feed tier, and Qualcomm's is on-die SRAM sized to hold weights. Any of those is a real inference-relevant number and none is the same number as the next vendor's. Never sum or compare them across vendors without reading `kind` first. DO NOT FILL A FIELD YOU DID NOT VERIFY against a first-party spec sheet, architecture whitepaper or vendor docs page: a null here is the correct value for a part whose on-chip hierarchy nobody publishes.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "l2",
+            "llc-in-front-of-hbm",
+            "sram-feed-tier",
+            "unknown",
+            null
+          ],
+          "description": "What the capacity below actually IS. Required whenever the object is non-null, because this is the field that stops a reader treating AMD's Infinity Cache and NVIDIA's L2 as interchangeable. All THREE members are in use as of 2026-10-05: 'l2' 1 record (nvidia-rtx-5090), 'llc-in-front-of-hbm' 3 (MI300X, MI350P, MI355X), 'sram-feed-tier' 1 (tenstorrent-wormhole-n150). A FOURTH member, 'weight-resident-sram', was drafted for Qualcomm AI100/AI200 (whose on-die SRAM is sized to hold weights and is the fastest on-package memory in that family) and then REMOVED unused: the vendor pages behind those two figures could not be re-verified first-party during the 2026-10-05 pass, and adding a kind no record could honestly hold would have been exactly the documented failure mode in this repo - an enum member recognised by zero records. The Qualcomm records keep onchip_cache null, which means 'not verified first-party'. Re-add the member in the same commit as a verified AI100 or AI200 record, never before. 'unknown' and null have ZERO rows: they exist so a generated skeleton and a record whose on-chip hierarchy genuinely could not be identified still validate, matching the convention paper.venue_track and metric_exposure.metric_type use. They are not gaps, and a future pass should not read their emptiness as a reason to invent a row."
+        },
+        "l2_kb": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "NVIDIA-style true L2, in KB. Published as e.g. 73728 KB (RTX 4090)."
+        },
+        "llc_mb": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Package-level last-level cache in FRONT of HBM, MB. AMD Infinity Cache: 256 MB on MI300X and MI355X, 128 MB on MI350P. Reading time for a hit is HBM-class; on a miss the data has still crossed HBM, so this is a hit-rate multiplier rather than a bandwidth multiplier."
+        },
+        "sram_mb": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "On-die SRAM acting as an L2-like feed tier, MB. Tenstorrent Wormhole: 108 MB per n150 card."
+        },
+        "per_scope": {
+          "enum": [
+            "per-package",
+            "per-die",
+            "per-card",
+            "per-xcd",
+            null
+          ],
+          "description": "CRITICAL and easy to get wrong. AMD MI300X/MI355X print 4 MB L2 per compute die (XCD) and 256 MB Infinity Cache per 8-XCD PACKAGE - the two numbers describe different scopes and must never be added or compared directly."
+        },
+        "basis": {
+          "enum": [
+            "vendor-spec-sheet",
+            "vendor-whitepaper",
+            "vendor-docs",
+            null
+          ],
+          "description": "Provenance of the figure. Only first-party sources are accepted; a secondary aggregator is not recorded here, because a cache size copied from an aggregator is indistinguishable from one copied from a wrong column."
+        },
+        "source_note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Where the number was read, and any trap found. E.g. the GeForce RTX Blackwell architecture whitepaper prints L2 per FULL DIE (GB203 = 65536 KB) in one table and per SKU in another; the 5070 Ti is 49152 KB, not the full-die 65536 KB, and the RTX 5090 is explicitly called out as 96 MB on a 128 MB GB202."
+        }
+      },
+      "additionalProperties": false
+    },
     "flops": {
       "type": "array",
       "items": {

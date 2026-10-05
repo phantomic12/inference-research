@@ -1,38 +1,50 @@
 {
-  "id": "bw-nvfp4-mxfp4-block-scaled-formats",
-  "type": "flop",
-  "name": "NVFP4 and MXFP4 block-scaled formats on Blackwell: microscaling block size, per-block scales, and kernel consumption",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "Blackwell supports three 4-bit floating-point formats with different block-scaling strategies. (1) FP4 (E2M1): 4 bits per value (1 sign, 2 exponent, 1 mantissa), no hardware scaling - requires software-managed scales. (2) MXFP4: E2M1 + 1 shared power-of-two scale (UE8M0) per 32-value block. Hardware-accelerated scaling. (3) NVFP4: E2M1 + 1 shared FP8 (E4M3) scale per 16-value micro-block + per-tensor FP32 scale. Hardware-accelerated scaling. The key difference: NVFP4 uses a 16-value block with FP8 E4M3 scale (non-power-of-two, fractional precision), while MXFP4 uses a 32-value block with UE8M0 scale (power-of-two only). NVFP4's finer-grained scaling (16 vs 32 values per block) and higher-precision scale (E4M3 vs UE8M0) reduce quantization error. The tcgen05.mma instruction consumes these formats via .kind::mxf4 (MXFP4 with UE8M0), .kind::mxf4nvf4 (NVFP4 with UE8M0/UE4M3/UE5M3 scales), and .kind::f8f6f4 (non-block-scaled FP4 E2M1). NVFP4 reduces model memory footprint by ~3.5x vs FP16 and ~1.8x vs FP8. Accuracy: NVFP4 achieves 1% or less degradation vs FP8 on DeepSeek-R1-0528 benchmarks. The NVFP4 pretraining recipe (arXiv 2509.25149) combines micro-block scaling, E4M3 scale factors, Hadamard transforms, selective 2D block-based quantization, and stochastic rounding. Energy efficiency: up to 25x (Blackwell) and 50x (Blackwell Ultra) vs H100 for NVFP4 workloads. The per-tensor FP32 scale in NVFP4 is computed as s_global = global_amax / (448 * 6) where 448 is the E4M3 max and 6 is the E2M1 max.",
-  "bound_by": "compute",
-  "scales_with": [
-    "block size (16 for NVFP4, 32 for MXFP4)",
-    "scale precision (E4M3 for NVFP4, UE8M0 for MXFP4)",
-    "model size (larger models benefit more from NVFP4's finer scaling)",
-    "quantization method (PTQ vs QAT vs pretraining recipe)"
-  ],
-  "affected_by_hardware": [
+ "id": "bw-nvfp4-mxfp4-block-scaled-formats",
+ "type": "flop",
+ "name": "NVFP4 and MXFP4 block-scaled formats on Blackwell: microscaling block size, per-block scales, and kernel consumption",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "Blackwell supports three 4-bit floating-point formats with different block-scaling strategies. (1) FP4 (E2M1): 4 bits per value (1 sign, 2 exponent, 1 mantissa), no hardware scaling - requires software-managed scales. (2) MXFP4: E2M1 + 1 shared power-of-two scale (UE8M0) per 32-value block. Hardware-accelerated scaling. (3) NVFP4: E2M1 + 1 shared FP8 (E4M3) scale per 16-value micro-block + per-tensor FP32 scale. Hardware-accelerated scaling. The key difference: NVFP4 uses a 16-value block with FP8 E4M3 scale (non-power-of-two, fractional precision), while MXFP4 uses a 32-value block with UE8M0 scale (power-of-two only). NVFP4's finer-grained scaling (16 vs 32 values per block) and higher-precision scale (E4M3 vs UE8M0) reduce quantization error. The tcgen05.mma instruction consumes these formats via .kind::mxf4 (MXFP4 with UE8M0), .kind::mxf4nvf4 (NVFP4 with UE8M0/UE4M3/UE5M3 scales), and .kind::f8f6f4 (non-block-scaled FP4 E2M1). NVFP4 reduces model memory footprint by ~3.5x vs FP16 and ~1.8x vs FP8. Accuracy: NVFP4 achieves 1% or less degradation vs FP8 on DeepSeek-R1-0528 benchmarks. The NVFP4 pretraining recipe (arXiv 2509.25149) combines micro-block scaling, E4M3 scale factors, Hadamard transforms, selective 2D block-based quantization, and stochastic rounding. Energy efficiency: up to 25x (Blackwell) and 50x (Blackwell Ultra) vs H100 for NVFP4 workloads. The per-tensor FP32 scale in NVFP4 is computed as s_global = global_amax / (448 * 6) where 448 is the E4M3 max and 6 is the E2M1 max.",
+ "bound_by": "compute",
+ "scales_with": [
+  "block size (16 for NVFP4, 32 for MXFP4)",
+  "scale precision (E4M3 for NVFP4, UE8M0 for MXFP4)",
+  "model size (larger models benefit more from NVFP4's finer scaling)",
+  "quantization method (PTQ vs QAT vs pretraining recipe)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-b200",
+  "nvidia-b300",
+  "nvidia-gb200-nvl72"
+ ],
+ "workarounds": [
+  "Use NVFP4 (16-value block, E4M3 scale) for best accuracy at 4-bit",
+  "Use MXFP4 (32-value block, UE8M0 scale) for simpler power-of-two scaling",
+  "Use per-tensor FP32 scale in addition to per-block scales for NVFP4",
+  "Apply Hadamard transforms to bound block-level outliers before quantization",
+  "Use stochastic rounding for unbiased gradient estimation in training",
+  "Use selective high-precision layers for sensitive components"
+ ],
+ "notes": "The tcgen05.mma .kind::mxf4nvf4 supports NVFP4 with UE8M0, UE4M3, and UE5M3 scale types. The .kind::mxf4 supports MXFP4 with UE8M0 only. For K=96 block-scaled FP4, target sm_103a or sm_107a (not sm_100a). For K=128/192, target sm_107f or higher. CUTLASS 4.8 supports Blackwell block-scaled GEMM. The NVFP4 paper (arXiv 2509.25149) trained a 12B model on 10 trillion tokens with validation loss matching FP8 baseline. The NVFP4 inference blog reports 25x energy efficiency on Blackwell and 50x on Blackwell Ultra vs H100. The comparison table from the blog: FP4 has no hardware scaling, MXFP4 has 1 shared power-of-two scale per 32-value block, NVFP4 has 1 shared FP8 scale per 16-value block.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "bw-nv-nvfp4-inference-blog",
+  "bw-nv-nvfp4-pretraining-blog",
+  "bw-nv-nvfp4-paper",
+  "kern-ptx-isa",
+  "quant-nvfp4-te-docs"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "tensor_core_count",
+   "effect": "The tcgen05.mma instruction consumes these formats via .kind::mxf4 (MXFP4 with UE8M0), .kind::mxf4nvf4 (NVFP4 with UE8M0/UE4M3/UE5M3 scales), and .kind::f8f6f4 (non-block-scaled FP4 E2M1).",
+   "basis": "unverified",
+   "values_for": [
     "nvidia-b200",
     "nvidia-b300",
     "nvidia-gb200-nvl72"
-  ],
-  "workarounds": [
-    "Use NVFP4 (16-value block, E4M3 scale) for best accuracy at 4-bit",
-    "Use MXFP4 (32-value block, UE8M0 scale) for simpler power-of-two scaling",
-    "Use per-tensor FP32 scale in addition to per-block scales for NVFP4",
-    "Apply Hadamard transforms to bound block-level outliers before quantization",
-    "Use stochastic rounding for unbiased gradient estimation in training",
-    "Use selective high-precision layers for sensitive components"
-  ],
-  "notes": "The tcgen05.mma .kind::mxf4nvf4 supports NVFP4 with UE8M0, UE4M3, and UE5M3 scale types. The .kind::mxf4 supports MXFP4 with UE8M0 only. For K=96 block-scaled FP4, target sm_103a or sm_107a (not sm_100a). For K=128/192, target sm_107f or higher. CUTLASS 4.8 supports Blackwell block-scaled GEMM. The NVFP4 paper (arXiv 2509.25149) trained a 12B model on 10 trillion tokens with validation loss matching FP8 baseline. The NVFP4 inference blog reports 25x energy efficiency on Blackwell and 50x on Blackwell Ultra vs H100. The comparison table from the blog: FP4 has no hardware scaling, MXFP4 has 1 shared power-of-two scale per 32-value block, NVFP4 has 1 shared FP8 scale per 16-value block.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-04",
-  "sources": [
-    "bw-nv-nvfp4-inference-blog",
-    "bw-nv-nvfp4-pretraining-blog",
-    "bw-nv-nvfp4-paper",
-    "kern-ptx-isa",
-    "quant-nvfp4-te-docs"
-  ]
+   ]
+  }
+ ]
 }

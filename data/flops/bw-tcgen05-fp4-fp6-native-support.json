@@ -1,36 +1,58 @@
 {
-  "id": "bw-tcgen05-fp4-fp6-native-support",
-  "type": "flop",
-  "name": "tcgen05 5th-gen Tensor Core: native FP4/FP6 support and emulation paths",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "The tcgen05.mma instruction on Blackwell (sm_100a) supports multiple .kind values that determine which precision formats are natively executed. From the PTX ISA 9.4 Table 48: .kind::f16 supports FP16/BF16 at K=16 (dense) or K=32 (sparse); .kind::f8f6f4 supports FP8 (E4M3/E5M2) and FP6 (E2M3/E3M2) at K=32 (dense) or K=64/128 (sparse), with FP4 (E2M1) at K=64 (dense) or K=128 (sparse) - but only E4M3/E5m2 for K=64; .kind::mxf8f6f4 supports block-scaled FP8/FP6 with UE8M0 scale at K=32/64 (dense) or K=64/128 (sparse); .kind::mxf4 supports block-scaled FP4 (E2M1) with UE8M0 scale at K=64/96 (dense) or K=128/192 (sparse); .kind::mxf4nvf4 supports NVFP4 (E2M1) with UE8M0/UE4M3/UE5M3 scales at K=64/96 (dense) or K=128/192 (sparse). The key distinction: FP4 E2M1 is natively supported in .kind::f8f6f4 (non-block-scaled), .kind::mxf4 (block-scaled with UE8M0), and .kind::mxf4nvf4 (NVFP4 with UE4M3/UE5M3 scales). FP6 E2M3/E3M2 is natively supported in .kind::f8f6f4 and .kind::mxf8f6f4. However, K=96 for .kind::mxf4/.kind::mxf4nvf4 is only supported on sm_103a and sm_107a (not sm_100a), and K=128/192 for those kinds requires sm_107f or higher. On sm_100a (B200), the maximum K for block-scaled FP4 is 64 (dense) or 128 (sparse). CUTLASS 4.8 lists higher-throughput FP8 (MMA_K=64) and FP4 (MMA_K=128) Tensor Core MMA instructions for Blackwell. The emulation path: CUTLASS example 78_blackwell_emulated_bf16x9_gemm shows FP32 emulation via BF16 on Blackwell, and example 84_blackwell_narrow_precision_sparse_gemm shows block-scaled sparse GEMM.",
-  "bound_by": "compute",
-  "scales_with": [
-    "precision (FP16 -> FP8 -> FP6 -> FP4 changes MMA_K and throughput)",
-    "block scaling format (none vs UE8M0 vs UE4M3/UE5M3)",
-    "architecture target (sm_100a vs sm_103a vs sm_107a vs sm_107f)",
-    "CTA group size (1 or 2 for tcgen05)"
-  ],
-  "affected_by_hardware": [
+ "id": "bw-tcgen05-fp4-fp6-native-support",
+ "type": "flop",
+ "name": "tcgen05 5th-gen Tensor Core: native FP4/FP6 support and emulation paths",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "The tcgen05.mma instruction on Blackwell (sm_100a) supports multiple .kind values that determine which precision formats are natively executed. From the PTX ISA 9.4 Table 48: .kind::f16 supports FP16/BF16 at K=16 (dense) or K=32 (sparse); .kind::f8f6f4 supports FP8 (E4M3/E5M2) and FP6 (E2M3/E3M2) at K=32 (dense) or K=64/128 (sparse), with FP4 (E2M1) at K=64 (dense) or K=128 (sparse) - but only E4M3/E5m2 for K=64; .kind::mxf8f6f4 supports block-scaled FP8/FP6 with UE8M0 scale at K=32/64 (dense) or K=64/128 (sparse); .kind::mxf4 supports block-scaled FP4 (E2M1) with UE8M0 scale at K=64/96 (dense) or K=128/192 (sparse); .kind::mxf4nvf4 supports NVFP4 (E2M1) with UE8M0/UE4M3/UE5M3 scales at K=64/96 (dense) or K=128/192 (sparse). The key distinction: FP4 E2M1 is natively supported in .kind::f8f6f4 (non-block-scaled), .kind::mxf4 (block-scaled with UE8M0), and .kind::mxf4nvf4 (NVFP4 with UE4M3/UE5M3 scales). FP6 E2M3/E3M2 is natively supported in .kind::f8f6f4 and .kind::mxf8f6f4. However, K=96 for .kind::mxf4/.kind::mxf4nvf4 is only supported on sm_103a and sm_107a (not sm_100a), and K=128/192 for those kinds requires sm_107f or higher. On sm_100a (B200), the maximum K for block-scaled FP4 is 64 (dense) or 128 (sparse). CUTLASS 4.8 lists higher-throughput FP8 (MMA_K=64) and FP4 (MMA_K=128) Tensor Core MMA instructions for Blackwell. The emulation path: CUTLASS example 78_blackwell_emulated_bf16x9_gemm shows FP32 emulation via BF16 on Blackwell, and example 84_blackwell_narrow_precision_sparse_gemm shows block-scaled sparse GEMM.",
+ "bound_by": "compute",
+ "scales_with": [
+  "precision (FP16 -> FP8 -> FP6 -> FP4 changes MMA_K and throughput)",
+  "block scaling format (none vs UE8M0 vs UE4M3/UE5M3)",
+  "architecture target (sm_100a vs sm_103a vs sm_107a vs sm_107f)",
+  "CTA group size (1 or 2 for tcgen05)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-b200",
+  "nvidia-b300",
+  "nvidia-gb200-nvl72"
+ ],
+ "workarounds": [
+  "Use .kind::f8f6f4 for non-block-scaled FP8/FP6/FP4 on sm_100a",
+  "Use .kind::mxf4nvf4 for NVFP4 with UE4M3/UE5M3 scales (requires sm_100a or higher)",
+  "Use .kind::mxf4 for MXFP4 with UE8M0 power-of-two scales",
+  "For K=96 block-scaled FP4, target sm_103a or sm_107a (not sm_100a)",
+  "For K=128/192 block-scaled FP4, target sm_107f or higher",
+  "Use CUTLASS 4.8+ for Blackwell tcgen05 kernel support"
+ ],
+ "notes": "The tcgen05.mma instruction is issued by a single thread (not a warpgroup like Hopper's wgmma), accumulates in Tensor Memory (TMEM) rather than registers, and can span 2 CTAs in a cluster. TMEM on sm_100a/sm_100f is 512 columns x 128 lanes per CTA with 32-bit cells. The largest single-CTA BF16/FP16 UMMA tile is 128x256x16 (~2x the largest Hopper WGMMA atom). 2-CTA MMA reaches 256x256x16. PTX ISA 9.4 adds UE5M3 as a scale type for tcgen05.mma and .kind::ti16 qualifier. CUTLASS README explicitly warns: sm100a-compiled kernels are NOT compatible with RTX 50 series (SM120) because SM120 has a different compute capability from datacenter SM100.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "kern-ptx-isa",
+  "kern-cutlass-github",
+  "bw-nv-blackwell-ultra-blog"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "tensor_core_count",
+   "effect": "The tcgen05.mma instruction on Blackwell (sm_100a) supports multiple .kind values that determine which precision formats are natively executed.",
+   "basis": "recorded",
+   "values_for": [
     "nvidia-b200",
     "nvidia-b300",
     "nvidia-gb200-nvl72"
-  ],
-  "workarounds": [
-    "Use .kind::f8f6f4 for non-block-scaled FP8/FP6/FP4 on sm_100a",
-    "Use .kind::mxf4nvf4 for NVFP4 with UE4M3/UE5M3 scales (requires sm_100a or higher)",
-    "Use .kind::mxf4 for MXFP4 with UE8M0 power-of-two scales",
-    "For K=96 block-scaled FP4, target sm_103a or sm_107a (not sm_100a)",
-    "For K=128/192 block-scaled FP4, target sm_107f or higher",
-    "Use CUTLASS 4.8+ for Blackwell tcgen05 kernel support"
-  ],
-  "notes": "The tcgen05.mma instruction is issued by a single thread (not a warpgroup like Hopper's wgmma), accumulates in Tensor Memory (TMEM) rather than registers, and can span 2 CTAs in a cluster. TMEM on sm_100a/sm_100f is 512 columns x 128 lanes per CTA with 32-bit cells. The largest single-CTA BF16/FP16 UMMA tile is 128x256x16 (~2x the largest Hopper WGMMA atom). 2-CTA MMA reaches 256x256x16. PTX ISA 9.4 adds UE5M3 as a scale type for tcgen05.mma and .kind::ti16 qualifier. CUTLASS README explicitly warns: sm100a-compiled kernels are NOT compatible with RTX 50 series (SM120) because SM120 has a different compute capability from datacenter SM100.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-04",
-  "sources": [
-    "kern-ptx-isa",
-    "kern-cutlass-github",
-    "bw-nv-blackwell-ultra-blog"
-  ]
+   ]
+  },
+  {
+   "parameter": "tmem_capacity",
+   "effect": "The tcgen05.mma instruction is issued by a single thread (not a warpgroup like Hopper's wgmma), accumulates in Tensor Memory (TMEM) rather than registers, and can span 2 CTAs in a cluster.",
+   "basis": "recorded",
+   "values_for": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+   ]
+  }
+ ]
 }

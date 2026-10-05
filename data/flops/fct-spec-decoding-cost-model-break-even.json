@@ -1,48 +1,74 @@
 {
-  "id": "fct-spec-decoding-cost-model-break-even",
-  "type": "flop",
-  "name": "Speculative decoding cost model: the break-even acceptance rate a(B, k, draft size) actually requires, and the draft model's HBM cost against KV cache",
-  "class": "speculative_verify",
-  "arithmetic_intensity": "THE COST MODEL, with each term defined. Baseline decode step at batch B: T_base(B) = max(2*P_t/BW, 2*B*P_t/PEAK) for the target's weight stream alone, with P_t the target parameter count and the same terms added for KV. One speculative iteration that drafts k positions and expects a accepted tokens (a = expected accepted tokens per pass, INCLUDING the bonus token, so 1 <= a <= k+1) costs: T_draft = max(2*P_d/BW, 2*k*P_d/PEAK) (draft weights streamed once, k positions of work) + T_verify = max(2*P_t/BW, 2*B*k*P_t/PEAK) (target weights streamed once, B*k rows of work). Serial execution sums them; if the two weight streams can be co-scheduled on the same memory system the tighter bound is T_spec = max(2*(P_d+P_t)/BW, 2*k*P_d/PEAK + 2*B*k*P_t/PEAK), and the honest answer is the serial sum minus whatever overlap the engine actually achieves - which is a measurement, not a derivation, so both bounds are given. SPEEDUP S = a / (T_spec / T_base) = a*T_base/T_spec, so BREAK-EVEN IS A_be = T_spec / (k * T_base). This is the number the repo was missing: a quoted speculative speedup is meaningless without the a_be it has to beat, and a_be is a function of batch, k, draft size AND the hardware's PEAK/BW ratio. WHY B DOES NOT APPEAR AT LOW BATCH, which is the non-obvious part: in the memory-bound regime both T_base and T_verify are dominated by the weight stream, and the target's weight stream is IDENTICAL in a baseline step and a verify pass - the verify pass reads the same 2*P_t bytes whether it computes 1 position or k, because k positions share every weight. So T_verify = T_base exactly while both are bandwidth-priced, and A_be collapses to (2*P_d/BW + 2*P_t/BW) / (k * 2*P_t/BW) = (1 + P_d/P_t)/k. BATCH IS ABSENT FROM THAT EXPRESSION. The whole 'speculation's advantage decays with batch' effect is therefore NOT a memory-bandwidth effect at low batch - it is the transition out of the memory-bound regime. WORKED, target P_t = 68.98e9 (Llama-2-70B), draft P_d = 1e9, k = 4, H100 SXM (BW 3350 GB/s, PEAK_bf16 989.5 TFLOPS): memory-bound regime A_be = (1 + 1/68.98)/4 = 1.0145/4 = 0.2536. BATCH SWEEP at k=4, P_d = 1e9, showing where B finally appears: B=1 to 64 all give A_be = 0.2536 identically (T_base = 2*P_t/BW = 41.18 ms; T_verify = the same 41.18 ms; T_draft = 0.597 ms; T_spec = 41.78 ms); B=128 T_verify is still bandwidth-priced but the compute term has started to matter - A_be = 0.4370 serial, 0.4334 overlapped; B=192 A_be = 0.654; B=256 A_be = 0.870; B=320 A_be = 1.003 and at this point T_base has ALSO crossed into compute pricing, so the regime has changed and the shape of the model changes with it; above B = B* (295.4 for bf16 on H100) both baseline and verify are compute-priced and A_be = (P_d + B*P_t)/(B*P_t) = 1 + P_d/(B*P_t), which tends to 1 as B grows. THE HEADLINE CONSEQUENCE: the memory-bound A_be of 0.2536 is trivially beatable - you need to accept only one token per four drafted positions, i.e. a 25% acceptance rate, and the maximum possible is k+1 = 5, so the available speedup range is up to 5/0.2536 = 19.7x and almost any real drafter lands in the middle of it. The compute-bound A_be of ~1.0 is much harder: you need essentially every drafted token accepted, and since a <= k+1 with equality only if the draft equals the target, the achievable window shrinks to almost nothing. This is the quantitative form of 'speculative decoding is a latency optimization, not a throughput one'. K AND DRAFT SIZE SWEEPS (memory-bound, hence B-independent, H100, P_t = 68.98e9): A_be = (1+P_d/P_t)/k, so at k=2, 0.5072; k=4, 0.2536; k=6, 0.1691; k=8, 0.1268; k=12, 0.0845 - linear in 1/k, so the required acceptance rate falls as 1/k but the MAXIMUM is k+1, so larger k widens the window on both sides and is nearly free in the memory-bound regime. Draft size at k=4: P_d = 0.4e9 gives 0.2514, 1e9 gives 0.2536, 7e9 gives 0.2754, 13e9 gives 0.2971 - the draft size enters only through P_d/P_t and is therefore almost irrelevant in the memory-bound regime (a 32x larger draft costs 17% more break-even acceptance) and dominant in the compute-bound one (A_be = 1 + P_d/(B*P_t), where P_d = 13e9 at B = 256 is 1 + 0.0005, still small, but at B = 8 it is 1.024). THE DRAFT'S MEMORY COST, which competes with KV cache directly: the draft weights are a FIXED byte cost 2*P_d that is amortized over B*L*kv_b*tok bytes of KV, so the draft is a large fraction of HBM exactly when KV is small, i.e. at low batch and short context. Numerically, a 1e9-parameter draft in bf16 is 1.863 GiB and is worth exactly 1.863 GiB / kv_b*tok tokens of KV: Llama-2-70B (320 KiB/token) 6,104 tokens; Llama-3-32B (256 KiB/token) 7,629; Llama-3-8B (128 KiB/token) 15,259. So at L = 4096 the draft's bytes are 67% (70B), 54% (32B), 27% (8B) of the whole KV cache. But at batch 32 and L = 32k the ordering inverts completely: Llama-2-70B KV = 320 GiB against a 1.87 GiB draft = 0.58% of the KV and 0.42% of the combined weights + KV footprint; Llama-3-8B KV = 128 GiB, draft = 1.46% of KV and 1.29% of the footprint. THE TWO FACTS RECONCILE: 'the draft competes with KV cache' is true only at low batch and short context; at production batch and context it is a rounding error, and the real cost of the draft is its LATENCY (it sits in the critical path of every iteration) and its weight bytes, not its share of HBM.",
-  "bound_by": "both",
-  "scales_with": [
-    "acceptance_rate (the a in S = a*T_base/T_spec; break-even is A_be = T_spec/(k*T_base))",
-    "draft_k (A_be falls as 1/k in the memory-bound regime, so k is nearly free there)",
-    "draft_model_size P_d (enters as P_d/P_t; near-irrelevant memory-bound, dominant compute-bound)",
-    "batch_size (ABSENT from the memory-bound A_be and decisive in the compute-bound one: A_be = 1 + P_d/(B*P_t))",
-    "context_length (via KV bytes in both T_base and T_verify)",
-    "peak_to_bandwidth_ratio (B* = (PEAK/BW)*w_b/2 sets where B appears in the model at all)",
-    "overlap_achieved (serial sum vs bandwidth-shared bound; a measurement, not a derivation)"
-  ],
-  "affected_by_hardware": [
+ "id": "fct-spec-decoding-cost-model-break-even",
+ "type": "flop",
+ "name": "Speculative decoding cost model: the break-even acceptance rate a(B, k, draft size) actually requires, and the draft model's HBM cost against KV cache",
+ "class": "speculative_verify",
+ "arithmetic_intensity": "THE COST MODEL, with each term defined. Baseline decode step at batch B: T_base(B) = max(2*P_t/BW, 2*B*P_t/PEAK) for the target's weight stream alone, with P_t the target parameter count and the same terms added for KV. One speculative iteration that drafts k positions and expects a accepted tokens (a = expected accepted tokens per pass, INCLUDING the bonus token, so 1 <= a <= k+1) costs: T_draft = max(2*P_d/BW, 2*k*P_d/PEAK) (draft weights streamed once, k positions of work) + T_verify = max(2*P_t/BW, 2*B*k*P_t/PEAK) (target weights streamed once, B*k rows of work). Serial execution sums them; if the two weight streams can be co-scheduled on the same memory system the tighter bound is T_spec = max(2*(P_d+P_t)/BW, 2*k*P_d/PEAK + 2*B*k*P_t/PEAK), and the honest answer is the serial sum minus whatever overlap the engine actually achieves - which is a measurement, not a derivation, so both bounds are given. SPEEDUP S = a / (T_spec / T_base) = a*T_base/T_spec, so BREAK-EVEN IS A_be = T_spec / (k * T_base). This is the number the repo was missing: a quoted speculative speedup is meaningless without the a_be it has to beat, and a_be is a function of batch, k, draft size AND the hardware's PEAK/BW ratio. WHY B DOES NOT APPEAR AT LOW BATCH, which is the non-obvious part: in the memory-bound regime both T_base and T_verify are dominated by the weight stream, and the target's weight stream is IDENTICAL in a baseline step and a verify pass - the verify pass reads the same 2*P_t bytes whether it computes 1 position or k, because k positions share every weight. So T_verify = T_base exactly while both are bandwidth-priced, and A_be collapses to (2*P_d/BW + 2*P_t/BW) / (k * 2*P_t/BW) = (1 + P_d/P_t)/k. BATCH IS ABSENT FROM THAT EXPRESSION. The whole 'speculation's advantage decays with batch' effect is therefore NOT a memory-bandwidth effect at low batch - it is the transition out of the memory-bound regime. WORKED, target P_t = 68.98e9 (Llama-2-70B), draft P_d = 1e9, k = 4, H100 SXM (BW 3350 GB/s, PEAK_bf16 989.5 TFLOPS): memory-bound regime A_be = (1 + 1/68.98)/4 = 1.0145/4 = 0.2536. BATCH SWEEP at k=4, P_d = 1e9, showing where B finally appears: B=1 to 64 all give A_be = 0.2536 identically (T_base = 2*P_t/BW = 41.18 ms; T_verify = the same 41.18 ms; T_draft = 0.597 ms; T_spec = 41.78 ms); B=128 T_verify is still bandwidth-priced but the compute term has started to matter - A_be = 0.4370 serial, 0.4334 overlapped; B=192 A_be = 0.654; B=256 A_be = 0.870; B=320 A_be = 1.003 and at this point T_base has ALSO crossed into compute pricing, so the regime has changed and the shape of the model changes with it; above B = B* (295.4 for bf16 on H100) both baseline and verify are compute-priced and A_be = (P_d + B*P_t)/(B*P_t) = 1 + P_d/(B*P_t), which tends to 1 as B grows. THE HEADLINE CONSEQUENCE: the memory-bound A_be of 0.2536 is trivially beatable - you need to accept only one token per four drafted positions, i.e. a 25% acceptance rate, and the maximum possible is k+1 = 5, so the available speedup range is up to 5/0.2536 = 19.7x and almost any real drafter lands in the middle of it. The compute-bound A_be of ~1.0 is much harder: you need essentially every drafted token accepted, and since a <= k+1 with equality only if the draft equals the target, the achievable window shrinks to almost nothing. This is the quantitative form of 'speculative decoding is a latency optimization, not a throughput one'. K AND DRAFT SIZE SWEEPS (memory-bound, hence B-independent, H100, P_t = 68.98e9): A_be = (1+P_d/P_t)/k, so at k=2, 0.5072; k=4, 0.2536; k=6, 0.1691; k=8, 0.1268; k=12, 0.0845 - linear in 1/k, so the required acceptance rate falls as 1/k but the MAXIMUM is k+1, so larger k widens the window on both sides and is nearly free in the memory-bound regime. Draft size at k=4: P_d = 0.4e9 gives 0.2514, 1e9 gives 0.2536, 7e9 gives 0.2754, 13e9 gives 0.2971 - the draft size enters only through P_d/P_t and is therefore almost irrelevant in the memory-bound regime (a 32x larger draft costs 17% more break-even acceptance) and dominant in the compute-bound one (A_be = 1 + P_d/(B*P_t), where P_d = 13e9 at B = 256 is 1 + 0.0005, still small, but at B = 8 it is 1.024). THE DRAFT'S MEMORY COST, which competes with KV cache directly: the draft weights are a FIXED byte cost 2*P_d that is amortized over B*L*kv_b*tok bytes of KV, so the draft is a large fraction of HBM exactly when KV is small, i.e. at low batch and short context. Numerically, a 1e9-parameter draft in bf16 is 1.863 GiB and is worth exactly 1.863 GiB / kv_b*tok tokens of KV: Llama-2-70B (320 KiB/token) 6,104 tokens; Llama-3-32B (256 KiB/token) 7,629; Llama-3-8B (128 KiB/token) 15,259. So at L = 4096 the draft's bytes are 67% (70B), 54% (32B), 27% (8B) of the whole KV cache. But at batch 32 and L = 32k the ordering inverts completely: Llama-2-70B KV = 320 GiB against a 1.87 GiB draft = 0.58% of the KV and 0.42% of the combined weights + KV footprint; Llama-3-8B KV = 128 GiB, draft = 1.46% of KV and 1.29% of the footprint. THE TWO FACTS RECONCILE: 'the draft competes with KV cache' is true only at low batch and short context; at production batch and context it is a rounding error, and the real cost of the draft is its LATENCY (it sits in the critical path of every iteration) and its weight bytes, not its share of HBM.",
+ "bound_by": "both",
+ "scales_with": [
+  "acceptance_rate (the a in S = a*T_base/T_spec; break-even is A_be = T_spec/(k*T_base))",
+  "draft_k (A_be falls as 1/k in the memory-bound regime, so k is nearly free there)",
+  "draft_model_size P_d (enters as P_d/P_t; near-irrelevant memory-bound, dominant compute-bound)",
+  "batch_size (ABSENT from the memory-bound A_be and decisive in the compute-bound one: A_be = 1 + P_d/(B*P_t))",
+  "context_length (via KV bytes in both T_base and T_verify)",
+  "peak_to_bandwidth_ratio (B* = (PEAK/BW)*w_b/2 sets where B appears in the model at all)",
+  "overlap_achieved (serial sum vs bandwidth-shared bound; a measurement, not a derivation)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-b200",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090"
+ ],
+ "workarounds": [
+  "Free drafters (n-gram, prompt-lookup, lookahead) set P_d = 0, which drives A_be to exactly 1/k - the floor of the model, and cost no weight memory at all",
+  "Early-exit drafting at layer d instead of running a separate model reduces P_d to a fraction of P_t with the same 1/k structure",
+  "Run the draft on a separate, smaller device or concurrently with the target's previous step's tail, which removes the draft's latency from the critical path and moves T_spec from the serial sum toward the overlapped bound",
+  "Keep B below B* so the target stays bandwidth-priced and the model stays in its benign regime; disable spec decode above it",
+  "Tree/multi-candidate drafting raises a (more accepted tokens per weight-streamed pass) without changing A_be's 1/k floor",
+  "Quantize the draft to FP8/INT8 to halve its fixed HBM cost - matters only at low batch and short context, per the arithmetic above"
+ ],
+ "notes": "Design consequence: speculative decoding's break-even is 1/k in the memory-bound regime and approximately 1 in the compute-bound regime, so the scheme is not 'a win that decays with batch' but 'a large win that becomes unavailable exactly when you cross the roofline'. The batch number at which it dies is B* = (PEAK/BW)*w_b/2 - the same crossover as fct-batch1-step-cost-formula, which is why the two records share a number rather than each inventing one. This also gives the correct reading of the repo's existing k/B claim: the 'k/B' form describes the COMPUTE-bound regime, where raising AI from B to B+k is the only increment available, and it is a poor description of the latency regime where the increment is from 1 to k and B does not appear at all. For a reader predicting cost: compute A_be for your own (B, k, P_d, P_t, hardware) before enabling speculation; if A_be comes out near 1, do not bother. WHERE THE DERIVATION BREAKS DOWN, five places. (1) It prices only weight streaming. It ignores the KV cache read that grows with B*k in the verify pass, the k x V logits tensor, the rejection-sampling arithmetic over that tensor, and the attention flops at context L - so at long context the verify pass is more expensive than the model says and the true A_be is HIGHER. (2) It treats acceptance rate as a scalar. Real acceptance is a per-token geometric-like process that is correlated with position (early drafted tokens are accepted more often), so the distribution of a matters, not just its mean; quoting mean acceptance understates variance and the tail latency. (3) It assumes one target forward pass per k positions, which is what makes the weights free across k. Tree drafts with a verification-aware test break that: the verify pass is then k_nodes rows, not k, and the weight stream is unchanged, so the memory-bound A_be improves but the compute term worsens - the model must be re-derived for tree widths. (4) It assumes zero cost for the bonus token, but under rejection sampling a rejected draft still costs a full draft pass for nothing, and the expected number of DRAFT PASSES is what matters, not the expected number of accepts; a draft that accepts 1 token on average by rejecting 3 of 4 has paid 4 draft positions and 4 verify positions for 1 token and A_be is much worse than the scalar suggests. (5) It ignores that speculation and CUDA Graphs interact badly - the repo records FlashInfer silently downgrading graphs to PIECEWISE under spec decode, worth ~16% of decode throughput (spec-decode-silently-downgrades-cudagraphs), which is a real cost the model does not contain and which partly or wholly cancels the gain at low k. Also note the correctness surface, which is separate from cost but governs whether the speedup is even obtainable: spec decode under PD disaggregation crashes on a per-algorithm basis, MTP plus prefix caching costs ~20% accuracy, and EAGLE/MTP prefix-cache last-block drops corrupt long responses - see speculative-decoding-bandwidth-trade-at-batch.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.75,
+ "updated": "2026-10-05",
+ "sources": [
+  "flop-speculative-decoding",
+  "flop-speculative-sampling-deepmind",
+  "flop-roofline-williams-2008",
+  "flop-nvidia-h100-specs",
+  "nv-h100-datasheet",
+  "flop2-llama2-70b-config",
+  "flop2-llama3-8b-config",
+  "sd-eagle2-paper",
+  "sd-medusa-paper",
+  "sd-lookahead-paper"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "Baseline decode step at batch B: T_base(B) = max(2*P_t/BW, 2*B*P_t/PEAK) for the target's weight stream alone, with P_t the target parameter count and the same terms added for KV.",
+   "basis": "unverified",
+   "values_for": [
     "nvidia-h100-sxm",
     "nvidia-h200-sxm",
     "nvidia-b200",
     "amd-instinct-mi300x",
     "nvidia-rtx-4090"
-  ],
-  "workarounds": [
-    "Free drafters (n-gram, prompt-lookup, lookahead) set P_d = 0, which drives A_be to exactly 1/k - the floor of the model, and cost no weight memory at all",
-    "Early-exit drafting at layer d instead of running a separate model reduces P_d to a fraction of P_t with the same 1/k structure",
-    "Run the draft on a separate, smaller device or concurrently with the target's previous step's tail, which removes the draft's latency from the critical path and moves T_spec from the serial sum toward the overlapped bound",
-    "Keep B below B* so the target stays bandwidth-priced and the model stays in its benign regime; disable spec decode above it",
-    "Tree/multi-candidate drafting raises a (more accepted tokens per weight-streamed pass) without changing A_be's 1/k floor",
-    "Quantize the draft to FP8/INT8 to halve its fixed HBM cost - matters only at low batch and short context, per the arithmetic above"
-  ],
-  "notes": "Design consequence: speculative decoding's break-even is 1/k in the memory-bound regime and approximately 1 in the compute-bound regime, so the scheme is not 'a win that decays with batch' but 'a large win that becomes unavailable exactly when you cross the roofline'. The batch number at which it dies is B* = (PEAK/BW)*w_b/2 - the same crossover as fct-batch1-step-cost-formula, which is why the two records share a number rather than each inventing one. This also gives the correct reading of the repo's existing k/B claim: the 'k/B' form describes the COMPUTE-bound regime, where raising AI from B to B+k is the only increment available, and it is a poor description of the latency regime where the increment is from 1 to k and B does not appear at all. For a reader predicting cost: compute A_be for your own (B, k, P_d, P_t, hardware) before enabling speculation; if A_be comes out near 1, do not bother. WHERE THE DERIVATION BREAKS DOWN, five places. (1) It prices only weight streaming. It ignores the KV cache read that grows with B*k in the verify pass, the k x V logits tensor, the rejection-sampling arithmetic over that tensor, and the attention flops at context L - so at long context the verify pass is more expensive than the model says and the true A_be is HIGHER. (2) It treats acceptance rate as a scalar. Real acceptance is a per-token geometric-like process that is correlated with position (early drafted tokens are accepted more often), so the distribution of a matters, not just its mean; quoting mean acceptance understates variance and the tail latency. (3) It assumes one target forward pass per k positions, which is what makes the weights free across k. Tree drafts with a verification-aware test break that: the verify pass is then k_nodes rows, not k, and the weight stream is unchanged, so the memory-bound A_be improves but the compute term worsens - the model must be re-derived for tree widths. (4) It assumes zero cost for the bonus token, but under rejection sampling a rejected draft still costs a full draft pass for nothing, and the expected number of DRAFT PASSES is what matters, not the expected number of accepts; a draft that accepts 1 token on average by rejecting 3 of 4 has paid 4 draft positions and 4 verify positions for 1 token and A_be is much worse than the scalar suggests. (5) It ignores that speculation and CUDA Graphs interact badly - the repo records FlashInfer silently downgrading graphs to PIECEWISE under spec decode, worth ~16% of decode throughput (spec-decode-silently-downgrades-cudagraphs), which is a real cost the model does not contain and which partly or wholly cancels the gain at low k. Also note the correctness surface, which is separate from cost but governs whether the speedup is even obtainable: spec decode under PD disaggregation crashes on a per-algorithm basis, MTP plus prefix caching costs ~20% accuracy, and EAGLE/MTP prefix-cache last-block drops corrupt long responses - see speculative-decoding-bandwidth-trade-at-batch.",
-  "status": "verified",
-  "confidence": 0.75,
-  "updated": "2026-10-04",
-  "sources": [
-    "flop-speculative-decoding",
-    "flop-speculative-sampling-deepmind",
-    "flop-roofline-williams-2008",
-    "flop-nvidia-h100-specs",
-    "nv-h100-datasheet",
-    "flop2-llama2-70b-config",
-    "flop2-llama3-8b-config",
-    "sd-eagle2-paper",
-    "sd-medusa-paper",
-    "sd-lookahead-paper"
-  ]
+   ]
+  },
+  {
+   "parameter": "peak_flops",
+   "effect": "This is the number the repo was missing: a quoted speculative speedup is meaningless without the a_be it has to beat, and a_be is a function of batch, k, draft size AND the hardware's PEAK/BW ratio.",
+   "basis": "unverified",
+   "values_for": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+   ]
+  }
+ ]
 }

@@ -1,45 +1,60 @@
 {
-  "id": "quantized-decode-high-batch",
-  "type": "flop",
-  "name": "Quantized decode at high batch: where the dequantization tax comes back",
-  "class": "quantization_overhead",
-  "arithmetic_intensity": "Quantization raises decode arithmetic intensity by the compression factor, which moves the roofline crossover batch DOWN by the same factor - and that is precisely why dequantization overhead reappears at high batch. For 4-bit weights, bytes fall 4x while flops are unchanged, so AI = 4*B rather than B (see decode-gemm). Against H100 SXM's dense-bf16 ridge of 295.4 flop/byte (989.5 TFLOPS / 3.35 TB/s) the ideal crossover batches are: bf16 AI = B, B_ridge = 295.4; fp8/int8 AI = 2*B, B_ridge = 147.7; 4-bit AI = 4*B, B_ridge = 73.8; 2-bit AI = 8*B, B_ridge = 36.9. The arithmetic of the crossover is not the interesting part - the interesting part is that it predicts a measurement. MARLIN reports that 'batchsizes up to 16-32 can be supported with close to maximum (4x) quantization speedup, and larger batchsizes up to 64-128 with gradually decreasing, but still significant, acceleration' (arXiv 2408.11743). The ideal 4-bit ridge of 73.8 sits INSIDE that measured 16-128 band. The roofline therefore explains why quantized decode stops paying at high batch, in the right order of magnitude, from a two-line derivation: once B exceeds ~74 on an H100, the 4-bit GEMM has enough arithmetic intensity to be compute-bound, at which point the missing 2x of peak FLOPS that bf16 has and 4-bit does not is what matters, and the dequant-to-bf16 path pays. The dequant cost itself is a fixed per-element tax that does not benefit from batching: unpacking a group's scales and converting to a compute-representable form is O(elements) work regardless of how many rows share the weights, so as B grows the useful work (2*B*P flops) grows linearly while the unpack cost (O(P) with a per-group scale load) does not - yet the total stops shrinking because the GEMM has left the memory roof. Note the term that makes it worse with batch specifically: scale unpacking. A weight group of g elements adds g scale loads per group, and with a small g (16 or 32 is common) the scale bytes are a large fraction of the weight bytes - at g = 16 and 4-bit weights, each 16-element group costs 4*16 = 64 bits of weight plus a 16-bit scale, so scales are 20% of the traffic; at g = 128 they are 2.8%. This is why weight_group_size is a serving knob and not only a quality knob.",
-  "bound_by": "both",
-  "scales_with": [
-    "batch_size (THE knob: AI = bits_factor * B, so B_ridge = ridge/bits_factor - 295.4/4 = 73.8 for 4-bit on H100, and MARLIN's measured useful band of 16-128 brackets it)",
-    "bits (directly sets bytes, hence AI, hence the crossover batch: every halving of bits halves the tolerable batch)",
-    "weight_group_size g (scale bytes as a fraction of weight bytes: g=16 gives 20% overhead, g=128 gives 2.8% - a serving-relevant number that is usually quoted only as a quality knob)",
-    "activation_quantization_scheme (per-tensor dynamic quantization adds a per-token reduction and rescale; per-channel static adds nothing per token)",
-    "hardware_native_support (a native fp8/int8 tensor-core path fuses dequant into the load; an emulated dequant-to-bf16 path pays a separate pass that batching cannot amortize)",
-    "model_size (larger models have more bytes to unpack but the same ratio, so the effect is a constant factor on the step)"
-  ],
-  "affected_by_hardware": [
+ "id": "quantized-decode-high-batch",
+ "type": "flop",
+ "name": "Quantized decode at high batch: where the dequantization tax comes back",
+ "class": "quantization_overhead",
+ "arithmetic_intensity": "Quantization raises decode arithmetic intensity by the compression factor, which moves the roofline crossover batch DOWN by the same factor - and that is precisely why dequantization overhead reappears at high batch. For 4-bit weights, bytes fall 4x while flops are unchanged, so AI = 4*B rather than B (see decode-gemm). Against H100 SXM's dense-bf16 ridge of 295.4 flop/byte (989.5 TFLOPS / 3.35 TB/s) the ideal crossover batches are: bf16 AI = B, B_ridge = 295.4; fp8/int8 AI = 2*B, B_ridge = 147.7; 4-bit AI = 4*B, B_ridge = 73.8; 2-bit AI = 8*B, B_ridge = 36.9. The arithmetic of the crossover is not the interesting part - the interesting part is that it predicts a measurement. MARLIN reports that 'batchsizes up to 16-32 can be supported with close to maximum (4x) quantization speedup, and larger batchsizes up to 64-128 with gradually decreasing, but still significant, acceleration' (arXiv 2408.11743). The ideal 4-bit ridge of 73.8 sits INSIDE that measured 16-128 band. The roofline therefore explains why quantized decode stops paying at high batch, in the right order of magnitude, from a two-line derivation: once B exceeds ~74 on an H100, the 4-bit GEMM has enough arithmetic intensity to be compute-bound, at which point the missing 2x of peak FLOPS that bf16 has and 4-bit does not is what matters, and the dequant-to-bf16 path pays. The dequant cost itself is a fixed per-element tax that does not benefit from batching: unpacking a group's scales and converting to a compute-representable form is O(elements) work regardless of how many rows share the weights, so as B grows the useful work (2*B*P flops) grows linearly while the unpack cost (O(P) with a per-group scale load) does not - yet the total stops shrinking because the GEMM has left the memory roof. Note the term that makes it worse with batch specifically: scale unpacking. A weight group of g elements adds g scale loads per group, and with a small g (16 or 32 is common) the scale bytes are a large fraction of the weight bytes - at g = 16 and 4-bit weights, each 16-element group costs 4*16 = 64 bits of weight plus a 16-bit scale, so scales are 20% of the traffic; at g = 128 they are 2.8%. This is why weight_group_size is a serving knob and not only a quality knob.",
+ "bound_by": "both",
+ "scales_with": [
+  "batch_size (THE knob: AI = bits_factor * B, so B_ridge = ridge/bits_factor - 295.4/4 = 73.8 for 4-bit on H100, and MARLIN's measured useful band of 16-128 brackets it)",
+  "bits (directly sets bytes, hence AI, hence the crossover batch: every halving of bits halves the tolerable batch)",
+  "weight_group_size g (scale bytes as a fraction of weight bytes: g=16 gives 20% overhead, g=128 gives 2.8% - a serving-relevant number that is usually quoted only as a quality knob)",
+  "activation_quantization_scheme (per-tensor dynamic quantization adds a per-token reduction and rescale; per-channel static adds nothing per token)",
+  "hardware_native_support (a native fp8/int8 tensor-core path fuses dequant into the load; an emulated dequant-to-bf16 path pays a separate pass that batching cannot amortize)",
+  "model_size (larger models have more bytes to unpack but the same ratio, so the effect is a constant factor on the step)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "amd-instinct-mi300x",
+  "nvidia-rtx-4090",
+  "nvidia-l4",
+  "nvidia-b200",
+  "google-tpu-v5e"
+ ],
+ "workarounds": [
+  "MARLIN-style mixed-precision GEMM: asynchronous memory access, complex task scheduling/pipelining and bespoke quantization support, keeping 4-bit weight traffic bandwidth-bound up to batch 16-32 and useful to 64-128 (arXiv 2408.11743) - the design point exists precisely to extend the band past the naive ridge",
+  "Native low-precision tensor-core paths (FP8 / INT8 / FP4 on device) so dequant is fused into the load rather than done in a separate pass - on H100 the dense fp8 ridge is 1979/3350 = 590.7, so fp8 both raises AI (2*B) AND doubles the roof",
+  "Fused dequant-into-shared-memory GEMM epilogues rather than a separate dequant kernel",
+  "Asymmetric group-wise scale layout enabling vectorized 4-bit loads, so the scale bytes stream alongside the weights in the same transactions",
+  "Pre-quantized weights so the format is not re-derived per launch",
+  "Prepacked / repacked weight layouts at load time rather than per forward, which is what makes the async memory access in MARLIN possible",
+  "Continuous batching to keep B in the 16-64 window where quantization is unambiguously still paying, rather than pushing B higher for its own sake",
+  "Serve quantized weights at low batch and bf16 at high batch - the crossover is computable from the part's ridge, so a scheduler could switch formats by concurrency"
+ ],
+ "notes": "The value added here over the existing quantization-overhead record is the PREDICTION: the ideal 4-bit roofline crossover of B_ridge = 295.4/4 = 73.8 falls inside the 16-128 band MARLIN actually measures, so the two-line derivation AI = bits_factor * B predicts the published behaviour. That is worth stating because it means the crossover is not a kernel-tuning artifact to be discovered empirically - it is a property of the part (its ridge) and the format (its compression factor), and the formula B_ridge = 1000*TFLOPs/(GB_per_s * bits_factor) will locate it on any part. Worked examples: H100 SXM bf16 -> 295.4; MI300X bf16 1307.4/5300 = 246.7, so 4-bit -> 61.7; RTX 4090 165.2/1008 = 163.9, so 4-bit -> 41.0; TPU v5e 197/819 = 240.5, so 4-bit -> 60.1. A bandwidth-rich, FLOPS-poor part therefore keeps quantization profitable to a LOWER batch than a FLOPS-rich one, which is counter-intuitive and follows from the ridge being a ratio. Second, and worth flagging because it is the part most discussions omit: weight_group_size is a throughput knob. At g = 16 with 4-bit weights, each group is 16*4 = 64 bits of weight plus a 16-bit scale = 20% extra traffic, which is pure overhead on a memory-bound step; at g = 128 it is 2.8%. So the quality-vs-speed tradeoff in group size is also a 7x swing in scale-loading overhead, and it applies on top of whatever the format's nominal compression is - a '4x smaller model' with g = 16 moves fewer bytes than the headline suggests. Third: the distinction between native and emulated quantization is not a matter of degree here. A native fp8/int8 path fuses the unpack into the tensor-core load; an emulated dequant-to-bf16 path issues a separate memory-bound kernel whose output must then be re-read by the GEMM, and that added round trip does not amortize with batch at all.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "flop-marlin",
+  "flop-roofline-williams-2008",
+  "flop-nvidia-h100-specs",
+  "flop-nvidia-inference-optimization",
+  "flop-orca-osdi22"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "MARLIN-style mixed-precision GEMM: asynchronous memory access, complex task scheduling/pipelining and bespoke quantization support, keeping 4-bit weight traffic bandwidth-bound up to batch 16-32 and useful to 64-128 (arXiv 2408.11743) - the design point exists precisely to extend the band past the naive ridge | Native low-precision tensor-core paths (FP8 / INT8 / FP4 on device) so dequant is fu",
+   "basis": "recorded",
+   "values_for": [
     "nvidia-h100-sxm",
     "amd-instinct-mi300x",
     "nvidia-rtx-4090",
     "nvidia-l4",
     "nvidia-b200",
     "google-tpu-v5e"
-  ],
-  "workarounds": [
-    "MARLIN-style mixed-precision GEMM: asynchronous memory access, complex task scheduling/pipelining and bespoke quantization support, keeping 4-bit weight traffic bandwidth-bound up to batch 16-32 and useful to 64-128 (arXiv 2408.11743) - the design point exists precisely to extend the band past the naive ridge",
-    "Native low-precision tensor-core paths (FP8 / INT8 / FP4 on device) so dequant is fused into the load rather than done in a separate pass - on H100 the dense fp8 ridge is 1979/3350 = 590.7, so fp8 both raises AI (2*B) AND doubles the roof",
-    "Fused dequant-into-shared-memory GEMM epilogues rather than a separate dequant kernel",
-    "Asymmetric group-wise scale layout enabling vectorized 4-bit loads, so the scale bytes stream alongside the weights in the same transactions",
-    "Pre-quantized weights so the format is not re-derived per launch",
-    "Prepacked / repacked weight layouts at load time rather than per forward, which is what makes the async memory access in MARLIN possible",
-    "Continuous batching to keep B in the 16-64 window where quantization is unambiguously still paying, rather than pushing B higher for its own sake",
-    "Serve quantized weights at low batch and bf16 at high batch - the crossover is computable from the part's ridge, so a scheduler could switch formats by concurrency"
-  ],
-  "notes": "The value added here over the existing quantization-overhead record is the PREDICTION: the ideal 4-bit roofline crossover of B_ridge = 295.4/4 = 73.8 falls inside the 16-128 band MARLIN actually measures, so the two-line derivation AI = bits_factor * B predicts the published behaviour. That is worth stating because it means the crossover is not a kernel-tuning artifact to be discovered empirically - it is a property of the part (its ridge) and the format (its compression factor), and the formula B_ridge = 1000*TFLOPs/(GB_per_s * bits_factor) will locate it on any part. Worked examples: H100 SXM bf16 -> 295.4; MI300X bf16 1307.4/5300 = 246.7, so 4-bit -> 61.7; RTX 4090 165.2/1008 = 163.9, so 4-bit -> 41.0; TPU v5e 197/819 = 240.5, so 4-bit -> 60.1. A bandwidth-rich, FLOPS-poor part therefore keeps quantization profitable to a LOWER batch than a FLOPS-rich one, which is counter-intuitive and follows from the ridge being a ratio. Second, and worth flagging because it is the part most discussions omit: weight_group_size is a throughput knob. At g = 16 with 4-bit weights, each group is 16*4 = 64 bits of weight plus a 16-bit scale = 20% extra traffic, which is pure overhead on a memory-bound step; at g = 128 it is 2.8%. So the quality-vs-speed tradeoff in group size is also a 7x swing in scale-loading overhead, and it applies on top of whatever the format's nominal compression is - a '4x smaller model' with g = 16 moves fewer bytes than the headline suggests. Third: the distinction between native and emulated quantization is not a matter of degree here. A native fp8/int8 path fuses the unpack into the tensor-core load; an emulated dequant-to-bf16 path issues a separate memory-bound kernel whose output must then be re-read by the GEMM, and that added round trip does not amortize with batch at all.",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-03",
-  "sources": [
-    "flop-marlin",
-    "flop-roofline-williams-2008",
-    "flop-nvidia-h100-specs",
-    "flop-nvidia-inference-optimization",
-    "flop-orca-osdi22"
-  ]
+   ]
+  }
+ ]
 }

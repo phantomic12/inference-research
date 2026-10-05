@@ -1,37 +1,59 @@
 {
-  "id": "bw-tma-tcgen05-async-copy-warp-specialization",
-  "type": "flop",
-  "name": "TMA + tcgen05 MMA with async copy and warp-specialization in CUTLASS Blackwell kernels",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "Blackwell kernels use TMA (cp.async.bulk.tensor) for global->shared memory copies and tcgen05.mma for tensor-core operations, with warp specialization to overlap data movement with compute. The producer-consumer pattern: producer warps issue TMA copies (cp.async.bulk.tensor) to move tiles from HBM to shared memory, while consumer warps issue tcgen05.mma instructions to perform matrix multiplications. This is the Blackwell analogue of Hopper's FA-3 warp specialization (producer warps issue TMA, consumer warps issue WGMMA). The key difference: tcgen05.mma is issued by a single thread (not a warpgroup), accumulates in TMEM (not registers), and can span 2 CTAs. TMA on Blackwell supports .multicast::cluster::32b qualifier for tcgen05.commit and mbarrier.expect_tx (PTX ISA 9.4), enabling multicast completion. The .shared::cluster.global direction is 'optimized for' sm_90a/sm_100a/sm_100f/sm_103a/sm_103f/sm_107a/sm_107f/sm_110a/sm_110f. CUTLASS 3.x on Blackwell SM100 uses umma/tcgen05 instructions. CUTLASS 4.8 adds CuTe DSL support for Blackwell with FP8 (MMA_K=64) and FP4 (MMA_K=128) Tensor Core MMA instructions. The async copy pipeline: TMA does address generation and bounds predication in hardware, freeing registers so tiles can be larger. Larger tiles amortize each HBM byte over more MACs. The tcgen05.mma accumulator in TMEM means the MMA pipeline does not compete with CUDA-core work for registers, enabling deeper pipelining.",
-  "bound_by": "both",
-  "scales_with": [
-    "tile size (larger tiles = more FLOPs per HBM byte)",
-    "number of pipeline stages (TMEM capacity limits accumulator count)",
-    "warp specialization granularity (producer vs consumer warp count)",
-    "CTA group size (1 or 2 for tcgen05)"
-  ],
-  "affected_by_hardware": [
+ "id": "bw-tma-tcgen05-async-copy-warp-specialization",
+ "type": "flop",
+ "name": "TMA + tcgen05 MMA with async copy and warp-specialization in CUTLASS Blackwell kernels",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "Blackwell kernels use TMA (cp.async.bulk.tensor) for global->shared memory copies and tcgen05.mma for tensor-core operations, with warp specialization to overlap data movement with compute. The producer-consumer pattern: producer warps issue TMA copies (cp.async.bulk.tensor) to move tiles from HBM to shared memory, while consumer warps issue tcgen05.mma instructions to perform matrix multiplications. This is the Blackwell analogue of Hopper's FA-3 warp specialization (producer warps issue TMA, consumer warps issue WGMMA). The key difference: tcgen05.mma is issued by a single thread (not a warpgroup), accumulates in TMEM (not registers), and can span 2 CTAs. TMA on Blackwell supports .multicast::cluster::32b qualifier for tcgen05.commit and mbarrier.expect_tx (PTX ISA 9.4), enabling multicast completion. The .shared::cluster.global direction is 'optimized for' sm_90a/sm_100a/sm_100f/sm_103a/sm_103f/sm_107a/sm_107f/sm_110a/sm_110f. CUTLASS 3.x on Blackwell SM100 uses umma/tcgen05 instructions. CUTLASS 4.8 adds CuTe DSL support for Blackwell with FP8 (MMA_K=64) and FP4 (MMA_K=128) Tensor Core MMA instructions. The async copy pipeline: TMA does address generation and bounds predication in hardware, freeing registers so tiles can be larger. Larger tiles amortize each HBM byte over more MACs. The tcgen05.mma accumulator in TMEM means the MMA pipeline does not compete with CUDA-core work for registers, enabling deeper pipelining.",
+ "bound_by": "both",
+ "scales_with": [
+  "tile size (larger tiles = more FLOPs per HBM byte)",
+  "number of pipeline stages (TMEM capacity limits accumulator count)",
+  "warp specialization granularity (producer vs consumer warp count)",
+  "CTA group size (1 or 2 for tcgen05)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-b200",
+  "nvidia-b300",
+  "nvidia-gb200-nvl72"
+ ],
+ "workarounds": [
+  "Use TMA (cp.async.bulk.tensor) instead of per-thread address arithmetic",
+  "Use tcgen05.mma with TMEM accumulators to avoid register pressure",
+  "Use warp specialization: separate producer warps (TMA) and consumer warps (tcgen05.mma)",
+  "Use 2-CTA MMA when both CTAs of the pair can stay resident",
+  "Use CUTLASS 4.8+ CuTe DSL for Blackwell kernel development",
+  "Target sm_100a for datacenter Blackwell (not sm_120 for consumer)"
+ ],
+ "notes": "The TMA + tcgen05 combination is what enables Blackwell's 2.25x BF16 tensor-core throughput increase over Hopper (2500 vs 989 TFLOPS dense on H100 SXM). The warp-specialization pattern is inherited from Hopper (FA-3) but the single-thread UMMA launch and TMEM accumulators change the register-pressure equation. CUTLASS README: 'The NVIDIA Blackwell SM100 architecture used in the datacenter products has a different compute capability than the one underpinning NVIDIA Blackwell GeForce RTX 50 series GPUs (SM120). As a result, kernels compiled for Blackwell SM100 architecture with arch conditional features (using sm100a) are not compatible with RTX 50 series GPUs.' Blackwell entries in CUTLASS list extended TMEM from 512 to 576 columns, 328KB shared-memory allocations, higher-throughput FP8 (MMA_K=64) and FP4 (MMA_K=128) Tensor Core MMA instructions.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "kern-ptx-isa",
+  "kern-cutlass-github",
+  "kern-flashattention-4-blog",
+  "bw-nv-blackwell-ultra-blog"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "tensor_core_count",
+   "effect": "The producer-consumer pattern: producer warps issue TMA copies (cp.async.bulk.tensor) to move tiles from HBM to shared memory, while consumer warps issue tcgen05.mma instructions to perform matrix multiplications.",
+   "basis": "unverified",
+   "values_for": [
     "nvidia-b200",
     "nvidia-b300",
     "nvidia-gb200-nvl72"
-  ],
-  "workarounds": [
-    "Use TMA (cp.async.bulk.tensor) instead of per-thread address arithmetic",
-    "Use tcgen05.mma with TMEM accumulators to avoid register pressure",
-    "Use warp specialization: separate producer warps (TMA) and consumer warps (tcgen05.mma)",
-    "Use 2-CTA MMA when both CTAs of the pair can stay resident",
-    "Use CUTLASS 4.8+ CuTe DSL for Blackwell kernel development",
-    "Target sm_100a for datacenter Blackwell (not sm_120 for consumer)"
-  ],
-  "notes": "The TMA + tcgen05 combination is what enables Blackwell's 2.25x BF16 tensor-core throughput increase over Hopper (2500 vs 989 TFLOPS dense on H100 SXM). The warp-specialization pattern is inherited from Hopper (FA-3) but the single-thread UMMA launch and TMEM accumulators change the register-pressure equation. CUTLASS README: 'The NVIDIA Blackwell SM100 architecture used in the datacenter products has a different compute capability than the one underpinning NVIDIA Blackwell GeForce RTX 50 series GPUs (SM120). As a result, kernels compiled for Blackwell SM100 architecture with arch conditional features (using sm100a) are not compatible with RTX 50 series GPUs.' Blackwell entries in CUTLASS list extended TMEM from 512 to 576 columns, 328KB shared-memory allocations, higher-throughput FP8 (MMA_K=64) and FP4 (MMA_K=128) Tensor Core MMA instructions.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-04",
-  "sources": [
-    "kern-ptx-isa",
-    "kern-cutlass-github",
-    "kern-flashattention-4-blog",
-    "bw-nv-blackwell-ultra-blog"
-  ]
+   ]
+  },
+  {
+   "parameter": "tmem_capacity",
+   "effect": "The key difference: tcgen05.mma is issued by a single thread (not a warpgroup), accumulates in TMEM (not registers), and can span 2 CTAs.",
+   "basis": "unverified",
+   "values_for": [
+    "nvidia-b200",
+    "nvidia-b300",
+    "nvidia-gb200-nvl72"
+   ]
+  }
+ ]
 }

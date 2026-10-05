@@ -1,40 +1,97 @@
 {
-  "id": "flashattention-4-blackwell-tmem",
-  "type": "flop",
-  "name": "FlashAttention-4 (Blackwell): tensor memory, 2-CTA MMA, and emulated exponential",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "FA-4 is the first attention kernel whose bottleneck moves off tensor cores. Feed-and-speeds per B200 SM at M=N=D=128: tensor cores 8192 ops/cycle, exponential unit 16 ops/cycle, shared memory 128 bytes/cycle. Forward per tile: 1024 tensor-core cycles vs 1024 exp cycles vs 768 SMEM cycles - forward is bound by compute AND exponential simultaneously. Backward (5 chained MMAs): 2560 tensor-core, 1024 exp, 3328 SMEM - backward is bound by SHARED-MEMORY BANDWIDTH, not FLOPs. So the reductions are: (1) shared-memory traffic in backward, via storing transposed intermediates directly into tensor memory in the operand-A layout the dV/dK MMAs consume (removing a shared-memory round trip) and via 2-CTA MMA which roughly halves operand-B shared-memory traffic; (2) SFU exp contention in forward, by splitting exp across hardware MUFU.EX2 and a software Cody-Waite + Horner polynomial on FMA units that would otherwise idle, and by explicitly desynchronizing the two softmax warpgroups so they do not contend for MUFU; (3) non-critical-path work, by moving online-softmax rescaling to a dedicated correction warpgroup and only rescaling when the max jump exceeds a threshold tau (the final output is still normalized by the true final statistics, so output is preserved); (4) register pressure, because UMMA accumulators live in TMEM rather than registers - Hopper-era FA-3's register pressure forced a more serial schedule.",
-  "bound_by": "both",
-  "scales_with": [
-    "head_dim",
-    "tile size (FA-4 uses two 128-token query tiles per CTA)",
-    "seqlen",
-    "batch_size (scheduling: LPT ordering and batch-head swizzling into L2-sized sections to fight causal load imbalance)"
-  ],
-  "affected_by_hardware": [
+ "id": "flashattention-4-blackwell-tmem",
+ "type": "flop",
+ "name": "FlashAttention-4 (Blackwell): tensor memory, 2-CTA MMA, and emulated exponential",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "FA-4 is the first attention kernel whose bottleneck moves off tensor cores. Feed-and-speeds per B200 SM at M=N=D=128: tensor cores 8192 ops/cycle, exponential unit 16 ops/cycle, shared memory 128 bytes/cycle. Forward per tile: 1024 tensor-core cycles vs 1024 exp cycles vs 768 SMEM cycles - forward is bound by compute AND exponential simultaneously. Backward (5 chained MMAs): 2560 tensor-core, 1024 exp, 3328 SMEM - backward is bound by SHARED-MEMORY BANDWIDTH, not FLOPs. So the reductions are: (1) shared-memory traffic in backward, via storing transposed intermediates directly into tensor memory in the operand-A layout the dV/dK MMAs consume (removing a shared-memory round trip) and via 2-CTA MMA which roughly halves operand-B shared-memory traffic; (2) SFU exp contention in forward, by splitting exp across hardware MUFU.EX2 and a software Cody-Waite + Horner polynomial on FMA units that would otherwise idle, and by explicitly desynchronizing the two softmax warpgroups so they do not contend for MUFU; (3) non-critical-path work, by moving online-softmax rescaling to a dedicated correction warpgroup and only rescaling when the max jump exceeds a threshold tau (the final output is still normalized by the true final statistics, so output is preserved); (4) register pressure, because UMMA accumulators live in TMEM rather than registers - Hopper-era FA-3's register pressure forced a more serial schedule.",
+ "bound_by": "both",
+ "scales_with": [
+  "head_dim",
+  "tile size (FA-4 uses two 128-token query tiles per CTA)",
+  "seqlen",
+  "batch_size (scheduling: LPT ordering and batch-head swizzling into L2-sized sections to fight causal load imbalance)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-b200",
+  "nvidia-gb200-nvl72",
+  "nvidia-b300",
+  "nvidia-h100-sxm"
+ ],
+ "workarounds": [
+  "tcgen05 UMMA with TMEM accumulators: largest single-CTA tile 128x256x16 in BF16/FP16, ~2x the largest Hopper WGMMA atom, issued by a single thread (eases register pressure, removes Hopper's spilling pain points)",
+  "2-CTA MMA: one UMMA across a CTA pair in a cluster spanning both CTAs' TMEM, up to 256x256x16, halving operand-B shared-memory traffic",
+  "DSMEM exchange between the CTA pair to repack dS along the non-reduction axis when 2-CTA splitting conflicts with the dQ reduction axis",
+  "Store P in TMEM in stages (rather than holding S and P in registers) and fire the PV matmul once 3/4 of P is written",
+  "Distribute exp across MUFU.EX2 and an FMA polynomial approximation (Cody-Waite range reduction, Horner form, Sollya-fitted coefficients)",
+  "Conditional online-softmax rescaling to delete small rescale steps from the critical path",
+  "Longest-processing-time-first tile scheduling plus L2-sized batch-head swizzling; SPT ordering for the deterministic path",
+  "Reuse TMEM columns across stages since five full accumulators do not fit (S and P share one column set, dP/dS/dQ another)"
+ ],
+ "notes": "Hardware scope: the repo states FA-4 is 'written in CuTeDSL and optimized for Hopper and Blackwell GPUs (e.g. H100, B200)'; B200 numbers are the ones quoted. The paper's central argument - that tensor core throughput grows far faster than SFU count and shared-memory bandwidth (BF16 tensor cores go from 1 to 2.25 PFLOPs H100->B200 while SFU count and SMEM bandwidth are unchanged) - is a generational scaling asymmetry that every Blackwell kernel author has to re-derive, and it is the reason FA-4 emulates part of the exponential in software. Where it does NOT apply: SM120 consumer Blackwell cannot run sm100a binaries (see the CUTLASS source record), and 2-CTA MMA requires both CTAs of the pair to stay active for the duration, which constrains scheduling. Reported numbers are author claims: up to 1605 TFLOPs/s BF16 on B200 (71% of utilization), 1.3x vs cuDNN 9.13 and 2.7x vs Triton; deterministic backward reaches ~85-90% of nondeterministic throughput. Note that some of these techniques have flowed back into cuDNN 9.13/9.14, so an engine using cuDNN gets some of this benefit without running FA-4 - a caution against reading a vendor benchmark as a library-specific fact.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-05",
+ "sources": [
+  "kern-flashattention-4-blog",
+  "kern-flashattention-github",
+  "kern-ptx-isa",
+  "kern-cutlass-github"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "Backward (5 chained MMAs): 2560 tensor-core, 1024 exp, 3328 SMEM - backward is bound by SHARED-MEMORY BANDWIDTH, not FLOPs.",
+   "basis": "unverified",
+   "values_for": [
     "nvidia-b200",
     "nvidia-gb200-nvl72",
     "nvidia-b300",
     "nvidia-h100-sxm"
-  ],
-  "workarounds": [
-    "tcgen05 UMMA with TMEM accumulators: largest single-CTA tile 128x256x16 in BF16/FP16, ~2x the largest Hopper WGMMA atom, issued by a single thread (eases register pressure, removes Hopper's spilling pain points)",
-    "2-CTA MMA: one UMMA across a CTA pair in a cluster spanning both CTAs' TMEM, up to 256x256x16, halving operand-B shared-memory traffic",
-    "DSMEM exchange between the CTA pair to repack dS along the non-reduction axis when 2-CTA splitting conflicts with the dQ reduction axis",
-    "Store P in TMEM in stages (rather than holding S and P in registers) and fire the PV matmul once 3/4 of P is written",
-    "Distribute exp across MUFU.EX2 and an FMA polynomial approximation (Cody-Waite range reduction, Horner form, Sollya-fitted coefficients)",
-    "Conditional online-softmax rescaling to delete small rescale steps from the critical path",
-    "Longest-processing-time-first tile scheduling plus L2-sized batch-head swizzling; SPT ordering for the deterministic path",
-    "Reuse TMEM columns across stages since five full accumulators do not fit (S and P share one column set, dP/dS/dQ another)"
-  ],
-  "notes": "Hardware scope: the repo states FA-4 is 'written in CuTeDSL and optimized for Hopper and Blackwell GPUs (e.g. H100, B200)'; B200 numbers are the ones quoted. The paper's central argument - that tensor core throughput grows far faster than SFU count and shared-memory bandwidth (BF16 tensor cores go from 1 to 2.25 PFLOPs H100->B200 while SFU count and SMEM bandwidth are unchanged) - is a generational scaling asymmetry that every Blackwell kernel author has to re-derive, and it is the reason FA-4 emulates part of the exponential in software. Where it does NOT apply: SM120 consumer Blackwell cannot run sm100a binaries (see the CUTLASS source record), and 2-CTA MMA requires both CTAs of the pair to stay active for the duration, which constrains scheduling. Reported numbers are author claims: up to 1605 TFLOPs/s BF16 on B200 (71% of utilization), 1.3x vs cuDNN 9.13 and 2.7x vs Triton; deterministic backward reaches ~85-90% of nondeterministic throughput. Note that some of these techniques have flowed back into cuDNN 9.13/9.14, so an engine using cuDNN gets some of this benefit without running FA-4 - a caution against reading a vendor benchmark as a library-specific fact.",
-  "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-03",
-  "sources": [
-    "kern-flashattention-4-blog",
-    "kern-flashattention-github",
-    "kern-ptx-isa",
-    "kern-cutlass-github"
-  ]
+   ]
+  },
+  {
+   "parameter": "tensor_core_count",
+   "effect": "Forward per tile: 1024 tensor-core cycles vs 1024 exp cycles vs 768 SMEM cycles - forward is bound by compute AND exponential simultaneously.",
+   "basis": "unverified",
+   "values_for": [
+    "nvidia-b200",
+    "nvidia-gb200-nvl72",
+    "nvidia-b300",
+    "nvidia-h100-sxm"
+   ]
+  },
+  {
+   "parameter": "shared_memory_capacity",
+   "effect": "Forward per tile: 1024 tensor-core cycles vs 1024 exp cycles vs 768 SMEM cycles - forward is bound by compute AND exponential simultaneously.",
+   "basis": "unverified",
+   "values_for": [
+    "nvidia-b200",
+    "nvidia-gb200-nvl72",
+    "nvidia-b300",
+    "nvidia-h100-sxm"
+   ]
+  },
+  {
+   "parameter": "tmem_capacity",
+   "effect": "So the reductions are: (1) shared-memory traffic in backward, via storing transposed intermediates directly into tensor memory in the operand-A layout the dV/dK MMAs consume (removing a shared-memory round trip) and via 2-CTA MMA which roughly halves operand-B shared-memory traffic; (2) SFU exp contention in forward, by splitting exp across hard",
+   "basis": "unverified",
+   "values_for": [
+    "nvidia-b200",
+    "nvidia-gb200-nvl72",
+    "nvidia-b300",
+    "nvidia-h100-sxm"
+   ]
+  },
+  {
+   "parameter": "l2_cache_size",
+   "effect": "head_dim | tile size (FA-4 uses two 128-token query tiles per CTA) | seqlen | batch_size (scheduling: LPT ordering and batch-head swizzling into L2-sized sections to fight causal load imbalance)",
+   "basis": "unverified",
+   "values_for": [
+    "nvidia-b200",
+    "nvidia-gb200-nvl72",
+    "nvidia-b300",
+    "nvidia-h100-sxm"
+   ]
+  }
+ ]
 }

@@ -1,36 +1,49 @@
 {
-  "id": "bw-fp8-fine-grained-scaling-hopper-vs-blackwell",
-  "type": "flop",
-  "name": "FP8 fine-grained scaling on Hopper vs Blackwell: per-tensor vs per-block scales and accuracy implications",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "FP8 (E4M3/E5M2) was introduced on Hopper with per-tensor scaling: a single FP32 scale factor for the entire tensor, applied before the FP8 GEMM and after in the epilogue. This coarse scaling is problematic for tensors with high dynamic range or outliers, as a single scale cannot adequately represent both large and small values. Blackwell extends FP8 support with block-scaled formats: MXFP8 (E4M13 + UE8M0 scale per 32-value block) and NVFP8 (E4M3 + E4M3 scale per 16-value block + per-tensor FP32 scale). The tcgen05.mma instruction supports these via .kind::mxf8f6f4 (block-scaled FP8/FP6 with UE8M0 scale). The finer-grained scaling (per-16 or per-32 values instead of per-tensor) reduces quantization error by allowing different scale factors for different regions of the tensor. The accuracy implication: block-scaled FP8 can achieve close to FP16/BF16 accuracy, while per-tensor FP8 may suffer noticeable degradation on tensors with outliers. The CUTLASS block-scaled tensor core record notes that DeepGEMM requires packed UE8M0 scales (four per int) on SM100, while SM90 wants FP32 scales - this changes the memory layout the engine must produce. The existing block-scaled-tensor-core-fp4-fp8 record covers the PTX ISA shape tables; this record focuses on the Hopper-to-Blackwell evolution of FP8 scaling granularity and its accuracy implications.",
-  "bound_by": "compute",
-  "scales_with": [
-    "scaling granularity (per-tensor vs per-32 vs per-16)",
-    "tensor dynamic range (outliers require finer scaling)",
-    "block size (16 vs 32 values per scale)"
-  ],
-  "affected_by_hardware": [
+ "id": "bw-fp8-fine-grained-scaling-hopper-vs-blackwell",
+ "type": "flop",
+ "name": "FP8 fine-grained scaling on Hopper vs Blackwell: per-tensor vs per-block scales and accuracy implications",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "FP8 (E4M3/E5M2) was introduced on Hopper with per-tensor scaling: a single FP32 scale factor for the entire tensor, applied before the FP8 GEMM and after in the epilogue. This coarse scaling is problematic for tensors with high dynamic range or outliers, as a single scale cannot adequately represent both large and small values. Blackwell extends FP8 support with block-scaled formats: MXFP8 (E4M13 + UE8M0 scale per 32-value block) and NVFP8 (E4M3 + E4M3 scale per 16-value block + per-tensor FP32 scale). The tcgen05.mma instruction supports these via .kind::mxf8f6f4 (block-scaled FP8/FP6 with UE8M0 scale). The finer-grained scaling (per-16 or per-32 values instead of per-tensor) reduces quantization error by allowing different scale factors for different regions of the tensor. The accuracy implication: block-scaled FP8 can achieve close to FP16/BF16 accuracy, while per-tensor FP8 may suffer noticeable degradation on tensors with outliers. The CUTLASS block-scaled tensor core record notes that DeepGEMM requires packed UE8M0 scales (four per int) on SM100, while SM90 wants FP32 scales - this changes the memory layout the engine must produce. The existing block-scaled-tensor-core-fp4-fp8 record covers the PTX ISA shape tables; this record focuses on the Hopper-to-Blackwell evolution of FP8 scaling granularity and its accuracy implications.",
+ "bound_by": "compute",
+ "scales_with": [
+  "scaling granularity (per-tensor vs per-32 vs per-16)",
+  "tensor dynamic range (outliers require finer scaling)",
+  "block size (16 vs 32 values per scale)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "nvidia-b200",
+  "nvidia-b300",
+  "nvidia-gb200-nvl72"
+ ],
+ "workarounds": [
+  "Use per-tensor FP8 scaling on Hopper (simplest, but may lose accuracy on outlier tensors)",
+  "Use MXFP8 (per-32-value block, UE8M0 scale) on Blackwell for better accuracy",
+  "Use NVFP8 (per-16-value block, E4M3 scale) on Blackwell for best FP8 accuracy",
+  "Apply Hadamard transforms to bound outliers before FP8 quantization",
+  "Use incoherent processing (random-sign Hadamard on Q and K) for attention FP8"
+ ],
+ "notes": "The evolution from per-tensor FP8 (Hopper) to block-scaled FP8 (Blackwell) is analogous to the evolution from per-tensor INT8 to per-channel INT8 in earlier generations. The key accuracy implication: block-scaled FP8 can maintain close to FP16 accuracy on most tensors, while per-tensor FP8 may suffer 1-5% degradation depending on the tensor distribution. The FlashAttention-3 record notes that FP8 doubles tensor-core throughput but leaves SFU exp unchanged, making the softmax bottleneck worse - this is true on both Hopper and Blackwell. The block-scaled FP8 formats are consumed by tcgen05.mma via .kind::mxf8f6f4. DeepGEMM's requirement for packed UE8M0 scales on SM100 (vs FP32 on SM90) is a concrete example of how the scale format changes the engine's required data layout.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-05",
+ "sources": [
+  "bw-nv-nvfp4-inference-blog",
+  "bw-nv-nvfp4-pretraining-blog",
+  "kern-ptx-isa",
+  "kern-flashattention-3-blog"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "tensor_core_count",
+   "effect": "The tcgen05.mma instruction supports these via .kind::mxf8f6f4 (block-scaled FP8/FP6 with UE8M0 scale).",
+   "basis": "unverified",
+   "values_for": [
     "nvidia-h100-sxm",
     "nvidia-b200",
     "nvidia-b300",
     "nvidia-gb200-nvl72"
-  ],
-  "workarounds": [
-    "Use per-tensor FP8 scaling on Hopper (simplest, but may lose accuracy on outlier tensors)",
-    "Use MXFP8 (per-32-value block, UE8M0 scale) on Blackwell for better accuracy",
-    "Use NVFP8 (per-16-value block, E4M3 scale) on Blackwell for best FP8 accuracy",
-    "Apply Hadamard transforms to bound outliers before FP8 quantization",
-    "Use incoherent processing (random-sign Hadamard on Q and K) for attention FP8"
-  ],
-  "notes": "The evolution from per-tensor FP8 (Hopper) to block-scaled FP8 (Blackwell) is analogous to the evolution from per-tensor INT8 to per-channel INT8 in earlier generations. The key accuracy implication: block-scaled FP8 can maintain close to FP16 accuracy on most tensors, while per-tensor FP8 may suffer 1-5% degradation depending on the tensor distribution. The FlashAttention-3 record notes that FP8 doubles tensor-core throughput but leaves SFU exp unchanged, making the softmax bottleneck worse - this is true on both Hopper and Blackwell. The block-scaled FP8 formats are consumed by tcgen05.mma via .kind::mxf8f6f4. DeepGEMM's requirement for packed UE8M0 scales on SM100 (vs FP32 on SM90) is a concrete example of how the scale format changes the engine's required data layout.",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-04",
-  "sources": [
-    "bw-nv-nvfp4-inference-blog",
-    "bw-nv-nvfp4-pretraining-blog",
-    "kern-ptx-isa",
-    "kern-flashattention-3-blog"
-  ]
+   ]
+  }
+ ]
 }

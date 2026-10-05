@@ -6,6 +6,7 @@ Each test builds records in a throwaway temp dir, so it never touches data/.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -1462,6 +1463,323 @@ class TestSiteDataCoversEveryType(Harness):
         r = run_tool("build_site_data.py", "--check", cwd=ROOT)
         self.assertEqual(r.returncode, 0, r.stdout[-4000:] + r.stderr[-2000:])
         self.assertNotIn("KeyError", r.stdout + r.stderr)
+
+
+class TestSchemaAuthorityBackfill(Harness):
+    """Guards for the 2026-10-05 schema-authority pass.
+
+    This repo's stated rule is that a schema field recognised by zero records is
+    worse than no field at all: it has shipped 36 dead enum values and one empty
+    record type before. Every fix in that pass added a field or an enum member
+    ONLY together with the records that use it, and these tests are what stops
+    the next pass from quietly breaking that pairing.
+
+    They are deliberately written against the real corpus rather than fixtures,
+    because the failure being guarded is a mismatch between schemas/ and data/.
+    """
+
+    def schema(self, t):
+        return json.loads((ROOT / "schemas" / f"{t}.schema.json").read_text(encoding="utf-8"))
+
+    def records(self, t):
+        from registry import DIRS
+        d = ROOT / "data" / DIRS[t]
+        return [json.loads(f.read_text(encoding="utf-8")) for f in sorted(d.glob("*.json"))]
+
+    def site_module(self):
+        sys.path.insert(0, str(TOOLS))
+        import build_site_data
+        return build_site_data
+
+    # ---------------------------------------------------------------- venues
+    def test_sigcomm_and_cais_are_used(self):
+        """paper.venue gained sigcomm + cais in this pass. Zero records using
+        either is exactly the dead-enum-value failure."""
+        venues = [r["venue"] for r in self.records("paper")]
+        self.assertGreaterEqual(venues.count("sigcomm"), 2)
+        self.assertGreaterEqual(venues.count("cais"), 1)
+        enum = self.schema("paper")["properties"]["venue"]["enum"]
+        self.assertIn("sigcomm", enum)
+        self.assertIn("cais", enum)
+
+    def test_sigcomm_records_are_not_left_as_other(self):
+        """The two SIGCOMM papers must carry the real venue, with the
+        verification recorded, not 'other' plus a note."""
+        for rid in ("w4p-megascale-infer-disaggregated-expert-parallelism",
+                    "paper-cachegen"):
+            rec = next(r for r in self.records("paper") if r["id"] == rid)
+            self.assertEqual(rec["venue"], "sigcomm", rid)
+            self.assertIn("Crossref", rec["notes"], f"{rid} lost its venue evidence")
+
+    def test_cais_record_is_not_left_as_other(self):
+        rec = next(r for r in self.records("paper")
+                   if r["id"] == "w4p-xgrammar2-dynamic-agentic-structured-generation")
+        self.assertEqual(rec["venue"], "cais")
+
+    def test_megascale_affiliation_is_not_rice(self):
+        """Its SIGCOMM Crossref deposit lists Peking University and ByteDance.
+        The record used to claim Rice University, which no author has."""
+        rec = next(r for r in self.records("paper")
+                   if r["id"] == "w4p-megascale-infer-disaggregated-expert-parallelism")
+        joined = " ".join(rec["affiliations"]).lower()
+        self.assertNotIn("rice", joined)
+        self.assertIn("peking", joined)
+        self.assertIn("bytedance", joined)
+
+    # --------------------------------------------------------------- metrics
+    def test_ratio_members_are_used(self):
+        metrics = [r["metric"] for r in self.records("benchmark")]
+        self.assertGreaterEqual(metrics.count("speedup_ratio"), 5)
+        self.assertGreaterEqual(metrics.count("dimensionless_ratio"), 9)
+
+    def test_no_rate_metric_carries_a_ratio_unit(self):
+        """The original defect: a dimensionless ratio filed under a tok/s rate.
+        This is the assertion the gotcha asked a reader to make by hand, now
+        enforced in CI."""
+        rates = {"decode_tok_s", "prefill_tok_s", "tps_aggregate", "tok_s_per_user"}
+        offenders = []
+        for r in self.records("benchmark"):
+            unit = (r.get("unit") or "").lower()
+            if r["metric"] in rates and re.search(
+                    r"\bratio\b|\bspeedup\b|\bmultiple\b|\bdimensionless\b|"
+                    r"\binflation factor\b|\bx\b MULTIPLE", unit):
+                offenders.append((r["id"], r["metric"]))
+        self.assertEqual(offenders, [], f"rate metric carrying a ratio unit: {offenders}")
+
+    def test_speedup_ratio_records_name_a_baseline(self):
+        """A bare ratio is the single most misleading number in this domain, so
+        `unit` must carry the baseline it is measured against."""
+        for r in self.records("benchmark"):
+            if r["metric"] != "speedup_ratio":
+                continue
+            unit = (r.get("unit") or "").lower()
+            self.assertTrue(
+                any(k in unit for k in ("baseline", "vs ", "versus", "against")),
+                f"{r['id']} is a speedup_ratio with no baseline named in unit")
+
+    def test_dimensionless_ratio_is_not_a_speedup(self):
+        """PUE and idle/max-power ratios have no faster/slower reading. Filing
+        them as speedup_ratio would replace one wrong answer with another.
+
+        This asserts on the CLAIM, not on the word: these units deliberately say
+        "not a speedup", so a bare substring search would fail on the disclaimer
+        that is the whole point. What must not appear is a faster/slower reading -
+        'N times faster', 'speedup of', 'faster than'. The word "baseline" is NOT
+        in the list: the LBNL PUE records legitimately carry "2014 baseline", which
+        is the year their figures are quoted against and has nothing to do with a
+        speedup baseline. Asserting on it would have flagged correct records.
+        """
+        for r in self.records("benchmark"):
+            if r["metric"] != "dimensionless_ratio":
+                continue
+            unit = (r.get("unit") or "").lower()
+            for phrase in ("times faster", "x speedup", "speedup of", "faster than"):
+                self.assertNotIn(
+                    phrase, unit,
+                    f"{r['id']} reads as a speedup ('{phrase}')")
+
+    # ------------------------------------------------------- energy / power
+    def test_power_and_energy_fields_are_used(self):
+        """These six fields shipped with zero records for the whole life of the
+        repo while the joules sat in prose inside `unit`."""
+        counts = {k: 0 for k in ("energy_basis", "power_w", "power_scope",
+                                 "power_cap", "clock_lock_mhz", "thermal_state")}
+        for r in self.records("benchmark"):
+            for k in counts:
+                if r.get(k) is not None:
+                    counts[k] += 1
+        for k in ("energy_basis", "power_w", "power_scope", "thermal_state"):
+            self.assertGreaterEqual(counts[k], 4, f"{k} unused ({counts[k]})")
+
+    def test_power_w_is_never_the_power_cap(self):
+        """A submission that DECLARES a cap publishes no trace, so recording the
+        cap as a measured draw would claim the part drew exactly its limit."""
+        for r in self.records("benchmark"):
+            if r.get("power_w") is None or r.get("power_cap") is None:
+                continue
+            self.assertNotEqual(
+                r["power_w"], r["power_cap"],
+                f"{r['id']}: power_w equals power_cap - that is a TGP, not a draw")
+
+    def test_locked_clock_runs_say_so(self):
+        """A locked-clock figure is not a stock-boost figure, and the MLPerf
+        MaxQ records are locked at 1000 MHz."""
+        for r in self.records("benchmark"):
+            if r.get("power_w") is None:
+                continue
+            self.assertIsNotNone(
+                r.get("clock_lock_mhz"),
+                f"{r['id']} records watts without saying whether clocks were locked")
+
+    def test_power_scope_node_and_device_are_both_used(self):
+        scopes = {r.get("power_scope") for r in self.records("benchmark")}
+        self.assertIn("node", scopes)
+        self.assertIn("device", scopes)
+
+    # ----------------------------------------------- flop hardware_parameters
+    def test_every_hardware_parameter_member_is_used(self):
+        params = (self.schema("flop")["properties"]["hardware_parameters"]["items"]
+                  ["properties"]["parameter"]["enum"])
+        used = set()
+        for r in self.records("flop"):
+            for row in r.get("hardware_parameters") or []:
+                used.add(row["parameter"])
+        empty = [p for p in params if p not in used]
+        self.assertEqual(empty, [], f"flop.hardware_parameters members with zero rows: {empty}")
+
+    def test_hardware_parameter_rows_are_well_formed(self):
+        """A row is a CLAIM that a parameter moves a class's cost. `effect` is
+        required for that to mean anything, and `basis` must be declared rather
+        than left to look sourced by default."""
+        for r in self.records("flop"):
+            for row in r.get("hardware_parameters") or []:
+                self.assertTrue(row.get("effect", "").strip(),
+                                f"{r['id']}: empty hardware_parameters.effect")
+                self.assertIn(row.get("basis"),
+                              ("recorded", "derived", "unverified", None))
+
+    def test_hardware_parameters_are_not_cross_references(self):
+        """The incident this field exists to fix: hardware PARAMETERS were put in
+        affected_by_hardware, a cross-reference field, where they consumed the
+        dangling-reference budget. No record may put a parameter name there."""
+        params = set(self.schema("flop")["properties"]["hardware_parameters"]
+                     ["items"]["properties"]["parameter"]["enum"])
+        offenders = []
+        for r in self.records("flop"):
+            for slug in r.get("affected_by_hardware") or []:
+                if slug in params:
+                    offenders.append((r["id"], slug))
+        self.assertEqual(offenders, [],
+                         f"hardware parameter in affected_by_hardware: {offenders}")
+
+    def test_unverified_parameter_rows_are_not_inflated(self):
+        """62 of 101 rows are unverified, and that is the honest reading. If a
+        future pass marks them all 'recorded', this fails - which is the point:
+        'recorded' must mean a figure or a named architecture, not confidence."""
+        rows = [row for r in self.records("flop")
+                for row in r.get("hardware_parameters") or []]
+        self.assertGreater(len(rows), 50)
+        unverified = [row for row in rows if row.get("basis") == "unverified"]
+        self.assertGreater(len(unverified), 0,
+                           "no unverified rows at all - was every claim upgraded?")
+
+    # -------------------------------------------------- accelerator on-chip
+    def test_onchip_cache_rows_declare_kind_and_basis(self):
+        """`kind` is what stops AMD's Infinity Cache being read as NVIDIA's L2,
+        and `basis` keeps an aggregator-copied figure out of the repo."""
+        kinds = ("l2", "llc-in-front-of-hbm", "sram-feed-tier", "unknown", None)
+        bases = ("vendor-spec-sheet", "vendor-whitepaper", "vendor-docs", None)
+        seen = 0
+        for r in self.records("accelerator"):
+            oc = r.get("onchip_cache")
+            if oc is None:
+                continue
+            seen += 1
+            self.assertIn(oc.get("kind"), kinds, f"{r['id']}: bad kind")
+            self.assertIn(oc.get("basis"), bases, f"{r['id']}: non-first-party basis")
+            self.assertIn(oc.get("per_scope"),
+                          ("per-package", "per-die", "per-card", "per-xcd", None))
+        self.assertGreaterEqual(seen, 4, "onchip_cache went back to unused")
+
+    def test_onchip_cache_is_not_vram(self):
+        """The field exists because on-chip capacity is a different quantity from
+        vram_gb. A row that simply restates VRAM is the mistake it prevents.
+
+        Units differ by field - l2_kb is KB, llc_mb and sram_mb are MB, vram_gb is
+        GB - so the comparison normalises to MB rather than comparing a raw
+        number against a raw number, which would read 256 MB > 192 as a failure.
+        """
+        for r in self.records("accelerator"):
+            oc = r.get("onchip_cache")
+            if not oc:
+                continue
+            caps = [oc.get(k) for k in ("l2_kb", "llc_mb", "sram_mb")
+                    if oc.get(k) is not None]
+            self.assertTrue(caps, f"{r['id']}: onchip_cache with no capacity figure")
+            if not r.get("vram_gb"):
+                continue
+            vram_mb = r["vram_gb"] * 1024
+            onchip_mb = max(
+                [oc["l2_kb"] / 1024 if oc.get("l2_kb") else 0,
+                 oc.get("llc_mb") or 0,
+                 oc.get("sram_mb") or 0])
+            self.assertLess(
+                onchip_mb, vram_mb,
+                f"{r['id']}: on-chip cache {onchip_mb} MB >= VRAM {vram_mb} MB "
+                "- one of them is wrong")
+
+    def test_rtx_5090_l2_is_the_sku_not_the_full_die(self):
+        """96 MB per SKU vs 128 MB for the full GB202 die. A wrong pick
+        overstates the card's cache by 33%, so the number is pinned."""
+        rec = next(r for r in self.records("accelerator") if r["id"] == "nvidia-rtx-5090")
+        self.assertEqual(rec["onchip_cache"]["l2_kb"], 98304.0)
+
+    def test_amd_llc_scope_is_package_not_die(self):
+        """MI300X/MI355X print 4 MB per compute die AND 256 MB per 8-die
+        package. Recording the die figure as the package one is a 64x error."""
+        for rid, mb in (("amd-instinct-mi300x", 256.0),
+                        ("amd-instinct-mi355x", 256.0),
+                        ("amd-instinct-mi350p", 128.0)):
+            rec = next(r for r in self.records("accelerator") if r["id"] == rid)
+            oc = rec["onchip_cache"]
+            self.assertEqual(oc["llc_mb"], mb, rid)
+            self.assertEqual(oc["per_scope"], "per-package", rid)
+            self.assertIsNone(oc["l2_kb"],
+                              f"{rid}: the 4 MB figure is per XCD, not a package L2")
+
+    # ------------------------------------------------------------- doc sync
+    def test_schema_md_documents_every_field_and_enum_member(self):
+        """SCHEMA.md drifted from schemas/ before, twice. This walks the real
+        schema files and fails on any property or enum member the human-facing
+        doc never mentions."""
+        sys.path.insert(0, str(TOOLS))
+        from registry import TYPES
+        md = (ROOT / "SCHEMA.md").read_text(encoding="utf-8")
+        missing = []
+
+        def walk(name, node):
+            if not isinstance(node, dict):
+                return
+            for key in ("enum",):
+                for member in node.get(key, []):
+                    if member is None:
+                        continue
+                    if not re.search(r"(?<![\w-])" + re.escape(str(member)) + r"(?![\w-])", md):
+                        missing.append(f"{name}:{member}")
+            for field, sub in (node.get("properties") or {}).items():
+                if not re.search(r"(?<![\w-])" + re.escape(field) + r"(?![\w-])", md):
+                    missing.append(f"{name}.{field}")
+                walk(f"{name}.{field}", sub)
+                items = sub.get("items") if isinstance(sub, dict) else None
+                if isinstance(items, dict):
+                    walk(f"{name}.{field}[]", items)
+
+        for t in TYPES:
+            walk(t, self.schema(t))
+        self.assertEqual(missing, [], f"SCHEMA.md is missing: {missing}")
+
+    def test_new_templates_and_site_meta_know_the_new_fields(self):
+        """A field the generator does not seed and the site does not render is a
+        field nobody will ever fill."""
+        sys.path.insert(0, str(TOOLS))
+        import new_record
+        self.assertIn("hardware_parameters", new_record.TEMPLATES["flop"])
+        self.assertIn("onchip_cache", new_record.TEMPLATES["accelerator"])
+        for f in ("energy_basis", "power_w", "power_scope", "power_cap",
+                  "clock_lock_mhz", "thermal_state"):
+            self.assertIn(f, new_record.TEMPLATES["benchmark"], f)
+        fields = dict(self.site_module().FIELD_META)
+        self.assertIn("onchip_cache", dict(fields["accelerator"]))
+        self.assertIn("hardware_parameters", dict(fields["flop"]))
+        for f in ("energy_basis", "power_w", "power_scope"):
+            self.assertIn(f, dict(fields["benchmark"]), f)
+
+    def test_flop_hardware_parameters_is_not_a_ref_field(self):
+        """It must never become a cross-reference: the whole defect was
+        parameters treated as if they were record ids."""
+        sys.path.insert(0, str(TOOLS))
+        from registry import REF_FIELDS
+        self.assertNotIn("hardware_parameters", REF_FIELDS.get("flop", {}))
 
 
 if __name__ == "__main__":

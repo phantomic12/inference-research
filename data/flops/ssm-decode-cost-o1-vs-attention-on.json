@@ -1,39 +1,52 @@
 {
-  "id": "ssm-decode-cost-o1-vs-attention-on",
-  "type": "flop",
-  "name": "SSM decode cost: O(1) per token vs O(n) for attention \u2014 the constant-state advantage and its limits",
-  "class": "decode_gemm",
-  "arithmetic_intensity": "The per-token decode cost of an SSM layer is O(1) in sequence length, while attention is O(n). For an SSM layer with state size N and inner dimension d_inner, each decode step does: (1) input projection: 2*d_inner*hidden flops, (2) state update: 2*d_inner*N flops (the B_t@C_t product), (3) output projection: 2*d_inner*hidden flops. The state is d_inner*N elements, read and written once per step: 2*d_inner*N*2 bytes. So AI = (2*d_inner*hidden + 2*d_inner*N + 2*d_inner*hidden) / (2*d_inner*N*2) = (2*hidden/N + 1 + 2*hidden/N) / 2. For Nemotron-H-8B (hidden 4096, d_inner 8192, N=128): AI = (2*4096/128 + 1 + 2*4096/128) / 2 = (64 + 1 + 64) / 2 = 64.5 flop/byte. This is well above the H100 ridge point (~295), so SSM decode is compute-bound at batch 1, unlike attention decode which is memory-bound. The catch: the state is per-sequence, so at batch B the total state memory is B * num_ssm_layers * d_inner * N * 2 bytes. For Nemotron-H-8B at batch 256: 256 * 48 * 8192 * 128 * 2 = 25.8 GiB. This is the opposite of KV cache, which grows with context length but amortizes across the batch dimension in the sense that paged KV can pack multiple sequences into shared pages.",
-  "bound_by": "compute",
-  "scales_with": [
-    "batch_size (state memory is per-sequence, does NOT amortize with batch)",
-    "context_length (NOT at all for SSM layers \u2014 this is the defining property)",
-    "ssm_state_size N (the constant that determines servability)",
-    "expand ratio (d_inner = expand * hidden)",
-    "num_ssm_layers",
-    "state_dtype (bf16 vs fp8)"
-  ],
-  "affected_by_hardware": [
+ "id": "ssm-decode-cost-o1-vs-attention-on",
+ "type": "flop",
+ "name": "SSM decode cost: O(1) per token vs O(n) for attention — the constant-state advantage and its limits",
+ "class": "decode_gemm",
+ "arithmetic_intensity": "The per-token decode cost of an SSM layer is O(1) in sequence length, while attention is O(n). For an SSM layer with state size N and inner dimension d_inner, each decode step does: (1) input projection: 2*d_inner*hidden flops, (2) state update: 2*d_inner*N flops (the B_t@C_t product), (3) output projection: 2*d_inner*hidden flops. The state is d_inner*N elements, read and written once per step: 2*d_inner*N*2 bytes. So AI = (2*d_inner*hidden + 2*d_inner*N + 2*d_inner*hidden) / (2*d_inner*N*2) = (2*hidden/N + 1 + 2*hidden/N) / 2. For Nemotron-H-8B (hidden 4096, d_inner 8192, N=128): AI = (2*4096/128 + 1 + 2*4096/128) / 2 = (64 + 1 + 64) / 2 = 64.5 flop/byte. This is well above the H100 ridge point (~295), so SSM decode is compute-bound at batch 1, unlike attention decode which is memory-bound. The catch: the state is per-sequence, so at batch B the total state memory is B * num_ssm_layers * d_inner * N * 2 bytes. For Nemotron-H-8B at batch 256: 256 * 48 * 8192 * 128 * 2 = 25.8 GiB. This is the opposite of KV cache, which grows with context length but amortizes across the batch dimension in the sense that paged KV can pack multiple sequences into shared pages.",
+ "bound_by": "compute",
+ "scales_with": [
+  "batch_size (state memory is per-sequence, does NOT amortize with batch)",
+  "context_length (NOT at all for SSM layers — this is the defining property)",
+  "ssm_state_size N (the constant that determines servability)",
+  "expand ratio (d_inner = expand * hidden)",
+  "num_ssm_layers",
+  "state_dtype (bf16 vs fp8)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "nvidia-b200",
+  "amd-instinct-mi300x",
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "workarounds": [
+  "Batch the state update across sequences so the state GEMM gets a real M dimension",
+  "fp8 state to halve the per-sequence cost",
+  "Do not page or evict the state — it is fixed-size, allocate contiguously",
+  "Cache the state across turns of multi-turn conversations",
+  "Use chunkwise/SSD formulation for prefill to get tensor-core efficiency"
+ ],
+ "notes": "The O(1) per-token decode cost is the defining advantage of SSMs over attention. For attention, each decode step must attend to all previous tokens: O(n) per token, O(n^2) total. For SSMs, the state summarizes all previous tokens in a fixed-size vector: O(1) per token, O(n) total. The constant-state size in bytes per sequence per layer is d_inner * N * 2 (for bf16). This is the number that determines whether the model is servable: at some batch size, the total state memory exceeds available HBM. The tensor-core mismatch (see ssm-sequential-scan-tensor-core-mismatch) means the FLOP efficiency is worse than attention, but the memory advantage is real and grows with context length. At 128K context, a pure-attention model's KV cache is 128K * num_layers * num_kv_heads * head_dim * 2 * 2 bytes, while an SSM's state is num_layers * d_inner * N * 2 bytes regardless of context.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "draft",
+ "confidence": 0.7,
+ "updated": "2026-10-05",
+ "sources": [
+  "arch-mamba",
+  "arch-mamba2-ssd",
+  "arch-nemotron-h",
+  "arch-hf-config-nemotron-h"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "peak_flops",
+   "effect": "This is well above the H100 ridge point (~295), so SSM decode is compute-bound at batch 1, unlike attention decode which is memory-bound.",
+   "basis": "recorded",
+   "values_for": [
     "nvidia-h100-sxm",
     "nvidia-b200",
     "amd-instinct-mi300x",
     "nvidia-a100-80gb-sxm4"
-  ],
-  "workarounds": [
-    "Batch the state update across sequences so the state GEMM gets a real M dimension",
-    "fp8 state to halve the per-sequence cost",
-    "Do not page or evict the state \u2014 it is fixed-size, allocate contiguously",
-    "Cache the state across turns of multi-turn conversations",
-    "Use chunkwise/SSD formulation for prefill to get tensor-core efficiency"
-  ],
-  "notes": "The O(1) per-token decode cost is the defining advantage of SSMs over attention. For attention, each decode step must attend to all previous tokens: O(n) per token, O(n^2) total. For SSMs, the state summarizes all previous tokens in a fixed-size vector: O(1) per token, O(n) total. The constant-state size in bytes per sequence per layer is d_inner * N * 2 (for bf16). This is the number that determines whether the model is servable: at some batch size, the total state memory exceeds available HBM. The tensor-core mismatch (see ssm-sequential-scan-tensor-core-mismatch) means the FLOP efficiency is worse than attention, but the memory advantage is real and grows with context length. At 128K context, a pure-attention model's KV cache is 128K * num_layers * num_kv_heads * head_dim * 2 * 2 bytes, while an SSM's state is num_layers * d_inner * N * 2 bytes regardless of context.",
-  "status": "draft",
-  "confidence": 0.7,
-  "updated": "2026-10-04",
-  "sources": [
-    "arch-mamba",
-    "arch-mamba2-ssd",
-    "arch-nemotron-h",
-    "arch-hf-config-nemotron-h"
-  ]
+   ]
+  }
+ ]
 }

@@ -61,8 +61,11 @@
         "interspeech",
         "icassp",
         "colm",
+        "sigcomm",
+        "cais",
         "other"
-      ]
+      ],
+      "description": "sigcomm and cais added 2026-10-05 (schema authority pass). Before them the only honest encoding for a SIGCOMM or ACM CAIS paper was venue='other' with the real venue in free-text notes, which is exactly what three wave-4 records had to do. Both values were verified against the PUBLISHER'S OWN Crossref deposit before being added, never against an arXiv comment string: SIGCOMM 2025 via DOI 10.1145/3718958.3750506 (container-title 'Proceedings of the ACM SIGCOMM 2025 Conference', event \"SIGCOMM '25: ACM SIGCOMM 2025 Conference\", pages 592-608, issued 2025-08-27, published-print 2025-09-08) and ACM CAIS '26 via DOI 10.1145/3786335.3813124 (container-title 'Proceedings of the ACM Conference on AI and Agentic Systems', event \"CAIS '26\", pages 1009-1022, issued 2026-05-26). sigcomm is a CONFERENCE and is NOT interchangeable with the existing 'sigmod' member, which is a different ACM Special Interest Group. THREE records were reclassified from 'other' in the same commit: w4p-megascale-infer-disaggregated-expert-parallelism (SIGCOMM '25), w4p-xgrammar2-dynamic-agentic-structured-generation (CAIS '26) and paper-cachegen (SIGCOMM '24, DOI 10.1145/3651890.3672274)."
     },
     "venue_track": {
       "enum": [
@@ -202,5 +205,98 @@
       "description": "source ids; each must exist in data/sources/"
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "x-notes-other-venue-survey-2026-10-05": {
+    "why": "`other` is NOT a single state. After the sigcomm/cais pass it still holds 18 papers spanning at least nine DISTINCT venues, which is the whole problem: a reader filtering venue=other cannot tell 'published somewhere I could not name' from 'venue not yet known'. This survey is recorded here so the next schema pass does not re-derive it, and so no value is added on the strength of a notes sentence alone.",
+    "surveyed_2026_10_05": [
+      {
+        "venue_named_in_notes": "SIGIR 2020 / SIGIR 2021",
+        "records": [
+          "colbert",
+          "splade"
+        ],
+        "verified": "BOTH verified against Crossref by bibliographic query 2026-10-05: ColBERT container 'Proceedings of the 43rd International ACM SIGIR Conference on Research and Development in Information Retrieval', event \"SIGIR '20\", DOI 10.1145/3397271.3401075, pages 39-48; SPLADE container 'Proceedings of the 44th ...', event \"SIGIR '21\", DOI 10.1145/3404835.3463098.",
+        "action_taken": "NOT reclassified. sigir was NOT added, because adding a venue member is only honest if every record that will use it is reclassified in the same change and this pass is scoped to the two venues four agents reported. Recorded here as the highest-confidence next candidate with its evidence already attached."
+      },
+      {
+        "venue_named_in_notes": "CIKM 2022",
+        "records": [
+          "plaid"
+        ],
+        "verified": "The record's own notes say crossref did NOT surface a proceedings entry, and that Semantic Scholar is the only source. One aggregator, no publisher deposit.",
+        "action_taken": "NOT reclassified. A venue on a single secondary source is a claim, not a venue; it needs a Crossref or ACM DL deposit first."
+      },
+      {
+        "venue_named_in_notes": "TMLR",
+        "records": [
+          "frugalgpt",
+          "contriever",
+          "nomic-embed"
+        ],
+        "verified": "frugalgpt has an OpenReview note reading content.venue='Accepted by TMLR'. contriever and nomic-embed rest on Semantic Scholar's venue string only.",
+        "action_taken": "NOT reclassified. TMLR is a JOURNAL, not a conference, so it would be a different kind of member than every other value in this enum; adding it needs a decision about journals vs conferences, not just a member."
+      },
+      {
+        "venue_named_in_notes": "SC22",
+        "records": [
+          "deepspeed-inference"
+        ],
+        "verified": "Crossref DOI 10.1109/SC41404.2022.00051, container 'SC22: International Conference for High Performance Computing, Networking, Storage and Systems'.",
+        "action_taken": "NOT reclassified. Strong evidence, but the same scoping decision as sigir."
+      },
+      {
+        "venue_named_in_notes": "IEEE/ACM TASLP",
+        "records": [
+          "hubert",
+          "soundstream"
+        ],
+        "verified": "Both confirmed via Crossref by the record authors. Also a journal.",
+        "action_taken": "NOT reclassified; journal-vs-conference decision, as above."
+      },
+      {
+        "venue_named_in_notes": "JMLR 2022",
+        "records": [
+          "switch-transformers"
+        ],
+        "verified": "arXiv abs page plus Semantic Scholar. Journal.",
+        "action_taken": "NOT reclassified; journal-vs-conference decision, as above."
+      },
+      {
+        "venue_named_in_notes": "ACM FAccT",
+        "records": [
+          "carbon-intensity-ai-cloud-instances",
+          "careless-whisper"
+        ],
+        "verified": "carbon-intensity rests on the arXiv COMMENT FIELD alone ('In ACM Conference on Fairness, Accountability, and Transparency (ACM FAccT) 2022'), which is exactly the provenance this repo distrusts. careless-whisper is an explicit CONFLICT: crossref says ACM FAccT 2024 (DOI 10.1145/3630106.3658996) while the arXiv v2 comment says IEEE ICASSP 2025, and the record deliberately sets venue='other' rather than picking one.",
+        "action_taken": "NOT reclassified and NOT added. One record is comment-only and the other is contested; adding 'facct' now would put an unverifiable venue into the enum."
+      },
+      {
+        "venue_named_in_notes": "PPoPP 2024",
+        "records": [
+          "marlin-mixed-precision-autoregressive-inference"
+        ],
+        "verified": "Semantic Scholar only. (PPoPP is a strong candidate: an OSDI/MLSys-class systems venue this repo already tracks under other names.)",
+        "action_taken": "NOT reclassified; needs a publisher deposit."
+      },
+      {
+        "venue_named_in_notes": "EACL 2023 / ENLSP 2024 / IJCNLP-AACL 2023 demo",
+        "records": [
+          "mteb",
+          "mx-ftptq",
+          "whisper-streaming"
+        ],
+        "verified": "mteb is crossref-confirmed ('Proceedings of the 17th Conference of the European Chapter of the ACL'); the other two are Semantic Scholar / arXiv comment.",
+        "action_taken": "NOT reclassified. EACL is the notable one: the repo already documents in the venue_track description that ACL-family Findings and EACL were UNDER-CLAIMED, so 'eacl' is a well-motivated next member with one verified record."
+      },
+      {
+        "venue_named_in_notes": "none / not applicable",
+        "records": [
+          "mooncake-kimi"
+        ],
+        "verified": "Crossref puts the title in ACM Transactions on Storage (DOI 10.1145/3773772), NOT at a systems conference. A separate OSDI '25 paper shares the name 'Mooncake' and is a different system by different authors.",
+        "action_taken": "NOT reclassified. The correct fix is a journal member, which does not exist yet; filing it under a conference would be wrong."
+      }
+    ],
+    "rule_learned": "The lesson from this pass is that venue='other' was mostly a PROVENANCE problem, not a vocabulary problem. Ten of the eighteen records name a real, verifiable venue that simply had no enum member; several of those DO have publisher deposits sitting in this repo's own data/sources/ already. Adding a member without reclassifying every record that will use it is what produced 36 dead enum values in this repo before, so each addition here is deliberately paired with its records."
+  }
 }

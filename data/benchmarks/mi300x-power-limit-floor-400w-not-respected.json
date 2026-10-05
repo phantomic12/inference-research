@@ -1,22 +1,27 @@
 {
-  "id": "mi300x-power-limit-floor-400w-not-respected",
-  "type": "benchmark",
-  "name": "AMD MI300X: measured power-limit sweep finds efficiency peak hardware- and workload-specific, and power limits below 400 W are not respected",
-  "engine_id": "vllm",
-  "accelerator_ids": [
-    "amd-instinct-mi300x"
-  ],
-  "metric": "quality",
-  "value": 400.0,
-  "unit": "W - the power-limit floor below which the MI300X did not honour the requested cap in this study",
-  "methodology": "Measured, not modelled: the RRZE-HPC framework runs vision (image classification and generation) and LLM (continued pre-training and inference) benchmarks on NVIDIA H100, NVIDIA H200 and AMD MI300X while sweeping the enforced power cap. Energy efficiency is defined by the authors as throughput / (P_GPU + 100 W / N_GPU), with a constant 100 W per node added as an estimated fixed system overhead beyond the accelerators - so their efficiency numbers are NOT pure-GPU figures and cannot be compared to a bare-GPU joules/token. Metric 'quality' is a placeholder because the enum has no energy metric; the number is a power cap in watts. Code and data are public (github.com/RRZE-HPC/hpc-ai-perf-bench, Zenodo 20083679), so this is the reproducible entry in this group.",
-  "measured_by": "third_party",
-  "reproducible": true,
-  "notes": "TWO RESULTS WORTH KEEPING, BOTH NON-NVIDIA. (1) POWER-CAP FLOOR: 'amd-smi did not allow power state modifications, and the MI300X did not respect power limits set below 400 W' - so a power-capped MI300X energy measurement below 400 W is not measuring what the cap says it is. This is the AMD-side twin of the MLPerf MaxQ gotcha already in the repo (mlperf-maxq-is-not-a-watt-cap): a vendor power-control surface that looks authoritative and is not. (2) MI300X SHAPE: the MI300X had the LOWEST overall energy efficiency of the three accelerators but the FLATTEST response to rising power limits, and the authors tie that flatness to a power-limit-dependent change in MEMORY CLOCK on the AMD platform - i.e. on AMD the cap is partly enforced by dropping memory clock, not just core clock, so a cap-induced slowdown is not a clean core-clock experiment. By contrast H100 efficiency peaks at 300-400 W depending on workload and H200 at ~400 W with flatter high-power behaviour. NO JOUles/TOKEN FIGURE FOR MI300X IS RECORDED: this paper reports work units per Joule, not tokens per joule, and converting would require assuming a throughput the paper does not tabulate per token.",
-  "status": "verified",
-  "confidence": 0.82,
-  "updated": "2026-10-03",
-  "sources": [
-    "nrg2-arxiv-rrze-hpc-ai-power-limits"
-  ]
+ "id": "mi300x-power-limit-floor-400w-not-respected",
+ "type": "benchmark",
+ "name": "AMD MI300X: measured power-limit sweep finds efficiency peak hardware- and workload-specific, and power limits below 400 W are not respected",
+ "engine_id": "vllm",
+ "accelerator_ids": [
+  "amd-instinct-mi300x"
+ ],
+ "metric": "quality",
+ "value": 400.0,
+ "unit": "W - the power-limit floor below which the MI300X did not honour the requested cap in this study",
+ "methodology": "Measured, not modelled: the RRZE-HPC framework runs vision (image classification and generation) and LLM (continued pre-training and inference) benchmarks on NVIDIA H100, NVIDIA H200 and AMD MI300X while sweeping the enforced power cap. Energy efficiency is defined by the authors as throughput / (P_GPU + 100 W / N_GPU), with a constant 100 W per node added as an estimated fixed system overhead beyond the accelerators - so their efficiency numbers are NOT pure-GPU figures and cannot be compared to a bare-GPU joules/token. Metric 'quality' is a placeholder because the enum has no energy metric; the number is a power cap in watts. Code and data are public (github.com/RRZE-HPC/hpc-ai-perf-bench, Zenodo 20083679), so this is the reproducible entry in this group.",
+ "measured_by": "third_party",
+ "reproducible": true,
+ "notes": "TWO RESULTS WORTH KEEPING, BOTH NON-NVIDIA. (1) POWER-CAP FLOOR: 'amd-smi did not allow power state modifications, and the MI300X did not respect power limits set below 400 W' - so a power-capped MI300X energy measurement below 400 W is not measuring what the cap says it is. This is the AMD-side twin of the MLPerf MaxQ gotcha already in the repo (mlperf-maxq-is-not-a-watt-cap): a vendor power-control surface that looks authoritative and is not. (2) MI300X SHAPE: the MI300X had the LOWEST overall energy efficiency of the three accelerators but the FLATTEST response to rising power limits, and the authors tie that flatness to a power-limit-dependent change in MEMORY CLOCK on the AMD platform - i.e. on AMD the cap is partly enforced by dropping memory clock, not just core clock, so a cap-induced slowdown is not a clean core-clock experiment. By contrast H100 efficiency peaks at 300-400 W depending on workload and H200 at ~400 W with flatter high-power behaviour. NO JOUles/TOKEN FIGURE FOR MI300X IS RECORDED: this paper reports work units per Joule, not tokens per joule, and converting would require assuming a throughput the paper does not tabulate per token.\n\nENERGY-FIELD BACKFILL 2026-10-05 (schema authority pass, agent w5-schema). energy_basis / power_w / power_scope / power_cap / clock_lock_mhz / thermal_state were all DRAFTED and shipped UNUSED: before this commit zero records in the repo set power_w, power_scope or thermal_state, and the joules figures travelled as prose inside `unit` while metric enum member joules_per_token had zero records. They are populated here from facts this record already documented.\nWHY power_cap IS 400 RATHER THAN ANY HIGHER VALUE: this record's entire content is that the part would not honour anything below 400 W, so 400 W is the one number here that is both a cap and a measured fact about enforcement. This is the AMD-side twin of gotcha mlperf-maxq-is-not-a-watt-cap: a vendor power-control surface that looks authoritative and is not.",
+ "status": "verified",
+ "confidence": 0.82,
+ "updated": "2026-10-05",
+ "sources": [
+  "nrg2-arxiv-rrze-hpc-ai-power-limits"
+ ],
+ "power_scope": "device",
+ "power_cap": 400.0,
+ "power_w": null,
+ "thermal_state": "unknown",
+ "energy_basis": "NO ENERGY FIGURE AND NO MEASURED DRAW. This record's value is the power-limit FLOOR, not a measurement: the study swept enforced power limits and found that 'amd-smi did not allow power state modifications, and the MI300X did not respect power limits set below 400 W', so 400 W is the lowest limit the part actually honoured. No joules were computed and none should be, because a power-capped MI300X energy measurement below 400 W would not be measuring what the cap claims. On AMD the cap is partly enforced by dropping MEMORY clock, not just core clock, so a cap-induced slowdown is not a clean core-clock experiment. The study's own efficiency figure (throughput / (P_GPU + 100 W / N_GPU)) adds an ESTIMATED 100 W per node of non-accelerator overhead and is therefore not a pure-GPU number either."
 }

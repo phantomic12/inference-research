@@ -1,34 +1,47 @@
 {
-  "id": "amd-numa-nps-binding",
-  "type": "flop",
-  "name": "NUMA-aware process binding and NPS (NUMA Partitioning Services) on MI300X",
-  "class": "custom_kernel",
-  "bound_by": "interconnect",
-  "scales_with": [
-    "num_gpus",
-    "numa_nodes",
-    "nps_mode",
-    "tensor_parallel_size"
-  ],
-  "affected_by_hardware": [
+ "id": "amd-numa-nps-binding",
+ "type": "flop",
+ "name": "NUMA-aware process binding and NPS (NUMA Partitioning Services) on MI300X",
+ "class": "custom_kernel",
+ "bound_by": "interconnect",
+ "scales_with": [
+  "num_gpus",
+  "numa_nodes",
+  "nps_mode",
+  "tensor_parallel_size"
+ ],
+ "affected_by_hardware": [
+  "amd-instinct-mi300x",
+  "amd-instinct-mi325x",
+  "amd-instinct-mi350x",
+  "amd-instinct-mi355x"
+ ],
+ "workarounds": [
+  "NPS1 (default): all memory interleaved across all HBM stacks - maximum bandwidth for single-GPU workloads",
+  "NPS2: memory partitioned into two pools (one per IOD) - reduces cross-IOD Infinity Fabric traffic",
+  "NPS4: memory partitioned into four pools - for CDNA3 MI300X/MI325X with 4 IODs",
+  "For inference: NPS1 is recommended for TP=1 workloads; NPS2 may help TP=8 workloads by reducing cross-IOD traffic"
+ ],
+ "notes": "AMD EPYC processors with MI300X GPUs use NUMA (Non-Uniform Memory Access) architecture. Each GPU is connected to one NUMA node via PCIe Gen5 x16. NPS (NUMA Partitioning Services) controls how memory is interleaved across HBM stacks. On MI300X (CDNA3, 4 IODs): NPS1 interleaves across all 8 HBM stacks (maximum bandwidth), NPS2 partitions into 2 pools, NPS4 partitions into 4 pools. On MI350X/MI355X (CDNA4, 2 IODs): NPS1 or NPS2 only. For inference: NPS1 is recommended for TP=1 workloads (each GPU uses its full memory bandwidth). For TP=8 workloads, NPS2 may reduce cross-IOD Infinity Fabric traffic and improve latency. The ROCm documentation recommends binding GPU processes to the local NUMA node using numactl or ROCm's binding tools. AMD's MLPerf submissions use NPS1 with 8 instances of TP=1 for small models. The vLLM blog notes 'NUMA auto-balancing disabled' in their system configuration. RESOLVED (2026-10-04 cross-reference repair): the bare part names in affected_by_hardware were expanded to their record ids - mi300x -> amd-instinct-mi300x, mi325x -> amd-instinct-mi325x, mi350x -> amd-instinct-mi350x, mi355x -> amd-instinct-mi355x. Each name matched exactly one accelerator record in data/accelerators/, so no variant was chosen between siblings (MI300X and MI325X are both CDNA3, MI350X/MI355X/MI350P all CDNA4) - the id is forced by the part name. This field is still a mixed bucket: it also carries the architecture codename values gfx942/gfx950, which are not ids and were left alone.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-05",
+ "sources": [
+  "bench-amd-rocm-llm-inference-best-practices",
+  "net2-rocm-mi350-microarch",
+  "amd-mi300x-product-page"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "For inference: NPS1 is recommended for TP=1 workloads (each GPU uses its full memory bandwidth).",
+   "basis": "unverified",
+   "values_for": [
     "amd-instinct-mi300x",
     "amd-instinct-mi325x",
     "amd-instinct-mi350x",
     "amd-instinct-mi355x"
-  ],
-  "workarounds": [
-    "NPS1 (default): all memory interleaved across all HBM stacks - maximum bandwidth for single-GPU workloads",
-    "NPS2: memory partitioned into two pools (one per IOD) - reduces cross-IOD Infinity Fabric traffic",
-    "NPS4: memory partitioned into four pools - for CDNA3 MI300X/MI325X with 4 IODs",
-    "For inference: NPS1 is recommended for TP=1 workloads; NPS2 may help TP=8 workloads by reducing cross-IOD traffic"
-  ],
-  "notes": "AMD EPYC processors with MI300X GPUs use NUMA (Non-Uniform Memory Access) architecture. Each GPU is connected to one NUMA node via PCIe Gen5 x16. NPS (NUMA Partitioning Services) controls how memory is interleaved across HBM stacks. On MI300X (CDNA3, 4 IODs): NPS1 interleaves across all 8 HBM stacks (maximum bandwidth), NPS2 partitions into 2 pools, NPS4 partitions into 4 pools. On MI350X/MI355X (CDNA4, 2 IODs): NPS1 or NPS2 only. For inference: NPS1 is recommended for TP=1 workloads (each GPU uses its full memory bandwidth). For TP=8 workloads, NPS2 may reduce cross-IOD Infinity Fabric traffic and improve latency. The ROCm documentation recommends binding GPU processes to the local NUMA node using numactl or ROCm's binding tools. AMD's MLPerf submissions use NPS1 with 8 instances of TP=1 for small models. The vLLM blog notes 'NUMA auto-balancing disabled' in their system configuration. RESOLVED (2026-10-04 cross-reference repair): the bare part names in affected_by_hardware were expanded to their record ids - mi300x -> amd-instinct-mi300x, mi325x -> amd-instinct-mi325x, mi350x -> amd-instinct-mi350x, mi355x -> amd-instinct-mi355x. Each name matched exactly one accelerator record in data/accelerators/, so no variant was chosen between siblings (MI300X and MI325X are both CDNA3, MI350X/MI355X/MI350P all CDNA4) - the id is forced by the part name. This field is still a mixed bucket: it also carries the architecture codename values gfx942/gfx950, which are not ids and were left alone.",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-04",
-  "sources": [
-    "bench-amd-rocm-llm-inference-best-practices",
-    "net2-rocm-mi350-microarch",
-    "amd-mi300x-product-page"
-  ]
+   ]
+  }
+ ]
 }

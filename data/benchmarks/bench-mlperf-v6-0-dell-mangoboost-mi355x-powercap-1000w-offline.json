@@ -1,30 +1,34 @@
 {
-  "id": "bench-mlperf-v6-0-dell-mangoboost-mi355x-powercap-1000w-offline",
-  "type": "benchmark",
-  "name": "Dell PowerEdge XE9785 8xMI355X at a 1000W PER-GPU POWER CAP, MLPerf Inference v6.0 Offline: Llama 2 70B, and its uncapped twin",
-  "status": "verified",
-  "confidence": 0.95,
-  "updated": "2026-10-04",
-  "sources": [
-    "bench-mlperf-v6-0-summary-json"
-  ],
-  "engine_id": "vllm",
-  "accelerator_ids": [
-    "amd-instinct-mi355x"
-  ],
-  "interconnect_ids": [
-    "amd-infinity-fabric-link",
-    "amd-xgmi",
-    "pcie-gen5"
-  ],
-  "model": "Llama 2 70B (MLPerf v6.0 submission, -99.9 accuracy track, FP8 weights)",
-  "format_id": "fp8-e4m3",
-  "metric": "tps_aggregate",
-  "value": 81870.5,
-  "unit": "output tokens/s (aggregate under a 1000W per-GPU cap; v6.0 result ID 6.0-0033)",
-  "methodology": "AGGREGATE. MLPerf Inference v6.0 Closed division, Datacenter suite, Offline scenario. THIS IS THE ONLY GENUINE POWER-CAPPED LLM SUBMISSION PAIR IN THE ENTIRE MLPerf RESULT DATABASE, and it exists because the submitter ran the same chassis twice under two different declared limits. LOADS: batch size not a fixed published number; llama2-70b/user.conf min_duration 600000 ms, min_query_count 2000. Hardware: 1 node, 8x AMD Instinct MI355X 288GB HBM3e, Dell PowerEdge XE9785. POWER CONFIGURATION: the v6.0 system name for this result is literally 'PowerEdge XE9785 (MI355X Power Cap 1000W)' and its Platform id is '8xMI355X_2xEPYC_9965_Power_Cap_1000W' - a declared 1000W cap per GPU, enforced by the submitter via amdgpu/rocm-smi, NOT an MLPerf power measurement (has_power=false). UNCAPED CONTROL: the identical submission on the identical chassis, v6.0 result ID 6.0-0032 'PowerEdge XE9785', gives 97535.1 tok/s Offline and 93272.4 tok/s Server. CAPPED: 81870.5 Offline and 76359.5 Server. Framework listed as 'ROCm' with no version. OMITTED BY SOURCE: how the cap was set (rocm-smi vs amdgpu), whether clocks were also locked, KV dtype, concurrency, TP size, cooling configuration.",
-  "measured_by": "vendor",
-  "reproducible": true,
-  "power_cap": null,
-  "notes": "THE MOST USEFUL SINGLE MLPerf LLM DATAPOINT IN THIS REPO, and it exists only because a partner submitted a duplicate. Capping each MI355X at 1000W costs 16.1% of Offline throughput (97535.1 -> 81870.5) and 18.1% of Server throughput (93272.4 -> 76359.5). That is the real shape of the power-versus-throughput trade-off for this part - roughly a fifth of throughput for the cap - and it is nowhere in MLCommons' structured data, because MLPerf publishes watts only for the non-LLM benchmarks and a declared cap only as free text. Crucially this is a THROUGHPUT-AT-A-CAP measurement, not an efficiency measurement: no joules are reported, so this record cannot tell you whether 1000W is a good operating point, only what it costs in tokens. Anyone claiming to know the efficiency curve for MI355X from MLPerf alone does not have it. It is also the cleanest available rebuttal to the repo's existing MaxQ gotcha: here a real, explicit watt cap moves throughput by a known and plausible amount, whereas the H200 MaxQ submission's 19% gap is a clock-lock and possible-NVLink-disable artifact.\nINTERCONNECT IDS FILLED 2026-10-04: interconnect_ids was empty; it now carries the interconnect list of the accelerator record(s) this run names (amd-instinct-mi355x). BASIS AND ITS LIMITS, stated because this field is easy to over-read: it records the FABRIC PRESENT IN THE HARDWARE CONFIGURATION, which is how every previously-filled record in this repo reads it, not traffic measured over that fabric. The clearest evidence for that convention is that single-GPU records already carry a scale-up fabric here - trtllm-llama31-8b-fp8-h100-1k1k-tps is 1x H100 at TP=1 and carries ['nvlink-4','nvswitch-4'] - and that host-link-only records carry a PCIe value (arc-pro-b70-mlperf-v6-1-llama2-70b-offline-tokens carries ['pcie-gen5'] on 4x Arc Pro B70, which has no GPU-to-GPU fabric at all). So a value here does NOT mean the interconnect was exercised by this particular workload, and must not be cited as evidence that it was. Whether the run actually crossed that fabric is a question about TP/EP/PP size, which this repo records in methodology, not here. NOT INVENTED: nothing was filled where the accelerator record itself carries no interconnect, so this field stays empty for any part whose own record has none - which is the honest state for a single-socket Apple sOC and for parts whose vendor publishes no host interface."
+ "id": "bench-mlperf-v6-0-dell-mangoboost-mi355x-powercap-1000w-offline",
+ "type": "benchmark",
+ "name": "Dell PowerEdge XE9785 8xMI355X at a 1000W PER-GPU POWER CAP, MLPerf Inference v6.0 Offline: Llama 2 70B, and its uncapped twin",
+ "status": "verified",
+ "confidence": 0.95,
+ "updated": "2026-10-05",
+ "sources": [
+  "bench-mlperf-v6-0-summary-json"
+ ],
+ "engine_id": "vllm",
+ "accelerator_ids": [
+  "amd-instinct-mi355x"
+ ],
+ "interconnect_ids": [
+  "amd-infinity-fabric-link",
+  "amd-xgmi",
+  "pcie-gen5"
+ ],
+ "model": "Llama 2 70B (MLPerf v6.0 submission, -99.9 accuracy track, FP8 weights)",
+ "format_id": "fp8-e4m3",
+ "metric": "tps_aggregate",
+ "value": 81870.5,
+ "unit": "output tokens/s (aggregate under a 1000W per-GPU cap; v6.0 result ID 6.0-0033)",
+ "methodology": "AGGREGATE. MLPerf Inference v6.0 Closed division, Datacenter suite, Offline scenario. THIS IS THE ONLY GENUINE POWER-CAPPED LLM SUBMISSION PAIR IN THE ENTIRE MLPerf RESULT DATABASE, and it exists because the submitter ran the same chassis twice under two different declared limits. LOADS: batch size not a fixed published number; llama2-70b/user.conf min_duration 600000 ms, min_query_count 2000. Hardware: 1 node, 8x AMD Instinct MI355X 288GB HBM3e, Dell PowerEdge XE9785. POWER CONFIGURATION: the v6.0 system name for this result is literally 'PowerEdge XE9785 (MI355X Power Cap 1000W)' and its Platform id is '8xMI355X_2xEPYC_9965_Power_Cap_1000W' - a declared 1000W cap per GPU, enforced by the submitter via amdgpu/rocm-smi, NOT an MLPerf power measurement (has_power=false). UNCAPED CONTROL: the identical submission on the identical chassis, v6.0 result ID 6.0-0032 'PowerEdge XE9785', gives 97535.1 tok/s Offline and 93272.4 tok/s Server. CAPPED: 81870.5 Offline and 76359.5 Server. Framework listed as 'ROCm' with no version. OMITTED BY SOURCE: how the cap was set (rocm-smi vs amdgpu), whether clocks were also locked, KV dtype, concurrency, TP size, cooling configuration.",
+ "measured_by": "vendor",
+ "reproducible": true,
+ "power_cap": 1000.0,
+ "notes": "THE MOST USEFUL SINGLE MLPerf LLM DATAPOINT IN THIS REPO, and it exists only because a partner submitted a duplicate. Capping each MI355X at 1000W costs 16.1% of Offline throughput (97535.1 -> 81870.5) and 18.1% of Server throughput (93272.4 -> 76359.5). That is the real shape of the power-versus-throughput trade-off for this part - roughly a fifth of throughput for the cap - and it is nowhere in MLCommons' structured data, because MLPerf publishes watts only for the non-LLM benchmarks and a declared cap only as free text. Crucially this is a THROUGHPUT-AT-A-CAP measurement, not an efficiency measurement: no joules are reported, so this record cannot tell you whether 1000W is a good operating point, only what it costs in tokens. Anyone claiming to know the efficiency curve for MI355X from MLPerf alone does not have it. It is also the cleanest available rebuttal to the repo's existing MaxQ gotcha: here a real, explicit watt cap moves throughput by a known and plausible amount, whereas the H200 MaxQ submission's 19% gap is a clock-lock and possible-NVLink-disable artifact.\nINTERCONNECT IDS FILLED 2026-10-04: interconnect_ids was empty; it now carries the interconnect list of the accelerator record(s) this run names (amd-instinct-mi355x). BASIS AND ITS LIMITS, stated because this field is easy to over-read: it records the FABRIC PRESENT IN THE HARDWARE CONFIGURATION, which is how every previously-filled record in this repo reads it, not traffic measured over that fabric. The clearest evidence for that convention is that single-GPU records already carry a scale-up fabric here - trtllm-llama31-8b-fp8-h100-1k1k-tps is 1x H100 at TP=1 and carries ['nvlink-4','nvswitch-4'] - and that host-link-only records carry a PCIe value (arc-pro-b70-mlperf-v6-1-llama2-70b-offline-tokens carries ['pcie-gen5'] on 4x Arc Pro B70, which has no GPU-to-GPU fabric at all). So a value here does NOT mean the interconnect was exercised by this particular workload, and must not be cited as evidence that it was. Whether the run actually crossed that fabric is a question about TP/EP/PP size, which this repo records in methodology, not here. NOT INVENTED: nothing was filled where the accelerator record itself carries no interconnect, so this field stays empty for any part whose own record has none - which is the honest state for a single-socket Apple sOC and for parts whose vendor publishes no host interface.\n\nENERGY-FIELD BACKFILL 2026-10-05 (schema authority pass, agent w5-schema). energy_basis / power_w / power_scope / power_cap / clock_lock_mhz / thermal_state were all DRAFTED and shipped UNUSED: before this commit zero records in the repo set power_w, power_scope or thermal_state, and the joules figures travelled as prose inside `unit` while metric enum member joules_per_token had zero records. They are populated here from facts this record already documented.\nWHY power_w IS NULL AND NOT A NUMBER: no power trace accompanies this submission. A throughput figure under a cap says nothing about the watts actually drawn, and filling power_w with the 1000 W cap would assert that the part drew exactly its limit, which is the same conflation gotcha mlperf-maxq-is-not-a-watt-cap exists to prevent.\nWHY power_scope IS 'device' HERE AND 'node' ON THE H200 RECORDS: the cap is enforced PER-GPU (8 MI355X each held at 1000 W), so the quantity constrained is a per-device one. The H200 MaxQ records are 'node' because their instrument is a whole-node Yokogawa. That is what the field is for: an 8-GPU node figure is NOT a per-GPU figure, and these two sets of records are not comparable on power without reading it.\nWHY thermal_state IS 'unknown' AND NOT 'steady': no trace means no evidence either way about a thermal plateau. 'unknown' is the honest value; 'steady' would be a guess, and the field's own description warns that a short run measures the ramp and biases energy LOW.",
+ "power_scope": "device",
+ "power_w": null,
+ "thermal_state": "unknown",
+ "energy_basis": "NO ENERGY FIGURE EXISTS FOR THIS SUBMISSION and none was inferred. The MLPerf system name is literally 'PowerEdge XE9785 (MI355X Power Cap 1000W)' and the platform id is '8xMI355X_2xEPYC_9965_Power_Cap_1000W', so a 1000 W PER-GPU cap was DECLARED and enforced by the submitter via amdgpu/rocm. joules = null because this is a THROUGHPUT-AT-A-CAP measurement, not an efficiency measurement: the submission reports no joules, so this record cannot tell you whether 1000 W is a good operating point, only what it costs in tokens."
 }

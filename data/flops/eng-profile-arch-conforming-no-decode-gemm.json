@@ -1,40 +1,62 @@
 {
-  "id": "eng-profile-arch-conforming-no-decode-gemm",
-  "type": "flop",
-  "name": "Architecture-conforming engines remove the decode GEMM cost model entirely: Groq, Cerebras, TPU",
-  "class": "custom_kernel",
-  "arithmetic_intensity": "THE MODEL DEFAULT IS WRONG FOR THESE ENGINES IN A WAY THAT IS NOT A CONSTANT ERROR. The standard decode cost model (fct-batch1-step-cost-formula) is T = max(2*P_t/BW, 2*B*P_t/PEAK): the memory-bound term 2*P_t/BW comes from STREAMING THE WEIGHTS once per step, and the compute-bound term from doing B rows of work against them. Both terms presuppose a memory hierarchy where weights live off-chip and must be fetched. An architecture-conforming engine removes that premise. Groq: SRAM-only, no off-chip HBM tier, so there IS no weight-streaming path - a model larger than 230 MB must be tiled across chips and the tapeout is fixed at compile time, and the compiler statically schedules ALL data movement, which is why static shapes are mandatory (no dynamic batching, no variable-length sequences without bucketing, no data-dependent control flow). Cerebras: 44 GB of on-chip SRAM per wafer at 21 PB/s (CS-3) or 43.2 PB/s (CS-4 Turbo), weights stay on-chip, no HBM streaming, tokens flow uninterrupted through layers pipelined across wafers. TPU: an on-chip Cmem SRAM feed tier added specifically so that lower batch sizes are viable, and Google's own reason for adding 8-bit mode support and faster MXU weight-loading. THE DOMINANT FLOP CLASS CHANGES ACCORDINGLY. Where the default profile says decode is bound_by memory (a weight stream), these engines make the dominant term the LAUNCH/SCHEDULING and INTERCONNECT terms and the SRAM feed, not an HBM read. Concretely: Groq's constraint class is recorded as bound_by launch_overhead because a fully statically-scheduled datapath has no dynamic launch cost at all but a fixed compile-time schedule whose granularity is the bucket; Cerebras is recorded bound_by compute only because 21 PB/s of on-chip bandwidth removes the memory term by construction. THE CAPACITY CONSEQUENCE A PLANNER MUST NOT MISS: on these engines batch size is not a free runtime knob. Groq's compiler requires static shapes, so variable concurrency requires BUCKETING - a fixed set of precompiled batch shapes - which means the decode step cost is a step function of batch, not the smooth max() curve the standard model predicts.",
-  "bound_by": "compute",
-  "scales_with": [
-    "batch_shape_bucket (Groq: batch is static and bucketed, so the decode cost is a step function of batch, NOT the smooth max() curve - the single largest departure from the default model)",
-    "on_chip_capacity (Groq 230 MB per chip, Cerebras 44 GB per wafer; the hard ceiling on model size per device, above which the model must be TILED)",
-    "static_schedule_granularity (the compile-time resolution of the schedule; data-dependent control flow is impossible, so variable-length sequences must be padded/bucketed)",
-    "num_chips_or_wafers (tiling and layer-pipelining, the only way to exceed the on-chip capacity)",
-    "wafer-to-wafer latency (Cerebras 2 microsecond CS-3/CS-4, which is what makes multi-wafer pipelining of a >44 GB model viable)",
-    "sram_feed_bandwidth (TPU Cmem tier exists for exactly this term)"
-  ],
-  "affected_by_hardware": [
+ "id": "eng-profile-arch-conforming-no-decode-gemm",
+ "type": "flop",
+ "name": "Architecture-conforming engines remove the decode GEMM cost model entirely: Groq, Cerebras, TPU",
+ "class": "custom_kernel",
+ "arithmetic_intensity": "THE MODEL DEFAULT IS WRONG FOR THESE ENGINES IN A WAY THAT IS NOT A CONSTANT ERROR. The standard decode cost model (fct-batch1-step-cost-formula) is T = max(2*P_t/BW, 2*B*P_t/PEAK): the memory-bound term 2*P_t/BW comes from STREAMING THE WEIGHTS once per step, and the compute-bound term from doing B rows of work against them. Both terms presuppose a memory hierarchy where weights live off-chip and must be fetched. An architecture-conforming engine removes that premise. Groq: SRAM-only, no off-chip HBM tier, so there IS no weight-streaming path - a model larger than 230 MB must be tiled across chips and the tapeout is fixed at compile time, and the compiler statically schedules ALL data movement, which is why static shapes are mandatory (no dynamic batching, no variable-length sequences without bucketing, no data-dependent control flow). Cerebras: 44 GB of on-chip SRAM per wafer at 21 PB/s (CS-3) or 43.2 PB/s (CS-4 Turbo), weights stay on-chip, no HBM streaming, tokens flow uninterrupted through layers pipelined across wafers. TPU: an on-chip Cmem SRAM feed tier added specifically so that lower batch sizes are viable, and Google's own reason for adding 8-bit mode support and faster MXU weight-loading. THE DOMINANT FLOP CLASS CHANGES ACCORDINGLY. Where the default profile says decode is bound_by memory (a weight stream), these engines make the dominant term the LAUNCH/SCHEDULING and INTERCONNECT terms and the SRAM feed, not an HBM read. Concretely: Groq's constraint class is recorded as bound_by launch_overhead because a fully statically-scheduled datapath has no dynamic launch cost at all but a fixed compile-time schedule whose granularity is the bucket; Cerebras is recorded bound_by compute only because 21 PB/s of on-chip bandwidth removes the memory term by construction. THE CAPACITY CONSEQUENCE A PLANNER MUST NOT MISS: on these engines batch size is not a free runtime knob. Groq's compiler requires static shapes, so variable concurrency requires BUCKETING - a fixed set of precompiled batch shapes - which means the decode step cost is a step function of batch, not the smooth max() curve the standard model predicts.",
+ "bound_by": "compute",
+ "scales_with": [
+  "batch_shape_bucket (Groq: batch is static and bucketed, so the decode cost is a step function of batch, NOT the smooth max() curve - the single largest departure from the default model)",
+  "on_chip_capacity (Groq 230 MB per chip, Cerebras 44 GB per wafer; the hard ceiling on model size per device, above which the model must be TILED)",
+  "static_schedule_granularity (the compile-time resolution of the schedule; data-dependent control flow is impossible, so variable-length sequences must be padded/bucketed)",
+  "num_chips_or_wafers (tiling and layer-pipelining, the only way to exceed the on-chip capacity)",
+  "wafer-to-wafer latency (Cerebras 2 microsecond CS-3/CS-4, which is what makes multi-wafer pipelining of a >44 GB model viable)",
+  "sram_feed_bandwidth (TPU Cmem tier exists for exactly this term)"
+ ],
+ "affected_by_hardware": [
+  "groq-lpu",
+  "cerebras-wse-3",
+  "google-tpu-v4"
+ ],
+ "workarounds": [
+  "Bucketing is mandatory, not an optimisation: pad every sequence to a precompiled shape and accept the padded flops as waste",
+  "Plan the model-to-chip tiling explicitly; a model that exceeds on-chip SRAM cannot be served by simply adding bandwidth",
+  "For >44 GB models on Cerebras, pipeline layers across wafers and budget the 2 microsecond inter-wafer hop per crossing",
+  "Do not port a batch-size sweep from a GPU engine onto these - the batch axis is discrete here, so interpolation between buckets is meaningless",
+  "Re-derive the decode roofline from SRAM bandwidth and the schedule, not from HBM bandwidth; the standard B* = (PEAK/BW)*w_b/2 crossover does not apply as written"
+ ],
+ "notes": "Design consequence, and the class of gap this record fills: every other flop record in the repo describes how an engine executes the MODEL DEFAULT arithmetic faster or slower. These three engines change which terms exist. The 2*P_t/BW weight-stream term - the term that makes decode memory-bound at batch 1 on a GPU, the term the entire serving literature is organised around - is ABSENT by construction when weights are resident in on-chip SRAM. That is why the standard 'decode is memory-bound' intuition fails on Groq and Cerebras, and why a batch-1 tok/s figure from one of them is not comparable to a GPU figure even after normalising for precision and model size. THE HONEST NEGATIVES, which are the substance of this record: (1) Cerebras publishes NO per-chip throughput figure for standard benchmarks - no MLPerf, no third-party throughput comparison; the 750 tok/s figure in this repo is for one specific model (GPT-5.6 Sol Ultrafast) and is a vendor claim, so NO per-chip tok/s is asserted here. (2) Groq publishes NO per-chip compute figure at all on its own site; the 188 TFLOPS FP16 / 750 TOPS INT8 figures in the accelerator record are press-attributed and flagged basis:'unverified' in the 2026-10-04 backfill, so they are NOT used as inputs to anything here. (3) The wafer-scale architecture is optimised for single-stream low-latency decode, NOT high-throughput batched inference, so it is the wrong engine for the workload the default cost model describes. (4) No vLLM, no PyTorch native support on Cerebras; SDK only, and gated behind registration. WHAT A READER SHOULD TAKE AWAY: for these engines the question 'what is the roofline crossover batch B*' has no answer in the standard form, and the substitute question is 'what are the precompiled batch buckets and how much padded flops does each waste' - which is a compile-time question, not a runtime one. Engine records: [[engines/alt-groq-groqflow]], [[engines/alt-cerebras-csl-sdk]], [[engines/alt-tpu-inference-vllm-plugin]], [[engines/alt-jetstream]]. Existing flop records for the same engines: [[alt-groq-compiler-constraints]], [[alt-groq-deterministic-architecture]], [[alt-cerebras-wafer-sram]], [[alt-cerebras-limitations]], [[alt-tpu-xla-static-shapes]], [[alt-tpu-bucketing-padding]], [[alt-tpu-mfu-performance-rules]]. The default decode model being departed from: [[fct-batch1-step-cost-formula]].\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "draft",
+ "confidence": 0.66,
+ "updated": "2026-10-05",
+ "sources": [
+  "alt-groq-compiler-constraints",
+  "alt-groq-deterministic-architecture",
+  "alt-cerebras-wafer-sram",
+  "alt-cerebras-limitations",
+  "alt-tpu-xla-static-shapes",
+  "alt-tpu-bucketing-padding"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "The standard decode cost model (fct-batch1-step-cost-formula) is T = max(2*P_t/BW, 2*B*P_t/PEAK): the memory-bound term 2*P_t/BW comes from STREAMING THE WEIGHTS once per step, and the compute-bound term from doing B rows of work against them.",
+   "basis": "unverified",
+   "values_for": [
     "groq-lpu",
     "cerebras-wse-3",
     "google-tpu-v4"
-  ],
-  "workarounds": [
-    "Bucketing is mandatory, not an optimisation: pad every sequence to a precompiled shape and accept the padded flops as waste",
-    "Plan the model-to-chip tiling explicitly; a model that exceeds on-chip SRAM cannot be served by simply adding bandwidth",
-    "For >44 GB models on Cerebras, pipeline layers across wafers and budget the 2 microsecond inter-wafer hop per crossing",
-    "Do not port a batch-size sweep from a GPU engine onto these - the batch axis is discrete here, so interpolation between buckets is meaningless",
-    "Re-derive the decode roofline from SRAM bandwidth and the schedule, not from HBM bandwidth; the standard B* = (PEAK/BW)*w_b/2 crossover does not apply as written"
-  ],
-  "notes": "Design consequence, and the class of gap this record fills: every other flop record in the repo describes how an engine executes the MODEL DEFAULT arithmetic faster or slower. These three engines change which terms exist. The 2*P_t/BW weight-stream term - the term that makes decode memory-bound at batch 1 on a GPU, the term the entire serving literature is organised around - is ABSENT by construction when weights are resident in on-chip SRAM. That is why the standard 'decode is memory-bound' intuition fails on Groq and Cerebras, and why a batch-1 tok/s figure from one of them is not comparable to a GPU figure even after normalising for precision and model size. THE HONEST NEGATIVES, which are the substance of this record: (1) Cerebras publishes NO per-chip throughput figure for standard benchmarks - no MLPerf, no third-party throughput comparison; the 750 tok/s figure in this repo is for one specific model (GPT-5.6 Sol Ultrafast) and is a vendor claim, so NO per-chip tok/s is asserted here. (2) Groq publishes NO per-chip compute figure at all on its own site; the 188 TFLOPS FP16 / 750 TOPS INT8 figures in the accelerator record are press-attributed and flagged basis:'unverified' in the 2026-10-04 backfill, so they are NOT used as inputs to anything here. (3) The wafer-scale architecture is optimised for single-stream low-latency decode, NOT high-throughput batched inference, so it is the wrong engine for the workload the default cost model describes. (4) No vLLM, no PyTorch native support on Cerebras; SDK only, and gated behind registration. WHAT A READER SHOULD TAKE AWAY: for these engines the question 'what is the roofline crossover batch B*' has no answer in the standard form, and the substitute question is 'what are the precompiled batch buckets and how much padded flops does each waste' - which is a compile-time question, not a runtime one. Engine records: [[engines/alt-groq-groqflow]], [[engines/alt-cerebras-csl-sdk]], [[engines/alt-tpu-inference-vllm-plugin]], [[engines/alt-jetstream]]. Existing flop records for the same engines: [[alt-groq-compiler-constraints]], [[alt-groq-deterministic-architecture]], [[alt-cerebras-wafer-sram]], [[alt-cerebras-limitations]], [[alt-tpu-xla-static-shapes]], [[alt-tpu-bucketing-padding]], [[alt-tpu-mfu-performance-rules]]. The default decode model being departed from: [[fct-batch1-step-cost-formula]].",
-  "status": "draft",
-  "confidence": 0.66,
-  "updated": "2026-10-04",
-  "sources": [
-    "alt-groq-compiler-constraints",
-    "alt-groq-deterministic-architecture",
-    "alt-cerebras-wafer-sram",
-    "alt-cerebras-limitations",
-    "alt-tpu-xla-static-shapes",
-    "alt-tpu-bucketing-padding"
-  ]
+   ]
+  },
+  {
+   "parameter": "peak_flops",
+   "effect": "Bucketing is mandatory, not an optimisation: pad every sequence to a precompiled shape and accept the padded flops as waste | Plan the model-to-chip tiling explicitly; a model that exceeds on-chip SRAM cannot be served by simply adding bandwidth | For >44 GB models on Cerebras, pipeline layers across wafers and budget the 2 microsecond inter-wafer hop per crossing | Do not port a batch-size sweep from a GPU engine...",
+   "basis": "recorded",
+   "values_for": [
+    "groq-lpu",
+    "cerebras-wse-3",
+    "google-tpu-v4"
+   ]
+  }
+ ]
 }

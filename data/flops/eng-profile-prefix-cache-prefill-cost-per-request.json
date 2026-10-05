@@ -1,40 +1,54 @@
 {
-  "id": "eng-profile-prefix-cache-prefill-cost-per-request",
-  "type": "flop",
-  "name": "Engine choice changes prefill cost PER REQUEST: prefix caching and radix prefix reuse are not the same accounting",
-  "class": "prefill_attention",
-  "arithmetic_intensity": "THE PER-TOKEN ARITHMETIC IS UNCHANGED BY THE ENGINE - prefill attention flops are 2*n_q*d_h*L^2 and the projection GEMMs are 2*L*d^2 regardless of who schedules them. What the engine changes is the DENOMINATOR: how many of those L^2 terms are executed at all for a given REQUEST. On a full prefix hit of length L_hit the attention flops for those positions were already paid when the prefix was first seen, so a hit request executes the GEMM for the new tokens plus one attention pass whose queries are only the new positions. The saving is quadratic in L_hit and the remaining cost is linear in t_new, so the per-request prefill cost as a function of hit length is NOT a constant times prompt length - it is a piecewise curve with a knee, and WHICH curve you get is an engine property. The three mechanisms differ in a way a capacity planner must not conflate. (1) vLLM: automatic prefix caching, block-level, hash-based - reuse requires landing on a block boundary, so effective hit length is quantised down to the block granularity. (2) SGLang: RadixAttention, a radix tree over KV blocks, so any shared PREFIX in the tree sense is found, not just an exact-prefix match - the hit rate is strictly higher at the same prompt set, and the per-request cost is lower at the same cache occupancy. (3) llama.cpp: four separate mechanisms (shared unified KV buffer, slot-prompt-similarity matching, idle-slot prompt-cache persistence, up to 32 per-slot context checkpoints) and explicitly NO paged-KV block manager in the vLLM sense - KV is allocated per slot from a preallocated pool, so a hit is a whole-slot match. For capacity planning the consequence is that prefill capacity cannot be sized from prompt length and a model's L^2 curve; it must be sized from the engine's realised hit distribution, and the engines realise different hit rates from the same workload.",
-  "bound_by": "compute",
-  "scales_with": [
-    "prefix_hit_length L_hit (the entire saving; attention flops avoided scale as L_hit^2, so this is a quadratic term, not a linear one)",
-    "block_granularity of the engine's KV allocator (an exact-hash engine's effective hit is quantised DOWN to a block boundary; a radix engine's is not)",
-    "prefix_sharing_rate across requests (a cache nothing shares is pure overhead)",
-    "kv_residency (HBM vs DRAM vs remote decides the BYTES/SECOND the hit path gets, which is what the hit actually costs)",
-    "context_length L (the miss-path L^2 term)",
-    "batch_size (prefill is compute-bound, so batching changes throughput here, unlike decode)"
-  ],
-  "affected_by_hardware": [
+ "id": "eng-profile-prefix-cache-prefill-cost-per-request",
+ "type": "flop",
+ "name": "Engine choice changes prefill cost PER REQUEST: prefix caching and radix prefix reuse are not the same accounting",
+ "class": "prefill_attention",
+ "arithmetic_intensity": "THE PER-TOKEN ARITHMETIC IS UNCHANGED BY THE ENGINE - prefill attention flops are 2*n_q*d_h*L^2 and the projection GEMMs are 2*L*d^2 regardless of who schedules them. What the engine changes is the DENOMINATOR: how many of those L^2 terms are executed at all for a given REQUEST. On a full prefix hit of length L_hit the attention flops for those positions were already paid when the prefix was first seen, so a hit request executes the GEMM for the new tokens plus one attention pass whose queries are only the new positions. The saving is quadratic in L_hit and the remaining cost is linear in t_new, so the per-request prefill cost as a function of hit length is NOT a constant times prompt length - it is a piecewise curve with a knee, and WHICH curve you get is an engine property. The three mechanisms differ in a way a capacity planner must not conflate. (1) vLLM: automatic prefix caching, block-level, hash-based - reuse requires landing on a block boundary, so effective hit length is quantised down to the block granularity. (2) SGLang: RadixAttention, a radix tree over KV blocks, so any shared PREFIX in the tree sense is found, not just an exact-prefix match - the hit rate is strictly higher at the same prompt set, and the per-request cost is lower at the same cache occupancy. (3) llama.cpp: four separate mechanisms (shared unified KV buffer, slot-prompt-similarity matching, idle-slot prompt-cache persistence, up to 32 per-slot context checkpoints) and explicitly NO paged-KV block manager in the vLLM sense - KV is allocated per slot from a preallocated pool, so a hit is a whole-slot match. For capacity planning the consequence is that prefill capacity cannot be sized from prompt length and a model's L^2 curve; it must be sized from the engine's realised hit distribution, and the engines realise different hit rates from the same workload.",
+ "bound_by": "compute",
+ "scales_with": [
+  "prefix_hit_length L_hit (the entire saving; attention flops avoided scale as L_hit^2, so this is a quadratic term, not a linear one)",
+  "block_granularity of the engine's KV allocator (an exact-hash engine's effective hit is quantised DOWN to a block boundary; a radix engine's is not)",
+  "prefix_sharing_rate across requests (a cache nothing shares is pure overhead)",
+  "kv_residency (HBM vs DRAM vs remote decides the BYTES/SECOND the hit path gets, which is what the hit actually costs)",
+  "context_length L (the miss-path L^2 term)",
+  "batch_size (prefill is compute-bound, so batching changes throughput here, unlike decode)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "amd-instinct-mi300x",
+  "nvidia-b200",
+  "nvidia-gb200-nvl72"
+ ],
+ "workarounds": [
+  "Size prefill capacity from the engine's realised hit distribution, not from prompt length and the model's L^2 curve - they are different curves",
+  "Align prompt structure to the engine's block granularity so hits are not truncated at a boundary",
+  "Put the shared prefix FIRST and keep it byte-identical; a hit path that is not bit-identical produces output that depends on cache state",
+  "For a non-prefix engine (llama.cpp's slot matching), align prompts to the granularity its matcher uses - a partial-slot similarity match is not a KV reuse you can bill as a hit"
+ ],
+ "notes": "Design consequence: this is the record the repo needed and did not have. The FLOP map had prefix-cache-hit-path-gemm-only (the arithmetic on the hit path) and prefix-cache-hit-miss, and the engine records listed each engine's caching feature as a bullet, but nothing stated that the FEATURE NAMES ARE NOT COMPARABLE UNITS. vLLM's 'automatic prefix caching', SGLang's 'RadixAttention', llama.cpp's 'prompt cache' and mlx-lm's 'prompt cache' are four different mechanisms with four different hit semantics, and quoting a hit rate from one as if it described another is the specific error. The one hard number in the repo that DOES measure this within one engine is SGLang's LSPM cache-aware admission, and it is a hit-rate lever rather than an arithmetic one. THE COST THAT A HIT PATH ADDS is the part that makes prefix caching non-free: the KV for L_hit tokens must be READ from wherever it lives, and the block-table and hash computation grows with hit length. At HBM residency that read is cheap relative to recompute; at DRAM or remote residency it is bandwidth-bound and the win shrinks - which is why the saving is not automatically quadratic in practice, and why lmcache exists as a separate layer whose entire purpose is to move the hit-path residency question. THE CORRECTNESS PRICE, sourced: vLLM issue #40896 demonstrates with no external tier involved that with prefix caching on, the same request at temperature=0 returns different output on a freshly started server than thereafter, and disabling prefix caching makes it deterministic. Stated root causes are key-identity gaps, not arithmetic - blocks reused across LoRA adapters sharing a name, blocks reused across embedding variants omitted from the key, and blocks produced under a different numerical configuration (attention backend, batch-invariance mode, GPU architecture). A reader planning capacity should treat a hit rate as conditional on those fields. Engine records: [[engines/vllm]], [[engines/sglang]], [[engines/llama-cpp]], [[engines/mlx-lm]], [[engines/lmcache]]. Hit-path arithmetic: [[prefix-cache-hit-path-gemm-only]], [[prefix-cache-hit-miss]], [[lmcache-kv-tier-outside-attention]].\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "draft",
+ "confidence": 0.65,
+ "updated": "2026-10-05",
+ "sources": [
+  "engine-vllm-github",
+  "engine-sglang-github",
+  "engine-llamacpp-github",
+  "engine-mlx-lm-github",
+  "pd-lmcache-docs"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "At HBM residency that read is cheap relative to recompute; at DRAM or remote residency it is bandwidth-bound and the win shrinks - which is why the saving is not automatically quadratic in practice, and why lmcache exists as a separate layer whose entire purpose is to move the hit-path residency question.",
+   "basis": "unverified",
+   "values_for": [
     "nvidia-h100-sxm",
     "nvidia-h200-sxm",
     "amd-instinct-mi300x",
     "nvidia-b200",
     "nvidia-gb200-nvl72"
-  ],
-  "workarounds": [
-    "Size prefill capacity from the engine's realised hit distribution, not from prompt length and the model's L^2 curve - they are different curves",
-    "Align prompt structure to the engine's block granularity so hits are not truncated at a boundary",
-    "Put the shared prefix FIRST and keep it byte-identical; a hit path that is not bit-identical produces output that depends on cache state",
-    "For a non-prefix engine (llama.cpp's slot matching), align prompts to the granularity its matcher uses - a partial-slot similarity match is not a KV reuse you can bill as a hit"
-  ],
-  "notes": "Design consequence: this is the record the repo needed and did not have. The FLOP map had prefix-cache-hit-path-gemm-only (the arithmetic on the hit path) and prefix-cache-hit-miss, and the engine records listed each engine's caching feature as a bullet, but nothing stated that the FEATURE NAMES ARE NOT COMPARABLE UNITS. vLLM's 'automatic prefix caching', SGLang's 'RadixAttention', llama.cpp's 'prompt cache' and mlx-lm's 'prompt cache' are four different mechanisms with four different hit semantics, and quoting a hit rate from one as if it described another is the specific error. The one hard number in the repo that DOES measure this within one engine is SGLang's LSPM cache-aware admission, and it is a hit-rate lever rather than an arithmetic one. THE COST THAT A HIT PATH ADDS is the part that makes prefix caching non-free: the KV for L_hit tokens must be READ from wherever it lives, and the block-table and hash computation grows with hit length. At HBM residency that read is cheap relative to recompute; at DRAM or remote residency it is bandwidth-bound and the win shrinks - which is why the saving is not automatically quadratic in practice, and why lmcache exists as a separate layer whose entire purpose is to move the hit-path residency question. THE CORRECTNESS PRICE, sourced: vLLM issue #40896 demonstrates with no external tier involved that with prefix caching on, the same request at temperature=0 returns different output on a freshly started server than thereafter, and disabling prefix caching makes it deterministic. Stated root causes are key-identity gaps, not arithmetic - blocks reused across LoRA adapters sharing a name, blocks reused across embedding variants omitted from the key, and blocks produced under a different numerical configuration (attention backend, batch-invariance mode, GPU architecture). A reader planning capacity should treat a hit rate as conditional on those fields. Engine records: [[engines/vllm]], [[engines/sglang]], [[engines/llama-cpp]], [[engines/mlx-lm]], [[engines/lmcache]]. Hit-path arithmetic: [[prefix-cache-hit-path-gemm-only]], [[prefix-cache-hit-miss]], [[lmcache-kv-tier-outside-attention]].",
-  "status": "draft",
-  "confidence": 0.65,
-  "updated": "2026-10-04",
-  "sources": [
-    "engine-vllm-github",
-    "engine-sglang-github",
-    "engine-llamacpp-github",
-    "engine-mlx-lm-github",
-    "pd-lmcache-docs"
-  ]
+   ]
+  }
+ ]
 }

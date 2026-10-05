@@ -1,31 +1,38 @@
 {
-  "id": "aud-flop-audio-token-explosion",
-  "type": "flop",
-  "name": "Audio input token count explodes relative to text output",
-  "class": "custom_kernel",
-  "bound_by": "memory",
-  "scales_with": [
-    "audio_duration",
-    "sample_rate",
-    "mel_bins",
-    "encoder_layers",
-    "encoder_hidden_size"
-  ],
-  "affected_by_hardware": [],
-  "workarounds": [
-    "Use 30-second windowing (Whisper's max_source_positions=1500 at 50Hz mel frame rate)",
-    "Use VAD to skip non-speech segments",
-    "Use streaming ASR for long audio (with quality tradeoff)"
-  ],
-  "notes": "HARDWARE PARAMETERS, NOT RECORD IDS. 2026-10-04: affected_by_hardware previously held ['gpu-vram', 'memory-bandwidth'] - hardware quantities, not products. They could never resolve, so the repo was carrying permanent false debt against a budget that exists to catch NEW bad references. Moved into this note; the field is now EMPTY and that is the correct value, not a gap. Why: These were hardware PARAMETERS ('gpu-vram', 'memory-bandwidth'), not products. But the record is ALSO part-independent - it is derived from Whisper model configs across five model sizes, so naming any GPU would INVENT a hardware dependency it does not claim.",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-04",
-  "sources": [
-    "aud-src-whisper-tiny-config",
-    "aud-src-whisper-base-config",
-    "aud-src-whisper-small-config",
-    "aud-src-whisper-medium-config",
-    "aud-src-whisper-large-v2-config"
-  ]
+ "id": "aud-flop-audio-token-explosion",
+ "type": "flop",
+ "name": "Audio input token count explodes relative to text output",
+ "class": "custom_kernel",
+ "bound_by": "memory",
+ "scales_with": [
+  "audio_duration",
+  "sample_rate",
+  "mel_bins",
+  "encoder_layers",
+  "encoder_hidden_size"
+ ],
+ "affected_by_hardware": [],
+ "workarounds": [
+  "Use 30-second windowing (Whisper's max_source_positions=1500 at 50Hz mel frame rate)",
+  "Use VAD to skip non-speech segments",
+  "Use streaming ASR for long audio (with quality tradeoff)"
+ ],
+ "notes": "HARDWARE PARAMETERS, NOT RECORD IDS. 2026-10-04: affected_by_hardware previously held ['gpu-vram', 'memory-bandwidth'] - hardware quantities, not products. They could never resolve, so the repo was carrying permanent false debt against a budget that exists to catch NEW bad references. Moved into this note; the field is now EMPTY and that is the correct value, not a gap. Why: These were hardware PARAMETERS ('gpu-vram', 'memory-bandwidth'), not products. But the record is ALSO part-independent - it is derived from Whisper model configs across five model sizes, so naming any GPU would INVENT a hardware dependency it does not claim.\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "aud-src-whisper-tiny-config",
+  "aud-src-whisper-base-config",
+  "aud-src-whisper-small-config",
+  "aud-src-whisper-medium-config",
+  "aud-src-whisper-large-v2-config"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "2026-10-04: affected_by_hardware previously held ['gpu-vram', 'memory-bandwidth'] - hardware quantities, not products.",
+   "basis": "unverified"
+  }
+ ]
 }

@@ -60,8 +60,11 @@
         "memory_gb",
         "tok_s_per_user",
         "quality",
-        "joules_per_token"
-      ]
+        "joules_per_token",
+        "speedup_ratio",
+        "dimensionless_ratio"
+      ],
+      "description": "speedup_ratio and dimensionless_ratio added 2026-10-05. Before them the enum had NO home for a ratio, so records measuring relative change were filed under whichever RATE was the thing being compared, or under the quality catch-all. That is not cosmetic: it is selected by exactly the filter a capacity planner uses. sd-medusa-batch32-degradation carried value 0 as decode_tok_s (0 reads as a failed run when it is the FLOOR of a documented degradation curve); sd-eagle3-throughput-sglang-batch64 carried 1.38 as tps_aggregate (1.38x the baseline, not 1.38 tok/s); ev-llamacpp-spec-bench-replay-inflates carried 13.4 as tps_aggregate (an inflation FACTOR that reads as a respectable per-GPU figure - the dangerous direction, because it would be QUOTED as one). All three were corrected in the same commit with their VALUES unchanged, closing gotcha bench-metric-enum-hides-a-dimensionless-ratio. THE TWO MEMBERS ARE NOT INTERCHANGEABLE. speedup_ratio is 'N times faster than a named baseline' and MUST name that baseline in `unit`; a bare ratio with no baseline is the single most misleading number in this domain, the same rule paper.speedup_reported follows. dimensionless_ratio is a ratio with no faster/slower reading: PUE (facility energy / IT energy, 1.145 = the facility draws 14.5% more than the IT load) and idle/maximum power dynamic range. Filing PUE 2.5 as a speedup would be a NEW error of exactly the kind this member set exists to remove, which is why they are separate members and why the ten PUE / power-ratio records went to dimensionless_ratio rather than joining the speedups.\n\nTWO MEMBERS REMAIN UNUSED AS OF 2026-10-05, and both are documented rather than filled. joules_per_token has ZERO records and the reason is a modelling limitation, not missing data: one benchmark record carries ONE (metric, value) pair, while every joules figure in this repo is measured ALONGSIDE a throughput on the same run - the four MLPerf MaxQ records and the two Apple powermetrics records each state both. Re-labelling one of those would destroy the throughput from `value`, which is independently measured and is what the throughput-at-a-cap comparison set needs. The correct fix is a SECOND record per run carrying the joules, and that was deliberately NOT done in a schema pass because it means minting new record ids asserting derived energy figures. Until then the joules live in `energy_basis` (8 records, with the sample window and derivation written out) on the throughput record that measured them, and `power_w` + `power_scope` hold the watts underneath. memory_gb has ZERO records: no benchmark in this repo measures a peak resident footprint as its primary quantity; memory figures appear in methodology and notes on KV-cache records instead."
     },
     "value": {
       "type": "number"
@@ -135,7 +138,7 @@
         "rack",
         null
       ],
-      "description": "An 8-GPU NODE figure is NOT a per-GPU figure. Always state which."
+      "description": "An 8-GPU NODE figure is NOT a per-GPU figure. Always state which. Usage as of 2026-10-05: node 6 records, device 2 records. 'rack' HAS ZERO RECORDS AND THAT IS A VERIFIED NEGATIVE, NOT AN OMISSION: every rack-scale result in this repo (the four CoreWeave GB200/GB300 NVL72 MLPerf v6.1 submissions and the vendor rack measurements) carries has_power=false or publishes no watts at all, so no rack-scope mean draw exists to record. The member is KEPT because MLPerf's power extension is capable of reporting one and the absence is a property of what has been submitted, not of the schema - and because a rack figure is exactly the number a capacity planner would wrongly substitute for a node figure if the field did not exist to name the difference. The member that shipped empty and was NOT justified on those grounds in this repo is documented the same way in accelerator.flops[].precision ('other')."
     },
     "power_cap": {
       "type": [

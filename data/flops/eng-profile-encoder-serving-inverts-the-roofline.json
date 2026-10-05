@@ -1,36 +1,50 @@
 {
-  "id": "eng-profile-encoder-serving-inverts-the-roofline",
-  "type": "flop",
-  "name": "Encoder-serving engines invert the roofline: at batch 1 an embedding or rerank workload wants FLOPS, the inverse of LLM decode on the same GPU",
-  "class": "embedding",
-  "arithmetic_intensity": "THE INVERSION IS EXACT AND IT IS THE MOST COMMON MISMATCH IN THIS REPO'S DOMAIN. An LLM decode step streams each weight once per generated token, so arithmetic intensity is ~1 flop per byte at batch 1 and HBM bandwidth alone decides tok/s (the qhw-decode-gemm-memory-bound regime). An encoder does ONE bidirectional attention pass over all input tokens with no KV cache and no autoregressive streaming, so its arithmetic is dense GEMM with HIGH arithmetic intensity: every weight it loads is reused across all input tokens, and at batch 1 it is already compute-bound. On the same GPU, then, the decoder wants bandwidth and the encoder wants FLOPS, and the two have OPPOSITE hardware-selection implications. Concretely for a BERT-size encoder at batch 1: the projection GEMMs are 2*L*d^2 per layer and the attention is 2*L^2*d plus 2*L^2*d for the two attention matrices, all of which scale with L and reuse weights across the L positions, so AI rises with L while the decoder's AI is pinned near 1. THE DOMINANT FLOP CLASS IS THEREFORE DECODE-ATTENTION'S OPPOSITE: for long inputs the encoder's L^2 terms dominate, and they are ordinary dense attention with a full (not causal) mask - there is no causal-mask saving available, and no KV cache to amortise anything into. An engine that optimises for streaming decode is therefore optimising the wrong term for this workload, and an engine chosen for an embedding or rerank tier on the strength of its decode tok/s is a category error. THE RERANK-SPECIFIC INVERSION, which is stronger: a cross-encoder reranker takes a correlated (query, document) PAIR as one stateful unit - two sequences of independent attention, concatenated - not two independent sequences. Its cost is the SUM of two attention passes plus the pair-wise structure, and at typical rerank batch sizes it is compute-bound while a bi-encoder embedder of the same family is bandwidth-bound. Same library, same box, opposite regime. CONSEQUENCE FOR A CAPACITY PLAN: an embedding tier sized by tok/s from an LLM decode benchmark will be wrong by a large factor in the conservative direction, because it will provision HBM bandwidth and not FLOPs.",
-  "bound_by": "compute",
-  "scales_with": [
-    "input_length L (the encoder's dominant term is quadratic in L, unlike the decoder's linear weight stream - this is the axis that moves the cost, and it is absent from a decode-derived capacity plan)",
-    "batch_size (raises AI directly; encoders tolerate large batches where decoders do not, because there is no KV-capacity cliff)",
-    "hidden_width d (the 2*L*d^2 GEMM terms)",
-    "num_layers (linear)",
-    "num_query_heads (the 2*L^2*n_q*d attention terms; no GQA saving is available in the usual encoder configuration)"
-  ],
-  "affected_by_hardware": [
+ "id": "eng-profile-encoder-serving-inverts-the-roofline",
+ "type": "flop",
+ "name": "Encoder-serving engines invert the roofline: at batch 1 an embedding or rerank workload wants FLOPS, the inverse of LLM decode on the same GPU",
+ "class": "embedding",
+ "arithmetic_intensity": "THE INVERSION IS EXACT AND IT IS THE MOST COMMON MISMATCH IN THIS REPO'S DOMAIN. An LLM decode step streams each weight once per generated token, so arithmetic intensity is ~1 flop per byte at batch 1 and HBM bandwidth alone decides tok/s (the qhw-decode-gemm-memory-bound regime). An encoder does ONE bidirectional attention pass over all input tokens with no KV cache and no autoregressive streaming, so its arithmetic is dense GEMM with HIGH arithmetic intensity: every weight it loads is reused across all input tokens, and at batch 1 it is already compute-bound. On the same GPU, then, the decoder wants bandwidth and the encoder wants FLOPS, and the two have OPPOSITE hardware-selection implications. Concretely for a BERT-size encoder at batch 1: the projection GEMMs are 2*L*d^2 per layer and the attention is 2*L^2*d plus 2*L^2*d for the two attention matrices, all of which scale with L and reuse weights across the L positions, so AI rises with L while the decoder's AI is pinned near 1. THE DOMINANT FLOP CLASS IS THEREFORE DECODE-ATTENTION'S OPPOSITE: for long inputs the encoder's L^2 terms dominate, and they are ordinary dense attention with a full (not causal) mask - there is no causal-mask saving available, and no KV cache to amortise anything into. An engine that optimises for streaming decode is therefore optimising the wrong term for this workload, and an engine chosen for an embedding or rerank tier on the strength of its decode tok/s is a category error. THE RERANK-SPECIFIC INVERSION, which is stronger: a cross-encoder reranker takes a correlated (query, document) PAIR as one stateful unit - two sequences of independent attention, concatenated - not two independent sequences. Its cost is the SUM of two attention passes plus the pair-wise structure, and at typical rerank batch sizes it is compute-bound while a bi-encoder embedder of the same family is bandwidth-bound. Same library, same box, opposite regime. CONSEQUENCE FOR A CAPACITY PLAN: an embedding tier sized by tok/s from an LLM decode benchmark will be wrong by a large factor in the conservative direction, because it will provision HBM bandwidth and not FLOPs.",
+ "bound_by": "compute",
+ "scales_with": [
+  "input_length L (the encoder's dominant term is quadratic in L, unlike the decoder's linear weight stream - this is the axis that moves the cost, and it is absent from a decode-derived capacity plan)",
+  "batch_size (raises AI directly; encoders tolerate large batches where decoders do not, because there is no KV-capacity cliff)",
+  "hidden_width d (the 2*L*d^2 GEMM terms)",
+  "num_layers (linear)",
+  "num_query_heads (the 2*L^2*n_q*d attention terms; no GQA saving is available in the usual encoder configuration)"
+ ],
+ "affected_by_hardware": [
+  "nvidia-h100-sxm",
+  "nvidia-h200-sxm",
+  "nvidia-l4",
+  "amd-instinct-mi300x",
+  "nvidia-a10"
+ ],
+ "workarounds": [
+  "Size an embedding or rerank tier on FLOPs and input length, never on a decode tok/s figure - the roofline is inverted relative to LLM decode",
+  "Check whether the deployment is a bi-encoder (two independent sequences, bandwidth-bound at small batch) or a cross-encoder (one paired stateful unit, compute-bound) before choosing hardware - same library, opposite regime",
+  "Use large batches deliberately; there is no KV-capacity cliff to hit, so the usual reason to keep encoder batches small does not apply",
+  "If reusing an LLM-serving engine for embeddings, verify pooling and mask behaviour rather than assuming the decode-optimised attention path applies"
+ ],
+ "notes": "Design consequence: the repo's FLOP map had embedding-batch-encoding and cross-encoder-reranking as flop records, and triton-inference-server's own engine record already stated this inversion in prose for the Triton case ('COMPUTE-BOUND for the encoder phase at batch 1 ... it wants FLOPS rather than HBM bandwidth. This is the exact inverse of an LLM decode part on the same GPU'). This record generalises it from one engine's note to the class, because the property belongs to the WORKLOAD (no KV cache, no streaming, weights reused across all positions) and not to Triton. THE OPERATIONALLY CONSEQUENTIAL PART, which the repo stated nowhere else: the three dedicated embedding engines in data/engines/ (hf-text-embeddings-inference, infinity-embeddings, qdrant-fastembed, plus the pooling-model paths in vllm and vllm-pooling-models) are ALL throughput-first with batch-inference-only as an explicit design goal. That is the workload demanding the inverted roofline, and the fact that those engines are built batch-inference-only rather than low-latency is itself the confirmation of the inversion - a latency-optimised streaming engine is structurally the wrong shape for this class. The rerank case additionally needs the SEQUENCE BATCHER, not just dynamic batching: triton-inference-server's record states the sequence batcher is the piece that matters for cross-encoder rerankers, which take a correlated query-document pair as one stateful unit rather than two independent sequences - so even the batching MECHANISM differs, not just the arithmetic. NO THROUGHPUT FIGURE IS ASSERTED HERE: the repo's embedding/rerank benchmark records were not re-derived in this pass and no tok/s is invented. Engine records: [[engines/hf-text-embeddings-inference]], [[engines/infinity-embeddings]], [[engines/qdrant-fastembed]], [[engines/triton-inference-server]], [[engines/niche-colbert]], [[engines/vllm-pooling-models]]. Existing flop records: [[embedding-batch-encoding]], [[cross-encoder-reranking]], [[qhw-decode-gemm-memory-bound]]. Hardware selection is the practical consequence: [[niche-kserve]].\n\nHARDWARE-PARAMETER ROWS ADDED 2026-10-05 (schema authority pass, agent w5-schema). `affected_by_hardware` names PRODUCTS (accelerator record ids); these rows name the hardware QUANTITIES that move this class's cost, which had nowhere to live until flop.hardware_parameters was added in this commit. Every effect below is lifted verbatim from this record's own existing prose and no figure here is new - `magnitude` reproduces numbers the record already quoted. `basis` is 'unverified' where the effect was asserted with nothing concrete behind it, rather than being dressed up. The rows were pulled out of free-text notes; they are not a change to what this record claims.",
+ "status": "verified",
+ "confidence": 0.75,
+ "updated": "2026-10-05",
+ "sources": [
+  "embed-triton-inference-server-github",
+  "engine-tgi-github"
+ ],
+ "hardware_parameters": [
+  {
+   "parameter": "memory_bandwidth",
+   "effect": "An LLM decode step streams each weight once per generated token, so arithmetic intensity is ~1 flop per byte at batch 1 and HBM bandwidth alone decides tok/s (the qhw-decode-gemm-memory-bound regime).",
+   "basis": "unverified",
+   "values_for": [
     "nvidia-h100-sxm",
     "nvidia-h200-sxm",
     "nvidia-l4",
     "amd-instinct-mi300x",
     "nvidia-a10"
-  ],
-  "workarounds": [
-    "Size an embedding or rerank tier on FLOPs and input length, never on a decode tok/s figure - the roofline is inverted relative to LLM decode",
-    "Check whether the deployment is a bi-encoder (two independent sequences, bandwidth-bound at small batch) or a cross-encoder (one paired stateful unit, compute-bound) before choosing hardware - same library, opposite regime",
-    "Use large batches deliberately; there is no KV-capacity cliff to hit, so the usual reason to keep encoder batches small does not apply",
-    "If reusing an LLM-serving engine for embeddings, verify pooling and mask behaviour rather than assuming the decode-optimised attention path applies"
-  ],
-  "notes": "Design consequence: the repo's FLOP map had embedding-batch-encoding and cross-encoder-reranking as flop records, and triton-inference-server's own engine record already stated this inversion in prose for the Triton case ('COMPUTE-BOUND for the encoder phase at batch 1 ... it wants FLOPS rather than HBM bandwidth. This is the exact inverse of an LLM decode part on the same GPU'). This record generalises it from one engine's note to the class, because the property belongs to the WORKLOAD (no KV cache, no streaming, weights reused across all positions) and not to Triton. THE OPERATIONALLY CONSEQUENTIAL PART, which the repo stated nowhere else: the three dedicated embedding engines in data/engines/ (hf-text-embeddings-inference, infinity-embeddings, qdrant-fastembed, plus the pooling-model paths in vllm and vllm-pooling-models) are ALL throughput-first with batch-inference-only as an explicit design goal. That is the workload demanding the inverted roofline, and the fact that those engines are built batch-inference-only rather than low-latency is itself the confirmation of the inversion - a latency-optimised streaming engine is structurally the wrong shape for this class. The rerank case additionally needs the SEQUENCE BATCHER, not just dynamic batching: triton-inference-server's record states the sequence batcher is the piece that matters for cross-encoder rerankers, which take a correlated query-document pair as one stateful unit rather than two independent sequences - so even the batching MECHANISM differs, not just the arithmetic. NO THROUGHPUT FIGURE IS ASSERTED HERE: the repo's embedding/rerank benchmark records were not re-derived in this pass and no tok/s is invented. Engine records: [[engines/hf-text-embeddings-inference]], [[engines/infinity-embeddings]], [[engines/qdrant-fastembed]], [[engines/triton-inference-server]], [[engines/niche-colbert]], [[engines/vllm-pooling-models]]. Existing flop records: [[embedding-batch-encoding]], [[cross-encoder-reranking]], [[qhw-decode-gemm-memory-bound]]. Hardware selection is the practical consequence: [[niche-kserve]].",
-  "status": "verified",
-  "confidence": 0.75,
-  "updated": "2026-10-04",
-  "sources": [
-    "embed-triton-inference-server-github",
-    "engine-tgi-github"
-  ]
+   ]
+  }
+ ]
 }

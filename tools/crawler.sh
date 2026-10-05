@@ -50,7 +50,20 @@ cmd_commit() {
     echo "usage: crawler.sh commit <slug> <msg-file>" >&2; exit 2
   fi
   wt="$(wt_path)"
-  git -C "$wt" add -A data/ schemas/ docs/ tools/
+  # SCHEMA.md is named explicitly because it was NOT in the original path list,
+  # and that silently dropped a whole commit's documentation. The 2026-10-05
+  # schema-authority pass edited SCHEMA.md in its worktree, called this command,
+  # and the file was never staged -- so its commit shipped schemas that the
+  # human-facing doc did not describe, which is the exact drift this repo has
+  # already hit once. A schema change without its SCHEMA.md row IS the failure
+  # mode, so the file is named here rather than left to the path list.
+  #
+  # Found by: an agent that had already verified validate.py and the test suite,
+  # committed, and only discovered the loss when `git status` still showed the
+  # file modified. Worth noting that the worktree was NOT re-read after the
+  # commit -- the edits were gone, not merely unstaged, because the commit cycle
+  # in the parent repo reset the working copy.
+  git -C "$wt" add -A data/ schemas/ docs/ tools/ SCHEMA.md README.md AGENTS.md .github/ site/
   if git -C "$wt" diff --cached --quiet; then
     echo "NOTHING TO COMMIT" >&2; exit 3
   fi
