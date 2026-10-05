@@ -59,6 +59,23 @@ THROUGHPUT_METRICS = ("decode_tok_s", "tok_s_per_user", "tps_aggregate")
 # gpus_in_quote    how many GPUs the raw quoted figure covers, for the record
 # --------------------------------------------------------------------------
 PRICE_QUOTES: dict[str, list[dict]] = {
+    # ---- AMD Instinct, Oracle OCI bare metal ---------------------------
+    # Added 2026-10-05. These close the repo's longest-standing cost gap:
+    # docs/08-cost-per-token.md asserted for months that every AMD benchmark
+    # was unpriceable, and that was true only of the records that existed. The
+    # OEM/reseller channels cited as evidence do not quote per-GPU-hour because
+    # that is not their unit - the negative generalised across a boundary it was
+    # never tested at. Oracle publishes the rate directly.
+    #
+    # DO NOT DIVIDE BY 8. Oracle's footnote defines the column as a per-GPU
+    # rate; the '.8' in the shape name is the GPU count. This is the same trap
+    # this table already caught on Oracle's H100 record and on CoreWeave.
+    "w5s-oracle-oci-amd-mi300x-mi355x-gpu-hour": [
+        dict(accel="amd-instinct-mi300x", usd=6.00, tier="on-demand", gpus=8,
+             basis="BM.GPU.MI300X.8 = 8x AMD MI300X 192GB Matrix Core, CDNA 3, 8x1x400 Gb/sec RDMA, $6.00/GPU-hr"),
+        dict(accel="amd-instinct-mi355x", usd=8.60, tier="on-demand", gpus=8,
+             basis="MI355X is $8.60 per MI355X-hour"),
+    ],
     # ---- H100 SXM -------------------------------------------------------
     "aws-ec2-p5-h100": [
         dict(accel="nvidia-h100-sxm", usd=6.88, tier="on-demand", gpus=8,
@@ -272,6 +289,15 @@ BENCH_JOIN: dict[str, dict] = {
     "h200-8x-mlperf-v4-1-maxq-llama2-70b-server-energy-per-token": dict(gpus=8, evidence="H200-SXM-141GBx8_TRT_MaxQ"),
     # --- already per-GPU by its own unit string -----------------------------
     "perplexity-llama2-70b-h100-fp8-tp2-bs128-tps-per-gpu": dict(gpus=None, evidence="output tokens/s per GPU"),
+    # --- AMD Instinct, joined 2026-10-05 -----------------------------------
+    # The price existed (Oracle, per-GPU-hour) from 2026-10-05, but these rows
+    # still could not join until each declared its GPU count, because the tool
+    # refuses to guess a divisor. A price is not enough: an aggregate rate over
+    # an unknown number of devices is not a per-device rate.
+    "bench-mlperf-v6-1-amd-mi355x-llama2-70b-offline": dict(
+        gpus=8, evidence="8x AMD Instinct MI355X 288GB HBM3e"),
+    "llama-cpp-mi300x-deepseek-v3-671b-q4-decode-tok-s": dict(
+        gpus=8, evidence="8x AMD Instinct MI300X"),
 }
 
 EXCLUDED: dict[str, str] = {
