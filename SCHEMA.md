@@ -229,9 +229,17 @@ so a verbatim metric name is queryable instead of buried in `notable_features`.
                          research: bitnet-b158 | flute | lqer | quip | atom |
                          squeezellm | quarot | omniquant | zeroquant | qat
                          runtimes: bitsandbytes-nf4 | bitsandbytes-int8 |
-                         optimum-quanto | ort-matmulnbits-int4 |
+                         optimum-quanto | quanto | ort-matmulnbits-int4 |
                          llmcompressor-compressed-tensors | mlc-q4f16
+                         gguf unlisted members: gguf-fp16
                          kv-side: kv-cache-quant | kv-eviction | kv-sparsity | w4a8kv4
+
+`scheme` is the one enum in this repo that is deliberately NOT enumerated inline
+in full: the authoritative list is `schemas/quantization.schema.json` and the
+families above are a reading aid, not a second source of truth. The families
+cover every member as of 2026-10-05; `gguf-fp16` is called out separately because
+the gguf rows above are deliberately k-quant/i-quant shaped and fp16 is the
+plain-storage outlier.
     bits                  string    "4", "3.2 avg", "w4a16"
     weight_group_size     number|null
     activation_scheme     string|null
