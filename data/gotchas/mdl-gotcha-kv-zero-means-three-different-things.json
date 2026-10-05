@@ -1,0 +1,31 @@
+{
+ "id": "mdl-gotcha-kv-zero-means-three-different-things",
+ "type": "gotcha",
+ "name": "kv_cache_bytes_per_token = 0 is used for three unrelated situations in this repo, and a reader querying on it gets all three unless the notes are read",
+ "class": "config",
+ "affects": [],
+ "concepts": [
+  "kv-cache",
+  "encoder",
+  "embedding-models",
+  "ssm",
+  "mamba",
+  "recurrent",
+  "diffusion",
+  "closed-api",
+  "schema-conventions"
+ ],
+ "symptom": "Thirty-two records carry kv_cache_bytes_per_token = 0 and they do not mean the same thing. Three groups sit behind the single value: (1) genuinely cache-free architectures - bidirectional encoders (bge-*, e5-*, gte-*, snowflake-arctic-embed-l, modernbert-base, xlm-roberta based rerankers) and single-pass embedding models, which have no causal decode loop; (2) state-space and recurrent models (mamba-codestral-7b, rwkv5-eagle-7b, llada-8b-instruct, mercury) whose recurrent state is fixed-size and does not grow with context; (3) bounded-not-growing hybrids, where the cache stops growing past a window. A reader who queries 'models with no KV cache' to decide what fits on a GPU gets 32 rows and no way to tell which are cheap to serve and which are merely unmeasured.",
+ "root_cause": "The schema types the field as number-or-null, so 0 and null are the only ways to say 'nothing' and each is overloaded. The sharpest case is that 0 is a CLAIM while null is an ABSENCE, and three voyage records (voyage-3, voyage-3-lite, voyage-code-3) held 0 while their own notes said the KV-geometry fields were 'left null' because Voyage publishes no config. Zero asserts a model provably has no per-token cache; a closed API with no readable config cannot establish that. Those three now read null, which is what their prose always said. The mirror-image error is lfm2-1-2b and lfm2-5-1-2b-instruct, where 0 is deliberate and correct under this repo's convention for state-space and hybrid models, and the notes carry the nonzero slice (6 attention layers x 8 KV heads x 64 head_dim x 2 x 2 = 12,288 B/token) so the real number is not lost - that is the pattern the other groups should follow.",
+ "workaround": "When a record's kv_cache_bytes_per_token is 0, read attention_variant and the notes before concluding anything: 'bidirectional encoder' or an embedding/reranking task means group 1 (cache-free by construction), 'ssm' / 'recurrent' / 'diffusion' means group 2 (fixed-size state, no growth), and a hybrid record with a window means group 3 (bounded - report the attention slice from the notes, because 0 understates it by design). Reserve 0 for a statement you can defend from config or architecture class, and null for anything you could not establish. The single most useful discipline: a 0 whose justification is a task label rather than a config read should say so in the notes, which is what all-minilm-l6-v2, the two cohere-embed-v3 records and mercury now do explicitly.",
+ "severity": "minor",
+ "notes": "FULL INVENTORY AFTER THIS PASS. Group 1, cache-free by construction, 0 and justified in notes: all-minilm-l6-v2, all-mpnet-base-v2, bge-base-en-v1-5, bge-large-en-v1-5, bge-m3, bge-reranker-large, bge-reranker-v2-m3, bge-small-en-v1-5, canary-1b-flash, cohere-embed-english-v3, cohere-embed-multilingual-v3, cohere-rerank-v3-5, e5-base-v2, e5-large-v2, gte-base, gte-large, gte-reranker-modernbert, jina-embeddings-v3, jina-reranker-v2-base-multilingual, modernbert-base, mxbai-embed-large-v1, mxbai-rerank-large-v1, nomic-embed-text-v1-5, nomic-embed-text-v2-moe, parakeet-ctc-1-1b, snowflake-arctic-embed-l. Group 2, fixed-size recurrent state: mamba-codestral-7b (model_type mamba2, 64 layers, 128 heads, head_dim 64 - pure SSM, no attention branch at all), rwkv5-eagle-7b (model_type rwkv5, 32 layers), llada-8b-instruct (diffusion, 32 layers, 32 KV heads - the transformer backbone is bidirectional and full-sequence so no cache), mercury (diffusion, no config published - 0 rests on the architecture class). Group 3, bounded-not-growing: lfm2-1-2b and lfm2-5-1-2b-instruct, 6 of 16 layers full attention, 12,288 B/token attention slice recorded in notes, conv layers hold a 3-timestep rolling state. CONTRAST WITH null, WHICH IS A DIFFERENT STATEMENT: seventeen records hold null - the closed-API chat models (claude-haiku-4-5, claude-opus-5-5, claude-sonnet-5-5, gpt-4-1, o3) where no geometry is published at all; deepseek-v4-flash and deepseek-v4-pro, whose config publishes no kv_lora_rank because they use compressed/hashed KV with per-layer compress_ratios and a sparse indexer rather than a rank-512 latent, so there is no single per-token figure to record and inventing one would be the worst possible fill; and five architecture records with no derivable geometry (griffin-14b, hyena-arch, jamba-1-5-large, retnet-arch, samba-7b), two multimodal models whose text tower is not in the top-level config (paligemma-3b-mix-224, parakeet-tdt-0-6b-v2), and the three voyage records corrected here, which moved from 0 to null so that this list and the reasoning above agree. The deepseek-v4 pair is the one to watch: an MLA-adjacent model recorded as if it had ordinary KV would overstate by tens of times, and null is the honest value there.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "aud-src-whisper-base-config",
+  "hf-edge-lfm2-1-2b",
+  "hf-embed-bge-base-en-v1-5"
+ ]
+}

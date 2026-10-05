@@ -1,0 +1,29 @@
+{
+ "id": "mdl-gotcha-pi-and-self-extend-are-valid-schema-values-with-zero-models",
+ "type": "gotcha",
+ "name": "context_scaling_method accepts 'pi' and 'self-extend' and no model record uses either - verified absence, not a gap to be filled",
+ "class": "config",
+ "affects": [],
+ "concepts": [
+  "rope-scaling",
+  "context-window",
+  "position-interpolation",
+  "self-extend",
+  "long-context",
+  "schema-enum",
+  "queryable-classification"
+ ],
+ "symptom": "A reader querying the model records for context_scaling_method = 'pi' or 'self-extend' gets zero rows out of 155, while the schema's enum lists both as valid values. Read quickly, that looks like two unfilled fields - the same shape as the four records whose context_scaling_method was genuinely null. It is not. It is a correct and permanent result, and 'fixing' it by assigning one of these values to a model that does not use the method would inject a false claim into the one field a reader queries to decide whether a model's advertised context window is trustworthy.",
+ "root_cause": "The enum is a vocabulary of POSSIBLE methods, not an inventory of methods in use; it was written to cover the space, and two entries have no instance in this corpus. Both absences are independently established rather than merely unobserved. For 'pi': position interpolation is not a separate method in any shipped config here - it is the rope_type literally named 'linear', and the repo already classifies it that way, with three records on 'linear' (gemma-3-4b-it / 12b / 27b, whose config carries rope_scaling {rope_type: linear, factor 8.0}). So PI is not missing from the data; it is recorded under the name the config uses. For 'self-extend': the method exists in the literature (papers/selfextend, arXiv 2401.01325, ICML 2024 Spotlight) and the repo has that paper record, but its adoption field records it as research-only VERIFIED BY ABSENCE - no selfextend or LongLM code path in vLLM's or SGLang's trees and no corresponding cache layer in transformers - and no checkpoint in this corpus ships it. No model here uses it.",
+ "workaround": "Query 'linear' when you mean position interpolation, and do not expect 'pi' or 'self-extend' to ever return rows for this corpus unless a future checkpoint actually ships the method. If a record does need to express 'looked for it and it is not present', the schema already provides the value for that: none-verified, which twelve records use. Reserve 'unknown' for a case where the author looked and could not establish the method, and leave the field null only when it was never filled in at all - those four states are distinct and the enum distinguishes them deliberately.",
+ "severity": "minor",
+ "notes": "COVERAGE OF THE BACKFILL: context_scaling_method is populated on 151 of 155 records. The distribution is native 102, none-verified 12, yarn 11, llama3 10, mrope 6, other 5, linear 3, ntk-aware 2, and null 4. The four nulls are the hosted-API models that expose no config at all - cohere-rerank-v3-5, voyage-3, voyage-3-lite and voyage-code-3 - which is honest, since none-verified would imply an author looked at a config that does not exist. The closed-API chat models (claude-haiku-4-5, claude-opus-5-5, claude-sonnet-5-5, o3, gpt-4-1) are NOT among the nulls: each already carries a value, and gpt-4-1's architecture is recorded as 'other' with kv_cache_bytes_per_token null, which is the right combination for a model with no published geometry. INDEPENDENT CROSS-CHECK OF THE WHOLE FIELD: every rope_scaling / rope_parameters block in all 125 configs with a readable HuggingFace config was extracted and compared against the recorded class. Config types found: yarn 10, llama3 9, default 7 (three of which are mrope or per-layer-type and carry mrope_section), linear 3, longrope 4, mrope 2, ntk 1, su 1, and a three-way per-layer-type block on the gemma-4 records. Every recorded class agrees with its config's own rope_type; there is no record whose context_scaling_method contradicts the config it cites. The one systematic finding is that 'other' (5 records) is doing real work: the four phi records carry rope_type longrope (or su for the vision variant), which has no enum value, and 'other' is the correct home for it rather than a classification gap. Two config-only observations worth recording: deepseek-v4-flash and deepseek-v4-pro changed their YaRN factor from 40 (V2/V3, over an original 4096) to 16 (V4, over an original 65536), and the three gemma-4 records carry rope parameters PER LAYER TYPE - full_attention at rope_theta 1e6 with rope_type proportional, sliding_attention at 1e4 - with no scaling factor, which is per-layer RoPE geometry rather than a context-extension method and is correctly recorded 'native'. Two configs could not be fetched and their records were therefore NOT audited for this field: ByteDance-Seed/seed-oss-36B and GSAI-MML/LLaDA-8B-Instruct both return HTTP 401 (gated repositories requiring authentication), so those two records retain their existing values unverified against config by this pass.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-05",
+ "sources": [
+  "pap-attn-selfextend",
+  "ctx-src-pose-positional-skip-training",
+  "mbl-cfg-glm-5"
+ ]
+}

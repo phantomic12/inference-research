@@ -4,7 +4,7 @@
  "name": "Mercury",
  "status": "draft",
  "confidence": 0.4,
- "updated": "2026-10-04",
+ "updated": "2026-10-05",
  "sources": [
   "mdl2-sglang-diffusion-language-models"
  ],
@@ -30,6 +30,6 @@
  "flops_per_token_active": null,
  "open_weights": null,
  "license": null,
- "notes": "Mercury is a diffusion language model listed in SGLang's supported diffusion language models. Specific architecture details (parameter count, layer count, denoising steps) could not be verified from the available sources. The SGLang docs page confirms it is served as a diffusion LM with --dllm-algorithm flags. More research needed to fill in the geometry.\n\nCONTEXT_SCALING_METHOD (native): diffusion (non-autoregressive) architecture record; no autoregressive position ladder.",
+ "notes": "Mercury is a diffusion language model listed in SGLang's supported diffusion language models. Specific architecture details (parameter count, layer count, denoising steps) could not be verified from the available sources. The SGLang docs page confirms it is served as a diffusion LM with --dllm-algorithm flags. More research needed to fill in the geometry.\n\nCONTEXT_SCALING_METHOD (native): diffusion (non-autoregressive) architecture record; no autoregressive position ladder. KV CACHE FIELD CLARIFIED (2026-10-05): kv_cache_bytes_per_token = 0 is correct here and means 'this architecture has no growing per-token KV cache', but it rests on the architecture CLASS rather than on a config read, because no config.json for Mercury is published - the record's own notes say the parameter and layer counts could not be verified. The reasoning: a diffusion language model denoises a fixed-length sequence through a fixed number of iterative steps rather than extending a cache one token at a time, so there is no cache whose size grows with generated length. It does still hold per-step activations for the current sequence, which is a memory cost, but that cost is bounded by sequence length and step count rather than accumulating across tokens as a KV cache does. So the 0 is honest, and a reader should not read it as 'unknown' - but it also should not read it as 'verified from config', since no config exists. This is the same distinction the three voyage records needed: a claim about cache behaviour, not a measurement of it.",
  "context_scaling_method": "native"
 }

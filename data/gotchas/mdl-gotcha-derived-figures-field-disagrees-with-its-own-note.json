@@ -1,0 +1,30 @@
+{
+ "id": "mdl-gotcha-derived-figures-field-disagrees-with-its-own-note",
+ "type": "gotcha",
+ "name": "A derived number can be written into kv_cache_bytes_per_token with its derivation expression written correctly beside it in the notes, and the two still disagree because the expression was never actually evaluated - the field is not self-checking",
+ "class": "config",
+ "affects": [],
+ "concepts": [
+  "kv-cache",
+  "whisper",
+  "encoder-decoder",
+  "head-dim",
+  "d_model",
+  "asr",
+  "speech-to-text",
+  "derived-figures"
+ ],
+ "symptom": "Four of the eight Whisper records overstated kv_cache_bytes_per_token: whisper-tiny 30720 vs 6144 (5.00x), whisper-base 40960 vs 12288 (3.33x), whisper-small 81920 vs 36864 (2.22x), whisper-medium 131072 vs 98304 (1.33x). The four large/turbo records were correct. The tell that identifies this as a mis-evaluation rather than a wrong input: in every affected record the notes paragraph contains a derivation expression that is CORRECT and whose evaluation gives the correct answer, immediately followed by an '=' and the inflated result. whisper-base reads 'decoder self-attention 6 * 8 * 64 * 2 * 2 = 40,960 B/token' where 6*8*64*2*2 is 12,288. So the reader is not looking at a plausible-looking formula and accepting it - the formula is right and the arithmetic after the equals sign is wrong, inside one record, visibly. Because Whisper's decoder window is fixed at 448 target tokens the absolute waste is small, so nothing crashes and no benchmark moves; the number is simply wrong for anyone sizing a KV budget from it.",
+ "root_cause": "The head_dim was NOT the error - head_dim 64 is correct for every Whisper variant, since d_model/decoder_attention_heads is 64 throughout the family (384/6, 512/8, 768/12, 1024/16, 1280/20). Nor were the layer or head counts wrong: the records used decoder_layers and decoder_attention_heads, which is the right choice for a decoder-side self-attention figure. The inputs were right and the multiplication was not carried out. The pattern across the four failures is that the stated result is the correct product divided by an integer that grows as the model shrinks (5.00, 3.33, 2.22, 1.33 - i.e. 5/1, 10/3, 20/9, 4/3), so no single transcription slip explains all four; what they share is that the derivation was written in prose and the number beside it was filled in separately. Nothing in the pipeline can catch this: schemas/model.schema.json types kv_cache_bytes_per_token as a plain number with no *_basis companion, and notes is free text, so validate.py has no way to evaluate the expression against the field it claims to derive. A record is therefore only as correct as the author's arithmetic at the moment of writing, and the derivation expression is documentation, not a check.",
+ "workaround": "Write the derivation as an executable expression and evaluate it in the same step that writes the field - derive the number in code from the fetched config and paste both, rather than typing the formula into prose and the number into the field. When re-auditing a family, evaluate the notes' own expression per record and compare it to the field: agreement across a family is the signal, and here the two large records that agreed were simply the two whose author had multiplied it out.",
+ "severity": "major",
+ "notes": "PER-RECORD ARITHMETIC. Correct figure = 2 (K and V) x decoder_layers x decoder_attention_heads x head_dim x 2 bytes (fp16). whisper-tiny: 2 x 4 x 6 x 64 x 2 = 6,144 (field held 30,720, 5.00x). whisper-base: 2 x 6 x 8 x 64 x 2 = 12,288 (field held 40,960, 3.33x). whisper-small: 2 x 12 x 12 x 64 x 2 = 36,864 (field held 81,920, 2.22x). whisper-medium: 2 x 24 x 16 x 64 x 2 = 98,304 (field held 131,072, 1.33x). whisper-large-v1 / v2 / v3: 2 x 32 x 20 x 64 x 2 = 163,840 (already correct). whisper-large-v3-turbo: 2 x 4 x 20 x 64 x 2 = 20,480 (already correct; note this uses decoder_layers 4, not encoder_layers 32 - the turbo variant's decoder is genuinely 4 layers deep). WHAT WAS DELIBERATELY NOT CHANGED: the head_dim 64, num_kv_heads, num_layers and hidden_size fields in all six records, and the cross-attention figures in the same notes paragraphs, which were already correct (base: 6 x 8 x 64 x 1500 x 2 x 2 = 18,432,000 B = 17.6 MiB per in-flight request) and are a per-request constant bounded by the fixed 1500-frame encoder span rather than a per-token cost. GENERALISATION FOR THIS REPO: the audit that found this recomputed every model's KV figure from config.json independently of the notes, and that is the only reason it surfaced - the notes were internally consistent in style and plausibly worded throughout. The four errors were all in records whose prose looked more careful than average, which is the uncomfortable part: a confident derivation invites review of the reasoning rather than of the multiplication.",
+ "status": "verified",
+ "confidence": 0.92,
+ "updated": "2026-10-05",
+ "sources": [
+  "aud-src-whisper-base-config",
+  "aud-src-whisper-small-config",
+  "aud-src-whisper-medium-config"
+ ]
+}
