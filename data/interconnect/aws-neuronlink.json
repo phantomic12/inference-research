@@ -5,6 +5,7 @@
   "kind": "other",
   "version": "NeuronLink, Inferentia2 / Trainium2 generation",
   "bandwidth_gbps": 192,
+  "way": "unknown",
   "bandwidth_basis": "PER CHIP. AWS's Inf2 instance page states 'Inf2 instances support 192 GB/s of NeuronLink, a high-speed, nonblocking interconnect' and describes it as connecting up to 12 Inferentia2 chips, with 'data flows directly between' them for models too large for one chip. The figure is stated by AWS as a flat 192 GB/s with NO direction qualifier, so it is recorded exactly as published rather than halved - unlike the NVIDIA figures in this repo, which are explicitly bidirectional aggregates and are halved in nvswitch-4 and nvlink-4. This asymmetry is deliberate and is why cross-vendor bandwidth comparisons in this repo must check each record's basis field. AWS publishes no NeuronLink rate for Trainium2 separately from Inferentia2, so the same figure is carried here for both, flagged in notes rather than restated as a distinct measurement.",
   "link_count": null,
   "topology": "Non-blocking, and AWS uses that word explicitly. Scale-up domain is one EC2 instance: Inf2 holds up to 12 Inferentia2 chips, Trn2.48xlarge holds 16 Trainium2 chips, and a Trainium2 UltraServer spans 64 chips across 4 instances. The link is chip-to-chip and bypasses the host CPU for transfers, which is the property that makes multi-chip tensor parallelism viable at all - a path through host memory would halve effective bandwidth and add a hop.",
