@@ -24,6 +24,12 @@ def _budget() -> int:
                          .read_text(encoding="utf-8"))["max_dangling_refs"])
 
 
+def _docs_budget() -> int:
+    """The recorded docs-citation budget, read the way validate.py reads it."""
+    return int(json.loads((ROOT / "tools" / "docs_ref_budget.json")
+                         .read_text(encoding="utf-8"))["max_docs_dangling_refs"])
+
+
 def run_tool(script: str, *args: str, cwd: Path) -> subprocess.CompletedProcess:
     """Run the COPY of the tool inside cwd.
 
@@ -362,6 +368,42 @@ class TestDanglingReferences(Harness):
         self.assertIn("max_dangling_refs", budget)
         self.assertIsInstance(budget["max_dangling_refs"], int)
 
+    def test_docs_budget_file_is_the_committed_baseline(self):
+        """Same discipline for the docs/ citation budget."""
+        p = ROOT / "tools" / "docs_ref_budget.json"
+        self.assertTrue(p.exists(), "tools/docs_ref_budget.json missing")
+        budget = json.loads(p.read_text(encoding="utf-8"))
+        self.assertIn("max_docs_dangling_refs", budget)
+        self.assertIsInstance(budget["max_docs_dangling_refs"], int)
+        self.assertGreaterEqual(budget["max_docs_dangling_refs"], 0)
+
+    def test_real_repo_is_within_its_docs_budget(self):
+        """The whole point, for docs/: the real corpus must not exceed the
+        recorded budget, so a NEW rotted citation fails CI while the existing
+        debt stays visible. Runs the REAL repo, same as above.
+
+        The budget is a ceiling and the count shrinks as citations get fixed,
+        so this is count-relative rather than an equality, and it must also
+        prove the check is real by failing one below the actual count.
+        """
+        r = run_tool("validate.py", cwd=ROOT)
+        self.assertEqual(r.returncode, 0, r.stdout[-4000:] + r.stderr[-2000:])
+        tail = [ln for ln in r.stdout.splitlines()
+                if "unresolvable docs citation(s)" in ln]
+        self.assertEqual(len(tail), 1, r.stdout[-2000:])
+        count = int(tail[0].split()[0])
+        self.assertLessEqual(count, _docs_budget(),
+                             f"{count} unresolvable docs citations exceeds "
+                             f"budget {_docs_budget()}")
+        # ...and the check is real: the budget minus one must fail, so the
+        # green run above is not the check being silently skipped.
+        tight = run_tool("validate.py",
+                         "--max-docs-dangling-refs", str(count - 1),
+                         cwd=ROOT)
+        self.assertEqual(tight.returncode, 1, tight.stdout[-2000:])
+        self.assertIn(f"unresolvable docs citations: {count}, "
+                      f"budget of {count - 1}", tight.stdout)
+
     def test_real_repo_is_within_its_own_budget(self):
         """The whole point: the real data/ must not exceed the recorded budget,
         so a new dangling reference fails CI while the existing debt stays
@@ -423,6 +465,118 @@ class TestNewRecord(Harness):
         run_tool("new_record.py", *args, cwd=self.tmp)
         r = run_tool("new_record.py", *args, "--force", cwd=self.tmp)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+
+class TestDocsCitations(Harness):
+    """A citation in docs/ that resolves to nothing is a defect.
+
+    tools/build_site_data.py degrades an unresolvable citation to plain text
+    rather than a broken link, which is the right rendering and the reason the
+    failure went undetected: the docs rendered, the site built, and nothing
+    failed. validate.py is the check that makes it detectable, using the same
+    resolution rewrite_docs performs.
+
+    These tests build a docs/ tree on purpose. The Harness setUp copies the
+    REAL docs/ corpus, which is right for a record test and wrong here: a
+    citation check needs to know exactly which citations exist, and the real
+    corpus cites directories the fixture tree has no records in.
+    """
+
+    def fixture_docs(self, files: dict[str, str]) -> None:
+        """Replace docs/ with exactly the files given."""
+        d = self.tmp / "docs"
+        for f in d.glob("*.md"):
+            f.unlink()
+        for name, text in files.items():
+            (d / name).write_text(text, encoding="utf-8")
+
+    def test_resolving_citation_passes(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/accelerators/acme-a100.json", self.good_accelerator())
+        self.fixture_docs({"99-test.md": "See [[accelerators/acme-a100]] here.\n"})
+        r = self.validate("--max-docs-dangling-refs", "0")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("0 unresolvable docs citation(s)", r.stdout)
+
+    def test_bare_record_slug_citation_resolves(self):
+        """The bare-slug form must resolve too: rewrite_docs infers the type."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/accelerators/acme-a100.json", self.good_accelerator())
+        self.fixture_docs({"99-test.md": "See [[acme-a100]] here.\n"})
+        r = self.validate("--max-docs-dangling-refs", "0")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_rotted_citation_is_reported(self):
+        """The whole point: a citation to a nonexistent record now fails."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/accelerators/acme-a100.json", self.good_accelerator())
+        self.fixture_docs({"99-test.md": "See [[accelerators/typo-ghost]] here.\n"})
+        r = self.validate("--max-docs-dangling-refs", "0")
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("99-test.md:1 [[accelerators/typo-ghost]]", r.stdout)
+
+    def test_rotted_citation_fails_one_over_budget(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/accelerators/acme-a100.json", self.good_accelerator())
+        self.fixture_docs({"99-test.md": "A [[accelerators/typo-ghost]] and "
+                                        "B [[accelerators/vllm-metal]] too.\n"})
+        r = self.validate("--max-docs-dangling-refs", "1")
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("unresolvable docs citations: 2, budget of 1", r.stdout)
+
+    def test_broken_doc_link_is_reported(self):
+        """A [label](file.md) link whose file does not exist is the same defect.
+
+        This is the class that carried the real repo's baseline: three docs
+        cite `15-cost-per-token.md`, which was renumbered to 08-cost-per-token.
+        """
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/accelerators/acme-a100.json", self.good_accelerator())
+        (self.tmp / "docs" / "08-cost-per-token.md").write_text(
+            "# 08\n", encoding="utf-8")
+        self.fixture_docs({
+            "99-test.md": "See [the $/Mtok arithmetic](15-cost-per-token.md).\n",
+            "08-cost-per-token.md": "# 08\n",
+        })
+        r = self.validate("--max-docs-dangling-refs", "0")
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("99-test.md:1 [the $/Mtok arithmetic]"
+                      "(15-cost-per-token.md)", r.stdout)
+
+    def test_doc_stem_citation_always_resolves(self):
+        """[[other-doc]] is a doc-to-doc link, not a record citation, so it
+        resolves against the set of doc stems rather than against records."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/accelerators/acme-a100.json", self.good_accelerator())
+        self.fixture_docs({
+            "98-other.md": "# 98\n",
+            "99-test.md": "See [[98-other]] too.\n",
+        })
+        r = self.validate("--max-docs-dangling-refs", "0")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("0 unresolvable docs citation(s)", r.stdout)
+
+    def test_generated_index_is_not_the_subject(self):
+        """00-index.md is generated from data/, so it is excluded, exactly as
+        build_site_data.load_docs() excludes it. A citation transcribed by the
+        generator cannot rot independently of the record it came from."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/accelerators/acme-a100.json", self.good_accelerator())
+        self.fixture_docs({"00-index.md": "[[ghost-record]]\n"})
+        r = self.validate("--max-docs-dangling-refs", "0")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_subset_tree_is_skipped_not_failed(self):
+        """The Harness' default shape: the full docs/ corpus, near-empty data/.
+
+        Every citation into an unpopulated directory would be reported as rot,
+        which would be a measurement of an absent corpus rather than of the
+        corpus. The check says it skipped and why, instead of looking clean.
+        """
+        r = self.validate()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("docs citation check skipped: ", r.stdout)
+        self.assertIn("cannot be told apart from an absent corpus", r.stdout)
 
 
 class TestQuery(Harness):
