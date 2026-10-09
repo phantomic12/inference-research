@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -47,6 +48,13 @@ from registry import DIRS  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 
 THROUGHPUT_METRICS = ("decode_tok_s", "tok_s_per_user", "tps_aggregate")
+
+# Does the record itself state how many devices its aggregate covers? This is
+# only used to choose the WORDS of a `--gaps` message, never to pick a divisor:
+# the divisor still has to be quoted verbatim in BENCH_JOIN and proven by
+# check_evidence(). The pattern deliberately accepts only a count immediately
+# followed by a device noun, so "87 GPUs across 11 nodes" reports "87 GPUs".
+GPU_COUNT_HINT = re.compile(r"\b\d+x\s[^\s]+|\b\d+[\s-]GPUs?\b")
 
 # --------------------------------------------------------------------------
 # PRICE_QUOTES: (supply record, accelerator) -> USD per GPU-hour.
@@ -298,6 +306,50 @@ BENCH_JOIN: dict[str, dict] = {
         gpus=8, evidence="8x AMD Instinct MI355X 288GB HBM3e"),
     "llama-cpp-mi300x-deepseek-v3-671b-q4-decode-tok-s": dict(
         gpus=8, evidence="8x AMD Instinct MI300X"),
+    # ---- AMD Instinct, joined 2026-10-06 (defect D2) --------------------
+    # Every entry below names the GPU count as a LITERAL substring of that
+    # record's own unit/methodology, which is what check_evidence() enforces.
+    # The two clusters that still do NOT price and must not be forced:
+    #   - mi300x-vs-h100-vllm-llama31-{405b,70b}-fp8-tp8-output-throughput
+    #     name TWO platforms at once and are correctly unpriceable as single rows.
+    #   - mi325x-mlperf-v5-0-mangoboost-llama2-70b-offline says "4 nodes" and
+    #     never states GPUs per node, so the total device count is unknown.
+    # The last one is the row that proves the scheme works: 87 GPUs, not 8.
+    "mi355x-mlperf-v6-0-llama2-70b-87gpu-offline-tokens": dict(
+        gpus=87, evidence="87 GPUs across 11 nodes"),
+    "mi355x-mlperf-v6-0-llama2-70b-wmxfp4-offline-tokens": dict(
+        gpus=8, evidence="Hardware: 8x AMD Instinct MI355X, 288GB HBM3E each"),
+    "mi355x-mlperf-v6-0-gpt-oss-120b-offline-tokens": dict(
+        gpus=8,
+        evidence="Same 8xMI355X / 8xEPYC 9575F system and same software stack "
+                 "as the Llama 2 70B Offline record"),
+    "bench-mlperf-v6-0-dell-mangoboost-mi355x-powercap-1000w-offline": dict(
+        gpus=8,
+        evidence="Hardware: 1 node, 8x AMD Instinct MI355X 288GB HBM3e, "
+                 "Dell PowerEdge XE9785."),
+    "bench-mlperf-v6-1-oracle-mi355x-llama3-1-8b-server": dict(
+        gpus=8, evidence="SERVER scenario on Oracle's 8xMI355X_2xEPYC_9575F node"),
+    # ---- AMD Instinct, joined 2026-10-06 after the methodology edit -------
+    # These four records state their GPU count only in the record NAME
+    # ("AMD 8xMI355X", "Dell XE9785L 8xMI355X"), which check_evidence() cannot
+    # see. The count is now also in methodology, quoting the MLPerf system id
+    # the row was run on, so each entry is provable from the record itself.
+    "bench-mlperf-v6-1-amd-mi355x-llama2-70b-server": dict(
+        gpus=8, evidence="8xAMD Instinct MI355X 288GB HBM3e"),
+    "bench-mlperf-v6-1-amd-mi355x-llama2-70b-interactive": dict(
+        gpus=8, evidence="8xAMD Instinct MI355X 288GB HBM3e"),
+    "bench-mlperf-v6-1-dell-mi355x-llama3-1-8b-server": dict(
+        gpus=8, evidence="8xAMD Instinct MI355X 288GB HBM3e"),
+    "bench-mlperf-v6-1-dell-mi355x-llama3-1-8b-interactive": dict(
+        gpus=8, evidence="8xAMD Instinct MI355X 288GB HBM3e"),
+    # Its OFFLINE sibling, bench-mlperf-v6-1-dell-mi355x-llama3-1-8b-offline,
+    # already carried its count in methodology ("Hardware: 1 node, 8x AMD
+    # Instinct MI355X 288GB HBM3e, Dell PowerEdge XE9785L."), so it needed no
+    # edit at all - it is a BENCH_JOIN-only row, like the four below.
+    "bench-mlperf-v6-1-dell-mi355x-llama3-1-8b-offline": dict(
+        gpus=8,
+        evidence="Hardware: 1 node, 8x AMD Instinct MI355X 288GB HBM3e, "
+                 "Dell PowerEdge XE9785L."),
 }
 
 EXCLUDED: dict[str, str] = {
@@ -324,6 +376,9 @@ EXCLUDED: dict[str, str] = {
         "accelerator_ids is empty - no price join; also the single-user counterpart of an aggregate record",
     "mpt7b-a100-bs64-aggregate-output-tps":
         "accelerator_ids is empty - no price join",
+    # --- GPU count is genuinely unknown, not merely unstated ---------------
+    "mi325x-mlperf-v5-0-mangoboost-llama2-70b-offline":
+        "the methodology states 4 nodes but never states GPUs per node, and the record itself says the per-node GPU count, TP size and engine are all absent from the source - so the divisor is unknown and no divisor may be inferred from the sibling MI300X submissions",
 }
 
 
@@ -543,8 +598,43 @@ def cmd_gaps(args) -> None:
         elif all(a not in priced_accels for a in accels):
             reason = EXCLUDED.get(
                 bid, f"no priced per-GPU-hour supply record for {', '.join(accels)}")
+        elif bid in EXCLUDED:
+            # A row can be withheld deliberately even when its accelerator is
+            # priced: the mixed-platform pair below, and mi325x-mlperf-v5-0,
+            # whose methodology quotes "8xMI325X" only as a CORROBORATING
+            # CONTEXT sentence about a DIFFERENT submission and whose own device
+            # count is genuinely unknown. The explicit reason outranks any
+            # pattern-match, because the explicit reason is the one a human
+            # checked the record for.
+            reason = EXCLUDED[bid]
         else:
-            reason = EXCLUDED.get(bid, "see EXCLUDED in tools/cost_per_token.py")
+            # The accelerator IS priced, so the only thing standing between this
+            # row and a price is the device count the aggregate covers. The fall
+            # used to read "see EXCLUDED", which sent readers to a dict that did
+            # not contain the row and did not describe its blocker. The message
+            # must name what this specific row is actually missing.
+            if len(accels) > 1:
+                # Several DISTINCT platforms in one row: a tok/s divided by
+                # "GPUs" is meaningless when the GPUs differ, so no count would
+                # make this row priceable. The split twins carry the value.
+                reason = (f"names several platforms at once ({', '.join(accels)}) - "
+                          f"a rate divided by a device count means nothing when "
+                          f"the devices differ; the single-platform twins carry "
+                          f"the split values")
+            else:
+                stated = GPU_COUNT_HINT.search(
+                    f"{rec.get('unit') or ''}\n{rec.get('methodology') or ''}")
+                if stated:
+                    # A count is ON DISPLAY but the tool still will not use it
+                    # unless it is quoted verbatim in BENCH_JOIN, so this is a
+                    # one-line join fix, not a data gap.
+                    reason = (f"GPU count is stated in the record "
+                              f"({stated.group(0)}) but is not in BENCH_JOIN - "
+                              f"add the entry there")
+                else:
+                    reason = ("no declared GPU count - see BENCH_JOIN "
+                              "(the record's unit/methodology does not state how "
+                              "many devices the aggregate covers)")
         print(f"  benchmarks/{bid}")
         print(f"      {rec['model']}  {rec['value']} {rec.get('unit','')}")
         print(f"      -> {reason}\n")
