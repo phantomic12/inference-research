@@ -63,7 +63,7 @@
 - **Moore Threads MTT S5000 (PH100, Pinghu architecture)** (`accelerators/moore-threads-s5000`) — asic-other MUSA (4th gen) / Pinghu 2026
 - **Mythic M1108** (`accelerators/mythic-m1108`) — asic-other analog compute-in-memory (Flash memory cell array) 2019 · 4 W
 - **Rebellions Rebel100** (`accelerators/rebellions-rebel100`) — asic-other rebel100 (4-chiplet UCIe-Advanced) 2025 · 144 GB hbm3e · 4800 GB/s · 600 W
-- **d-Matrix Corsair** (`accelerators/d-matrix-corsair`) — asic-other Corsair (digital in-memory compute, chiplet-based) 2025
+- **d-Matrix Corsair** (`accelerators/d-matrix-corsair`) — asic-other Corsair (digital in-memory compute, chiplet-based) 2025 · 256 GB two-tier: on-chip integrated Performance Memory (SRAM-class, capacity in onchip_cache) + off-chip LPDDR5 Capacity Memory (up to 256 GB per card, vendor ceiling)
 - **Cambricon MLU370 (Siyuan 370) AIDC accelerators** (`accelerators/cambricon-mlu370`) — cambricon mluarch03 2021 · 48 GB lpddr5 · 307.2 GB/s · 75 W
 - **Cambricon MLU370-X8 AIDC accelerator (dual Siyuan 370, train+infer)** (`accelerators/cambricon-mlu370-x8`) — cambricon mluarch03 (dual Siyuan 370 chiplet) 2022 · 48 GB lpddr5 · 614.4 GB/s · 250 W
 - **Cambricon MLU590 (Siyuan 590) training accelerator** (`accelerators/cambricon-mlu590`) — cambricon mluarch05 2023 · 192 GB hbm2e · 2400 GB/s · 350 W
@@ -741,7 +741,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (374)
+## Gotchas (376)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
@@ -873,6 +873,7 @@ TRAP
 - **CUDA MPS provides no error isolation - one client crash kills all clients on the GPU** (`gotchas/serve-mps-no-error-isolation`) — [major] hardware · One inference engine crashes, and all other engines on the same GPU crash with it. The failure is not contained.
 - **CUDA enumerates at most one Compute Instance per GPU Instance, at most 64 MIG devices total, and needs ulimit -n raised - so a MIG layout reports fewer usable devices than the profile table implies** (`gotchas/mgpu-mig-driver-enumeration-limits-cut-ci-count`) — [major] config · A MIG layout created to expose many instances does not present that many usable CUDA devices. Driver >= R570 enumerates a single Compute Instance per GPU Instance, and CUDA 'supports at most 64 MIG in
 - **CUTLASS grouped FP8 MoE has its own CUDA floor (12.3 on Hopper, 12.8 on Blackwell) that is higher than per-tensor FP8 (12.0 / 12.4) on the same GPU, and no vendor table expresses it** (`gotchas/cutlass-fp8-moe-needs-a-higher-cuda-than-dense-fp8-on-the-same-hopper`) — [major] toolchain · An FP8 MoE deployment fails its native-GEMM path on a Hopper GPU that passes every FP8 row in the vendor support matrix, while a dense FP8 model on the same GPU and the same CUDA build runs natively. 
+- **CXL 3.x and 4.0 records carry nearly 2x the PCIe figure for the same physical layer, because the pass that 'corrected' CXL for direction applied the fix to the wrong state** (`gotchas/w8r-cxl-family-broke-the-pcie-direction-convention-it-copied-from`) — [major] hardware · Two records that describe the SAME physical layer hold different numbers, and each record's own prose says so. cxl-3-x.bandwidth_gbps is 236.0 while its own bandwidth_basis asserts verbatim: "The reco
 - **Canarying an inference service is harder than canarying a web service because a request's cost is not knowable in advance and the comparison is non-deterministic, so there is no clean 'new version is worse' signal** (`gotchas/ops-canary-on-inference-is-harder-than-web`) — [major] operations · A canary at 5% traffic produces no usable verdict. Error-rate comparison is meaningless because both versions return 200; latency comparison is confounded because a different replica mix behind the ca
 - **Colocation PUE is ~1.9, not the 1.2 often quoted: the 1.2 figure is hyperscale-only, and most third-party inference runs in colocation where the LBNL 2014 baseline shows midtier at 1.9 with cooling alone contributing 0.63** (`gotchas/pue-colocation-1-9-not-1-2`) — [major] measurement · A carbon or energy calculation for an inference deployment uses PUE = 1.2, producing an emissions estimate that is 35-40% too low for a colocation facility. The 1.2 figure is real — it is the LBNL 201
 - **Concurrent collectives on 2-3 RCCL communicators deadlock 50-100% of runs on gfx90a, which is the exact shape FSDP2+tensor-parallel produces** (`gotchas/mgpu-rccl-multiple-communicators-deadlock-gfx90a`) — [major] kernel · RCCL 2.30.4 (HIP 7.14) on 4x gfx90a GCD of an MI250 system deadlocks 50-100% of runs when a process uses 2-3 NCCL communicators concurrently. Upstream PyTorch tests reproduce it directly: TestFullySha
@@ -1009,6 +1010,7 @@ TRAP
 - **TurboQuant KV cache (k8v4) is unusable on Ampere consumer/prosumer cards with hybrid MoE models: a Triton FP8 path reports supported below SM 89, gets selected, then fails at runtime** (`gotchas/comm-turboquant-kv-ampere-arch-gate`) — [major] driver · A user on 2x NVIDIA RTX A5000 24GB (SM86) running Qwen/Qwen3-35B-A3B-FP8 with kv_cache_dtype=turboquant_k8v4 and max_model_len=163840 hit a chain of failures, starting with the model refusing to start
 - **Two NVFP4 kernels in vLLM's registry assert no architecture support at all, so 'the engine supports FP4' is not decidable from its own gate list** (`gotchas/nvfp4-registry-has-kernels-with-no-arch-gate`) — [major] kernel · An NVFP4 checkpoint serves on hardware that has no FP4 tensor-core path — a V100, an A100 — with no capability error at load time. The failure, if any, surfaces later and from inside FlashInfer's own 
 - **Unified memory is not VRAM: capacity, bandwidth, and sharing constraints** (`gotchas/local-unified-memory-not-vram`) — [major] hardware · A Mac with 128GB unified memory can serve a larger model than a discrete GPU with 24GB VRAM, but the advantage is capacity, not speed. The unified memory bandwidth is shared with the CPU and is not de
+- **Verified negative: no vendor, no paper and no official results page publishes a tok/s figure for any of the six third-party field-report shapes in this slice - a single community post is the entire published record** (`gotchas/w8-no-vendor-publishes-tok-s-for-these-six-shapes`) — [major] measurement · A reader auditing data/benchmarks/ for provenance finds records whose only source is a GitHub issue, and the audit question is whether a better source exists that simply was not cited. For the six sha
 - **Video frame sampling rate is the primary cost knob** (`gotchas/video-frame-sampling-rate-is-the-primary-cost-knob`) — [major] config · Video inference cost is dominated by the frame sampling rate. A 1-minute video at 1 fps = 60 frames, but at 2 fps = 120 frames, doubling the cost.
 - **Vision encoder re-encoding waste in multi-turn chat** (`gotchas/vision-encoder-re-encoding-waste-in-multi-turn-chat`) — [major] config · In multi-turn image/video chat, the vision encoder re-encodes the same image every turn, wasting compute. For a 448x448 image with ViT-L/16, this is ~763 GFLOPs per turn. Over 10 turns, that's 7.6 TFL
 - **Vision encoder runs on separate schedule from decoder** (`gotchas/vision-encoder-runs-on-separate-schedule-from-decoder`) — [major] config · The vision encoder and LLM decoder run on separate schedules, leading to underutilization. While the encoder is running, the decoder is idle, and vice versa.
@@ -1695,7 +1697,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (2013)
+## Sources (2018)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -1747,6 +1749,7 @@ and t
 - **US EIA Electric Power Annual Table 2.2 - Sales of Electricity to Ultimate Customers by Sector (MWh)** (`sources/pwr-eia-epa-table-2-2`) — benchmark · US Energy Information Administration
 - **US EIA Electric Power Annual Table 2.3 - Revenue from Sales of Electricity to Ultimate Customers by Sector** (`sources/pwr-eia-epa-table-2-3`) — benchmark · US Energy Information Administration
 - **VAST.ai public offers API (console.vast.ai/api/v0/bundles)** (`sources/sup-price-vast-rental-api`) — benchmark · VAST.ai
+- **mlx-lm's own merged benchmark table (mlx_lm/BENCHMARKS.md, added by PR #552 'LLM Benchmarks' by awni, merged 2025-10-15)** (`sources/w8-src-mlxlmm-552-benchmarks-merged`) — benchmark · ml-explore (Apple)
 - **vLLM 0.9.x ROCm optimizations: AITER block-scaled GEMM, fused MoE, MLA** (`sources/amd-vllm-09x-rocm`) — benchmark · AMD ROCm Blogs
 - **vLLM ROCm attention backends: 7 backends, 3-path routing, and measured speedups** (`sources/amd-vllm-rocm-attn-backends`) — benchmark · vLLM Blog (AMD AI Framework team)
 - **AMD Instinct GPUs MLPerf Inference v6.0 Submission (ROCm Blogs)** (`sources/bench-amd-mlperf-v6-0-submission`) — blog · AMD
@@ -1767,6 +1770,7 @@ and t
 - **CacheBlend: Fast Large Language Model Serving for RAG with Cached Knowledge Fusion (arXiv:2405.16444)** (`sources/pap-eff-cacheblend`) — blog
 - **Carbon Emissions and Large Neural Network Training (arXiv:2104.10350)** (`sources/pap-eff-carbon-nn-training`) — blog
 - **Cerebras GPT-5.6 Sol Ultrafast (750 tok/s)** (`sources/alt-cerebras-ultrafast`) — blog · Cerebras Systems
+- **Cerebras blog 'CS-3: the world's fastest and most scalable AI accelerator' (2024-03-12) - MemoryX external-memory SKUs, and the Weight Streaming architecture that needs them** (`sources/w8r-cerebras-cs3-blog-memoryx-external-memory`) — blog · Cerebras Systems
 - **Chain-of-Thought Prompting Elicits Reasoning in Large Language Models (arXiv:2201.11903)** (`sources/pap-eff-cot-prompting`) — blog
 - **Data Center Dynamics: Nvidia creates pared back H100 GPU for export to China, called H800** (`sources/acc-fill-dcd-h800-interconnect-halved`) — blog · Data Center Dynamics
 - **Defeating Nondeterminism in LLM Inference (Horace He et al., Thinking Machines Lab, 2025-09-10)** (`sources/nrg2-thinkingmachines-defeating-nondeterminism`) — blog · Thinking Machines Lab
@@ -2321,6 +2325,7 @@ and t
 - **HeteGen (arXiv 2403.01164) - arXiv API entry with 'MLSys 2024' comment** (`sources/w3p-hetegen-arxiv-2403-01164`) — paper · arXiv
 - **HeteGen - MLSys 2024 proceedings title listing** (`sources/w3p-hetegen-mlsys24-proceedings`) — paper · MLSys / proceedings.mlsys.org
 - **High Fidelity Neural Audio Compression (EnCodec) (arXiv:2210.13438)** (`sources/pap-mm-encodec`) — paper · arXiv
+- **How Much Dense Attention is Necessary? Oracle-Guided Sparse Prefill for Full/GQA Layers in Hybrid Long-Context Models (arXiv:2606.07703) - the authors' own report behind the SOTA2/WizWand TTFT leaderboard** (`sources/w8-src-arxiv-2606-07703-dense-attention-oracle`) — paper · SOTA2 Research (formerly WizWand) - Hongxing Wang, Harenome Razanajato, Zhen Zhang, Yujie Yuan, Hongsheng Liu
 - **HuBERT-EE: Early Exiting HuBERT for Efficient Speech Recognition (arXiv:2204.06328)** (`sources/pap-mm-hubert-ee`) — paper · arXiv
 - **HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction of Hidden Units (arXiv:2106.07447)** (`sources/pap-mm-hubert`) — paper · arXiv
 - **Hydra: Sequentially-Dependent Draft Heads for Medusa Decoding** (`sources/sd-hydra-paper`) — paper · arXiv (Ankner, Parthasarathy, Nrusimha, Rinard, Ragan-Kelley, Brandon)
@@ -2398,6 +2403,7 @@ and t
 - **Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism** (`sources/flop2-megatron-lm`) — paper · arXiv
 - **MicroMix: Efficient Mixed-Precision Quantization with Microscaling Formats for Large Language Models** (`sources/qlab-micromix-paper`) — paper · arXiv
 - **Microscaling Data Formats for Deep Learning** (`sources/quant-mx-paper`) — paper · arXiv
+- **MiniMax Sparse Attention (arXiv:2606.13392, MiniMax-AI) - authors' own technical report for the MiniMax-M3 model card** (`sources/w8-src-arxiv-2606-13392-minimax-msa`) — paper · MiniMax-AI
 - **MiniMax-01: Scaling Foundation Models with Lightning Attention** (`sources/arch-minimax-01`) — paper · MiniMax (arXiv)
 - **MiniMax-01: Scaling Foundation Models with Lightning Attention** (`sources/pap-arch-2501-08313`) — paper · arXiv
 - **MiniMax-M1: Scaling Test-Time Compute Efficiently with Lightning Attention** (`sources/pap-arch-2506-13585`) — paper · arXiv
@@ -2458,6 +2464,7 @@ and t
 - **Qwen-VL: A Versatile Vision-Language Model for Understanding, Localization, and Text Recognition (arXiv:2308.12966)** (`sources/pap-mm-qwen-vl`) — paper · arXiv
 - **Qwen2-Audio Technical Report (arXiv:2407.10759)** (`sources/pap-mm-qwen2-audio`) — paper · arXiv
 - **Qwen2-VL: Enhancing Vision-Language Model's Perception of the World at Any Resolution** (`sources/pap-attn-qwen2-vl-mrope`) — paper · arXiv
+- **Qwen3 Technical Report (arXiv:2505.09388, Qwen / Alibaba) - the authors' own evaluation tables for Qwen3-8B and the Qwen3 family** (`sources/w8-src-arxiv-2505-09388-qwen3-technical-report`) — paper · Qwen (Alibaba)
 - **RULER paper (arXiv:2404.06654v3) Yi-34B model analysis section and per-category effective-length tables** (`sources/ctx-src-ruler-paper-yi-ablation`) — paper · arXiv / NVIDIA
 - **RULER: What's the Real Context Size of Your Long-Context Language Models? (arXiv:2404.06654)** (`sources/mkt-ruler-long-context-benchmark`) — paper · arXiv
 - **RWKV: Reinventing RNNs for the Transformer Era** (`sources/arch-rwkv`) — paper · Peng et al. / EleutherAI (arXiv)
@@ -4036,11 +4043,11 @@ and t
 
 ## Coverage
 
-Total records: **3979**
+Total records: **3986**
 
 | group | records |
 |---|---|
-| severity:major | 231 |
+| severity:major | 233 |
 | backend:cuda | 77 |
 | severity:blocker | 72 |
 | severity:minor | 68 |
