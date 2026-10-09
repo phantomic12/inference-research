@@ -1,28 +1,29 @@
 {
-  "id": "minimax-m3-fp8kv-sm80-gpqa-diamond-vs-official-api",
-  "type": "benchmark",
-  "name": "MiniMax-M3-AWQ-INT4 with an FP8 E5M2 KV cache on 8xA800: GPQA Diamond measured against the same harness as the official API",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-03",
-  "sources": [
-    "qgotcha-vllm-50881-fp8kv-cudagraph-scatter"
-  ],
-  "engine_id": "vllm",
-  "accelerator_ids": [
-    "nvidia-a100-80gb-sxm4"
-  ],
-  "interconnect_ids": [
-    "nvlink-3",
-    "nvswitch-2"
-  ],
-  "model": "MiniMax-M3-AWQ-INT4 (weight-only int4) with --kv-cache-dtype fp8_e5m2",
-  "format_id": "fp8-e5m2",
-  "metric": "quality",
-  "value": 0.909,
-  "unit": "accuracy (GPQA Diamond fraction correct)",
-  "methodology": "8x A800-80GB (SM80, TP=8), --kv-cache-dtype fp8_e5m2 --max-model-len 1048576 --attention-backend TRITON_ATTN --block-size 128 --enable-chunked-prefill, plus the reporter's three patches (@eager_break_during_capture on MiniMaxM3SparseAttention._insert_kv, dense KV writes routed through CUDA reshape_and_cache_flash with a software fp8 convert, SM89 guards relaxed to SM80). GPQA Diamond scored by ONE harness against BOTH this build and the official MiniMax API, so the two numbers differ only in the serving stack. Decode ~86 tok/s, about 90 percent of the bf16 baseline; a full 1,048,576-token window fits with a pool of ~1.22M tokens.",
-  "measured_by": "third_party",
-  "reproducible": true,
-  "notes": "The comparison design is the transferable part: one harness, both targets, official API as the control - which is the only way to separate 'fp8 KV costs 2.5 points' from 'the API serves something better'. The 2.5 pp delta (93.4% for the official API vs 90.9% for this fp8-KV build) is a KV-cache precision cost on SM80, where e5m2 has 2 mantissa bits and there is no native fp8 to fall back on. Note this record's value is the OFFICIAL API number (93.4% measured in the same harness); the API is not an accelerator-gated engine, so it is stored against the local build's deployment for context. Pairs with gotcha fp8-kv-cache-cudagraph-python-scatter-corruption.\nINTERCONNECT IDS FILLED 2026-10-04: interconnect_ids was empty; it now carries the interconnect list of the accelerator record(s) this run names (nvidia-a100-80gb-sxm4). BASIS AND ITS LIMITS, stated because this field is easy to over-read: it records the FABRIC PRESENT IN THE HARDWARE CONFIGURATION, which is how every previously-filled record in this repo reads it, not traffic measured over that fabric. The clearest evidence for that convention is that single-GPU records already carry a scale-up fabric here - trtllm-llama31-8b-fp8-h100-1k1k-tps is 1x H100 at TP=1 and carries ['nvlink-4','nvswitch-4'] - and that host-link-only records carry a PCIe value (arc-pro-b70-mlperf-v6-1-llama2-70b-offline-tokens carries ['pcie-gen5'] on 4x Arc Pro B70, which has no GPU-to-GPU fabric at all). So a value here does NOT mean the interconnect was exercised by this particular workload, and must not be cited as evidence that it was. Whether the run actually crossed that fabric is a question about TP/EP/PP size, which this repo records in methodology, not here. NOT INVENTED: nothing was filled where the accelerator record itself carries no interconnect, so this field stays empty for any part whose own record has none - which is the honest state for a single-socket Apple sOC and for parts whose vendor publishes no host interface."
+ "id": "minimax-m3-fp8kv-sm80-gpqa-diamond-vs-official-api",
+ "type": "benchmark",
+ "name": "MiniMax-M3-AWQ-INT4 with an FP8 E5M2 KV cache on 8xA800: GPQA Diamond measured against the same harness as the official API",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-08",
+ "sources": [
+  "qgotcha-vllm-50881-fp8kv-cudagraph-scatter",
+  "w8-src-arxiv-2606-13392-minimax-msa"
+ ],
+ "engine_id": "vllm",
+ "accelerator_ids": [
+  "nvidia-a100-80gb-sxm4"
+ ],
+ "interconnect_ids": [
+  "nvlink-3",
+  "nvswitch-2"
+ ],
+ "model": "MiniMax-M3-AWQ-INT4 (weight-only int4) with --kv-cache-dtype fp8_e5m2",
+ "format_id": "fp8-e5m2",
+ "metric": "quality",
+ "value": 0.909,
+ "unit": "accuracy (GPQA Diamond fraction correct)",
+ "methodology": "8x A800-80GB (SM80, TP=8), --kv-cache-dtype fp8_e5m2 --max-model-len 1048576 --attention-backend TRITON_ATTN --block-size 128 --enable-chunked-prefill, plus the reporter's three patches (@eager_break_during_capture on MiniMaxM3SparseAttention._insert_kv, dense KV writes routed through CUDA reshape_and_cache_flash with a software fp8 convert, SM89 guards relaxed to SM80). GPQA Diamond scored by ONE harness against BOTH this build and the official MiniMax API, so the two numbers differ only in the serving stack. Decode ~86 tok/s, about 90 percent of the bf16 baseline; a full 1,048,576-token window fits with a pool of ~1.22M tokens.",
+ "measured_by": "third_party",
+ "reproducible": true,
+ "notes": "The comparison design is the transferable part: one harness, both targets, official API as the control - which is the only way to separate 'fp8 KV costs 2.5 points' from 'the API serves something better'. The 2.5 pp delta (93.4% for the official API vs 90.9% for this fp8-KV build) is a KV-cache precision cost on SM80, where e5m2 has 2 mantissa bits and there is no native fp8 to fall back on. Note this record's value is the OFFICIAL API number (93.4% measured in the same harness); the API is not an accelerator-gated engine, so it is stored against the local build's deployment for context. Pairs with gotcha fp8-kv-cache-cudagraph-python-scatter-corruption.\nINTERCONNECT IDS FILLED 2026-10-04: interconnect_ids was empty; it now carries the interconnect list of the accelerator record(s) this run names (nvidia-a100-80gb-sxm4). BASIS AND ITS LIMITS, stated because this field is easy to over-read: it records the FABRIC PRESENT IN THE HARDWARE CONFIGURATION, which is how every previously-filled record in this repo reads it, not traffic measured over that fabric. The clearest evidence for that convention is that single-GPU records already carry a scale-up fabric here - trtllm-llama31-8b-fp8-h100-1k1k-tps is 1x H100 at TP=1 and carries ['nvlink-4','nvswitch-4'] - and that host-link-only records carry a PCIe value (arc-pro-b70-mlperf-v6-1-llama2-70b-offline-tokens carries ['pcie-gen5'] on 4x Arc Pro B70, which has no GPU-to-GPU fabric at all). So a value here does NOT mean the interconnect was exercised by this particular workload, and must not be cited as evidence that it was. Whether the run actually crossed that fabric is a question about TP/EP/PP size, which this repo records in methodology, not here. NOT INVENTED: nothing was filled where the accelerator record itself carries no interconnect, so this field stays empty for any part whose own record has none - which is the honest state for a single-socket Apple sOC and for parts whose vendor publishes no host interface.\n\nPROVENANCE SEARCHED 2026-10-08 (w8-bench-src) - and the search produced the repo's cleanest example of a Tier-A vendor document that exists and does NOT contain the number. Added [[w8-src-arxiv-2606-13392-minimax-msa]], MiniMax's own 'MiniMax Sparse Attention' (arXiv:2606.13392, 17 authors, 30pp, submitted 11 Jun 2026, v2 12 Jun 2026), which was fetched and read in full. It is the authors' report on the MSA attention that powers MiniMax-M3, and the MiniMax-M3 Hugging Face card links to it. Its own Table 5 reports, for the matched-checkpoint comparison on a 109B model: MMLU 67.0 / MMLU-Pro 38.5 / BBH 67.7 / GPQA HARD 25.9 (Full), 67.2 / 38.8 / 66.6 / 26.3 (MSA-PT), 66.8 / 39.1 / 66.1 / 26.3 (MSA-CPT), plus GSM8K 76.2, ARC-C 82.7, RULER-32K 75.0 and the image/video rows. It contains no GPQA DIAMOND row, no AIME, no MATH-500 and no PostTrainBench decomposition. The model card's own benchmark.jpeg was transcribed on 2026-10-08 and likewise has no GPQA Diamond row: its nearest row is PostTrainBench (MiniMax M3 = 37.1), whose methodology footnote defines it as five benchmarks (AIME2025, BFCL, GPQA MAIN, GSM8K, HumanEval) across 4 base models with an LLM-as-judge - not GPQA Diamond, and not a number for this model. So the vendor publishes its own quality evaluation, and 93.4% is not in it. VALUE UNCHANGED at 93.4 and the reason is now explicit: this figure is a ONE-HARNESS comparison in which the official MiniMax API was scored BY THE SAME REPORTER'S harness as the local fp8-KV build, so the two numbers differ only in the serving stack. That is a property of a single third-party experiment, which is exactly why it cannot be sourced to the vendor - the vendor's number is not the same measurement, and 25.9 GPQA-Hard on a 109B matched-checkpoint checkpoint is neither a confirmation nor a contradiction of 93.4 GPQA-Diamond on a served 428B API. Recorded as a verified negative in [[gotchas/w8-no-vendor-publishes-tok-s-for-these-six-shapes]]."
 }
