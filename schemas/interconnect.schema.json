@@ -55,7 +55,7 @@
         "number",
         "null"
       ],
-      "description": "per link, unidirectional"
+      "description": "the vendor's OWN published figure, NOT a normalised rate. The granularity differs per record - per link, per port, per lane, per chip, per NPU, per GPU, per 8-GPU domain, per package - and bandwidth_basis names which one applies, so two values are comparable only once BOTH their granularity and their direction (see `way`) match. This field is not always per link and not always one direction: cxl-2-0, cxl-3-x, cxl-4-0 and iluvatar-bi-v100-chip-to-chip hold BIDIRECTIONAL AGGREGATES, while the pcie-gen* family and the amd-infinity-fabric-* records hold the per-direction half. A null here carries no value at all and FOUR different reasons produce it, none distinguishable from the typed value alone, so the record must say which in bandwidth_basis: (1) definitional - the kind is structurally not a link rate, e.g. roce is a transport and cerebras-wafer-mesh publishes bits/s over a whole wafer; (2) sourcing - the vendor publishes no figure, e.g. biren-blink, groq-lpu-interconnect, tenstorrent-warp100, w7c-google-tpu-ici-v3 and w7c-google-tpu-ici-v4; (3) verified negative - the source was read and the figure was absent, the one null kind that verified_negatively flags; (4) vendor-silent - nobody has checked, or the one source that could say refuses. Reasons (1) and (2) are about the vendor, (3) is about this repo's own search, and only (4) is a standing gap."
     },
     "bandwidth_basis": {
       "type": [
@@ -68,6 +68,19 @@
         "integer",
         "null"
       ]
+    },
+    "way": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "each",
+        "both",
+        "unknown",
+        null
+      ],
+      "description": "WHICH WAY(S) bandwidth_gbps COUNTS - the field that replaces the direction sentence every record used to have to write in prose. each = the figure is ONE direction. both = the figure is BOTH directions summed, i.e. the vendor's bidirectional aggregate. unknown = the vendor states no direction and none is inferred (metaxlink, moore-threads-mtlink, cambricon-mlu-link). null = not established, which is the state of every record written before this field existed, and is NOT the same as unknown. The vendor evidence behind each member: PCI-SIG prints BIDIRECTIONAL on its own pages, so its Gen6 x16 headline of 256 GB/s is the sum of both directions and the per-direction value is half; Intel's Gaudi 3 paper gives both halves in one cell ('total bandwidth of 128 GB/sec, with 64 GB/sec available in each direction'); AMD's CDNA 2 white paper endnote MI200-29 carries its own formula with a #directions factor ('Baud Rate * #lanes * #directions * #links / 8'), which is what confirms AMD's aggregates are bidirectional; Huawei restates its own bidirectional figure as unidirectional elsewhere in the same document; and Google's per-generation ICI rows are bidirectional aggregates whose typed values are the per-direction half. NEVER halve, double, sum or compare two records' values without reading `way` on BOTH first - cxl-4-0 and iluvatar-bi-v100-chip-to-chip hold aggregates while the pcie-gen* family holds halves, and treating one as the other is the 2x error this field exists to stop."
     },
     "topology": {
       "type": [
@@ -92,6 +105,13 @@
         "string",
         "null"
       ]
+    },
+    "verified_negatively": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "true only when the ABSENCE of an interconnect capability was actively confirmed against a primary source - the vendor's own page or spec sheet, fetched and read at the URL named in bandwidth_basis or notes. Without this, 'checked' and 'never checked' are the same record: a null bandwidth on an ordinary-looking record reads as 'not applicable', which is how a reader concludes the part has no fabric. The worked example is iluvatar-bi-v150-and-bi-v250-fabric, whose BI-V150 product page returns HTTP 200 with 3,970 readable characters and ZERO occurrences of 规格 (specification) / 接口 (interfaces) / PCIe / GB/s / 互联 (interconnect) - a measured negative about the vendor's DISCLOSURE, not a claim that the part has no fabric. A page that ERRORS is not evidence of absence: the sibling BI-V250 URL returns an application-error page, so this field stays false or null there. null = not established."
     },
     "notes": {
       "type": "string"
