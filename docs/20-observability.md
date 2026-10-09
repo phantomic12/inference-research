@@ -184,9 +184,38 @@ autoscaling signal specifically — see [19-production-operations.md](19-product
 
 ### 5.1 vLLM — the reference surface
 
-The most complete of any engine: 39 metric names in `vllm/v1/metrics/loggers.py` plus 7
-in the spec-decode metrics module, all prefixed `vllm:`
-([[engines/obs-vllm-observability]]).
+The most complete of any engine: **41** metric names declared in
+`vllm/v1/metrics/loggers.py` plus **7** in the spec-decode metrics module, all
+prefixed `vllm:` ([[engines/obs-vllm-observability]]).
+
+**This count is a moving target and this line has already been wrong once.**
+The record was written against 39 names; upstream had 40 on the day the record
+was verified (2026-10-04, after the KV-fetch stage gauges landed) and 41 on
+2026-10-06 (after the per-source cached-prompt-token counter), because upstream
+adds metrics on a moving branch. **Count from the file, not from this document,
+and not from a record's `notes`.** A reader who re-counts and gets a different
+number from this line should trust their own count and treat the difference as
+drift, not as an error in their method.
+
+**Do not "fix" the path either — the file has not moved.** The vLLM metric
+collectors are still where this document says they are: `loggers.py` **and**
+`buckets.py` are both on `main` as of 2026-10-08 (checked against the upstream
+recursive tree). A wave-7 report implied both had been relocated and a later
+path sweep suspected the same of `buckets.py`; neither is true, and the sweep
+that checked it recorded the correct result — "PATH SWEEP RESULT: NO REPAIR
+NEEDED" in [[sources/w3m-vllm-buckets-module]]. Rewriting these paths to point
+wherever upstream had *at some point* lived would have replaced a correct
+citation with a wrong one. **The count above was the only edit this line needed.**
+
+**The one vLLM metrics path that really is gone is `vllm/engine/metrics.py`, and
+it is gone from `main`, not from the tag that cites it.** TensorRT-LLM's
+collector still points at
+`vllm-project/vllm/blob/v0.10.0rc1/vllm/engine/metrics.py#L30` and that tag URL
+resolves, so the citation in §24 is sound; but a reader following the *same path*
+on `main` gets a 404, because vLLM moved the collector to
+`vllm/v1/metrics/loggers.py`. **A permalink with no tag or commit is a citation
+with no revision** — this is the same class of hazard as §3 in
+[24-metrics-surface-selection.md](24-metrics-surface-selection.md).
 
 **Do not read metric names from memory.** `vllm:gpu_cache_usage_perc`,
 `vllm:num_requests_swapped` and `vllm:cpu_cache_usage_perc` are all gone or renamed, and

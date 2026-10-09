@@ -39,7 +39,8 @@ Every row below requires all of these. They are not hedges; they are the
 conditions under which the arithmetic is even meaningful.
 
 **1. The throughput is AGGREGATE, not single-user.** Every joinable record in
-the repo is `tps_aggregate`. `--single-user` returns **zero rows**. A row here is
+the repo is `tps_aggregate`. `--single-user` returns **one row** and that row is
+not what a user pays. A row here is
 a *fleet-average* cost at whatever concurrency that benchmark used — it is not
 what one user pays. The repo documents exactly how wrong this can be:
 [[benchmarks/mpt7b-a100-bs1-per-user-decode-tps]] gives 57.6 tok/s for one user
@@ -49,6 +50,18 @@ aggregate at batch 64, and
 user in that same batch-64 run. Aggregate rose 13.9x while the experienced rate
 **fell 4.6x**. A single-user cost cannot be derived from these records; see
 "What the records cannot answer".
+
+**Why the one `--single-user` row is the trap, not the exception.** It joins
+[[benchmarks/llama-cpp-mi300x-deepseek-v3-671b-q4-decode-tok-s]] (36.53 tok/s,
+per-request batch-1 decode) against the Oracle MI300X rate, and the tool is
+*right* to emit it — but note what it is: the record's own methodology says the
+rig was **8x MI300X** and the run was llama.cpp's `tg` benchmark, so the tool
+divides 36.53 by 8 (`BENCH_JOIN` carries `gpus=8, evidence="8x AMD Instinct
+MI300X"`) to get 4.57 tok/s per GPU. A reader who filters to `--single-user`
+gets one row and could easily read it as "the single-user cost of DeepSeek-V3".
+It is that, arithmetically, on an 8-GPU node quoting a cloud asking rate, from a
+**community run with no warmup or clock state recorded**. An empty result here
+would have been safer, and a single row is not a population.
 
 **2. Price tier is not interchangeable, and rows are NOT comparable across
 tiers.** The `tier` column is load-bearing:
@@ -362,10 +375,11 @@ repo: a negative asserted on one channel, generalised to the whole market.
 closed **on the supply side and still open in the tooling**.
 `tools/cost_per_token.py` is driven by a hand-maintained `PRICE_QUOTES` table rather
 than by scanning `data/supply`, so the new record does not by itself reach the tool:
-`python tools/cost_per_token.py gaps` still lists **11 records on
-`amd-instinct-mi355x` and 2 on `amd-instinct-mi300x`** as having no priced
-per-GPU-hour supply record. Adding two entries of the form
-`dict(accel="amd-instinct-mi300x", usd=6.00, tier="on-demand", gpus=1, basis="BM.GPU.MI300X.8 = $6.00")`
+`python tools/cost_per_token.py gaps` still lists **12 AMD MI3xx rows** (11
+`amd-instinct-mi355x`, 1 `amd-instinct-mi300x`) with no priced per-GPU-hour supply
+record, plus the 2 head-to-head MI300X/H100 rows that are correctly unpriceable as
+single rows. Adding the two entries of the form
+`dict(accel="amd-instinct-mi300x", usd=6.00, tier="on-demand", gpus=8, basis="...")`
 and its MI355X equivalent is an edit in `tools/`, outside this document's scope.
 The 19 AMD MI3xx throughput records in the repo — including
 [[benchmarks/mi355x-mlperf-v6-0-llama2-70b-wmxfp4-offline-tokens]] at 103,480 tok/s,
@@ -432,15 +446,33 @@ joined record pairs a prefill price with a prefill rate.
 
 Of **145** benchmark records with a positive `value`:
 
-- **15 joinable — 10.3%.** 203 rows, 17 supply records, 11 models, 13
-  hardware×model combinations, 136 provider×model pairs.
-- **65 throughput records named in `--gaps`** as unpriceable, which together with
-  the 15 joined accounts for all **80** records whose `metric` is one of
-  `decode_tok_s`, `tok_s_per_user` or `tps_aggregate`.
+- **17 joinable — 11.7%.** 205 rows, 18 supply records, 13 models, 15
+  hardware×model combinations, 138 provider×model pairs. A "joinable" record is
+  one throughput record with a positive `value`, an `accelerator_ids` entry, and a
+  matching per-GPU-hour price — that is exactly the `BENCH_JOIN` table, and every
+  one of its 17 entries produces at least one priced row. The share is 17 of the
+  145 positive-value records, or 17 of the **80** throughput records, which is the
+  more honest denominator for this claim.
+- **63 throughput records named in `--gaps`** as unpriceable, which together with
+  the 17 `BENCH_JOIN` entries accounts for all **80** records whose `metric` is
+  one of `decode_tok_s`, `tok_s_per_user` or `tps_aggregate`. The two counts are
+  row-level and record-level respectively: `BENCH_JOIN` holds 17 benchmark ids and
+  every one of them produces at least one priced row, while `--gaps` lists 63
+  benchmark ids that do not. The 2 head-to-head MI300X/H100 rows sit in `EXCLUDED`
+  with a reason of their own and appear under `--gaps` for that reason, not as
+  join failures.
 - **The other 65 positive-value records are not throughput records at all** and are
   therefore outside this join's denominator by construction: 33 `quality`,
   10 `dimensionless_ratio`, 8 `ttft_ms`, 7 `prefill_tok_s`, 4 `speedup_ratio`,
   3 `itl_ms`.
+
+**The row count and the record count are different denominators, and the row count
+is the one that moves.** `python tools/cost_per_token.py` printed **205** rows on
+the run this line was checked; the earlier revision of this document said 203. The
+rows are a cross-product — each throughput record joined against every price for
+the accelerator and tier it can use — so the row count grows whenever a price
+record is added, without a single new benchmark existing. **Re-read the count from
+the tool's own header line before quoting it.**
 
 **This document names 28 of the 145 positive-value records; 117 are never
 mentioned here**, and the gap is concentrated in exactly the classes a cost
@@ -448,16 +480,23 @@ model needs and this join cannot serve: **33 of the 51 `tps_aggregate` records
 and 17 of the 24 `decode_tok_s` records appear nowhere in this doc**, because
 they sit on hardware no price record covers (AMD Instinct, GB200/GB300 NVL72,
 Apple, consumer Radeon, Gaudi2, Arc) or on a `benchmark`-only channel with no
-accelerator id to join on. **65 positive-value records have no accelerator id
+accelerator id to join on. **44 positive-value records have no accelerator id
 at all** and are structurally unpriceable regardless of how many prices exist.
 Where another document carries those records, cite it; the point of stating the
-count here is that a 10.3% join is not a pricing model, it is a worked example
+count here is that a 11.7% join is not a pricing model, it is a worked example
 on the fifth of the corpus the price records happen to reach.
 
-**Every joinable row is aggregate. There are zero single-user rows.** The join
-answers "what does a saturated fleet cost per million output tokens", which is a
-real and useful question. It does not answer "what will my user pay per token",
-which is usually the question being asked.
+**Every aggregate join is a fleet average, and the one single-user row is a trap
+worth its own warning — see §assumptions 1 above.** The join emits **1**
+single-user row out of 205, and it exists because exactly one per-request
+throughput record has an accelerator id that a price record covers. **A
+single-user count this small is not a population and should never be quoted as
+one.** The other 204 rows are aggregate.
+
+**Almost every joinable row is aggregate — 204 of 205 — and the one exception is
+not a general result.** The join answers "what does a saturated fleet cost per
+million output tokens", which is a real and useful question. It does not answer
+"what will my user pay per token", which is usually the question being asked.
 
 Three findings the join makes visible that were not obvious from the records
 alone:
@@ -475,10 +514,10 @@ alone:
 
 ## Reproducing
 
-    python tools/cost_per_token.py                # 203 rows
+    python tools/cost_per_token.py                # 205 rows
     python tools/cost_per_token.py explain        # per-row arithmetic
     python tools/cost_per_token.py gaps           # the unpriceable records
-    python tools/cost_per_token.py --single-user  # zero rows, by design
+    python tools/cost_per_token.py --single-user  # one row, not a population
     python tools/test_tools.py                    # the evidence check is tested
 
 The tool stores, for every price, the literal substring of the `price_basis` it
