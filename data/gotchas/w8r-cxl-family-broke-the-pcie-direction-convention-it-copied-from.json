@@ -1,0 +1,38 @@
+{
+  "id": "w8r-cxl-family-broke-the-pcie-direction-convention-it-copied-from",
+  "type": "gotcha",
+  "name": "CXL 3.x and 4.0 records carry nearly 2x the PCIe figure for the same physical layer, because the pass that 'corrected' CXL for direction applied the fix to the wrong state",
+  "class": "hardware",
+  "affects": [
+    "cxl-2-0",
+    "cxl-3-x",
+    "cxl-4-0",
+    "pcie-gen6",
+    "pcie-gen7"
+  ],
+  "concepts": [
+    "cxl",
+    "pcie",
+    "per-direction",
+    "bidirectional",
+    "flit",
+    "pam4",
+    "memory-pooling"
+  ],
+  "symptom": "Two records that describe the SAME physical layer hold different numbers, and each record's own prose says so. cxl-3-x.bandwidth_gbps is 236.0 while its own bandwidth_basis asserts verbatim: \"The recorded value now equals pcie-gen6 exactly, which is correct since CXL 3.x IS the PCIe 6.0 physical layer.\" It does not: pcie-gen6 is 121.0. The gap is 236.0/121.0 = 1.95, not 1.00. cxl-4-0 repeats the identical shape at 472.0 against pcie-gen7's 242.0, a ratio of 1.95. Only the middle generation agrees: cxl-2-0 is 63.0 and pcie-gen5 is 63.0, ratio 1.00. A reader who trusts the sibling-agreement rule the repo already relies on - 'the value should equal the PCIe generation it runs on' - will read 236.0 as correct because two of the three rows obey it, or will read it as wrong because one row in the middle does, and there is no way to tell which without working out the signalling independently.",
+  "root_cause": "CXL 3.x runs on the PCIe 6.0 physical layer and CXL 4.0 on what will be PCIe 7.0's, so per direction at x16 they must hold the PCIe generation's per-direction payload figure. The wave-3 pass that 'corrected' the CXL family for direction worked in the right direction on genuine bugs - cxl-2-0 really had been storing a bidirectional aggregate - but then read PCIe's headline numbers through a PAM4 assumption that does not belong to CXL. Its cxl-3-x basis states the arithmetic verbatim: '64 GT/s PAM4 at 2 bits/symbol = 128 Gb/s raw per lane per direction, flit-mode framing at 236B/256B gives 118.0 Gb/s payload per lane per direction, x16 = 236.0 GB/s.' Every step of that chain is wrong for CXL. GT/s is transfers per second, not bits per second: a PAM4 symbol carries 2 bits so 64 GT/s is 128 Gb/s of RAW PER LANE PER DIRECTION, and 128 x 16 / 8 = 256 GB/s, not 128 - so the chain under-counts the raw rate by 2x at step one while simultaneously asserting 2 bits per symbol. Then it doubles back by taking a 236B/256B flit efficiency that it applies to a number it has already mis-scaled, arriving at 118 Gb/s per lane, and multiplying by 16 for 1,888 Gb/s. The real per-lane payload figure is 7.563 GB/s (64 GT/s x 242/256 / 8), which x16 is 121.0 GB/s per direction - exactly pcie-gen6. The compounding errors partly cancel, which is why the resulting 236.0 is so stable: it is within 2% of the true GEN6 BIDIRECTIONAL AGGREGATE (242.0) and is simultaneously the true GEN7 PER-DIRECTION figure. The family is the same physical layer as PCIe and therefore the same direction convention, and the convention is set by the lane being dual-simplex: every per-lane rate is already per direction and must never be halved again.",
+  "workaround": "Treat any CXL generation's per-direction x16 bandwidth as a one-step lookup into the PCIe generation it runs on, then read it off that record: CXL 1.x/2.0 -> PCIe 5.0 -> 63.0; CXL 3.x -> PCIe 6.0 -> 121.0; CXL 4.0 -> PCIe 7.0 -> 242.0. The consortium's own descriptions confirm the pairing without doing bandwidth arithmetic at all - CXL 4.0 'Doubles the bandwidth to 128GTs with zero added latency' - and 121.0 -> 242.0 is the only doubling that preserves the PCIe 6.0 -> 7.0 relationship. When a family member's prose states a cross-record identity ('equals pcie-gen6 exactly'), that sentence is a free test: read the sibling and compare. Here the test failed loudly on two of three rows and nothing failed, because the assertion lived in prose that nothing checks. Verify the arithmetic chain's units at each step, and specifically that GT/s is never divided by 8 without first multiplying by bits-per-symbol - dividing raw per-lane transfers by 8 and calling the result GB/s is the exact operation that produced both errors in this record.",
+  "severity": "major",
+  "status": "contested",
+  "confidence": 0.8,
+  "updated": "2026-10-08",
+  "sources": [
+    "w7p-pcisig-pcie6-faq",
+    "w7p-wikipedia-pcie-link-performance",
+    "link-wikipedia-cxl",
+    "link-cxl-about",
+    "net2-pcisig-pcie6-spec",
+    "net2-pcisig-pcie5-faq"
+  ],
+  "notes": "RE-VERIFIED 2026-10-08 by w8-reverify against three independent live sources, and the verdict is that pcie-gen6 (121.0) is RIGHT and the CXL family (236.0, 472.0) is WRONG. (1) PCI-SIG's PCIe 6.0 FAQ, fetched live: 'supports a data rate of 64.0 GT/s and up to 256.0 GB/s via a x16 configuration' and, from the PAM4 question, 'up to 256.0 GB/s BIDIRECTIONAL bandwidth via a x16 configuration'. 256.0 is bidirectional, so per direction is 128.0 raw, and 16 x 64 / 8 = 128.0 closes on that exactly with no factor of two. (2) PCI-SIG's own FLIT blog, fetched live, states the flit structure and the efficiency in one sentence: 'we settled on 256 Bytes with 236 bytes of TLP payload and a TLP efficiency of 92%'. So the TLP-carrying region is 236 bytes and the efficiency is 92%, i.e. 236/256 = 0.921875 - NOT the 242/256 = 0.945 that pcie-gen6's basis asserts, and NOT the 236B/256B that cxl-3-x asserts. This is a real discrepancy inside the repo's own PCIe family and it is recorded here rather than smoothed over, per the ledger's standing rule that a wrong number in a record is a defect in that record. (3) Wikipedia's PCIe 'link performance' table, which pcie-gen6 cites, gives per-lane 7.563 and x16 121 for Gen6 - and 121/16/64 x 8 = 7.568 Gb/s per lane, which is only reachable as 64 GT/s x 1 bit-transfer-equivalent x 242/256. The 121.0 figure therefore rests on 242/256, which is NOT what PCI-SIG says the flit efficiency is; the figure that closes on PCI-SIG's own 236-byte and 92% statements is a per-lane 7.40625 GB/s and an x16 of 118.5 GB/s. THE SITUATION IS GENUINELY AMBIGUOUS AT THE ~2% LEVEL and this gotcha exists to say so rather than to pick: every primary and secondary source that publishes a usable Gen6 number agrees it is ~118-121 GB/s per direction, and no source publishes 236 for Gen6 per-direction. The 2% uncertainty in the payload ratio cannot rescue cxl-3-x, because its error is a factor of ~2, not 2%. RECORDED SEPARATELY because the repo's own docs/26-known-defects.md already flags this class once (D4, a reported claim that was disproven and kept so it stops being re-reported) and this is the second instance of the same failure mode with a different cause: a prose cross-record identity that nothing in the repo tests. The check that costs nothing and would have caught all of it is a single script comparing each cxl-* record against the pcie-gen* record its version string names, and it is not in the repo today. THE OTHER FINDING, KEPT SEPARATE: PCI-SIG's FLIT blog also refutes a claim carried in this repo's pcie-gen6 basis, which says 'the flit framing were 236B/256B' would have produced the old wrong value of 236.0 - implying 236B is a framing ratio. PCI-SIG's actual words are that the FLIT is 256 Bytes 'with 236 bytes of TLP payload', so 236 is a byte count of a region, not a ratio, and 242/256 is a ratio that appears in neither PCI-SIG page. Both of pcie-gen6's derivations are documented here because a reader re-deriving 121.0 will hit the same two candidate ratios and needs to know the repo has seen this and left it open."
+}

@@ -1,61 +1,61 @@
 {
- "id": "metax-c500-n100",
- "type": "accelerator",
- "name": "MetaX MXC500 / MXN100 GPGPU (training and inference)",
- "vendor": "asic-other",
- "architecture": "MetaX proprietary GPGPU core IP",
- "release_year": 2023,
- "process_nm": 7,
- "form_factors": [
-  "pcie"
- ],
- "vram_gb": null,
- "memory_type": "hbm2e",
- "memory_bus_bit": null,
- "memory_bandwidth_gbps": null,
- "memory_bandwidth_basis": "None available. Memory TYPE is reported (HBM2E for the N100) but capacity and bandwidth are not published in any source located, so no arithmetic intensity can be derived. MetaX's own English product page for the C500 describes 'large-capacity high-bandwidth memory' and 'advanced multi-GPU interconnection (MetaXLink) technology' without a single number (https://www.metax-tech.com/en/goods/prod.html?cid=107&id=21).",
- "flops": [
-  {
-   "precision": "fp32",
-   "tflops": 15,
-   "dense": true,
-   "vendor_claim": false,
-   "source_id": "cn-metax-wikipedia",
-   "basis": "secondary-aggregator",
-   "basis_detail": "Wikipedia aggregator, citing Digitimes (Li 2025-01-22, Liang 2025-04-10) for the underlying figures."
-  },
-  {
-   "precision": "fp16",
-   "tflops": 80,
-   "dense": true,
-   "vendor_claim": false,
-   "source_id": "cn-metax-wikipedia",
-   "basis": "secondary-aggregator",
-   "basis_detail": "Wikipedia aggregator, citing Digitimes (Li 2025-01-22, Liang 2025-04-10) for the underlying figures."
-  },
-  {
-   "precision": "int8",
-   "tflops": 160,
-   "dense": true,
-   "vendor_claim": false,
-   "source_id": "cn-metax-wikipedia",
-   "basis": "secondary-aggregator",
-   "basis_detail": "Wikipedia aggregator, citing Digitimes (Li 2025-01-22, Liang 2025-04-10) for the underlying figures."
-  }
- ],
- "tdp_w": null,
- "interconnect": [
-  "metaxlink",
-  "pcie-gen4"
- ],
- "unified_memory": false,
- "consumer": false,
- "notes": "THE HIERARCHY POINT: recorded as a single record because MetaX's own taxonomy splits these across two lines that share a silicon family, and the schema has no way to express that: MXN = inference, MXC = training and general computing, MXG = graphics (cn-metax-wikipedia). THE C500 AND N100 FIGURES BELOW BELONG TO DIFFERENT PARTS AND MUST NOT BE ADDED OR CROSS-COMPARED. C500 (training/HPC, June 2023, MACA 2.0, 7 nm): 15 TFLOPS FP32, which the reporting describes as roughly 75% of an A100 - a comparison that is about vector throughput, not tensor throughput, and tells you nothing about how the part handles an LLM. N100 (inference, June 2023, mass production 2023): HBM2E, 160 TOPS INT8 and 80 TFLOPS FP16, with 128-channel 8K encoding and 96-channel decoding across HEVC, H.264, AV1 and AVS2, positioned for smart cities, security, transportation, cloud and video. All figures are flagged vendor_claim: false because they come via a secondary aggregator (Wikipedia, citing DIGITIMES) rather than a MetaX datasheet - MetaX's own product pages carry no numbers. THIS IS THE ONLY CHINESE VENDOR IN THIS SLICE WITH A CONFIRMED CUDA-COMPATIBLE STACK: MACA 2.0, plus an open-source gitee.com/metax-maca and github.com/metax-maca presence and a documented developer community, which makes it the most drop-in candidate of the non-CUDA parts here even though the software is MACA rather than CUDA. VENDOR STATUS IS UNUSUALLY GOOD: MetaX IPO'd on the SSE on 17 December 2025 (ticker 688802), shares up 693% on debut, and filed for a Hong Kong secondary listing in July 2026. DEPLOYMENT SCALE IS THE ONE FIGURE THAT IS WELL-SOURCED AND IT IS LARGE: over 10,000 GPUs across nine compute clusters in commercial operation by end-2024, with C-Series clusters pre-training a billion-parameter MoE model for the Beijing Academy of Artificial Intelligence in June 2024. SUPPLY CHAIN PRESSURE IS DOCUMENTED AND IT SHAPES THE SPEC: in 2024 it was reported MetaX ran out of C500 stock and submitted a downgraded C280 design to TSMC to stay under the US thresholds - the same downgrade-to-comply pattern Reuters documented across several Chinese AI chip firms including Enflame in June 2024. So the 7 nm C500 as originally designed is not what is broadly available today. Also note the C500 is described as the first AI training GPU MetaX successfully tested (June 2023), and the company was founded September 2020 by former AMD engineers.\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). %s NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either inference is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the note above names the specific document that was read and found not to carry it, so a future pass does not have to re-establish that from scratch.\n\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). MetaX's C550 product page publishes HBM2E capacity and bandwidth but no memory-bus width and no per-pin data rate. NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the text above names the specific document read and found not to carry it, so a future pass does not have to re-establish that from scratch.\n\nNEGATIVE QUALIFIED 2026-10-05: the claim that MetaX publishes no compute figure is PROBABLY TRUE but is NOT established by a completed read of the vendor's pages, and the difference matters. MetaX's own product pages (cid=107&id=21 for the C500, id=35 for the C550) fail with 'All scraping engines failed to retrieve content from this URL. Engines tried: [playwright, fetch]', and cn-metax-c550's existing note already records a plain probe returning HTTP 403. A Wayback capture DOES exist and renders (timestamp 20260609083954) and confirms the vendor has pages for all four parts of this record - N100, N260, N300, C500, C550, C500X, C588, C600 - none of which is reachable from here. So for MetaX the honest statement is 'the vendor pages exist and are unreadable by three client types', not 'the vendor publishes nothing'. WHAT IS ESTABLISHED: a secondary compilation carries a much fuller C500 table - FP32 54 TFLOPS '(vector 18 + matrix 36)', TF32 140, FP16 280, BF16 280, INT8 560 TOPS, 64GB HBM2e, 7 MetaXLink ports to 64 cards - which is 3.5x the Wikipedia-sourced figures on the SAME part. That disagreement is recorded and NOT propagated: the compilation explicitly labels process, TDP and bandwidth as undisclosed or estimated, so it is not a citable source for the rows it does not mark as estimates, and importing its compute figures while its memory figures are estimates would smuggle an estimate into a field that does not need one. A future pass with access to the vendor page has a 3.5x question to settle here, not a gap to fill. See w5a-metax-no-compute-figure-confirmed-two-methods.",
- "status": "draft",
- "confidence": 0.45,
- "updated": "2026-10-05",
- "sources": [
-  "cn-metax-wikipedia",
-  "w5a-metax-no-compute-figure-confirmed-two-methods"
- ]
+  "id": "metax-c500-n100",
+  "type": "accelerator",
+  "name": "MetaX MXC500 / MXN100 GPGPU (training and inference)",
+  "vendor": "asic-other",
+  "architecture": "MetaX proprietary GPGPU core IP",
+  "release_year": 2023,
+  "process_nm": 7,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": null,
+  "memory_type": "hbm2e",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": null,
+  "memory_bandwidth_basis": "None available. Memory TYPE is reported (HBM2E for the N100) but capacity and bandwidth are not published in any source located, so no arithmetic intensity can be derived. MetaX's own English product page for the C500 describes 'large-capacity high-bandwidth memory' and 'advanced multi-GPU interconnection (MetaXLink) technology' without a single number (https://www.metax-tech.com/en/goods/prod.html?cid=107&id=21).",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 15,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "cn-metax-wikipedia",
+      "basis": "secondary-aggregator",
+      "basis_detail": "Wikipedia aggregator, citing Digitimes (Li 2025-01-22, Liang 2025-04-10) for the underlying figures."
+    },
+    {
+      "precision": "fp16",
+      "tflops": 80,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "cn-metax-wikipedia",
+      "basis": "secondary-aggregator",
+      "basis_detail": "Wikipedia aggregator, citing Digitimes (Li 2025-01-22, Liang 2025-04-10) for the underlying figures."
+    },
+    {
+      "precision": "int8",
+      "tflops": 160,
+      "dense": true,
+      "vendor_claim": false,
+      "source_id": "cn-metax-wikipedia",
+      "basis": "secondary-aggregator",
+      "basis_detail": "Wikipedia aggregator, citing Digitimes (Li 2025-01-22, Liang 2025-04-10) for the underlying figures."
+    }
+  ],
+  "tdp_w": null,
+  "interconnect": [
+    "metaxlink",
+    "pcie-gen4"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "THE HIERARCHY POINT: recorded as a single record because MetaX's own taxonomy splits these across two lines that share a silicon family, and the schema has no way to express that: MXN = inference, MXC = training and general computing, MXG = graphics (cn-metax-wikipedia). THE C500 AND N100 FIGURES BELOW BELONG TO DIFFERENT PARTS AND MUST NOT BE ADDED OR CROSS-COMPARED. C500 (training/HPC, June 2023, MACA 2.0, 7 nm): 15 TFLOPS FP32, which the reporting describes as roughly 75% of an A100 - a comparison that is about vector throughput, not tensor throughput, and tells you nothing about how the part handles an LLM. N100 (inference, June 2023, mass production 2023): HBM2E, 160 TOPS INT8 and 80 TFLOPS FP16, with 128-channel 8K encoding and 96-channel decoding across HEVC, H.264, AV1 and AVS2, positioned for smart cities, security, transportation, cloud and video. All figures are flagged vendor_claim: false because they come via a secondary aggregator (Wikipedia, citing DIGITIMES) rather than a MetaX datasheet - MetaX's own product pages carry no numbers. THIS IS THE ONLY CHINESE VENDOR IN THIS SLICE WITH A CONFIRMED CUDA-COMPATIBLE STACK: MACA 2.0, plus an open-source gitee.com/metax-maca and github.com/metax-maca presence and a documented developer community, which makes it the most drop-in candidate of the non-CUDA parts here even though the software is MACA rather than CUDA. VENDOR STATUS IS UNUSUALLY GOOD: MetaX IPO'd on the SSE on 17 December 2025 (ticker 688802), shares up 693% on debut, and filed for a Hong Kong secondary listing in July 2026. DEPLOYMENT SCALE IS THE ONE FIGURE THAT IS WELL-SOURCED AND IT IS LARGE: over 10,000 GPUs across nine compute clusters in commercial operation by end-2024, with C-Series clusters pre-training a billion-parameter MoE model for the Beijing Academy of Artificial Intelligence in June 2024. SUPPLY CHAIN PRESSURE IS DOCUMENTED AND IT SHAPES THE SPEC: in 2024 it was reported MetaX ran out of C500 stock and submitted a downgraded C280 design to TSMC to stay under the US thresholds - the same downgrade-to-comply pattern Reuters documented across several Chinese AI chip firms including Enflame in June 2024. So the 7 nm C500 as originally designed is not what is broadly available today. Also note the C500 is described as the first AI training GPU MetaX successfully tested (June 2023), and the company was founded September 2020 by former AMD engineers.\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). The vendor publishes NO memory-bus width for this part, and none was back-computed from the published bandwidth. NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH.[REPAIRED 2026-10-08 by w8-reverify. This sentence previously read '(2026-10-04). %s NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH' — a literal printf placeholder left in the JSON by the wave-3 pass (commit 9968769) across 34 accelerator records, and invisible to every check in this repo because validate.py never reads notes. The substitution text is the same boilerplate the 7 uncorrupted records in this family already carry, and it is only valid here because memory_bus_bit is null on every one of the 34, so \"the vendor does not publish it\" is the true state. A record with a non-null memory_bus_bit must NOT receive this filler.] That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either inference is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the note above names the specific document that was read and found not to carry it, so a future pass does not have to re-establish that from scratch.\n\nMEMORY_BUS_WIDTH: STILL NULL, AND HERE IS PRECISELY WHAT WAS LOOKED FOR (2026-10-04). MetaX's C550 product page publishes HBM2E capacity and bandwidth but no memory-bus width and no per-pin data rate. NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH. That is the standing rule for this field in this repo and it was applied to every null here rather than to a subset: a width derived by dividing a published aggregate bandwidth by an assumed or half-assumed per-pin rate is two inferences stacked on one number, and if either is wrong the record looks populated while being wrong. The correct state of this field is 'the vendor does not publish it', and the text above names the specific document read and found not to carry it, so a future pass does not have to re-establish that from scratch.\n\nNEGATIVE QUALIFIED 2026-10-05: the claim that MetaX publishes no compute figure is PROBABLY TRUE but is NOT established by a completed read of the vendor's pages, and the difference matters. MetaX's own product pages (cid=107&id=21 for the C500, id=35 for the C550) fail with 'All scraping engines failed to retrieve content from this URL. Engines tried: [playwright, fetch]', and cn-metax-c550's existing note already records a plain probe returning HTTP 403. A Wayback capture DOES exist and renders (timestamp 20260609083954) and confirms the vendor has pages for all four parts of this record - N100, N260, N300, C500, C550, C500X, C588, C600 - none of which is reachable from here. So for MetaX the honest statement is 'the vendor pages exist and are unreadable by three client types', not 'the vendor publishes nothing'. WHAT IS ESTABLISHED: a secondary compilation carries a much fuller C500 table - FP32 54 TFLOPS '(vector 18 + matrix 36)', TF32 140, FP16 280, BF16 280, INT8 560 TOPS, 64GB HBM2e, 7 MetaXLink ports to 64 cards - which is 3.5x the Wikipedia-sourced figures on the SAME part. That disagreement is recorded and NOT propagated: the compilation explicitly labels process, TDP and bandwidth as undisclosed or estimated, so it is not a citable source for the rows it does not mark as estimates, and importing its compute figures while its memory figures are estimates would smuggle an estimate into a field that does not need one. A future pass with access to the vendor page has a 3.5x question to settle here, not a gap to fill. See w5a-metax-no-compute-figure-confirmed-two-methods.",
+  "status": "draft",
+  "confidence": 0.45,
+  "updated": "2026-10-08",
+  "sources": [
+    "cn-metax-wikipedia",
+    "w5a-metax-no-compute-figure-confirmed-two-methods"
+  ]
 }
