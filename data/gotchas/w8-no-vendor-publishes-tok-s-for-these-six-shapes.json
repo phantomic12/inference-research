@@ -1,0 +1,51 @@
+{
+  "id": "w8-no-vendor-publishes-tok-s-for-these-six-shapes",
+  "type": "gotcha",
+  "name": "Verified negative: no vendor, no paper and no official results page publishes a tok/s figure for any of the six third-party field-report shapes in this slice - a single community post is the entire published record",
+  "class": "measurement",
+  "affects": [
+    "vllm",
+    "sglang",
+    "llama-cpp",
+    "mlx-lm"
+  ],
+  "concepts": [
+    "tokens-per-second",
+    "prefill-throughput",
+    "ttft",
+    "speculative-decoding",
+    "provenance",
+    "verified-negative",
+    "field-report",
+    "community-benchmark",
+    "github-issue",
+    "single-reporter",
+    "wsl2",
+    "cuda-graphs",
+    "blackwell-sm120",
+    "rdna4",
+    "gfx1100",
+    "tensor-split",
+    "vcache-precision"
+  ],
+  "symptom": "A reader auditing data/benchmarks/ for provenance finds records whose only source is a GitHub issue, and the audit question is whether a better source exists that simply was not cited. For the six shapes below the answer is NO, and the answer was established by searching, not by assuming. What the shapes have in common is that each is a CONFIGURATION nobody has a commercial reason to publish: (1) llama.cpp under ROCm on RDNA3/RDNA4 consumer cards with a sub-2-bit trellis format; (2) tensor-split decode across two consumer RDNA3 cards with only PCIe between them; (3) a first-party ENGINE BUG measured from the outside, where the vendor's own number for the correct behaviour is not the quantity being recorded; (4) a production deployment on consumer Blackwell with no NVLink; (5) vLLM decode on a consumer Blackwell card under WSL2 with CUDA graphs enabled; (6) a single-site field report of a 769B MoE on eight consumer cards. Every one of these has an obvious-looking alternative source that turns out NOT to contain the number.",
+  "root_cause": "None of these is a sourcing failure in this repo. They are places where the published record consists of exactly one party's measurement, and that party is not a vendor. Concretely, for each, the alternative was checked and found empty: (1) Radeon AI PRO R9700 / Bonsai-27B Q1_0: AMD publishes no llama.cpp benchmark; the AMD ROCm blog carries no RDNA4 llama.cpp decode table; the number's value is a SOFTWARE LOWERING finding (HIP lacks hardware __byte_perm so the Q1_0 unpack lowers to a software routine, 20 calls per 32-element chunk), which no hardware vendor would publish. (2) 2x RX 7900 XTX tensor split: the issue itself cites the nearest AMD first-party document (ROCm blog 'Accelerating LLM Inference on AMD GPUs with Low-Latency GEMMs', 2026-06-29) and that document is single-GPU MI355X/gfx950 only - so the vendor has published on the ADJACENT problem and never on this one. (3) Speculative-decoding regressions and inflation factors: vLLM, SGLang and llama.cpp publish no such benchmark because publishing one would be publishing their own bug. (4) 8x RTX PRO 6000 with no NVLink: NVIDIA publishes nothing for this shape; the DeepSeek-V4.1-Flash model card (deepseek-ai/DeepSeek-V4.1-Flash, fetched 2026-10-08) contains no throughput or latency figure of any kind - only architecture and quality tables. (5) RTX 5090 under WSL2: NVIDIA publishes no WSL2 CUDA-graph benchmark. (6) vLLM eager-path prefill on SM120: same - the vendor publishes nothing.",
+  "workaround": "Say so in the record and keep the number. The records are already marked measured_by=third_party, status draft, and confidence 0.4-0.8, which is the honest register for a single reporter, and they carry the full command line and environment where the reporter supplied one. Do not raise confidence because a Tier-A document EXISTS nearby for the same hardware or the same engine - a vendor spec sheet is Tier A for a bandwidth and silent on tok/s, and citing it anyway is exactly the fabrication pattern recorded in [[gotchas/bench-tok-s-derived-from-memory-bandwidth-is-not-a-benchmark]]. The positive half of the same search, so the next wave does not repeat it: two of the weak records DID have a better source waiting, and both were retrieved rather than assumed - mlx-lm PR #552 turned out to be MERGED (merged_at 2025-10-15T19:24:12Z, merge_commit_sha a4c64703906f709a493341508ac31af4085d2638), so its table is a live first-party artifact at mlx_lm/BENCHMARKS.md and not an orphan PR; and the SOTA2/WizWand TTFT leaderboard has an author preprint behind it (arXiv:2606.07703). The lesson from those two is that 'community' was sometimes a BOOKKEEPING ARTIFACT - a closed PR that was actually merged, a researcher-org leaderboard that actually has a paper - and not a property of the measurement.",
+  "severity": "major",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-08",
+  "sources": [
+    "w8-src-mlxlmm-552-benchmarks-merged",
+    "w8-src-arxiv-2606-07703-dense-attention-oracle",
+    "w8-src-arxiv-2606-13392-minimax-msa",
+    "w8-src-arxiv-2505-09388-qwen3-technical-report",
+    "bench-llamacpp-pr-28398-radeon-r9700-q1",
+    "bench-llamacpp-issue-28863-rx7900xtx-tensor-split",
+    "ev-sglang-issue-40877-production-deepseek-v41-flash",
+    "ev-vllm-issue-56700-production-deepseek-v41-flash",
+    "comm-github-vllm-37242-5090-wsl2-cudagraphs",
+    "ev-llamacpp-issue-26100-spec-benchmark-inflates-10x"
+  ],
+  "notes": "Recorded by w8-bench-src (2026-10-08) as the explicit WHY for every benchmark record left at Tier D/E after the search. Scope of the search that produced this: for each of the 21 weak benchmark figures, the vendor's own site and docs, the model's Hugging Face card, the engine's blog and repository, arXiv (by title, by model name, and by the specific quantity), and the specific adjacent vendor documents named in the records themselves. TWO FURTHER NEGATIVES worth keeping, because both look like gaps and neither is: (a) the MiniMax-M3 GPQA-Diamond number in [[benchmarks/minimax-m3-fp8kv-sm80-gpqa-diamond-vs-official-api]] exists only in the vLLM issue, and the vendor DOES have a Tier-A document - arXiv:2606.13392, MiniMax Sparse Attention, fetched and read - but that paper's own table reports GPQA HARD 25.9/26.3/26.3 for Full/MSA-PT/MSA-CPT on a 109B matched-checkpoint comparison, and the model card's benchmark.jpeg (transcribed) has no GPQA Diamond row at all, only a PostTrainBench row whose footnote aggregates GPQA MAIN with four other benchmarks across four base models. So a primary vendor document exists for the family and does not contain this number: the figure is a THIRD-PARTY one-harness comparison of a served API against a local fp8-KV build, which is the measurement's whole point and is not reproducible from the vendor's own pages. (b) The Qwen3-8B MXFP4/NVFP4 quality rows now cite the Qwen3 Technical Report (arXiv:2505.09388) for the REFERENCE (Table 17 thinking: MATH-500 97.4, AIME'24 76.0, AIME'25 67.3, GPQA-Diamond 62.0; Table 12 base: GSM8K 89.84 4-shot CoT), which corroborates the order of magnitude without being the same measurement - the paper never averages those four sets, so the composite remains the reporter's construction on their own harness. Verified negative is a RESULT and belongs in the repo; a silent gap that looks like an omission is not."
+}
