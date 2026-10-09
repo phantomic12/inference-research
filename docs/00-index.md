@@ -68,7 +68,7 @@
 - **Cambricon MLU370-X8 AIDC accelerator (dual Siyuan 370, train+infer)** (`accelerators/cambricon-mlu370-x8`) — cambricon mluarch03 (dual Siyuan 370 chiplet) 2022 · 48 GB lpddr5 · 614.4 GB/s · 250 W
 - **Cambricon MLU590 (Siyuan 590) training accelerator** (`accelerators/cambricon-mlu590`) — cambricon mluarch05 2023 · 192 GB hbm2e · 2400 GB/s · 350 W
 - **Cerebras WSE-3 (CS-3 system)** (`accelerators/cerebras-wse-3`) — cerebras wafer-scale engine (WSE-3) 2024 · 27000 W
-- **Cerebras WSE-3 Turbo (WSE-3T, the wafer inside the CS-4 system)** (`accelerators/cerebras-wse-3t`) — cerebras wafer-scale engine, Turbo generation (WSE-3T) 2025 · 43200 GB/s
+- **Cerebras WSE-3 Turbo (WSE-3T, the wafer inside the CS-4 system)** (`accelerators/cerebras-wse-3t`) — cerebras wafer-scale engine, Turbo generation (WSE-3T) 2025
 - **Google Cloud TPU v2** (`accelerators/google-tpu-v2`) — google v2 2017 · 16 GB hbm · 700 GB/s · 280 W
 - **Google Cloud TPU v3** (`accelerators/google-tpu-v3`) — google v3 2018 · 32 GB hbm2 · 900 GB/s · 262 W
 - **Google Cloud TPU v4** (`accelerators/google-tpu-v4`) — google v4 2021 · 32 GB hbm2 · 1200 GB/s · 192 W
@@ -509,8 +509,8 @@
 ## Interconnect (71)
 
 - **Compute Express Link 2.0** (`interconnect/cxl-2-0`) — 63.0 GB/s · Point-to-point device attachment over PCIe PHY, extended with switching and memory pooling so a single host can reach pooled memory devices across a CXL domain.
-- **Compute Express Link 3.x** (`interconnect/cxl-3-x`) — 236.0 GB/s · Switched fabric with memory pooling and multi-host sharing across a CXL domain; peer-to-peer device-to-device traffic is possible within the domain, which is new relative to 2.0.
-- **Compute Express Link 4.0** (`interconnect/cxl-4-0`) — 472.0 GB/s · Switched fabric with pooling, now with native x2 width for platform fan-out, bundled ports combining host and Type 1/2 accelerator ports, and support for up to four retimers for channel reach.
+- **Compute Express Link 3.x** (`interconnect/cxl-3-x`) — 121.0 GB/s · Switched fabric with memory pooling and multi-host sharing across a CXL domain; peer-to-peer device-to-device traffic is possible within the domain, which is new relative to 2.0.
+- **Compute Express Link 4.0** (`interconnect/cxl-4-0`) — 242.0 GB/s · Switched fabric with pooling, now with native x2 width for platform fan-out, bundled ports combining host and Type 1/2 accelerator ports, and support for up to four retimers for channel reach.
 - **AWS Elastic Fabric Adapter (EFA) scale-out network** (`interconnect/aws-efa`) — None GB/s · Standard switched Ethernet data-centre network, with EFA adding the scale-out interface that carries collectives between instances and hosts. EFA is an adapter and its programming model (SRD, an OS-bypass path) is the distinguishing feature rather than any new physical layer - it presents RDMA-style verbs over commodity Ethernet.
 - **NVIDIA BlueField-3 DPU** (`interconnect/nic-bluefield3-dpu`) — 50 GB/s · Standard Ethernet or InfiniBand switched fabric. BlueField-3 can operate in either Ethernet or InfiniBand mode.
 - **NVIDIA BlueField-4 DPU** (`interconnect/nic-bluefield4-dpu`) — 100 GB/s · Standard Ethernet or InfiniBand switched fabric.
