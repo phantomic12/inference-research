@@ -56,6 +56,32 @@ def flatten(obj, prefix="") -> dict:
     return out
 
 
+def resolve_key(recs: dict[str, tuple[str, dict]], args):
+    """Resolve args.id and an OPTIONAL args.type to a qualified record id.
+
+    `type` is positional and optional on `get`/`refs`, so `query.py refs vllm`
+    arrives with `args.type is None` and `DIRS[None]` is a KeyError, not a
+    lookup. When no type is given, infer it from the records: the bare stem
+    under every type's directory, then the record's own `id` field — the same
+    lookup `build_site_data.build_bare` does, so the two tools cannot disagree
+    about which record a bare slug names. Returns None for a genuine miss so
+    each caller can phrase its own message instead of a traceback.
+    """
+    given = args.id
+    if "/" in given:
+        candidates = [given]
+    elif args.type is not None:
+        candidates = [f"{DIRS[args.type]}/{given}"]
+    else:
+        candidates = [f"{DIRS[t]}/{given}" for t in TYPES]
+        candidates += [rid for rid, (_, r) in sorted(recs.items())
+                       if r.get("id") == given]
+    for key in candidates:
+        if key in recs:
+            return key
+    return None
+
+
 def cmd_list(args) -> None:
     recs = load_all()
     ids = sorted(i for i in recs if i.startswith(DIRS[args.type] + "/"))
@@ -75,10 +101,15 @@ def cmd_list(args) -> None:
 
 def cmd_get(args) -> None:
     recs = load_all()
-    key = args.id if "/" in args.id else f"{DIRS[args.type]}/{args.id}"
-    if key not in recs:
-        near = [k for k in sorted(recs) if key.split("/")[-1].split("-")[0] in k]
-        print(f"no such record: {key}")
+    key = resolve_key(recs, args)
+    if key is None:
+        if args.type is None:
+            near = [k for k in sorted(recs) if args.id in k]
+        else:
+            near = [k for k in sorted(recs)
+                    if k.startswith(DIRS[args.type] + "/")
+                    and args.id.split("-")[0] in k]
+        print(f"no such record: {args.id}")
         if near:
             print("did you mean:\n  " + "\n  ".join(near[:12]))
         raise SystemExit(1)
@@ -136,9 +167,19 @@ def cmd_where(args) -> None:
 
 def cmd_refs(args) -> None:
     recs = load_all()
-    key = args.id if "/" in args.id else f"{DIRS[args.type]}/{args.id}"
-    if key not in recs:
-        raise SystemExit(f"no such record: {key}")
+    key = resolve_key(recs, args)
+    if key is None:
+        if args.type is None:
+            near = [k for k in sorted(recs) if args.id in k]
+        else:
+            near = [k for k in sorted(recs)
+                    if k.startswith(DIRS[args.type] + "/")
+                    and args.id.split("-")[0] in k]
+        print(f"no such record: {args.id}")
+        if near:
+            print("did you mean:\n  " + "\n  ".join(near[:12]))
+        print(f"valid types: {', '.join(TYPES)}")
+        raise SystemExit(1)
     t, r = recs[key]
     bare = key.split("/", 1)[1]
     bare_to_qualified = {i.split("/", 1)[1]: i for i in recs}
