@@ -281,4 +281,4 @@ Before deploying, and at every version bump:
 
 - [05-known-traps.md](05-known-traps.md) — every gotcha record, severity-ordered.
 - [17-deployment-shape.md](17-deployment-shape.md) — the multi-node failure modes.
-- [15-cost-per-token.md](15-cost-per-token.md) — the idle-power cost trap.
+- [08-cost-per-token.md](08-cost-per-token.md) — the idle-power cost trap.

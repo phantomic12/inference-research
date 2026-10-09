@@ -198,6 +198,6 @@ Before upgrading, answer these questions with data:
 
 ## Related documents
 
-- [15-cost-per-token.md](15-cost-per-token.md) — the $/Mtok arithmetic used throughout.
+- [08-cost-per-token.md](08-cost-per-token.md) — the $/Mtok arithmetic used throughout.
 - [01-hardware-selection.md](01-hardware-selection.md) — the per-workload hardware table.
 - [02-flop-map.md](02-flop-map.md) §3.1 — the ridge points that determine what binds.

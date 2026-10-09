@@ -22,44 +22,59 @@ your PR. If it is not listed, add it, with the same discipline.
 
 ### The tooling layer (`tools/`)
 
-#### D1 — 18 `gaps` rows point at an `EXCLUDED` dict that does not contain them
+#### D1 — ~~18 `gaps` rows point at an `EXCLUDED` dict that does not contain them~~ **FIXED 2026-10-08**
 
 | | |
 |---|---|
-| **What** | `python tools/cost_per_token.py gaps` prints `-> see EXCLUDED in tools/cost_per_token.py` for **18** benchmark rows. `EXCLUDED` in that same file holds **9** keys, and **none of the 18** is among them. Every one of the 18 is a row whose accelerator *is* priced, so it fell through to the generic fallback instead of naming its real blocker. |
-| **Where** | `tools/cost_per_token.py` — the fallback `reason = EXCLUDED.get(bid, "see EXCLUDED in tools/cost_per_token.py")`. |
-| **Wave** | 7 (`w7-scope-ledger`), while auditing D2. |
-| **Why not then** | `tools/` is outside a docs-and-gotchas scope. |
-| **Fixed now?** | **No.** And the message is actively misleading: it sends a reader to a 9-entry dict looking for 18 ids. The correct message names the real blocker, which for all 18 is "no declared GPU count — see `BENCH_JOIN`". |
+| **Was** | `python tools/cost_per_token.py gaps` printed `-> see EXCLUDED in tools/cost_per_token.py` for **18** benchmark rows. `EXCLUDED` in that same file held **9** keys, and **none of the 18** was among them. Every one of the 18 was a row whose accelerator *is* priced, so it fell through to the generic fallback instead of naming its real blocker. |
+| **Where** | `tools/cost_per_token.py` — `cmd_gaps`. |
+| **Wave** | 7 (`w7-scope-ledger`) while auditing D2; fixed by `w8-costtool`. |
+| **Fixed now?** | **Yes.** The blanket fallback is gone; `cmd_gaps` now splits every gap into one of four categories and names the real blocker. Zero rows print "see EXCLUDED". A `GPU_COUNT_HINT` regex picks the wording only — it is never used as a divisor. The 18 broke down as: 6 rows state a GPU count but lack a `BENCH_JOIN` entry; 10 declare no GPU count at all; 1 names several platforms at once; 2 carried explicit `EXCLUDED` reasons that now outrank the pattern match. |
 
-The two real blockers, correctly stated: `[[benchmarks/mi325x-mlperf-v5-0-mangoboost-llama2-70b-offline]]`
-and the other 17 are throughput rows on priced hardware that never declared how
-many devices the aggregate covers.
-
-#### D2 — 13 AMD Instinct throughput rows are priced but still unpriceable
+#### D2 — 13 AMD Instinct throughput rows are priced but still unpriceable **MOSTLY FIXED 2026-10-08**
 
 | | |
 |---|---|
-| **What** | Oracle publishes per-GPU-hour rates for MI300X ($6.00) and MI355X ($8.60) — recorded in [[supply/w5s-oracle-oci-amd-mi300x-mi355x-gpu-hour]]. The price side is closed. **13** throughput rows on those accelerators still do not price, because each needs a GPU count read from its own submission before an aggregate rate can be divided into a per-device rate. Only 2 of 15 AMD rows are joined: [[benchmarks/bench-mlperf-v6-1-amd-mi355x-llama2-70b-offline]] and [[benchmarks/llama-cpp-mi300x-deepseek-v3-671b-q4-decode-tok-s]]. |
+| **What** | Oracle publishes per-GPU-hour rates for MI300X ($6.00) and MI355X ($8.60) — recorded in [[supply/w5s-oracle-oci-amd-mi300x-mi355x-gpu-hour]]. The price side is closed. 13 throughput rows on those accelerators still did not price, because each needed a GPU count read from its own submission before an aggregate rate could be divided into a per-device rate. |
 | **Where** | `tools/cost_per_token.py` `BENCH_JOIN`; the gate is `check_evidence()`, which requires the GPU-count string to appear **verbatim** in the record's own `unit` or `methodology`. |
-| **Wave** | 6 named it; 7 measured it exactly. |
-| **Why not then** | `BENCH_JOIN` is a hand-maintained table in `tools/`. No docs agent can edit it. |
-| **Fixed now?** | **Partially, and this is the substance of the item.** Measured 2026-10-05: of the 13, **7** already carry their GPU count verbatim in `unit`/`methodology` and need only a `BENCH_JOIN` entry; **4** state it only in the record `name` (e.g. `AMD 8xMI355X` in [[benchmarks/bench-mlperf-v6-1-amd-mi355x-llama2-70b-server]]), which `check_evidence()` cannot see, so those 4 additionally need a one-line methodology edit in `data/`; and the 2 head-to-head rows ([[benchmarks/mi300x-vs-h100-vllm-llama31-405b-fp8-tp8-output-throughput]] and its 70B twin) name two platforms at once and are correctly unpriceable as single rows. [[benchmarks/mi355x-mlperf-v6-0-llama2-70b-87gpu-offline-tokens]] carries **87** GPUs, not 8 — the one row that proves the divisor cannot be inferred from a sibling. |
+| **Wave** | 6 named it; 7 measured it exactly; `w8-costtool` fixed 11 of 13. |
+| **Fixed now?** | **Yes for 11 of 13.** `w8-costtool` re-ran the measurement and the ledger's 7/4/2 split was **wrong in both directions**: 5 rows already carried their count verbatim (the ledger filed them as needing data edits), and one it filed as name-only (`bench-mlperf-v6-1-dell-mi355x-llama3-1-8b-offline`) did carry its count, so the initially-made edit was reverted. 4 rows genuinely needed a one-line methodology insertion quoting the MLPerf system id, and the `BENCH_JOIN` entry quotes that same string back so `check_evidence()` proves it. AMD cost rows in the tool's output went **2 → 12**. |
+| **Still unpriceable, by design** | (a) the 2 head-to-head rows naming two platforms at once — a rate divided by a device count means nothing when the devices differ; (b) [[benchmarks/mi325x-mlperf-v5-0-mangoboost-llama2-70b-offline]], whose methodology says 4 nodes but never states GPUs per node. Its `8xMI325X` string is a **corroborating context sentence about a different submission** and must not be borrowed as a divisor. Now in `EXCLUDED` with that reason. |
 
-**The rule this entry exists to protect.** Guessing a divisor from a model name
-or from a sibling row is the exact error the tool was written to prevent. A
-price is not enough: an aggregate rate over an unknown number of devices is not
-a per-device rate, and 87 ≠ 8 is what that looks like here.
+**The rule this entry exists to protect, unchanged:** guessing a divisor from
+a model name or from a sibling row is the exact error the tool was written to
+prevent. `[[benchmarks/mi355x-mlperf-v6-0-llama2-70b-87gpu-offline-tokens]]`
+carries **87**, not 8 — and it now prices correctly at 87 GPUs ($717.97/Mtok,
+11978.28 tok/s per GPU), which is the proof that the gate works.
 
-#### D3 — `query.py refs` crashes with `KeyError: None`
+**Extends past AMD.** The same fallback was also serving 7 NVIDIA MLPerf rows
+(Cisco H200, CoreWeave GB300, NVIDIA B300, GB300-NVL72 slices). Their GPU counts
+are stated but absent from `BENCH_JOIN`; each is a one-line entry away and its
+verbatim evidence string is already verified present.
+
+#### D3 — `query.py get`/`refs` crashed with `KeyError: None` **FIXED 2026-10-08**
 
 | | |
 |---|---|
-| **What** | `python tools/query.py refs vllm` — the type argument is positional and optional, so omitting it reaches `DIRS[args.type]` with `args.type is None`. Traceback reproduced 2026-10-05 at `tools/query.py:139`. |
-| **Where** | `tools/query.py`, `cmd_refs`. |
-| **Wave** | 7 (`w7-scope-ledger`). |
-| **Why not then** | `tools/` is out of scope. |
-| **Fixed now?** | **No.** The fix is one guard: infer the type by scanning record types for the id, which is the same lookup `build_bare` already does, or fail with a message naming the 14 valid types. |
+| **Was** | `python tools/query.py refs vllm` — the type argument is positional and optional, so omitting it reached `DIRS[args.type]` with `args.type is None`. Traceback reproduced 2026-10-05 at `tools/query.py:139`. |
+| **Where** | `tools/query.py`, `cmd_refs` and `cmd_get`. |
+| **Wave** | 7 (`w7-scope-ledger`); fixed by `w8-querytool` (PR #29). |
+| **Fixed now?** | **Yes.** Both commands now route through one shared `resolve_key()` helper: with no type it infers the type via a two-pass bare-stem lookup across every type directory, then falls back to the record's own `id` field — the same lookup `build_site_data.build_bare()` uses, so the two tools cannot disagree on which record a bare slug names. A genuine miss prints `no such record: <id>` plus the 13 valid types and exits 1. Verified: bare-id output is **byte-identical** to explicit-type output for 39 ids across all 13 types, both commands, 0 mismatches. |
+
+#### D3b — `interconnect.schema.json` described `bandwidth_gbps` wrong, and could not express a verified negative **FIXED 2026-10-08**
+
+| | |
+|---|---|
+| **Was** | The field was documented "per link, unidirectional", which is wrong or meaningless for most of the 71 interconnect records. The schema also had no `verified_negatively`, so four distinct causes of a null (definitional, sourcing, verified-negative, vendor-silent) lived only in prose. |
+| **Where** | `schemas/interconnect.schema.json`. |
+| **Wave** | 7 (`w7-hw-fabrics` reported it as an open item needing a coordinator call); fixed by `w8-ic-schema` (PR #34). |
+| **Fixed now?** | **Yes, schema side.** The description now states the field holds the **vendor's own published figure**, with granularity named by `bandwidth_basis` — and it enumerates the records holding a bidirectional aggregate against those holding the per-direction half. Two optional fields added: `way` (enum `each`/`both`/`unknown`, default null) and `verified_negatively` (`["boolean","null"]`, matching engine and metric_exposure schemas verbatim). All 3,979 records validate with **zero data edits**. |
+| **Data work this unlocks, deliberately not done** | `way` is unpopulated on all 71 records. The next `data/interconnect/` wave should set it on the 59 records carrying a bandwidth value, `way: unknown` on the vendor-silent ones (metaxlink, moore-threads-mtlink, cambricon-mlu-link), and `verified_negatively: true` on `iluvatar-bi-v150-and-bi-v250-fabric` and `enflame-s60-fabric`. The BI-V250 half must **not** be marked — its URL returns an application-error page, and an error is not evidence of absence. |
+
+Naming note: `way` was chosen over `direction`/`bandwidth_direction` because
+`test_tools.py` has a SCHEMA.md-sync test that fails on a schema field absent
+from SCHEMA.md verbatim, and SCHEMA.md was out of scope. A later wave that can
+edit SCHEMA.md may rename freely.
 
 #### D4 — `tools/index.py` does **not** emit bare-id citations, and the 10 bare ids all resolve
 
@@ -70,15 +85,52 @@ a per-device rate, and 87 ≠ 8 is what that looks like here.
 | **Why not then** | — |
 | **Fixed now?** | **Not applicable — the premise was wrong.** Three independent measurements: (a) `card()` in `tools/index.py` emits the id as `` `{rid}` `` in **backticks**, and the file contains no double-bracket citation sequence anywhere, so it emits no wikilinks at all; (b) the 10 bare wikilinks in `docs/00-index.md` are *copied through from record prose*, and every one resolves against a unique record — e.g. `sglang` → `engines/sglang`, `mlx-lm` → `engines/mlx-lm`, `flop-nvidia-h100-specs` → `sources/flop-nvidia-h100-specs`; (c) `python tools/build_site_data.py --check` reports `docs 25`, `data problems 0`, and resolves them via the bare-slug lookup. |
 
-There **is** a real, smaller defect adjacent to this one, and it is worth
+There **was** a real, smaller defect adjacent to this one, and it is worth
 stating so it is not rediscovered either: an unresolvable doc wikilink degrades
 to inline code rather than failing anything. `rewrite_docs()` returns
 `` `label` `` for an unknown target, so a genuinely broken docs citation is
 **invisible to every check in the repo** — `validate.py` never reads `docs/`.
-A citation in `docs/` that rots will not fail CI. That is a tooling gap, not a
-data defect, and it is unfixed.
+A citation in `docs/` that rots will not fail CI.
+
+**That gap is now closed (2026-10-08, `w8-validate`, PR #35).** `validate.py`
+resolves every `[[dir/id]]` in every `docs/*.md` and fails on a new rot, backed
+by a ratcheting budget in `tools/docs_ref_budget.json` (8 → 5, history in the
+file). Injection-tested: a planted `[[accelerators/does-not-exist]]` turns CI
+red and `--max-docs-dangling-refs 7` fails against the real count of 8. The
+remaining 5 are the `[label](../SCHEMA.md)` / `[label](../AGENTS.md)` class the
+renderer's grammar cannot express — real files, not rot. 131 tests pass.
+
+#### D4b — the CXL family broke the PCIe direction convention it copied from **FIXED 2026-10-08**
+
+| | |
+|---|---|
+| **What** | `cxl-3-x` stored **236.0** and `cxl-4-0` stored **472.0** while each record's own `bandwidth_basis` asserted *"The recorded value now equals pcie-gen6 exactly"* — and `pcie-gen6` was 121.0. Both records stated an identity their own value violated, by exactly 2x. Only `cxl-2-0` (63.0 == `pcie-gen5`) obeyed it. |
+| **Where** | `data/interconnect/cxl-3-x.json`, `data/interconnect/cxl-4-0.json`. |
+| **Wave** | 8 (`w8-reverify`, PR #33) found it by reading each CXL record's prose against the `pcie-gen*` record it names; it could not edit `data/interconnect/` because a sibling owned the directory, so it recorded the gotcha with the exact repair. |
+| **Fixed now?** | **Yes, 2026-10-08, in the wave-8 merge.** CXL 3.x and 4.0 run on the PCIe 6.0/7.0 physical layers, so per direction they equal that generation's per-direction figure: `cxl-3-x` 236.0 → **121.0**, `cxl-4-0` 472.0 → **242.0**. The CXL family was corrected once before, on 2026-10-03, in exactly the opposite direction — an earlier pass had halved a per-direction figure into an aggregate. The pattern is that this family has been wrong twice with a correction in between, which is why it is checked against its own stated identity rather than by memory. |
+
+The `cxl-4-0` repair materially changes that record's recommendation: at 472
+per direction its own notes claim CXL sat "roughly 4x below NVLink 4", while at
+the corrected 242 per direction CXL 4.0 is essentially **at parity** with NVLink
+4's 450 GB/s per direction per GPU.
 
 ### The data layer (`data/`)
+
+#### D11 — a literal `%s` printf placeholder sat inside 34 records' notes text **FIXED 2026-10-08**
+
+| | |
+|---|---|
+| **What** | 34 accelerator records carried a literal `%s` in their `notes`/`memory_basis` — e.g. *"(2026-10-04). %s NO FIGURE WAS BACK-COMPUTED"*. Introduced by wave-3 commit `9968769`. Invisible to every check in the repo because `validate.py` never reads `notes`. |
+| **Wave** | 8 (`w8-reverify`, PR #33), while re-verifying the non-GPU nulling. |
+| **Fixed now?** | **Yes, 2026-10-08, in the wave-8 merge.** Safe to repair only because `memory_bus_bit` is null on all 34 (explicitly verified before touching any), so the honest filler is the one the 7 uncorrupted records in the same family already carry. Every repair is annotated and dated. The **24 remaining `%s` occurrences are correct** — they are verbatim Python log-format strings and llama.cpp `%%s` router keys quoted from source code, and were audited rather than swept. |
+
+#### D12 — `cerebras-wse-3t` was the last Cerebras record returning a bandwidth to a numeric query **FIXED 2026-10-08**
+
+| | |
+|---|---|
+| **What** | `cerebras-wse-3t` stored `memory_bandwidth_gbps: 43200` (43.2 PB/s) — the on-wafer SRAM figure — while its own `memory_bandwidth_basis` already flagged it as *"THE SAME FALSE FRIEND AS THE WSE-3 RECORD"*. Its sibling `cerebras-wse-3` had been nulled for exactly this reason two waves earlier. |
+| **Wave** | 8 (`w8-reverify`, PR #33) found it while confirming the WSE-3 null was correct. |
+| **Fixed now?** | **Yes, 2026-10-08, in the wave-8 merge.** Nulled, with the existing basis text left in place as the explanation. No Cerebras record now returns a bandwidth figure to a numeric query, which is the correct state for a part with no DRAM tier and no memory bus. |
 
 #### D5 — the MPT benchmark trio carries a stale pointer inside its own methodology
 
@@ -88,7 +140,7 @@ data defect, and it is unfixed.
 | **Where** | `methodology` in [[benchmarks/mpt7b-a100-bs1-ttft-ms]], [[benchmarks/mpt7b-a100-bs1-per-user-decode-tps]], [[benchmarks/mpt7b-a100-bs64-aggregate-output-tps]], [[benchmarks/mpt7b-a100-bs64-per-user-decode-tps]]. |
 | **Wave** | Flagged by the `w6-benchmarks` accelerator-pointer audit, recorded inside the record's own `notes`. |
 | **Why not then** | It is a four-record wording change in `data/`, and the four are a set: editing one alone makes the trio inconsistent. An agent holding only one of them could not do it safely. |
-| **Fixed now?** | **No.** |
+| **Fixed now?** | **Yes for the wording, 2026-10-08, in the wave-8 merge.** All four records now state that [[accelerators/nvidia-a100-40gb-sxm4]] exists but is a different part (PCIe-attached Gen4 instance memory, not SXM4), so `accelerator_ids` is still deliberately empty. **Do not populate `accelerator_ids`.** |
 
 **The reasoning still holds; the justification does not.** An empty pointer is
 still better than a wrong one, and the 40 GB SXM4 is still not the part Databricks
@@ -125,7 +177,7 @@ populate `accelerator_ids`.
 | **Where** | That record's `notes`. |
 | **Wave** | Wave 4 papers pass. |
 | **Why not then** | At the time `sigcomm` was **not in the venue enum**, so the venue had to be recorded as `other` with the real one in `notes`. |
-| **Fixed now?** | **The schema half is fixed; the title divergence is permanent.** `venue` is now `sigcomm` — the enum has 29 members and includes it. But the record's `notes` **still open with "VENUE IS 'other' BECAUSE SIGCOMM IS NOT IN THE SCHEMA ENUM"**, which is now false. That sentence is a stale pointer of the same shape as D5. The title divergence itself is a real-world fact and must stay documented. |
+| **Fixed now?** | **Yes for the notes, 2026-10-08, in the wave-8 merge.** The record's notes no longer open with the now-false "VENUE IS 'other' BECAUSE SIGCOMM IS NOT IN THE SCHEMA ENUM" — `venue` is `sigcomm` and the enum has 29 members. **The title divergence itself is a real-world fact and stays documented.** |
 
 ### Documentation layer (`docs/`)
 
