@@ -234,6 +234,24 @@ def resolve_citation(target: str, records: dict[str, tuple[str, dict]],
     return target if target in bare else None
 
 
+def strip_inline_code(path: Path) -> str:
+    """Return the file's text with every inline-code span blanked out.
+
+    Markdown renders `` `[[dir/id]]` `` as literal text, so a doc EXPLAINING the
+    citation grammar - this ledger's own D4 entry does exactly that - parses an
+    example citation as a real one. Two of them are worse than noise: a
+    `[[dir/id]]` example names a directory that holds no records, which trips
+    the empty-corpus guard below and silently disables the entire check.
+
+    Blanking the spans keeps the line's length and every newline, so reported
+    line numbers stay exact. Only single-backtick spans are handled, which is
+    the form prose uses; a fenced block is not a citation source either, but
+    stripping it is not needed to be correct and would complicate the offsets.
+    """
+    text = path.read_text(encoding="utf-8")
+    return re.sub(r"`[^`\n]*`", lambda m: " " * len(m.group(0)), text)
+
+
 def check_docs_citations(records: dict[str, tuple[str, dict]],
                          bare: set[str]) -> tuple[list[str], str | None]:
     """Every citation in every docs/*.md file that resolves to nothing.
@@ -277,9 +295,9 @@ def check_docs_citations(records: dict[str, tuple[str, dict]],
     # is a subset, so citations into it are not evidence of rot.
     cited_dirs = set()
     for f in doc_files:
-        for m in DOC_WIKILINK.finditer(f.read_text(encoding="utf-8")):
+        for m in DOC_WIKILINK.finditer(strip_inline_code(f)):
             target = m.group(1)
-            if target in doc_slugs or "/" not in target:
+            if "/" not in target:
                 continue
             cited_dirs.add(target.split("/", 1)[0])
     populated = {d for d in cited_dirs
@@ -294,7 +312,10 @@ def check_docs_citations(records: dict[str, tuple[str, dict]],
 
     unresolved: list[str] = []
     for f in doc_files:
-        text = f.read_text(encoding="utf-8")
+        # Same stripped text as the directory census above, for the same
+        # reason: an example citation inside backticks is not a citation.
+        # Blanking preserves offsets, so line numbers stay exact.
+        text = strip_inline_code(f)
         for m in DOC_WIKILINK.finditer(text):
             if resolve_citation(m.group(1), records, bare, doc_slugs) is None:
                 unresolved.append(f"{f.name}:{text[:m.start()].count(chr(10)) + 1} "

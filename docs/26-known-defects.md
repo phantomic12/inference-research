@@ -93,7 +93,7 @@ to inline code rather than failing anything. `rewrite_docs()` returns
 A citation in `docs/` that rots will not fail CI.
 
 **That gap is now closed (2026-10-08, `w8-validate`, PR #35).** `validate.py`
-resolves every `[[dir/id]]` in every `docs/*.md` and fails on a new rot, backed
+resolves every `[[dir/id]]` citation in every `docs/*.md` and fails on a new rot, backed
 by a ratcheting budget in `tools/docs_ref_budget.json` (8 → 5, history in the
 file). Injection-tested: a planted `[[accelerators/does-not-exist]]` turns CI
 red and `--max-docs-dangling-refs 7` fails against the real count of 8. The
