@@ -1,0 +1,106 @@
+{
+  "id": "nvidia-a100-sxm",
+  "type": "accelerator",
+  "name": "NVIDIA A100 SXM (capacity unstated)",
+  "vendor": "nvidia",
+  "architecture": "ampere",
+  "release_year": 2020,
+  "process_nm": 7,
+  "form_factors": [
+    "sxm"
+  ],
+  "vram_gb": null,
+  "memory_type": null,
+  "memory_bus_bit": 5120,
+  "memory_bandwidth_gbps": null,
+  "memory_bandwidth_basis": "DELIBERATELY NULL, AND THE NULL IS THE RECORD'S WHOLE POINT. This is the capacity-unstated A100 SXM form factor: the citation target for papers that cite bare \"A100\" and never state a memory capacity. The A100 SXM4 ships in two cuts and they are NOT interchangeable on memory: 40 GB of HBM2 on a 5120-bit interface at 1215 MHz DDR = 1555 GB/s (see [[accelerators/nvidia-a100-40gb-sxm4]]), and 80 GB of HBM2e on the same 5120-bit interface at 2039 GB/s (see [[accelerators/nvidia-a100-80gb-sxm4]]). Recording either figure here would invent a capacity the citing papers do not state, so both vram_gb and memory_bandwidth_gbps are null, and memory_type is null for the same reason (HBM2 on the 40 GB cut, HBM2e on the 80 GB cut). memory_bus_bit is 5120 because that ONE memory-interface fact is capacity-INDEPENDENT: both cuts are 5120-bit, and the Ampere architecture white paper Table 4 prints the A100's interface verbatim as 'Memory Interface 5120-bit HBM2'. The 80 GB datasheet does not print a bus width at all (only the aggregate 2039 GB/s), but its own record stores 5120 as the standard GA100 HBM2e interface. Null is a VERIFIED NON-PICK here, not an unverified gap: the two candidate values are known and named, and neither is chosen because the sources do not choose.",
+  "flops": [
+    {
+      "precision": "fp64",
+      "tflops": 9.7,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "a100canon-acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Ampere GA100 white paper Table 4 'NVIDIA A100' column prints 'Peak FP64 TFLOPS (non-Tensor) 9.7'. The A100 datasheet's 80 GB SXM column prints the identical 9.7, so the value is capacity-independent: both A100 SXM4 cuts carry the same 108-SM GA100 die at the same clocks, and memory capacity does not change the compute path.",
+      "unit": "fp64-vector"
+    },
+    {
+      "precision": "fp64",
+      "tflops": 19.5,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "a100canon-acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Ampere GA100 white paper Table 4, 'Peak FP64 Tensor TFLOPS 19.5' - a DISTINCT hardware path from the 9.7 vector figure, hence the separate row and the `unit` label. The 80 GB SXM datasheet prints the identical 19.5, so the value is capacity-independent.",
+      "unit": "fp64-tensor-core"
+    },
+    {
+      "precision": "fp32",
+      "tflops": 19.5,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "a100canon-acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Ampere GA100 white paper Table 4, 'Peak FP32 TFLOPS (non-Tensor) 19.5'. The 80 GB SXM datasheet prints the identical 19.5, so the value is capacity-independent. Dense as printed; sparsity does not apply to the CUDA-core FP32 path.",
+      "unit": null
+    },
+    {
+      "precision": "tf32",
+      "tflops": 156,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "a100canon-acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Ampere GA100 white paper Table 4 prints 'Peak TF32 Tensor TFLOPS 156/312', the pair being dense/sparse, so the DENSE value is the first number, 156. The 80 GB SXM datasheet's own record stores 156 dense, so the two capacity cuts agree. Capacity-independent.",
+      "unit": null
+    },
+    {
+      "precision": "bf16",
+      "tflops": 312,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "a100canon-acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Ampere GA100 white paper Table 4 prints 'Peak BF16 Tensor TFLOPS 312/624', dense/sparse, so DENSE = 312. The 80 GB SXM datasheet's own record stores 312 dense, so the two capacity cuts agree. Capacity-independent.",
+      "unit": null
+    },
+    {
+      "precision": "fp16",
+      "tflops": 312,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "a100canon-acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Ampere GA100 white paper Table 4 prints 'Peak FP16 Tensor TFLOPS 312/624', dense/sparse, so DENSE = 312. The 80 GB SXM datasheet's own record stores 312 dense, so the two capacity cuts agree. Capacity-independent. Every A100 Tensor Core figure on the datasheet is the WITH-SPARSITY number (marked '*'); dense is half, and 312 is that half.",
+      "unit": null
+    },
+    {
+      "precision": "int8",
+      "tflops": 624,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "a100canon-acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Ampere GA100 white paper Table 4 prints 'Peak INT8 Tensor TOPS 624/1248', dense/sparse, so DENSE = 624. The 80 GB SXM datasheet's own record stores 624 dense, so the two capacity cuts agree. Capacity-independent.",
+      "unit": null
+    }
+  ],
+  "tdp_w": 400,
+  "interconnect": [
+    "nvlink-3",
+    "nvswitch-2",
+    "pcie-gen4"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "notes": "WHAT THIS RECORD IS, AND WHY IT EXISTS. This is the CAPACITY-UNSTATED A100 SXM form-factor record. It exists to be the citation target for papers that cite bare \"A100\" and never state a memory capacity - 17 paper records carry `hardware_relevance: \"nvidia-a100-sxm\"`, and until this record was created that id resolved to nothing, so all 17 were counted as dangling references. Creating the record makes every one of the 17 resolve without editing a single paper: the citation was never wrong, the target was simply missing.\n\nWHAT IT IS NOT, AND THE RECORDS THAT MUST NOT BE TOUCHED. nvidia-a100-40gb-sxm4 and nvidia-a100-80gb-sxm4 are the CAPACITY-SPECIFIC records, and they are the correct targets whenever a source DOES state a capacity. This record does NOT replace, subsume, merge or deprecate them - they carry the memory figures (40 GB HBM2 / 1555 GB/s and 80 GB HBM2e / 2039 GB/s) that this record deliberately leaves null. Do NOT merge this record into either of them, and do NOT delete them in favour of this one. A bare \"A100\" citation is genuinely ambiguous between the two cuts; the honest resolution is a third, capacity-unstated record, not a coin-flip.\n\nWHY THE CAPACITY FIELDS ARE NULL RATHER THAN PICKED. The 17 citing papers were read and none states whether its A100 had 40 GB or 80 GB of memory. Renaming the citation to either capacity-specific id would have asserted a hardware fact the source does not contain - the exact \"invent the hardware\" error this repo's ledger warns against. So vram_gb, memory_type and memory_bandwidth_gbps are null, with the two candidate values and their sources named in memory_bandwidth_basis. A null that names its candidates is a verified non-pick; a null with no candidates would be an unverified gap.\n\nWHAT *IS* CAPACITY-INDEPENDENT, AND THEREFORE STATED. The two A100 SXM4 cuts are the SAME GA100 die: 108 SMs, the same tensor-core complement, the same 7 nm process, the same 1410 MHz boost clock, the same 400 W board power, and the same 5120-bit HBM interface. Compute (FP64 9.7/19.5, FP32 19.5, TF32 156, BF16/FP16 312, INT8 624 TFLOPS, all dense) and the fabric (NVLink 3, NVSwitch 2, PCIe Gen4 host link) therefore do NOT depend on how much HBM is soldered to the package, so those fields are populated here from the same first-party sources that back the two capacity-specific records. process_nm (7) and tdp_w (400) are the two variants' AGREED values; had they disagreed, both would be null with the disagreement recorded.\n\nSTATUS = verified, AND WHAT THAT COVERS. Every non-null figure in this record is transcribed from a first-party NVIDIA document (the Ampere architecture white paper and the A100 datasheet), and the two documents AGREE on every compute figure, so the compute is verified for the SXM form factor independent of capacity. What \"verified\" does NOT claim is that any individual citing paper used an SXM part: the papers say \"A100\" without stating capacity OR form factor, and this record is the SXM-form-factor target the citation already names. It does not assert that a given paper ran on 40 GB, on 80 GB, or on SXM at all.\n\nCONFIDENCE 0.85: the capacity-independent figures are first-party verified (the class the two capacity-specific records carry at 0.9), discounted slightly because this record is an abstraction over two published SKUs rather than a single part NVIDIA sells under this name.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-10",
+  "sources": [
+    "a100canon-acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+    "a100canon-link2-nvidia-hgx-a100-datasheet",
+    "a100canon-nv-a100-datasheet"
+  ]
+}
