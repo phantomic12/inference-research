@@ -1,0 +1,32 @@
+{
+  "id": "w10-a-source-doi-resolves-to-a-different-paper",
+  "type": "gotcha",
+  "name": "Two source records cite a DOI that resolves to a DIFFERENT paper - a DOI is not self-verifying evidence just because it resolves",
+  "class": "toolchain",
+  "affects": [
+    "pap-mm-colbert",
+    "pap-mm-splade"
+  ],
+  "concepts": [
+    "provenance",
+    "doi",
+    "crossref",
+    "wrong-paper",
+    "citation-integrity",
+    "sigir",
+    "venue"
+  ],
+  "symptom": "When checking the venue of every paper filed venue='other', the Crossref deposit was read back for each DOI quoted in the source records. Two of them resolve cleanly to a DIFFERENT paper than the one they are attached to. pap-mm-colbert (source of papers/colbert, arXiv 2004.12832) carries DOI 10.1145/3397271.3401555 in its notes, and that DOI does NOT resolve at all (Crossref 404). pap-mm-splade (source of papers/splade, arXiv 2107.05720) carries DOI 10.1145/3404835.3463031, and that DOI resolves to 'Cross-Graph Attention Enhanced Multi-Modal Correlation Learning for Fine-Grained Image-Text Retrieval' (SIGIR '21, pp. 1865-1869) - a real SIGIR paper that is not SPLADE. SPLADE's actual deposit is 10.1145/3404835.3463098 (same proceedings volume, SIGIR '21, pp. 2288-2292), which sits in w3p-crossref-sigir-cikm-sigcomm-venues instead. The symptom in the corpus is silent: a reader following the DOI from pap-mm-splade lands on a different paper's page, and the SPLADE record still looks fully sourced. Nothing in validate.py catches this because the check it performs is that the source ID exists, not that the source describes the record it is attached to.",
+  "root_cause": "A DOI looks like a self-certifying citation: it resolves, so it feels verified. But a DOI is only evidence about the document it names, and nothing binds the DOI in a notes string to the paper whose record holds it. Two failure modes produce an indistinguishable corpus state: (1) a DOI that 404s is visibly broken and will be re-checked; (2) a DOI that resolves to a DIFFERENT paper is INVISIBLE, because every automated check sees a working link and the SPLADE venue claim survives in a source record whose DOI points elsewhere. The second is strictly more dangerous, and it is what the SPLADE record has. It arises because a proceedings DOI is easy to mistranscribe - SIGIR '21 deposits share the prefix 10.1145/3404835. and differ only in the final four digits, so 3404835.3463031 and 3404835.3463098 are one keystroke-class apart and both land somewhere plausible. The venue-level conclusion (SIGIR 2021) happens to be correct anyway, which is exactly what lets the wrong DOI persist: the derived claim is right, so nobody re-derives it from the citation.",
+  "workaround": "When a record's venue claim rests on a DOI, resolve the DOI and compare the returned title against the record's own `name` field before believing it - a DOI that resolves to a title other than the record's is worse than a dead one, because the dead one announces itself. Prefer title-search over DOI-string trust: query Crossref with query.bibliographic=<record name> and read the container-title and event off the top proceedings-article hit, then read the DOI off THAT. Where two DOIs share a prefix, check both rather than assuming the one already written down is the right one. This is the same rule as w6s-citation-rot-three-instrument-false-deaths, applied to the resolving case: 403/404 describes the client, and a 200 that names the wrong document describes nothing about your claim at all.",
+  "severity": "major",
+  "notes": "Severity major, not blocker: both records' venue attributions are independently correct - SPLADE is genuinely SIGIR '21 (deposit 10.1145/3404835.3463098, verified by exact-title Crossref query) and ColBERT is genuinely SIGIR '20 (deposit 10.1145/3397271.3401075, pages 39-48, also verified by exact-title query). What is wrong is the provenance chain, not the conclusion, and that is precisely the class of defect that survives a wave: the answer is right so the evidence behind it is never re-opened. Recorded by the w10-venue-gaps crawler while re-verifying the venue of all 18 venue='other' papers before deciding which could be reclassified into a schema enum member. Neither source record was edited by this crawler - data/sources/ is outside its write scope (data/papers/ venue field only, plus data/gotchas/), so this is reported rather than fixed, and the fix belongs to a wave that owns source records. Reproduce with: curl -s 'https://api.crossref.org/works/10.1145/3397271.3401555' (404) and .../10.1145/3404835.3463031 (returns Cross-Graph Attention...). The correct pair, for the repairing wave, is 10.1145/3397271.3401075 and 10.1145/3404835.3463098.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-10",
+  "sources": [
+    "pap-mm-colbert",
+    "pap-mm-splade",
+    "w3p-crossref-sigir-cikm-sigcomm-venues"
+  ]
+}
