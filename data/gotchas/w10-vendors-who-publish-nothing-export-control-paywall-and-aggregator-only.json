@@ -1,0 +1,34 @@
+{
+  "id": "w10-vendors-who-publish-nothing-export-control-paywall-and-aggregator-only",
+  "type": "gotcha",
+  "name": "A Chinese vendor's own site has no spec table, an export-controlled part has no public datasheet, an industry survey is members-only, and a hosted model has no config.json - four different vendor silences that produce the same 0.5 and only one of them is fixable",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "provenance",
+    "source-audit",
+    "known-limitation",
+    "verified-negative",
+    "export-control",
+    "paywall",
+    "secondary-aggregator",
+    "chinese-vendor",
+    "confidence",
+    "vendor-silence"
+  ],
+  "symptom": "Five source records carry confidence 0.3-0.5 and every one of them is at that number because the first-party document does not exist in public. cn-cambricon-mlu590 sits at 0.3, the lowest non-probe value in data/sources, because as its own note states 'Cambricon has NOT published an official MLU590 datasheet or product page. The flopper.io spec sheet shows all dashes (no data)' - the figures it holds are analyst estimates from awesomeagents.ai and bestofai.io and they are 'mutually inconsistent across sources'. cn-iluvatar-bi-v150 sits at 0.3 because the aggregator it cites 'warns that Detailed specifications of TianGai 150 are not fully disclosed by official sources' and the record ends 'Iluvatar's own website publishes no specifications for this part'. nv-h20-flopper-specsheet sits at 0.5 because 'NVIDIA never published a full public H20 datasheet (export-controlled part)' and Flopper itself 'states plainly that NVIDIA publishes no maximum board power for this part'. nrg2-uptime-institute-survey-paywalled sits at 0.5 as an explicit RECORDED AS A NEGATIVE RESULT - the landing pages return 200 and confirm the survey exists in its 14th year, but every one is an ~11.7 KB landing page with no PUE number, and the actual figures are in a 13-14 page excerpt from a 31-page report available only to Uptime Network / Uptime Intelligence members. hf-embed-voyage-code-3 sits at 0.3, the lowest repo value after the harness probe, because 'No config.json available on HF' and the note spells out that 'architecture details not verifiable from config'.",
+  "root_cause": "Four unrelated mechanisms that the confidence field cannot distinguish, and they are not equally fixable. (1) EXPORT CONTROL is a legal silence: the H20's restricted status means there is no public datasheet to find, and no amount of searching will produce one - this is a permanent known limitation. (2) A MEMBERSHIP PAYWALL is a commercial silence: the Uptime figure almost certainly does exist, because Google quotes an 'industry average' of 1.56 that Uptime is the usual origin of, so this one is closable by someone with a membership copy and is not closable from a public host. (3) A CHINESE VENDOR'S OWN SILENCE is a disclosure practice: the part exists and is deployed (the BI-V150 ran in Zhiyuan's Aquila2-70B hybrid training at 85.3% of theoretical peak), but the vendor publishes no spec sheet, so the only route is an aggregator whose own numbers disagree with each other. (4) A HOSTED MODEL WITHOUT A config.json is a packaging artefact: the publisher put a README on the Hub and no architecture file, so the record is not unverifiable, it is merely stored somewhere other than the file the repo knows how to read. The single confidence value collapses all four into 'weak', which is why three of them look like an unfinished audit when they are finished and negative.",
+  "workaround": "Split the follow-up by mechanism, because they do not share one. For the export-controlled part, accept the aggregator and keep vendor_claim:false plus the 'treat all figures as provisional analyst estimates, not vendor specifications' sentence, which nv-h20-flopper-specsheet already carries; there is no first-party document to upgrade to. For the paywalled survey, note that the industry-average PUE likely exists and requires a member copy - do not substitute Google's 1.56 for Uptime's figure, because a number quoted by a third party about a report is not the report. For the Chinese-vendor parts, keep the aggregator citation and record the disagreement explicitly, which is what makes cn-cambricon-mlu590 usable; upgrading it needs a vendor document, not a better aggregator. For the hosted model with no config.json, the README is a weaker but real source and the upgrade path is a publisher-released config or the model's own paper. In all four cases the record is correctly rated and the work is not 'check it again'.",
+  "severity": "major",
+  "notes": "W10 LOWCONFIDENCE PROVENANCE AUDIT 2026-10-10. Categorized KNOWN_LIMITATION for all five and left at their existing confidence, deliberately: a raise here would mean trusting an aggregator more than the note that cites it, and three of the five notes already say the opposite of trust. The audit's contribution is the mechanism split, because the repo currently has no field for it and w7f-non-nv-am-vendor-conventions established the same need on the interconnect side - that gotcha identifies three kinds of null bandwidth_gbps (definitional, sourcing, verified-negative) with no schema field to tell them apart, and this is the same trap one directory up: four kinds of vendor silence, one confidence number. One related positive: the wave-7 pass already fixed the two Iluvatar interconnect records that were closable (w7f-iluvatar-bi-v100-vendor-publishes-chip-to-chip-64gbs), which is the model to follow - close the ones with a vendor document, and label the ones without. No URL, kind or publisher changed.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-10",
+  "sources": [
+    "cn-cambricon-mlu590",
+    "cn-iluvatar-bi-v150",
+    "nv-h20-flopper-specsheet",
+    "nrg2-uptime-institute-survey-paywalled",
+    "hf-embed-voyage-code-3"
+  ]
+}

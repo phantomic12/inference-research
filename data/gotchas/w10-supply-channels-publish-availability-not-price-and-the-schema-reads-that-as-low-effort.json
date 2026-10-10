@@ -1,0 +1,37 @@
+{
+  "id": "w10-supply-channels-publish-availability-not-price-and-the-schema-reads-that-as-low-effort",
+  "type": "gotcha",
+  "name": "Reseller and procurement channels publish availability and a 'Get a Quote' form instead of a price - the reseller gap in the supply layer is structural, and no amount of re-checking a live page will close it",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "provenance",
+    "source-audit",
+    "supply-layer",
+    "price-discovery",
+    "quote-on-request",
+    "known-limitation",
+    "bidirectional-market",
+    "confidence"
+  ],
+  "symptom": "Ten supply/supply-side source records sit at confidence 0.5-0.6, and every one of them has already been fetched and read. sup-used-itcreations-gpu, sup-used-compucycle and sup-used-equipnet-auctions each carry a full 2026-10-03 description of what the channel publishes - IT Creations' structured catalogue of 'NVIDIA Workstation GPUs (35)', 'NVIDIA Datacenter GPUs (30)', 'TITAN (2)', 'GeForce (22)' indexed by architecture, EquipNet's timed-auction marketplace with an in-house refurbishment lab, CompuCycle's enterprise ITAD with a bid-login and corporate-quote motion - and each of them ends with the same sentence in different words: NOT PRICED. The three CDW records behave identically when re-fetched: the DGX B200 page returns a full 'Quick tech specs' block, an Mfg # and a CDW #, and then 'Get a Quote - A CDW representative will email you within one business day to confirm your request'. The RTX PRO 6000 Blackwell Server Edition page gives the card, 96 GB GDDR7, 512-bit bus, 1.6 Tbit/s bandwidth - and then the same 'Get a Quote'. The two eBay records note that 'eBay blocks automated scraping; pricing and availability must be checked manually'. The reseller is not hiding the price badly; the reseller is telling you the price does not exist as a published number.",
+  "root_cause": "B2B compute is sold by quote, not by list. A CDW or a specialist ex-datacenter reseller carries an SKU set that is configurable to the buyer's contract, entitlement and discount structure, so the published surface carries the SKU and leaves the number to a sales conversation. A used/liquidation channel (ITAD, auction, refurbishment) is a bidirectional market where the price is per-lot and per-auction, so there is no price list to quote at all. Both shapes are indistinguishable from a lazy record on the confidence axis, and they are both opposite in sign from what the field is supposed to mean. The confounder is that the gotcha w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market already establishes that 'no OEM publishes this price' is a closable gap in one axis (a cloud hourly rate exists where an OEM server price does not) - and the argument stops there. It does not follow that the reseller axis is equally closable, because an OEM server price is a single published number while a CDW SKU price is a negotiation. Reading those two as the same gap is what makes these records look under-audited rather than correctly-audited.",
+  "workaround": "Treat these as availability evidence, not price evidence, and price the hardware from a channel that does publish a rate: runpod-pricing-page (which does publish per-GPU-hour), the cloud providers' retail-price APIs, or a buyer's own quote. When a record's purpose is to establish that a SKU EXISTS in a channel, cite it for that and say so, which is what sup-used-itcreations-gpu now does ('Useful as evidence that a specialist ex-datacenter reseller carries a broad accelerator SKU set'). If a price is required, request one - that is the intended path and it produces a real number, unlike re-fetching the page. Do not convert these into secondary-aggregator estimates: the aggregator route is exactly what cn-cambricon-mlu590 and nv-h20-flopper-specsheet had to use for parts with no first-party publication, and those carry confidence 0.3-0.5 for that reason.",
+  "severity": "minor",
+  "notes": "W10 LOWCONFIDENCE PROVENANCE AUDIT 2026-10-10. Categorized KNOWN_LIMITATION for all ten records, with one re-classification inside the class: sup-buy-cdw-h100-catalog was moved OUT of this group to UNCHECKED and raised, because a 2026-10-10 re-fetch returned a live results page - 'Results for NVIDIA H100, 1 - 24 of 654' with working category and price-range facets - which is real catalogue content that the record's one-line note did not describe. The other two CDW records were re-fetched at the same time and stay in this group: they return a spec block and a Get a Quote form and no price. Nine records stay here and were left at their existing confidence. Evidence basis: all ten re-fetched from this host on 2026-10-10 with a browser User-Agent; eight returned HTTP 200 with the bodies quoted above, two eBay search URLs returned 403 for automated access and are covered by the anti-bot gotcha. No URL, kind or publisher was changed.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-10",
+  "sources": [
+    "sup-buy-cdw-dgx-b200",
+    "sup-buy-cdw-rtx-pro-6000-be",
+    "sup-used-itcreations-gpu",
+    "sup-used-compucycle",
+    "sup-used-equipnet-auctions",
+    "sup-buy-ebay-a100-80gb-sxm4",
+    "sup-buy-ebay-h200",
+    "sup-buy-it-creations",
+    "sup-used-overclockers-uk",
+    "sup-buy-cdw-h100-catalog"
+  ]
+}

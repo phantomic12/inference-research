@@ -1,0 +1,36 @@
+{
+  "id": "w10-thirty-five-arxiv-preprints-are-kind-blog-at-0-5-while-392-arxiv-records-are-kind-paper-at-0-9",
+  "type": "gotcha",
+  "name": "35 arXiv preprints are filed kind:blog at confidence 0.5 in data/sources while 392 arXiv records are filed kind:paper at 0.9+ - the split tracks whether anyone read past the abstract, not the source's reliability",
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "provenance",
+    "source-audit",
+    "arxiv",
+    "kind-field",
+    "citation-vs-derived",
+    "confidence",
+    "abstract-only",
+    "venue",
+    "unchecked"
+  ],
+  "symptom": "data/sources holds 35 records whose URL is an arxiv.org/abs page and whose confidence is 0.5, ALL of them with kind='blog' - the pap-eff-* and pap-* family, plus blip-2, flamingo and navit. The same directory holds 392 records whose URL is an arxiv.org page sitting at 0.9-0.95, 255 of them with kind='paper'. The same corpus, the same publisher, the same retrieval mechanism, and a 0.5 vs 0.9 spread. Read the notes and the split is not about the papers: every one of the 35 carries a one-paragraph abstract summary ('arXiv:2201.11903. Chain-of-Thought Prompting Elicits Reasoning in Large Language Models. By Jason Wei et al. (Google). Submitted 2022-01-28. Demonstrates that prompting LLMs with intermediate reasoning steps improves performance on arithmetic, commonsense, and symbolic reasoning tasks.'), while the 392's notes cite sections, tables and verbatim strings ('Section 3: we interleave multiple local layers between each global layer ... 1 global for every 5 local layers', 'Section 2.1. Table 1 gives KV-cache-per-token in ELEMENTS'). The low-confidence half was written from the abstract page; the high-confidence half was written from the paper. Compounding it, 25 of the 35 are cited by data/papers records that already carry a researched venue - chain-of-thought-prompting is venue=neurips, process-supervision-prm800k is venue=iclr and additionally cites sco-iclr-accepted-index-2024, s1-budget-forcing is venue=emnlp, rest-retrieval-speculative-decoding is venue=naacl, specinfer-tree-speculative-serving is venue=asplos, lookahead-parallel-decoding is venue=icml, magicdec-long-context-specdec is venue=iclr, self-consistency-marginalise-paths is venue=iclr, react-reasoning-and-acting is venue=iclr, mobilellm-on-device is venue=icml. The venue research was done next door and never propagated one directory into the source record.",
+  "root_cause": "Two different failure modes stacked. The first and larger one is an UNCHECKED classification: a source written from an arXiv abstract page looks fully cited - it has a URL, an author list, a date, a one-sentence claim - and nothing in the contract requires reading the paper, so 35 of them got a number and stopped. This is the abstract-only source class, and it is invisible on the source record because the record that would reveal it is the paper record, which is fine. The second is the kind field, which is being asked to carry reliability. AGENTS.md says 'A blog post that cites no primary source is still a source, but mark it kind: blog and expect lower confidence' - so an arXiv preprint got filed as kind:blog and then given blog confidence, even though the enum has 'paper' available and the neighbouring 392 arXiv records use it. A preprint is not a blog; the distinction that matters is peer-reviewed-vs-not, and the repo expresses it in the venue field on the paper record, not in kind on the source. The third contributor is the citation-vs-derived confusion, which shows up most clearly in the MLPerf set: 14 power sources sit at 0.5 because the JOULES-PER-TOKEN figures derived from them are affected by MaxQ-not-being-a-watt-cap, fixed-clock-at-1000MHz, and tok/s-being-aggregate. Those are properties of the derived number, not of the log file, and the repo has no way to say so.",
+  "workaround": "Separate the two axes the repo currently conflates: a citation's confidence (did we read what this document actually says) and a derived figure's reliability (is the number we computed from it comparable to other numbers). For the 35 preprints the fix is to read the paper and put a section-level quote in the note, the way the 392 already do - that is real work but it is bounded, and for the 25 with a researched venue the venue evidence already exists and only needs to be carried into the source note. Where a paper is genuinely still a preprint (mistral-7b-gqa-swa, cacheblend-rag-kv-fusion, hawk-griffin-gated-linear-recurrence and 9 others are venue=arxiv-preprint with no external venue index cited), say so and keep it lower. For the MLPerf set, raise the citation and keep the caveats on the gotcha, which is what gotchas/mlperf-maxq-is-not-a-watt-cap and gotchas/pwr-short-run-measures-ramp-not-steady-state already do. Do not fix this by lowering the 392 to meet the 35.",
+  "severity": "major",
+  "notes": "W10 LOWCONFIDENCE PROVENANCE AUDIT 2026-10-10. The audit raised 14 MLPerf power sources from 0.5 to 0.95 and re-fetched every quoted number verbatim from the mlcommons/inference_results_v4.1 tree on the same day: 'Tokens per second: 25262.1' / 'Samples per second: 86.7369' for the MaxQ llama2 Offline run, 'Completed tokens per second: 23113.14' for the Server run, 'Tokens per second: 48987.9' / 'Samples per second: 335.674' for mixtral Offline, 'Tokens per second: 31302.7' for the non-power MaxP run, and the NVIDIA README lines 'NVIDIA's power category submission is called MaxQ', 'the first run is called the ranging run, which is used to gather the maximum voltage and current that the system consumes so as to configure the power meter correctly', and 'we use the Yokogawa WT333E meter in either single channel or multi-channel mode'. All matched verbatim, which is why the citations are now 0.95 and the caveats stay where they were. The 35 preprints were deliberately NOT raised: the audit could not read 35 full papers in the time available, and the correct UNCHECKED response to 'nobody has done the lookup' is to do the lookup, not to assert it was unnecessary. Venue spot-checks were run for a few (EAGLE-3 is in proceedings.neurips.cc 2025, s1 is at aclanthology 2025.emnlp-main.1025, Ouroboros is at aclanthology 2024.emnlp-main.742) and those confirm the direction, but three confirmations across 25 does not justify 25 raises. No kind, publisher or URL changed on any record.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-10",
+  "sources": [
+    "pap-eff-cot-prompting",
+    "pap-eff-s1-budget-forcing",
+    "pap-eff-verify-step-by-step",
+    "pap-eff-rest-speculative",
+    "pwr-mlperf-v4-1-h200-maxq-l70-offline-summary",
+    "pwr-mlperf-v4-1-nvidia-readme-maxq",
+    "arch-gemma3",
+    "chain-of-thought-prompting"
+  ]
+}
