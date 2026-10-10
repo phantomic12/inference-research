@@ -741,7 +741,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (383)
+## Gotchas (384)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
@@ -1078,6 +1078,7 @@ and t
 - **Consensus with a reservation: TensorRT-LLM is recommended only when you own the hardware and can absorb the build and operational complexity, and even enthusiasts concede the complexity** (`gotchas/sent-tensorrt-llm-worth-the-build-step`) — [minor] build · Two practitioner sources, four years apart, agree on the shape and differ on the tone. In 2023 a commenter in the launch thread leads with the gating friction: TensorRT-LLM at launch required that 'yo
 - **Consensus: llama.cpp is the default recommendation for one user, especially on consumer or non-NVIDIA hardware, and the reasons given are dependency count and quant coverage rather than speed** (`gotchas/sent-llamacpp-single-user-consensus`) — [minor] toolchain · In a thread asking for the fastest engine for a single personal assistant, the top answer is the bare name: '"llama-server" from "llama.cpp"' (24 upvotes). The second, at 17 upvotes, gives the reason:
 - **Consensus: vLLM is what production teams reach for by default on datacenter NVIDIA, because of Day-1 model support and ecosystem size - not because it benchmarks best** (`gotchas/sent-vllm-enterprise-default-consensus`) — [minor] toolchain · Asked what stacks the industry actually uses, the highest-scoring answer (63 upvotes) from a working ML engineer says: 'Infra for inference wise most production apps use Nvidia TensorRT LLM or vLLM, c
+- **Contested paper audit: cross-index verification resolves venue disputes but leaves preprints and schema gaps contested** (`gotchas/w11-contested-paper-audit-resolutions-and-unresolved-gaps`) — [minor] measurement · 30 papers were marked status=contested after wave-9/10 venue and hardware sweeps. An audit across arXiv API metadata, PMLR, Crossref, and conference indexes resolved only two records to verified (deep
 - **Counter-consensus worth keeping: on Apple Silicon the corpus does not treat llama.cpp as the default, and nominates MLX instead - so the strongest engine consensus in this slice is vendor-scoped** (`gotchas/sent-llamacpp-not-the-apple-fast-path`) — [minor] toolchain · The 'llama.cpp for single user' consensus is stated for CUDA and AMD hardware in every practitioner thread. On Apple Silicon it is contested, from two directions. In the r/LocalLLaMA engine thread a M
 - **For almost every engine in this repo the honest answer to 'does it run in production, and at what scale' is NO EVIDENCE FOUND - and that negative is worth more than an inferred answer** (`gotchas/ev-production-evidence-is-scarce-and-nearly-always-single-site`) — [minor] measurement · Asked to record real-world deployment evidence for each engine, the actual yield on 2026-10-04 was TWO engines with first-party-adjacent numeric field reports from named production sites: [[sglang]] (
 - **GPU power and link state are node-global, so you cannot set or change them from inside a shared multi-tenant allocation - and a node someone else down-clocked will silently cap your throughput** (`gotchas/node-global-power-state-unsettable-in-shared-allocation`) — [minor] config · A benchmark or production tuning session that works perfectly on a dedicated node behaves differently on a shared cluster, with no error from the tooling. Attempts to fix it fail confusingly: the cloc
@@ -4050,14 +4051,14 @@ and t
 
 ## Coverage
 
-Total records: **3993**
+Total records: **3994**
 
 | group | records |
 |---|---|
 | severity:major | 239 |
 | backend:cuda | 77 |
 | severity:blocker | 72 |
-| severity:minor | 69 |
+| severity:minor | 70 |
 | flop bound:memory | 55 |
 | flop bound:compute | 42 |
 | backend:rocm | 37 |
