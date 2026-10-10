@@ -38,8 +38,8 @@ price-basis error cannot reach this doc quietly.
 Every row below requires all of these. They are not hedges; they are the
 conditions under which the arithmetic is even meaningful.
 
-**1. The throughput is AGGREGATE, not single-user.** Every joinable record in
-the repo is `tps_aggregate`. `--single-user` returns **zero rows**. A row here is
+**1. The throughput is almost all AGGREGATE, not single-user.** 28 of 29 joinable records in
+the repo are `tps_aggregate` (`--single-user` returns **1 row**). A row here is
 a *fleet-average* cost at whatever concurrency that benchmark used — it is not
 what one user pays. The repo documents exactly how wrong this can be:
 [[benchmarks/mpt7b-a100-bs1-per-user-decode-tps]] gives 57.6 tok/s for one user
@@ -89,7 +89,7 @@ benchmark for. Likewise the TensorRT-LLM rows are NVIDIA-engine numbers; vLLM
 and SGLang rows are different engines on the same silicon.
 
 **5. Throughput is vendor-reported unless stated.** Of the joinable benchmarks,
-13 of 15 are `measured_by: vendor`. Two are third-party:
+27 of 29 are `measured_by: vendor`. Two are third-party:
 [[benchmarks/perplexity-llama2-70b-h100-fp8-tp2-bs128-tps-per-gpu]] and
 [[benchmarks/sglang-deepseek-v3-96xh100-output-tps-per-node]]. Vendor aggregate
 figures are published under an offline infinite-rate feed — the best point on a
@@ -113,7 +113,7 @@ $0.04/GiB separately. A real bill is higher.
 
 ## The table
 
-`provider × model × hardware`, all rows **AGGREGATE**. Full 203-row output:
+`provider × model × hardware` (220 aggregate, 1 single-user). Full 221-row output:
 `python tools/cost_per_token.py`.
 
 ### Llama 3.1 8B FP8 on 1x H100 SXM — the best-served shape in the repo
@@ -432,10 +432,10 @@ joined record pairs a prefill price with a prefill rate.
 
 Of **145** benchmark records with a positive `value`:
 
-- **15 joinable — 10.3%.** 203 rows, 17 supply records, 11 models, 13
-  hardware×model combinations, 136 provider×model pairs.
-- **65 throughput records named in `--gaps`** as unpriceable, which together with
-  the 15 joined accounts for all **80** records whose `metric` is one of
+- **29 joinable — 20.0%.** 221 rows, 18 supply records, 17 models, 20
+  hardware×model combinations, 145 provider×model pairs.
+- **51 throughput records named in `--gaps`** as unpriceable, which together with
+  the 29 joined accounts for all **80** records whose `metric` is one of
   `decode_tok_s`, `tok_s_per_user` or `tps_aggregate`.
 - **The other 65 positive-value records are not throughput records at all** and are
   therefore outside this join's denominator by construction: 33 `quality`,
@@ -451,10 +451,10 @@ Apple, consumer Radeon, Gaudi2, Arc) or on a `benchmark`-only channel with no
 accelerator id to join on. **65 positive-value records have no accelerator id
 at all** and are structurally unpriceable regardless of how many prices exist.
 Where another document carries those records, cite it; the point of stating the
-count here is that a 10.3% join is not a pricing model, it is a worked example
+count here is that a 20.0% join is not a pricing model, it is a worked example
 on the fifth of the corpus the price records happen to reach.
 
-**Every joinable row is aggregate. There are zero single-user rows.** The join
+**Almost every joinable row is aggregate (220 aggregate, 1 single-user).** The join
 answers "what does a saturated fleet cost per million output tokens", which is a
 real and useful question. It does not answer "what will my user pay per token",
 which is usually the question being asked.
@@ -475,10 +475,10 @@ alone:
 
 ## Reproducing
 
-    python tools/cost_per_token.py                # 203 rows
+    python tools/cost_per_token.py                # 221 rows
     python tools/cost_per_token.py explain        # per-row arithmetic
     python tools/cost_per_token.py gaps           # the unpriceable records
-    python tools/cost_per_token.py --single-user  # zero rows, by design
+    python tools/cost_per_token.py --single-user  # 1 row
     python tools/test_tools.py                    # the evidence check is tested
 
 The tool stores, for every price, the literal substring of the `price_basis` it
