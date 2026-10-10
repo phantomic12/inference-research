@@ -350,6 +350,30 @@ BENCH_JOIN: dict[str, dict] = {
         gpus=8,
         evidence="Hardware: 1 node, 8x AMD Instinct MI355X 288GB HBM3e, "
                  "Dell PowerEdge XE9785L."),
+    # ---- NVIDIA GB300 / B300, joined 2026-10-10 --------------------------
+    # Three v6.1 NVIDIA SERVER rows were left unpriceable at wave 9. Each one
+    # states its device count in the record's own `unit` string, which is the
+    # authoritative statement of what the figure covers, so the divisor is
+    # quoted from there and proven by check_evidence().
+    #
+    # The GB300 NVL72 rows are the useful addition: a rack-scale aggregate of
+    # 944902.14 tok/s is 13123.64 tok/s per GPU on 72 devices, not on 8. The
+    # same trap this table already caught on CoreWeave's H100 and on Oracle.
+    "bench-mlperf-v6-1-coreweave-gb300-nvl72-llama2-70b-server": dict(
+        gpus=72, evidence="aggregate across all 72 GPUs"),
+    "bench-mlperf-v6-1-nvidia-gb300-8gpu-llama2-70b-server": dict(
+        gpus=8, evidence="aggregate across 8 GPUs on 2 nodes"),
+    # bench-mlperf-v6-1-nvidia-b300-llama2-70b-server is NOT here and NOT in
+    # EXCLUDED below, deliberately: its unit is 'output tokens/s (aggregate,
+    # harness 'Completed tokens per second')' and its methodology never states
+    # a device count at any point - not a count beside a device noun, not a
+    # "Hardware:" line, nothing. Its Offline twin on the SAME node does say
+    # "Hardware: 8x NVIDIA B300-SXM-270GB, 1 node", and the record's own `name`
+    # field says "on 8x B300-SXM-270GB", but the tool may not read the name or
+    # borrow the sibling's divisor. The row stays unpriceable, so it falls
+    # through to the honest generic --gaps message: "no declared GPU count -
+    # see BENCH_JOIN (the record's unit/methodology does not state how many
+    # devices the aggregate covers)".
 }
 
 EXCLUDED: dict[str, str] = {
