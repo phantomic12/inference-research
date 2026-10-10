@@ -1,0 +1,32 @@
+{
+  "id": "w10-antibot-403-is-not-a-dead-link-five-sources-block-a-scripted-client",
+  "type": "gotcha",
+  "name": "A plain HTTP probe from this host gets 403 from a commercial vendor and looks like a dead source - five sources in data/sources were rated 0.5 for exactly that, and the correct rating is KNOWN_LIMITATION not UNCHECKED",
+  "class": "compliance",
+  "affects": [],
+  "concepts": [
+    "provenance",
+    "source-audit",
+    "anti-bot",
+    "waf",
+    "false-negative",
+    "confidence",
+    "http-403"
+  ],
+  "symptom": "Five source records sit at confidence 0.5 because a plain HTTP GET from an unauthenticated datacenter IP returns HTTP 403 'Access Denied'. They are sup-buy-intel-gaudi (intel.com), sup-buy-supermicro-gpu-servers and sup-buy-supermicro-sys-521ge (supermicro.com), sup-buy-nvidia-marketplace-wtb (marketplace.nvidia.com, connection reset / antibot refusal), and local-webgpu-spec (www.w3.org/TR/webgpu/). Each of those five notes already carries the 2026-10-03 SOURCE AUDIT paragraph saying the same thing in words: 'That is anti-bot gating, NOT evidence the document moved or is dead, so the URL is deliberately left unchanged and no archived_url was substituted. A future auditor should re-verify from a browser session rather than recording this as a dead link.' The problem is that the CONFIDENCE FIELD disagrees with the note. 0.5 says 'half as trustworthy as a verified source', and a reader filtering on confidence or an agent picking up the record reads that as a source that needs re-checking. It does not. The 403 is a property of the probing client, not of the document.",
+  "root_cause": "The probe cannot distinguish a wall from a death. Both present as a non-200 on the exact URL under test, and the only instrument available from a scripted client is a non-200. This is the same single-hypothesis probe failure recorded in gotchas/w6s-citation-rot-three-instrument-false-deaths, but with the opposite consequence: there, a live document was written off as dead; here, a live document is left permanently at half confidence. The deeper cause is that the repo has a place for 'verified negative' notes but no vocabulary on the source record for the THIRD state - 'not verifiable from here', which is different from both verified and false-negative. So the auditor who cannot open a document has two bad options and picks 0.5 for both of them. The evidence that the documents are alive comes from HPE ProLiant XD685, which serves as the control: a plain curl returned 000 (HPE drops the connection on the non-browser TLS fingerprint) while an independent fetch of the same URL returned the page including the 'HPE secures 18 #1 rankings in MLPerf Inference v6.0 benchmarks' string. Two different clients, two different answers, one live page.",
+  "workaround": "Do not treat a scripted 403 as a source-quality signal. (1) Re-probe with a browser-fingerprint client or a real browser session before drawing any conclusion about the document. (2) Record the probe result as a property of the METHOD, as these five records already do in prose. (3) Until the schema gains an unverifiable-from-here flag, do not encode the method failure in the confidence number: the note is the right home for it, and confidence should describe the source. (4) For these five specifically the URL is stable and the publisher is authoritative, so a future browser-session re-probe is the only outstanding work and it is one session, not one lookup.",
+  "severity": "major",
+  "notes": "W10 LOWCONFIDENCE PROVENANCE AUDIT 2026-10-10. These five records are categorized KNOWN_LIMITATION: the limit is that a compliant HTTP client cannot reach the page, which is a documented host-level anti-bot behaviour, and the limit is already recorded on each record in prose. Confidence left at 0.5 in this pass - the honest position is that a citation nobody has been able to open cannot be verified, and raising it on the strength of a note about why it could not be opened would be exactly the '0.5 to 0.9 because I glanced at it' failure the brief warned against. What this gotcha does instead is name the structural cause so a future wave does not spend another probe re-deriving it. Also note the scale of the class: these 5 are the ones that explicitly documented the 403 in 2026-10-03; a 53-URL parallel probe on 2026-10-10 across every sup-buy-, local-, docs- and vendor-doc source found 8 non-200s total, of which 5 are this class, and the remaining 3 (two eBay search URLs blocked for scraping, and the Fortis/local-webgpu exception) are separate instances of the same anti-bot pattern rather than a different mechanism. See also rent-vendor-pricing-tables-are-js-but-their-apis-are-not for the adjacent 'the surface you can scrape is not the surface that has the number' trap.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-10",
+  "sources": [
+    "sup-buy-intel-gaudi",
+    "sup-buy-supermicro-gpu-servers",
+    "sup-buy-supermicro-sys-521ge",
+    "sup-buy-hpe-xd685",
+    "sup-buy-nvidia-marketplace-wtb",
+    "local-webgpu-spec"
+  ]
+}
