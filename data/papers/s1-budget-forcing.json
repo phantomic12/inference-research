@@ -1,44 +1,43 @@
 {
- "id": "s1-budget-forcing",
- "name": "s1: Simple test-time scaling",
- "arxiv_id": "2501.19393",
- "venue": "emnlp",
- "year": 2025,
- "category": "inference-time-compute",
- "authors": [
-  "Niklas Muennighoff",
-  "Zitong Yang",
-  "Weijia Shi",
-  "Xiang Lisa Li",
-  "Li Fei-Fei",
-  "Hannaneh Hajishirzi",
-  "Luke Zettlemoyer",
-  "Percy Liang",
-  "Emmanuel Candès",
-  "Tatsunori Hashimoto"
- ],
- "problem": "OpenAI's o1 showed test-time scaling works but did not publish its methodology, and replication attempts were producing complicated systems.",
- "mechanism": "Two parts. (1) CURATE s1K: 1,000 questions paired with reasoning traces, selected on three criteria validated by ablations - difficulty, diversity, and quality. (2) BUDGET FORCING, the transferable mechanism: control test-time compute by FORCEFULLY TERMINATING the model's thinking process when a budget is exhausted, or by LENGTHENING it by appending 'Wait' multiple times to the generation when the model tries to end - which induces it to double-check and often fix incorrect reasoning steps. Then plain SFT of Qwen2.5-32B-Instruct on s1K.",
- "hardware_relevance": [
-  "nvidia-h100-sxm",
-  "nvidia-a100-sxm"
- ],
- "speedup_reported": "s1-32B EXCEEDS o1-preview on competition math by up to 27% (MATH and AIME24). More important for this repo than the accuracy claim: scaling s1-32B WITH BUDGET FORCING allows EXTRAPOLATING BEYOND ITS PERFORMANCE WITHOUT TEST-TIME INTERVENTION, from 50% to 57% on AIME24. Budget forcing is thus a knob that moves the accuracy/OUTPUT-TOKEN frontier, and the operator sets the token budget explicitly.",
- "adoption": "research-only",
- "code_url": "https://github.com/simplescaling/s1",
- "open_weights": true,
- "notes": "ADOPTION: research-only as a system - model, data, and code are open (s1-32B weights released, which is unusual for this sub-area and is recorded as open_weights = true), but budget forcing is not a feature in any production engine. It is trivially implementable though: append 'Wait' and cap the trace, which is why it belongs in this slice despite being research-only. THE OPERATING-POINT POINT, which is the durable contribution for anyone reasoning about serving cost: budget forcing makes the ACCURACY-vs-TOKEN-COUNT relationship a directly controllable dial, so a serving system can trade latency for accuracy at a known token price. The append-'Wait' trick is also why reasoning-token counts became a first-class serving metric rather than an implementation detail. VENUE NOTE: no peer-reviewed venue verifiable; arXiv comment carries only a page/figure/table count, so venue = arxiv-preprint, year = ArXiv v1 (Jan 2025). The '27% over o1-preview' comparison is against a specific dated snapshot of a closed product and will not age well - the s1K selection criteria and the budget-forcing mechanism are the reproducible parts. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). No A100 anywhere in the paper; all of its training hardware is H100: \"Finetuning took 26 minutes on 16 NVIDIA H100 GPUs with PyTorch FSDP\", \"we use 394 H100 GPU hours while s1-32B only required 7 H100 GPU hours\", \"partly conducted using the Stanford Marlowe GPU cluster\". Source: https://arxiv.org/pdf/2501.19393 . Left dangling. The record's existing 'nvidia-h100-sxm' sibling ref is the one the paper supports.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass): venue_track set to 'main' from the ACL Anthology bib index (anthology.bib, 131650 entries) by normalized title match. Evidence: anthology id 2025.emnlp-main.1025, booktitle 'Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing'. The Anthology id is the authoritative signal here and it is unambiguous, so this is an additive clarification of a track, not a change of venue - `venue` is untouched and no status change is implied. The reason this matters for inference readers: a Findings paper and a main-track paper at the same venue are not the same kind of evidence, and until this field existed the repo could not say which was which.\n\nVENUE CORRECTION + VENUE_TRACK 2026-10-04 (paper-fields pass, agent w3p): venue 'arxiv-preprint' -> 'emnlp', venue_track 'main'. EVIDENCE: the ACL Anthology bib index (anthology.bib, 131650 entries, fetched 2026-10-04) contains this exact title as anthology id 2025.emnlp-main.1025 with booktitle 'Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing'. That is a proceedings record, so 'no venue found' was an under-claim, not a fact. BOTH VALUES RETAINED HERE PER THE REPO CONTRACT: the prior value was 'arxiv-preprint'. status set to contested because this changes a peer-reviewed attribution. arxiv_id unchanged (2501.19393).\n\nAFFILIATIONS BACKFILLED 2026-10-04 (paper-fields pass, agent w3p): OpenAlex institutions field; corroborated by the paper's own author block. Filled from the API/PDF rather than from memory, because an affiliation is a fact about a specific paper's author block and inference from the author's employer history is how wrong affiliations get shipped.",
- "confidence": 0.85,
- "type": "paper",
- "affiliations": [
-  "Allen Institute for Artificial Intelligence",
-  "Stanford University",
-  "University of Washington"
- ],
- "status": "contested",
- "updated": "2026-10-04",
- "sources": [
-  "pap-eff-s1-budget-forcing"
- ],
- "venue_track": "main"
+  "id": "s1-budget-forcing",
+  "name": "s1: Simple test-time scaling",
+  "arxiv_id": "2501.19393",
+  "venue": "emnlp",
+  "year": 2025,
+  "category": "inference-time-compute",
+  "authors": [
+    "Niklas Muennighoff",
+    "Zitong Yang",
+    "Weijia Shi",
+    "Xiang Lisa Li",
+    "Li Fei-Fei",
+    "Hannaneh Hajishirzi",
+    "Luke Zettlemoyer",
+    "Percy Liang",
+    "Emmanuel Candès",
+    "Tatsunori Hashimoto"
+  ],
+  "problem": "OpenAI's o1 showed test-time scaling works but did not publish its methodology, and replication attempts were producing complicated systems.",
+  "mechanism": "Two parts. (1) CURATE s1K: 1,000 questions paired with reasoning traces, selected on three criteria validated by ablations - difficulty, diversity, and quality. (2) BUDGET FORCING, the transferable mechanism: control test-time compute by FORCEFULLY TERMINATING the model's thinking process when a budget is exhausted, or by LENGTHENING it by appending 'Wait' multiple times to the generation when the model tries to end - which induces it to double-check and often fix incorrect reasoning steps. Then plain SFT of Qwen2.5-32B-Instruct on s1K.",
+  "hardware_relevance": [
+    "nvidia-h100-sxm"
+  ],
+  "speedup_reported": "s1-32B EXCEEDS o1-preview on competition math by up to 27% (MATH and AIME24). More important for this repo than the accuracy claim: scaling s1-32B WITH BUDGET FORCING allows EXTRAPOLATING BEYOND ITS PERFORMANCE WITHOUT TEST-TIME INTERVENTION, from 50% to 57% on AIME24. Budget forcing is thus a knob that moves the accuracy/OUTPUT-TOKEN frontier, and the operator sets the token budget explicitly.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/simplescaling/s1",
+  "open_weights": true,
+  "notes": "ADOPTION: research-only as a system - model, data, and code are open (s1-32B weights released, which is unusual for this sub-area and is recorded as open_weights = true), but budget forcing is not a feature in any production engine. It is trivially implementable though: append 'Wait' and cap the trace, which is why it belongs in this slice despite being research-only. THE OPERATING-POINT POINT, which is the durable contribution for anyone reasoning about serving cost: budget forcing makes the ACCURACY-vs-TOKEN-COUNT relationship a directly controllable dial, so a serving system can trade latency for accuracy at a known token price. The append-'Wait' trick is also why reasoning-token counts became a first-class serving metric rather than an implementation detail. VENUE NOTE: no peer-reviewed venue verifiable; arXiv comment carries only a page/figure/table count, so venue = arxiv-preprint, year = ArXiv v1 (Jan 2025). The '27% over o1-preview' comparison is against a specific dated snapshot of a closed product and will not age well - the s1K selection criteria and the budget-forcing mechanism are the reproducible parts. DANGLING REF STILL OPEN (2026-10-04 paper-read pass; supersedes the earlier 'LEFT UNRESOLVED' note, which reached the same conclusion but only from this record's own text - this time the PAPER itself was read). No A100 anywhere in the paper; all of its training hardware is H100: \"Finetuning took 26 minutes on 16 NVIDIA H100 GPUs with PyTorch FSDP\", \"we use 394 H100 GPU hours while s1-32B only required 7 H100 GPU hours\", \"partly conducted using the Stanford Marlowe GPU cluster\". Source: https://arxiv.org/pdf/2501.19393 . Left dangling. The record's existing 'nvidia-h100-sxm' sibling ref is the one the paper supports.\n\nVENUE_TRACK BACKFILL 2026-10-04 (paper-fields pass): venue_track set to 'main' from the ACL Anthology bib index (anthology.bib, 131650 entries) by normalized title match. Evidence: anthology id 2025.emnlp-main.1025, booktitle 'Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing'. The Anthology id is the authoritative signal here and it is unambiguous, so this is an additive clarification of a track, not a change of venue - `venue` is untouched and no status change is implied. The reason this matters for inference readers: a Findings paper and a main-track paper at the same venue are not the same kind of evidence, and until this field existed the repo could not say which was which.\n\nVENUE CORRECTION + VENUE_TRACK 2026-10-04 (paper-fields pass, agent w3p): venue 'arxiv-preprint' -> 'emnlp', venue_track 'main'. EVIDENCE: the ACL Anthology bib index (anthology.bib, 131650 entries, fetched 2026-10-04) contains this exact title as anthology id 2025.emnlp-main.1025 with booktitle 'Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing'. That is a proceedings record, so 'no venue found' was an under-claim, not a fact. BOTH VALUES RETAINED HERE PER THE REPO CONTRACT: the prior value was 'arxiv-preprint'. status set to contested because this changes a peer-reviewed attribution. arxiv_id unchanged (2501.19393).\n\nAFFILIATIONS BACKFILLED 2026-10-04 (paper-fields pass, agent w3p): OpenAlex institutions field; corroborated by the paper's own author block. Filled from the API/PDF rather than from memory, because an affiliation is a fact about a specific paper's author block and inference from the author's employer history is how wrong affiliations get shipped.\n\n2026-10-10: removed nvidia-a100-sxm. The paper names no A100 anywhere; all its training hardware is H100 ('26 minutes on 16 NVIDIA H100 GPUs with PyTorch FSDP', '394 H100 GPU hours'). The A100 ref was fabricated, not an ambiguous-capacity pick. nvidia-h100-sxm stays, supported.\n\n2026-10-10: removed nvidia-a100-sxm. The paper names no A100 anywhere; all its training hardware is H100 ('26 minutes on 16 NVIDIA H100 GPUs with PyTorch FSDP', '394 H100 GPU hours'). The A100 ref was fabricated, not an ambiguous-capacity pick. nvidia-h100-sxm stays, supported.",
+  "confidence": 0.85,
+  "type": "paper",
+  "affiliations": [
+    "Allen Institute for Artificial Intelligence",
+    "Stanford University",
+    "University of Washington"
+  ],
+  "status": "contested",
+  "updated": "2026-10-04",
+  "sources": [
+    "pap-eff-s1-budget-forcing"
+  ],
+  "venue_track": "main"
 }
