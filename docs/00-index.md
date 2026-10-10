@@ -741,7 +741,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (376)
+## Gotchas (377)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
@@ -846,6 +846,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **A peak-FLOPS specification filed under metric=tps_aggregate is returned verbatim by a capacity planner's tokens/s filter, as four numbers that are not tokens per second** (`gotchas/bench-tflops-filed-as-tps-aggregate-survives-the-tok-s-filter`) — [major] measurement · Four records in data/benchmarks/ carry metric=tps_aggregate while their value is a peak COMPUTE figure, not a rate of tokens: alt-aws-inf2-fp16-tps is 2280 with unit 'TFLOPS FP16', alt-aws-trn2-fp8-tp
 - **A per-GPU-hour rate is not a comparable number until you also know which instance shape it came from - the same GPU differs 2x per-GPU between an 8-GPU and a 1-GPU shape** (`gotchas/rent-per-gpu-hour-needs-the-shape-too`) — [major] measurement · You collect per-GPU-hour figures from several providers to compare cost, divide each node price by its GPU count, and produce a clean table. The table looks fine and it is wrong in a specific way: AWS
 - **A pre-set PROMETHEUS_MULTIPROC_DIR makes vLLM's metrics wrong across restarts — and autoscaling reads them** (`gotchas/ops-stale-multiprocess-metrics-dir`) — [major] operations · After a pod restart the vLLM gauges that should reset to zero instead carry the previous process's values: vllm:num_requests_running, vllm:num_requests_waiting and vllm:kv_cache_usage_perc all read hi
+- **A record can cite a source_id that exists but is absent from its own sources[], and no check in the repo can see it** (`gotchas/w10r-cited-source-id-is-not-a-declared-source`) — [major] toolchain · AGENTS.md rule 2 says every claim must have at least one sources entry and every entry must resolve, and tools/validate.py implements exactly that: it resolves each sources[] entry against data/source
 - **A record whose bandwidth_basis correctly says the figure is bidirectional and must be halved, while its typed bandwidth field stores the unhalved aggregate - the prose was right and the number was 2x wrong, for two months** (`gotchas/w7n-nvswitch-1-stored-the-bidirectional-aggregate-as-per-direction`) — [major] hardware · The nvswitch-1 record stated in its own bandwidth_basis that 'the recorded per-direction value is 150 GB/s per GPU' and simultaneously stored bandwidth_gbps 300. Two fields of one record, one prose se
 - **A right-to-erasure request has to reach logs, traces and caches, not just the primary store - and 164.316 wants the audit documentation kept for 6 years** (`gotchas/sec-right-to-erasure-has-to-reach-derived-artefacts`) — [major] compliance · A deletion request is honoured in the application database. The same prompt is still in the log aggregator, in a trace span, in object storage, and in a multi-turn conversation's cached prefix, and th
 - **A router scrape that recognizes zero metric names returns an all-zero stats object that is truthy, so load-aware routing silently degrades to a random pick with no warning anywhere** (`gotchas/dep-router-metric-name-parse-miss-looks-healthy`) — [major] framework · The deployment looks correct from every signal it exposes. Every backend reports healthy, get_health() stays true, the router logs a normal scrape, dashboard gauges render, and traffic keeps flowing. 
@@ -4043,11 +4044,11 @@ and t
 
 ## Coverage
 
-Total records: **3986**
+Total records: **3987**
 
 | group | records |
 |---|---|
-| severity:major | 233 |
+| severity:major | 234 |
 | backend:cuda | 77 |
 | severity:blocker | 72 |
 | severity:minor | 68 |
