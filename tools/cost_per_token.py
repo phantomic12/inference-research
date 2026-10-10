@@ -350,6 +350,25 @@ BENCH_JOIN: dict[str, dict] = {
         gpus=8,
         evidence="Hardware: 1 node, 8x AMD Instinct MI355X 288GB HBM3e, "
                  "Dell PowerEdge XE9785L."),
+    # ---- NVIDIA MLPerf, joined 2026-10-10 --------------------------------
+    # Each entry names the GPU count as a LITERAL substring of that record's
+    # own unit/methodology, which is what check_evidence() enforces.
+    "bench-mlperf-v5-1-cisco-h200-tgp700w-llama2-70b-offline": dict(
+        gpus=8,
+        evidence="Hardware: 1 node, 8x NVIDIA H200-SXM-141GB, Cisco UCS C880A M8."),
+    "bench-mlperf-v6-1-coreweave-gb300-nvl72-llama2-70b-offline": dict(
+        gpus=72,
+        evidence="Hardware: 72x NVIDIA GB300-288GB aarch64, 18 nodes, 4 per node."),
+    "bench-mlperf-v6-1-nvidia-b300-llama2-70b-offline": dict(
+        gpus=8,
+        evidence="Hardware: 8x NVIDIA B300-SXM-270GB, 1 node"),
+    # The GB300 8-GPU slice rows ran on 8 of the NVL72's 72 GPUs. The divisor
+    # is the slice size (8), not the whole rack (72) - the record's own
+    # methodology says "8-GPU SLICE" and "taken across 2 nodes with 4
+    # accelerators per node".
+    "bench-mlperf-v6-1-nvidia-gb300-8gpu-llama2-70b-offline": dict(
+        gpus=8,
+        evidence="on an 8-GPU SLICE of a GB300 NVL72 (72 GPUs total on the NVL72)"),
 }
 
 EXCLUDED: dict[str, str] = {
