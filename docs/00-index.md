@@ -741,7 +741,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (380)
+## Gotchas (382)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
@@ -984,6 +984,7 @@ TRAP
 - **SYCL_CACHE_PERSISTENT=1 causes crashes in llama.cpp; not recommended** (`gotchas/xpu-sycl-cache-persistent-crash`) — [major] config · Setting SYCL_CACHE_PERSISTENT=1 in the environment causes crashes when running llama.cpp with the SYCL backend. The crash occurs because the SYCL runtime caches and reuses JIT-compiled binaries, and w
 - **Scale-to-zero on an LLM is a bill-shaped decision, not a latency-shaped one: keeping a model warm is the only way to be interactive, so the economics only work when utilization is very low or traffic is genuinely spiky** (`gotchas/dep-serverless-scale-to-zero-only-pays-for-spiky-or-mostly-idle`) — [major] config · Serverless GPU looks cheap until you notice what the cold-start penalty forces you to do about idle capacity, and the fix for that penalty is to keep the container warm - which is the thing you were t
 - **Searching arXiv for DeepGEMM by title returns a same-name paper by unrelated CPU-inference authors - reject it on author grounds** (`gotchas/meta-deepgemm-title-search-returns-the-wrong-deepgemm`) — [major] toolchain · The natural way to fill the DeepGEMM citation is a title search on the arXiv API. That search DOES return exactly one hit, it is titled 'DeepGEMM', and it looks authoritative - so it is easy to record
+- **Sixteen of the eighteen venue='other' papers name a real venue with a publisher deposit - the gap was a missing enum member, not missing information** (`gotchas/w10-b-venue-other-is-a-provenance-claim-not-a-vocabulary-claim`) — [major] toolchain · Auditing all 18 papers with venue='other' in this repo, on the expectation that most were genuinely unverifiable, produced the opposite result: every one of them names a real venue, and 12 of the 15 i
 - **Sizing a rack by summing GPU TDP understates it badly: a 72-GPU GB200 NVL72 rack draws ~120 kW against a 1,200 W per-GPU ceiling, and its installed PSU capacity is 264 kW** (`gotchas/power-floor-scaling-rack-is-not-sum-of-gpu-tdp`) — [major] config · A power budget built by multiplying published per-GPU Max TDP by GPU count is wrong by roughly 40% on facility draw and by more than 2x on installed electrical capacity. For GB200 NVL72: 72 x 1,200 W 
 - **Speculative decoding that works standalone crashes under PD disaggregation, on a per-algorithm basis with no warning** (`gotchas/pd-speculative-decoding-unsupported-per-algorithm-under-pd`) — [major] framework · DFLASH speculative decoding crashes at startup under PD disaggregation: the first update_running_batch on the decode side dies with AttributeError: 'NoneType' object has no attribute 'prepare_for_deco
 - **Standard load balancers cannot see KV cache state - routing decisions are blind to cache locality** (`gotchas/serve-routing-cache-state-not-visible-to-load-balancer`) — [major] config · A standard load balancer (round-robin, least-connections) sends requests to replicas that do not have the prefix cached, causing redundant prefill computation and higher TTFT.
@@ -1012,6 +1013,7 @@ TRAP
 - **Time-slicing provides no throughput isolation - one tenant's load silently degrades all others** (`gotchas/serve-time-slicing-no-throughput-isolation`) — [major] hardware · One tenant runs a large batch job, and all other tenants on the same GPU experience latency degradation. There is no isolation.
 - **TurboQuant KV cache (k8v4) is unusable on Ampere consumer/prosumer cards with hybrid MoE models: a Triton FP8 path reports supported below SM 89, gets selected, then fails at runtime** (`gotchas/comm-turboquant-kv-ampere-arch-gate`) — [major] driver · A user on 2x NVIDIA RTX A5000 24GB (SM86) running Qwen/Qwen3-35B-A3B-FP8 with kv_cache_dtype=turboquant_k8v4 and max_model_len=163840 hit a chain of failures, starting with the model refusing to start
 - **Two NVFP4 kernels in vLLM's registry assert no architecture support at all, so 'the engine supports FP4' is not decidable from its own gate list** (`gotchas/nvfp4-registry-has-kernels-with-no-arch-gate`) — [major] kernel · An NVFP4 checkpoint serves on hardware that has no FP4 tensor-core path — a V100, an A100 — with no capability error at load time. The failure, if any, surfaces later and from inside FlashInfer's own 
+- **Two source records cite a DOI that resolves to a DIFFERENT paper - a DOI is not self-verifying evidence just because it resolves** (`gotchas/w10-a-source-doi-resolves-to-a-different-paper`) — [major] toolchain · When checking the venue of every paper filed venue='other', the Crossref deposit was read back for each DOI quoted in the source records. Two of them resolve cleanly to a DIFFERENT paper than the one 
 - **Unified memory is not VRAM: capacity, bandwidth, and sharing constraints** (`gotchas/local-unified-memory-not-vram`) — [major] hardware · A Mac with 128GB unified memory can serve a larger model than a discrete GPU with 24GB VRAM, but the advantage is capacity, not speed. The unified memory bandwidth is shared with the CPU and is not de
 - **Verified negative: no vendor, no paper and no official results page publishes a tok/s figure for any of the six third-party field-report shapes in this slice - a single community post is the entire published record** (`gotchas/w8-no-vendor-publishes-tok-s-for-these-six-shapes`) — [major] measurement · A reader auditing data/benchmarks/ for provenance finds records whose only source is a GitHub issue, and the audit question is whether a better source exists that simply was not cited. For the six sha
 - **Video frame sampling rate is the primary cost knob** (`gotchas/video-frame-sampling-rate-is-the-primary-cost-knob`) — [major] config · Video inference cost is dominated by the frame sampling rate. A 1-minute video at 1 fps = 60 frames, but at 2 fps = 120 frames, doubling the cost.
@@ -4047,11 +4049,11 @@ and t
 
 ## Coverage
 
-Total records: **3990**
+Total records: **3992**
 
 | group | records |
 |---|---|
-| severity:major | 236 |
+| severity:major | 238 |
 | backend:cuda | 77 |
 | severity:blocker | 72 |
 | severity:minor | 69 |
