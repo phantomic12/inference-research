@@ -7,8 +7,8 @@ items were named three times by three different agents before anyone wrote them
 down. This document exists so that the fifth naming of an item is a lookup, not
 a discovery.
 
-**Status as of 2026-10-05**, against a corpus of **3873 records, 0 errors, 30
-dangling references against a budget of 30** (`python tools/validate.py`).
+**Status as of 2026-10-10**, against a corpus of **3990 records, 0 errors, 13
+dangling references against a budget of 13** (`python tools/validate.py`).
 
 **How to use it.** If you are about to report a defect, check here first. If it
 is listed and still open, do not re-report it — either fix it if it is genuinely
@@ -149,15 +149,16 @@ record and find this one instead — the failure mode is a confident reader
 concluding the repo is missing a part. Fix the wording across all four; do not
 populate `accelerator_ids`.
 
-#### D6 — 17 `nvidia-a100-sxm` dangling references, and the other 13
+#### D6 — 17 `nvidia-a100-sxm` dangling references **FIXED 2026-10-10**, and the other 13 **still budgeted**
 
 | | |
 |---|---|
-| **What** | 30 dangling references total. **17** are `hardware_relevance: "nvidia-a100-sxm"` on paper records. The remaining **13**: `gfx950` (4), `gfx942` (3), `mlx-quantized-4bit` (3), `gfx1151` (1), `2bit` (1), `amd-ryzen-strix-point` (1). |
+| **Was** | 30 dangling references total. **17** were `hardware_relevance: "nvidia-a100-sxm"` on paper records. The remaining **13**: `gfx950` (4), `gfx942` (3), `mlx-quantized-4bit` (3), `gfx1151` (1), `2bit` (1), `amd-ryzen-strix-point` (1). |
 | **Where** | `hardware_relevance` on [[papers/w4p-megascale-infer-disaggregated-expert-parallelism]] and its peers; `affected_by_hardware` on the AMD FLOP records; `format_id` on the MLX and Radeon rows. |
-| **Wave** | A100 disambiguation pass fixed 11 of 29; the rest survived into waves 6 and 7. |
+| **Wave** | A100 disambiguation pass fixed 11 of 29; the rest survived into waves 6 and 7. Closed by `w9-a100-canonical`. |
 | **Why not then** | **Cannot be fixed by a rename, and that is the finding.** `nvidia-a100-sxm` names an id that splits into [[accelerators/nvidia-a100-40gb-sxm4]] and [[accelerators/nvidia-a100-80gb-sxm4]]. The papers cite "A100" and do not state a capacity, so picking one variant would be inventing the hardware. The 4-row-remaining MDNA targets (`gfx942`, `gfx950`, `gfx1151`) are **architecture targets, not parts** — there is no record to point them at. The `format_id` values are bit-width and scheme names, not record ids. |
-| **Fixed now?** | **No, and it should not be "fixed" by picking.** This is budgeted debt against `max_dangling_refs: 30`, which ratchets: 110 → 54 → 43 → 30. Lower it in the same change that reduces the count; never raise it to go green. |
+| **Fixed now?** | **Yes for the 17, 2026-10-10, by CREATING THE MISSING TARGET rather than editing the citations.** A new canonical accelerator record [[accelerators/nvidia-a100-sxm]] (NVIDIA A100 SXM, **capacity unstated**) now carries the id the 17 papers already named, so all 17 resolve with **zero paper edits** — the citations were never wrong, the record they pointed at simply did not exist. The record deliberately leaves `vram_gb`, `memory_type` and `memory_bandwidth_gbps` **null** (the two candidate cuts and their sources are named in its `memory_bandwidth_basis`, so the null is a verified non-pick, not a gap) and states the capacity-independent figures (compute, 5120-bit interface, NVLink 3 / NVSwitch 2, 400 W, 7 nm) that both cuts share. It does **not** replace, merge or deprecate the two capacity-specific records. `max_dangling_refs` ratcheted **30 → 13** in the same change. |
+| **Still budgeted (13), and NOT to be "fixed" by adding records** | The remaining 13 are named above and are a different class: the AMD `gfx*` values are architecture targets (no part exists to point at), the `format_id` values are quantization-format names, and `amd-ryzen-strix-point` is a CPU point on a flops record. They stay as budgeted debt against `max_dangling_refs: 13`, which ratchets: 110 → 54 → 43 → 30 → 13. Lower it in the same change that reduces the count; never raise it to go green. |
 
 #### D7 — two energy-schema members deliberately left unused
 
@@ -295,10 +296,15 @@ Three acceptable endings:
 
 - **Never raise a budget to go green.** `max_dangling_refs` moves down in the
   same change that reduces the count. Its history is in the file: 110 → 54 → 43 →
-  30.
+  30 → 13.
 - **Cite nothing you have not resolved.** Every `dir/id` citation in this document
-  was checked against the record set on 2026-10-05 — 37 unique, all resolving. An
-  unresolvable citation is worse than no citation, because it looks sourced.
+  was checked against the record set on 2026-10-10 — **34 unique real record
+  citations, all resolving** (plus the two non-record examples `dir/id` and
+  `accelerators/does-not-exist`). The 2026-10-05 sentence in this file claimed
+  **37**; re-measuring the pre-change text gives **35 unique slash citations, 33
+  of them real records** — the 37 did not reproduce, so the figure is replaced
+  with the measured value, per the rule below. An unresolvable citation is worse
+  than no citation, because it looks sourced.
 - **A wrong number in this ledger is a defect in this ledger.** Several numbers
   in D1, D2, D4 and D6 arrived in the brief that commissioned this document and
   did not survive measurement. They are recorded at their measured values, with
