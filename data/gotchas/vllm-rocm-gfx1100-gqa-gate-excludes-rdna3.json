@@ -1,0 +1,29 @@
+{
+  "id": "vllm-rocm-gfx1100-gqa-gate-excludes-rdna3",
+  "type": "gotcha",
+  "name": "vLLM ROCm custom paged attention gate requires gqa_ratio >= 3 on gfx1100 vs >= 1 on CDNA, forcing 1.8x-7.3x slower Triton fallback",
+  "class": "kernel",
+  "affects": [
+    "amd-radeon-rx-7900-xtx",
+    "vllm"
+  ],
+  "concepts": [
+    "gfx1100",
+    "rdna3",
+    "paged-attention",
+    "gqa",
+    "triton",
+    "rocm"
+  ],
+  "symptom": "On AMD RDNA3 (gfx1100, RX 7900 series), vLLM's use_rocm_custom_paged_attention in vllm/platforms/rocm.py requires gqa_ratio >= 3, whereas on CDNA parts the same function requires gqa_ratio >= 1. For models with GQA ratio between 1 and 2, gfx1100 is silently excluded from the ROCm custom paged attention kernel and routed to Triton paged attention. In the excluded range, the custom ROCm kernel is measured to be 1.84x to 7.28x faster than the Triton fallback, costing 1.19x end-to-end decode throughput at 32K context.",
+  "root_cause": "A performance heuristic introduced in vllm/platforms/rocm.py assumed custom paged attention only benefited RDNA3 when GQA ratio was high (>= 3). Empirical benchmarking on dual RX 7900 XT demonstrated that the heuristic is inverted: the excluded range (gqa_ratio 1-2) is where the custom kernel provides the largest relative speedup over Triton.",
+  "workaround": "Patch vllm/platforms/rocm.py to relax the gfx11 gate condition to gqa_ratio >= 1 matching CDNA, or override the attention backend selection via environment variables.",
+  "severity": "major",
+  "notes": "Measured on dual RX 7900 XT by cadamcat (dual-radeon-vllm). Confirmed by upstream issues vllm#54210 and vllm#50603.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-11",
+  "sources": [
+    "cadamcat-dual-radeon-rdna3-second-class"
+  ]
+}

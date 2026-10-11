@@ -1,0 +1,31 @@
+{
+  "id": "amd-rdna3-tensor-parallel-decode-scaling-bottleneck",
+  "type": "gotcha",
+  "name": "On dual consumer RX 7900 XT, tensor parallelism yields only 1.11x-1.23x decode scaling due to KV-head starvation while achieving 1.56x-1.87x prefill scaling",
+  "class": "framework",
+  "affects": [
+    "amd-radeon-rx-7900-xtx",
+    "vllm"
+  ],
+  "concepts": [
+    "gfx1100",
+    "rdna3",
+    "tensor-parallel",
+    "tp2",
+    "decode",
+    "prefill",
+    "gqa",
+    "kv-cache"
+  ],
+  "symptom": "Adding a second consumer RX 7900 GPU under vLLM TP=2 yields only 1.11x to 1.23x speedup on batch-1 token generation across context lengths from 500 to 32K tokens on dense and MoE models (e.g. 1.13x-1.23x on gemma-4-12B, 1.11x-1.12x on gemma-4-26B-A4B). In contrast, prompt processing (prefill) on the same pair achieves 1.56x to 1.87x wall-clock speedup.",
+  "root_cause": "The decode scaling bottleneck is not primarily interconnect all-reduce latency over PCIe (which measures only ~1.85 ms out of 16.70 ms per step). Instead, 2D flash-decoding launches one GPU workgroup per KV head; tensor parallelism halves the KV heads per GPU, doubling compute starvation during batch-1 decode. Prefill scales cleanly (1.56x-1.87x) because prompt attention parallelises across attention heads with zero inter-GPU communication.",
+  "workaround": "Do not scale consumer RDNA3 cards via tensor parallelism expecting 2x batch-1 decode throughput. Use pipeline parallelism, independent model replica serving, or leverage the dual-card setup primarily for larger context/model capacity and prefill throughput gains.",
+  "severity": "major",
+  "notes": "Directly measured by cadamcat on 2x RX 7900 XT in dual-radeon-vllm across eleven ladder depths with verify_doc_figures.py regression checks.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-11",
+  "sources": [
+    "cadamcat-dual-radeon-a100-vs-two-radeons"
+  ]
+}

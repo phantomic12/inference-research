@@ -1,0 +1,31 @@
+{
+  "id": "amd-strix-halo-ttm-pages-limit-unified-memory",
+  "type": "gotcha",
+  "name": "AMD Strix Halo (gfx1151) requires ttm.pages_limit boot parameter to expose >100GB unified memory to ROCm, avoiding false OOM errors",
+  "class": "config",
+  "affects": [
+    "amd-radeon-8060s-ryzen-ai-max",
+    "llama-cpp"
+  ],
+  "concepts": [
+    "strix-halo",
+    "gfx1151",
+    "radeon-8060s",
+    "ttm",
+    "gtt",
+    "unified-memory",
+    "rocm",
+    "pages-limit"
+  ],
+  "symptom": "On AMD Strix Halo APUs (Ryzen AI Max+ 395 with Radeon 8060S, 128 GB LPDDR5X), attempting to allocate large models in llama.cpp with ROCm fails during startup with 'ROCm error: out of memory' or 'hipStreamCreateWithFlags', even when the system has over 100 GB of free RAM. Conversely, allocating a 96 GB static UMA framebuffer in BIOS wastes memory and restricts host OS usage.",
+  "root_cause": "Linux amdgpu manages APU compute memory through GTT (Graphics Translation Table) and TTM (Translation Table Manager). By default, TTM caps the dynamic memory available to the GPU below what large LLM models require. The BIOS UMA Frame Buffer setting only sets the display framebuffer (which only needs to be 512 MB) and does not govern the compute pool.",
+  "workaround": "Keep BIOS UMA Frame Buffer Size at 512 MB. Set ttm.pages_limit on the kernel command line in /etc/default/grub (e.g. ttm.pages_limit=30146560 for ~115 GiB on a 128 GB machine, calculated as 115 * 1024^3 / 4096) and pass amd_iommu=off. Verify after reboot via /sys/module/ttm/parameters/pages_limit.",
+  "severity": "blocker",
+  "notes": "Empirically verified on GMKtec EVO-X2 (AMD Ryzen AI Max+ 395, 128GB LPDDR5X) under Ubuntu 26.04 LTS and Linux kernel 7.0 by See Hiong.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-11",
+  "sources": [
+    "seehiong-strix-halo-llama-cpp"
+  ]
+}
