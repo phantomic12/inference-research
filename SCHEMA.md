@@ -369,7 +369,10 @@ a contribution with a method, a claim, and an adoption status.
                          naacl | cvpr | iccv | eccv | osdi | sosp | nsdi | atc |
                          eurosys | asplos | micro | isca | mlsys | vldb | sigmod |
                          kdd | www | interspeech | icassp | colm | sigcomm |
-                         cais | other
+                         cais | sigir | cikm | ppopp | sc22 | facct | enlsp |
+                         tmlr | taslp | jmlr | acm-tos | nature | other
+    venue_kind           conference | journal | null
+                         distinguishes conference from journal publication venue
     year                 int|null
     category             attention | kv-cache | quantization | moe | ssm |
                          speculative-decoding | serving-systems | scheduling |
