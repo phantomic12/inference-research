@@ -1,0 +1,33 @@
+{
+  "id": "chunked-prefill-ttft-throughput-tradeoff",
+  "type": "flop",
+  "name": "Chunked prefill and hybrid batching: tail-latency elimination vs raw throughput and TTFT tax",
+  "class": "prefill_attention",
+  "arithmetic_intensity": "Monolithic prefill executes all prompt tokens L in a single large-M GEMM, achieving high compute bound arithmetic intensity (AI ~ L). However, at long context (16K-128K), monolithic prefill monopolizes GPU streaming multiprocessors for hundreds to thousands of milliseconds, causing severe generation stalls (inter-token latency / TBT spikes lasting multiple seconds in vLLM and Orca for concurrent decodes). Chunked prefill (Sarathi-Serve, OSDI'24, arXiv:2403.02310, [[sarathi-serve]]) divides prefill tokens into chunks of size C (e.g. 512, 1024, 2048) and forms hybrid batches coalescing in-flight decodes with prefill chunks. Under tail latency SLOs (P99 TBT), Sarathi-Serve demonstrates dramatic gains in serving capacity: 2.6x higher serving capacity for Mistral-7B on 1x A100, up to 3.7x for Yi-34B on 2x A100, and up to 5.6x for Falcon-180B under pipeline parallelism by eliminating pipeline bubbles. Under load, stall-free scheduling reduces queueing delays, improving median TTFT on openchat_sharegpt4 (0.53s vs 1.04s) and arxiv_summarization (3.78s). However, chunking incurs three quantitative costs: (1) Repeated KV cache memory traffic: for a prompt split into N = L/C chunks, the attention kernel must reload previous KV tokens in subsequent chunks (chunk 1 KV is loaded N-1 times, chunk 2 is loaded N-2 times, totaling O(N^2 * C) KV reload bytes), degrading prefill bandwidth efficiency; (2) Tile quantization penalty: non-tile-aligned chunk budgets cause significant kernel slowdown (e.g. Sarathi-Serve observes chunk size 257 increases prefill time by 32% vs chunk size 256); (3) Aggregate raw throughput tax: on unconstrained offline workloads with no latency SLO, chunked prefill reduces peak token throughput compared to unchunked batch prefill because of repeated KV loads and the lower arithmetic intensity of mixed prefill+decode GEMMs.",
+  "bound_by": "both",
+  "scales_with": [
+    "chunk_size C (controls the trade-off: larger chunks increase GEMM efficiency but increase decode TBT interruption)",
+    "prompt_length L (determines chunk count N = L/C; KV reload overhead scales quadratically with N)",
+    "batch_size (number of decode rows co-scheduled in the hybrid batch)",
+    "pipeline_parallel_stages (uniform chunked batches eliminate pipeline execution bubbles across stages)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200"
+  ],
+  "workarounds": [
+    "Tune max_num_batched_tokens to a power-of-two tile multiple (e.g. 512, 1024, 2048) to avoid the 32% tile-quantization overhead penalty",
+    "Adopt prefill/decode disaggregation (DistServe, Mooncake) for extreme 128K context to decouple long-prefill compute from decode latency without paying N-iteration chunking delays",
+    "Use stall-free piggybacking of decodes onto prefill iterations rather than round-robin alternation"
+  ],
+  "notes": "THE PRODUCTION TRADE-OFF AND VERIFIED NEGATIVE AT 128K: Chunked prefill is fundamentally an SLO/goodput optimization, not an arithmetic throughput enhancer. It converts idle decode bandwidth into prefill work and bounds decode interruption at the expense of extra KV memory traffic and per-request iteration overhead. VERIFIED NEGATIVE AT 128K: Sarathi-Serve evaluated prompt traces filtered to <=8192 and <=16384 tokens (openchat_sharegpt4 and arxiv_summarization). Neither Sarathi-Serve nor vLLM/SGLang publishes empirical serving throughput or TTFT benchmarks for chunked prefill at 128K context. At 128K with a typical chunk size of 1024 tokens, a single prompt requires 128 scheduler iterations to complete prefill. If decode iterations interleave between chunks under high traffic, TTFT inflates by orders of magnitude compared to isolated execution, making physical disaggregation (e.g. Mooncake, DistServe) the dominant architecture for true 128K production serving. Cross-references: [[sarathi-serve]], [[chunked-prefill-interleaving-scheduling]], [[sched-prefill-decode-disaggregation]].",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-11",
+  "sources": [
+    "sched-sarathi-osdi24",
+    "pap-sys-sarathi-arxiv"
+  ]
+}

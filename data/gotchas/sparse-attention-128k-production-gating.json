@@ -1,0 +1,30 @@
+{
+  "id": "sparse-attention-128k-production-gating",
+  "type": "gotcha",
+  "name": "Production sparse attention (NSA, MoBA) is strictly gated on native model architectures and lacks 128K serving throughput benchmarks",
+  "class": "framework",
+  "affects": [],
+  "concepts": [
+    "sparse-attention",
+    "nsa",
+    "moba",
+    "vllm",
+    "sglang",
+    "long-context",
+    "128k",
+    "serving-benchmarks"
+  ],
+  "symptom": "Operators expecting 5x-10x throughput gains on arbitrary dense 128K-context models by enabling sparse attention find that production engines (vLLM, SGLang) cannot enable NSA or MoBA on standard dense checkpoints (e.g. Llama-3.1, Qwen2.5), and that neither paper publishes multi-tenant serving throughput at 128K.",
+  "root_cause": "Sparse attention mechanisms like NSA (DeepSeek, arXiv:2502.11089) and MoBA (Moonshot AI, arXiv:2502.13189) rely on specialized routing networks and training-time representations (hierarchical compression/selection in NSA, block-level MoE gating in MoBA). Post-hoc application of block sparsity to dense models without retraining causes severe quality collapse. Consequently, SGLang gates NSA strictly to models natively trained with NSA (python/sglang/srt/layers/attention/nsa/), and vLLM does not support MoBA or NSA as general-purpose serving backends. Furthermore, both papers report microbenchmark kernel speedups (NSA: 9.0x forward on 8x A100 at 64k; MoBA: 6.5x at 1M in custom FlashAttention) or synthetic retrieval (64k NIAH, 128K RULER 0.7818 vs 0.7849), with a verified absence of end-to-end serving benchmarks (tok/s, TTFT, P99 ITL) under realistic multi-user 128K traffic.",
+  "workaround": "Only deploy sparse attention for models pretrained end-to-end with the sparse architecture. For dense models at 128K, use KV cache quantization (FP8 KV) and chunked prefill rather than post-hoc sparse attention. Acknowledge the empirical gap: treat published 6.5x-11.6x speedup figures as isolated attention kernel bounds, not serving capacity gains.",
+  "severity": "major",
+  "notes": "A VERIFIED NEGATIVE: In the literature introducing Native Sparse Attention (arXiv:2502.11089, [[nsa-native-sparse]]) and MoBA (arXiv:2502.13189, [[moba]]), neither paper publishes 128K serving throughput or TTFT under production serving traffic. NSA's empirical benchmarks stop at 64k (65,536 tokens on 8x A100), where it reports 9.0x forward / 6.0x backward kernel speedup and 11.6x decode memory access reduction. MoBA evaluates RULER at 128K (0.7818 vs 0.7849 for Full Attention at 62.5% sparsity with block size 4096 and top-k=12) and prefill speedup up to 6.5x at 1M and 16x at 10M, but publishes no serving throughput or decode latency numbers under multi-tenant serving workloads. In production inference engines, SGLang implements dedicated Triton/TileLang kernels for NSA gated exclusively on native checkpoints, while vLLM provides no automatic drop-in sparse attention path for standard dense models. Cross-references: [[nsa-native-sparse]], [[moba]], [[sparse-attention-hardware-aligned-nsa-moba]], [[attn-sparse-structured-attention-status]].",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-11",
+  "sources": [
+    "pap-attn-nsa-native-sparse",
+    "pap-attn-moba",
+    "qhw-src-sglang-quant-docs"
+  ]
+}
