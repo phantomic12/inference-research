@@ -41,7 +41,7 @@
 - **Biren BR100 GPGPU (2-die OAM training accelerator)** (`accelerators/biren-br100`) — asic-other Biren SPC (2-die chiplet, CoWoS packaging) 2022 · 64 GB hbm2e · 1600 GB/s · 550 W
 - **Biren BR104 GPGPU (single-die inference accelerator)** (`accelerators/biren-br104`) — asic-other Biren SPC (single die, half-size sibling of BR100) 2023 · 32 GB hbm2e · 300 W
 - **Enflame S60 (SCORPIO-AO) AI accelerator** (`accelerators/enflame-s60`) — asic-other Enflame SuiSi / SCORPIO chiplet 2025
-- **FuriosaAI Warboy** (`accelerators/furiosaai-warboy`) — asic-other Warboy (Gen 1 Vision NPU) 2021 · 66 GB/s · 40 W
+- **FuriosaAI Warboy** (`accelerators/furiosaai-warboy`) — asic-other Warboy (Gen 1 Vision NPU) 2021 · 16 GB lpddr4x · 66 GB/s · 40 W
 - **Horizon Robotics Journey 5 (J5) automotive AI SoC** (`accelerators/horizon-journey-5`) — asic-other BPU 3.0 Bayes (dual-core) 2021
 - **Horizon Robotics Journey 6P (Nash BPU automotive SoC)** (`accelerators/horizon-journey-6p`) — asic-other BPU 3.0 Nash 2024 · 204 GB/s
 - **Huawei Ascend 310P (Da Vinci edge inference NPU)** (`accelerators/huawei-ascend-310p`) — asic-other da-vinci (310-series) 2022 · 24 GB lpddr4x · 204.8 GB/s · 72 W
@@ -741,7 +741,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (387)
+## Gotchas (390)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
@@ -1068,6 +1068,7 @@ and t
 - **A gateway hop costs one to two orders of magnitude less latency than the model call it fronts, but it adds a failure domain, a compatibility ceiling and a throughput ceiling - the overhead number is the least of the three** (`gotchas/dep-gateway-hop-cost-and-value`) — [minor] config · The question 'how much latency does the gateway add' is asked with the expectation of a bad number, and the measured answers are small: roughly 2 ms of data-plane overhead under sustained enterprise L
 - **A single llama.cpp commit regressed Vulkan Q4_K_M decode speed with no prompt-processing change** (`gotchas/vulkan-q4km-speed-regression`) — [minor] kernel · Bisected to first bad commit adc5dd92e8aea98f5e7ac84f6e1bc15de35130b5 on Windows 11 with dual Radeon PRO W7800, Vulkan SDK 1.3.283, Qwen2.5-14B-Instruct-Q4_K_M at -ngl 99. Decode (tg) fell 42.12 -> 36
 - **A source citation pointing at a file that upstream moved looks first-party and cannot be followed - and the reported move is often not a move at all** (`gotchas/w6s-stale-repo-path-citation-looks-first-party`) — [minor] toolchain · A source record cites a specific file inside an upstream repo - the natural way to cite code, because a permalink to a source file is the strongest evidence available. Upstream refactors, the file mov
+- **A100 hardware relevance cited without memory capacity (Defect D6)** (`gotchas/gap-a100-no-capacity-hardware-relevance`) — [minor] hardware · Thirteen records in data/papers/ cite hardware_relevance 'nvidia-a100-sxm', generating 13 dangling reference warnings under tools/validate.py against the budgeted debt.
 - **AMD Ryzen Strix Point (gfx1150) APU accelerator gap distinct from Strix Halo (gfx1151)** (`gotchas/gap-amd-ryzen-strix-point`) — [minor] hardware · data/flops/embedding.json cites affected_by_hardware 'amd-ryzen-strix-point', which has no matching accelerator record in data/accelerators/. This reference is flagged by tools/validate.py as a dangli
 - **An empty quantization.native_support means three different things - no silicon path, no hardware format at all, or unchecked - and the field cannot tell them apart** (`gotchas/quant-native-support-empty-means-three-different-things`) — [minor] format · 72 of the 103 quantization records in this repo carry native_support: [], and the field is defined in SCHEMA.md as 'ids where the format has a hardware path'. A reader taking that definition literally
 - **Apple Silicon has better bandwidth-per-watt than discrete GPUs, but lower absolute bandwidth** (`gotchas/local-bandwidth-per-watt-apple-vs-discrete`) — [minor] hardware · Apple Silicon delivers more memory bandwidth per watt than discrete GPUs, but the absolute bandwidth is lower. A Mac can run a model longer on battery, but a discrete GPU will decode faster when both 
@@ -1105,6 +1106,8 @@ and t
 - **Q: 'Should I move off Ollama to vLLM/SGLang?' - A: the corpus gives a numeric trigger of about five concurrent users, and names the two situations where you should not move at all** (`gotchas/sent-qa-ollama-vs-real-engine-migration`) — [minor] toolchain · The 'Best LLM Inference engine for today?' thread is literally this question - a user migrating off Ollama for a personal assistant - and the corpus answer is engine-by-situation rather than migrate. 
 - **Q: 'Which GPU should I buy for local LLMs?' - A: stack used RTX 3090s, the consensus answer, on VRAM per dollar rather than on benchmark rank** (`gotchas/sent-qa-which-gpu-should-i-buy-local`) — [minor] hardware · Asked directly in a thread about getting above 200B parameters on a $10k budget (79 upvotes, 185 comments), the highest-scoring answer in the entire corpus (85 upvotes) is a used-3090 recommendation w
 - **Q: 'Which engine for structured output / agentic / multi-turn workloads?' - A: SGLang and vLLM, with the reason stated as prefix reuse, and llama.cpp kept for the local-model reference path** (`gotchas/sent-qa-which-engine-for-structured-and-reasoning-workloads`) — [minor] toolchain · For prefix-heavy and structured work the corpus names vLLM's prefix caching as the specific asset: 'Prefix caching is amazing for best-of-n style generative tasks.' For large-context single-box work o
+- **Quantization bit-width and format family names cited as format records** (`gotchas/gap-quantization-family-format-identifiers`) — [minor] format · Four records in data/benchmarks/ cite format_id '2bit' or 'mlx-quantized-4bit', producing 4 dangling reference warnings under tools/validate.py.
+- **ROCm LLVM gfx instruction set targets cited as hardware accelerators** (`gotchas/gap-rocm-llvm-gfx-target-architectures`) — [minor] hardware · Six records in data/flops/ (amd-cdna3-mfma-precision-support, amd-cdna4-infinity-fabric-change, amd-cdna4-mfma-precision-support, amd-fp4-mxfp4-support, amd-mi300x-infinity-fabric-topology, amd-rocm-f
 - **Reseller and procurement channels publish availability and a 'Get a Quote' form instead of a price - the reseller gap in the supply layer is structural, and no amount of re-checking a live page will close it** (`gotchas/w10-supply-channels-publish-availability-not-price-and-the-schema-reads-that-as-low-effort`) — [minor] measurement · Ten supply/supply-side source records sit at confidence 0.5-0.6, and every one of them has already been fetched and read. sup-used-itcreations-gpu, sup-used-compucycle and sup-used-equipnet-auctions e
 - **SGLang's is_blackwell / is_sm100_supported / is_sm120_supported predicates all include a CUDA >= 12.8 requirement, so 'is Blackwell' in SGLang dispatch means Blackwell AND a new enough runtime** (`gotchas/sglang-blackwell-predicate-is-a-cuda-version-test`) — [minor] config · The same Blackwell GPU takes a different dispatch branch under CUDA 12.6 than under CUDA 12.8. A native FP4 or MXFP4 path silently degrades, or a hard error appears, on hardware that a support table m
 - **TensorRT-LLM has no paper - the absence is verified by an empty title search, and its kernels are documented in this repo as records instead** (`gotchas/meta-tensorrt-llm-has-no-paper-do-not-invent-one`) — [minor] toolchain · A reader auditing this repo for inference coverage sees that TensorRT-LLM - one of the two or three production inference engines on NVIDIA hardware - has engine, observability and multiple FLOP/kernel
@@ -4054,13 +4057,13 @@ and t
 
 ## Coverage
 
-Total records: **3997**
+Total records: **4000**
 
 | group | records |
 |---|---|
 | severity:major | 239 |
 | backend:cuda | 77 |
-| severity:minor | 73 |
+| severity:minor | 76 |
 | severity:blocker | 72 |
 | flop bound:memory | 55 |
 | flop bound:compute | 42 |
