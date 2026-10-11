@@ -770,7 +770,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (405)
+## Gotchas (406)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
@@ -1007,6 +1007,7 @@ TRAP
 - **One GPU, one provider, one page, several prices - and the record keeps the dearest one** (`gotchas/w5s-one-page-one-product-many-tiers`) — [major] measurement · A supply record carries a per-GPU-hour figure that is arithmetically correct for its own product and nevertheless reads as 'what this GPU costs here'. Together AI's pricing page publishes THREE tables
 - **One dead rank does not stop new KV loads to its siblings: per-port peer identity means a 30 s timeout is the only terminator** (`gotchas/pd-p2p-peer-liveness-per-rank-not-per-pod`) — [major] framework · On a disaggregated P/D deployment with multi-rank prefill pods, a source pod became unavailable mid-transfer. The consumer marked the source's rank-0 control peer down within a second - and then submi
 - **Output filtering at serve time: logit masking, post-hoc scanning and a separate guard model are three different systems with three different bills** (`gotchas/sec-output-filter-three-placement-cost`) — [major] security · An engineer asks 'add content filtering' and gets three mutually exclusive answers depending on who is asked. Logit masking inside the decode loop costs throughput; scanning completed text costs nothi
+- **Owned-hardware TCO is computable and electricity is only 8-20% of it over three years; rent-vs-own break-even is NOT computable, because no accelerator in this corpus has both a priced rental row and a local decode benchmark** (`gotchas/value-tco-and-why-rent-vs-own-cannot-be-computed-from-this-corpus`) — [major] measurement · Asked for a rent-vs-own break-even, the corpus appears to have everything needed: prices for owned hardware in data/supply/, TDP for almost every accelerator, a kWh rate, and 221 priced cloud rows. It
 - **PCIe GT/s rate is not proportional to usable bandwidth across the PAM4 boundary: Gen5->Gen6 payload per direction rises only 1.92x, not the 2x the GT/s doubling implies, so a GT/s-based comparison concludes PCIe 6.0 is slower than it is** (`gotchas/w7p-gotcha-pcie-gt-s-hides-pam4-payload-step`) — [major] hardware · Comparing two PCIe generations by their GT/s rate gives the wrong answer, in both directions depending on which pair is compared. Concretely, for this repo's seven generations, payload per direction a
 - **Preemption costs no visible throughput and only shows up in latency, so a throughput dashboard stays green through a KV-cache collapse** (`gotchas/obs-preemption-hides-latitude-from-throughput`) — [major] measurement · Aggregate output tok/s and request-success rate look normal or even improve while users report stalling. Inter-token latency and time-to-first-token p99 climb. Nothing in the throughput panel moves, a
 - **Prefix cache blocks computed under one LoRA adapter are reused under another when the adapters share a name** (`gotchas/pd-lora-adapter-swap-reuses-stale-prefix-blocks`) — [major] config · Prefix cache corruption when two LoRA adapters share a name but differ in lora_init_id: blocks computed under one adapter are served for requests targeting the other, producing wrong output with no er
@@ -4147,11 +4148,11 @@ and t
 
 ## Coverage
 
-Total records: **4090**
+Total records: **4091**
 
 | group | records |
 |---|---|
-| severity:major | 248 |
+| severity:major | 249 |
 | severity:minor | 80 |
 | backend:cuda | 78 |
 | severity:blocker | 74 |
