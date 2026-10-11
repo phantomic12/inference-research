@@ -1,0 +1,46 @@
+{
+  "id": "speculative-quantized-drafter-lm-head",
+  "type": "flop",
+  "name": "Speculative decoding drafter bottlenecks: draft LM-head projection and quantized drafter scaling",
+  "class": "speculative_draft",
+  "arithmetic_intensity": "In modern auxiliary-head speculative drafters (EAGLE-3, Medusa, MTP), the drafter backbone is compact (1-2 layers, hidden size d), but its LM-head must project hidden states to the full target vocabulary V (e.g. V = 128k in Llama-3, V = 152k in Qwen3). Consequently, computing logits over V requires 2 * k * d * V FLOPs and streaming d * V weights from memory. As shown by Plaksin et al. (SlimSpec, arXiv:2605.10453), LM-head latency accounts for 45%-60% of total draft latency T_draft. Similarly, in full-model drafters, quantizing drafter weights to 4-bit (MXFP4 / ML-SpecQD, arXiv:2503.13565) halves draft memory traffic and accelerates drafting in memory-bound regimes.",
+  "bound_by": "memory",
+  "scales_with": [
+    "vocabulary_size_V (vocabulary dimension of target model)",
+    "hidden_dimension_d (model hidden size)",
+    "drafter_rank_r (rank of factorized LM projection in low-rank heads)",
+    "drafter_quantization_bits (e.g. 16-bit vs 8-bit vs 4-bit MXFP4)",
+    "batch_size (at batch >= 32-64, LM-head GEMM becomes compute-bound)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "amd-instinct-mi300x",
+    "nvidia-rtx-4090"
+  ],
+  "hardware_parameters": [
+    {
+      "parameter": "memory_bandwidth",
+      "effect": "Governs drafter LM-head weight streaming latency at low batch sizes (batch 1-16).",
+      "values_for": [
+        "nvidia-h100-sxm",
+        "amd-instinct-mi300x"
+      ],
+      "magnitude": "3.35 TB/s vs 5.3 TB/s",
+      "basis": "recorded"
+    }
+  ],
+  "workarounds": [
+    "Low-rank drafter LM-head (SlimSpec): factorize projection d x V into d x r and r x V (e.g. r = d/8), reducing LM-head latency by 2-3x while preserving full vocabulary support",
+    "Quantized drafts (ML-SpecQD): direct-cast 4-bit (MXFP4) quantization of draft weights to reduce memory footprint and latency in client/edge inference",
+    "Static vocabulary truncation (VocabTrim, FR-Spec): limit drafter predictions to top 32k-64k frequent tokens, cutting LM-head work at the cost of capping maximum acceptance rate",
+    "Clustered / dynamic vocabulary routing (SpecVocab, DynaSpec): dynamically route contexts to token clusters"
+  ],
+  "notes": "Quantized drafters and draft-head optimization represent the current generation of speculative decoding engineering. When the drafter backbone is reduced to a single transformer layer or feature head, the LM-head projection (which cannot be easily pruned without hurting rare tokens) emerges as the dominant computational and bandwidth bottleneck of the drafting phase.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-11",
+  "sources": [
+    "w15-pap-slimspec",
+    "w15-pap-ml-specqd"
+  ]
+}

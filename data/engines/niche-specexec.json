@@ -1,0 +1,60 @@
+{
+  "id": "niche-specexec",
+  "type": "engine",
+  "name": "SpecExec (Massively Parallel Speculative Execution)",
+  "status": "draft",
+  "confidence": 0.8,
+  "updated": "2026-10-11",
+  "sources": [
+    "w15-pap-specexec"
+  ],
+  "repo": "yandex-research/specexec",
+  "languages": [
+    "Python"
+  ],
+  "license": null,
+  "first_release_year": 2024,
+  "design_goal": [
+    "speculative-decoding",
+    "low-latency",
+    "consumer-gpu-offload"
+  ],
+  "scheduling": [
+    "none"
+  ],
+  "supported_backends": [
+    "cuda"
+  ],
+  "supported_formats": [
+    "safetensors",
+    "gptq"
+  ],
+  "notable_features": [
+    "Massively parallel speculative decoding tailored for consumer hardware with host RAM/SSD offloading",
+    "Leverages spikiness of token probability distributions in modern LLMs: runs draft search to find B most likely future tokens and builds a speculative cache tree",
+    "Target model computes probabilities for all candidate tokens in a single offloaded forward pass, generating up to 10-20 accepted tokens per target model iteration",
+    "Supports stochastic sampling with exact distribution preservation (lossless) via generalized rejection sampling",
+    "Demonstrates interactive inference for 50B+ models (e.g. Llama-2-70B, Llama-3-70B, Mixtral-8x7B) at 4-6 tok/s in 4-bit GPTQ and 2-3 tok/s in FP16 on single consumer GPUs (RTX 4090, RTX 3090, RTX 4060)"
+  ],
+  "hardware_caveats": [
+    "Designed specifically for RAM/SSD parameter-offloading regimes where GPU compute is vastly underutilized relative to memory bandwidth / PCIe bus",
+    "On non-offloaded datacenter GPUs (like A100/H100 fitting models in VRAM), speedup is substantially lower (~2.1-2.4x at batch 1) because drafting overhead becomes a bottleneck",
+    "Batch size scaling: primary speedup is at single-stream interactive decode (batch 1); concurrent serving with high batch sizes dilutes the advantage as GPU compute fills up",
+    "No standard open-source license asserted in repository root (license is null)",
+    "Research prototype implementation (test scripts run_exp.py); lacks continuous batching or OpenAI-compatible server daemon"
+  ],
+  "best_for": [
+    "Running 70B+ LLMs interactively on consumer GPUs (16GB-24GB VRAM) with RAM offloading",
+    "Understanding massive draft-tree construction (budgets of 256-2048 tokens) when target model forward pass latency is measured in seconds",
+    "Lossless speculative sampling on offloaded setups"
+  ],
+  "avoid_for": [
+    "High-throughput multi-user serving (continuous batching is absent)",
+    "Datacenter servers where large models already fit fully in high-bandwidth HBM3/HBM3e",
+    "Production environments requiring OSI license compliance without legal review"
+  ],
+  "tracing_support": "none",
+  "verified_negatively": true,
+  "docs_url": "https://github.com/yandex-research/specexec",
+  "notes": "SpecExec (arXiv:2406.02532, NeurIPS 2024) turns the traditional speculative decoding logic on its head: while datacenter spec-decode budgets small draft chains (k=3-8) to avoid compute overhead, RAM offload shifts the bottleneck entirely to weight streaming over PCIe. Because streaming weights takes seconds, computing thousands of speculative draft tokens in the target model forward pass costs negligible extra time. Uses draft trees up to 2048 tokens to accept 10-20 tokens per pass."
+}

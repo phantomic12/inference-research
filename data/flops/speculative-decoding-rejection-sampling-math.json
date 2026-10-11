@@ -1,0 +1,47 @@
+{
+  "id": "speculative-decoding-rejection-sampling-math",
+  "type": "flop",
+  "name": "Speculative decoding rejection sampling: exact distribution math and acceptance-rate mechanics",
+  "class": "speculative_verify",
+  "arithmetic_intensity": "Verification pass computes target model logits for all k draft tokens in a single batched forward pass. For each draft token x_i proposed by draft distribution q(x_i | x_<i) and evaluated by target distribution p(x_i | x_<i), modified rejection sampling accepts x_i with probability min(1, p(x_i) / q(x_i)). If rejected at position j, the rejected token is discarded and a residual token is sampled from the rectified distribution max(0, p(x) - q(x)) / sum_x max(0, p(x) - q(x)). Total FLOPs for target verification is 2 * k * N_target (identical to batch-k decode GEMM), while arithmetic intensity is AI ~ k * N_target / (N_target + KV_cache_bytes).",
+  "bound_by": "memory",
+  "scales_with": [
+    "draft_tokens_k (length of draft proposal sequence or tree depth)",
+    "distribution_alignment_p_q (total variation distance between target and draft distributions)",
+    "sampling_temperature (higher temperature increases entropy and degrades draft-target alignment)",
+    "batch_size (higher serving batch size transitions target verification from memory-bound to compute-bound)",
+    "vocabulary_size_V (logits tensor size k * V during rejection test)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-a100-80gb-pcie",
+    "amd-instinct-mi300x"
+  ],
+  "hardware_parameters": [
+    {
+      "parameter": "memory_bandwidth",
+      "effect": "Determines target model verification latency; since weights are read once for k tokens, higher memory bandwidth shortens the verification step in memory-bound decode regimes.",
+      "values_for": [
+        "nvidia-h100-sxm",
+        "amd-instinct-mi300x"
+      ],
+      "magnitude": "3.35 TB/s (H100 SXM) vs 5.3 TB/s (MI300X)",
+      "basis": "recorded"
+    }
+  ],
+  "workarounds": [
+    "Dynamic draft trees (EAGLE-2/SpecExec) that branch along multiple high-probability candidates to increase probability of retaining at least one branch",
+    "Direct token prediction and multi-layer feature fusion (EAGLE-3 training-time test) to align draft feature space directly with target distribution",
+    "Multi-token prediction (MTP / NextN) where draft heads share trunk weights or are co-trained, eliminating distribution mismatch",
+    "Adaptive speculation termination: cut off drafting when cumulative draft confidence drops below threshold"
+  ],
+  "notes": "Mathematical foundation established by Leviathan et al. (ICLR 2023) and Chen et al. (2023). Modified rejection sampling guarantees that the output token distribution matches the target model distribution p(x) EXACTLY (lossless property). The expected number of accepted tokens E[alpha] = (1 - beta^(k+1)) / (1 - beta) where beta is the acceptance rate sum_x min(p(x), q(x)) = 1 - TVD(p, q). At high temperatures, total variation distance increases, reducing beta and collapsing speculative speedups toward 1.0x.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-11",
+  "sources": [
+    "sd-eagle2-paper",
+    "sd-eagle3-paper",
+    "w15-pap-specexec"
+  ]
+}
