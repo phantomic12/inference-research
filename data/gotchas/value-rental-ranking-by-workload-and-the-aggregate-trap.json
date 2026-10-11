@@ -1,0 +1,29 @@
+{
+  "id": "value-rental-ranking-by-workload-and-the-aggregate-trap",
+  "type": "gotcha",
+  "name": "The corpus prices 221 cloud rows but only one is a per-user figure, so the two populations cannot be compared - and spot is 35-43% off while capacity-block is 49% MORE than on-demand",
+  "class": "measurement",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-11",
+  "affects": [
+    "azure-nd-h100-v5",
+    "w5s-oracle-oci-amd-mi300x-mi355x-gpu-hour",
+    "modal-serverless-gpu",
+    "rent-azure-spot-eviction-and-max-price",
+    "rent-gcp-spot-vm-discount-and-exclusions"
+  ],
+  "symptom": "The corpus holds 221 priced rows from python tools/cost_per_token.py across 18 providers, 6 accelerators and 17 models, and the cheapest row is $151.50 per million output tokens. Asked to rank them by value, the first trap is that 220 of the 221 rows are AGGREGATE throughput and exactly one is single-user, and the single-user row is $1,313,988.50 per million tokens - about 8,700x the cheapest aggregate row. Any ranking that puts those two numbers in the same column is meaningless.",
+  "root_cause": "An aggregate tok/s is summed across every in-flight request, so USD per million output tokens computed from it is a FLEET-AVERAGE cost. A single-user tok/s is what one requester experiences at batch 1. The corpus's own documentation states the gap runs the wrong way from intuition: bigger batches raise aggregate throughput while lowering per-user latency-adjusted throughput, and the repo holds a paired record showing batch-64 aggregate at 800 tok/s against a per-user experience of 12.5 tok/s - a 64x gap.\n\nThe single-user row exists because Oracle's w5s OCI record quotes a per-request figure for DeepSeek-V3 671B (Q4_K_M) on MI300X. It is a real number and it belongs in the corpus. It is also the ONLY one, and no accelerator in the corpus has both an aggregate and a single-user row, so the two populations share no pair that could calibrate one against the other.",
+  "workaround": "Rank WITHIN the aggregate population, and treat the single-user row as a separate category. Best aggregate price per model class (2026-10-11, batch-size as recorded in each row):\n\n  workload class   rows   best $/Mtok   provider                    accelerator        tier\n  small (8B)        42      151         azure-nd-h100-v5            nvidia-h100-sxm    spot\n  medium (70B)     113      444         modal-serverless-gpu         nvidia-b300        base-with-multipliers\n  large (405B)      48    6,299         azure-nd-h100-v5            nvidia-h100-sxm    spot\n  MoE (671B)        18      724         w5s-oracle-oci-mi300x/mi355x amd-instinct-mi355x on-demand\n\nSPOT DISCOUNT, measured from the corpus's own rows on identical accelerator+model pairs: 13 pairs available. H100 SXM spot runs 65.1% of on-demand (-34.9%) and H200 SXM spot runs 57.0% (-43.0%). B200 spot is 63.7% (-36.3%). The consistency across models on one accelerator is the tell: the discount is a property of the PRICE, not of the model, because the tok/s side of the ratio is identical.\n\nCAPACITY-BLOCK IS NOT A DISCOUNT. 12 same-accelerator+model pairs, and capacity-block costs 148.7% of on-demand on H100 SXM and 149.6% on H200 SXM. Capacity-block buys reserved capacity, not cheaper tokens. Reading it as a discount tier inverts the ranking by roughly 49%.\n\nSTALE-PRICE CHECK: all 97 priced supply records carry a date, and every one is within 90 days of 2026-10-11. Zero stale, zero undated. This is a clean finding, not a defect.",
+  "severity": "major",
+  "notes": "FILED 2026-10-11 (parent, in place of a subagent that died on HTTP 429 before making a tool call). Computed from build_rows() in tools/cost_per_token.py rather than from any agent report.\n\nThe usable output here is the tier structure, not the ranking itself: on the same hardware and model, spot is a genuine 35-43% saving, and capacity-block is a 49% premium for guaranteed capacity. A buyer optimising cost with evictable workloads should be on spot; a buyer with a serving SLA should pay the capacity-block premium and not expect a discount for it.\n\nThe corpus's tier vocabulary also carries peer-to-peer-asking (15 rows), which is an ASKING price from a peer-to-peer host, not a realised transaction. It is recorded as such in its own supply record and should not be quoted as a market price.",
+  "sources": [
+    "azure-nd-h100-v5",
+    "w5s-oracle-oci-amd-mi300x-mi355x-gpu-hour",
+    "modal-serverless-gpu",
+    "rental-h100-sxm-vast-index",
+    "aws-ec2-p5-h100",
+    "aws-ec2-p5en-h200"
+  ]
+}
