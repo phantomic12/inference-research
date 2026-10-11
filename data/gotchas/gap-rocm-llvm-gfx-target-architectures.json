@@ -1,0 +1,27 @@
+{
+  "id": "gap-rocm-llvm-gfx-target-architectures",
+  "type": "gotcha",
+  "name": "ROCm LLVM gfx instruction set targets cited as hardware accelerators",
+  "class": "hardware",
+  "concepts": [
+    "rocm",
+    "llvm",
+    "isa",
+    "compiler-target",
+    "gfx942",
+    "gfx950",
+    "gfx1151",
+    "accelerator-gap"
+  ],
+  "symptom": "Six records in data/flops/ (amd-cdna3-mfma-precision-support, amd-cdna4-infinity-fabric-change, amd-cdna4-mfma-precision-support, amd-fp4-mxfp4-support, amd-mi300x-infinity-fabric-topology, amd-rocm-failure-modes) cite affected_by_hardware 'gfx942', 'gfx950', or 'gfx1151', generating 8 dangling reference warnings under tools/validate.py.",
+  "root_cause": "The affected_by_hardware field in data/flops/ expects record IDs from data/accelerators/. The identifiers gfx942 (CDNA 3 microarchitecture, MI300X/MI300A), gfx950 (CDNA 4 microarchitecture, MI350/MI355X), and gfx1151 (RDNA 3.5 APU Strix Halo) are ROCm and LLVM instruction set architecture (ISA) compiler target triples rather than distinct accelerator hardware products. They span multiple SKUs and lack standalone product-level datasheets for physical parameters such as memory capacity, board power, and clock frequencies.",
+  "workaround": "Retain these ISA identifiers as budgeted dangling references in data/flops/ until schema support or hardware-record disambiguation is established. Sibling gotcha gap-amd-ryzen-strix-point documents the related APU case for amd-ryzen-strix-point (gfx1150).",
+  "severity": "minor",
+  "notes": "CITING RECORDS: amd-cdna3-mfma-precision-support (cites gfx942), amd-cdna4-infinity-fabric-change (cites gfx950), amd-cdna4-mfma-precision-support (cites gfx950), amd-fp4-mxfp4-support (cites gfx950), amd-mi300x-infinity-fabric-topology (cites gfx942), amd-rocm-failure-modes (cites gfx942, gfx950, and gfx1151). WHAT MUST NOT BE DONE: Never create speculative stub accelerator records for compiler target triples like gfx942, gfx950, or gfx1151. An ISA target is not a physical board; fabricating a record with synthesized memory bus widths or TDP values pollutes accelerator comparisons and roofline models. Never arbitrarily repoint general ISA-level FLOP capability notes to a single board SKU when the instruction behavior applies across all products sharing that ISA. WHAT A FUTURE WAVE WOULD NEED: Either (1) schema evolution introducing an explicit instruction set architecture or compiler target registry separate from physical accelerator parts, or (2) verified first-party product-level accelerator records (such as amd-instinct-mi355x for CDNA 4 once complete datasheets are published) coupled with an audit determining whether each FLOP property is product-specific or architecture-wide.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-11",
+  "sources": [
+    "amd-rocm-compatibility-matrix"
+  ]
+}

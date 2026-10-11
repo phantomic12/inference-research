@@ -1,0 +1,26 @@
+{
+  "id": "gap-quantization-family-format-identifiers",
+  "type": "gotcha",
+  "name": "Quantization bit-width and format family names cited as format records",
+  "class": "format",
+  "concepts": [
+    "quantization-family",
+    "format-gap",
+    "2bit",
+    "mlx-quantized-4bit",
+    "mlx",
+    "llama-cpp"
+  ],
+  "symptom": "Four records in data/benchmarks/ cite format_id '2bit' or 'mlx-quantized-4bit', producing 4 dangling reference warnings under tools/validate.py.",
+  "root_cause": "data/quantization/ stores concrete quantization schemes with explicit numerical scales and packaging formats (e.g. bitsandbytes-nf4, gptq-4bit, gguf-q4-k-m). The tokens '2bit' and 'mlx-quantized-4bit' are format family names or bit-width descriptors rather than concrete serialization schemes. In MLX, 4-bit quantization can use affine (group size 64 default), mxfp4, or nvfp4 modes. In llama.cpp, '2bit' in this benchmark represents Q1_0 (a 2-bit trellis format) rather than a unified format record.",
+  "workaround": "Retain '2bit' and 'mlx-quantized-4bit' as budgeted dangling format references rather than synthesizing dummy format records or forcing inaccurate mappings.",
+  "severity": "minor",
+  "notes": "CITING RECORDS: llamacpp-radeon-r9700-gfx1201-q1-0-decode-tok-s (cites 2bit), local-m4-max-70b-q4-decode (cites mlx-quantized-4bit), local-m5-max-70b-q4-decode (cites mlx-quantized-4bit), and local-m5-ultra-70b-q4-decode (cites mlx-quantized-4bit). WHAT MUST NOT BE DONE: Never stub a format that is really a family name or bit-width descriptor. Creating fake format records for '2bit' or 'mlx-quantized-4bit' creates vague definitions and pollutes quantization metadata with underspecified schemes. Never repoint them to unrelated formats (such as gguf-iq1-s or ternary for 2bit, or bitsandbytes-nf4 for mlx). WHAT A FUTURE WAVE WOULD NEED: Concrete format records for the actual implementations measured: for 2bit in llama.cpp, a dedicated quantization record for llama.cpp Q1_0; for mlx-quantized-4bit, specific MLX format records identifying the exact quantization mode (e.g. mlx-affine-4bit with group size 64) and verifying the exact MLX invocation parameters used in each benchmark before updating the format_id references.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-11",
+  "sources": [
+    "qzgw-mlx-quantized-layer",
+    "bench-llamacpp-pr-28398-radeon-r9700-q1"
+  ]
+}
