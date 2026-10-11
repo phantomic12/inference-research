@@ -1458,7 +1458,7 @@ and t
 - **DINOv2: Learning Robust Visual Features without Supervision** (`papers/dinov2`) — multimodal · iclr · 2025 · arXiv:2304.07193 · in-production
 - **DISTFLASHATTN: Distributed Memory-efficient Attention for Long-context LLMs Training** (`papers/distflashattn`) — attention · colm · 2024 · arXiv:2310.03294 · research-only
 - **Decomposing Predictive Kubernetes Autoscaling for Large Language Model Serving Under Long Startup Delays** (`papers/k8s-predictive-autoscaling-llm`) — serving-systems · arxiv · 2026 · arXiv:2609.20874 · research-only
-- **DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning** (`papers/paper-deepseek-r1`) — distillation · other · 2025 · arXiv:2501.12948 · in-production
+- **DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning** (`papers/paper-deepseek-r1`) — distillation · nature · 2025 · arXiv:2501.12948 · in-production
 - **DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model** (`papers/deepseek-v2-mla`) — kv-cache · arxiv · 2024 · arXiv:2405.04434 · in-upstream-engine
 - **DeepSeek-V3 Technical Report** (`papers/deepseek-v3-report`) — moe · arxiv · 2024 · arXiv:2412.19437 · in-production
 - **DeepSeek-V3.2: Pushing the Frontier of Open Large Language Models (introducing DeepSeek Sparse Attention, DSA)** (`papers/w4p-deepseek-sparse-attention-dsa`) — attention · arxiv · 2025 · arXiv:2512.02556 · in-upstream-engine
@@ -1567,7 +1567,7 @@ and t
 - **Masked Autoencoders Are Scalable Vision Learners** (`papers/mae`) — multimodal · cvpr · 2022 · arXiv:2111.06377 · in-upstream-engine
 - **Matryoshka Representation Learning** (`papers/matryoshka`) — embedding · neurips · 2022 · arXiv:2205.13147 · in-production
 - **Measured Joules, Learned Routes: Learning to Route for Energy-Efficient LLM Serving** (`papers/energy-aware-routing`) — routing · arxiv · 2026 · arXiv:2609.23085 · research-only
-- **Measuring the Carbon Intensity of AI in Cloud Instances** (`papers/carbon-intensity-ai-cloud-instances`) — other · other · 2022 · arXiv:2206.05229 · in-production
+- **Measuring the Carbon Intensity of AI in Cloud Instances** (`papers/carbon-intensity-ai-cloud-instances`) — other · facct · 2022 · arXiv:2206.05229 · in-production
 - **Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads** (`papers/medusa-multiple-decoding-heads`) — speculative-decoding · icml · 2024 · arXiv:2401.10774 · in-upstream-engine
 - **MegaBlocks: Efficient Sparse Training with Mixture-of-Experts** (`papers/megablocks`) — moe · mlsys · 2023 · arXiv:2211.15841 · research-only
 - **MegaScale-Infer: Serving Mixture-of-Experts at Scale with Disaggregated Expert Parallelism** (`papers/w4p-megascale-infer-disaggregated-expert-parallelism`) — moe · sigcomm · 2025 · arXiv:2504.02263 · research-only
@@ -1605,7 +1605,7 @@ and t
 - **Phi-3 Technical Report: A Highly Capable Language Model Locally on Your Phone** (`papers/phi-3-small-capable`) — other · arxiv · 2024 · arXiv:2404.14219 · in-production
 - **Phi-4 Technical Report** (`papers/phi-4`) — distillation · arxiv · 2024 · arXiv:2412.08905 · in-production
 - **Pixtral 12B** (`papers/pixtral`) — multimodal · arxiv · 2024 · arXiv:2410.07073 · in-production
-- **Post Training Quantization of Large Language Models with Microscaling Formats** (`papers/mx-ftptq`) — quantization · other · 2024 · arXiv:2405.07135 · research-only
+- **Post Training Quantization of Large Language Models with Microscaling Formats** (`papers/mx-ftptq`) — quantization · enlsp · 2024 · arXiv:2405.07135 · research-only
 - **Power Aware Dynamic Reallocation For Inference (RAPID)** (`papers/rapid-power-aware-disaggregated-inference`) — scheduling · arxiv · 2026 · arXiv:2601.12241 · research-only
 - **PowerInfer: Fast Large Language Model Inference with a Consumer-grade GPU** (`papers/powerinfer-consumer-gpu-serving`) — serving-systems · sosp · 2024 · arXiv:2312.12456 · research-only
 - **Pre-gated MoE: An Algorithm-System Co-Design for Fast and Scalable Mixture-of-Expert LLM Inference** (`papers/pre-gated-moe`) — moe · isca · 2024 · arXiv:2308.12066 · research-only
