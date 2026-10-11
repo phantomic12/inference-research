@@ -1,0 +1,31 @@
+{
+  "id": "amd-strix-halo-dense-vs-moe-throughput-gap",
+  "type": "gotcha",
+  "name": "On AMD Strix Halo gfx1151, dense 72B models collapse to 4 tok/s due to 256 GB/s LPDDR5X bandwidth while 120B MoE achieves 49 tok/s",
+  "class": "hardware",
+  "affects": [
+    "amd-radeon-8060s-ryzen-ai-max",
+    "llama-cpp"
+  ],
+  "concepts": [
+    "strix-halo",
+    "gfx1151",
+    "radeon-8060s",
+    "unified-memory",
+    "lpddr5x",
+    "moe",
+    "mxfp4",
+    "bandwidth-bottleneck"
+  ],
+  "symptom": "Running large dense models on AMD Strix Halo (Radeon 8060S, 128 GB unified memory) yields low token generation speed despite full GPU offload: Qwen 2.5 72B Q5_K_M runs at only 4.1 tok/s (Q6_K at 3.7 tok/s). However, running GPT-OSS 120B (an MoE model with MXFP4 quantization) on the same machine delivers 49.0 tok/s.",
+  "root_cause": "Token generation (decode) is memory-bandwidth bound. Strix Halo uses a shared 256-bit LPDDR5X-8000 bus with a peak ceiling of 256 GB/s. For dense 72B models, all ~48-55 GB of weights must be streamed through the bus on every token forward pass (50 GB * 4 tok/s = 200 GB/s, near the bus limit). In contrast, GPT-OSS 120B MoE only activates a small fraction of experts per token and uses MXFP4 microscaling (4-bit), reading only ~4-5 GB of weights per token, enabling 49.0 tok/s within the same 256 GB/s memory bandwidth ceiling.",
+  "workaround": "For local interactive inference on unified-memory APUs like Strix Halo, deploy Mixture-of-Experts (MoE) architectures (e.g. GPT-OSS 120B) or aggressively quantized models rather than large dense (>70B) models.",
+  "severity": "minor",
+  "notes": "Verified by See Hiong on Ryzen AI Max+ 395 (Radeon 8060S, 40 CUs, 128GB LPDDR5X) with llama.cpp b10440 across Qwen 2.5 72B and GPT-OSS 120B.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-11",
+  "sources": [
+    "seehiong-strix-halo-llama-cpp"
+  ]
+}

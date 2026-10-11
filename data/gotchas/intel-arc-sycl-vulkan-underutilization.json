@@ -1,0 +1,31 @@
+{
+  "id": "intel-arc-sycl-vulkan-underutilization",
+  "type": "gotcha",
+  "name": "Intel Arc GPUs achieve only ~32% of theoretical memory bandwidth in llama.cpp due to unoptimized SYCL and Vulkan quantization kernels",
+  "class": "kernel",
+  "affects": [
+    "intel-arc-b580",
+    "llama-cpp"
+  ],
+  "concepts": [
+    "intel-arc",
+    "battlemage",
+    "b580",
+    "sycl",
+    "vulkan",
+    "oneapi",
+    "mul-mat-vec-q"
+  ],
+  "symptom": "On Intel Arc GPUs (such as Arc B580 Battlemage), llama.cpp token generation throughput via both SYCL and Vulkan backends severely underperforms hardware bandwidth. On an Arc B580 with 456 GB/s memory bandwidth, generating tokens on a 3.56 GB model achieves only 41.7 tok/s (~148 GB/s effective bandwidth), which is only ~32% of the theoretical roofline (~128 tok/s). On Linux, Vulkan often emits warnings about unsupported GPUs and falls back to host CPU unless bleeding-edge Mesa and kernel are present.",
+  "root_cause": "The mul_mat_vec_q dequantization and matrix-vector multiplication kernels in llama.cpp's SYCL backend lack optimized memory layout, vector load patterns, and XMX matrix engine integration. Simultaneously, Intel's official OneAPI Base Toolkit requires ~25 GB of disk space, while the official ipex-llm project was archived, leaving the SYCL backend in llama.cpp maintained primarily via community and Codeplay incremental patches.",
+  "workaround": "Use minimal OneAPI packaging (intel-cpp-essentials with libze1 Level Zero runtime) in Docker or bare-metal rather than full 25GB toolkit. For Vulkan, ensure kernel 6.12+ (or Ubuntu 24.04 HWE / Ubuntu 25.10 with Xe driver) and latest Mesa are installed. Watch for DP4A and XMX matrix kernel optimizations in upstream llama.cpp PRs.",
+  "severity": "major",
+  "notes": "Documented in llama.cpp Discussion #12570 by B580 practitioners and llama.cpp Vulkan/SYCL maintainers (0cc4m, Rbiessy), and CreateAltDelete/intel-arc-llama.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-11",
+  "sources": [
+    "llamacpp-discussion-12570-intel-arc",
+    "createaltdelete-intel-arc-llama-repo"
+  ]
+}

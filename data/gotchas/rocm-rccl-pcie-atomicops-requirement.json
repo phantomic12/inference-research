@@ -1,0 +1,29 @@
+{
+  "id": "rocm-rccl-pcie-atomicops-requirement",
+  "type": "gotcha",
+  "name": "ROCr runtime refuses kernel dispatches declaring hostcall buffers when PCIe root port lacks AtomicOps, causing all RCCL collectives to fail",
+  "class": "driver",
+  "affects": [
+    "amd-radeon-rx-7900-xtx",
+    "vllm"
+  ],
+  "concepts": [
+    "rocm",
+    "rccl",
+    "pcie",
+    "atomicops",
+    "hostcall",
+    "multi-gpu"
+  ],
+  "symptom": "When initializing multi-GPU inference with RCCL/vLLM on consumer motherboards or virtualized setups (VFIO/KVM), all RCCL collective operations fail at kernel dispatch. The ROCr runtime refuses any kernel execution that declares a hostcall buffer.",
+  "root_cause": "The PCIe root port or bridge above the consumer GPU fails to advertise PCIe 3.0/4.0 AtomicOps capability. The ROCr runtime strictly requires AtomicOps to allocate and manage hostcall buffers used by RCCL collectives for multi-GPU synchronization. If the root port does not advertise AtomicOps, dispatch is rejected by the runtime.",
+  "workaround": "On bare metal, enable PCIe AtomicOps, ACS, and ReBAR in the motherboard BIOS (and update BIOS firmware). On virtual machines (QEMU/KVM/VFIO), configure the root PCIe port with AtomicOps routing/forwarding enabled (e.g. qemu host bridge flags) so the guest kernel can see root port AtomicOps support.",
+  "severity": "blocker",
+  "notes": "Documented in dual-radeon-vllm and reported in ROCm issue #6520; reproduced on both bare metal consumer boards and virtualized topologies.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-11",
+  "sources": [
+    "cadamcat-dual-radeon-rdna3-second-class"
+  ]
+}

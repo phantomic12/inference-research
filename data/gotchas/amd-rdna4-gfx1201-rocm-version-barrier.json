@@ -1,0 +1,31 @@
+{
+  "id": "amd-rdna4-gfx1201-rocm-version-barrier",
+  "type": "gotcha",
+  "name": "RDNA4 gfx1201 (RX 9070 XT) requires ROCm 7.x and is unsupported on ROCm 6.x stacks, requiring Vulkan backend for stable inference",
+  "class": "toolchain",
+  "affects": [
+    "amd-radeon-rx-9070-xt",
+    "llama-cpp",
+    "ollama",
+    "vllm"
+  ],
+  "concepts": [
+    "gfx1201",
+    "rdna4",
+    "rx-9070-xt",
+    "rocm-7",
+    "vulkan",
+    "hip"
+  ],
+  "symptom": "Attempting to run LLM inference engines (llama.cpp, Ollama, vLLM) on AMD Radeon RX 9070 XT (gfx1201, Navi 48) fails on standard Linux distributions and ROCm 6.x packages with missing rocBLAS libraries ('No TensileLibrary for GPU arch: gfx1201') or device initialization errors. Standard pre-built wheels and packages fail to recognize the GPU target.",
+  "root_cause": "RDNA4 architecture introduces ISA target gfx1201, which was first introduced in ROCm 6.4.1/7.0.0 and requires HIP SDK 7.1+ with gfx120x rocBLAS compiled libraries. Official AMD driver support is strictly limited to newer Linux kernels and specific enterprise distributions (Ubuntu 24.04.2 / RHEL 9.6). On Windows, it requires the AMD Adrenalin 26.x+ AI bundle.",
+  "workaround": "For llama.cpp, compile with the Vulkan backend (cmake -B build -DGGML_VULKAN=ON) which runs directly on AMD Vulkan/RADV drivers without ROCm dependency. For ROCm/HIP, install ROCm 7.1+ or use official Ollama Windows installer (post-January 2026) shipping gfx120x libraries; when building from source, set -DGPU_TARGETS=gfx1201.",
+  "severity": "major",
+  "notes": "Documented in rocmate gfx1201 hardware matrix, AMD ROCm 7.0.0 compatibility matrix, and Ollama issue #9812.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-11",
+  "sources": [
+    "t0nd3-rocmate-gfx1201"
+  ]
+}
