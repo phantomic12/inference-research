@@ -1,0 +1,37 @@
+{
+  "id": "gotcha-apple-unified-memory-bandwidth-decode-ceiling",
+  "type": "gotcha",
+  "name": "Apple Silicon unified memory enables 70B+ model execution on consumer devices, but autoregressive decode speed is strictly bounded by LPDDR package bandwidth",
+  "class": "hardware",
+  "affects": [
+    "apple-m4-max",
+    "apple-m3-max",
+    "apple-m3-ultra",
+    "apple-m1-ultra",
+    "local-apple-m4-pro",
+    "local-apple-m3-pro"
+  ],
+  "concepts": [
+    "apple-silicon",
+    "unified-memory",
+    "memory-bandwidth",
+    "batch-1-decode",
+    "roofline",
+    "lpddr5x"
+  ],
+  "symptom": "Practitioners purchasing 64GB-128GB Macs frequently expect high decode throughput for 70B models based on the large unified pool, but observe single-user batch-1 decode speeds of only 8-15 tokens/second, which feels underwhelming compared to multi-GPU enterprise setups.",
+  "root_cause": "Single-batch LLM decode is strictly memory-bandwidth bound: generating each token requires streaming every model parameter from memory into compute cores. Apple Silicon integrates high-capacity LPDDR5/LPDDR5X on-package to maintain battery-friendly power consumption (~30-60W package power), but its absolute bandwidth ceiling is verified from Apple technical specifications as: M4 Pro at 273 GB/s, M3 Max at 300 or 400 GB/s, M4 Max at 410 or 546 GB/s, and M1/M3 Ultra at 800 or 819 GB/s. For a 70B parameter model in 4-bit precision (~35 GB weights), the theoretical maximum decode roofline is bandwidth / weight_bytes: on M4 Pro (273 GB/s), max theoretical is 7.8 tok/s; on M3 Max (400 GB/s), max is 11.4 tok/s; on M4 Max (546 GB/s), max is 15.6 tok/s; and on M3 Ultra (819 GB/s), max is 23.4 tok/s. Achieved throughput is typically 75-85% of this physical roofline.",
+  "workaround": "Accept that Apple Silicon's primary advantage is capacity per dollar and power efficiency (running 70B locally on ~50W), not peak decode speed. To improve tokens/sec, employ speculative decoding (such as draft models, MTP, or DFlash) to amortize weight bandwidth across multiple generated tokens per pass, or quantize to 3-bit / 4-bit formats rather than 8-bit / fp16.",
+  "severity": "minor",
+  "notes": "Verified against Apple's official tech specs: M4 Pro (273 GB/s, support.apple.com/en-us/121553), M3 Max (400 GB/s, support.apple.com/en-us/117737), M4 Max (546 GB/s, support.apple.com/en-us/122211), M1 Ultra (800 GB/s, support.apple.com/en-us/111900), and M3 Ultra (819 GB/s, support.apple.com/en-us/122211). Contrast with discrete datacenter cards: NVIDIA H100 SXM offers 3,350 GB/s (HBM3) and RTX 5090 offers 1,792 GB/s (GDDR7), yielding 3x-6x higher decode rates but with strict 24-32 GB capacity limits on consumer cards.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-11",
+  "sources": [
+    "consumer-apple-mac-studio-2025-tech-specs",
+    "consumer-apple-macbook-pro-16-m3-max-tech-specs",
+    "consumer-apple-macbook-pro-14-m4-max-tech-specs",
+    "consumer-apple-mac-studio-2022-tech-specs",
+    "local-apple-macbook-pro-m4-pro-tech-specs"
+  ]
+}
