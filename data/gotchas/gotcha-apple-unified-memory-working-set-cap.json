@@ -1,0 +1,39 @@
+{
+  "id": "gotcha-apple-unified-memory-working-set-cap",
+  "type": "gotcha",
+  "name": "Apple Silicon unified memory GPU allocations are capped at recommendedMaxWorkingSetSize (~75-85% of physical RAM), failing hard rather than paging cleanly",
+  "class": "hardware",
+  "affects": [
+    "apple-m4-max",
+    "apple-m3-max",
+    "apple-m3-ultra",
+    "apple-m1-ultra",
+    "local-apple-m4-pro",
+    "local-apple-m3-pro",
+    "apple-mlx",
+    "mlx-lm",
+    "llama-cpp"
+  ],
+  "concepts": [
+    "apple-silicon",
+    "unified-memory",
+    "working-set-limit",
+    "metal",
+    "out-of-memory",
+    "swap"
+  ],
+  "symptom": "Inference jobs allocating near the physical memory capacity of Apple Silicon crash with Metal errors such as kIOGPUCommandBufferCallbackErrorOutOfMemory or libc++abi: terminating due to uncaught exception of type std::runtime_error: [METAL] Command buffer execution failed: Insufficient Memory (00000008:***) even though activity monitors or sysctl show free RAM. On 128GB machines, allocations of ~112 GB fail against a ~107.5 GiB limit; on 512GB Mac Studios, models with 418 GB weights plus long KV cache fail during prompt processing despite tens of gigabytes appearing free.",
+  "root_cause": "Unified memory is shared between the CPU, GPU, WindowServer, and kernel. Metal imposes a hard process-level ceiling exposed via MTLDevice.recommendedMaxWorkingSetSize, which defaults to approximately 75% to 85% of total physical RAM (and can be constrained further by system memory pressure). Unlike host CPU anonymous memory which transparently spills to disk swap (with catastrophic performance loss), Metal GPU command buffers do not dynamically page active GPU buffers to NVMe swap during execution. When working set buffers (weights + KV cache + transient attention scratchpads) breach this limit, the Metal driver aborts command buffer execution immediately.",
+  "workaround": "Size model weights and context length such that total resident memory remains strictly below recommendedMaxWorkingSetSize (typically <=75% of physical unified memory, e.g., <=96 GB on a 128 GB Mac, <=36 GB on a 48 GB Mac). In multi-turn servers, enforce tight context limits or prompt cache trimming. For developers with root privileges, sysctl iogpu.wired_mem_limit can occasionally raise the ceiling slightly, but risks kernel panics if system memory is oversubscribed.",
+  "severity": "major",
+  "notes": "Verified across multiple production failure reports: llama.cpp issue #28107 documents reproducible OOM when allocating 112 GiB against a 107.5 GiB recommendedMaxWorkingSetSize on a 128 GB Mac; drama_llama issue #125 documents blallama panicking when requesting ~129 GB against an 83.5 GB working set; mlx-lm issue #1047 documents a 418 GB Kimi K2.5 crashing with Metal Insufficient Memory on a 512 GB Mac Studio M3 Ultra during prefill.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-11",
+  "sources": [
+    "src-github-llamacpp-issue-28107",
+    "src-github-mlx-lm-issue-1047",
+    "consumer-apple-mac-studio-2022-tech-specs",
+    "consumer-apple-mac-studio-2025-tech-specs"
+  ]
+}

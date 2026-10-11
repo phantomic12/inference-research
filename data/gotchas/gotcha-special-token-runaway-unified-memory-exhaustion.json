@@ -1,0 +1,32 @@
+{
+  "id": "gotcha-special-token-runaway-unified-memory-exhaustion",
+  "type": "gotcha",
+  "name": "Missing EOS or unhandled special token syntax triggers runaway generation and unified memory exhaustion crash on Apple Silicon",
+  "class": "toolchain",
+  "affects": [
+    "apple-mlx",
+    "mlx-lm",
+    "llama-cpp",
+    "ollama"
+  ],
+  "concepts": [
+    "apple-silicon",
+    "unified-memory",
+    "special-tokens",
+    "eos-token",
+    "out-of-memory",
+    "kv-cache"
+  ],
+  "symptom": "During inference on Apple Silicon, a request fails to terminate upon reaching the intended conclusion, continuing to emit repetitive prose, reasoning traces, or empty tokens. As generation proceeds into tens of thousands of tokens, the KV cache and working buffers expand until the engine crashes with Metal Insufficient Memory or the host locks up under extreme swap pressure.",
+  "root_cause": "Models utilizing complex multi-channel delimiters or custom special tokens (such as gpt-oss <|channel|>, <|call|>, <|end|>, Trinity multi-token <tool_call>, or speculative MTP variants) frequently encounter parsing flaws in inference engines. In mlx-lm, empty string values for tool_call_start or unhandled control token IDs cause the generation loop to fail stop checks. On discrete GPUs with small VRAM (e.g. 16-24 GB), KV cache allocations fail quickly and trigger engine exceptions early; on Apple Silicon with 64-128+ GB unified memory, the process continues allocating memory silently over long durations, consuming tens of gigabytes of RAM before finally violating Metal's allocation boundary or triggering memory watchdog panics.",
+  "workaround": "Always pass explicit --max-tokens caps to server runtimes (e.g., mlx_lm.server --max-tokens 4096), specify explicit stop token sequences in request payloads, and test tokenizer special token handling on single-turn requests before deploying multi-turn or agentic pipelines.",
+  "severity": "minor",
+  "notes": "Documented in mlx-lm issue #1047 (runaway context prefill/generation OOM on 512GB Mac Studio), issue #1292 (truncation/looping on Qwen MTP variants when system prompt is reused), issue #984 (tokenizer vocab guard failing on multi-token delimiters), and issue #1110 (empty tool_call_end tokens causing premature state machine exit).",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-11",
+  "sources": [
+    "src-github-mlx-lm-issue-1047",
+    "src-incoai-splash-issue-37"
+  ]
+}
