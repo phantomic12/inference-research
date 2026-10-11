@@ -1,0 +1,34 @@
+{
+  "id": "gguf-q3-k-s",
+  "type": "quantization",
+  "name": "GGUF Q3_K_S (3-bit K-quant, small)",
+  "scheme": "gguf-q3_k_m",
+  "bits": "3.4375 bpw base (block_q3_K = 110 bytes / 256 values); 3.9960 measured avg on Llama-3.1-8B (llama.cpp quantize README). Small variant emphasizing compression.",
+  "weight_group_size": 16,
+  "activation_scheme": null,
+  "native_support": [],
+  "emulated_support": [
+    "nvidia-h100-sxm",
+    "nvidia-h100-nvl",
+    "nvidia-l40s",
+    "nvidia-l4",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-a10"
+  ],
+  "kernels": [
+    "ggml dequantize_row_q3_K + get_rows",
+    "ggml-cuda mul_mat_vec_q / dequantize_mul_mat_vec + convert_mul_mat_q"
+  ],
+  "quality_delta": "Llama-3.1-8B-Instruct vs FP16 baseline from Table 2 of Kurt (2026, https://arxiv.org/abs/2601.14277, quant-gguf-kquant-study): WikiText-2 perplexity 8.96 vs 7.32 (+1.64 ppl delta); downstream 5-benchmark average 65.49 vs 69.47 (-3.98 delta): GSM8K 68.31 vs 77.63 (-9.32 pp), HellaSwag 71.87 vs 72.51 (-0.64 pp), IFEval 73.89 vs 78.93 (-5.04 pp), MMLU 59.31 vs 63.50 (-4.19 pp), TruthfulQA MC2 54.08 vs 54.79 (-0.71 pp). Model size reduction 77.23% vs FP16.",
+  "notes": "Q3_K_S is the small, compression-focused variant of the 3-bit K-quant family in llama.cpp. Base block structure uses QK_K = 256 super-block with 16 sub-block scales of 6 bits each (12 bytes), high bitmask (32 bytes), low bits (64 bytes), and fp16 scale d (2 bytes) = 110 bytes / 256 = 3.4375 bpw. In Kurt (2026), Q3_K_S achieves the highest compression among 3-bit K-quants (77.23% size reduction) but incurs the largest accuracy penalty in the 3-bit family (-9.32 pp on GSM8K, +1.64 WikiText-2 ppl), showing that mathematical reasoning is particularly sensitive to aggressive low-bit sub-block quantization. SCHEMA PROXY: scheme uses 'gguf-q3_k_m' because schemas/quantization.schema.json has no separate 'gguf-q3_k_s' enum value.",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-11",
+  "sources": [
+    "quant-gguf-kquant-study",
+    "qlab2-ggml-common-header",
+    "qlab2-llama-quant-cpp",
+    "quant-ggml-header",
+    "quant-llamacpp-quantize-readme"
+  ]
+}
