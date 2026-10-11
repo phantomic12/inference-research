@@ -1,0 +1,24 @@
+{
+  "id": "gap-a100-no-capacity-hardware-relevance",
+  "type": "gotcha",
+  "name": "A100 hardware relevance cited without memory capacity (Defect D6)",
+  "class": "hardware",
+  "concepts": [
+    "nvidia-a100",
+    "a100-sxm",
+    "hardware-relevance",
+    "defect-d6",
+    "accelerator-gap"
+  ],
+  "symptom": "Thirteen records in data/papers/ cite hardware_relevance 'nvidia-a100-sxm', generating 13 dangling reference warnings under tools/validate.py against the budgeted debt.",
+  "root_cause": "The repository splits NVIDIA A100 SXM accelerators into concrete capacity variants: nvidia-a100-40gb-sxm4 (40 GB HBM2, 1555 GB/s) and nvidia-a100-80gb-sxm4 (80 GB HBM2e, 2039 GB/s). The citing research papers mention running on 'A100' or 'A100 SXM' without declaring memory capacity. Resolving the citation by picking 40GB or 80GB would invent hardware specifications not substantiated by the paper, as documented under defect D6 in docs/26-known-defects.md.",
+  "workaround": "Preserve 'nvidia-a100-sxm' in hardware_relevance on the 13 paper records as budgeted debt until paper-specific hardware provenance is audited.",
+  "severity": "minor",
+  "notes": "CITING RECORDS: cacheblend-rag-kv-fusion, carbon-emissions-large-neural-training, chen-speculative-sampling-deepmind, eagle-3-training-time-test, hawk-griffin-gated-linear-recurrence, magicdec-long-context-specdec, mistral-7b-gqa-swa, mixture-of-depths, ouroboros-phrase-by-phrase-drafting, phi-3-small-capable, production-token-embedding-speculators, rest-retrieval-speculative-decoding, and self-consistency-marginalise-paths. WHAT MUST NOT BE DONE: Never repoint an A100-no-capacity citation at nvidia-a100-sxm by creating an unbacked, capacity-less nvidia-a100-sxm stub accelerator record to silence validator warnings. Never guess between nvidia-a100-40gb-sxm4 and nvidia-a100-80gb-sxm4 without explicit evidence in the paper text, setup tables, or source repo. Fabricating memory capacity distorts memory bandwidth and VRAM footprint limits in multi-node inference modeling. WHAT A FUTURE WAVE WOULD NEED: A primary-source audit of each cited paper (e.g. checking experimental setup sections, appendices, cluster cluster node descriptions, or code repository configs) to verify whether the evaluation cluster used 40GB or 80GB A100 GPUs. If verified, repoint to nvidia-a100-40gb-sxm4 or nvidia-a100-80gb-sxm4. If the paper omits the capacity entirely and cannot be resolved, either retain as budgeted debt or introduce schema-level support for unspecialized hardware series references.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-11",
+  "sources": [
+    "nv-a100-datasheet"
+  ]
+}
