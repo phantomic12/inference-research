@@ -1,0 +1,30 @@
+{
+  "id": "gap-nvidia-rtx-pro-6000-blackwell-max-q",
+  "type": "gotcha",
+  "name": "NVIDIA RTX PRO 6000 Blackwell Max-Q cited in benchmarks lacks first-party datasheet for dedicated record",
+  "class": "hardware",
+  "affects": [
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "concepts": [
+    "rtx-pro-6000",
+    "max-q",
+    "blackwell",
+    "sm120",
+    "dspark",
+    "accelerator-gap",
+    "first-party-specs"
+  ],
+  "symptom": "Field benchmarks and production reports for DeepSeek-V4.1-Flash (such as data/benchmarks/ev-sglang-dspark-spec-decoding-2x-decode-ab.json, ev-sglang-dsv41-production-128k-prefill-tps.json, ev-sglang-dsv41-production-decode-tok-s-per-user.json, and ev-sglang-dsv41-prefix-cache-hit-prefill-speedup.json) report hardware as '8x RTX PRO 6000 Blackwell Max-Q 96 GB (SM120, PCIe, no NVLink)'. There is no dedicated accelerator record for 'nvidia-rtx-pro-6000-blackwell-max-q' under data/accelerators/.",
+  "root_cause": "The repository contains data/accelerators/nvidia-rtx-pro-6000-blackwell.json, which represents the standard 600 W desktop workstation edition (24,064 CUDA cores, 96 GB GDDR7 at 1792 GB/s) based on NVIDIA's official workstation datasheet. While retailers like B&H list an 'OEM Max-Q Workstation' variant and production deployments report Max-Q enclosures, NVIDIA has not published a standalone public datasheet giving verified clocks, TDP cap, or per-precision TFLOPS for a separate Max-Q board SKU.",
+  "workaround": "The DSPARK benchmark records currently point their accelerator_ids to the canonical 'nvidia-rtx-pro-6000-blackwell' family record and detail the Max-Q / PCIe enclosure specifics in their methodology and notes. Do not create an unverified separate accelerator record.",
+  "severity": "minor",
+  "notes": "WHY A STUB WOULD BE WORSE THAN ABSENCE: Creating an unbacked accelerator record would require fabricating or guessing TDP limits (is Max-Q 300 W, 400 W, or 450 W?), sustained clocks, and peak compute TOPS/TFLOPS without a datasheet citation. Fabricated roofline parameters corrupt downstream throughput models, capacity calculations, and validator integrity. WHAT A LATER WAVE WOULD NEED: A first-party NVIDIA specification URL or official product brief specifically documenting the RTX PRO 6000 Blackwell Max-Q / OEM Workstation SKU—listing verbatim TDP/TGP, base/boost clocks, memory data rate, and dense/sparse compute figures—before creating a separate record.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-10",
+  "sources": [
+    "ev-sglang-issue-40877-production-deepseek-v41-flash",
+    "consumer-nvidia-rtx-pro-6000-blackwell-datasheet"
+  ]
+}
