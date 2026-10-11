@@ -770,7 +770,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (404)
+## Gotchas (405)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
@@ -1042,6 +1042,7 @@ TRAP
 - **The ROCm Triton w4a16 path asserts on GPTQ models with a non-zero-group qzeros layout** (`gotchas/triton-w4a16-gptq-qzeros-assert`) — [major] format · Serving GPTQ-Int4 quantized Qwen3.6-27B fails at triton_w4a16.py line 201 with an assertion on qzeros.shape == (K // group_size, N // 8). Unquantized models run fine, and two independent GPTQ-Int4 rep
 - **The abbreviated GPU UUID form that NVIDIA documents for CUDA_VISIBLE_DEVICES crashes vLLM's device resolution before the model even loads** (`gotchas/mgpu-short-cuda-visible-devices-uuid-crashes-nvml-resolution`) — [major] config · On 8x H200 (driver 590.48.01, Rocky Linux 9.8), setting CUDA_VISIBLE_DEVICES to a short UUID - e.g. GPU-af7b61d8 where the driver reports GPU-af7b61d8-21af-baea-6a19-42a1f9f7c3cb - crashes during Mode
 - **The community-standard way to pool VRAM across consumer NVIDIA cards is layer sharding over llama.cpp's RPC backend, not NCCL tensor parallelism - because it sidesteps the P2P ban entirely** (`gotchas/comm-community-standard-rpc-sharding-for-multi-gpu`) — [major] config · Run `ggml-rpc-server` on each machine (each exposing its own CUDA device over TCP), then point llama-server at the workers with `--rpc host:port[,host:port...]` plus `--split-mode layer -ngl 999 --ten
+- **The corpus prices 221 cloud rows but only one is a per-user figure, so the two populations cannot be compared - and spot is 35-43% off while capacity-block is 49% MORE than on-demand** (`gotchas/value-rental-ranking-by-workload-and-the-aggregate-trap`) — [major] measurement · The corpus holds 221 priced rows from python tools/cost_per_token.py across 18 providers, 6 accelerators and 17 models, and the cheapest row is $151.50 per million output tokens. Asked to rank them by
 - **The dense FLOPS value is not always the first number printed and the governing footnote differs per row and per vendor, so NVIDIA alone uses three mutually inconsistent sparsity conventions** (`gotchas/aa-gotcha-vendor-sparsity-footnote-conventions-differ-by-vendor`) — [major] hardware · A quoted peak FLOPS figure gets halved when it should not, or left unhalved when it should be, and the 2x error propagates into arithmetic intensity and every roofline, batching and cost conclusion bu
 - **The gateway rate limiter's counters are per-instance in-memory: N workers means N times the intended limit, and a restart resets every tenant's budget to full** (`gotchas/ops-wasm-ratelimit-state-is-per-worker-and-lost-on-restart`) — [major] operations · Tenant rate limits drift upward under load and reset to nothing on deploys. A tenant configured for 60 requests/minute sustains several hundred per minute when the gateway has several workers, and eve
 - **The guard model is a second extraction target: an LLM-as-judge can be replicated from black-box queries, so moderation capability is intellectual property you have to defend** (`gotchas/sec-guard-and-moderation-models-are-themselves-extraction-targets`) — [major] security · The moderation model is treated as plumbing - a small safety component in front of the real product. It is a trained model with measured capability, queried over an API, and it can be replicated.
@@ -4146,11 +4147,11 @@ and t
 
 ## Coverage
 
-Total records: **4089**
+Total records: **4090**
 
 | group | records |
 |---|---|
-| severity:major | 247 |
+| severity:major | 248 |
 | severity:minor | 80 |
 | backend:cuda | 78 |
 | severity:blocker | 74 |
