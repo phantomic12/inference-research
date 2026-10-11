@@ -1,0 +1,30 @@
+{
+  "id": "value-tco-and-why-rent-vs-own-cannot-be-computed-from-this-corpus",
+  "type": "gotcha",
+  "name": "Owned-hardware TCO is computable and electricity is only 8-20% of it over three years; rent-vs-own break-even is NOT computable, because no accelerator in this corpus has both a priced rental row and a local decode benchmark",
+  "class": "measurement",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-11",
+  "affects": [
+    "us-electricity-industrial-tariff-2024",
+    "azure-nd-h100-v5",
+    "rental-h100-sxm-vast-index",
+    "nvidia-rtx-4090",
+    "nvidia-rtx-5090",
+    "intel-arc-b580"
+  ],
+  "symptom": "Asked for a rent-vs-own break-even, the corpus appears to have everything needed: prices for owned hardware in data/supply/, TDP for almost every accelerator, a kWh rate, and 221 priced cloud rows. It cannot produce a break-even, because the two sides of the comparison never touch. The 18 providers and 6 accelerators in the priced rental table share ZERO accelerators with the accelerators that carry a local decode benchmark. The RTX 4090, RTX 5090, RX 7900 XTX, RX 9070 XT, Arc B580, RTX PRO 6000 and both A100s are priced locally with no rental row; H100 SXM, H200 SXM, MI300X, MI355X, B200 and B300 have rental rows and no local decode benchmark.",
+  "root_cause": "A rent-vs-own comparison needs the same accelerator priced both ways, or a defensible per-token price for both. The corpus's cloud rows are AGGREGATE fleet throughput and its local benchmarks are batch-1 single-user decode. Those are different populations, and value-rental-ranking-by-workload-and-the-aggregate-trap already establishes the corpus holds no accelerator with both an aggregate and a single-user row. So the two available figures cannot be divided into each other: a batch-1 tok/s is what one requester experiences, while an aggregate $/Mtok assumes the device is saturated with concurrent requests.",
+  "workaround": "What IS computable: the owned-hardware TCO, which is independent of the question. Model: capex from the cheapest non-cloud supply record per card, electricity at the corpus's own rate of $0.0891/kWh from supply/us-electricity-industrial-tariff-2024 (EIA industrial average, rolling 12 months to July 2026), power at card TDP plus a stated 120W host allowance (CPU, motherboard, PSU losses, idle NVMe), 24/7 operation, 3-year horizon.\n\n  card                          capex    sys W   kWh/yr@30%   $/yr   $/mo    3yr total\n  nvidia-rtx-4090               $ 2,000     570      1,498     $133    $11     $ 2,400\n  nvidia-rtx-5090               $ 1,999     695      1,826     $163    $14     $ 2,487\n  nvidia-rtx-3090               $ 1,100     470      1,235     $110     $9     $ 1,430\n  amd-radeon-rx-7900-xtx        $ 1,406     475      1,248     $111     $9     $ 1,739\n  amd-radeon-rx-9070-xt         $   829     424      1,114      $99     $8     $ 1,127\n  intel-arc-b580                $   200     310        815      $73     $6     $   418\n  nvidia-rtx-pro-6000-blackwell $16,624     720      1,892     $169    $14     $17,130\n  nvidia-a100-80gb-pcie         $12,099     420      1,104      $98     $8     $12,394\n\nAt 70% utilization the same cards cost $241 more per year in aggregate; the ordering is unchanged and the conclusion with it.\n\nWHAT THE MODEL ACTUALLY SAYS: electricity is 15-20% of three-year cost for the $2,000 cards and under 5% for the $12,000-and-up cards. Doubling utilization roughly doubles the power line but leaves it a rounding error against capex. A 450W card and a 300W card differ by about $76/yr at 30% load - not enough to change a purchase decision on its own, which is the opposite of what the joules-per-token framing implies. Power matters for thermals, noise and circuit capacity; it does not decide value.\n\nTHE HOLE TO FILL: to compute a break-even the corpus needs a SAME-ACCELERATOR pair - one priced cloud row and one batch-matched local benchmark - or an explicit aggregate-to-per-user conversion factor. Neither exists. Until one does, the answer to 'should I buy or rent' is a recommendation, not a corpus-backed number.",
+  "severity": "major",
+  "notes": "FILED 2026-10-11 (parent, in place of a subagent that died on HTTP 429 before making a tool call). All inputs are corpus records; the only non-corpus number is the 120W host allowance, stated here as an assumption.\n\nSecondary finding on the capex inputs themselves: ebay-used-consumer-gpu-market prices the RTX 4090 at $2,000, which is the LOW end of a $2,000-$3,000 band whose bulk sits at $2,500-$3,000, so the 4090 capex line is a best case rather than a typical one. The 3-year total for the 4090 should be read as a floor.",
+  "sources": [
+    "us-electricity-industrial-tariff-2024",
+    "ebay-used-consumer-gpu-market",
+    "nvidia-marketplace-geforce",
+    "newegg-refreshed-arc-b580",
+    "used-rx-7900-xtx-market",
+    "ebay-used-a100-80gb-pcie"
+  ]
+}
