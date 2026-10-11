@@ -1,0 +1,31 @@
+{
+  "id": "gap-amd-ryzen-strix-point",
+  "type": "gotcha",
+  "name": "AMD Ryzen Strix Point (gfx1150) APU accelerator gap distinct from Strix Halo (gfx1151)",
+  "class": "hardware",
+  "affects": [
+    "amd-radeon-8060s-ryzen-ai-max"
+  ],
+  "concepts": [
+    "strix-point",
+    "strix-halo",
+    "gfx1150",
+    "gfx1151",
+    "rdna3-5",
+    "apu",
+    "unified-memory",
+    "accelerator-gap"
+  ],
+  "symptom": "data/flops/embedding.json cites affected_by_hardware 'amd-ryzen-strix-point', which has no matching accelerator record in data/accelerators/. This reference is flagged by tools/validate.py as a dangling reference warning (budgeted debt).",
+  "root_cause": "The embedding FLOP class notes discuss unified memory on AMD APU designs. During earlier audits, 'amd-ryzen-strix-point' was introduced to represent the mobile/laptop Strix Point APU (RDNA 3.5 iGPU, Radeon 890M/880M, LLVM target gfx1150, 128-bit LPDDR5x). The repository has a record for Strix Halo (data/accelerators/amd-radeon-8060s-ryzen-ai-max.json, gfx1151, 40 CU, 256-bit bus), but no record for Strix Point. Repointing strix-point to the Strix Halo record would falsely conflate two physically different silicon products with different compute units, bus widths, and ROCm compilation targets.",
+  "workaround": "Keep 'amd-ryzen-strix-point' in flops/embedding.json as budgeted debt rather than repointing it to Strix Halo or silently deleting the token. The record's notes explicitly document the distinction and the deliberate decision to retain the reference without synthesizing wrong silicon.",
+  "severity": "minor",
+  "notes": "WHY A STUB WOULD BE WORSE THAN ABSENCE: Creating an unbacked stub accelerator record for 'amd-ryzen-strix-point' without official datasheet figures for GPU compute, memory bandwidth, and power envelope would introduce speculative numbers into the corpus. An incomplete or guessed stub corrupts roofline modeling for APU-based embedding workloads. WHAT A LATER WAVE WOULD NEED: A first-party AMD product specification URL (e.g., AMD's product page for Ryzen AI 9 HX 370 or Radeon 890M) detailing official GPU clock, CU count (16 CUs for 890M / 12 CUs for 880M), system memory bus configuration (128-bit LPDDR5x-7500), cTDP (15-54 W), and verified TOPS/TFLOPS figures before writing data/accelerators/amd-ryzen-strix-point.json.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-10",
+  "sources": [
+    "acc-fill-amd-ryzen-ai-max-plus-395-product-page",
+    "flop-roofline-williams-2008"
+  ]
+}

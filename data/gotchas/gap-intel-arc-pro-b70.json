@@ -1,0 +1,30 @@
+{
+  "id": "gap-intel-arc-pro-b70",
+  "type": "gotcha",
+  "name": "Intel Arc Pro B70 accelerator record gap reported by benchmark metadata",
+  "class": "hardware",
+  "affects": [
+    "intel-arc-pro-b70"
+  ],
+  "concepts": [
+    "arc-pro-b70",
+    "battlemage",
+    "xe2",
+    "mlperf",
+    "accelerator-gap",
+    "provenance",
+    "specification"
+  ],
+  "symptom": "The wave-10 format audit reported 'Intel Arc Pro B70' as an absent accelerator record cited by data/benchmarks/arc-pro-b70-mlperf-v6-1-llama2-70b-offline-tokens.json. The benchmark record's notes historically claimed 'The arc-pro-b70 accelerator id is referenced here but has NO record in data/accelerators/ in this repo; the validator flags this as a warning'. Meanwhile, data/accelerators/intel-arc-pro-b70.json exists under the vendor prefix 'intel-arc-pro-b70' backed by Intel ARK SKU 245797, but no un-prefixed record 'arc-pro-b70' exists.",
+  "root_cause": "A naming discrepancy and historical note drift: the benchmark notes were written during Crawler Round 2 before the accelerator record existed, noting the absence of 'arc-pro-b70'. Later waves created 'intel-arc-pro-b70' with verified ARK specs (32 GB GDDR6, 608 GB/s, 367 INT8 TOPS, 230 W TBP) and pointed the benchmark's accelerator_ids to 'intel-arc-pro-b70'. However, the benchmark's prose note was not updated, leading subsequent audits to report 'arc-pro-b70' as an unresolved gap.",
+  "workaround": "Do not create a stub 'arc-pro-b70' record. Downstream tools and queries should use the canonical record 'intel-arc-pro-b70'. If a future wave identifies that Intel releases a distinct non-ARK or OEM variant under 'Arc Pro B70', it must cite Intel's first-party datasheet URL.",
+  "severity": "minor",
+  "notes": "WHY A STUB WOULD BE WORSE THAN ABSENCE: Creating an un-prefixed stub record for 'arc-pro-b70' would introduce an aliased duplicate of 'intel-arc-pro-b70' with identical or unverified specs, violating the repository's single-canonical-record invariant and diluting provenance. WHAT A LATER WAVE WOULD NEED: The canonical part is already documented at data/accelerators/intel-arc-pro-b70.json from Intel's ARK page (https://www.intel.com/content/www/us/en/products/sku/245797/intel-arc-pro-b70-graphics/specifications.html, source acc-fill-intel-arc-pro-b70-ark-specs). If a distinct physical variant is ever required, a wave would need an official Intel product brief or datasheet URL with explicit TBP, memory pin rate, and peak TOPS before adding any new record.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-10",
+  "sources": [
+    "bench-intel-arc-pro-b70-mlperf-v6-1-llama2-70b",
+    "acc-fill-intel-arc-pro-b70-ark-specs"
+  ]
+}
