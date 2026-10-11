@@ -1,0 +1,31 @@
+{
+  "id": "sd-deepseek-v3-mtp-sglang-mi300x-b64",
+  "type": "benchmark",
+  "name": "DeepSeek-V3 MTP speculative decoding in SGLang on 8x AMD MI300X: batch 64 latency speedup",
+  "engine_id": "sglang",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-11",
+  "sources": [
+    "w15-amd-rocm-deepseek-mtp-benchmark"
+  ],
+  "accelerator_ids": [
+    "amd-instinct-mi300x"
+  ],
+  "interconnect_ids": [],
+  "model": "deepseek-ai/DeepSeek-V3",
+  "format_id": "fp8-e4m3",
+  "metric": "speedup_ratio",
+  "value": 1.25,
+  "unit": "speedup_ratio: 1.25x speedup over baseline without MTP (end-to-end latency reduced from 43848.20 ms to 35074.26 ms per request) at concurrency 64. BASELINE: DeepSeek-V3 served without MTP on identical 8x MI300X node in SGLang.",
+  "methodology": "Concurrency (batch) = 64. Model: DeepSeek V3 with NextN MTP module as speculative drafter (--speculative-algo=NEXTN). Hardware: 8x AMD Instinct MI300X 192GB (Supermicro AS-8125GS-TNMR2, dual AMD EPYC 9654, ROCm 6.3.1). Engine: SGLang v0.5.0rc0. Dataset: Random dataset. Metric: End-to-end request latency (ms).",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "energy_basis": null,
+  "power_w": null,
+  "power_scope": null,
+  "power_cap": null,
+  "clock_lock_mhz": null,
+  "thermal_state": null,
+  "notes": "Production serving figure: at batch/concurrency 64, the speedup compresses to 1.25x from 2.11x at batch 1 on Random dataset (and 1.36x at concurrency 64 on ShareGPT dataset). This demonstrates the classic batch dilution effect in production serving: as concurrency increases, GPU execution becomes compute-bound rather than memory-bandwidth-bound, reducing the relative benefit of speculative token verification."
+}
