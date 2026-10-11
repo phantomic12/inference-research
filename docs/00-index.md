@@ -1838,7 +1838,7 @@ and t
 - **Mixtral 8x22B release post** (`sources/model-fr-mistral-mixtral-8x22b-blog`) — blog · Mistral AI
 - **Mixture-of-Depths: Dynamically allocating compute in transformer-based language models (arXiv:2404.02258)** (`sources/pap-eff-mixture-of-depths`) — blog
 - **MobileLLM: Optimizing Sub-billion Parameter Language Models for On-Device Use Cases (arXiv:2402.14905)** (`sources/pap-eff-mobilellm`) — blog
-- **Mythic M1108 AMP Specs (Hackster.io)** (`sources/mythic-m1108-amp-specs-hackster-io`) — blog
+- **Mythic M1108 AMP Specs (Hackster.io)** (`sources/mythic-m1108-amp-specs-hackster-io`) — blog · Hackster.io
 - **Mythic M1108 Product Page** (`sources/mythic-m1108-product-page`) — blog
 - **Mythic M1108 host interface is PCI Express 2.0 (Hackster.io report of Mythic AMP specs)** (`sources/w3a-mythic-m1108-pcie-gen2-host-interface`) — blog · Hackster.io (third-party report; Mythic is not the publisher)
 - **NVFP4 Trains with Precision of 16-Bit and Speed and Efficiency of 4-Bit** (`sources/bw-nv-nvfp4-pretraining-blog`) — blog · NVIDIA
