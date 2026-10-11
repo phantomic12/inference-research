@@ -1,0 +1,41 @@
+{
+  "id": "w11-schema-discriminators-for-vendor-silence-and-null-bandwidth",
+  "type": "gotcha",
+  "name": "Typed fields cannot distinguish legal vs commercial vs disclosure vendor silence, nor definitional vs sourcing vs verified-negative null bandwidth without schema discriminators",
+  "class": "measurement",
+  "affects": [
+    "roce",
+    "ethernet-uec",
+    "biren-blink",
+    "iluvatar-bi-v150-and-bi-v250-fabric"
+  ],
+  "concepts": [
+    "schema",
+    "discriminator",
+    "vendor-silence",
+    "null-bandwidth",
+    "provenance",
+    "verified-negative",
+    "definitional-null",
+    "sourcing-null",
+    "export-control",
+    "paywall",
+    "aggregator-only",
+    "no-config-json"
+  ],
+  "symptom": "Two independent audits discovered identical compression traps across disparate layers: in data/sources/, four distinct vendor silences (legal export control, commercial paywall, vendor disclosure practice with no spec table, and packaging lack of config.json) all collapsed into an ambiguous 0.3-0.5 confidence score; in data/interconnect/, three distinct null bandwidth reasons (definitional transport without intrinsic link rate, sourcing aggregate without per-link divisor, and verified-negative confirmed absent spec) all collapsed into bandwidth_gbps: null. In both cases, downstream consumers and query tools were forced to parse load-bearing free-text notes or basis fields to determine why a value was missing or low-confidence, and could not query or filter records cleanly by mechanism.",
+  "root_cause": "The schemas lacked optional discriminator enums to make explicit the distinct real-world mechanisms documented by gotchas w10-vendors-who-publish-nothing-export-control-paywall-and-aggregator-only and w7f-non-nv-am-vendor-conventions. Without source.vendor_silence ('export-control', 'paywall', 'aggregator-only', 'no-config.json') and interconnect.null_bandwidth ('definitional', 'sourcing', 'verified-negative'), every unclosable negative result or unmeasurable transport looked identical to an unresearched draft or an unfinished audit.",
+  "workaround": "Use the schema discriminator fields instead of free-text parsing. Future data waves can backfill source.vendor_silence on low-confidence sources: 'export-control' on nv-h20-flopper-specsheet (permanent legal restriction), 'paywall' on nrg2-uptime-institute-survey-paywalled (commercial member-only document), 'aggregator-only' on cn-cambricon-mlu590 and cn-iluvatar-bi-v150 (vendors publish no spec table), and 'no-config.json' on hf-embed-voyage-code-3 (packaging artifact on Hugging Face). Similarly, backfill interconnect.null_bandwidth on null-bandwidth fabrics: 'definitional' on roce, ethernet-uec, and cerebras-wafer-mesh; 'sourcing' on biren-blink, groq-lpu-interconnect, and tenstorrent-warp100; and 'verified-negative' on iluvatar-bi-v150-and-bi-v250-fabric.",
+  "severity": "minor",
+  "notes": "Added in wave 11 schema enhancement to bridge gotchas w10 and w7f. Per repository rules, schema discriminators are declared first without mass-backfilling data/ records. Existing records remain valid and untouched with null discriminators until dedicated data migration waves populate them.",
+  "status": "verified",
+  "confidence": 0.95,
+  "updated": "2026-10-10",
+  "sources": [
+    "nv-h20-flopper-specsheet",
+    "nrg2-uptime-institute-survey-paywalled",
+    "cn-cambricon-mlu590",
+    "cn-iluvatar-bi-v150",
+    "hf-embed-voyage-code-3"
+  ]
+}

@@ -260,6 +260,7 @@ plain-storage outlier.
     version               string
     bandwidth_gbps        number     per link, unidirectional
     bandwidth_basis       string     how the bandwidth figure was arrived at
+    null_bandwidth        enum|null  definitional | sourcing | verified-negative
     link_count            number|null
     topology              string
     scale_up              bool
@@ -674,6 +675,7 @@ validates immediately. `new_record.py` seeds both with `unknown`.
     published            date|null
     accessed             date
     archived_url         string|null
+    vendor_silence       enum|null export-control | paywall | aggregator-only | no-config.json
     notes
 
 `database` (156 records) was missing from this doc until 2026-10-05 — SCHEMA.md had drifted
