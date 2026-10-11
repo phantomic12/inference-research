@@ -1,0 +1,33 @@
+{
+  "id": "kv-cache-quantization-fp8-scale-granularity",
+  "type": "flop",
+  "name": "KV cache quantization at 128K: FP8 scaling granularity, attention drift, and two-level accumulation",
+  "class": "quantization_overhead",
+  "arithmetic_intensity": "KV cache quantization directly halves memory bandwidth consumption during decode attention. For a model in BF16, each KV token requires 2 * num_layers * num_kv_heads * head_dim * 2 bytes. For Llama-3.1-70B (80 layers, 8 KV heads, head_dim 128), BF16 KV cache consumes 327,680 bytes (320 KiB) per token, amounting to 40.0 GiB for a single 128K context sequence. FP8 (e4m3) quantization halves this to 160 KiB per token (20.0 GiB at 128K), doubling decode arithmetic intensity from g to 2g (where g is the GQA ratio). However, quantization accuracy at 128K is dictated by scaling granularity: (1) Per-tensor scaling applies a single FP32 scalar across all heads and tokens in a layer, which suffers severe dynamic range collapse when outlier tokens or attention sink drift occur across long sequences; (2) Per-token (vector) and per-head scaling preserve per-channel/head variance but require non-standard GEMM support. In production vLLM benchmarks (ctx-src-vllm-fp8-kvcache-2026-04), FP8 decode attention fitted ITL slope falls to 54% of BF16 (e.g. Llama-3.1-8B on H100 with FA3: slope 4.37e-05 falling to 2.37e-05 ms/token, break-even at 7,010 tokens; on B200 with FlashInfer: 1.80e-05 falling to 9.72e-06 ms/token). At concurrency 8 on H100 (150 requests, 20K prompt / 2K output), FP8 achieves +14.9% output throughput (517.5 vs 450.3 tok/s) and -14.8% median ITL (12.93 vs 15.18 ms).",
+  "bound_by": "memory",
+  "scales_with": [
+    "context_length (at 128K, KV memory dominates model weight footprint by 2x-4x across active batches)",
+    "scale_granularity (per-tensor vs per-token vs per-head)",
+    "head_dim (head_dim 256 pays ~1.6x prefill penalty under two-level accumulation; head_dim 128 does not)",
+    "tensor_parallel_degree (KV cache is partitioned across TP ranks, reducing per-GPU memory footprint)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200"
+  ],
+  "workarounds": [
+    "Enable two-level accumulation in FlashAttention-3 on Hopper GPUs to prevent tensor core intermediate FP32 truncation when context length exceeds 100K",
+    "Use per-token dynamic scaling or calibrated per-tensor scales via llm-compressor; uncalibrated per-tensor scaling on non-standard models (e.g. Kimi-K2.5 on FlashMLA) exhibits systematic accuracy drops",
+    "Skip quantization on sliding-window attention layers (--kv-cache-dtype-skip-layers sliding_window); for hybrid models like gpt-oss-20b, skipping sliding window improves throughput from 853.0 to 871.8 tok/s at concurrency 8"
+  ],
+  "notes": "THE 128K ACCUMULATION CLIFF AND VERIFIED ACCURACY LOSS: On Hopper architectures (H100/H200), FP8 tensor cores accumulate intermediate sums with reduced mantissa precision before committing to FP32 registers. In attention prefill and decode (Softmax(QK^T)*V), the contraction dimension equals the context length. At 128K context, this hardware limitation causes severe numerical drift: on a 128K needle-in-a-haystack (NIAH) test, unmitigated FP8 KV scored 13% compared to a 91% BF16 baseline (a 78 percentage point collapse) without raising any kernel error or warning. Two-level accumulation (flash-attention PR #104 / SageAttention2) restored NIAH to 89%, but increased register pressure, raising the quadratic prefill TTFT coefficient by ~1.6x on head_dim 256 models. Real long-context evaluation on openai/mrcr with uncalibrated per-tensor FP8 KV: Llama-3.3-70B-Instruct at 128K recovers 97-98% of BF16 AUC; Qwen3-30B-A3B at 256K recovers 94-98% AUC; Qwen3.5-27B at 1M recovers aggregate AUC. VERIFIED NEGATIVE: Sub-8-bit KV (FP4/INT4) at 128K context has no native upstream support in vLLM on NVIDIA Hopper without severe quality collapse, and per-head scaling in FP8 KV attention is not supported by standard FA3 kernels. Cross-references: [[ctx-fp8-kv-cache-long-context-accuracy]], [[ctx-gotcha-fp8-kv-accumulation-cliff-at-100k]], [[qhw-fp8-kv-cache]].",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-11",
+  "sources": [
+    "ctx-src-vllm-fp8-kvcache-2026-04",
+    "qhw-src-vllm-quant-docs",
+    "qhw-src-sglang-quant-docs"
+  ]
+}

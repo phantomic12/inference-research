@@ -1,0 +1,34 @@
+{
+  "id": "sparse-attention-hardware-aligned-nsa-moba",
+  "type": "flop",
+  "name": "Sparse attention mechanisms for long context: hardware-aligned block selection in NSA and MoBA",
+  "class": "custom_kernel",
+  "arithmetic_intensity": "Sparse attention replaces the full O(L^2) attention computation with selective subsets of tokens, but token-granular selection collapses arithmetic intensity by turning contiguous tensor loads into non-contiguous gathers. Hardware-aligned sparse attention enforces block-level regularity to preserve Tensor Core utilization. NSA (Native Sparse Attention, DeepSeek, arXiv:2502.11089, [[nsa-native-sparse]]) structures attention into three parallel branches: (1) Compressed coarse-grained tokens: block size l=32, sliding stride d=16; (2) Selected fine-grained tokens: block size l'=64, selecting top n=16 blocks (n*l' = 1,024 tokens) via token-to-block routing; (3) Sliding window: local context w=512 tokens. At sequence length s, memory access per decode step is at most floor((s-l)/d) + n*l' + w tokens. At 64k (65,536 tokens), full attention loads 65,536 tokens, whereas NSA loads 5,632 tokens - a 11.6x reduction in memory access volume. NSA's kernel places query/output loops in Triton's grid scheduler with blockwise coalesced loads, achieving measured kernel speedups on 8x A100 vs FlashAttention-2 of 9.0x forward and 6.0x backward at 64k context. MoBA (Mixture of Block Attention, Moonshot AI, arXiv:2502.13189, [[moba]]) divides context into n blocks of size B=N/n (e.g. B=4096 at 128K context) and routes each query to top-k blocks via MoE-style gating. At 128K context with B=4096 and top-k=12 (12*4096 = 49,152 tokens), MoBA operates at 62.5% sparsity (1 - 49152/128K) and scores 0.7818 vs 0.7849 for Full Attention on RULER. At 32K context with B=512 and top-k=3, MoBA achieves 95.31% sparsity. MoBA reports up to 6.5x speedup when prefilling 1M tokens, and 16x at 10M tokens.",
+  "bound_by": "both",
+  "scales_with": [
+    "context_length (sparsity ratio increases as context length grows: 1 - (selected_tokens / context_length))",
+    "block_size B and l' (sets the tile size for Tensor Core coalesced memory loads)",
+    "top_k selected blocks (governs the active KV memory bandwidth and compute)",
+    "compression block stride d (determines coarse branch KV footprint)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-b200"
+  ],
+  "workarounds": [
+    "Enforce blockwise selection (block size >= 64) rather than per-token top-k to prevent non-contiguous memory gather and retain Tensor Core coalescing",
+    "Combine coarse-grained compression with fine-grained selected blocks and local sliding window (NSA) to avoid loss of global context and needle retrieval failure",
+    "Train models natively with the sparse branches active; post-hoc application of block sparsity onto pretrained dense models causes severe perplexity degradation"
+  ],
+  "notes": "PRODUCTION SERVING GATING AND VERIFIED NEGATIVES: In production inference engines (vLLM, SGLang), sparse attention mechanisms are NOT general-purpose drop-in optimizations for arbitrary models. SGLang implements dedicated Triton and TileLang kernels for NSA (python/sglang/srt/layers/attention/nsa/), including quant_k_cache.py and dequant_k_cache.py, but this path is strictly gated on checkpoints trained natively with the NSA architecture. In vLLM, neither MoBA nor NSA is enabled as an automatic backend for standard dense models; MoBA was deployed internally at Moonshot AI for Kimi long-context requests via a custom fork. VERIFIED NEGATIVE AT 128K: Neither paper publishes end-to-end serving throughput (tok/s) or time-to-first-token (TTFT) benchmarks at 128K context in production serving engines (vLLM/SGLang). NSA's empirical efficiency benchmarks stop at 64k (65,536 tokens on 8x A100), where it reports 9.0x forward / 6.0x backward kernel speedup and 11.6x decode memory access reduction. MoBA reports prefill speedups of 6.5x at 1M and 16x at 10M in custom FlashAttention integration and RULER evaluation at 128K (0.7818 vs 0.7849), but publishes no serving throughput or decode latency numbers under multi-tenant serving workloads. Cross-references: [[nsa-native-sparse]], [[moba]], [[attn-sparse-structured-attention-status]].",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-11",
+  "sources": [
+    "pap-attn-nsa-native-sparse",
+    "pap-attn-moba",
+    "qhw-src-sglang-quant-docs"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "id": "prefix-caching-paged-attention-sharing-and-miss-penalty",
+  "type": "flop",
+  "name": "Prefix caching and PagedAttention block sharing: granularity of sharing and the 128K cache miss penalty",
+  "class": "kv_transfer",
+  "arithmetic_intensity": "In standard PagedAttention (SOSP'23, arXiv:2309.06180, [[sched-vllm-pagedattention-sosp23]]), KV cache memory is allocated in non-contiguous physical blocks of fixed size B (typically 16 tokens). Within a single request using parallel sampling or beam search, all prompt tokens and shared prefix branches share physical blocks via reference counting; newly sampled tokens diverge using block-level Copy-on-Write (CoW). Across distinct requests, sharing requires Automatic Prefix Caching (vLLM APC, [[flop-pagedattention-vllm]]) or RadixAttention (SGLang, arXiv:2312.07104, [[flop-sglang]]). WHAT IS SHARED: Full completed token blocks whose token IDs and system state hash match existing nodes in the radix/hash tree (system prompts, few-shot examples, multi-turn history). WHAT IS NOT SHARED: (1) Partial blocks at sequence tails: tokens beyond the last 16-token boundary cannot be indexed into the shared radix tree until full, requiring local recomputation; (2) Request-specific states: position embeddings when not rotary/relative, adapter weights (unless explicitly keyed), sampling configurations, and layer activations; (3) Cross-tenant blocks across non-identical hardware or divergent numerical backends. THE 128K CACHE MISS PENALTY: When a 128K shared prefix hits in cache, prefill attention FLOPs drop from O(L^2) to O(t_new * L), avoiding 2 * n_heads * head_dim * L^2 operations (for Llama-3.1-70B with 64 Q heads, head_dim 128, L=131,072: avoiding ~35.2 TFLOPs of attention per request). When memory pressure evicts a 128K prefix block, a subsequent request suffers a complete cache miss. This inverts the execution profile from a sub-second memory-bound token generation into a compute-bound 128K prefill, driving TTFT from tens of milliseconds to dozens of seconds and stalling the scheduler.",
+  "bound_by": "both",
+  "scales_with": [
+    "block_size B (typically 16; smaller blocks reduce internal fragmentation waste to <4% but increase radix tree overhead and kernel indirection)",
+    "prefix_hit_rate (governs the probability of paying the O(L^2) recomputation penalty)",
+    "eviction_policy (LRU eviction under KV pressure triggers catastrophic recomputation cliffs for long prefixes)",
+    "prefix_length L (the penalty of a miss scales quadratically with L in attention flops)"
+  ],
+  "affected_by_hardware": [
+    "nvidia-h100-sxm",
+    "nvidia-h200-sxm",
+    "nvidia-a100-80gb-sxm4",
+    "nvidia-b200"
+  ],
+  "workarounds": [
+    "Pin shared system prompts and high-frequency long-context prefixes in HBM to prevent LRU eviction cascades",
+    "Align prompts to the 16-token block boundary so the maximum possible prefix length is shared across requests",
+    "Offload evicted prefix blocks to host DRAM (via Mooncake or LMCache) rather than discarding them, converting an O(L^2) compute recomputation into a PCIe/CXL bandwidth transfer"
+  ],
+  "notes": "EMPIRICAL SHARING AND FRAGMENTATION MEASUREMENTS: In the PagedAttention paper (arXiv:2309.06180, [[sched-vllm-pagedattention-sosp23]]), prior contiguous memory management wasted 60-80% of KV cache memory due to internal fragmentation (pre-allocating max context lengths) and external fragmentation. PagedAttention reduced memory waste to under 4%, improving throughput by 2x-4x across basic sampling and parallel decoding. In SGLang's RadixAttention evaluation (arXiv:2312.07104, [[flop-sglang]]), automatic prefix reuse achieved up to 6.4x higher serving throughput on multi-turn chat, few-shot benchmarks, and agent tree-search workloads. VERIFIED NEGATIVE AT 128K: Neither SOSP'23 vLLM nor the original SGLang paper published prefix caching hit/miss benchmarks at 128K context (vLLM evaluated max 2048-token sequences on A100; SGLang evaluated up to 4K-8K sequences). The cost of a 128K miss in production is derived from the quadratic attention prefill scaling and the capacity cliff when 128K prefixes compete with concurrent batch slots. Cross-references: [[prefix-cache-hit-miss]], [[prefix-cache-hit-path-gemm-only]], [[paged-attention-block-table-kernel]], [[attn-paged-attention-block-size-hardcoded]].",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-11",
+  "sources": [
+    "sched-vllm-pagedattention-sosp23",
+    "flop-sglang",
+    "flop-pagedattention-vllm"
+  ]
+}
