@@ -741,7 +741,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (386)
+## Gotchas (387)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
@@ -1117,6 +1117,7 @@ and t
 - **The unifying finding of this slice: what practitioners optimise for is integration cost and ecosystem maturity, not measured throughput - the same driver explains every engine and hardware preference recorded here** (`gotchas/sent-ecosystem-gap-is-the-real-preference-driver`) — [minor] framework · Every strong consensus in this sentiment layer resolves to the same underlying variable, and it is not performance. On engines: llama.cpp wins on dependency count and quant coverage, vLLM wins on Day-
 - **Triton JIT compilation on gfx906 makes first-token latency enormous and it recurs on every restart unless the compile cache is persisted; on MI50 it silently switches to the V0 engine** (`gotchas/comm-gfx906-triton-jit-cold-start-ttft`) — [minor] framework · Multi-minute time-to-first-token attributed directly to Triton JIT compilation, recurring on every service restart and machine reboot. Compounding it, vLLM logs 'rocm is experimental on VLLM_USE_V1=1.
 - **Two models quantized at 'the same Q4_K_M level' can land at 4.75 and 4.30 bpw, so named-quant comparisons across models are not controlled experiments** (`gotchas/same-named-quant-is-not-a-controlled-comparison`) — [minor] measurement · Standard llama.cpp quantization applies hardcoded rules ('use Q4_K_M, except bump some tensors up/down, except fall back if incompatible, except keep some tensors unquantized'), so two different model
+- **Typed fields cannot distinguish legal vs commercial vs disclosure vendor silence, nor definitional vs sourcing vs verified-negative null bandwidth without schema discriminators** (`gotchas/w11-schema-discriminators-for-vendor-silence-and-null-bandwidth`) — [minor] measurement · Two independent audits discovered identical compression traps across disparate layers: in data/sources/, four distinct vendor silences (legal export control, commercial paywall, vendor disclosure prac
 - **Vision encoder is a separate model requiring separate memory** (`gotchas/vision-encoder-is-a-separate-model-requiring-separate-memory`) — [minor] config · The vision encoder is a separate model that requires its own GPU memory, reducing the memory available for the LLM and KV cache. For a ViT-L/16 encoder (304M params, bf16), this is ~608 MB of addition
 - **Vision encoder not quantized in mixed-precision serving** (`gotchas/vision-encoder-not-quantized-in-mixed-precision-serving`) — [minor] config · The vision encoder runs in BF16 even when the LLM decoder is quantized to FP8 or INT8, leading to a precision mismatch and wasted memory.
 - **Watermarking is a provenance signal, not a safety control - it does not moderate, refuse, or prevent anything** (`gotchas/sec-watermark-provenance-is-not-a-compliance-control`) — [minor] security · A deployment adds a watermark and reports the content-safety problem as solved. The watermark changes which tokens get sampled; it has no ability to refuse, to filter, or to detect harm at generation 
@@ -4053,14 +4054,14 @@ and t
 
 ## Coverage
 
-Total records: **3996**
+Total records: **3997**
 
 | group | records |
 |---|---|
 | severity:major | 239 |
 | backend:cuda | 77 |
+| severity:minor | 73 |
 | severity:blocker | 72 |
-| severity:minor | 72 |
 | flop bound:memory | 55 |
 | flop bound:compute | 42 |
 | backend:rocm | 37 |
