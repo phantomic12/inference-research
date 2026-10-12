@@ -1,0 +1,27 @@
+{
+  "id": "local-rx9070xt-qwen3-8b-q4-decode-b1",
+  "type": "benchmark",
+  "name": "RX 9070 XT: Qwen3 8B Q4_K_M decode tok/s, batch 1 (Ollama, ROCm)",
+  "engine_id": "ollama",
+  "accelerator_ids": [
+    "amd-radeon-rx-9070-xt"
+  ],
+  "interconnect_ids": [
+    "pcie-gen5"
+  ],
+  "model": "Qwen3 8B",
+  "format_id": "gguf-q4-k-m",
+  "metric": "decode_tok_s",
+  "value": 96.7,
+  "unit": "tok/s",
+  "methodology": "SINGLE REQUEST, batch size 1 (one /api/generate call at a time; num_ctx 32768, f16 KV cache, temperature 0, seed 42). AMD Radeon RX 9070 XT 16GB (gfx1201), Windows 11, stock Ollama 0.35.1 with the ROCm backend (rocm_v7_1). Decode rate is Ollama's own eval_rate (eval_count / eval_duration); 32k context, f16 KV. Short-prompt cell (39-token prompt, 256 output tokens): 96.7 tok/s [96.3-97.0], median of 1 warmup + 3 measured runs. The same harness measured the Vulkan backend at 102.0 tok/s [101.3-102.5], and at a 12,952-token prompt ROCm 75.5 / Vulkan 77.6 tok/s. Full GPU offload (37/37 layers) was verified before measuring; 100% GPU in /api/ps, 0 errors.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "THE FIRST DECODE FIGURE THE CORPUS HOLDS FOR THE RX 9070 XT, the cheapest 16GB card in the priced set. Community measurement (jordanpaulee/local-agent-lab), not a vendor claim: filed under measured_by 'third_party' only because schemas/benchmark.schema.json has no 'community' member. WHAT IT IS NOT: this is Ollama's eval_rate, not a llama.cpp llama-bench tg128 row, and the two are not interchangeable in a given column - keep this row separate from any llama-bench column. The decode cell sits at the short 32k-context prompt where decode is most representative; the 13k-prompt cell is weaker (only 23-43 output tokens were produced, so it is a lower-confidence measurement) and is recorded in methodology rather than taken as the value. The author states several limits explicitly: one model, one quant, one machine, n=3, so this is not a general RDNA4 result. The decode tie between backends CONTRADICTS the popular 'Vulkan is faster on RDNA4' blogs the author cites (which report generation speed); at 13k tokens ROCm prefill is 2.6x Vulkan, but prefill is a different metric and is NOT recorded here as a decode value. Cross-check against the corpus's only other AMD 16GB+ row: amd-radeon-rx-7900-xtx Qwen3.8-27B Q4_K_XL decode 47.06 tok/s - a larger model on a 24GB card, so lower, as expected; the two are not a same-model A/B.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-11",
+  "sources": [
+    "gh-jordanpaulee-rx9070xt-rocm-vs-vulkan"
+  ]
+}
