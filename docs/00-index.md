@@ -770,7 +770,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **vLLM: MTP speculative decoding makes latency 76.5% WORSE on Qwen3-Next-80B-A3B-Instruct-FP8 at TP=4 (4x H100)** (`benchmarks/ev-vllm-mtp-regression-qwen3-next-80b-a3b`) — 894.0 ms average end-to-end latency, BASELINE with speculation DISABLED (0.894 s); the MTP-enabled figure is 1.578 s, i.e. +76.5% · Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 on nvidia-h100-sxm via vllm
 - **vLLM: Meta-Llama-3.1-405B-Instruct-FP8 on 8x H100 (TP=8), aggregate output throughput** (`benchmarks/vllm-llama31-405b-fp8-8xh100-tp8-output-tps`) — 291.53 output tokens/s (aggregate, 8 GPUs) · meta-llama/Meta-Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via vllm
 
-## Gotchas (406)
+## Gotchas (407)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
@@ -963,6 +963,7 @@ TRAP
 - **Inter-token latency and per-request time-per-output-token have different denominators and different weights; swapping them silently changes your SLO** (`gotchas/obs-itl-vs-request-tpot-are-different-metrics`) — [major] measurement · An alert tuned on one metric does not fire when the other degrades, or fires constantly with no user complaint. A dashboard shows p99 decode latency of 80 ms while individual users report multi-second
 - **Intra-node NVLink latency is ~10x lower than inter-node InfiniBand latency, dictating TP vs PP placement** (`gotchas/nic-nvlink-vs-infiniband-latency-gap`) — [major] hardware · Tensor-parallel sharding across a node boundary (using InfiniBand instead of NVLink) incurs ~10x higher latency per collective operation, which can dominate inference time for small-batch or low-laten
 - **Ironwood and Trillium are two different TPU generations, and Google's own naming hides which is which: a query for 'Ironwood' or for 'Trillium' returns half the answer** (`gotchas/w7x-gotcha-ironwood-is-tpu7x-not-trillium`) — [major] hardware · Google gave the two most recent TPU generations plant codenames and kept the marketing name DETACHED from the generation number in the docs: v6e is 'Trillium' and TPU7x is 'Ironwood'. The mechanical v
+- **Joules per token across the corpus spans 4.11 to 20.53 on comparable batch-1 rows, but three rows had to be excluded - an unsourced figure, three multi-GPU runs charging one card's TDP, and a batch-2048 row whose real batch is 16x larger than batch 1** (`gotchas/value-joules-per-token-and-why-the-cheapest-energy-is-not-the-cheapest-hardware`) — [major] measurement · The corpus has both TDP for 116 accelerators and decode_tok_s for 32 benchmark records, so joules per token looks like a straightforward join. The naive join produces absurd figures: the GB200 NVL72 r
 - **Kernel compilation cost dominates for short-running or frequently-changing workloads** (`gotchas/kernel-compilation-cost-dominates-for-short-running-or-frequentl`) — [major] toolchain · For workloads with short execution times or frequently-changing shapes, the cost of JIT compilation (Triton: 0.5-5s per kernel, torch.compile: 30s+ for complex models, CUTLASS: minutes for template in
 - **Kinara first-party datasheets and domain inaccessible (HTTP 404)** (`gotchas/ainv-gotcha-kinara-datasheets-inaccessible`) — [major] hardware · HTTP 404 Not Found returned when fetching kinara.ai, www.kinara.ai, and specific product paths (ara-1, ara-2).
 - **Long context is not servable on older hardware - the attention kernel is gated by SM generation, and one family hits two head_dim-256 walls** (`gotchas/ctx-gotcha-long-context-kernel-gate-by-sm-generation`) — [major] kernel · Two failures that look like anything but what they are. (1) A context length that works on one node fails on another with the same models, because the attention backend is chosen by SM generation: SM8
@@ -4148,11 +4149,11 @@ and t
 
 ## Coverage
 
-Total records: **4091**
+Total records: **4092**
 
 | group | records |
 |---|---|
-| severity:major | 249 |
+| severity:major | 250 |
 | severity:minor | 80 |
 | backend:cuda | 78 |
 | severity:blocker | 74 |
