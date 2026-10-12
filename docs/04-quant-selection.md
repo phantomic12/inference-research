@@ -1,5 +1,10 @@
 # 04 — Quantization: weight-only-4bit vs W4A4 are different regimes
 
+> **Scope.** This doc explains the *regimes* — why weight-only 4-bit and W4A4 are different
+> things. For the per-hardware decision (which format on which part, through which kernel and
+> engine) read [23-quantization-selection.md](23-quantization-selection.md), which is newer and
+> written against a larger corpus.
+
 <!-- generated against a snapshot of 1,087 records (52 quantization formats, 74 accelerators, 40 engines). Counts were a snapshot at authoring time. -->
 
 The single most consequential distinction in this repo is that **"4-bit" describes two
@@ -514,6 +519,7 @@ Silent-corruption-first ordering; the full list is in
 
 ## Related documents
 
+- [23-quantization-selection.md](23-quantization-selection.md) — the per-hardware decision table built on these regimes.
 - [01-hardware-selection.md](01-hardware-selection.md) — which part to buy for each precision regime.
 - [02-flop-map.md](02-flop-map.md) §3.7 — why quantization speedups are batch-conditional.
 - [03-engine-selection.md](03-engine-selection.md) — which engine supports which format on which backend.

@@ -305,3 +305,9 @@ represent** — because an untested tuple and a clean one currently look identic
 - **Bit-exactness across *versions* is not tested.** Oracle 1 catches a regression within
   one build; it does not tell you the new build is as correct as the old one. The
   cross-version case needs Oracle 2 or 3 as the bridge.
+
+## Related documents
+
+- [07-benchmarking-methodology.md](07-benchmarking-methodology.md) — the performance side: how a
+  tok/s or latency figure has to be measured before it becomes a benchmark record.
+- [05-known-traps.md](05-known-traps.md) — the silent-corruption gotchas these oracles exist to catch.

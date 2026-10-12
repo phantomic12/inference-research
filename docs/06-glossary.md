@@ -1,4 +1,4 @@
-# Glossary
+# 06 — Glossary
 
 One line per term, defined the way this repo uses it, with the records where the
 repo actually discusses it. Every id below resolves
