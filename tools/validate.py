@@ -101,19 +101,14 @@ SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 # the 9th. Lower the budget in the same change that fixes one; never raise it
 # to go green.
 #
-# What the 8 actually are, because the fix depends on the class:
-#   5 are `[label](../SCHEMA.md)` / `[label](../AGENTS.md)` links in 06-glossary
-#     (2) and 07-benchmarking-methodology (3). The targets are REAL files --
-#     SCHEMA.md and AGENTS.md exist at the repo root -- but they sit outside
-#     docs/, and the DOC_MD_LINK grammar in build_site_data resolves a .md
-#     target against the docs/ stems only, so it degrades them to plain text.
-#     They render as text on the live site, so the defect is real and visible.
-#   3 are `[15-cost-per-token.md](15-cost-per-token.md)` in 16, 17 and 18.
-#     That doc was renumbered to 08-cost-per-token.md and no 15- file exists,
-#     so these are genuine rot: a renamed doc pointer that degrades silently.
-#     This is exactly the failure mode the check was written to catch, and it
-#     is the first thing to fix -- fixing it takes the count to 5 and the
-#     budget in the same commit.
+# What the 8 were, because the fix depended on the class:
+#   3 were `[15-cost-per-token.md](15-cost-per-token.md)` in 16, 17 and 18:
+#     genuine rot (renumbered to 08-cost-per-token.md). Fixed 2026-10-08, 8 -> 5.
+#   5 were `[label](../SCHEMA.md)` / `[label](../AGENTS.md)` links: REAL files
+#     at the repo root that the docs-stem grammar could not express, so the
+#     site rendered them as plain text. root_md_target() now resolves a
+#     `../NAME.md` link to an existing repo-root file in both this checker and
+#     build_site_data.rewrite_docs (as a GitHub blob link). 5 -> 0, 2026-10-12.
 # ---------------------------------------------------------------------------
 
 
@@ -198,6 +193,22 @@ def _docs_budget_error(count: int, budget: int) -> str:
 #   [label](file.md)                 -> DOC_MD_LINK
 DOC_WIKILINK = re.compile(r"\[\[([^\[\]|]+?)(?:\|([^\]]*))?\]\]")
 DOC_MD_LINK = re.compile(r"\[([^\]]*)\]\((?:\.{1,2}/)*(?:docs/)?([A-Za-z0-9._-]+\.md)(#[^)]*)?\)")
+
+
+def root_md_target(link: str, root: Path) -> str | None:
+    """The repo-root file a docs/ `[label](../NAME.md)` link names, or None.
+
+    AGENTS.md and SCHEMA.md live at the repo root, outside docs/, so they are
+    not doc stems. A `../NAME.md` link to one is still a real link when the file
+    exists there; any other shape (bare NAME.md, deeper paths) is not.
+    """
+    href = link.split("](", 1)[1][:-1].split("#", 1)[0]
+    if not href.startswith("../"):
+        return None
+    name = href[3:]
+    if "/" in name or not (root / name).is_file():
+        return None
+    return name
 
 
 def resolve_citation(target: str, records: dict[str, tuple[str, dict]],
@@ -326,7 +337,8 @@ def check_docs_citations(records: dict[str, tuple[str, dict]],
             # a label degrades to plain text when the stem is not a doc, so
             # "not a doc stem" is the failure either way. The label and any
             # #fragment are not part of the citation.
-            if resolve_citation(m.group(2)[:-3], records, bare, doc_slugs) is None:
+            if (resolve_citation(m.group(2)[:-3], records, bare, doc_slugs) is None
+                    and root_md_target(m.group(0), ROOT) is None):
                 unresolved.append(f"{f.name}:{text[:m.start()].count(chr(10)) + 1} "
                                   f"[{m.group(1)}]({m.group(2)})")
     return unresolved, None

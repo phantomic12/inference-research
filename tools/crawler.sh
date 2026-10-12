@@ -22,8 +22,13 @@
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
-REPO="C:/Users/Yoav/inference-research"
-WT_ROOT="C:/Users/Yoav/kb-crawlers"
+# KB_REPO: the main checkout (default: the repo this script lives in, resolved
+#   through --git-common-dir so it is the main tree even when run from a
+#   crawler worktree). KB_WT_ROOT: where worktrees go (default: a
+#   kb-crawlers/ directory beside the main checkout). On Windows pass both as
+#   C:/... paths, per the MSYS trap above.
+REPO="${KB_REPO:-$(cd "$(dirname "$(git -C "$(dirname "$0")" rev-parse --path-format=absolute --git-common-dir)")" && pwd)}"
+WT_ROOT="${KB_WT_ROOT:-$(dirname "$REPO")/kb-crawlers}"
 SLUG="${2:-}"
 
 wt_path() { echo "$WT_ROOT/$SLUG"; }
