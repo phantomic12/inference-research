@@ -190,15 +190,6 @@ populate `accelerator_ids`.
 | **Why not then** | At the time `sigcomm` was **not in the venue enum**, so the venue had to be recorded as `other` with the real one in `notes`. |
 | **Fixed now?** | **Yes for the notes, 2026-10-08, in the wave-8 merge.** The record's notes no longer open with the now-false "VENUE IS 'other' BECAUSE SIGCOMM IS NOT IN THE SCHEMA ENUM" — `venue` is `sigcomm` and the enum has 29 members. **The title divergence itself is a real-world fact and stays documented.** |
 
-#### D12 — `value-cheapest-usable-vram` labels a $-per-throughput column "tok/s per $1000" **OPEN 2026-10-12**
-
-| | |
-|---|---|
-| **What** | The local value table in [[gotchas/value-cheapest-usable-vram-and-what-it-actually-runs]] heads its first column `tok/s per $1000`, but every value equals capex ÷ tok/s × 1000 (`$1999 / 140.00 × 1000 = 14279`). It is dollars per 1000 tok/s, so lower is better and the stated label inverts the reading. |
-| **Where** | `data/gotchas/value-cheapest-usable-vram-and-what-it-actually-runs.json`, `workaround`. |
-| **Wave** | Found while writing `docs/28-value-rent-vs-own.md`, which deliberately does not quote the table. |
-| **Fixed now?** | No. Fix is a relabel (or recompute as tok/s ÷ capex × 1000) in the record, with a note; the ordering conclusion in the record's prose should be re-read after. |
-
 ### Documentation layer (`docs/`)
 
 #### D9 — `docs/08`'s AMD coverage claim: corrected, but the tooling gap it exposed is open

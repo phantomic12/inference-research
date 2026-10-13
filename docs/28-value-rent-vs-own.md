@@ -15,7 +15,7 @@ are dominated by join rules, not by hardware.** This doc is the map.
 | is spot a budget number? | no — the headline discount is a ceiling, and spot is excluded from committed-use discounts | [[gotchas/rent-spot-discount-is-not-a-budget-number]] |
 | what does owning cost over three years? | computable; electricity is a minor line | [[gotchas/value-tco-and-why-rent-vs-own-cannot-be-computed-from-this-corpus]] |
 | rent vs own break-even | **not computable** — no accelerator has both a priced rental row and a batch-matched local benchmark | same record |
-| cheapest usable VRAM | only six accelerators can be ranked at all, and the ranking is dominated by which model each was measured on | [[gotchas/value-cheapest-usable-vram-and-what-it-actually-runs]] |
+| cheapest usable VRAM | only five accelerators can be ranked at all, and the ranking is dominated by which model each was measured on | [[gotchas/value-cheapest-usable-vram-and-what-it-actually-runs]] |
 | joules per token | 4.11 to 20.53 J/tok on comparable single-device batch-1 rows | [[gotchas/value-joules-per-token-and-why-the-cheapest-energy-is-not-the-cheapest-hardware]] |
 | should I buy at all? | a genuine community split, settled by usage pattern and data control, not by $/token | [[gotchas/sent-community-split-buy-local-versus-rent]] |
 
@@ -83,13 +83,14 @@ the benchmark's unit or methodology (`check_evidence()`, see
   batch-matched local benchmark — or an explicit aggregate-to-per-user conversion. Neither
   exists ([[gotchas/value-tco-and-why-rent-vs-own-cannot-be-computed-from-this-corpus]]).
   This is the single highest-value benchmark to add.
-- **Local value ranking across models.** The six rankable accelerators were each measured on
-  different models, so cross-card comparison is not a value finding.
-- **Known defect:** the local value table inside
-  [[gotchas/value-cheapest-usable-vram-and-what-it-actually-runs]] labels its first column
-  "tok/s per $1000", but the values equal capex ÷ tok/s × 1000 (e.g. $1,999 ÷ 140 tok/s ×
-  1000 = 14,279), i.e. dollars per 1000 tok/s. The ordering reads inverted under the stated
-  label. Recorded in [26-known-defects.md](26-known-defects.md); not quoted here.
+- **Local value ranking across models.** The five rankable accelerators (eight rows) were
+  each measured on different models, so cross-card comparison is not a value finding.
+  The table itself now lives in
+  [[gotchas/value-cheapest-usable-vram-and-what-it-actually-runs]] with the unit stated
+  correctly — dollars per 1000 tok/s of decode throughput, lower is better — after the
+  "tok/s per $1000" mislabel recorded in
+  [26-known-defects.md](26-known-defects.md) was fixed on 2026-10-12, along with the
+  over-attributed prices the table still quoted.
 
 ## Related documents
 
