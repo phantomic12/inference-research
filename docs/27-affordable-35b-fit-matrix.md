@@ -59,6 +59,12 @@ re-run it. Nothing here is a measurement.
 
 ## 1. The selection rule (which records got a row)
 
+*This build merges the Phase-C pass-5 ingest (Argonne LLM-Inference-Bench,
+MLPerf v3.0 QAic, and the five-card hardware-corner Qwen3-30B-A3B 16k sweep).
+Pass 5 added measured records but no new accelerator or supply records, so the
+qualifying/price counts and the §3 ranking are unchanged from the pass-4 build;
+what changed is §2's calibration material.*
+
 An accelerator record gets a row when **all** of these hold:
 
 - `vram_gb >= 8` — below this there is no useful quantised-7B headroom either.
@@ -124,6 +130,31 @@ bandwidth is scarcest. Treat every ceiling cell as the floor, not the forecast.
 figure, not a cost-per-token-served figure — it ignores power, the chassis/baseboard
 several of these parts need (§5), and that $/tok-s for a 14 tok/s card and a 240
 tok/s card are not the same product.
+
+**A third calibration sweep landed with the Phase-C pass-5 ingest.** The
+hardware-corner 16k-context sweep now holds **five** third-party measured decode
+rows on **Qwen3-30B-A3B (MoE) Q4_K XL** — the closest corpus proxy to the
+35B-A3B target — at a ~16,384-token context, batch-1 per-request:
+
+|| part | measured tok/s | derived ceiling (BW ÷ 20 GB) | measured ÷ ceiling |
+||---|---|---|---|
+|| [[accelerators/nvidia-rtx-3090-ti]] | **98.25** ([[benchmarks/hwcorner-rtx-3090-ti-qwen3-30b-a3b-q4kxl-decode-16k]]) | 50.4 | 1.95× |
+|| [[accelerators/nvidia-rtx-4090]] | **109.57** ([[benchmarks/hwcorner-rtx-4090-qwen3-30b-a3b-q4kxl-decode-16k]]) | 50.4 | 2.17× |
+|| [[accelerators/nvidia-rtx-6000-ada]] | **104.88** ([[benchmarks/hwcorner-rtx-6000-ada-qwen3-30b-a3b-q4kxl-decode-16k]]) | 48.0 | 2.19× |
+|| [[accelerators/nvidia-rtx-4080]] | **85.04** ([[benchmarks/hwcorner-rtx-4080-qwen3-30b-a3b-q4kxl-decode-16k]]) | 35.8 | 2.37× |
+|| [[accelerators/nvidia-rtx-5070-ti]] | **111.11** ([[benchmarks/hwcorner-rtx-5070-ti-qwen3-30b-a3b-q4kxl-decode-16k]]) | 44.8 | 2.48× |
+
+Two of the five (3090 Ti, 4090) are also *priced* rows in §3 — the ranking on
+them can now be sanity-checked against a measured number: both beat their dense
+roofline by ~2× at 16k context, corroborating the direction the Strix Halo
+anchors set (MoE reads ~3B active bytes, not the resident 20 GB). The ordering
+is *not* pure bandwidth — the 5070 Ti (896 GB/s) edges the 4090 (1,008 GB/s) at
+16k, so generation/architecture effects are real at long context — but every
+measured value sits *above* its derived ceiling, i.e. the ceilings in the table
+remain floors, and the $/tok-s ranking *undervalues* nothing below a measured
+anchor. Caveat: the hwcorner sweep measures 30B-A3B, not the 35B-A3B target —
+the active-parameter ratio is the same shape (~3B active of ~30B vs ~3B of ~35B
+resident), so the direction transfers, not the exact figure.
 
 ## 3. Ranked: purchase-priced parts by $/tok-s for the 35B-A3B job
 
