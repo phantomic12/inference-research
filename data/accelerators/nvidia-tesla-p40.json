@@ -1,0 +1,54 @@
+{
+  "id": "nvidia-tesla-p40",
+  "type": "accelerator",
+  "name": "NVIDIA Tesla P40 24GB",
+  "vendor": "nvidia",
+  "architecture": "pascal",
+  "release_year": 2016,
+  "process_nm": 16,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 24,
+  "memory_type": "GDDR5",
+  "memory_bus_bit": 384,
+  "memory_bandwidth_gbps": 347,
+  "memory_bandwidth_basis": "24 GB GDDR5 on a 384-bit bus. Widely published at 347 GB/s (384-bit x ~7.2 Gbps effective / 8 = ~346). Vendor spec sheet prints 346-347 GB/s; recorded 347.",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 12,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": null,
+      "basis": "secondary-aggregator",
+      "basis_detail": "Tesla P40 (GP102) single-precision ~12 TFLOPS, the widely-republished figure. Pascal has no tensor cores; FP16 runs at 1/64 FP32 rate so no useful FP16 row exists.",
+      "unit": null
+    },
+    {
+      "precision": "int8",
+      "tflops": 47,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": null,
+      "basis": "secondary-aggregator",
+      "basis_detail": "Tesla P40 INT8 DP4A ~47 TOPS - the Pascal deep-learning feature NVIDIA marketed for inference. This is the ONLY usable compute path for LLM (GGUF Q4/Q8 via DP4A); there is no FP16 tensor path.",
+      "unit": null
+    }
+  ],
+  "tdp_w": 250,
+  "interconnect": [
+    "pcie-gen3"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-14",
+  "sources": [
+    "newegg-tesla-p40-refurbished-listings",
+    "vramguide-tesla-p40-modelled-tok-s",
+    "picclick-ebay-aggregator-tesla-p40-24gb-asking-listings"
+  ],
+  "notes": "Pascal-generation passive datacenter card - the default floor buy for cheap local LLM. 24 GB GDDR5 at 347 GB/s is the binding constraint: enough to hold a 24-32B GGUF but decode-modelled ~35 tok/s on an 8B Q4_K_M (vramguide, MODELLED not measured). KEY HARDWARE TRAPS: (1) passive card - needs a 3D-printed shroud + high-static-pressure fan for desktop use; (2) EPS-12V 8-pin CPU power connector, NOT a PCIe 8-pin - wrong cable can damage the card; (3) needs Above-4G-Decoding / ReBAR-capable BIOS. SOFTWARE TRAP: Pascal has NO FP16 tensor cores and no INT8 tensor cores - the only usable path is INT8 DP4A (47 TOPS) via GGUF Q4_0/Q8/Q4_K_M in llama.cpp; FP16 runs at 1/64 FP32 and is useless. Prompt eval ~4.7 tok/s makes long-context ingestion painful; interactive chat is fine. eBay 'multi-option' listings ('P4 8GB / P40 24GB / K80 / M40') put a ~$105 headline on the P4 variant; the actual P40 selection inside those listings runs ~$273-310."
+}
