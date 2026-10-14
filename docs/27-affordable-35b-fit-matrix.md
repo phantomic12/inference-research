@@ -76,6 +76,14 @@ experts per token, not the 20 GB resident. The roofline ranks capex against a
 *dense-equivalent* number; it understates real MoE throughput most where
 bandwidth is scarcest. Treat every ceiling cell as the floor, not the forecast.
 
+The Phase-C backfill added a second calibration point on a *dense* model:
+[[benchmarks/comm-tenstorrent-n300-llama31-8b-decode]] measures a single N300 at
+**~30 tok/s** on Llama-3.1-8B single-stream decode (vLLM + TT-Metal, batch 1) —
+against the same record's derived roofline of 576 GB/s ÷ ~16 GB ≈ 36 tok/s for
+an 8B-at-Q4 resident, i.e. the measured number lands at ~83% of the dense
+roofline on a model that *does* read all resident weights. On dense models the
+ceiling is a real upper bound; on the MoE target it is a floor.
+
 **$/tok-s (derived) = cheapest purchase price ÷ the 35B-A3B ceiling.** It ranks
 "how little silicon do I buy to move 20 GB of weights." It is a *capex-efficiency*
 figure, not a cost-per-token-served figure — it ignores power, the chassis/baseboard
@@ -245,7 +253,7 @@ show*. These are the corpus's own gotcha records, not new claims:
   records that MI100 is the best $/(GB·TB/s) in the used slice but multi-GPU
   segfaults on bare-metal ROCm and wants a PCIe-passthrough VM — and gfx908 is
   maintenance-tier on the ROCm matrix.
-- **A "fits" flag is not a speed promise — and the new edge-NPU rows prove it.**
+- **A "fits" flag is not a speed promise — and the edge-NPU rows prove it.**
   The M40 fits 35B-A3B (24 GB) but its 288 GB/s ceiling is ~14 tok/s derived —
   barely interactive. The three cheapest *new-in-this-pass* fits are slower
   still: [[accelerators/huawei-ascend-310p]] (205 GB/s → 10.2 tok/s ceiling),
@@ -259,6 +267,15 @@ show*. These are the corpus's own gotcha records, not new claims:
   class measures the 35B-A3B **MoE** target at 42 tok/s
   ([[benchmarks/ryzen-ai-max-8060s-qwen35-35b-a3b-decode-tok-s]]). The MoE
   target is exactly the workload those parts *are* good for.
+- **Aggregate ≠ per-request.** The QAic 100 Ultra row
+  ([[accelerators/qualcomm-ai200]], 128 GB, 548 GB/s) is *not* in the priced
+  table — its only priced sibling is the smaller [[accelerators/qualcomm-ai100]]
+  at $400 — but the Phase-C ingest landed a measured
+  [[benchmarks/arxiv2507-qaic100ultra-llama3-3-70b-tps-agg]] of **4,528 tok/s
+  aggregate** on Llama-3.3-70B. That figure is the peak over 32–256 concurrent
+  requests on one card (4 SoCs); it is *not* a single-stream decode rate and
+  must not be read as one. It belongs in the concurrency-serving discussion in
+  `docs/08-cost-per-token.md`, not in a batch-1 $/tok-s ranking.
 
 ## 6. Assumptions and what this table deliberately ignores
 
