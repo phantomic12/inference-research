@@ -1,0 +1,33 @@
+{
+  "id": "l4-vllm-qwen3-8b-fp16-reasoning-c16-tps",
+  "type": "benchmark",
+  "name": "NVIDIA L4, vLLM 0.8.5: Qwen3-8B FP16 reasoning(256/~8192) c=16 aggregate tok/s",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-l4"
+  ],
+  "interconnect_ids": [
+    "pcie-gen4"
+  ],
+  "model": "Qwen3-8B (FP16, thinking tokens)",
+  "format_id": null,
+  "metric": "tps_aggregate",
+  "value": 174.21,
+  "unit": "output tok/s AGGREGATE across 16 concurrent reasoning requests (~10.9 t/s per request)",
+  "methodology": "THIRD-PARTY MEASURED (ree2raz/inference-bench, Modal L4 24GB, client+server collocated). Engine: vLLM v0.8.5 --reasoning-parser deepseek_r1 --max-model-len 16384. Model: Qwen3-8B FP16. Regime 'reasoning' = ~256-in / ~8192-out, concurrency 16, greedy (temp=0). ~6510 thinking + ~420 answer tokens per request. Values are medians verbatim from results/summary.csv. throughput_median is AGGREGATE output tok/s across all 16 concurrent requests; divide by 16 for the per-request rate.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "energy_basis": null,
+  "power_w": null,
+  "power_scope": null,
+  "power_cap": null,
+  "clock_lock_mhz": null,
+  "thermal_state": null,
+  "notes": "Long-generation reasoning: KV cache can't hold 16 x 8K sequences on 24 GB — only ~11 effective concurrent, vLLM queues the rest. AWQ variant hits 345.5 t/s at c=16. format_id=null: no fp16 record exists in data/quantization/ (FP16 is the unquantized baseline, not a format).",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-14",
+  "sources": [
+    "ree2raz-inference-bench-nvidia-l4-sweep"
+  ]
+}

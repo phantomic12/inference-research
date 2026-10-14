@@ -1,0 +1,32 @@
+{
+  "id": "gotcha-epyc-must-populate-all-memory-channels",
+  "type": "gotcha",
+  "name": "EPYC CPU inference wastes ~92% of bandwidth if every memory channel is not populated",
+  "class": "config",
+  "affects": [
+    "llama-cpp",
+    "ik-llama-cpp"
+  ],
+  "concepts": [
+    "epyc",
+    "genoa",
+    "memory-channels",
+    "ddr5",
+    "numa",
+    "bandwidth-bound",
+    "cpu-inference"
+  ],
+  "symptom": "A Genoa/EPYC box bought for CPU LLM inference delivers a tiny fraction of its expected tok/s when the DIMM slots are not fully populated. llama.cpp discussion #3167 measured a Genoa box with ONE 64GB DIMM at 1.5 tok/s on 34B Q4_0, jumping to 4 tok/s with just a second stick.",
+  "root_cause": "CPU LLM decode is memory-bandwidth-bound - the spec that matters is channels x MT/s, not cores. A 12-channel Genoa socket derives its ~460 GB/s from all 12 DDR5 channels working in parallel. One DIMM lights only one channel (~1/12 of the bandwidth), wasting ~92% of what was paid for.",
+  "workaround": "Populate every channel: budget 12x 32GB or 12x 64GB for Genoa, not 4x 96GB. Use llama.cpp/ik_llama.cpp's `--numa distribute` (and RPC for dual-socket). Note dual-socket does not double 70B decode - NUMA domain splitting gives ~1.3-1.6x a single socket unless the model spans both sockets' memory evenly.",
+  "severity": "major",
+  "notes": "Compounded by the 2026 DRAM crisis: 64GB DDR5 RDIMMs went ~$873 (Q1) toward a projected ~$1,586 (Q4), so the RAM for a proper 384GB 12-channel build is $4,000-5,200+ - more than four used RTX 3090s. This kills the CPU-inference value play unless you already own the RAM. Fully-populated Genoa measured ~7 tok/s on 70B Q4_K_M (record comm-epyc-9554-llama33-70b-q4-decode).",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-14",
+  "sources": [
+    "llama-cpp-discussion-3167-cpu-channel-population-effect",
+    "ahelpme-epyc-9554-llama-cpp-inference-benchmarks",
+    "runaihome-cpu-vs-gpu-llm-inference-home-lab-2026-dram-crisis"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "gotcha-ebay-multioption-listing-headline-price",
+  "type": "gotcha",
+  "name": "eBay multi-option listings put a bait headline price on the cheapest SKU, not the card you searched for",
+  "class": "operations",
+  "affects": [
+    "nvidia-tesla-p40",
+    "nvidia-tesla-m40"
+  ],
+  "concepts": [
+    "ebay",
+    "multi-option-listing",
+    "asking-price",
+    "street-price",
+    "bait-sku"
+  ],
+  "symptom": "A used-card search returns a ~$105 Tesla P40 listing, but that price buys the P4 8GB variant option, not the P40. The actual P40 selection inside the same listing runs ~$273-310. Any scraper or buyer reading the headline price under-prices the real card by ~3x.",
+  "root_cause": "eBay sellers group many SKUs (P4 8GB / P40 24GB / K80 24GB / M40 24GB) under one multi-option listing. The listing's displayed 'from' price is the cheapest variant in the dropdown, not the searched part. The same trap produces 'cheap 4090' results that are actually heatsinks, water coolers, or a 16GB laptop eGPU SKU.",
+  "workaround": "Parse the variant/options table, not the headline price. Dedicated single-part listings for the P40 cluster $273-325. Read titles for 'heatsink', 'cooler only', 'adapter', and laptop/16GB VRAM traps before treating a number as the card's street price.",
+  "severity": "minor",
+  "notes": "Observed directly in the Oct-2026 picclick/eBay sweep. Both the P40 (~$105 headline vs ~$290 real) and the 4090 used-market record (ebay-used-consumer-gpu-market) document the title-pollution trap: cheapest '4090' listings were cooling hardware with no GPU and wrong-VRAM SKUs.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-14",
+  "sources": [
+    "picclick-ebay-aggregator-tesla-p40-24gb-asking-listings",
+    "sup-price-picclick-ebay-asking"
+  ]
+}
