@@ -1786,7 +1786,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (2080)
+## Sources (2069)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -1795,7 +1795,6 @@ and t
 - **Benchmark comparison on MacBook Pro M3 Max 128GB: Splash, Ollama (MLX), and Ollama (llama.cpp) across Qwen3.6-35B and Qwen3.8-27B** (`sources/src-incoai-splash-issue-37`) — benchmark · incoai / community
 - **Best practices for competitive inference optimization on AMD Instinct MI300X GPUs (ROCm Blogs)** (`sources/bench-amd-rocm-llm-inference-best-practices`) — benchmark · AMD
 - **Command A W4A4 on vLLM: a performance breakdown on 2xH100 (capp-vllm-bench)** (`sources/bench-capp-vllm-longctx-ttft`) — benchmark · SamMausberg
-- **Embedded LLM — Benchmarking LLM Inference on Intel Arc Pro B60 (4x B60 TP=4, vLLM vs LLM-Scaler)** (`sources/embeddedllm-arc-pro-b60-vllm-llmscaler-benchmark`) — benchmark · Embedded LLM (Sparkle-provided 4xB60 workstation)
 - **Enhancing vLLM Inference on AMD GPUs (ROCm Blogs)** (`sources/bench-amd-vllm-rocm-optimize-fp8-gemm`) — benchmark · AMD
 - **Llama.cpp Meets Instinct: A New Era of Open-Source AI Acceleration (ROCm Blogs)** (`sources/bench-amd-llama-cpp-mi300x-deepseek`) — benchmark · AMD
 - **Long-Context Benchmarks: Who's Actually Fast at 128K Tokens? (GeneralCompute)** (`sources/bench-generalcompute-128k-ttft`) — benchmark · GeneralCompute
@@ -1811,12 +1810,9 @@ and t
 - **MLPerf Inference v4.1 NVIDIA H200-SXM-141GBx8_TRT_MaxQ mixtral-8x7b Offline run_1 power trace** (`sources/pwr-mlperf-v4-1-h200-maxq-mixtral-offline-spl`) — benchmark · MLCommons and NVIDIA
 - **MLPerf Inference v4.1 NVIDIA submission README - MaxQ power category and PTDaemon/Yokogawa WT333E methodology** (`sources/pwr-mlperf-v4-1-nvidia-readme-maxq`) — benchmark · MLCommons and NVIDIA
 - **MLPerf Inference v4.1 closed results: AMD 8xMI300X system definition** (`sources/bench-amd-mlperf-v4-1-mi300x-system`) — benchmark · MLCommons
-- **MLPerf Inference v5.0 results — Dell XE7745 8xL40S llama2-70b-99.9 submission (raw logs)** (`sources/bench-mlperf-v5-0-dell-xe7745-l40sx8-llama2-70b`) — benchmark · MLCommons / Dell
-- **MLPerf Inference v5.1 results — RedHat/IBM Cloud 1xL40S vLLM llama3.1-8b submission (raw logs)** (`sources/bench-mlperf-v5-1-redhat-ibm-l40s-vllm-llama3-8b`) — benchmark · MLCommons / RedHat
 - **MLPerf Inference v6.0 closed results: AMD 8xMI355X Llama2-70B Offline summary log** (`sources/bench-amd-mlperf-v6-0-raw-log-amd-mi355x`) — benchmark · MLCommons
 - **MLPerf Inference v6.0 closed results: AMD 8xMI355X gpt-oss-120b Offline summary log** (`sources/bench-amd-mlperf-v6-0-raw-log-amd-gpt-oss-120b`) — benchmark · MLCommons
 - **MLPerf Inference v6.1 closed results: Intel 4x Arc Pro B70 Llama2-70B Offline summary log** (`sources/bench-intel-arc-pro-b70-mlperf-v6-1-llama2-70b`) — benchmark · MLCommons / Intel
-- **MLPerf Inference v6.1 results summary.csv (all submissions)** (`sources/bench-mlperf-v6-1-summary-csv-llm-rows`) — benchmark · MLCommons
 - **MLPerf Inference: Datacenter benchmark suite description** (`sources/ev-mlperf-inference-datacenter-page`) — benchmark · MLCommons
 - **MLPerf v5.1 Supermicro AS-4126GS-NBR-LCC 8x B200-SXM-180GB llama3.1-8b Interactive run_1 harness summary log** (`sources/bench-mlperf-v5-1-supermicro-b200-llama3-8b-interactive-log`) — benchmark · MLCommons
 - **MLPerf v6.1 AMD 8xMI355X_2xEPYC_9575F llama2-70b-99.9 Interactive run_1 harness summary log** (`sources/bench-mlperf-v6-1-amd-mi355x-llama2-interactive-log`) — benchmark · MLCommons
@@ -1846,7 +1842,6 @@ and t
 - **VAST.ai public offers API (console.vast.ai/api/v0/bundles)** (`sources/sup-price-vast-rental-api`) — benchmark · VAST.ai
 - **cadamcat: A second RX 7900 XT buys 1.1x at decode and 1.9x at prefill** (`sources/cadamcat-dual-radeon-a100-vs-two-radeons`) — benchmark · cadamcat (dual-radeon-vllm)
 - **cadamcat: Eight ROCm kernel findings narrow to three on RDNA3** (`sources/cadamcat-dual-radeon-rdna3-second-class`) — benchmark · cadamcat (dual-radeon-vllm)
-- **kyuz0 AMD Strix Halo toolboxes — llama-bench results.json (pp512/tg128 across ROCm 6.4.4/7.2.3/7-nightlies + Vulkan AMDVLK/RADV)** (`sources/kyuz0-strix-halo-toolboxes-llamabench-results-json`) — benchmark · kyuz0 (Strix Halo community)
 - **mlx-lm's own merged benchmark table (mlx_lm/BENCHMARKS.md, added by PR #552 'LLM Benchmarks' by awni, merged 2025-10-15)** (`sources/w8-src-mlxlmm-552-benchmarks-merged`) — benchmark · ml-explore (Apple)
 - **vLLM 0.9.x ROCm optimizations: AITER block-scaled GEMM, fused MoE, MLA** (`sources/amd-vllm-09x-rocm`) — benchmark · AMD ROCm Blogs
 - **vLLM ROCm attention backends: 7 backends, 3-path routing, and measured speedups** (`sources/amd-vllm-rocm-attn-backends`) — benchmark · vLLM Blog (AMD AI Framework team)
@@ -1854,7 +1849,6 @@ and t
 - **AMD RDNA architecture page (generation comparison table and RDNA 4 overview)** (`sources/acc-fill-amd-rdna-architecture-page`) — blog · AMD
 - **AMD ROCm Blog: Efficient LLM Serving with MTP: DeepSeek V3 and SGLang on AMD Instinct GPUs** (`sources/w15-amd-rocm-deepseek-mtp-benchmark`) — blog · AMD
 - **AMD blog: AMD Ryzen AI MAX+ 395 Processor: Breakthrough AI Performance (Radeon 8060S LLM token-throughput measurements)** (`sources/acc-fill-amd-ryzen-ai-max-395-8060s-blog`) — blog · AMD
-- **AMD developer — 'llama.cpp on AMD EPYC: ZenDNN backend' (EPYC 9755 128c benchmarks)** (`sources/amd-llama-cpp-on-amd-epyc-zendnn-9755`) — blog · AMD
 - **AMD newsroom press release: AMD Unveils World's Most Advanced Gaming Graphics Cards, Built on Groundbreaking AMD RDNA 3 Architecture with Chiplet Design** (`sources/acc-fill-amd-rx-7900-series-press-release-rdna3`) — blog · AMD
 - **AMD partner article: Introducing the AMD Radeon RX 7900 Series Graphics** (`sources/acc-fill-amd-rx-7900-series-launch`) — blog · AMD
 - **AWS Trainium product page (Neuron SDK, Trainium3)** (`sources/asic-aws-trainium-product`) — blog · Amazon Web Services
@@ -1865,7 +1859,6 @@ and t
 - **Amazon EC2 Trn3 UltraServers (Trainium3)** (`sources/amazon-ec2-trn3-ultraservers-trainium3`) — blog
 - **Announcing Llama 3.1 Support in vLLM** (`sources/bench-nv-vllm-llama31-blog`) — blog · vLLM project
 - **Baseten blog - Introducing the Baseten Delivery Network: fast cold starts for big models** (`sources/dep-baseten-bdn-cold-start-blog`) — blog · Baseten
-- **Ben Linville (bentech) — Intel Arc Pro B60 + B70 LLM benchmarks, most quants every backend** (`sources/bentech-arc-pro-b60-b70-llm-benchmarks`) — blog · Ben Linville / bentech.substack.com
 - **Break the Sequential Dependency of LLM Inference Using Lookahead Decoding (arXiv:2402.02057)** (`sources/pap-eff-lookahead-decoding`) — blog
 - **CNBC: U.S. curbs export of more AI chips, including Nvidia H800, to China (2023-10-17)** (`sources/acc-fill-cnbc-h800-export-ban`) — blog · CNBC
 - **CacheBlend: Fast Large Language Model Serving for RAG with Cached Knowledge Fusion (arXiv:2405.16444)** (`sources/pap-eff-cacheblend`) — blog
@@ -1964,7 +1957,6 @@ and t
 - **Unsloth Dynamic 2.0 GGUF documentation** (`sources/hf-eco-unsloth-dynamic-gguf-doc`) — blog · Unsloth
 - **Vertiv - 800 VDC: the next evolution of AI power architecture (vendor learning-center resource index entry)** (`sources/pwr2-vertiv-800vdc`) — blog · Vertiv
 - **Why SambaNovas SN40L Chip Is the Best for Inference** (`sources/ainv-sambanova-sn40l-blog`) — blog · SambaNova Systems
-- **ahelpme.com — LLM inference benchmarks with llama.cpp on AMD EPYC 9554 (Genoa 64c, 12-channel DDR5-5600)** (`sources/ahelpme-epyc-9554-llama-bench-cpu-inference`) — blog · ahelpme.com
 - **d-Matrix Corsair Full Production Announcement** (`sources/d-matrix-corsair-full-production-announcement`) — blog
 - **d-Matrix Corsair Product Brief** (`sources/d-matrix-corsair-product-brief`) — blog
 - **d-Matrix Corsair White Paper** (`sources/d-matrix-corsair-white-paper`) — blog
@@ -2127,7 +2119,6 @@ and t
 - **Runpod GPU Cloud pricing** (`sources/sup-cloud-runpod-gpu-pricing`) — database · Runpod
 - **SGLang Crossref record (NeurIPS 2024)** (`sources/pap-sys-sglang-crossref`) — database · Advances in Neural Information Processing Systems (via Crossref)
 - **SambaNova Cloud pricing table (per-1M-token list prices)** (`sources/svc-src-sambanova-cloud-pricing-2026-10-14`) — database · SambaNova
-- **Silicon Score — Apple Silicon LLM benchmark audit surface (benchmarks.json, 432 rows)** (`sources/siliconscore-benchmarks-json-apple-silicon`) — database · Silicon Score
 - **SkyPilot Catalog - Automated multi-cloud GPU price database, refreshed every 7 hours** (`sources/ppl-cloud-skypilot-catalog`) — database · SkyPilot
 - **SkyPilot Catalog AWS GPU instances extract - Key instance types with per-hour rates** (`sources/ppl-cloud-skypilot-aws-gpu-extract`) — database · SkyPilot
 - **SkyPilot Catalog Azure GPU instances extract - ND series with per-hour rates** (`sources/ppl-cloud-skypilot-azure-gpu-extract`) — database · SkyPilot
@@ -2197,8 +2188,6 @@ and t
 - **gfx906 Discord server message export (3,007 messages, 17 channels, Aug 2025 - Oct 2026)** (`sources/comm-gfx906-discord-server-log`) — forum · gfx906 Discord community (Chinese-language AMD ROCm community)
 - **intel/ipex-llm issue #12991: Intel Arc B580 llama-bench Vulkan vs SYCL vs IPEX-LLM token-generation tables** (`sources/gh-intel-ipex-llm-12991-arc-b580-llama-bench`) — forum · Intel IPEX-LLM (GitHub, archived 2026-01-28)
 - **llama.cpp Discussion #12570: Current status of Intel Arc GPUs for llama.cpp** (`sources/llamacpp-discussion-12570-intel-arc`) — forum · ggml-org / llama.cpp
-- **llama.cpp Discussion #15013 — Performance of llama.cpp on Nvidia CUDA (community scoreboard)** (`sources/llama-cpp-discussion-15013-nvidia-cuda-scoreboard`) — forum · GitHub / ggml-org
-- **llama.cpp Discussion #15021 — Performance of llama.cpp on AMD ROCm/HIP (community scoreboard)** (`sources/llama-cpp-discussion-15021-amd-rocm-scoreboard`) — forum · GitHub / ggml-org
 - **llama.cpp PR #28398: hardware v_perm_b32 for Q1_0 vec_dot on AMD (+110% decode on gfx1201)** (`sources/bench-llamacpp-pr-28398-radeon-r9700-q1`) — forum · llama.cpp contributors (community)
 - **llama.cpp issue #11559: Vulkan Q4_K_M inference speed degradation** (`sources/gotcha-llamacpp-issue-11559-vulkan-q4km-regression`) — forum · llama.cpp GitHub issues
 - **llama.cpp issue #18808: totally broken for agentic use on Intel dGPUs (Arc Pro B50 Battlemage)** (`sources/gotcha-llamacpp-issue-18808-intel-dgpu-agentic-stall`) — forum · llama.cpp GitHub issues
@@ -4194,7 +4183,7 @@ and t
 
 ## Coverage
 
-Total records: **4134**
+Total records: **4123**
 
 | group | records |
 |---|---|
