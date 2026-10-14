@@ -1,0 +1,31 @@
+{
+  "id": "gotcha-cxl-memory-expanders-not-viable-for-consumers",
+  "type": "gotcha",
+  "name": "CXL memory expanders are not a consumer path to more inference RAM - host root-port support is server-only",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-14",
+  "class": "hardware",
+  "affects": [
+    "amd-epyc-9554-genoa",
+    "amd-epyc-9454p-genoa",
+    "amd-epyc-9334-genoa-dual",
+    "amd-ryzen-ai-max-395-framework-desktop"
+  ],
+  "concepts": [
+    "cxl",
+    "memory-expansion",
+    "bandwidth",
+    "capacity",
+    "server-platforms"
+  ],
+  "symptom": "A tempting path for '70B fits but decode is slow' builds is to bolt on CXL memory. It cannot be done: all shipping CXL expanders (Marvell Structera X 2404/2504/3406/3506, Astera Leo 2 / Leo X, Samsung CMM, XCENA MX1) are E3.S/E3.C PCIe-CEM modules sold to server OEMs, not retail; and CXL 2.0+ requires the CPU/root-complex to enable it - consumer Intel/AMD boards do not expose CXL on their PCIe root ports.",
+  "root_cause": "CXL.mem is a capacity fabric, not a bandwidth fabric. One PCIe 5.0 x16 CXL link is ~64 GB/s - WORSE than a single DDR5 channel pair - and adds ~200-400 ns over local DRAM. For bandwidth-bound LLM decode it does not help tok/s at all; for capacity it enumerates as nothing without host CXL support, which only Sapphire Rapids / Genoa-and-newer server platforms provide - and those already have 8-12 DDR5 channels so the expander is redundant.",
+  "workaround": "Drop the CXL-expander plan entirely for consumer/homelab builds. If you need capacity beyond what DDR channels give you, the working paths are: fully populate a server platform's channels (see gotcha-cpu-inference-must-populate-all-memory-channels), use unified memory (Apple Silicon, Strix Halo), or spread across multiple GPUs. Revisit CXL only when consumer chipsets ship CXL root ports - no earlier than ~2027 and that is optimistic.",
+  "severity": "major",
+  "notes": "From the big-memory research sweep: every shipping expander targets hyperscaler DDR-reclamation (Marvell Structera X 3506 = 6x DDR5 ch / up to 6TB per controller, sold to server OEMs). The ~$1,000+ OEM card put in a consumer board enumerates as nothing. CXL's one real future use is cheap far-memory so a 400B model LOADS, with a GPU doing decode from fast memory - not a decode-speed play. Bandwidth identity: cxl-2-0 == pcie-gen5 == 63 GB/s per direction; see data/interconnect/cxl-*.json.",
+  "sources": [
+    "servethehome-marvell-structera-x-cxl-3-2-memory-expanders",
+    "runaihome-cpu-vs-gpu-llm-inference-home-lab-2026-dram-crisis"
+  ]
+}
