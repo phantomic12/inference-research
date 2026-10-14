@@ -1,0 +1,28 @@
+{
+  "id": "comm-arc-pro-b70-vllm-qwen35-27b-decode",
+  "type": "benchmark",
+  "name": "Intel Arc Pro B70 32GB, vLLM: Qwen3.5-27B single-request decode tok/s + 4-card aggregate (wendell measured)",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "intel-arc-pro-b70"
+  ],
+  "interconnect_ids": [
+    "pcie-gen5"
+  ],
+  "model": "Qwen3.5-27B (dynamic FP8)",
+  "format_id": null,
+  "metric": "decode_tok_s",
+  "value": 13.4,
+  "unit": "tok/s single-request floor (dynamic FP8); 4x B70 TP=4 50-req ~370 t/s avg / 550 peak",
+  "methodology": "THIRD-PARTY MEASURED (wendell / Level1Techs, vLLM, Qwen3.5-27B). Single-request floor ~13.4 t/s (dynamic FP8 quant - the native FP8 model crashed, the dynamic-quant BF16 path was needed); had to cap mem-util at 0.8 for stability. Multi-card: 4x B70 TP=4 at 50 concurrent requests = 370 t/s avg output / 550 t/s peak, TTFT ~11.5s; 8-req 2-card 97.8 t/s agg. Reference: 4x 3090 same test ~348 t/s.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Cheapest NEW way to 32GB (~$949-1,000 Newegg, released Apr-2026) and the cheapest path to 128GB (4x ~ $3,800). BUT per-card decode is SLOWER than a used 3090 and the software is not plug-and-play - vLLM (Intel upstream) works but rough, llama.cpp via SYCL/Vulkan but mainline lags Intel's forks. Reasonable for batched/server-style workloads on a budget; NOT a 3090 replacement for single-user speed. 32GB GDDR6, 256-bit, ~576-608 GB/s, 230W blower.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-14",
+  "sources": [
+    "level1techs-forum-cheap-local-llm-gpu-thread",
+    "newegg-consumer-gpu-listings-rx-9070-xt-arc-b60-b70"
+  ]
+}

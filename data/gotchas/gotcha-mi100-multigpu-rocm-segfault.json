@@ -1,0 +1,32 @@
+{
+  "id": "gotcha-mi100-multigpu-rocm-segfault",
+  "type": "gotcha",
+  "name": "AMD MI100 multi-GPU segfaults on bare-metal ROCm - needs PCIe-passthrough VM + HSA_AMD_SVM",
+  "class": "driver",
+  "affects": [
+    "amd-instinct-mi100",
+    "llama-cpp"
+  ],
+  "concepts": [
+    "gfx908",
+    "cdna1",
+    "rocm",
+    "hsa-amd-svm",
+    "pcie-passthrough",
+    "multi-gpu",
+    "tensor-parallel"
+  ],
+  "symptom": "Adding a second (or more) MI100 card causes segfaults and instability on bare-metal Linux with standard ROCm - the canonical llama.cpp report (#2824) could only get 2x MI100 working by passing the cards through to a VM. Single-card works; multi-card is the landmine.",
+  "root_cause": "gfx908/CDNA1 is a maintenance-tier citizen on the ROCm compat matrix - multi-GPU shared virtual memory is fragile on bare metal. The working recipe requires the HSA_AMD_SVM kernel option and PCIe passthrough into an Ubuntu VM, which sidesteps the bare-metal driver path that segfaults.",
+  "workaround": "Run each MI100 (or the multi-card set) inside an Ubuntu VM via PCIe passthrough, and set the HSA_AMD_SVM kernel option. Read llama.cpp discussion #2824 end-to-end BEFORE buying the second card - the measured 8.32 tok/s on Llama-2-70B Q6_K was achieved under exactly this setup, not bare metal.",
+  "severity": "major",
+  "notes": "MI100 is the best $/(GB x TB/s) in the used slice (~$720-1,299 for 32GB/1228GB/s) but the ROCm tax is the price. gfx908 is still on the ROCm 10 compat matrix but is maintenance-tier. gfx90a (MI210/MI250) does NOT have this problem - it is fully supported upstream with no fork needed.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-14",
+  "sources": [
+    "llama-cpp-discussion-2824-mi100-multi-gpu-measured-tok-s",
+    "amd-rocm-compatibility-matrix",
+    "picclick-ebay-aggregator-amd-instinct-mi100-asking-listings"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "gotcha-strix-halo-moe-not-dense",
+  "type": "gotcha",
+  "name": "AMD Strix Halo is an MoE part, not a dense-70B part - the ~256 GB/s wall caps dense decode at ~5 tok/s",
+  "class": "hardware",
+  "affects": [
+    "amd-radeon-8060s-ryzen-ai-max",
+    "llama-cpp"
+  ],
+  "concepts": [
+    "strix-halo",
+    "ryzen-ai-max",
+    "unified-memory",
+    "moe",
+    "dense",
+    "bandwidth-bound",
+    "gpt-oss-120b"
+  ],
+  "symptom": "A Strix Halo 128GB box bought to run a dense 70B model delivers only ~5 tok/s - far slower than the marketing 'runs 70B/120B' implies. The same box runs gpt-oss-120b MoE at ~34 tok/s, which is the number that gets quoted.",
+  "root_cause": "Token-generation speed ≈ memory bandwidth ÷ bytes-read-per-token. Strix Halo's one 256-bit LPDDR5X-8000 bus gives ~256 GB/s (200-270 effective). A DENSE 70B reads ~40 GB/token -> ~5-6 tok/s. An MoE like gpt-oss-120b reads only the active experts' bytes (~5.1B of 117B) -> ~34 tok/s. The wall is bandwidth, and it is physics, not a software fix.",
+  "workaround": "Match the workload to the hardware: buy Strix Halo for gpt-oss-120b, GLM-4.5-Air, Qwen3-30B/235B-A3B-class MoE, or a silent always-on agent box - it is the best value here. For DENSE 70B buy bandwidth instead: Mac Ultra (~800 GB/s, ~12.6 t/s) > M4 Max (~546) > EPYC Genoa (~460) > Strix Halo (~256) > Milan (~205). A used M1 Ultra 128GB does ~12.6 t/s on the same dense 70B for similar money.",
+  "severity": "major",
+  "notes": "This is the single most-misread spec in the big-memory slice: 'runs 120B' is true but only because MoE is bandwidth-cheap. Measured (lhl/strix-halo-testing): gpt-oss-120b MXFP4 33.7 t/s, GLM-4.5-Air 23.4, Qwen3-235B-A22B 15.1, but dense Llama-3.3-70B Q4_K_M ~5.0 and dense Qwen3-32B Q8_0 6.4.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-14",
+  "sources": [
+    "lhl-strix-halo-testing-llm-bench-sweep",
+    "strix-halo-homelab-wiki-llama-cpp-performance",
+    "framework-community-ai-max-395-gpt-oss-120b-thread"
+  ]
+}

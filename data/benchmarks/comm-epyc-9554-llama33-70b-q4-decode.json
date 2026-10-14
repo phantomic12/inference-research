@@ -1,0 +1,26 @@
+{
+  "id": "comm-epyc-9554-llama33-70b-q4-decode",
+  "type": "benchmark",
+  "name": "AMD EPYC 9554 (64c Genoa, 1P, 12x DDR5-5600), llama.cpp: Llama-3.3-70B Q4_K_M decode tok/s",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "model": "Llama-3.3-70B (dense) Q4_K_M",
+  "format_id": "gguf-q4-k-m",
+  "metric": "decode_tok_s",
+  "value": 7.12,
+  "unit": "decode tok/s (single-socket, 12 channels populated)",
+  "methodology": "THIRD-PARTY MEASURED (ahelpme.com EPYC 9554 bench, llama-bench, --numa distribute). EPYC 9554 64-core single socket on 12x DDR5-5600 channels (~460.8 GB/s theoretical): Llama-3.3-70B Q4_K_M 7.12 tok/s; DeepSeek-R1-70B Q4_K_M 7.11; QwQ-32B Q4_K_M 13.9. The prior '~4-6 tok/s' estimate for 70B is slightly LOW for a fully-populated Genoa - measured is ~7. CRITICAL: every channel must be populated - llama.cpp discussion #3167 measured a Genoa box with ONE 64GB DIMM at 1.5 tok/s on 34B Q4_0, jumping to 4 tok/s with a second stick.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "The 'big channel count' CPU play. Decode is bandwidth-bound - channels x MT/s is the spec that matters, not cores. The 2026 problem is the RAM cost: 64GB DDR5 RDIMMs went ~$873 (Q1) toward a projected ~$1,586 (Q4); a 384GB DDR5 build is $4,000-5,200+ of RAM alone - more than four used RTX 3090s. A complete Genoa box lands ~$7,000-8,000+. Legit niche: cheapest way to RUN a 400B-class model at all (~1.5-2 tok/s, overnight batch) with ik_llama.cpp fused MoE. MoE is much better: EPYC 9454P does 63.1 t/s on Qwen3-MoE-30B.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-14",
+  "sources": [
+    "ahelpme-epyc-9554-llama-cpp-inference-benchmarks",
+    "runaihome-cpu-vs-gpu-llm-inference-home-lab-2026-dram-crisis",
+    "llama-cpp-discussion-3167-cpu-channel-population-effect",
+    "amd-llama-cpp-on-amd-epyc-zendnn-backend"
+  ]
+}

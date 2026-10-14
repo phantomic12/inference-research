@@ -1,0 +1,40 @@
+{
+  "id": "gotcha-exotic-silicon-dead-end-stack",
+  "type": "gotcha",
+  "name": "Cheap exotic accelerator surplus (Cambricon, Ascend, Coral, FPGA, Grayskull) has no load-a-GGUF-and-go LLM stack",
+  "class": "toolchain",
+  "affects": [
+    "cambricon-mlu270",
+    "cambricon-mlu370",
+    "huawei-ascend-310p",
+    "google-coral-edge-tpu",
+    "tenstorrent-grayskull-e150",
+    "furiosaai-warboy",
+    "simaai-mlsoc"
+  ],
+  "concepts": [
+    "neuware",
+    "cann",
+    "mindie",
+    "edgetpu",
+    "fpga",
+    "closed-sdk",
+    "no-gguf",
+    "dead-end-stack",
+    "grayskull"
+  ],
+  "symptom": "A tempting cheap used accelerator (Cambricon MLU270 ~$315, Ascend 310P ~$265, Coral ~$50-130, Alveo FPGA ~$200-2000, Grayskull e150 ~$300-500) cannot run an open-weight 7B+ model - there is no llama.cpp/vLLM/GGUF path. The silicon is real and the price is real, but the software is a dead end for LLM.",
+  "root_cause": "Each part requires its own closed/niche SDK: Cambricon Neuware/CNRT, Huawei CANN+MindIE (heavyweight enterprise stack, Chinese docs, version pinning), Coral is INT8-vision-only (no transformer-decode support at all), FPGAs have no maintained turnkey LLM flow, and Tenstorrent Grayskull is legacy with zero current LLM demos in tt-metal. None of them loads a GGUF.",
+  "workaround": "Do not buy these for LLM unless the explicit goal is learning that vendor's SDK. For the 7B goal the only exotic card that works out of the box is Tenstorrent WORMHOLE/BLACKHOLE (not Grayskull) - and a used RTX 3090/MI50 still beats it on $/tok. Qualcomm AI 100 is the partial exception (public SDK + vLLM path) but is an expert trap requiring a compile-ahead QPC pipeline.",
+  "severity": "blocker",
+  "notes": "Verdict classes from the exotic sweep: Coral/Grayskull/FPGA/Kinara/Furiosa-Warboy = PAPERWEIGHT for LLM; Cambricon/Ascend/MLU270 = TRAP (real silicon, dead-end stack); Qualcomm AI100 = VIABLE-ISH/expert-trap; SiMa/Furiosa-RNGD/Groq/Cerebras/SambaNova = UNOBTAINIUM (gated or cloud-only). The cheap-sticker trap is that the silicon is affordable precisely because the software isn't.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-14",
+  "sources": [
+    "picclick-ebay-aggregator-cambricon-mlu370-asking-listings",
+    "google-coral-products-page",
+    "tt-metal-models-readme-model-matrix-vendor-measured",
+    "r-localllama-atlas-300i-duo-150-tok-s-llama-3-report"
+  ]
+}

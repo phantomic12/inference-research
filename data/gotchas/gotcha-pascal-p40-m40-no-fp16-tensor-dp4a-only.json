@@ -1,0 +1,33 @@
+{
+  "id": "gotcha-pascal-p40-m40-no-fp16-tensor-dp4a-only",
+  "type": "gotcha",
+  "name": "Tesla P40/M40 (Pascal/Maxwell) have no FP16 tensor cores - GGUF INT8 DP4A is the only usable LLM path",
+  "class": "hardware",
+  "affects": [
+    "nvidia-tesla-p40",
+    "nvidia-tesla-m40",
+    "llama-cpp"
+  ],
+  "concepts": [
+    "pascal",
+    "maxwell",
+    "dp4a",
+    "int8",
+    "gguf",
+    "fp16",
+    "tensor-cores"
+  ],
+  "symptom": "Attempting to run an FP16 model or a non-DP4A quant on a Tesla P40 or M40 either fails outright or falls back to a path so slow it is unusable. On the P40, FP16 runs at 1/64 the FP32 rate. On the M40 (Maxwell CC5.2) there is not even an INT8 DP4A path, so llama.cpp drops to the FP32 CUDA-core path and is SLOWER than the P40 despite identical 24 GB VRAM.",
+  "root_cause": "Pascal (CC6.x) and Maxwell (CC5.2) predate tensor cores. The P40's only deep-learning feature is INT8 DP4A (~47 TOPS); it has no FP16 tensor path. The M40 is older still and lacks even DP4A. Modern LLM tooling assumes at least a Turing-class INT8/FP16 tensor path or a GGUF DP4A path.",
+  "workaround": "On the P40 run only GGUF INT8/Q4_0/Q8/Q4_K_M via llama.cpp's DP4A path - that is the single usable configuration (~35 tok/s modelled on 8B Q4). On the M40 there is no good path; do not buy it for LLM - the ~$90 saved over a P40 buys you an FP32-only card that is slower. For a real FP16 path step up to Volta V100 (first-gen tensor cores).",
+  "severity": "blocker",
+  "notes": "This is the trap that makes the M40 ($189, cheapest 24GB) a trap and not a deal: identical VRAM to the P40 but no DP4A, so it is slower on the only workload that matters here. P40 remains the floor buy because its DP4A path exists. Both cards are also passive (need a shroud+blower) and use an EPS-12V 8-pin connector that is NOT interchangeable with a PCIe 8-pin - wrong cable can damage the card; both need an Above-4G/ReBAR-capable BIOS.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-14",
+  "sources": [
+    "newegg-tesla-p40-refurbished-listings",
+    "newegg-tesla-m40-refurbished-listings",
+    "vramguide-tesla-p40-modelled-tok-s"
+  ]
+}

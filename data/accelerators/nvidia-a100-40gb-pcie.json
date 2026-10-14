@@ -1,0 +1,54 @@
+{
+  "id": "nvidia-a100-40gb-pcie",
+  "type": "accelerator",
+  "name": "NVIDIA A100 40GB PCIe",
+  "vendor": "nvidia",
+  "architecture": "ampere",
+  "release_year": 2020,
+  "process_nm": 7,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 40,
+  "memory_type": "HBM2",
+  "memory_bus_bit": 5120,
+  "memory_bandwidth_gbps": 1555,
+  "memory_bandwidth_basis": "A100 40GB PCIe Product Brief (PB-10137-001_v03) specifies memory identically to the SXM4 part: 'Memory clock 1215 MHz', 'Memory type HBM2', 'Memory size 40 GB', 'Memory bus width 5120 bits', 'Peak memory bandwidth Up to 1555 GB/s'. 1215 MHz x 2 (DDR) x 5120 bit / 8 = 1555 GB/s. The bandwidth is the same as the SXM4 module; the difference is the 250 W power envelope and lower boost clocks.",
+  "flops": [
+    {
+      "precision": "fp16",
+      "tflops": 312,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Ampere GA100 whitepaper Table 4 FP16 tensor dense 312 TFLOPS for the A100 40GB die. The PCIe card carries the same GA100-883AA-A1 silicon; the 250 W cap vs 400 W SXM4 means sustained clocks are lower in practice.",
+      "unit": null
+    },
+    {
+      "precision": "int8",
+      "tflops": 624,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+      "basis": "vendor-whitepaper",
+      "basis_detail": "Ampere GA100 whitepaper Table 4 INT8 dense 624 TOPS for the A100 40GB die; same silicon on the PCIe card.",
+      "unit": null
+    }
+  ],
+  "tdp_w": 250,
+  "interconnect": [
+    "pcie-gen4",
+    "nvlink-3"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-14",
+  "sources": [
+    "acc-fill-nvidia-ampere-whitepaper-a100-40gb",
+    "xiongjiedai-gpu-benchmarks-on-llm-inference-runpod-measured-llam"
+  ],
+  "notes": "The zero-drama A100 route: the same GA100 die as nvidia-a100-40gb-sxm4 in a passive FHFL PCIe card that drops into any x16 slot - no HGX baseboard, no SXM4-to-PCIe adapter. 40 GB HBM2, 5120-bit, 1555 GB/s identical to SXM4; the differences are the 250 W cap (vs 400 W SXM4), no NVSwitch, and lower boost clocks. THE PRICE IS A FORM-FACTOR STORY, NOT A SILICON STORY: the used 40GB PCIe card asks ~$6,995-8,074 (2026-10-03 eBay sweep) - roughly 2.8x the $2,499 bare SXM4 module. That gap is the HGX baseboard problem priced in: SXM4-to-PCIe adapters at $648-1,200 put total-landed SXM+adapter at ~$3,150-3,700, still half the PCIe ask, but the adapter route is grey-market. Full current CUDA stack (CC8.0). Measured sibling: A100 80GB SXM does 133 tok/s Llama-3-8B Q4_K_M decode and 22-24 tok/s on 70B Q4_K_M (XiongjieDai, RunPod); the 40GB part has ~24% less bandwidth -> expect ~100-110 tok/s 8B, ~17-19 tok/s 70B."
+}

@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "service",
+  "title": "service",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "name",
+    "provider",
+    "price_basis",
+    "status",
+    "confidence",
+    "updated",
+    "sources"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "type": {
+      "const": "service"
+    },
+    "name": {
+      "type": "string"
+    },
+    "provider": {
+      "enum": [
+        "openrouter",
+        "together",
+        "fireworks",
+        "deepinfra",
+        "cerebras",
+        "groq",
+        "sambanova",
+        "aws-bedrock",
+        "azure",
+        "gcp-vertex",
+        "other"
+      ],
+      "description": "the platform operating the endpoint. 'other' for providers outside the ten named ones; name the actual provider in the record name/notes (e.g. novita, nebius, hyperbolic)."
+    },
+    "endpoint_url": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "base URL of the OpenAI-compatible (or native) API endpoint, e.g. https://openrouter.ai/api/v1"
+    },
+    "models_served": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "bare model record ids (slugs from data/models/) this service can serve. Where the provider spells the id differently (llama-3.3-70b-versatile, anthropic.claude-sonnet-4-5), record the provider spelling in notes, not here - this field is a cross-reference and unresolved entries are counted as dangling references. A sample, not a census."
+    },
+    "price_input_per_mtok_usd": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "USD per 1M input tokens, list price for ONE representative model named in price_basis. Never the cheapest headline figure unless the basis says so."
+    },
+    "price_output_per_mtok_usd": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "USD per 1M output tokens for the same representative model as price_input_per_mtok_usd."
+    },
+    "price_basis": {
+      "type": "string",
+      "description": "MANDATORY even when both price fields are null: which model/tier/region the prices are for, when observed, and why the numbers are what they are (single-model list price, catalog range, sales-gated catalog). A price with no basis is noise."
+    },
+    "context_window": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "max context tokens for the representative model as the provider exposes it. Per-model in reality; the basis says which model."
+    },
+    "measured_ttft_ms": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "measured time to first token in milliseconds for the representative model; third-party median (artificial-analysis, llmperf) preferred over vendor claims. null = not measured here."
+    },
+    "measured_tps": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "measured output tokens per second (single-stream decode) for the representative model. Same provenance rule as measured_ttft_ms; measurement_source says who measured."
+    },
+    "measurement_source": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "artificial-analysis",
+        "llmperf",
+        "self",
+        "vendor",
+        null
+      ],
+      "description": "who produced measured_ttft_ms / measured_tps. vendor = provider-published number (e.g. Groq prints tok/s on its model page); null = no measurement recorded. Required whenever a measured_* field is set."
+    },
+    "regions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "regions where inference is actually served or offered: cloud region names (us-east-1, eu-west-1), or coarse scope (us, eu, apac, global) when the provider does not expose a region choice."
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "verified",
+        "draft",
+        "contested",
+        "deprecated"
+      ]
+    },
+    "confidence": {
+      "type": "number"
+    },
+    "updated": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "source ids; each must exist in data/sources/"
+    }
+  },
+  "additionalProperties": false
+}
