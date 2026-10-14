@@ -176,6 +176,10 @@ PRICE_JOIN = {
     #   via the -x2/-s1/framework/beelink-1 rows. min() picks the cheapest.
     "new-beelink-gtr9-pro-strix-halo-128gb-2": {"amd-ryzen-ai-max-395-framework-desktop": 2099.0},
     "new-gmktec-evo-x3-strix-halo-128gb":      {"amd-ryzen-ai-max-395-framework-desktop": 3799.0},
+    # Apple MacBook Pro Max rows: WHOLE-LAPTOP prices (the part is not sold
+    #   bare; the 128 GB configured unified pool is the usable capacity).
+    "used-macbook-pro-m3-max-128gb":    {"apple-m3-max": 3400.0},   # whole MBP
+    "used-macbook-pro-m4-max-128gb":    {"apple-m4-max": 4700.0},   # whole MBP
     # DGX-1: 8-GPU complete server, NOT a bare-card price - NOT joined (§6).
     # sxm2/sxm4 adapter carriers: no GPU included - NOT joined.
     # raspberry-pi-ai-hat-2, rockchip-rk3588-sbc, google-coral-edge-tpu: whole
