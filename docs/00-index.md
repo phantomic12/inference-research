@@ -2162,7 +2162,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (2069)
+## Sources (2193)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -2458,6 +2458,11 @@ and t
 - **Google Cloud accelerator-optimized VM pricing** (`sources/sup-cloud-gcp-accelerator-optimized-pricing`) — database · Google
 - **Groq console model list with per-1M-token prices** (`sources/rent-src-groq-model-pricing`) — database · Groq
 - **GroqCloud supported-models page (model ids, vendor speed figures, per-1M prices)** (`sources/svc-src-groq-models-page-2026-10-14`) — database · Groq
+- **Hardware Corner RTX 3090 benchmark page (avg market value + measured tok/s)** (`sources/hardware-corner-rtx-3090-benchmark-page-market-value`) — database · Hardware Corner
+- **Hardware Corner RTX 4090 benchmark page (measured llama.cpp tok/s)** (`sources/hardware-corner-rtx-4090-benchmark-page-llm-tok-s`) — database · Hardware Corner
+- **Hardware Corner RTX 5090 benchmark page (measured llama.cpp tok/s)** (`sources/hardware-corner-rtx-5090-benchmark-page-llm-tok-s`) — database · Hardware Corner
+- **Hardware Corner RTX PRO 6000 Blackwell benchmark page (measured llama.cpp tok/s)** (`sources/hardware-corner-rtx-pro-6000-blackwell-llm-tok-s`) — database · Hardware Corner
+- **Hardware Corner used-GPU price tracker (3090/4090/5090 history)** (`sources/hardware-corner-used-gpu-price-tracker-3090-4090-5090-history`) — database · Hardware Corner
 - **Hugging Face Hub response for meta-llama/Llama-Guard-3-1B: 'Access to model ... is restricted. You must have access to it and be authenticated'** (`sources/sec-hf-llama-guard-gated-access`) — database · Hugging Face
 - **Hugging Face Inference Endpoints (dedicated) - Hourly instance pricing across AWS and GCP** (`sources/ppl-cloud-huggingface-inference-endpoints-pricing`) — database · Hugging Face
 - **Hugging Face Inference Endpoints as orchestrator - Per-minute billing, managed model hosting** (`sources/ppl-orch-huggingface-billing-model`) — database · Hugging Face
@@ -2538,6 +2543,8 @@ and t
 - **Runpod GPU Cloud pricing** (`sources/sup-cloud-runpod-gpu-pricing`) — database · Runpod
 - **SGLang Crossref record (NeurIPS 2024)** (`sources/pap-sys-sglang-crossref`) — database · Advances in Neural Information Processing Systems (via Crossref)
 - **SambaNova Cloud pricing table (per-1M-token list prices)** (`sources/svc-src-sambanova-cloud-pricing-2026-10-14`) — database · SambaNova
+- **Silicon Score benchmarks.csv (machine-level measured tok/s export)** (`sources/silicon-score-benchmarks-csv-machine-level-measured-tok-s-export`) — database · Silicon Score
+- **Silicon Score — Apple Silicon LLM benchmark audit surface (benchmarks.json, 432 rows)** (`sources/siliconscore-benchmarks-json-apple-silicon`) — database · Silicon Score
 - **SkyPilot Catalog - Automated multi-cloud GPU price database, refreshed every 7 hours** (`sources/ppl-cloud-skypilot-catalog`) — database · SkyPilot
 - **SkyPilot Catalog AWS GPU instances extract - Key instance types with per-hour rates** (`sources/ppl-cloud-skypilot-aws-gpu-extract`) — database · SkyPilot
 - **SkyPilot Catalog Azure GPU instances extract - ND series with per-hour rates** (`sources/ppl-cloud-skypilot-azure-gpu-extract`) — database · SkyPilot
@@ -4676,7 +4683,7 @@ and t
 
 ## Coverage
 
-Total records: **4123**
+Total records: **4623**
 
 | group | records |
 |---|---|
