@@ -115,6 +115,16 @@ def card(r: dict) -> str:
         tail = [x for x in tail if x]
         if r.get("adoption"):
             tail.append(str(r["adoption"]))
+    elif t == "service":
+        head = str(r.get("provider") or "")
+        tail = []
+        pin, pout = r.get("price_input_per_mtok_usd"), r.get("price_output_per_mtok_usd")
+        if pin is not None or pout is not None:
+            tail.append(f"${pin}/${pout} per Mtok")
+        if r.get("measured_tps") is not None:
+            tail.append(f"{r['measured_tps']} tok/s")
+        if r.get("measured_ttft_ms") is not None:
+            tail.append(f"TTFT {r['measured_ttft_ms']} ms")
     else:
         head = str(r.get("kind") or "")
         tail = [str(r.get("publisher") or "")]

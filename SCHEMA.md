@@ -7,7 +7,7 @@ JSON Schema per record type lives in `schemas/`. This is the human version.
 | field | type | meaning |
 |---|---|---|
 | `id` | string | stable kebab-case slug, globally unique, matches filename |
-| `type` | enum | accelerator, flop, engine, quantization, interconnect, benchmark, gotcha, supply, model, paper, compiler, metric_exposure, source |
+| `type` | enum | accelerator, flop, engine, quantization, interconnect, benchmark, gotcha, supply, service, model, paper, compiler, metric_exposure, source |
 | `name` | string | display name |
 | `status` | enum | verified (checked against primary source), draft, contested (sources disagree), deprecated |
 | `confidence` | number | 0.0-1.0 |
@@ -575,6 +575,62 @@ listing them is still queryable.
 Supply records are the most perishable data in this repo. A price without an
 `updated` date is noise. Re-verify before trusting any figure older than a
 quarter.
+
+## service
+
+A hosted inference API — where a model can be RENTED by the token rather than
+run on owned hardware (supply records the buy/rent-hardware question; this type
+records the rent-the-model question). One record per provider product tier, not
+per model: the catalog is per-model, so the two price fields describe ONE
+representative model and `price_basis` names it. Added 2026-10-14.
+
+    provider              enum       openrouter | together | fireworks | deepinfra |
+                          cerebras | groq | sambanova | aws-bedrock | azure |
+                          gcp-vertex | other. 'other' carries the provider name
+                          in the record name (e.g. svc-novita, svc-nebius-token-factory)
+    endpoint_url          string|null   OpenAI-compatible (or native) base URL
+    models_served         [string]   bare model record ids — a CROSS-REFERENCE
+                          field, so entries must be slugs from data/models/,
+                          not the provider's own spelling (put
+                          llama-3.3-70b-versatile in notes, put llama-3-3-70b
+                          here). A representative sample, not a census.
+    price_input_per_mtok_usd   number|null
+    price_output_per_mtok_usd  number|null
+    price_basis           string     MANDATORY even when both prices are null:
+                          which model/tier/region the numbers are for, when
+                          observed, and why the fields are what they are —
+                          'single representative model' vs 'no public price
+                          exists' are different claims and the basis is the
+                          only place the difference is visible
+    context_window        int|null   max context tokens for the representative
+                          model as the provider exposes it
+    measured_ttft_ms      number|null  measured time-to-first-token (ms)
+    measured_tps          number|null  measured output tokens/s, single stream
+    measurement_source    enum|null  artificial-analysis | llmperf | self |
+                          vendor. REQUIRED whenever a measured_* field is set —
+                          a vendor-published tok/s (Groq prints ~1000 on its
+                          model page) and a third-party median are not the same
+                          claim. null = nothing measured.
+    regions               [string]   where inference is served: cloud region
+                          names or coarse scope (us, eu, apac, global)
+    notes
+
+Three structural facts that shaped the seed records:
+
+- **Prices are per-model, but the record is per-provider.** The scalar price
+  fields hold one representative model named in `price_basis`; a catalog range
+  goes in the basis text or notes. Bedrock and Nebius Token Factory carry null
+  prices because their per-model rate cards are per-region or behind an
+  authenticated console — null plus an honest basis beats a borrowed number.
+- **A router and a hoster are different records.** OpenRouter's price is the
+  upstream provider's price plus its markup, and its per-provider table doubles
+  as a third-party measurement source — which is why several seed records cite
+  it for measured_tps/ttft rather than claiming a vendor figure.
+- **Vendor-published speed is `measurement_source: vendor`.** Groq and Cerebras
+  print tok/s next to the model id; that is a list attribute, not a benchmark.
+  Third-party medians (OpenRouter routing telemetry, Artificial Analysis) go in
+  with their own source id so a reader can see the 233-tps measured vs 280-tps
+  advertised gap.
 
 ## gotcha
 

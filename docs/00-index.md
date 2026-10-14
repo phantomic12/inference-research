@@ -1326,6 +1326,21 @@ and t
 - **eBay used bare A100 80GB PCIe cards (the mainstream ex-datacenter consumer path)** (`supply/ebay-used-a100-80gb-pcie`) — various third-party sellers on eBay · United States (eBay.com) · $12,099.0 · in-stock · USED / Pre-Owned, bare A100 80GB **PCIe** card. $12,099.00 = the lowest listing  · EAR 3A090.a / 3A090.b (advanced-computing ICs) + EAR 742.6(a
 - **eBay used graphics-card market (GeForce RTX 4090 as reference used accelerator)** (`supply/ebay-used-consumer-gpu-market`) — various third-party sellers on eBay · United States (eBay.com, ship-to ZIP 11429) · $2,000.0 · in-stock · USED / Pre-Owned, bare PCIe graphics card, no server, as-is, no warranty stated. · EAR 3A001 or EAR99 (below the 3A090.a TPP / performance-dens
 
+## Hosted inference APIs (12)
+
+- **Amazon Bedrock managed inference** (`services/svc-aws-bedrock`) — aws-bedrock
+- **Azure OpenAI Service / Azure AI Foundry inference** (`services/svc-azure-ai-foundry`) — azure · $2.0/$8.0 per Mtok
+- **Cerebras Cloud inference (shared)** (`services/svc-cerebras-cloud`) — cerebras · $0.35/$0.75 per Mtok · 3000.0 tok/s
+- **DeepInfra serverless inference** (`services/svc-deepinfra`) — deepinfra · $0.25/$0.95 per Mtok · 14.0 tok/s · TTFT 510.0 ms
+- **Fireworks AI serverless inference** (`services/svc-fireworks-serverless`) — fireworks · $0.15/$0.6 per Mtok
+- **Google Cloud Vertex AI generative inference** (`services/svc-gcp-vertex`) — gcp-vertex · $0.72/$0.72 per Mtok · 98.0 tok/s · TTFT 4440.0 ms
+- **GroqCloud serverless inference** (`services/svc-groqcloud`) — groq · $0.15/$0.6 per Mtok · 233.0 tok/s · TTFT 400.0 ms
+- **Nebius Token Factory managed inference** (`services/svc-nebius-token-factory`) — other
+- **Novita AI serverless endpoints** (`services/svc-novita`) — other · $0.135/$0.4 per Mtok · 41.0 tok/s · TTFT 580.0 ms
+- **OpenRouter hosted API router** (`services/svc-openrouter`) — openrouter · $0.59/$0.79 per Mtok · 233.0 tok/s · TTFT 400.0 ms
+- **SambaNova Cloud inference** (`services/svc-sambanova-cloud`) — sambanova · $0.6/$1.2 per Mtok · 98.0 tok/s · TTFT 770.0 ms
+- **Together AI serverless inference** (`services/svc-together-serverless`) — together · $1.04/$1.04 per Mtok · 43.0 tok/s · TTFT 740.0 ms
+
 ## Models (158)
 
 - **Jamba-1.5-Large** (`models/jamba-1-5-large`) — hybrid-attention-ssm · hybrid: interleaved Transformer + Mamba blocks with MoE · 262,144 ctx
@@ -1771,11 +1786,12 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (2056)
+## Sources (2069)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
 - **AITER-enabled MLA layer inference on MI300X with matrix absorption** (`sources/amd-aiter-mla-mi300x`) — benchmark · AMD ROCm Blogs
+- **Artificial Analysis Llama 3.3 Instruct 70B provider comparison (independent TTFT / tps / price measurements)** (`sources/svc-src-artificialanalysis-llama33-70b-providers-2026-10-14`) — benchmark · Artificial Analysis
 - **Benchmark comparison on MacBook Pro M3 Max 128GB: Splash, Ollama (MLX), and Ollama (llama.cpp) across Qwen3.6-35B and Qwen3.8-27B** (`sources/src-incoai-splash-issue-37`) — benchmark · incoai / community
 - **Best practices for competitive inference optimization on AMD Instinct MI300X GPUs (ROCm Blogs)** (`sources/bench-amd-rocm-llm-inference-best-practices`) — benchmark · AMD
 - **Command A W4A4 on vLLM: a performance breakdown on 2xH100 (capp-vllm-bench)** (`sources/bench-capp-vllm-longctx-ttft`) — benchmark · SamMausberg
@@ -1961,12 +1977,14 @@ and t
 - **AWS EC2 Price List API - US West (Oregon), current** (`sources/sup-cloud-aws-ec2-price-list-usw2`) — database · Amazon Web Services
 - **AWS EC2 Price List API bulk JSON, us-east-1, OnDemand terms (publicationDate 2026-09-25)** (`sources/rent-src-aws-ec2-price-list-use1`) — database · AWS
 - **AliExpress secondary market listings for RTX 4090 48GB GDDR6X modded cards** (`sources/sup-used-aliexpress-4090-48gb`) — database · AliExpress
+- **Amazon Bedrock pricing page (per-provider on-demand/batch/provisioned model tables)** (`sources/svc-src-aws-bedrock-pricing-2026-10-14`) — database · Amazon Web Services
 - **Amazon EC2 Capacity Blocks for ML pricing** (`sources/sup-cloud-aws-ec2-capacityblocks-pricing`) — database · Amazon Web Services
 - **Amazon.com search results for RTX 3090** (`sources/noncuda-amazon-rtx3090-search`) — database · Amazon
 - **Anyscale ACU pricing - Compute unit rates and instance mapping** (`sources/ppl-cloud-anyscale-acu-detail`) — database · Anyscale
 - **Anyscale Pricing - Pay-as-you-go GPU rates (Hosted tier)** (`sources/ppl-cloud-anyscale-pricing`) — database · Anyscale
 - **Anyscale as cloud orchestrator - ACU billing, Ray platform, BYOC or hosted** (`sources/ppl-orch-anyscale-billing-model`) — database · Anyscale
 - **Anyscale vs raw cloud GPU pricing - ACU rates vs per-GPU-hour** (`sources/ppl-cloud-anyscale-vs-cloud-price`) — database · Anyscale
+- **Azure OpenAI Service pricing page (per-1M-token tables by model and deployment type)** (`sources/svc-src-azure-openai-pricing-2026-10-14`) — database · Microsoft Azure
 - **Azure Retail Prices API - ND96asr / ND96amsr A100 v4 (eastus)** (`sources/sup-cloud-azure-retail-prices-a100`) — database · Microsoft
 - **Azure Retail Prices API - ND96isr H100 v5 (eastus)** (`sources/sup-cloud-azure-retail-prices-h100`) — database · Microsoft
 - **Azure Retail Prices API - ND96isr H200 v5 (eastus2, westus2)** (`sources/sup-cloud-azure-retail-prices-h200`) — database · Microsoft
@@ -1984,16 +2002,19 @@ and t
 - **CDW product page: PNY NVIDIA RTX PRO 6000 96 GB GDDR7** (`sources/noncuda-cdw-rtxpro6000-pny-96gb`) — database · CDW
 - **CDW product pages - published lead-time ranges for GPU and AI server SKUs (observed 2026-10-04)** (`sources/spl-cdw-published-lead-times-gpu-2026-10`) — database · CDW
 - **CDW search results for RTX PRO 6000** (`sources/noncuda-cdw-rtxpro6000-search`) — database · CDW
+- **Cerebras Inference model catalog (shared-inference models, context, vendor speed figures)** (`sources/svc-src-cerebras-model-catalog-2026-10-14`) — database · Cerebras
 - **Colocation pricing by power density tier - Air-cooled vs liquid-cooled deployment costs** (`sources/ppl-dep-colocation-tiers`) — database · Vantage / derived from existing repo records
 - **CompuCycle corporate IT asset disposal and remarketing services** (`sources/sup-used-compucycle`) — database · CompuCycle
 - **CoreWeave Cloud pricing** (`sources/sup-cloud-coreweave-pricing`) — database · CoreWeave
 - **Crossref bibliographic query for 'Efficiently Modeling Long Sequences with Structured State Spaces' - returns NO JMLR entry (negative result)** (`sources/w6p-crossref-s4-no-jmlr-deposit`) — database · Crossref
 - **Crossref record for DOI 10.1145/3786335.3813124 - XGrammar-2** (`sources/sco-crossref-cais26-xgrammar2`) — database · Crossref
 - **Crossref records for ColBERT (SIGIR'20), SPLADE (SIGIR'21), PLAID (CIKM'22), CacheGen (SIGCOMM'24)** (`sources/w3p-crossref-sigir-cikm-sigcomm-venues`) — database · Crossref
+- **DeepInfra pricing page (per-model per-1M-token table)** (`sources/svc-src-deepinfra-pricing-page-2026-10-14`) — database · DeepInfra
 - **DeepSpeed-Inference Crossref record (SC22)** (`sources/pap-sys-deepspeed-inference-crossref`) — database · IEEE SC22 (via Crossref)
 - **ECCN 3A090 - advanced-computing integrated circuits (Commerce Control List thresholds)** (`sources/spl-eccn-3a090-ccl`) — database · ECCN Finder (editorial lookup of 15 CFR part 774 supplement no. 1)
 - **EquipNet auctions and IT asset disposition services** (`sources/sup-used-equipnet-auctions`) — database · EquipNet
 - **Fireworks AI pricing - On-Demand deployments** (`sources/sup-cloud-fireworks-pricing`) — database · Fireworks AI
+- **Fireworks AI serverless pricing doc (per-1M-token Standard/Priority/Fast list prices)** (`sources/svc-src-fireworks-serverless-pricing-2026-10-14`) — database · Fireworks AI
 - **FrugalGPT OpenReview record (TMLR)** (`sources/pap-sys-frugalgpt-openreview`) — database · OpenReview (TMLR)
 - **FrugalGPT OpenReview record — already used for TMLR; see notes on route/cascade adoption** (`sources/pap-sys-frugal-serving-note`) — database · OpenReview (TMLR)
 - **GDPR Article 17 - Right to erasure ('right to be forgotten')** (`sources/sec-gdpr-art-17`) — database · EUR-Lex (via gdpr-info.eu)
@@ -2014,8 +2035,10 @@ and t
 - **GitHub REST API repository metadata endpoint (repos/{owner}/{repo})** (`sources/niche-github-rest-api-repo-metadata`) — database · GitHub
 - **GitHub REST API repository metadata for all 102 engine repos (batch pull, 2026-10-04)** (`sources/ev-gh-api-repo-metadata-2026-10-04`) — database · GitHub
 - **Google Cloud TPU pricing** (`sources/sup-cloud-gcp-tpu-pricing`) — database · Google
+- **Google Cloud Vertex AI generative-AI pricing page (first-party and partner-model per-1M tables)** (`sources/svc-src-gcp-vertex-genai-pricing-2026-10-14`) — database · Google Cloud
 - **Google Cloud accelerator-optimized VM pricing** (`sources/sup-cloud-gcp-accelerator-optimized-pricing`) — database · Google
 - **Groq console model list with per-1M-token prices** (`sources/rent-src-groq-model-pricing`) — database · Groq
+- **GroqCloud supported-models page (model ids, vendor speed figures, per-1M prices)** (`sources/svc-src-groq-models-page-2026-10-14`) — database · Groq
 - **Hugging Face Hub response for meta-llama/Llama-Guard-3-1B: 'Access to model ... is restricted. You must have access to it and be authenticated'** (`sources/sec-hf-llama-guard-gated-access`) — database · Hugging Face
 - **Hugging Face Inference Endpoints (dedicated) - Hourly instance pricing across AWS and GCP** (`sources/ppl-cloud-huggingface-inference-endpoints-pricing`) — database · Hugging Face
 - **Hugging Face Inference Endpoints as orchestrator - Per-minute billing, managed model hosting** (`sources/ppl-orch-huggingface-billing-model`) — database · Hugging Face
@@ -2050,6 +2073,7 @@ and t
 - **MuxServe OpenReview record (ICML 2024)** (`sources/pap-sys-muxserve-openreview`) — database · OpenReview (ICML)
 - **NVIDIA H20 96GB spec sheet (Flopper.io aggregation)** (`sources/nv-h20-flopper-specsheet`) — database · Flopper.io
 - **NVIDIA Marketplace consumer GPU catalog (US)** (`sources/noncuda-nvidia-marketplace-gpu-catalog`) — database · NVIDIA
+- **Nebius prices page and Token Factory (per-token inference vs GPU-hour split)** (`sources/svc-src-nebius-token-factory-2026-10-14`) — database · Nebius
 - **NeurIPS 2021 proceedings index** (`sources/sco-neurips-2021-proceedings`) — database · NeurIPS
 - **NeurIPS 2024 proceedings index** (`sources/sco-neurips-2024-proceedings`) — database · NeurIPS
 - **NeurIPS 2024 proceedings index, full-text title sweep** (`sources/sco-neurips-2024-index-extended`) — database · NeurIPS
@@ -2066,9 +2090,11 @@ and t
 - **Newegg refurbished and open-box listings for Radeon RX 7900 XTX 24GB** (`sources/sup-used-newegg-rx-7900-xtx`) — database · Newegg
 - **Newegg search, Intel Arc B580, including Newegg Refreshed refurbished tier** (`sources/sup-used-newegg-refreshed-b580`) — database · Newegg
 - **Newegg secondary and open-box listings for Intel Arc B580 12GB** (`sources/sup-used-newegg-arc-b580`) — database · Newegg
+- **Novita AI serverless-endpoints pricing table (per-1M-token list prices)** (`sources/svc-src-novita-pricing-page-2026-10-14`) — database · Novita AI
 - **OpenReview api2 /notes/search for 'LMCache' - returns the arXiv deposit only, no ICLR record** (`sources/w6p-openreview-api2-lmcache-only-corr`) — database · OpenReview
 - **OpenReview api2 /notes/search responses for the 16 duplicate-slug papers (venue + venueid per forum)** (`sources/w6p-openreview-api2-duplicate-venue-records`) — database · OpenReview
 - **OpenReview api2 note-search index (venue + venueid per forum, mirrors DBLP for older venues)** (`sources/sco-openreview-venue-search`) — database · OpenReview
+- **OpenRouter provider table for meta-llama/llama-3.3-70b-instruct (per-provider price, P50 latency, throughput, uptime)** (`sources/svc-src-openrouter-provider-table-2026-10-14`) — database · OpenRouter
 - **Oracle Cloud Infrastructure Price List** (`sources/sup-cloud-oracle-cloud-pricelist`) — database · Oracle
 - **Oracle OCI 'GPU - Accelerated Compute' price table, including AMD MI300X and MI355X per-GPU-hour rates** (`sources/w5s-oracle-gpu-accelerated-compute-table`) — database · Oracle
 - **Overclockers UK graphics card listings (new, and out-of-stock RTX 4090)** (`sources/sup-used-overclockers-uk`) — database · Overclockers UK
@@ -2092,6 +2118,7 @@ and t
 - **RouteLLM OpenReview record (ICLR 2025)** (`sources/pap-sys-routellm-openreview`) — database · OpenReview (ICLR)
 - **Runpod GPU Cloud pricing** (`sources/sup-cloud-runpod-gpu-pricing`) — database · Runpod
 - **SGLang Crossref record (NeurIPS 2024)** (`sources/pap-sys-sglang-crossref`) — database · Advances in Neural Information Processing Systems (via Crossref)
+- **SambaNova Cloud pricing table (per-1M-token list prices)** (`sources/svc-src-sambanova-cloud-pricing-2026-10-14`) — database · SambaNova
 - **SkyPilot Catalog - Automated multi-cloud GPU price database, refreshed every 7 hours** (`sources/ppl-cloud-skypilot-catalog`) — database · SkyPilot
 - **SkyPilot Catalog AWS GPU instances extract - Key instance types with per-hour rates** (`sources/ppl-cloud-skypilot-aws-gpu-extract`) — database · SkyPilot
 - **SkyPilot Catalog Azure GPU instances extract - ND series with per-hour rates** (`sources/ppl-cloud-skypilot-azure-gpu-extract`) — database · SkyPilot
@@ -2104,6 +2131,7 @@ and t
 - **Together AI as cloud orchestrator - Per-GPU-hour, per-token, and PTU billing models** (`sources/ppl-orch-together-billing-model`) — database · Together AI
 - **Together AI pricing - GPU Clusters** (`sources/sup-cloud-together-gpu-clusters-pricing`) — database · Together AI
 - **Together AI pricing page — GPU Clusters on-demand, Preemptible Compute and reserved tier table (re-read 2026-10-05)** (`sources/w5s-together-gpu-clusters-tiers-2026-10-05`) — database · Together AI
+- **Together AI serverless inference pricing table (per-1M-token list prices)** (`sources/svc-src-together-serverless-pricing-2026-10-14`) — database · Together AI
 - **US EIA Electric Power Annual Table 2.4 - Average Price of Electricity to Ultimate Customers by End-Use Sector (Cents per kWh)** (`sources/pd-eia-epa-table-2-4`) — database · US Energy Information Administration
 - **US EIA Electric Power Monthly Table 5.3 - Average Price of Electricity to Ultimate Customers by End-Use Sector, monthly series through July 2026** (`sources/pd-eia-epm-table-5-3`) — database · US Energy Information Administration
 - **USENIX NSDI '17 technical sessions (full program page)** (`sources/pap-sys-nsdi17-proceedings`) — database · USENIX Association
@@ -4155,7 +4183,7 @@ and t
 
 ## Coverage
 
-Total records: **4098**
+Total records: **4123**
 
 | group | records |
 |---|---|

@@ -23,6 +23,7 @@ DIRS = {
     "benchmark": "benchmarks",
     "gotcha": "gotchas",
     "supply": "supply",
+    "service": "services",
     "model": "models",
     "paper": "papers",
     "source": "sources",
@@ -54,6 +55,7 @@ REF_FIELDS: dict[str, dict[str, str]] = {
     "paper": {"hardware_relevance": "accelerator"},
     "quantization": {"native_support": "accelerator", "emulated_support": "accelerator"},
     "supply": {"accelerator_ids": "accelerator"},
+    "service": {"models_served": "model"},
     "metric_exposure": {"engine_id": "engine"},
 }
 
@@ -76,6 +78,7 @@ TITLES = {
     "benchmark": "Benchmarks",
     "gotcha": "Gotchas",
     "supply": "Where to buy / source hardware",
+    "service": "Hosted inference APIs",
     "model": "Models",
     "paper": "Papers",
     "source": "Sources",

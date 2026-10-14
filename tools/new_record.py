@@ -71,6 +71,13 @@ TEMPLATES = {
         "availability": None, "lead_time_weeks": None,
         "export_controlled": None, "notes": "",
     },
+    "service": {
+        "provider": None, "endpoint_url": None, "models_served": [],
+        "price_input_per_mtok_usd": None, "price_output_per_mtok_usd": None,
+        "price_basis": "REPLACE ME - mandatory: which model/tier/region, when observed, and why",
+        "context_window": None, "measured_ttft_ms": None, "measured_tps": None,
+        "measurement_source": None, "regions": [], "notes": "",
+    },
     "model": {
         "family": None, "vendor": None, "release_year": None,
         "architecture": None, "params_b": None, "active_params_b": None,
