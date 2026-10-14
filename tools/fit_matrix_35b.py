@@ -116,7 +116,63 @@ PRICE_JOIN = {
     # used-dgx1-8x-v100 is an 8-GPU server at $4,000 -> NOT a bare-card price.
     # ebay-used-a100-40gb-rack-liquidator is a 32-GPU rack at $249,000.
     # used-8x-h100-sxm-node-system is an 8-GPU server at $180,000.
+
+    # --- Phase-A ingest (Oct-14 research wave), single clear part each -------
+    # Apple Mac Studios are WHOLE-SYSTEM prices (the part is not sold bare);
+    # the capacity is the configured unified memory, not a GPU carve-out.
+    "used-mac-studio-m2-ultra-192gb":   {"apple-m2-ultra": 3700.0},   # whole Studio, 192 GB
+    "used-mac-studio-m3-ultra-96gb":    {"apple-m3-ultra": 3700.0},   # whole Studio, 96 GB
+    # Intel Arc Pro B60/B70 are bare PCIe cards at NEW retail.
+    "newegg-new-arc-pro-b60-24gb":      {"intel-arc-pro-b60": 655.0},
+    "newegg-new-arc-pro-b70-32gb":      {"intel-arc-pro-b70": 949.0},
+    # Strix Halo: all four are 128 GB unified-memory mini-PCs / boards; the
+    #   cheapest ticket is the Minisforum MS-S1 MAX at $1,900. See
+    #   UNIFIED_MEM_GB below for why the fit flags need a capacity override.
+    "new-minisforum-ms-s1-max-128gb":   {"amd-radeon-8060s-ryzen-ai-max": 1900.0},
+    "new-framework-desktop-strix-halo-128gb": {"amd-radeon-8060s-ryzen-ai-max": 1999.0},
+    "new-beelink-gtr9-pro-strix-halo-128gb":  {"amd-radeon-8060s-ryzen-ai-max": 2100.0},
+    "new-gmktec-evo-x2-strix-halo-128gb":     {"amd-radeon-8060s-ryzen-ai-max": 2199.0},
+    # PCIe cards / parts at used or new retail.
+    "ebay-used-cambricon-mlu370":       {"cambricon-mlu370": 450.0},
+    "new-tenstorrent-blackhole-p150":   {"tenstorrent-blackhole-p150": 1399.0},
+    "used-tenstorrent-grayskull-e150":  {"tenstorrent-grayskull-e150": 400.0},
+    "used-qualcomm-cloud-ai100-pcie":   {"qualcomm-ai100": 400.0},
+    "taobao-used-huawei-ascend-310p":   {"huawei-ascend-310p": 265.0},
+    # RX 7900 XTX: a cheaper peer/eBay used channel ($875) than the Newegg
+    #   refurb-retail row already joined above ($1,405). Both are real asking
+    #   prices; min() picks the cheaper one for the ranked table.
+    "ebay-used-rx-7900-xtx-market-oct2026": {"amd-radeon-rx-7900-xtx": 875.0},
 }
+
+# ---------------------------------------------------------------------------
+# UNIFIED_MEM_GB: effective resident capacity for unified_memory accelerators
+# whose own record leaves vram_gb null ON PURPOSE (an APU/SoC shares one
+# LPDDR5x pool with the CPU; there is no dedicated VRAM to report, and the
+# record's notes say so). The vram>=8 gate would silently drop these parts even
+# though they are the most decision-relevant cheap big-memory options in the
+# corpus. The override is the CONFIGURED memory of the cheapest linked supply
+# record (a whole system, so the RAM it ships is the usable pool), which is a
+# number that IS in a record — read off the supply record's configured capacity,
+# not invented. apple-m1/m2/m3-ultra already carry an explicit vram_gb so they
+# never reach this branch.
+# ---------------------------------------------------------------------------
+UNIFIED_MEM_GB = {
+    # Strix Halo 8060S: every linked supply record is a 128 GB mini-PC/board
+    #   (new-minisforum-ms-s1-max-128gb, new-framework-desktop-strix-halo-128gb,
+    #   new-beelink-gtr9-pro-strix-halo-128gb, new-gmktec-evo-x2-strix-halo-128gb).
+    #   128 GB is the shared pool; ~110 GB is allocatable to the GPU on the
+    #   shipping firmware, which still clears the 70B-Q4 48 GB threshold.
+    "amd-radeon-8060s-ryzen-ai-max": 128.0,
+}
+
+def effective_vram(a):
+    """Resident capacity for the fit test: dedicated VRAM if present, else the
+    configured unified pool for a unified_memory part, else None."""
+    if a.get("vram_gb") is not None:
+        return a["vram_gb"]
+    if a.get("unified_memory"):
+        return UNIFIED_MEM_GB.get(a["id"])
+    return None
 
 # accel_id -> list of (per-unit usd, supply_id). The usd here is the curated
 # per-UNIT figure for that part from PRICE_JOIN (which may differ from the
@@ -131,19 +187,20 @@ for sid, join in PRICE_JOIN.items():
 rows = []
 for aid, a in accs.items():
     v = a.get("vram_gb")
+    ev = effective_vram(a)          # dedicated VRAM, else unified pool, else None
     bw = a.get("memory_bandwidth_gbps")
-    if v is None or v < 8:
+    if ev is None or ev < 8:
         continue
     sup = price_map.get(aid, [])
     min_price = min((u for u, _ in sup), default=None)
     qualifies = (bw is not None and bw >= 300) or (min_price is not None and min_price <= 3000)
     if not qualifies:
         continue
-    fits = {k: (v >= w + kv) for k, _, w, kv in MODELS}
+    fits = {k: (ev >= w + kv) for k, _, w, kv in MODELS}
     ceil = {k: (bw / w if bw and w else None) for k, _, w, kv in MODELS}
     cheapest = min(sup, key=lambda x: x[0]) if sup else None  # (usd, supply_id)
     dpt = (cheapest[0] / ceil["35b"]) if cheapest and ceil["35b"] else None
-    rows.append(dict(id=aid, a=a, vram=v, bw=bw, fits=fits, ceil=ceil,
+    rows.append(dict(id=aid, a=a, vram=ev, bw=bw, fits=fits, ceil=ceil,
                      cheapest=cheapest, supplies=sup, dpt=dpt))
 
 priced = sorted([r for r in rows if r["dpt"] is not None], key=lambda r: r["dpt"])
