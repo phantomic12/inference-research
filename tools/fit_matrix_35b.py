@@ -142,6 +142,49 @@ PRICE_JOIN = {
     #   refurb-retail row already joined above ($1,405). Both are real asking
     #   prices; min() picks the cheaper one for the ranked table.
     "ebay-used-rx-7900-xtx-market-oct2026": {"amd-radeon-rx-7900-xtx": 875.0},
+
+    # --- ingest/research-oct14 pass-2 gap-fill records ----------------------
+    # Many are near-duplicate ids of rows already joined above (the doc branch
+    #   and the ingest branch each named their own supply file for the same
+    #   market sweep). They are joined so min() keeps the cheapest, and so the
+    #   "← supply" column can cite the freshest Oct-2026 record.
+    "ebay-used-tesla-p100-16gb-pcie":   {"nvidia-tesla-p100": 115.0},
+    "ebay-used-v100-32gb-pcie-card":   {"nvidia-v100-pcie-32gb": 750.0},
+    "ebay-used-v100-32gb-sxm2-module": {"nvidia-v100-sxm2-32gb": 500.0},
+    "ebay-used-tesla-m40-24gb":        {"nvidia-tesla-m40": 189.0},
+    "ebay-used-amd-mi250x-128gb-oam":  {"amd-instinct-mi250": 4950.0,
+                                        "amd-instinct-mi250x": 4950.0},
+    "ebay-used-gaudi2-hl225-oam-module": {"intel-gaudi2": 2000.0},
+    "ebay-used-cambricon-mlu270-s4":   {"cambricon-mlu270": 317.0},
+    "ebay-used-tenstorrent-grayskull-e150-market": {"tenstorrent-grayskull-e150": 400.0},
+    "ebay-used-a100-40gb-pcie-card":   {"nvidia-a100-40gb-pcie": 7000.0},
+    "new-arc-b580-12gb-retail":        {"intel-arc-b580": 300.0},
+    "new-arc-pro-b60-24gb-retail-oct2026": {"intel-arc-pro-b60": 650.0},
+    "new-arc-pro-b70-32gb-retail-oct2026": {"intel-arc-pro-b70": 949.0},
+    "new-rtx-5090-32gb-retail-oct2026": {"nvidia-rtx-5090": 3600.0},
+    "new-rtx-pro-6000-blackwell-96gb": {"nvidia-rtx-pro-6000-blackwell": 8650.0},
+    "new-rx-9070-xt-16gb-retail-oct2026": {"amd-radeon-rx-9070-xt": 900.0},
+    "new-tenstorrent-blackhole-p150-retail": {"tenstorrent-blackhole-p150": 1399.0},
+    "new-tenstorrent-wormhole-n300":   {"tenstorrent-wormhole-n300": 1449.0},
+    "used-rtx-3090-market-oct2026-spike": {"nvidia-rtx-3090": 950.0},
+    "used-rtx-3090-ti-market-oct2026": {"nvidia-rtx-3090-ti": 950.0},
+    "used-rtx-4090-market-oct2026":    {"nvidia-rtx-4090": 2300.0},
+    "used-rx-7900-xtx-24gb-market-oct2026": {"amd-radeon-rx-7900-xtx": 875.0},
+    # Strix Halo pass-2 whole systems, joined to the OTHER Strix Halo
+    #   accelerator record (the SoC-in-Framework part, vram_gb=128 explicit).
+    #   Both records describe the same silicon; the 8060s one is joined above
+    #   via the -x2/-s1/framework/beelink-1 rows. min() picks the cheapest.
+    "new-beelink-gtr9-pro-strix-halo-128gb-2": {"amd-ryzen-ai-max-395-framework-desktop": 2099.0},
+    "new-gmktec-evo-x3-strix-halo-128gb":      {"amd-ryzen-ai-max-395-framework-desktop": 3799.0},
+    # DGX-1: 8-GPU complete server, NOT a bare-card price - NOT joined (§6).
+    # sxm2/sxm4 adapter carriers: no GPU included - NOT joined.
+    # raspberry-pi-ai-hat-2, rockchip-rk3588-sbc, google-coral-edge-tpu: whole
+    #   SBC/edge boards; their NPU records have no vram_gb>=8 for the matrix
+    #   anyway - left unjoined so the price column stays a GPU price.
+    # used-epyc-*/used-nvidia-gtx-1080-ti-market: no accelerator_ids to join.
+    # gaudi2-8x-oam-tray-supermicro-820gh ($11,995) is an 8-MODULE OAM tray,
+    #   ~$1,500/module-equivalent (derived), a system price not a module price.
+    # ebay-used-a100-40gb-rack-liquidator ($249,000) is a 32-GPU rack.
 }
 
 # ---------------------------------------------------------------------------
