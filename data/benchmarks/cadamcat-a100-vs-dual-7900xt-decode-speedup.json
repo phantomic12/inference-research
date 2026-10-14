@@ -1,0 +1,34 @@
+{
+  "id": "cadamcat-a100-vs-dual-7900xt-decode-speedup",
+  "type": "benchmark",
+  "name": "cadamcat: 1x A100-80GB vs 2x RX 7900 XT TP=2 batch-1 decode speedup ratio (vLLM)",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-a100-80gb-sxm4",
+    "amd-radeon-rx-7900-xtx"
+  ],
+  "interconnect_ids": [
+    "pcie-gen4"
+  ],
+  "model": "gemma-4-12B-it (dense) + gemma-4-26B-A4B (MoE)",
+  "format_id": null,
+  "metric": "speedup_ratio",
+  "value": 1.4,
+  "unit": "x (A100 tok/s / dual-7900XT tok/s, batch-1 decode, 500-32K ctx ladder)",
+  "methodology": "THIRD-PARTY MEASURED (cadamcat dual-radeon-vllm, a100-vs-two-radeons). vLLM batch-1 decode, 11 context depths 500->32K, 2 rounds/cell. Stock ladder (no patches both platforms) yields A100 leading 1.36x-1.44x; the nominal BW ratio is 1.27x (2039 vs 2x800 GB/s). Fit r2>=0.9999.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "energy_basis": null,
+  "power_w": null,
+  "power_scope": null,
+  "power_cap": null,
+  "clock_lock_mhz": null,
+  "thermal_state": "steady",
+  "notes": "Headline ratio on STOCK ladder = 1.36-1.44x A100 over dual 7900 XT (reported as ~1.40x mean). The second 7900 XT card adds only 1.11-1.23x decode (bandwidth-bound step + all-reduce). Prefill is the opposite: second card buys 1.56-1.87x. Compares two consumer cards vs one used-datacenter A100 - the 'buy another one' decision.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-14",
+  "sources": [
+    "cadamcat-dual-radeon-a100-vs-two-radeons"
+  ]
+}

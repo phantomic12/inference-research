@@ -1,0 +1,38 @@
+{
+  "id": "sambaflow-sambanova-rdu-runtime",
+  "type": "engine",
+  "name": "SambaFlow (SambaNova RDU runtime)",
+  "status": "draft",
+  "confidence": 0.5,
+  "updated": "2026-10-14",
+  "sources": [
+    "argonne-llm-inference-bench-all-results-csv"
+  ],
+  "repo": null,
+  "languages": ["python"],
+  "license": "proprietary",
+  "first_release_year": 2021,
+  "design_goal": [
+    "compile-once dataflow graphs onto Reconfigurable Dataflow Units (RDU); whole-model residency across a node",
+    "vendor runtime for SN40L/SN30 accelerators, not a general-purpose engine"
+  ],
+  "scheduling": ["none"],
+  "supported_backends": ["npu"],
+  "supported_formats": ["sambaflow-compiled-pef"],
+  "notable_features": [
+    "static dataflow compilation; model is laid out across RDU tiles at compile time",
+    "batch size and sequence length pinned per compiled graph"
+  ],
+  "hardware_caveats": [
+    "runs ONLY on SambaNova DataScale nodes (SN40L RDU); not portable",
+    "long compile times; one graph per (model, batch, seqlen) triple"
+  ],
+  "best_for": [
+    "vendor-benchmark rows where SambaNova publishes aggregate tok/s through its own stack"
+  ],
+  "avoid_for": [
+    "any cross-engine comparison that expects per-request decode parity with vLLM/llama.cpp"
+  ],
+  "docs_url": "https://docs.sambanova.ai/",
+  "notes": "Added 2026-10-14 to give benchmark.engine_id a real record for the Argonne LLM-Inference-Bench SN40L rows (arXiv:2411.00136). SambaFlow is SambaNova's closed-source compiler+runtime stack; the Argonne measurements use it because SN40L has no PyTorch-eager path for LLMs."
+}
