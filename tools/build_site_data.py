@@ -54,7 +54,7 @@ REF_LABELS = {
     "hardware_relevance": "Hardware relevance",
     "native_support": "Native support",
     "emulated_support": "Emulated support",
-    "engine_id": "Engine",
+    "models_served": "Models",
 }
 
 FIELD_META: dict[str, list[tuple[str, str]]] = {
@@ -194,6 +194,15 @@ FIELD_META: dict[str, list[tuple[str, str]]] = {
         ("phase_scoped", "Phase scoped"),
         ("verified_negatively", "Verified negatively"),
     ],
+    "service": [
+        ("provider", "Provider"), ("endpoint_url", "Endpoint"),
+        ("models_served", "Models served"),
+        ("price_input_per_mtok_usd", "Input $/Mtok"),
+        ("price_output_per_mtok_usd", "Output $/Mtok"),
+        ("price_basis", "Price basis"), ("context_window", "Context window"),
+        ("measured_ttft_ms", "TTFT (ms)"), ("measured_tps", "Output tok/s"),
+        ("measurement_source", "Measured by"), ("regions", "Regions"),
+    ],
 }
 
 FACETS: dict[str, list[str]] = {
@@ -211,6 +220,7 @@ FACETS: dict[str, list[str]] = {
     "compiler": ["category", "license", "learning_curve", "production_ready"],
     "metric_exposure": ["metric_type", "exposure", "phase_scoped",
                         "enabled_by_default", "verified_negatively"],
+    "service": ["provider", "measurement_source"],
 }
 
 # Long-form fields: render as prose, not as a wrapped scalar.
@@ -225,7 +235,7 @@ PROSE = {
     "lead_time_basis",
 }
 # Fields holding a single URL.
-URL_FIELDS = {"url", "archived_url", "docs_url", "code_url"}
+URL_FIELDS = {"url", "archived_url", "docs_url", "code_url", "endpoint_url"}
 
 COMMON = ("id", "type", "name", "status", "confidence", "updated")
 STATUS_ORDER = ["contested", "draft", "verified", "deprecated"]
@@ -412,6 +422,18 @@ def summarise(rec: dict) -> dict:
         facets = {"category": _s(g("category")), "license": _s(g("license")),
                   "learning_curve": _s(g("learning_curve")),
                   "production_ready": _s(g("production_ready"))}
+    elif t == "service":
+        head = _s(g("provider"))
+        tail = []
+        pin, pout = g("price_input_per_mtok_usd"), g("price_output_per_mtok_usd")
+        if _num(pin) or _num(pout):
+            tail.append(f"${_s(pin)}/${_s(pout)} per Mtok")
+        if _num(g("measured_tps")):
+            tail.append(f"{g('measured_tps')} tok/s")
+        if _num(g("measured_ttft_ms")):
+            tail.append(f"TTFT {g('measured_ttft_ms')} ms")
+        facets = {"provider": _s(g("provider")),
+                  "measurement_source": _s(g("measurement_source"))}
     else:
         head = _s(g("kind"))
         tail = [_s(g("publisher"))]
