@@ -73,13 +73,19 @@ the three columns.
 
 *How* conservative shows up the moment a low-bandwidth part enters the table:
 [[accelerators/amd-radeon-8060s-ryzen-ai-max]] (Strix Halo, 256 GB/s shared)
-derives to a 12.8 tok/s ceiling on the 20 GB column, but the corpus's own
-measurement of the **exact target model** —
-[[benchmarks/ryzen-ai-max-8060s-qwen35-35b-a3b-decode-tok-s]] — records **42.04
-tok/s** on it, ~3.3× the derived ceiling, because the MoE reads only ~3B active
-experts per token, not the 20 GB resident. The roofline ranks capex against a
-*dense-equivalent* number; it understates real MoE throughput most where
-bandwidth is scarcest. Treat every ceiling cell as the floor, not the forecast.
+derives to a 12.8 tok/s ceiling on the 20 GB column, but the corpus now holds
+**third-party** measurements of the *exact* target model on it —
+[[benchmarks/kyuz0-strix-8060s-qwen36-35b-a3b-q4kxl-vulkan-radv-tg128]] records
+**60.43 tok/s** (llama.cpp build 9187, Vulkan RADV, Qwen3.6-35B-A3B
+UD-Q4_K_XL, batch-1 tg128) and the ROCm 7.2.3 twin
+[[benchmarks/kyuz0-strix-8060s-qwen36-35b-a3b-q4kxl-rocm723-tg128]] records
+**51.53 tok/s** — 4.7× / 4.0× the derived ceiling, because the MoE reads only
+its ~3B active experts per token, not the 20 GB resident. (A vendor record,
+[[benchmarks/ryzen-ai-max-8060s-qwen35-35b-a3b-decode-tok-s]], put the same
+part at 42.04 tok/s; the third-party numbers are higher and corroborate the
+direction.) The roofline ranks capex against a *dense-equivalent* number; it
+understates real MoE throughput most where bandwidth is scarcest. Treat every
+ceiling cell as the floor, not the forecast.
 
 The Phase-C backfill added a second calibration point on a *dense* model:
 [[benchmarks/comm-tenstorrent-n300-llama31-8b-decode]] measures a single N300 at
@@ -188,7 +194,10 @@ $7,500 price includes ~$2k of CPU + ~$5k of RDIMM, so its $/tok-s is a
   [[accelerators/apple-m4-max]] ($4,700, rank 40) are the first *laptop* rows —
   they fit all three targets on a 128 GB unified pool but are bandwidth-capped
   at 400/546 GB/s, so the derived ceilings (20.0 / 27.3 tok/s) sit near Strix
-  Halo's. [[accelerators/amd-epyc-9554-genoa]] is the first **host-CPU** row
+  Halo's — and the corpus's measured 27B-dense record on the M3 Max
+  ([[benchmarks/ollama-m3-max-qwen3-8-27b-mlx-decode-tok-s]], 42.5 tok/s MLX,
+  third-party) lands *above* its 20 GB ceiling the same way the MoE records do,
+  because a 27B-Q4 resident reads ~16 GB, not 20. [[accelerators/amd-epyc-9554-genoa]] is the first **host-CPU** row
   (rank 41): a 12-channel-DDR5 Genoa self-build at $7,500
   ([[supply/used-epyc-9004-genoa-build-384gb]]) fits everything on 384 GB of
   system DRAM, but 460.8 GB/s caps the 35B ceiling at 23.0 tok/s — and the
@@ -300,9 +309,11 @@ show*. These are the corpus's own gotcha records, not new claims:
   Conversely the unified-memory parts (Apple, Strix Halo) fit large models but
   are bandwidth-capped; [[gotchas/gotcha-strix-halo-moe-not-dense]] measures a
   dense-70B at ~5 tok/s on the ~256 GB/s Strix Halo wall, while the same record
-  class measures the 35B-A3B **MoE** target at 42 tok/s
-  ([[benchmarks/ryzen-ai-max-8060s-qwen35-35b-a3b-decode-tok-s]]). The MoE
-  target is exactly the workload those parts *are* good for.
+  class measures the 35B-A3B **MoE** target at 42 tok/s vendor
+  ([[benchmarks/ryzen-ai-max-8060s-qwen35-35b-a3b-decode-tok-s]]) and **60.4
+  tok/s** third-party
+  ([[benchmarks/kyuz0-strix-8060s-qwen36-35b-a3b-q4kxl-vulkan-radv-tg128]]). The
+  MoE target is exactly the workload those parts *are* good for.
 - **Aggregate ≠ per-request.** The QAic 100 Ultra row
   ([[accelerators/qualcomm-ai200]], 128 GB, 548 GB/s) is *not* in the priced
   table — its only priced sibling is the smaller [[accelerators/qualcomm-ai100]]
