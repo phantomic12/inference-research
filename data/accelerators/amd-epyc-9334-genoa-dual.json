@@ -1,0 +1,31 @@
+{
+  "id": "amd-epyc-9334-genoa-dual",
+  "type": "accelerator",
+  "name": "AMD EPYC 9334 (Genoa, 32-core, dual-socket, 12-channel DDR5 host CPU)",
+  "status": "verified",
+  "confidence": 0.72,
+  "updated": "2026-10-14",
+  "vendor": "amd",
+  "architecture": "Zen 4 (Genoa, SP5)",
+  "release_year": 2022,
+  "process_nm": 5,
+  "form_factors": [
+    "socketed-host-cpu",
+    "dual-socket"
+  ],
+  "vram_gb": null,
+  "memory_type": "DDR5 RDIMM, 12 channels per socket (24 in 2P)",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 921.6,
+  "memory_bandwidth_basis": "2 sockets x 12 channels x DDR5-4800 = 921.6 GB/s theoretical aggregate. IMPORTANT: NUMA splits this - the ~920 GB/s is NOT usable as one pool for a single model's decode. In practice a dual-socket Genoa delivers ~1.3-1.6x a single socket on 70B decode, not 2x, unless the model is spread evenly across both sockets' memory (ik_llama.cpp -numa distribute / RPC help).",
+  "tdp_w": 420,
+  "flops": [],
+  "interconnect": [],
+  "unified_memory": true,
+  "consumer": false,
+  "notes": "Dual-socket CPU-only inference host. Leaseweb 2026 bench measured DeepSeek-8B 27.8 tok/s and gpt-oss-20b Q4 ~26 tok/s on a 2x EPYC 9334. The NUMA caveat is the whole story for a 2P box: doubling channels does not double decode because the model straddles two memory domains. vram_gb null: capacity is DIMM-dependent. tdp_w is the 2-socket combined figure (210 W each) - system draw is higher. Record exists so the leaseweb benchmark's accelerator_ids resolve; this is a config, not a single chip.",
+  "sources": [
+    "leaseweb-amd-epyc-llm-inference-benchmark-cpu-vs-gpu",
+    "runaihome-cpu-vs-gpu-llm-inference-home-lab-2026-dram-crisis"
+  ]
+}

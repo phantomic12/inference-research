@@ -1,0 +1,31 @@
+{
+  "id": "amd-epyc-9554-genoa",
+  "type": "accelerator",
+  "name": "AMD EPYC 9554 (Genoa, 64-core, 12-channel DDR5 host CPU)",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-14",
+  "vendor": "amd",
+  "architecture": "Zen 4 (Genoa, SP5)",
+  "release_year": 2022,
+  "process_nm": 5,
+  "form_factors": [
+    "socketed-host-cpu"
+  ],
+  "vram_gb": null,
+  "memory_type": "DDR5-5600 RDIMM, 12 channels",
+  "memory_bus_bit": null,
+  "memory_bandwidth_gbps": 460.8,
+  "memory_bandwidth_basis": "12 channels x DDR5-4800 = 460.8 GB/s theoretical peak per socket (AMD Genoa platform spec); the ahelpme bench populated all 12 channels with DDR5-5600, so effective is at or slightly above this figure.",
+  "tdp_w": 360,
+  "flops": [],
+  "interconnect": [],
+  "unified_memory": true,
+  "consumer": false,
+  "notes": "CPU-only inference host: the 'memory' that matters is the socket's DDR5 channel bandwidth, not VRAM. Decode is bandwidth-bound, so a fully-populated 12-channel Genoa (~460 GB/s theoretical) measures ~7.1 tok/s on Llama-3.3-70B Q4_K_M (ahelpme.com llama-bench, --numa distribute). The single biggest gotcha is channel population: llama.cpp discussion #3167 measured the same class of box dropping to 1.5 tok/s on a 34B model when only ONE DIMM was installed - one stick wastes ~92% of the bandwidth paid for. vram_gb left null: capacity is a function of how many RDIMMs are fitted (up to ~6 TB on SP5), not a fixed package figure. 2026 DRAM crisis has made the RAM the dominant cost of a Genoa build, not the CPU.",
+  "sources": [
+    "ahelpme-epyc-9554-llama-bench-cpu-inference",
+    "runaihome-cpu-vs-gpu-llm-inference-home-lab-2026-dram-crisis",
+    "llama-cpp-discussion-3167-cpu-channel-population-effect"
+  ]
+}
