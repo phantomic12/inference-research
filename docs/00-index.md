@@ -2051,7 +2051,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (2140)
+## Sources (2069)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -2423,7 +2423,6 @@ and t
 - **Runpod GPU Cloud pricing** (`sources/sup-cloud-runpod-gpu-pricing`) — database · Runpod
 - **SGLang Crossref record (NeurIPS 2024)** (`sources/pap-sys-sglang-crossref`) — database · Advances in Neural Information Processing Systems (via Crossref)
 - **SambaNova Cloud pricing table (per-1M-token list prices)** (`sources/svc-src-sambanova-cloud-pricing-2026-10-14`) — database · SambaNova
-- **Silicon Score — Apple Silicon LLM benchmark audit surface (benchmarks.json, 432 rows)** (`sources/siliconscore-benchmarks-json-apple-silicon`) — database · Silicon Score
 - **SkyPilot Catalog - Automated multi-cloud GPU price database, refreshed every 7 hours** (`sources/ppl-cloud-skypilot-catalog`) — database · SkyPilot
 - **SkyPilot Catalog AWS GPU instances extract - Key instance types with per-hour rates** (`sources/ppl-cloud-skypilot-aws-gpu-extract`) — database · SkyPilot
 - **SkyPilot Catalog Azure GPU instances extract - ND series with per-hour rates** (`sources/ppl-cloud-skypilot-azure-gpu-extract`) — database · SkyPilot
@@ -4519,7 +4518,7 @@ and t
 
 ## Coverage
 
-Total records: **4459**
+Total records: **4123**
 
 | group | records |
 |---|---|
