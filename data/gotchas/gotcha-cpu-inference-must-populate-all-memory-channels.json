@@ -1,0 +1,28 @@
+{
+  "id": "gotcha-cpu-inference-must-populate-all-memory-channels",
+  "type": "gotcha",
+  "name": "CPU/EPYC inference collapses unless every memory channel is populated",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-14",
+  "sources": [
+    "llama-cpp-discussion-3167-cpu-channel-population-effect",
+    "ahelpme-epyc-9554-llama-bench-cpu-inference",
+    "runaihome-cpu-vs-gpu-llm-inference-home-lab-2026-dram-crisis"
+  ],
+  "class": "config",
+  "affects": [
+    "amd-ryzen-ai-max-395-framework-desktop"
+  ],
+  "concepts": [
+    "memory-channels",
+    "numa",
+    "epyc",
+    "bandwidth"
+  ],
+  "symptom": "A Genoa box with ONE 64GB DIMM measured 1.5 tok/s on 34B Q4_0, jumping to 4 tok/s with a second stick - one DIMM wastes ~92% of the bandwidth you paid for.",
+  "root_cause": "LLM decode is bandwidth-bound; server CPUs only reach their rated ~460 GB/s (Genoa 12ch) with a DIMM on every channel. A few fat DIMMs leave most channels idle.",
+  "workaround": "Budget 12x 32GB or 12x 64GB, not 4x 96GB. Fully populated Genoa lands ~7 tok/s on 70B Q4_K_M. Dual-socket does NOT double it - NUMA splits to ~1.3-1.6x single-socket.",
+  "severity": "major",
+  "notes": ""
+}

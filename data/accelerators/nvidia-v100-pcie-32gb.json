@@ -1,0 +1,55 @@
+{
+  "id": "nvidia-v100-pcie-32gb",
+  "type": "accelerator",
+  "name": "NVIDIA V100 32GB PCIe",
+  "vendor": "nvidia",
+  "architecture": "volta",
+  "release_year": 2017,
+  "process_nm": 12,
+  "form_factors": [
+    "pcie"
+  ],
+  "vram_gb": 32,
+  "memory_type": "HBM2",
+  "memory_bus_bit": 4096,
+  "memory_bandwidth_gbps": 900,
+  "memory_bandwidth_basis": "32 GB HBM2 on a 4096-bit bus. Same silicon as the SXM2 32GB part (nvidia-v100-sxm2-32gb) which NVIDIA publishes at 900 GB/s; the PCIe card carries the same HBM2 stacks at the same ~900 GB/s but a 250 W cap and lower clocks (FP16 tensor 112 TF vs 125 TF SXM2).",
+  "flops": [
+    {
+      "precision": "fp32",
+      "tflops": 14,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "nv-v100-datasheet",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "V100 PCIe 32GB FP32 ~14 TFLOPS (vs 15.7 SXM2 - the 250 W PCIe power envelope trims clocks). NVIDIA V100 datasheet PCIe column.",
+      "unit": null
+    },
+    {
+      "precision": "fp16",
+      "tflops": 112,
+      "dense": true,
+      "vendor_claim": true,
+      "source_id": "nv-v100-datasheet",
+      "basis": "vendor-spec-sheet",
+      "basis_detail": "V100 PCIe 32GB FP16 tensor ~112 TFLOPS (vs 125 SXM2). Volta first-generation tensor cores - a REAL FP16 path, which is the advantage over every Pascal part in this price band (P40/P100 have no FP16 tensor).",
+      "unit": null
+    }
+  ],
+  "tdp_w": 250,
+  "interconnect": [
+    "pcie-gen3"
+  ],
+  "unified_memory": false,
+  "consumer": false,
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-14",
+  "sources": [
+    "nv-v100-datasheet",
+    "picclick-ebay-aggregator-tesla-v100-32gb-pcie-asking-listings",
+    "vramguide-v100-32gb-modelled-tok-s",
+    "hf-space-v100-homelab-field-guide"
+  ],
+  "notes": "The low-drama V100 route and the sweet spot of the used-datacenter slice. Same Volta silicon as nvidia-v100-sxm2-32gb but as a passive dual-slot PCIe card - drops into any x16 slot with NO SXM2 carrier/baseboard problem (the PCIe premium ~$300-350 over the bare SXM2 module buys the carrier problem solved). Passive cooling needs an airflow mod for desktop use. REAL advantage over Pascal: Volta first-gen tensor cores give a genuine FP16 path (~112 TF) so vLLM FP16 works properly. Measured-class envelope: ~60+ tok/s claimed on an 8B-class model in the HF 'V100 Homelab Field Guide'; ~106 tok/s modelled by vramguide for Q4_K_M 8B; low-teens on 32B. Street ~$695-900 (HPE P05913-001 $694.99, HP PG500-216 $809-899, Dell pulls ~$758)."
+}
