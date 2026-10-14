@@ -1033,7 +1033,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **US national average PUE across all data center equipment: 1.45 in 2024, down from 1.55 in 2018; 1.36 projected for 2030 in the Reference Case** (`benchmarks/pue-national-average-us-all-equipment-2024-1-45`) — 1.45 dimensionless PUE ratio (total facility energy / IT equipment energy). Not an accuracy score and not a speedup: 1.0 means the facility overhead is nil. · None on ? via ollama
 - **Used RTX 3090 24GB, llama.cpp CUDA: Qwen3-8B Q4_K decode tok/s @4K ctx (Hardware Corner measured)** (`benchmarks/comm-rtx3090-qwen3-8b-q4-decode`) — 115.3 decode tok/s (TG, single-stream, batch-1, 4K context) · Qwen3-8B Q4_K_M (GGUF) on nvidia-rtx-3090 via llama-cpp
 - **W8A8 int8 quantization on MI50 is 4-6x SLOWER than fp16/GPTQ, not faster, because it falls to a TritonScaledMMLinearKernel path and never engages the hardware INT8 path** (`benchmarks/comm-gfx906-w8a8-int8-slower-than-gptq`) — 10.81 tok/s (total token throughput) · Qwen3-0.6B.w8a8 on amd-radeon-instinct-mi50x via vllm
-- **cadamcat: 1x A100-80GB vs 2x RX 7900 XT TP=2 batch-1 decode speedup ratio (vLLM)** (`benchmarks/cadamcat-a100-vs-dual-7900xt-decode-speedup`) — 1.4 x (A100 tok/s vs dual-7900XT tok/s baseline, batch-1 decode, 500-32K ctx ladder) · gemma-4-12B-it (dense) + gemma-4-26B-A4B (MoE) on nvidia-a100-80gb-sxm4, amd-radeon-rx-7900-xtx via vllm
+- **cadamcat: 1x A100-80GB vs 2x RX 7900 XT TP=2 batch-1 decode speedup ratio (vLLM)** (`benchmarks/cadamcat-a100-vs-dual-7900xt-decode-speedup`) — 1.4 x (A100 tok/s / dual-7900XT tok/s, batch-1 decode, 500-32K ctx ladder) · gemma-4-12B-it (dense) + gemma-4-26B-A4B (MoE) on nvidia-a100-80gb-sxm4, amd-radeon-rx-7900-xtx via vllm
 - **kyuz0 Strix Halo sweep: GLM-4.7-Flash-UD-Q8_K_XL vulkan_radv decode_tok_s on Radeon 8060S (gfx1151)** (`benchmarks/kyuz0-strix-8060s-glm47-flash-q8kxl-vulkan-radv-tg128`) — 41.17 tok/s (tg128, batch 1) · GLM-4.7-Flash-UD-Q8_K_XL on amd-radeon-8060s-ryzen-ai-max via llama-cpp
 - **kyuz0 Strix Halo sweep: Qwen3.5-122B-A10B-UD-Q5_K_XL rocm-7_2_3 decode_tok_s on Radeon 8060S (gfx1151)** (`benchmarks/kyuz0-strix-8060s-qwen35-122b-a10b-q5kxl-rocm723-tg128`) — 20.12 tok/s (tg128, batch 1) · Qwen3.5-122B-A10B-UD-Q5_K_XL on amd-radeon-8060s-ryzen-ai-max via llama-cpp
 - **kyuz0 Strix Halo sweep: Qwen3.6-35B-A3B-UD-Q4_K_XL rocm-7_2_3 decode_tok_s on Radeon 8060S (gfx1151)** (`benchmarks/kyuz0-strix-8060s-qwen36-35b-a3b-q4kxl-rocm723-tg128`) — 51.53 tok/s (tg128, batch 1) · Qwen3.6-35B-A3B-UD-Q4_K_XL on amd-radeon-8060s-ryzen-ai-max via llama-cpp
@@ -1712,6 +1712,7 @@ and t
 - **eBay used MacBook Pro M3 Max 16in 128GB (Oct 2026)** (`supply/used-macbook-pro-m3-max-128gb`) — Apple · US · $3,400.0 · in-stock · ASKING/used-complete-system price. $3,000-3,800 used Oct-2026 (eBay, Amazon Rene
 - **eBay used MacBook Pro M4 Max 16in 128GB (Oct 2026)** (`supply/used-macbook-pro-m4-max-128gb`) — Apple · US · $4,700.0 · in-stock · ASKING/used-complete-system price. $4,200-5,200 used Oct-2026 (eBay, Amazon Rene
 - **Used Apple Mac Studio M3 Ultra 96GB** (`supply/used-mac-studio-m3-ultra-96gb`) — Apple (OEM); eBay/Apple refurb · US · $3,700.0 · in-stock · ASKING price, used 96GB $3,400-4,000 (Apple refurb $3,999 new), Oct-2026. PERISH
+- **Used Apple Mac Studio M1 Ultra 128GB** (`supply/used-mac-studio-m1-ultra-128gb`) — Apple (OEM); eBay/brokers · US · $2,500.0 · in-stock · ASKING/used-complete-system price. $2,200-3,000 used Oct-2026 (eBay, macpro-la).
 - **Used Apple Mac Studio M2 Ultra 192GB** (`supply/used-mac-studio-m2-ultra-192gb`) — Apple (OEM); eBay/macpro-la/OWC resellers · US · $3,700.0 · in-stock · ASKING price, used/renewed 192GB machine $3,200-4,200 Oct-2026. PERISHABLE-FIGUR
 - **New Beelink GTR9 Pro 128GB** (`supply/new-beelink-gtr9-pro-strix-halo-128gb-2`) — Beelink · US · $2,099.0 · in-stock · RETAIL/new-system price. ~$1,999-2,199 Oct-2026. PERISHABLE-FIGURE STAMP (added 
 - **New Beelink GTR9 Pro 128GB (Strix Halo)** (`supply/new-beelink-gtr9-pro-strix-halo-128gb`) — Beelink · global · $2,100.0 · in-stock · NEW retail ~$1,999-2,199 Oct-2026. PERISHABLE-FIGURE STAMP (added 2026-10-14, un
@@ -1722,7 +1723,7 @@ and t
 - **Used EPYC 7003 'Milan' server (e.g. Dell R6515, 512GB DDR4)** (`supply/used-epyc-7003-milan-host-512gb`) — Dell/Supermicro etc; used-server resellers · US · $2,000.0 · in-stock · ASKING price, complete used Milan host $1,500-2,500 with 512GB DDR4 Oct-2026. PE
 - **Enterprise ITAD upstream: EquipNet and CompuCycle corporate asset disposal and remarketing** (`supply/itad-upstream-equipnet-compucycle`) — EquipNet; CompuCycle · United States / global (EquipNet North America; CompuCycle UK-headquartered, US operations) · unknown · EAR 3A001 or EAR99 (below the 3A090.a TPP / performance-dens
 - **Framework Desktop Ryzen AI Max+ PRO 495 192GB (new)** (`supply/new-framework-desktop-strix-halo-192gb-pro-495`) — Framework · US · $3,750.0 · lead-time · RETAIL list price. New 2026 SKU - biggest Strix Halo capacity at 192GB. Research
-- **Framework Desktop 128GB (AMD Strix Halo, Ryzen AI Max+ 395) new** (`supply/new-framework-desktop-strix-halo-128gb`) — Framework Computer · United States / direct · $1,999.0 · in-stock · NEW complete Mini-ITX desktop, 128 GB unified LPDDR5X-8000. $1,999 = base DIY co · EAR (consumer product, general rules)
+- **New Framework Desktop 128GB (Ryzen AI Max+ 395)** (`supply/new-framework-desktop-strix-halo-128gb`) — Framework · US · $1,999.0 · in-stock · RETAIL/new-system price. ~$1,999 base +~$300 RAM config Oct-2026. PERISHABLE-FIG
 - **New GMKtec EVO-X2 128GB (Ryzen AI Max+ 395 Strix Halo)** (`supply/new-gmktec-evo-x2-strix-halo-128gb`) — GMKtec · global · $2,199.0 · in-stock · NEW retail $2,199 (up from ~$1,999 launch), Oct-2026. PERISHABLE-FIGURE STAMP (a
 - **New GMKtec EVO-X3 128GB** (`supply/new-gmktec-evo-x3-strix-halo-128gb`) — GMKtec · US · $3,799.0 · in-stock · RETAIL/new-system price. $3,799 Oct-2026. PERISHABLE-FIGURE STAMP (added 2026-10
 - **Used Google Coral Edge TPU (dev board / USB / M.2)** (`supply/used-google-coral-edge-tpu`) — Google (OEM); eBay resellers · US · $90.0 · in-stock · ASKING price, used Coral $50-130 Oct-2026. PERISHABLE-FIGURE STAMP (added 2026-1
@@ -1763,8 +1764,8 @@ and t
 - **Supermicro 820GH-TNR2 8x Gaudi 2 OAM tray / baseboard** (`supply/gaudi2-8x-oam-tray-supermicro-820gh`) — Supermicro (tray); server resellers · US · $11,995.0 · in-stock · ASKING price for the 8-module OAM baseboard/tray, captured Oct-2026. PERISHABLE-
 - **New Tenstorrent Blackhole p150** (`supply/new-tenstorrent-blackhole-p150-retail`) — Tenstorrent · US · $1,399.0 · in-stock · RETAIL price, new card. p150a/b $1,399, p100a $999. PERISHABLE-FIGURE STAMP (add
 - **New Tenstorrent Blackhole p150 (retail)** (`supply/new-tenstorrent-blackhole-p150`) — Tenstorrent · US/global · $1,399.0 · lead-time · NEW retail price, p150a/b SKU $1,399 (p100a $999), in stock ships ~2wk, Oct-2026
+- **New Tenstorrent Wormhole n150** (`supply/new-tenstorrent-wormhole-n150`) — Tenstorrent · US · $999.0 · in-stock · RETAIL price, new card. n150s $999, n150d $1,099 (in stock, ships ~2 wk). PERISH
 - **New Tenstorrent Wormhole n300** (`supply/new-tenstorrent-wormhole-n300`) — Tenstorrent · US · $1,449.0 · in-stock · RETAIL price, new card. n300d $1,449 (in stock). PERISHABLE-FIGURE STAMP (added 
-- **Tenstorrent Wormhole n150 / n300 new (direct)** (`supply/new-tenstorrent-wormhole-n150`) — Tenstorrent · United States / direct · $999.0 · in-stock · NEW card, direct from Tenstorrent. $999 = n150s; n150d $1,099; n300d $1,449. Shi · EAR (general rules)
 - **Used Tenstorrent Grayskull e75/e150** (`supply/used-tenstorrent-grayskull-e150`) — Tenstorrent (OEM); eBay resellers · US · $400.0 · in-stock · ASKING price, used card $300-500 range Oct-2026. PERISHABLE-FIGURE STAMP (added 
 - **SXM2->PCIe adapter / carrier board for V100 SXM2 modules** (`supply/sxm2-to-pcie-adapter-carrier`) — Various (eBay/Taobao resellers) · US/global marketplace · $130.0 · in-stock · ASKING price, adapter board only - SXM2-to-PCIe carrier + heatsink mount, no GPU
 - **SXM4->PCIe adapter / carrier board for A100 SXM4 modules** (`supply/sxm4-to-pcie-adapter-carrier`) — Various (grey-market resellers) · US/global marketplace · $900.0 · in-stock · ASKING price, adapter board only - SXM4-to-PCIe carrier, no GPU included. Range 
@@ -1867,6 +1868,8 @@ and t
 - **Used RTX 4090 24GB - Oct-2026 band** (`supply/used-rtx-4090-market-oct2026`) — US · $2,300.0 · in-stock · ASKING/used band ~$2,200-2,400 Oct-2026 (Feb-2026 $2,400; HC page $2,200 avg). P
 - **Used RX 7900 XTX 24GB market** (`supply/used-rx-7900-xtx-24gb-market-oct2026`) — US · $875.0 · in-stock · ASKING/used ~$800-950 used Oct-2026 (new remaining stock $1,400-1,800 - avoid ne
 - **eBay used A100 40GB PCIe card** (`supply/ebay-used-a100-40gb-pcie-card`) — US · $7,000.0 · in-stock · ASKING price. $6,995-8,074 used asking Oct-2026 (same eBay sweep as the $2,499 S
+- **eBay used AMD Instinct MI100 32GB** (`supply/ebay-used-amd-mi100-32gb`) — US · $720.0 · in-stock · ASKING price. $720 for a 102-D34228 pull; $1,299 top-rated seller. Range $720-1,
+- **eBay used AMD Instinct MI210 64GB** (`supply/ebay-used-amd-mi210-64gb`) — US · $4,000.0 · in-stock · ASKING price. $4,000-4,369 observed Oct-2026. PERISHABLE-FIGURE STAMP (added 202
 - **eBay used AMD Instinct MI250/MI250X 128GB OAM** (`supply/ebay-used-amd-mi250x-128gb-oam`) — US · $4,950.0 · in-stock · ASKING price. $4,950-5,970 for OAM module w/ heatsink Oct-2026. PERISHABLE-FIGUR
 - **eBay used Cambricon MLU270-S4** (`supply/ebay-used-cambricon-mlu270-s4`) — US · $317.0 · in-stock · ASKING price. $315-320 observed Oct-2026. PERISHABLE-FIGURE STAMP (added 2026-10
 - **eBay used Intel Gaudi 2 HL-225(B) 96GB OAM module** (`supply/ebay-used-gaudi2-hl225-oam-module`) — US · $2,000.0 · in-stock · ASKING price. Observed Oct-2026: HL-225 $2,500, HL-225H $2,700, PC-07784-01-GP3 
@@ -1878,8 +1881,6 @@ and t
 - **eBay used Cambricon MLU270-S4 card (dead-end stack)** (`supply/ebay-used-cambricon-mlu270`) — various sellers on eBay · United States (eBay.com / picclick) · $318.0 · in-stock · USED, bare single-slot PCIe card. $318 = the ~$315-320 ask band for MLU270-S4 ca · EAR + destination import rules (Cambricon is Entity-List-adj
 - **eBay used NVIDIA Tesla P100 16GB PCIe card** (`supply/ebay-used-tesla-p100-16gb`) — various sellers on eBay · United States (eBay.com / picclick) · $115.0 · in-stock · USED, bare passive PCIe card. $115 = midpoint of the $89.95-143.85 ask band for  · EAR 3A001 or EAR99 (Pascal below 3A090.a thresholds)
 - **eBay used NVIDIA Tesla P40 24GB (multi-option-listing trap priced in)** (`supply/ebay-used-tesla-p40-24gb`) — various sellers on eBay · United States (eBay.com / picclick) · $290.0 · in-stock · USED, bare passive PCIe card, no fan shroud. $290 = the realistic clean-single-l · EAR 3A001 or EAR99 (legacy Pascal below 3A090.a thresholds)
-- **eBay used AMD Instinct MI100 32GB PCIe card (ex-datacenter pull)** (`supply/ebay-used-amd-mi100-32gb`) — various server liquidators / eBay sellers · United States (eBay.com / picclick) · $900.0 · in-stock · USED, bare passive dual-slot PCIe card. $900 = midpoint of the $720-1,299 ask ba · EAR 3A001 or EAR99 (CDNA1 gfx908 below 3A090.a thresholds) +
-- **eBay used AMD Instinct MI210 64GB PCIe card** (`supply/ebay-used-amd-mi210-64gb`) — various server liquidators / eBay sellers · United States (eBay.com / picclick) · $4,180.0 · in-stock · USED, bare passive PCIe card. $4,180 = midpoint of the $4,000-4,369 ask band cap · EAR 3A001 or EAR99 (CDNA2 gfx90a; check against 3A090 thresh
 - **eBay used AMD Instinct MI250 / MI250X 128GB OAM module (with heatsink)** (`supply/ebay-used-amd-mi250x-oam-128gb`) — various server liquidators / eBay sellers · United States (eBay.com / picclick) · $5,450.0 · in-stock · USED, OAM module WITH heatsink - NOT a PCIe card. $5,450 = midpoint of the $4,95 · EAR (check ECCN 3A090 thresholds for MI250X at purchase) + E
 - **eBay used Intel Gaudi 2 HL-225(B) 96GB OAM module** (`supply/ebay-used-intel-gaudi2-hl225-oam`) — various server liquidators / eBay sellers · United States (eBay.com / picclick) · $2,100.0 · in-stock · USED, BARE OAM MODULE - no chassis, no fabric. $2,100 = midpoint of observed ask · EAR 3A001 or EAR99 + EAR 744.23 / 744.6 party screening
 - **eBay used NVIDIA A100 40GB PCIe card (ex-datacenter)** (`supply/ebay-used-a100-40gb-pcie`) — various server liquidators / eBay sellers · United States (eBay.com) · $7,500.0 · in-stock · USED, bare passive FHFL PCIe card - drops into any x16 slot, no baseboard. $7,50 · EAR 3A090.a / 3A090.b (advanced-computing ICs) + EAR 742.6(a
@@ -2369,8 +2370,8 @@ and t
 - **Benchmark comparison on MacBook Pro M3 Max 128GB: Splash, Ollama (MLX), and Ollama (llama.cpp) across Qwen3.6-35B and Qwen3.8-27B** (`sources/src-incoai-splash-issue-37`) — benchmark · incoai / community
 - **Best practices for competitive inference optimization on AMD Instinct MI300X GPUs (ROCm Blogs)** (`sources/bench-amd-rocm-llm-inference-best-practices`) — benchmark · AMD
 - **Command A W4A4 on vLLM: a performance breakdown on 2xH100 (capp-vllm-bench)** (`sources/bench-capp-vllm-longctx-ttft`) — benchmark · SamMausberg
+- **Embedded LLM - Benchmarking LLM Inference on Intel Arc Pro B60 (4x B60 TP=4, vLLM vs LLM-Scaler)** (`sources/embeddedllm-arc-pro-b60-vllm-llmscaler-benchmark`) — benchmark · Embedded LLM (Sparkle-provided 4xB60 workstation)
 - **Embedded LLM - High throughput LLM inference with vLLM and AMD (MI210 vs A100 vs L40)** (`sources/embeddedllm-vllm-rocm-mi210-vs-a100-l40-throughput`) — benchmark · Embedded LLM
-- **Embedded LLM — Benchmarking LLM Inference on Intel Arc Pro B60 (4x B60 TP=4, vLLM vs LLM-Scaler)** (`sources/embeddedllm-arc-pro-b60-vllm-llmscaler-benchmark`) — benchmark · Embedded LLM (Sparkle-provided 4xB60 workstation)
 - **Enhancing vLLM Inference on AMD GPUs (ROCm Blogs)** (`sources/bench-amd-vllm-rocm-optimize-fp8-gemm`) — benchmark · AMD
 - **Hardware Corner used-GPU price tracker + llama.cpp measured table** (`sources/hardware-corner-used-gpu-price-tracker-llama-cpp-measured-table`) — benchmark · Hardware Corner
 - **Hardware Corner — Definitive GPU Ranking for LLMs (llama-bench CUDA 12.8, Q4_K_XL decode/PP vs context)** (`sources/hardware-corner-gpu-ranking-local-llm`) — benchmark · Hardware Corner
@@ -2464,7 +2465,7 @@ and t
 - **AMD RDNA architecture page (generation comparison table and RDNA 4 overview)** (`sources/acc-fill-amd-rdna-architecture-page`) — blog · AMD
 - **AMD ROCm Blog: Efficient LLM Serving with MTP: DeepSeek V3 and SGLang on AMD Instinct GPUs** (`sources/w15-amd-rocm-deepseek-mtp-benchmark`) — blog · AMD
 - **AMD blog: AMD Ryzen AI MAX+ 395 Processor: Breakthrough AI Performance (Radeon 8060S LLM token-throughput measurements)** (`sources/acc-fill-amd-ryzen-ai-max-395-8060s-blog`) — blog · AMD
-- **AMD developer — 'llama.cpp on AMD EPYC: ZenDNN backend' (EPYC 9755 128c benchmarks)** (`sources/amd-llama-cpp-on-amd-epyc-zendnn-9755`) — blog · AMD
+- **AMD developer - 'llama.cpp on AMD EPYC: ZenDNN backend' (EPYC 9755 128c benchmarks)** (`sources/amd-llama-cpp-on-amd-epyc-zendnn-9755`) — blog · AMD
 - **AMD newsroom press release: AMD Unveils World's Most Advanced Gaming Graphics Cards, Built on Groundbreaking AMD RDNA 3 Architecture with Chiplet Design** (`sources/acc-fill-amd-rx-7900-series-press-release-rdna3`) — blog · AMD
 - **AMD partner article: Introducing the AMD Radeon RX 7900 Series Graphics** (`sources/acc-fill-amd-rx-7900-series-launch`) — blog · AMD
 - **AMD: llama.cpp on AMD EPYC (ZenDNN backend)** (`sources/amd-llama-cpp-on-amd-epyc-zendnn-backend`) — blog · AMD
@@ -2476,7 +2477,7 @@ and t
 - **Amazon EC2 Trn3 UltraServers (Trainium3)** (`sources/amazon-ec2-trn3-ultraservers-trainium3`) — blog
 - **Announcing Llama 3.1 Support in vLLM** (`sources/bench-nv-vllm-llama31-blog`) — blog · vLLM project
 - **Baseten blog - Introducing the Baseten Delivery Network: fast cold starts for big models** (`sources/dep-baseten-bdn-cold-start-blog`) — blog · Baseten
-- **Ben Linville (bentech) — Intel Arc Pro B60 + B70 LLM benchmarks, most quants every backend** (`sources/bentech-arc-pro-b60-b70-llm-benchmarks`) — blog · Ben Linville / bentech.substack.com
+- **Ben Linville (bentech) - Intel Arc Pro B60 + B70 LLM benchmarks, most quants every backend** (`sources/bentech-arc-pro-b60-b70-llm-benchmarks`) — blog · Ben Linville / bentech.substack.com
 - **Break the Sequential Dependency of LLM Inference Using Lookahead Decoding (arXiv:2402.02057)** (`sources/pap-eff-lookahead-decoding`) — blog
 - **CNBC: U.S. curbs export of more AI chips, including Nvidia H800, to China (2023-10-17)** (`sources/acc-fill-cnbc-h800-export-ban`) — blog · CNBC
 - **CacheBlend: Fast Large Language Model Serving for RAG with Cached Knowledge Fusion (arXiv:2405.16444)** (`sources/pap-eff-cacheblend`) — blog
@@ -2818,11 +2819,8 @@ and t
 - **Newegg consumer GPU listings (RX 9070 XT, Arc B60/B70)** (`sources/newegg-consumer-gpu-listings-rx-9070-xt-arc-b60-b70`) — forum · Newegg
 - **Newegg marketplace Tesla P40/M40/V100 refurbished listings** (`sources/newegg-tesla-p40-v100-m40-marketplace-refurb-listings`) — forum · Newegg
 - **PicClick eBay aggregator: AMD Instinct MI100 asking listings** (`sources/picclick-ebay-aggregator-amd-instinct-mi100-asking-listings`) — forum · PicClick / eBay
-- **PicClick eBay aggregator: AMD Instinct MI210 asking listings** (`sources/picclick-ebay-aggregator-amd-instinct-mi210-asking-listings`) — forum · PicClick / eBay
-- **PicClick eBay aggregator: AMD Instinct MI250X OAM asking listings** (`sources/picclick-ebay-aggregator-amd-instinct-mi250x-oam-asking-listings`) — forum · PicClick / eBay
 - **PicClick eBay aggregator: Cambricon MLU370 asking listings** (`sources/picclick-ebay-aggregator-cambricon-mlu370-asking-listings`) — forum · PicClick / eBay
 - **PicClick eBay aggregator: Intel Gaudi 2 HL-225 asking listings** (`sources/picclick-ebay-aggregator-intel-gaudi-2-hl-225-asking-listings`) — forum · PicClick / eBay
-- **PicClick eBay aggregator: Tesla P100 16GB asking listings** (`sources/picclick-ebay-aggregator-tesla-p100-16gb-asking-listings`) — forum · PicClick / eBay
 - **PicClick eBay aggregator: Tesla P40 24GB asking listings** (`sources/picclick-ebay-aggregator-tesla-p40-24gb-asking-listings`) — forum · PicClick / eBay
 - **PicClick eBay aggregator: Tesla V100 32GB PCIe asking listings** (`sources/picclick-ebay-aggregator-tesla-v100-32gb-pcie-asking-listings`) — forum · PicClick / eBay
 - **PicClick eBay aggregator: Tesla V100 32GB SXM2 asking listings** (`sources/picclick-ebay-aggregator-tesla-v100-32gb-sxm2-asking-listings`) — forum · PicClick / eBay
@@ -2842,8 +2840,11 @@ and t
 - **eBay used Mac Studio M1 Ultra market (Oct 2026)** (`sources/ebay-used-mac-studio-m1-ultra-market-oct2026`) — forum · eBay
 - **eBay used Tenstorrent Grayskull e75/e150 market** (`sources/ebay-used-tenstorrent-grayskull-market`) — forum · eBay
 - **eBay used V100 32GB SXM2 module market (Oct 2026)** (`sources/ebay-used-v100-32gb-sxm2-module-market-oct2026`) — forum · PicClick (eBay aggregator)
+- **eBay/PicClick AMD Instinct MI210 asking listings** (`sources/picclick-ebay-aggregator-amd-instinct-mi210-asking-listings`) — forum · PicClick (eBay aggregator)
+- **eBay/PicClick AMD Instinct MI250X OAM asking listings** (`sources/picclick-ebay-aggregator-amd-instinct-mi250x-oam-asking-listings`) — forum · PicClick (eBay aggregator)
 - **eBay/PicClick Cambricon MLU270-S4 asking listings** (`sources/picclick-ebay-aggregator-cambricon-mlu270-asking-listings`) — forum · PicClick (eBay aggregator)
 - **eBay/PicClick Tesla M40 24GB asking listings** (`sources/picclick-ebay-aggregator-tesla-m40-24gb-asking-listings`) — forum · PicClick (eBay aggregator)
+- **eBay/PicClick Tesla P100 16GB asking listings** (`sources/picclick-ebay-aggregator-tesla-p100-16gb-asking-listings`) — forum · PicClick (eBay aggregator)
 - **eBay/PicClick Tesla V100 32GB PCIe card asking listings** (`sources/picclick-ebay-aggregator-tesla-v100-32gb-pcie-card-asking`) — forum · PicClick (eBay aggregator)
 - **gfx906 Discord server message export (3,007 messages, 17 channels, Aug 2025 - Oct 2026)** (`sources/comm-gfx906-discord-server-log`) — forum · gfx906 Discord community (Chinese-language AMD ROCm community)
 - **intel/ipex-llm issue #12991: Intel Arc B580 llama-bench Vulkan vs SYCL vs IPEX-LLM token-generation tables** (`sources/gh-intel-ipex-llm-12991-arc-b580-llama-bench`) — forum · Intel IPEX-LLM (GitHub, archived 2026-01-28)
@@ -4130,8 +4131,8 @@ and t
 - **Iluvatar CoreX BI-V150 (Tiangai 150) — product overview and estimates** (`sources/cn-iluvatar-bi-v150`) — review · mirrorfrog.com (aggregating Chinese sources)
 - **NEGATIVE: no accelerator OEM or major distributor publishes a lead time in weeks (checked 2026-10-04)** (`sources/spl-negative-no-oem-publishes-lead-time`) — review · (negative finding; probed Dell, Supermicro, HPE, QCT, CDW, Insight, Provantage, IT Creations, ServersDirect)
 - **NanoReview GPU specification pages (launch MSRP)** (`sources/sup-price-nanoreview-msrp`) — review · NanoReview
+- **ServeTheHome Inspur NF5488M5 8x V100 SXM2 server review** (`sources/servethehome-inspur-nf5488m5-8x-v100-server-review`) — review · ServeTheHome
 - **ServeTheHome: GMKtec EVO-X3 mini PC review** (`sources/servethehome-gmktec-evo-x3-mini-pc-review`) — review · ServeTheHome
-- **ServeTheHome: Inspur NF5488M5 8x V100 server review** (`sources/servethehome-inspur-nf5488m5-8x-v100-server-review`) — review · ServeTheHome
 - **ServeTheHome: Marvell Structera X CXL 3.2 memory expanders** (`sources/servethehome-marvell-structera-x-cxl-3-2-memory-expanders`) — review · ServeTheHome
 - **TechInsights: Enflame S60 AI Accelerator Processor Floorplan Analysis** (`sources/cn-enflame-techinsights`) — review · TechInsights
 - **VERIFIED NEGATIVE: MetaX publishes no compute figure for C500, C500X, C550 or N100 - vendor site unreadable AND no figure in the one readable MetaX-citing source** (`sources/w5a-metax-no-compute-figure-confirmed-two-methods`) — review · Wikipedia (the same document as cn-metax-wikipedia, the only MetaX source in this repo that can be read)
