@@ -1677,7 +1677,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **vllm on intel-arc-pro-b70: Qwen3.5-27B fp8-e4m3 tg128 tok/s (bentech, dual B70+B60 vLLM FP8 pipeline-parallel)** (`benchmarks/bentech-b70-qwen35-27b-fp8-dual-tg`) — 13.3 tok/s (tg128, batch-1 per-request) · Qwen3.5-27B on intel-arc-pro-b70, intel-arc-pro-b60 via vllm
 - **vllm-ascend v0.17.0 on Huawei Atlas 300I Pro (Ascend 310P3, 24GB LPDDR4X): Qwen3-4B FP16, ~9 tok/s decode** (`benchmarks/vllm-ascend-atlas300ipro-qwen3-4b-fp16-decode`) — 9.0 ~tok/s decode (reporter's rounded figure) · Qwen/Qwen3-4B (FP16, ~8GB weights) on huawei-atlas-300i-pro via niche-vllm-ascend
 
-## Gotchas (437)
+## Gotchas (438)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
@@ -1995,6 +1995,7 @@ TRAP
 - **Video frame sampling rate is the primary cost knob** (`gotchas/video-frame-sampling-rate-is-the-primary-cost-knob`) — [major] config · Video inference cost is dominated by the frame sampling rate. A 1-minute video at 1 fps = 60 frames, but at 2 fps = 120 frames, doubling the cost.
 - **Vision encoder re-encoding waste in multi-turn chat** (`gotchas/vision-encoder-re-encoding-waste-in-multi-turn-chat`) — [major] config · In multi-turn image/video chat, the vision encoder re-encodes the same image every turn, wasting compute. For a 448x448 image with ViT-L/16, this is ~763 GFLOPs per turn. Over 10 turns, that's 7.6 TFL
 - **Vision encoder runs on separate schedule from decoder** (`gotchas/vision-encoder-runs-on-separate-schedule-from-decoder`) — [major] config · The vision encoder and LLM decoder run on separate schedules, leading to underutilization. While the encoder is running, the decoder is idle, and vice versa.
+- **Volta (V100, sm_70) is outside FlashAttention-2's target set - the cheapest HBM2 parts in the used market run the FA1/older attention path, not the modern FA2 kernels the llama.cpp/vLLM decode numbers assume** (`gotchas/gotcha-volta-v100-no-fa2-flashattention-2-does-not-target-sm70`) — [major] kernel · An 8x V100 SXM2 box (~256 GB HBM2, ~900 GB/s per GPU, ~$3,000-6,000 used for a DGX-1-class chassis) looks like the fastest tok/s-per-dollar answer to a 70B Q4 dense model, and on aggregate bandwidth i
 - **Vulkan decode collapses ~78% at long context from suballocation fragmentation; llama-bench does not see it** (`gotchas/vulkan-suballoc-fragmentation-decode-cliff`) — [major] measurement · Vulkan decode on an RX 7900 XTX falls off a cliff between 98K and 131K context: Qwen3.8-27B Q4_K_XL with q8_0 KV and FA on measures 40.4 t/s at ctx 65536, 40.8 t/s at 98304, and 8.9 t/s at 131072. Rai
 - **Vulkan decode on an AMD dGPU collapses 2-6x when Resizable BAR is disabled in BIOS** (`gotchas/vulkan-rebar-off-collapses-amd-decode`) — [major] driver · With ReBAR/SAM off in BIOS, llama.cpp's Vulkan backend runs decode at a fraction of the card's bandwidth. On an RX 7900 XTX with Qwen3.8-27B Q4_K_XL: 13.89 t/s for 128-token generation and 25.28 t/s a
 - **Watermark detection fails exactly where the output matters most: low-entropy text, and about 25% of assistant-style responses** (`gotchas/sec-watermark-low-entropy-output-is-where-detection-dies`) — [major] security · A watermark works on essays and fails on the deployment's actual traffic. Mark My Words reports KGW watermarking Llama-2-7B-chat and Mistral-7B-Instruct with no perceivable quality loss and detection 
@@ -5360,11 +5361,11 @@ and t
 
 ## Coverage
 
-Total records: **5297**
+Total records: **5298**
 
 | group | records |
 |---|---|
-| severity:major | 266 |
+| severity:major | 267 |
 | severity:blocker | 86 |
 | severity:minor | 82 |
 | backend:cuda | 78 |

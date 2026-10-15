@@ -1,0 +1,38 @@
+{
+  "id": "gotcha-volta-v100-no-fa2-flashattention-2-does-not-target-sm70",
+  "type": "gotcha",
+  "name": "Volta (V100, sm_70) is outside FlashAttention-2's target set - the cheapest HBM2 parts in the used market run the FA1/older attention path, not the modern FA2 kernels the llama.cpp/vLLM decode numbers assume",
+  "class": "kernel",
+  "affects": [
+    "nvidia-v100-sxm2-32gb",
+    "nvidia-v100-pcie-32gb"
+  ],
+  "concepts": [
+    "volta",
+    "sm70",
+    "sm_70",
+    "flash-attention",
+    "flash-attention-2",
+    "dgx-1",
+    "sxm2",
+    "quantization-gptq",
+    "quantization-awq",
+    "vllm",
+    "text-generation-inference",
+    "8x-v100"
+  ],
+  "symptom": "An 8x V100 SXM2 box (~256 GB HBM2, ~900 GB/s per GPU, ~$3,000-6,000 used for a DGX-1-class chassis) looks like the fastest tok/s-per-dollar answer to a 70B Q4 dense model, and on aggregate bandwidth it is - vLLM/TGI tensor-parallel spread across the NVLink plane is roughly 30-50 tok/s. But the assumption that the modern decode numbers port cleanly is wrong at the kernel layer: FlashAttention-2 does not target Volta (sm_70). FA-2 kernels are written for Ampere-and-newer primitives; a V100 deployment falls back to FA1 or an older attention path, and the llama.cpp/exllama quant kernels that produce the headline numbers on Ampere+ are tuned for Turing-and-newer. The practical serving path on Volta is GPTQ/AWQ 4-bit via vLLM or text-generation-inference, not the GGUF stack most of the consumer numbers in this repo come from.",
+  "root_cause": "FlashAttention-2's kernel schedule is built on the warp-level work partitioning and async-copy/TMA-adjacent primitives that exist from Ampere (sm_80) onward; there is no sm_70 instantiation, so an engine that selects attention backend by SM generation silently lands on FA1 or a pre-FA path on V100. Separately, Volta has first-generation tensor cores with FP16 accumulate only - no INT4/FP8 tensor path - so the sub-8-bit weight-quant kernels that modern llama.cpp/vLLM decode relies on have no hardware path and run through a slower emulation or older dequant path. The bandwidth is real; the kernel and tensor-core generation are 2017.",
+  "workaround": "On 8x V100 / a parted-out DGX-1, run vLLM or text-generation-inference with a GPTQ or AWQ 4-bit checkpoint rather than expecting GGUF/llama.cpp headline numbers to transfer - that is the path the ~30-50 tok/s 70B figure is actually measured on. Do not plan around FlashAttention-2 features (FA-2's work-partitioning win, FlashMLA, fp8 KV attention) - none of them exist on sm_70. Cross-reference: [[ctx-gotcha-long-context-kernel-gate-by-sm-generation]] for the general SM-generation attention-kernel gate (SM80 = FA1/FA2 only; Volta sits below even that), [[gotcha-sxm-module-needs-carrier-baseboard]] for the chassis/carrier problem that the cheap bare modules also carry, and [[comm-gfx906-flash-attn-slower-than-off]] for the analogous flash-attention-on-unsupported-silicon trap on AMD.",
+  "severity": "major",
+  "notes": "This is a software-age trap, not a bandwidth trap - V100's 900 GB/s HBM2 is genuinely good, which is exactly why the part gets bought and why the gap bites. The used-DGX-1 value case is still real (see used-dgx1-8x-v100 supply record and the r/homelab $2,500 thread) but the ~30-50 tok/s 70B figure comes with Volta-era tooling constraints, ~3 kW draw, and rack noise - it is a garage homelab fast-serving project, not a plug-in desktop. The FA2-does-not-target-Volta claim is an engineering constraint stated in the overnight big-memory research file (research-big-memory.md, 2026-10-14) and is consistent with the attention-kernel-by-SM-generation pattern in ctx-gotcha-long-context-kernel-gate-by-sm-generation, whose matrix bottoms out at SM80 because nothing below it runs the modern kernels. Status set to verified at moderate confidence: the kernel-gate mechanism is well-supported, but no single citation in the repo states the sm_70 exclusion in so many words.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-14",
+  "sources": [
+    "servethehome-inspur-nf5488m5-8x-v100-server-review",
+    "attn-flashattention-2-paper",
+    "r-homelab-dgx-1-2500-thread-and-ebay-dgx1-market",
+    "hf-space-v100-homelab-field-guide"
+  ]
+}
