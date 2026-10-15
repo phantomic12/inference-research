@@ -61,8 +61,8 @@ PRICE_JOIN = {
     "used-nvidia-tesla-m40-market":     {"nvidia-tesla-m40": 189.0},
     "ebay-used-tesla-p40-24gb":         {"nvidia-tesla-p40": 290.0},
     "used-nvidia-tesla-p40-market":     {"nvidia-tesla-p40": 397.99},
-    "ebay-used-amd-mi100-32gb":         {"amd-instinct-mi100": 900.0},
-    "ebay-used-amd-mi210-64gb":         {"amd-instinct-mi210": 4180.0},
+    "ebay-used-amd-mi100-32gb":         {"amd-instinct-mi100": 720.0},   # record repriced 900->720 Oct-14 ingest (low-end ask)
+    "ebay-used-amd-mi210-64gb":         {"amd-instinct-mi210": 4000.0},  # record repriced 4180->4000 Oct-14 ingest
     "ebay-used-amd-mi250x-oam-128gb":   {"amd-instinct-mi250": 5450.0,
                                          "amd-instinct-mi250x": 5450.0},
     "ebay-used-intel-gaudi2-hl225-oam": {"intel-gaudi2": 2100.0},
@@ -81,7 +81,12 @@ PRICE_JOIN = {
     "bestbuy-rdna4-consumer-discrete":  {"amd-radeon-rx-9070-xt": 869.99},
     "new-framework-desktop-strix-halo-128gb": {"amd-radeon-8060s-ryzen-ai-max": 1999.0},  # whole mini-ITX box
     "new-tenstorrent-wormhole-n150":    {"tenstorrent-wormhole-n150": 999.0},
-    "used-mac-studio-m1-ultra-128gb":   {"apple-m1-ultra": 2600.0},   # whole Mac Studio
+    "used-mac-studio-m1-ultra-128gb":   {"apple-m1-ultra": 2500.0},   # whole Mac Studio; record repriced 2600->2500 Oct-14 ingest
+    # NOT joined: used-mac-studio-m1-ultra-64gb ($1,850) prices the same
+    #   apple-m1-ultra *chip* but in a 64 GB chassis — the apple-m1-ultra
+    #   accelerator record carries vram_gb=128, so min() against that price
+    #   would pair a 64 GB sticker with a 128 GB fit flag. Cross-capacity
+    #   join dropped; the 64 GB SKU is noted in the doc §6 instead.
     "ebay-used-a100-80gb-pcie":         {"nvidia-a100-80gb-pcie": 12099.0},
     "used-a100-80gb-pcie-market":       {"nvidia-a100-80gb-pcie": 21995.0},
     "used-h100-80gb-pcie-market":       {"nvidia-h100-pcie": 43000.0},
@@ -120,8 +125,11 @@ PRICE_JOIN = {
     # --- Phase-A ingest (Oct-14 research wave), single clear part each -------
     # Apple Mac Studios are WHOLE-SYSTEM prices (the part is not sold bare);
     # the capacity is the configured unified memory, not a GPU carve-out.
-    "used-mac-studio-m2-ultra-192gb":   {"apple-m2-ultra": 3700.0},   # whole Studio, 192 GB
-    "used-mac-studio-m3-ultra-96gb":    {"apple-m3-ultra": 3700.0},   # whole Studio, 96 GB
+    "used-mac-studio-m2-ultra-192gb":   {"apple-m2-ultra": 3700.0},   # whole Studio, 192 GB = record vram_gb
+    # apple-m3-ultra record carries vram_gb=512 (the MAX config per its notes).
+    #   Under the capacity-match rule, the $3,700 96 GB row and the $6,250
+    #   256 GB row both price LESS pool than the fit flag claims — neither is
+    #   joined. The 512 GB SKU at $9,000 is the honest match (joined below).
     # Intel Arc Pro B60/B70 are bare PCIe cards at NEW retail.
     "newegg-new-arc-pro-b60-24gb":      {"intel-arc-pro-b60": 655.0},
     "newegg-new-arc-pro-b70-32gb":      {"intel-arc-pro-b70": 949.0},
@@ -170,16 +178,32 @@ PRICE_JOIN = {
     "used-rtx-3090-ti-market-oct2026": {"nvidia-rtx-3090-ti": 950.0},
     "used-rtx-4090-market-oct2026":    {"nvidia-rtx-4090": 2300.0},
     "used-rx-7900-xtx-24gb-market-oct2026": {"amd-radeon-rx-7900-xtx": 875.0},
+
+    # Whole-system unified-memory prices whose capacity MATCHES the
+    #   accelerator record's vram_gb (joined so min() can cite them):
+    "used-macbook-pro-m3-max-128gb":   {"apple-m3-max": 3400.0},   # 128 GB SKU = record vram_gb
+    "used-macbook-pro-m4-max-128gb":   {"apple-m4-max": 4700.0},   # 128 GB SKU = record vram_gb
+    "used-mac-studio-m3-ultra-512gb":  {"apple-m3-ultra": 9000.0},  # 512 GB SKU = record vram_gb
+    # NOT joined:
+    #   used-mac-studio-m3-ultra-96gb ($3,700) / used-mac-studio-m3-ultra-256gb
+    #     ($6,250) — both price less pool than the record's vram_gb=512 claims.
+    #   used-mac-studio-m1-ultra-64gb ($1,850) — 64 GB vs record's 128 GB.
+    #   new-framework-desktop-strix-halo-192gb-pro-495 ($3,750) — 192 GB vs the
+    #     record's explicit vram_gb=128 (same trap as the M1-64GB row, §6).
+    #   apple-m2-max (vram_gb=96) has NO capacity-matched whole-system supply
+    #     record — the M2-Max gap-fill ingest added the accelerator but no 96 GB
+    #     Mac Studio/MacBook Pro SKU — so it stays unpriced in §4.
+    #   amd-epyc-9454p-genoa / amd-epyc-9554-genoa / amd-epyc-9334-genoa-dual are
+    #     vram_gb-null DDR5 host CPUs (unified_memory); the Genoa supply rows
+    #     price the CPU alone ($2,000, no RAM = no resident pool) or a 384 GB
+    #     self-build ($7,500, capacity-mismatched vs whatever pool the reader
+    #     assumes) — neither joined; the host class is documented in §4.
     # Strix Halo pass-2 whole systems, joined to the OTHER Strix Halo
     #   accelerator record (the SoC-in-Framework part, vram_gb=128 explicit).
     #   Both records describe the same silicon; the 8060s one is joined above
     #   via the -x2/-s1/framework/beelink-1 rows. min() picks the cheapest.
     "new-beelink-gtr9-pro-strix-halo-128gb-2": {"amd-ryzen-ai-max-395-framework-desktop": 2099.0},
     "new-gmktec-evo-x3-strix-halo-128gb":      {"amd-ryzen-ai-max-395-framework-desktop": 3799.0},
-    # Apple MacBook Pro Max rows: WHOLE-LAPTOP prices (the part is not sold
-    #   bare; the 128 GB configured unified pool is the usable capacity).
-    "used-macbook-pro-m3-max-128gb":    {"apple-m3-max": 3400.0},   # whole MBP
-    "used-macbook-pro-m4-max-128gb":    {"apple-m4-max": 4700.0},   # whole MBP
     # DGX-1: 8-GPU complete server, NOT a bare-card price - NOT joined (§6).
     # sxm2/sxm4 adapter carriers: no GPU included - NOT joined.
     # raspberry-pi-ai-hat-2, rockchip-rk3588-sbc, google-coral-edge-tpu: whole
