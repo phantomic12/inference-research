@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kv_efficiency",
+  "title": "kv_efficiency",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "name",
+    "engine_id",
+    "context_length",
+    "kv_bytes_per_token",
+    "kv_cache_dtype",
+    "attention_variant",
+    "prefix_reuse",
+    "status",
+    "confidence",
+    "updated",
+    "sources"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "type": {
+      "const": "kv_efficiency"
+    },
+    "name": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string",
+      "description": "free text, same convention as benchmark.model"
+    },
+    "engine_id": {
+      "type": "string",
+      "description": "engine that produced the measurement"
+    },
+    "accelerator_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "interconnect_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "context_length": {
+      "type": "integer",
+      "description": "context size the measured_*_at_ctx figures were taken at; also named in methodology"
+    },
+    "kv_bytes_per_token": {
+      "type": "number",
+      "description": "resident KV bytes per token at this configuration's dtype. For a measured record this is a model-geometry quantity, NOT a per-run memory reading: it equals the model's kv_cache_bytes_per_token scaled by dtype bytes / 2 (bf16 base). Derivation goes in kv_bytes_per_token_basis so a reader can re-run it with their own inputs. For an MLA model it is the latent-plus-rope size, NOT num_layers*num_kv_heads*head_dim*2*bytes - the same formula distinction model.kv_cache_bytes_per_token documents."
+    },
+    "kv_bytes_per_token_basis": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "the derivation with numbers substituted, e.g. '80 layers x 8 kv heads x 128 head_dim x 2 tensors x 1 byte (fp8) = 163,840'. Same role as accelerator.flops[].basis_detail: a bytes figure with no derivation is a number nobody can check."
+    },
+    "kv_cache_dtype": {
+      "enum": [
+        "fp16",
+        "bf16",
+        "fp8",
+        "int8",
+        "int4",
+        "fp4",
+        "turboquant",
+        "kivi",
+        "other"
+      ]
+    },
+    "attention_variant": {
+      "enum": [
+        "mha",
+        "gqa",
+        "mqa",
+        "mla",
+        "sliding",
+        "hybrid"
+      ]
+    },
+    "prefix_reuse": {
+      "enum": [
+        "none",
+        "apc",
+        "radix",
+        "context-checkpoint",
+        "custom"
+      ],
+      "description": "none = cold prefill, no shared-prefix cache in play. apc = vLLM-style hashed-block automatic prefix caching. radix = SGLang RadixAttention tree over token sequences. context-checkpoint = llama.cpp-style named KV snapshots. custom = anything else (LMCache, Strata n-gram, engine-specific). The prefix mechanism, not the eviction policy - H2O/SnapKV/StreamingLLM have no member and belong in quant_method or notes only when they change what is resident."
+    },
+    "quant_method": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "the KV quantization method when kv_cache_dtype alone under-specifies it: e.g. 'kivi-asymmetric-2k4v', 'spinquant-w4a4kv4', 'gguf-q4_0-kv'. null when the dtype is a plain engine storage format (--kv-cache-dtype fp8) with no named method behind it."
+    },
+    "measured_ttft_ms_at_ctx": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "TTFT in milliseconds measured at context_length, cold cache unless prefix_reuse says otherwise. null when the run published no TTFT - an absent number, never a zero."
+    },
+    "measured_tps_at_ctx": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "tokens/s measured at context_length, per-request decode or single-stream prefill per methodology. null when the run published no throughput - an absent number, never a zero."
+    },
+    "methodology": {
+      "type": "string",
+      "description": "batch/concurrency, model + weight quant, KV config, context size, what the measured_* fields actually count. Same rule as benchmark.methodology: a number without its conditions is unquotable."
+    },
+    "measured_by": {
+      "enum": [
+        "vendor",
+        "third_party",
+        "self"
+      ]
+    },
+    "reproducible": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "verified",
+        "draft",
+        "contested",
+        "deprecated"
+      ]
+    },
+    "confidence": {
+      "type": "number"
+    },
+    "updated": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "source ids; each must exist in data/sources/"
+    }
+  },
+  "additionalProperties": false
+}

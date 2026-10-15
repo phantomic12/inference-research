@@ -1,0 +1,29 @@
+{
+  "id": "deepseek-v3-mla-vs-mha-128k",
+  "type": "kv_efficiency",
+  "name": "DeepSeek-V3 MLA at 128K: 68.6 KiB/token latent KV, ~85x smaller than the MHA-equivalent — the reason 128K fits at all",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-04",
+  "sources": [
+    "attn-deepseek-v3-paper",
+    "model-cn-deepseek-v3-report"
+  ],
+  "model": "DeepSeek-V3 671B (37B active, bf16)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 131072,
+  "kv_bytes_per_token": 70272,
+  "kv_bytes_per_token_basis": "61 layers x (kv_lora_rank 512 + qk_rope_head_dim 64) x 2 bytes (bf16) = 61 x 576 x 2 = 70,272 B/token (68.6 KiB). The MHA-equivalent on the same skeleton would be 61 x 2 x 128 heads x (128+64) x 2 = 5,856 KiB/token — an 85.3x reduction. Do NOT apply the GQA formula: config.json lists num_key_value_heads=128 because the latent is expanded to 128 heads at attention time, not because 128 head-pairs are cached; num_layers x num_kv_heads x head_dim x 2 x 2 = 4,000,256 B/token overstates the real cache by ~57x.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "mla",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "An architectural fact recorded in the measured-run shape so it can be filtered with the dtype/prefix records: this is the DeepSeek-V3 technical report's own geometry, not a serving benchmark. context_length 131072 is the repo's standard 128K comparison point; the model's max_position_embeddings is 163840 via YaRN factor 40. At 128K one sequence's resident KV is 131072 x 70,272 = ~8.6 GiB at bf16 — versus ~717 GiB for the naive 128-head GQA misreading, which is the single largest KV-reduction factor in the record set and the property that makes 671B-scale long context servable on one node.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "MLA is the strongest KV-shrink mechanism in the repo precisely because it is architectural, not a codec: the cache is a 512-rank latent plus a 64-dim decoupled RoPE key, so there is nothing to quantize away later — fp8 MLA (record sglang-dsv41-fp8kv-128k-cold-prefill) halves it again to ~4.3 GiB at 128K. Engine consequence recorded in the model record and worth restating: an engine without a dedicated MLA decode kernel cannot serve this class at all (llama.cpp reaches it via the DEEPSEEK arch entries with no tensor-core attention path; vLLM/SGLang/TRT-LLM have native MLA rows). measured_* are null because the technical report publishes geometry, not latency — the 8.6s-at-128K TTFT on 72x GB300 lives in benchmark record [[benchmarks/sglang-gb300-deepseek-r1-ttft-128k]], the same model family on the far side of the hardware range."
+}

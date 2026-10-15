@@ -1,0 +1,32 @@
+{
+  "id": "sglang-radix-hit-112k-prefix",
+  "type": "kv_efficiency",
+  "name": "SGLang RadixAttention hit on 8x RTX PRO 6000: 112K-token shared prefix served in 0.34 s (~39x the cold prefill rate)",
+  "status": "draft",
+  "confidence": 0.75,
+  "updated": "2026-10-04",
+  "sources": [
+    "ev-sglang-issue-40877-production-deepseek-v41-flash"
+  ],
+  "model": "DeepSeek-V4.1-Flash (MXFP4 experts, 1M context enabled)",
+  "engine_id": "sglang",
+  "accelerator_ids": [
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "interconnect_ids": [
+    "pcie-gen5"
+  ],
+  "context_length": 114688,
+  "kv_bytes_per_token": 35136,
+  "kv_bytes_per_token_basis": "61 layers x (kv_lora_rank 512 + qk_rope_head_dim 64) x 1 byte (fp8_e4m3) = 61 x 576 = 35,136 B/token, same MLA latent skeleton as sglang-dsv41-fp8kv-128k-cold-prefill. On a HIT the resident cost is not paid again, which is the entire mechanism: the radix tree maps the 112K-token prefix to already-resident KV blocks instead of recomputing them.",
+  "kv_cache_dtype": "fp8",
+  "attention_variant": "mla",
+  "prefix_reuse": "radix",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": 340,
+  "measured_tps_at_ctx": 325000.0,
+  "methodology": "SINGLE REQUEST whose 112,000-token prompt was an already-cached shared prefix on the same production SGLang config as sglang-dsv41-fp8kv-128k-cold-prefill (8x RTX PRO 6000, TP=8/EP=8, kv_cache_dtype fp8_e4m3, RadixAttention). measured_tps_at_ctx is arithmetic on the wall clock (112,000 / 0.34 s ~ 329K; the source states ~325K), i.e. a prefill-equivalent rate on a cache HIT, not a separately instrumented throughput counter — recorded because the source publishes it as the comparison to the 6,853 tok/s cold figure (~39x).",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "THE HEADLINE TRAP, stated because this is the most misquotable number in the type: ~39x is a property of the CACHE, not of SGLang vs any other engine — it compares a radix hit against a cold miss on the same engine, so 'SGLang is 39x faster' is the wrong reading in both directions. The honest use is the quantum of prefix reuse on a workload that resends long shared prefixes (agentic / multi-turn), which is exactly the condition RadixAttention exists for. Requires a byte-identical prefix; near-prefixes do not hit. Compare [[benchmarks/ev-llamacpp-spec-bench-replay-inflates]], where a similar replay path makes a BENCHMARK read ~13x high rather than making a server fast — the distinction this record's notes exist to keep straight. measured_ttft_ms_at_ctx = 340 ms is the wall-clock serve time the source reports for the hit."
+}

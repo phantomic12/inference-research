@@ -7,7 +7,7 @@ JSON Schema per record type lives in `schemas/`. This is the human version.
 | field | type | meaning |
 |---|---|---|
 | `id` | string | stable kebab-case slug, globally unique, matches filename |
-| `type` | enum | accelerator, flop, engine, quantization, interconnect, benchmark, gotcha, supply, service, model, paper, compiler, metric_exposure, source |
+| `type` | enum | accelerator, flop, engine, quantization, interconnect, benchmark, gotcha, supply, service, model, paper, compiler, metric_exposure, kv_efficiency, source |
 | `name` | string | display name |
 | `status` | enum | verified (checked against primary source), draft, contested (sources disagree), deprecated |
 | `confidence` | number | 0.0-1.0 |
@@ -720,6 +720,59 @@ the observability slice had to write metric inventories as sentences.
 
 `metric_type` and `exposure` are required, but nullable, so a generated skeleton
 validates immediately. `new_record.py` seeds both with `unknown`.
+
+## kv_efficiency
+
+One record per (engine, model, KV configuration) measured run: what the KV
+cache costs and what the engine does about it at a stated context length. The
+type exists because `benchmark` carries one (metric, value) pair per record,
+while a KV-efficiency result is a configuration — dtype, attention variant,
+prefix reuse — plus the TTFT/throughput it produced. The same convention as
+`benchmark.model` applies: `model` is free text, paired with a `models/` record
+in `notes` where one exists.
+
+    model                string     free text
+    engine_id            string     engine record id (hard reference, like
+                         benchmark.engine_id)
+    accelerator_ids      [string]
+    interconnect_ids     [string]
+    context_length       int        ctx the measured_* fields were taken at
+    kv_bytes_per_token   number     resident KV bytes per token at this dtype.
+                         A model-geometry quantity (model record's figure
+                         scaled by dtype bytes/2), NOT a per-run memory
+                         reading — for MLA use the latent+rope size, not the
+                         GQA formula, same as model.kv_cache_bytes_per_token
+    kv_bytes_per_token_basis  string|null  the derivation with numbers
+                         substituted; a bytes figure with no derivation is a
+                         number nobody can check
+    kv_cache_dtype       enum       fp16 | bf16 | fp8 | int8 | int4 | fp4 |
+                         turboquant | kivi | other
+    attention_variant    enum       mha | gqa | mqa | mla | sliding | hybrid
+    prefix_reuse         enum       none | apc | radix | context-checkpoint |
+                         custom. none = cold prefill; apc = vLLM-style hashed
+                         blocks; radix = SGLang RadixAttention; context-
+                         checkpoint = llama.cpp named KV snapshots; custom =
+                         anything else (LMCache, Strata n-gram). The prefix
+                         mechanism, NOT an eviction policy — H2O/SnapKV/
+                         StreamingLLM belong in quant_method or notes
+    quant_method         string|null  the named KV-quant method when dtype
+                         alone under-specifies it ('kivi-asymmetric-2k4v',
+                         'spinquant-w4a4kv4'); null for a plain engine
+                         storage dtype like --kv-cache-dtype fp8
+    measured_ttft_ms_at_ctx  number|null  TTFT ms at context_length; null =
+                         not published, never zero
+    measured_tps_at_ctx  number|null  tok/s at context_length, per methodology
+    methodology          string     batch/concurrency, model + weight quant,
+                         KV config, ctx — same rule as benchmark.methodology
+    measured_by          enum       vendor | third_party | self
+    reproducible         bool|null
+    notes
+
+The two ratio-style traps from `benchmark` apply here unchanged: a prefix-cache
+hit that reads ~39x the cold rate is a property of the cache, not the engine —
+say so in `notes` (record `sglang-radix-hit-112k-prefix` does). And
+`measured_*_at_ctx` with no `context_length` is the same kind of unquotable
+number a `benchmark` with no `methodology` is; both fields are required.
 
 ## source
 

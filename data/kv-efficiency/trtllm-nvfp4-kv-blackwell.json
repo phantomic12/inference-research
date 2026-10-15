@@ -1,0 +1,32 @@
+{
+  "id": "trtllm-nvfp4-kv-blackwell",
+  "type": "kv_efficiency",
+  "name": "TensorRT-LLM FP4/NVFP4 KV cache on Blackwell: the 4-bit KV tier with a hardware path, <2% reported quality hit",
+  "status": "draft",
+  "confidence": 0.7,
+  "updated": "2026-10-15",
+  "sources": [
+    "quant-trtllm-quantization",
+    "quant-nvfp4-te-docs",
+    "quant-nvfp4-paper"
+  ],
+  "model": "Blackwell-supported LLMs (NVFP4 KV path is arch-gated)",
+  "engine_id": "tensorrt-llm",
+  "accelerator_ids": [
+    "nvidia-b200"
+  ],
+  "interconnect_ids": [],
+  "context_length": 131072,
+  "kv_bytes_per_token": 40960,
+  "kv_bytes_per_token_basis": "Representative geometry on Llama-3.1-8B GQA: 32 layers x 8 kv heads x 128 head_dim x 2 (K+V) x 0.5 byte (4-bit NVFP4 + block scales) = 32,768 B/token idealized; 40,960 records the practical figure with per-block scale overhead (~25%) — stated as an approximation because TRT-LLM documents the support matrix and block-scale format, not a clean per-token byte count. Scaled to Llama-3.3-70B the same rule gives ~102,400 B/token, i.e. 128K context ~12.5 GiB vs 40 GiB at bf16.",
+  "kv_cache_dtype": "fp4",
+  "attention_variant": "gqa",
+  "prefix_reuse": "none",
+  "quant_method": "nvfp4-kv",
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Support-matrix + documentation record, not a latency run: TRT-LLM's quantization docs (page dated 2026-09-26, commit c76f4a8) list the per-arch matrix in which FP4 KV is Blackwell-only — the same arch-gating class vLLM issue #40124 documents from the other side (turboquant k8v4 refused on SM80-86). No TTFT/tok-s figure is published at a named context in a form this schema can hold, so measured_* are null; the record exists because fp4 is the newest KV tier and only meaningful at long context — at 128K the difference between 2 GiB and 12 GiB of KV on a consumer-class model is the difference between serving and not. Quality: '<2% reported' per the research file and NVIDIA's own materials; that figure is a vendor claim, not a third-party measurement, which is why this record is draft.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "fp4 and turboquant are separate enum members deliberately: NVFP4 KV is a storage format with a Blackwell hardware path, while turboquant (vLLM kv_cache_dtype turboquant_k8v4) is a paired W4+KV4 scheme — the research file lists them on different rows for the same reason. The honest gap: no third-party TTFT-at-128K number exists for fp4 KV yet, so this record carries the capacity math and the arch gate, not a measured latency — when one is published it belongs as a sibling record, not an edit to this one. reproducible false: the support matrix is verifiable, the '<2%' quality figure is not independently reproduced."
+}

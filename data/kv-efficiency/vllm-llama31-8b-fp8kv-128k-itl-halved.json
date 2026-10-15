@@ -1,0 +1,30 @@
+{
+  "id": "vllm-llama31-8b-fp8kv-128k-itl-halved",
+  "type": "kv_efficiency",
+  "name": "vLLM FP8 KV (FA3, H100): Llama-3.1-8B decode ITL slope vs context halved vs bf16; 128K MRCR recovers 97-98% AUC",
+  "status": "verified",
+  "confidence": 0.88,
+  "updated": "2026-10-04",
+  "sources": [
+    "ctx-src-vllm-fp8-kvcache-2026-04"
+  ],
+  "model": "Llama-3.1-8B / Llama-3.3-70B-Instruct",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-h100-sxm"
+  ],
+  "interconnect_ids": [],
+  "context_length": 131072,
+  "kv_bytes_per_token": 65536,
+  "kv_bytes_per_token_basis": "32 layers x 8 kv heads x 128 head_dim x 2 (K and V) x 1 byte (fp8) = 65,536 B/token for Llama-3.1-8B (GQA); the bf16 model record carries 131,072. For Llama-3.3-70B: 80 x 8 x 128 x 2 x 1 = 163,840 B/token vs 327,680 bf16 — the 128K KV footprint drops 40 GiB to 20 GiB, which is the difference between fitting an 80GB card's KV budget and not.",
+  "kv_cache_dtype": "fp8",
+  "attention_variant": "gqa",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "vLLM project engineering validation (first-party blog, 2026-04-22). Hardware: H100 with FA3 attention backend, concurrency 1. KV dtype fp8 via --kv-cache-dtype fp8, uncalibrated per-tensor scales (the worst case), bf16 weights. DECODE COST, the headline: fitted ITL = slope x input_len + intercept; on Llama-3.1-8B the FP8-KV slope is 2.37e-05 ms/token vs 4.37e-05 for bf16 KV — the context-dependent half of inter-token latency is ~1.84x lower because decode attention reads half the KV bytes per step. ACCURACY AT 128K: Llama-3.3-70B-Instruct on openai/mrcr needle-recovery to 128K recovers 97-98% of the BF16 AUC; Qwen3-30B-A3B to 256K ~94-98%; reasoning benchmarks shift at most 1-2 points. HOPPER CORRECTNESS CAVEAT the same source documents: FP8 KV on FA3 at ~100K+ contraction length scored 13% on a 128K needle task vs 91% BF16 until two-level FP32 accumulation (flash-attention PR #104) restored 89% — the fix raises the TTFT quadratic coefficient ~1.6x at long context. measured_ttft_ms_at_ctx / measured_tps_at_ctx are null because the source publishes a fitted SLOPE and accuracy-recovery percentages, not point TTFT/tok-s figures at one context.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "The record type's best current evidence that fp8 KV is 'free' on Hopper/Blackwell for most models: ~2x decode-attention cost reduction at long context for <1-2% quality shift, with one named exception (Hopper FP32-accumulation failure at >=100K, now fixed at a prefill cost). fp8 here is a plain engine storage dtype, hence quant_method null. The 20 GB-at-128K figure for Llama-3.3-70B is why the research file's rule of thumb — 'fp8 drops 128K KV on a 70B GQA to ~20 GB; fits where bf16 cannot' — holds. Source is the engine vendor measuring its own software; treated as high-confidence engineering validation, not peer review."
+}

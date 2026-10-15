@@ -203,6 +203,19 @@ FIELD_META: dict[str, list[tuple[str, str]]] = {
         ("measured_ttft_ms", "TTFT (ms)"), ("measured_tps", "Output tok/s"),
         ("measurement_source", "Measured by"), ("regions", "Regions"),
     ],
+    "kv_efficiency": [
+        ("model", "Model"), ("engine_id", "Engine"),
+        ("accelerator_ids", "Accelerators"), ("interconnect_ids", "Interconnect"),
+        ("context_length", "Context length"),
+        ("kv_bytes_per_token", "KV (bytes/token)"),
+        ("kv_bytes_per_token_basis", "KV bytes basis"),
+        ("kv_cache_dtype", "KV dtype"), ("attention_variant", "Attention variant"),
+        ("prefix_reuse", "Prefix reuse"), ("quant_method", "Quant method"),
+        ("measured_ttft_ms_at_ctx", "TTFT (ms) @ ctx"),
+        ("measured_tps_at_ctx", "tok/s @ ctx"),
+        ("methodology", "Methodology"), ("measured_by", "Measured by"),
+        ("reproducible", "Reproducible"),
+    ],
 }
 
 FACETS: dict[str, list[str]] = {

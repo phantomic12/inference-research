@@ -29,6 +29,7 @@ DIRS = {
     "source": "sources",
     "compiler": "compilers",
     "metric_exposure": "metric-exposures",
+    "kv_efficiency": "kv-efficiency",
 }
 
 TYPES = list(DIRS)
@@ -57,6 +58,11 @@ REF_FIELDS: dict[str, dict[str, str]] = {
     "supply": {"accelerator_ids": "accelerator"},
     "service": {"models_served": "model"},
     "metric_exposure": {"engine_id": "engine"},
+    "kv_efficiency": {
+        "engine_id": "engine",
+        "accelerator_ids": "accelerator",
+        "interconnect_ids": "interconnect",
+    },
 }
 
 # Fields that hold a single reference and may be null (so an absent value is
@@ -64,10 +70,12 @@ REF_FIELDS: dict[str, dict[str, str]] = {
 NULLABLE_REF_FIELDS = frozenset({"format_id"})
 
 # (type, field) pairs where an unresolved reference is ALWAYS fatal, not
-# budgeted debt. benchmark.engine_id is required by the schema and names the
-# thing that produced the number; a benchmark whose engine cannot be resolved
-# cannot be interpreted at all, so this has always been an error and stays one.
-HARD_REF_FIELDS = frozenset({("benchmark", "engine_id")})
+# budgeted debt. benchmark.engine_id and kv_efficiency.engine_id are required by
+# their schemas and name the thing that produced the number; a record whose
+# engine cannot be resolved cannot be interpreted at all, so this has always
+# been an error and stays one.
+HARD_REF_FIELDS = frozenset({("benchmark", "engine_id"),
+                             ("kv_efficiency", "engine_id")})
 
 TITLES = {
     "accelerator": "Accelerators",
@@ -84,4 +92,5 @@ TITLES = {
     "source": "Sources",
     "compiler": "Compilers & kernel DSLs",
     "metric_exposure": "Metric exposures",
+    "kv_efficiency": "KV-cache efficiency",
 }
