@@ -1,0 +1,21 @@
+{
+  "id": "gotcha-mindie300-duo-image-on-300i-pro-npu-fault",
+  "type": "gotcha",
+  "name": "MindIE 3.0.0 '300I Duo' container image on a single Atlas 300I Pro (310P3): service start hard-faults the NPU (aclnnTril fail → HDC disconnect, unrecoverable until reboot)",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-15",
+  "sources": [
+    "gitcode-mindie-llm-issue-623-atlas300ipro"
+  ],
+  "class": "config",
+  "affects": [
+    "huawei-atlas-300i-pro",
+    "niche-vllm-ascend"
+  ],
+  "symptom": "Starting mindieservice_daemon from the mindie:3.0.0-300I-Duo-py311-openeuler24.03-lts image on a single-card Atlas 300I Pro (Ascend 310P3, 24GB) fails with aclnnTril error 107000, then cascades into halMemAlloc failures and 'internal host device communication (HDC) session is disconnected'. The NPU then stays in a fault state for all subsequent operations until reset.",
+  "root_cause": "The '300I Duo' MindIE image targets the dual-die Atlas 300I Duo SKU; its ATB model config/kernel set is incompatible with the single-310P3 Pro card. The Tril kernel binary load failure (BinaryGetFunction) appears to be a chip-variant mismatch that the runtime handles by severing the HDC session rather than erroring cleanly.",
+  "workaround": "Run vllm-ascend (v0.17.0 verified working, Qwen3-4B FP16 ~9 tok/s) instead of MindIE on the 300I Pro, or use the Pro-specific MindIE image if Huawei publishes one. Do NOT run the Duo image on the Pro card.",
+  "severity": "major",
+  "notes": "Reported in Ascend/MindIE-LLM issue #623 (gitcode), labelled 'usage' by maintainers 2026-05-27, moved to MindStudio issue board 2026-07-03 — no fix confirmed in the thread. The HDC disconnect is the dangerous part: a software-level image mismatch produces what looks like a hardware failure and requires NPU re-init."
+}
