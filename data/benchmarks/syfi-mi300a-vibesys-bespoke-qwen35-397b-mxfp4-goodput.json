@@ -1,0 +1,31 @@
+{
+  "id": "syfi-mi300a-vibesys-bespoke-qwen35-397b-mxfp4-goodput",
+  "type": "benchmark",
+  "name": "VibeSys bespoke agent-built engine on 4x MI300A: Qwen3.5-397B-A17B MXFP4 goodput 2242 tok/s @96sess",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "amd-instinct-mi300a"
+  ],
+  "interconnect_ids": [],
+  "model": "Qwen3.5-397B-A17B",
+  "format_id": "mxfp4",
+  "metric": "tps_aggregate",
+  "value": 2242.0,
+  "unit": "tok/s goodput (aggregate over 96 concurrent sessions, SLO-bound)",
+  "methodology": "THIRD-PARTY MEASURED (SyFI Lab, UW, blog 2026-10-08). 4x AMD Instinct MI300A (gfx942, 128GB HBM3 shared CPU+GPU per package, 512GB node). Model Qwen3.5-397B-A17B MXFP4 (amd/Qwen3.5-397B-A17B-MXFP4, ~17B active, 512 routed experts, hybrid 15 attn + 45 Gated-DeltaNet linear layers). Multi-turn chat benchmark, concurrency ramp 1->192 sessions, 3-6 turns x 80-300 gen tokens, full history resent each turn. GOODPUT = output tok/s for responses meeting SLO (p95 TPOT<=250ms, p95 TTFT<=10s). AGGREGATE over concurrent sessions. Engine: bespoke agent-built serving engine (~19.4k LOC, prefix cache w/ DeltaNet snapshots, HIP-graph decode, fused MXFP4 MoE, MTP w/ 2 draft tokens @84% accept). Peak at 96 sessions; 2.33x the tuned-SGLang baseline on the same 4x MI300A node.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "energy_basis": null,
+  "power_w": null,
+  "power_scope": null,
+  "power_cap": null,
+  "clock_lock_mhz": null,
+  "thermal_state": null,
+  "notes": "Filed under engine_id=vllm only because there is no 'vibesys-bespoke' engine record and vllm is the closest serving-engine class; the actual engine is a one-off agent build — see source. MI300A's unified HBM3 lets weights, KV, DeltaNet state, OS page cache and host share 128GB/pkg.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-15",
+  "sources": [
+    "syfi-qwen35-397b-mi300a-vibesys"
+  ]
+}
