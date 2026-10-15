@@ -2748,7 +2748,7 @@ and t
 - **eBay used bare A100 80GB PCIe cards (the mainstream ex-datacenter consumer path)** (`supply/ebay-used-a100-80gb-pcie`) — various third-party sellers on eBay · United States (eBay.com) · $12,099.0 · in-stock · USED / Pre-Owned, bare A100 80GB **PCIe** card. $12,099.00 = the lowest listing  · EAR 3A090.a / 3A090.b (advanced-computing ICs) + EAR 742.6(a
 - **eBay used graphics-card market (GeForce RTX 4090 as reference used accelerator)** (`supply/ebay-used-consumer-gpu-market`) — various third-party sellers on eBay · United States (eBay.com, ship-to ZIP 11429) · $2,000.0 · in-stock · USED / Pre-Owned, bare PCIe graphics card, no server, as-is, no warranty stated. · EAR 3A001 or EAR99 (below the 3A090.a TPP / performance-dens
 
-## Hosted inference APIs (12)
+## Hosted inference APIs (14)
 
 - **Amazon Bedrock managed inference** (`services/svc-aws-bedrock`) — aws-bedrock
 - **Azure OpenAI Service / Azure AI Foundry inference** (`services/svc-azure-ai-foundry`) — azure · $2.0/$8.0 per Mtok
@@ -2757,6 +2757,8 @@ and t
 - **Fireworks AI serverless inference** (`services/svc-fireworks-serverless`) — fireworks · $0.15/$0.6 per Mtok
 - **Google Cloud Vertex AI generative inference** (`services/svc-gcp-vertex`) — gcp-vertex · $0.72/$0.72 per Mtok · 98.0 tok/s · TTFT 4440.0 ms
 - **GroqCloud serverless inference** (`services/svc-groqcloud`) — groq · $0.15/$0.6 per Mtok · 233.0 tok/s · TTFT 400.0 ms
+- **Hyperbolic AI token inference API** (`services/svc-hyperbolic`) — other · $0.12/$0.3 per Mtok
+- **Lambda Inference API (hosted chat completions)** (`services/svc-lambda-chat`) — other
 - **Nebius Token Factory managed inference** (`services/svc-nebius-token-factory`) — other
 - **Novita AI serverless endpoints** (`services/svc-novita`) — other · $0.135/$0.4 per Mtok · 41.0 tok/s · TTFT 580.0 ms
 - **OpenRouter hosted API router** (`services/svc-openrouter`) — openrouter · $0.59/$0.79 per Mtok · 233.0 tok/s · TTFT 400.0 ms
@@ -3208,7 +3210,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (2246)
+## Sources (2248)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -3536,6 +3538,7 @@ and t
 - **Hugging Face Inference Endpoints as orchestrator - Per-minute billing, managed model hosting** (`sources/ppl-orch-huggingface-billing-model`) — database · Hugging Face
 - **Hugging Face Inference Endpoints vs raw cloud GPU pricing - same hardware, different rates** (`sources/ppl-cloud-huggingface-vs-cloud-price`) — database · Hugging Face
 - **Hugging Face config.json files for the long-context model families (fetched 2026-10-04)** (`sources/ctx-src-hf-configs-longctx-models`) — database · Hugging Face / model vendors
+- **Hyperbolic AI token-API pricing via LiteLLM provider table (per-1M-token list prices)** (`sources/svc-src-hyperbolic-litellm-pricing-2026-10-15`) — database · LiteLLM (BerriAI)
 - **ICLR 2021 accepted-paper index (iclr.cc virtual)** (`sources/sco-iclr-accepted-index-2021`) — database · ICLR
 - **ICLR 2024 accepted-paper index (iclr.cc virtual)** (`sources/sco-iclr-accepted-index-2024`) — database · ICLR
 - **ICLR 2025 accepted-paper index (iclr.cc virtual)** (`sources/sco-iclr-accepted-index-2025`) — database · ICLR
@@ -4347,6 +4350,7 @@ and t
 - **Hunyuan-A13B model card and technical report link (huggingface.co/tencent)** (`sources/model-cn-hunyuan-a13b-card`) — release-notes · Tencent
 - **KServe v0.21.0 release notes** (`sources/serve-kserve-release-notes`) — release-notes · KServe
 - **Kimi K3 model card and nested text config (huggingface.co/moonshotai)** (`sources/model-cn-kimi-k3-card`) — release-notes · Moonshot AI
+- **Lambda Inference API wind-down notice (lambda.ai/inference)** (`sources/svc-src-lambda-inference-winddown-2026-10-15`) — release-notes · Lambda
 - **Ling-3.0-flash model card and config (huggingface.co/inclusionAI)** (`sources/model-cn-ling-3-card`) — release-notes · Ant Group / inclusionAI
 - **MindIE - Ascend inference engine product page** (`sources/cn-huawei-mindie`) — release-notes · Huawei HiSilicon / Ascend Community
 - **MiniMax-M2 and M2.7 model cards and configs (huggingface.co/MiniMaxAI)** (`sources/model-cn-minimax-m2-card`) — release-notes · MiniMax
@@ -5793,7 +5797,7 @@ and t
 
 ## Coverage
 
-Total records: **5730**
+Total records: **5734**
 
 | group | records |
 |---|---|
