@@ -1677,7 +1677,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **vllm on intel-arc-pro-b70: Qwen3.5-27B fp8-e4m3 tg128 tok/s (bentech, dual B70+B60 vLLM FP8 pipeline-parallel)** (`benchmarks/bentech-b70-qwen35-27b-fp8-dual-tg`) — 13.3 tok/s (tg128, batch-1 per-request) · Qwen3.5-27B on intel-arc-pro-b70, intel-arc-pro-b60 via vllm
 - **vllm-ascend v0.17.0 on Huawei Atlas 300I Pro (Ascend 310P3, 24GB LPDDR4X): Qwen3-4B FP16, ~9 tok/s decode** (`benchmarks/vllm-ascend-atlas300ipro-qwen3-4b-fp16-decode`) — 9.0 ~tok/s decode (reporter's rounded figure) · Qwen/Qwen3-4B (FP16, ~8GB weights) on huawei-atlas-300i-pro via niche-vllm-ascend
 
-## Gotchas (438)
+## Gotchas (439)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
@@ -1833,6 +1833,7 @@ TRAP
 - **CUDA enumerates at most one Compute Instance per GPU Instance, at most 64 MIG devices total, and needs ulimit -n raised - so a MIG layout reports fewer usable devices than the profile table implies** (`gotchas/mgpu-mig-driver-enumeration-limits-cut-ci-count`) — [major] config · A MIG layout created to expose many instances does not present that many usable CUDA devices. Driver >= R570 enumerates a single Compute Instance per GPU Instance, and CUDA 'supports at most 64 MIG in
 - **CUTLASS grouped FP8 MoE has its own CUDA floor (12.3 on Hopper, 12.8 on Blackwell) that is higher than per-tensor FP8 (12.0 / 12.4) on the same GPU, and no vendor table expresses it** (`gotchas/cutlass-fp8-moe-needs-a-higher-cuda-than-dense-fp8-on-the-same-hopper`) — [major] toolchain · An FP8 MoE deployment fails its native-GEMM path on a Hopper GPU that passes every FP8 row in the vendor support matrix, while a dense FP8 model on the same GPU and the same CUDA build runs natively. 
 - **CXL 3.x and 4.0 records carry nearly 2x the PCIe figure for the same physical layer, because the pass that 'corrected' CXL for direction applied the fix to the wrong state** (`gotchas/w8r-cxl-family-broke-the-pcie-direction-convention-it-copied-from`) — [major] hardware · Two records that describe the SAME physical layer hold different numbers, and each record's own prose says so. cxl-3-x.bandwidth_gbps is 236.0 while its own bandwidth_basis asserts verbatim: "The reco
+- **CXL memory expanders are not a consumer path to more inference RAM - host root-port support is server-only** (`gotchas/gotcha-cxl-memory-expanders-not-viable-for-consumers`) — [major] hardware · A tempting path for '70B fits but decode is slow' builds is to bolt on CXL memory. It cannot be done: all shipping CXL expanders (Marvell Structera X 2404/2504/3406/3506, Astera Leo 2 / Leo X, Samsung
 - **Canarying an inference service is harder than canarying a web service because a request's cost is not knowable in advance and the comparison is non-deterministic, so there is no clean 'new version is worse' signal** (`gotchas/ops-canary-on-inference-is-harder-than-web`) — [major] operations · A canary at 5% traffic produces no usable verdict. Error-rate comparison is meaningless because both versions return 200; latency comparison is confounded because a different replica mix behind the ca
 - **Cheapest-per-GB VRAM is not value: two join artifacts produced a 60x and an 80x false ranking, and the real answer is that only five accelerators in this corpus can be ranked at all** (`gotchas/value-cheapest-usable-vram-and-what-it-actually-runs`) — [major] measurement · Asked for the cheapest configuration that can genuinely serve VRAM, the corpus produced a table where a $310 supply record paired with a 96GB RTX PRO 6000 Blackwell and came out as the best value in t
 - **Colocation PUE is ~1.9, not the 1.2 often quoted: the 1.2 figure is hyperscale-only, and most third-party inference runs in colocation where the LBNL 2014 baseline shows midtier at 1.9 with cooling alone contributing 0.63** (`gotchas/pue-colocation-1-9-not-1-2`) — [major] measurement · A carbon or energy calculation for an inference deployment uses PUE = 1.2, producing an emissions estimate that is 35-40% too low for a colocation facility. The 1.2 figure is real — it is the LBNL 201
@@ -5361,11 +5362,11 @@ and t
 
 ## Coverage
 
-Total records: **5298**
+Total records: **5299**
 
 | group | records |
 |---|---|
-| severity:major | 267 |
+| severity:major | 268 |
 | severity:blocker | 86 |
 | severity:minor | 82 |
 | backend:cuda | 78 |
