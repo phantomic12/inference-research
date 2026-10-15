@@ -24,11 +24,11 @@ An accelerator record gets a row when **all** of these hold:
 
 The `<= $3,000` arm exists so that a cheap-but-slow card (the used-Tesla slice)
 is not filtered out by the bandwidth floor before its price can speak. That rule
-yields **98 qualifying accelerators**, of which **41 have a usable purchase
-price** and 57 are bandwidth-qualified but have no bare-card/system price in
+yields **101 qualifying accelerators**, of which **41 have a usable purchase
+price** and 60 are bandwidth-qualified but have no bare-card/system price in
 `data/supply/`.
 
-**One exception to the `vram_gb` gate.** A `unified_memory` part (an APU/SoC
+**Exceptions to the `vram_gb` gate.** A `unified_memory` part (an APU/SoC
 whose GPU shares the CPU's LPDDR5x pool) leaves `vram_gb` null *on purpose* —
 there is no dedicated VRAM to report. The `>= 8` gate would silently drop it.
 For those, `tools/fit_matrix_35b.py` substitutes the **configured memory of the
@@ -36,6 +36,15 @@ cheapest linked supply record** (a whole system, so its RAM is the usable pool).
 Only [[accelerators/amd-radeon-8060s-ryzen-ai-max]] (Strix Halo, 128 GB
 configured) needs this override in the current corpus; the Apple Ultra parts
 already carry an explicit `vram_gb`.
+
+A *second* class of `vram_gb`-null record exists but is **not** overridden into
+the matrix: the **host-CPU inference** parts. [[accelerators/amd-epyc-9554-genoa]]
+and [[accelerators/amd-epyc-9454p-genoa]] are EPYC sockets whose "VRAM" is
+*whatever DDR5 the builder populates* — there is no single capacity number to
+substitute, and no bare-card price (the priced entity is a whole server build).
+They are documented in §4 as a capacity-dependent callout, not a table row:
+the roofline ceiling (460.8 GB/s → 23 tok/s on the 20 GB column) applies, but
+the fit flag is `?` because it is set by the DIMMs installed, not the chip.
 
 ## 2. The three fit columns and the one ceiling
 
@@ -164,16 +173,22 @@ See §1 and §6.
   deployable without a baseboard or a ROCm workaround. The
   [[accelerators/amd-radeon-rx-7900-xtx]] still undercuts both on $/tok-s
   ($875 used, rank 9) but needs the ROCm path.
-- **New in this pass — the used-Tesla and Tenstorrent slices filled in.** The
-  pass-2 ingest added bare-card used prices that were missing before:
-  [[accelerators/nvidia-tesla-p100]] (16 GB, **$115** — cheapest sticker in the
-  whole table), [[accelerators/tenstorrent-wormhole-n300]] (24 GB, $1,449, a
-  *new* retail card that fits 35B), [[accelerators/cambricon-mlu270]] (16 GB,
-  $317), and [[accelerators/tenstorrent-grayskull-e150]] (8 GB, $400). It also
-  re-priced existing rows: Gaudi2 down to **$2,000** (was $2,100), MI250/X to
-  **$4,950** (was $5,450), A100-40GB-PCIe to **$7,000** (was $7,500), RTX PRO
-  6000 to **$8,650** (was $16,624 — nearly halved), 3090 Ti to **$950** (was
-  $1,240). The second Strix Halo record
+- **New in this pass — the used-Tesla and Tenstorrent slices filled in, and a
+  capacity-dependent CPU class appeared.** The pass-2 ingest added bare-card
+  used prices that were missing before: [[accelerators/nvidia-tesla-p100]] (16
+  GB, **$115** — cheapest sticker in the whole table),
+  [[accelerators/tenstorrent-wormhole-n300]] (24 GB, $1,449, a *new* retail card
+  that fits 35B), [[accelerators/cambricon-mlu270]] (16 GB, $317), and
+  [[accelerators/tenstorrent-grayskull-e150]] (8 GB, $400). It also re-priced
+  existing rows: Gaudi2 down to **$2,000** (was $2,100), MI250/X to **$4,950**
+  (was $5,450), A100-40GB-PCIe to **$7,000** (was $7,500), RTX PRO 6000 to
+  **$8,650** (was $16,624 — nearly halved), 3090 Ti to **$950** (was $1,240).
+  The Oct-15 pass added one qualifying row — [[accelerators/apple-m2-max]] (96
+  GB, 400 GB/s, unpriced — a whole MacBook, §4) — and, more importantly, the
+  first **host-CPU inference** records: the EPYC sockets in §4's
+  capacity-dependent callout, where a *measured* 63.1 tok/s on a ~3B-active MoE
+  ([[benchmarks/comm-epyc-9454p-qwen3-moe-30b-decode]]) makes the roofline's
+  "understates MoE" caveat concrete. The second Strix Halo record
   ([[accelerators/amd-ryzen-ai-max-395-framework-desktop]]) is the same silicon
   as the 8060s row, priced at the Beelink whole-system $2,099.
 - **This refresh — capacity-matched Apple joins.** Two new rows enter at the
@@ -207,14 +222,15 @@ These records satisfy the bandwidth/fit rule but have **no bare-card or
 system purchase price** in `data/supply/` (they may have a *rental* price in
 the cloud records — that is a different join, see `tools/cost_per_token.py`).
 Listed because a future supply pass can close them; sorted by 35B ceiling.
-The pass-2 ingest pushed several former priced-adjacent rows up here — the
-whole Blackwell/TPU-v6/MI350X generation now qualifies on bandwidth but has no
-bare-card asking price. Later backfills added the rest of the unpriced tail
-(Trainium, Ascend 910B/C, the M5-generation Apple parts, A30/A10/L4):
+The Oct-15 ingest pushed the rest of the accelerator corpus up here — the
+whole Blackwell/TPU-v6/v7/MI350X/GH200/Trainium/CloudMatrix/Ascend generation
+now qualifies on bandwidth but has no bare-card asking price. The giant first
+row is the 384-chip CloudMatrix supernode: it fits trivially and its ceiling
+is a rack-scale figure, not a buyable part.
 
 | accelerator | VRAM | BW GB/s | Fits | 35B ceil *(derived)* | note |
 |---|---|---|---|---|---|
-| [[accelerators/huawei-ascend-910c-cloudmatrix-384]] | 49152 | 1228800 | Y/Y/Y | 61440.0 | 384-GPU supernode, not a card |
+| [[accelerators/huawei-ascend-910c-cloudmatrix-384]] | 49152 | 1228800 | Y/Y/Y | 61440.0 | 384-chip supernode; rack-scale, not a bare card |
 | [[accelerators/amd-instinct-mi350x]] | 288 | 8000 | Y/Y/Y | 400.0 | no price record |
 | [[accelerators/amd-instinct-mi355x]] | 288 | 8000 | Y/Y/Y | 400.0 | no price record |
 | [[accelerators/nvidia-gb200-nvl72]] | 186 | 8000 | Y/Y/Y | 400.0 | rack unit, not a bare card |
@@ -223,46 +239,92 @@ bare-card asking price. Later backfills added the rest of the unpriced tail
 | [[accelerators/nvidia-b300]] | 270 | 7700 | Y/Y/Y | 385.0 | no price record |
 | [[accelerators/google-tpu-ironwood]] | 192 | 7380 | Y/Y/Y | 369.0 | cloud only |
 | [[accelerators/amd-instinct-mi325x]] | 256 | 6000 | Y/Y/Y | 300.0 | no price record |
-| [[accelerators/amd-instinct-mi300a]] | 128 | 5300 | Y/Y/Y | 265.0 | APU part, no bare price |
+| [[accelerators/amd-instinct-mi300a]] | 128 | 5300 | Y/Y/Y | 265.0 | no price record |
 | [[accelerators/amd-instinct-mi300x]] | 192 | 5300 | Y/Y/Y | 265.0 | cloud-priced only ([[supply/w5s-oracle-oci-amd-mi300x-mi355x-gpu-hour]]) |
 | [[accelerators/aws-trainium3]] | 144 | 4900 | Y/Y/Y | 245.0 | cloud only |
 | [[accelerators/nvidia-h200-nvl]] | 141 | 4800 | Y/Y/Y | 240.0 | cloud/rental only |
 | [[accelerators/nvidia-h200-sxm]] | 141 | 4800 | Y/Y/Y | 240.0 | cloud/rental only |
 | [[accelerators/rebellions-rebel100]] | 144 | 4800 | Y/Y/Y | 240.0 | no price record |
 | [[accelerators/amd-instinct-mi350p]] | 144 | 4000 | Y/Y/Y | 200.0 | no price record |
+| [[accelerators/nvidia-gh200]] | 96 | 4000 | Y/Y/Y | 200.0 | Grace Hopper superchip; system, not a bare card |
 | [[accelerators/nvidia-h20]] | 96 | 4000 | Y/Y/Y | 200.0 | export part; the 37-ridge decode specialist of [[09-model-memory-envelope]] |
-| [[accelerators/nvidia-h100-nvl]] | 94 | 3938 | Y/Y/Y | 196.9 | no bare price |
+| [[accelerators/nvidia-h100-nvl]] | 94 | 3938 | Y/Y/Y | 196.9 | no price record |
 | [[accelerators/intel-gaudi3]] | 128 | 3700 | Y/Y/Y | 185.0 | no price record |
 | [[accelerators/xpu-intel-dc-gpu-max-1550]] | 128 | 3276 | Y/Y/Y | 163.8 | no price |
 | [[accelerators/huawei-ascend-910c]] | 128 | 3200 | Y/Y/Y | 160.0 | no price record |
 | [[accelerators/aws-trainium2]] | 96 | 2875 | Y/Y/Y | 143.8 | cloud only |
 | [[accelerators/google-tpu-v5p]] | 95 | 2765 | Y/Y/Y | 138.2 | cloud only |
 | [[accelerators/cambricon-mlu590]] | 192 | 2400 | Y/Y/Y | 120.0 | no price record |
-| [[accelerators/local-apple-m5-ultra]] | 512 | 1200 | Y/Y/Y | 60.0 | 2026 part, no used-market price yet |
+| [[accelerators/google-tpu-v6e]] | 32 | 1638 | Y/Y/- | 81.9 | cloud only |
+| [[accelerators/biren-br100]] | 64 | 1600 | Y/Y/Y | 80.0 | no price record |
+| [[accelerators/huawei-ascend-910b]] | 64 | 1400 | Y/Y/Y | 70.0 | no price record |
+| [[accelerators/google-tpu-v4]] | 32 | 1200 | Y/Y/- | 60.0 | cloud only |
+| [[accelerators/local-apple-m5-ultra]] | 512 | 1200 | Y/Y/Y | 60.0 | unreleased/rumoured part; no price |
 | [[accelerators/amd-radeon-instinct-mi50x]] | 32 | 1024 | Y/Y/- | 51.2 | no price record |
 | [[accelerators/amd-radeon-instinct-mi60]] | 32 | 1024 | Y/Y/- | 51.2 | no price record |
 | [[accelerators/nvidia-rtx-6000-ada]] | 48 | 960 | **Y/Y/Y** | 48.0 | cloud/rental only; cheapest 48 GB *fit* by VRAM but thin BW |
-| [[accelerators/nvidia-a30]] | 24 | 933 | Y/Y/- | 46.6 | no bare price |
+| [[accelerators/nvidia-a30]] | 24 | 933 | Y/Y/- | 46.6 | no price record |
+| [[accelerators/google-tpu-v3]] | 32 | 900 | Y/Y/- | 45.0 | cloud only |
 | [[accelerators/nvidia-rtx-pro-4500-blackwell]] | 32 | 896 | Y/Y/- | 44.8 | no price record |
-| [[accelerators/amd-radeon-pro-w7900]] | 48 | 864 | **Y/Y/Y** | 43.2 | no price record |
 | [[accelerators/nvidia-l40s]] | 48 | 864 | **Y/Y/Y** | 43.2 | cloud/rental only; second-highest ridge in the repo per docs/09 |
-| [[accelerators/cambricon-mlu370-x8]] | 48 | 614 | Y/Y/Y | 30.7 | dual-die AIDC, no bare price |
-| [[accelerators/local-apple-m5-max]] | 128 | 614 | Y/Y/Y | 30.7 | 2026 part, no used-market price yet |
-| [[accelerators/qualcomm-ai200]] | 128 | 548 | Y/Y/Y | 27.4 | Cloud AI 100 Ultra, no bare price |
-| [[accelerators/huawei-atlas-300i-duo]] | 96 | 408 | Y/Y/Y | 20.4 | inference card, no bare price |
-| [[accelerators/local-apple-m5-pro]] | 64 | 307 | Y/Y/Y | 15.3 | 2026 part, no used-market price yet |
-| [[accelerators/nvidia-l4]] | 24 | 300 | Y/Y/- | 15.0 | exactly at the 300 GB/s floor |
+| [[accelerators/amd-radeon-pro-w7900]] | 48 | 864 | **Y/Y/Y** | 43.2 | no price record |
+| [[accelerators/aws-inferentia2]] | 32 | 820 | Y/Y/- | 41.0 | cloud only |
+| [[accelerators/apple-m4-ultra]] | 192 | 819 | Y/Y/Y | 41.0 | whole Mac Studio; no bare-silicon price |
+| [[accelerators/aws-trainium1]] | 32 | 800 | Y/Y/- | 40.0 | cloud only |
+| [[accelerators/moore-threads-s4000]] | 48 | 768 | Y/Y/Y | 38.4 | no price record |
+| [[accelerators/amd-radeon-ai-pro-r9700]] | 32 | 640 | Y/Y/- | 32.0 | no price record |
+| [[accelerators/cambricon-mlu370-x8]] | 48 | 614.4 | Y/Y/Y | 30.7 | no price record |
+| [[accelerators/local-apple-m5-max]] | 128 | 614 | Y/Y/Y | 30.7 | unreleased/rumoured part; no price |
+| [[accelerators/nvidia-a10]] | 24 | 600 | Y/Y/- | 30.0 | no price record |
+| [[accelerators/qualcomm-ai200]] | 128 | 548 | Y/Y/Y | 27.4 | no price record |
+| [[accelerators/huawei-ascend-950dt]] | 96 | 500 | Y/Y/Y | 25.0 | no price record |
+| [[accelerators/huawei-atlas-300i-duo]] | 96 | 408 | Y/Y/Y | 20.4 | no price record |
+| [[accelerators/apple-m2-max]] | 96 | 400 | Y/Y/Y | 20.0 | whole MacBook; no bare-silicon price |
+| [[accelerators/local-apple-m5-pro]] | 64 | 307 | Y/Y/Y | 15.3 | unreleased/rumoured part; no price |
+| [[accelerators/nvidia-l4]] | 24 | 300 | Y/Y/- | 15.0 | no price record |
 
-Also qualified-but-unpriced, below the table's cutoff or cloud-only:
-[[accelerators/google-tpu-v6e]] (81.9), [[accelerators/biren-br100]] (80.0),
-[[accelerators/huawei-ascend-910b]] (70.0), [[accelerators/google-tpu-v4]] /
-[[accelerators/google-tpu-v3]] (60.0 / 45.0), [[accelerators/aws-inferentia2]]
-(41.0), [[accelerators/aws-trainium1]] (40.0),
-[[accelerators/moore-threads-s4000]] (38.4),
-[[accelerators/amd-radeon-ai-pro-r9700]] (32.0), [[accelerators/nvidia-a10]]
-(30.0), [[accelerators/huawei-ascend-950dt]] (25.0) — numbers are the derived
-35B ceilings. The full machine list (all 98 qualifying accelerators, the 57
-unpriced included) is reproducible with `python tools/fit_matrix_35b.py`.
+### The host-CPU class — `vram_gb`-null, capacity-dependent (not in the matrix count)
+
+The two EPYC records are excluded from the 101-row count because `vram_gb` is
+null and the `>= 8` gate drops them (see §1). They are listed here as a
+**capacity-dependent** class — the "VRAM" is whatever DDR5 you populate:
+
+| accelerator | capacity | BW GB/s | 35B ceil *(derived)* | note |
+|---|---|---|---|---|
+| [[accelerators/amd-epyc-9554-genoa]] | DIMM-dependent | 460.8 | 23.0 | 64-core Genoa, 12-channel DDR5 |
+| [[accelerators/amd-epyc-9454p-genoa]] | DIMM-dependent | 460.8 | 23.0 | 48-core Genoa, 12-channel DDR5 |
+
+Neither has a bare-card price (the priced entity is a whole server build — see
+[[supply/used-epyc-9004-genoa-build-384gb]], $7,500 with 384 GB populated), so
+no `$/tok-s` is computed and they do not rank. They are listed because the
+corpus's own measured run on the 9454P
+([[benchmarks/comm-epyc-9454p-qwen3-moe-30b-decode]]) recorded **63.1 tok/s** on
+a ~3B-active MoE — the strongest *measured* single-socket MoE decode in this
+price class, and ~2.7× the dense-equivalent roofline the table uses. This is
+the §2 "ceiling understates MoE" effect at its most extreme: a ~460 GB/s host
+CPU is where the dense roofline is most pessimistic, and the MoE target class
+is exactly what a 12-channel DDR5 socket is good at.
+
+### Qualified on bandwidth but cannot hold 35B-A3B (all unpriced)
+
+These records clear the `>= 300 GB/s` bandwidth floor but not the 24 GB
+resident-weights fit; listed for completeness so the price pass does not
+mistake a fast small card for an answer. `-/-/-` means it holds none of the
+three targets:
+
+| accelerator | VRAM | BW GB/s | Fits | 35B ceil *(derived)* |
+|---|---|---|---|---|
+| [[accelerators/amd-radeon-pro-vii]] | 16 | 1024 | -/-/- | 51.2 |
+| [[accelerators/nvidia-rtx-5080]] | 16 | 960 | -/-/- | 48.0 |
+| [[accelerators/nvidia-rtx-5070-ti]] | 16 | 896 | -/-/- | 44.8 |
+| [[accelerators/google-tpu-v5e]] | 16 | 819 | -/-/- | 41.0 |
+| [[accelerators/nvidia-rtx-4080]] | 16 | 716.8 | -/-/- | 35.8 |
+| [[accelerators/google-tpu-v2]] | 16 | 700 | -/-/- | 35.0 |
+| [[accelerators/local-nvidia-rtx-5070]] | 12 | 672 | -/-/- | 33.6 |
+| [[accelerators/xpu-intel-dc-gpu-flex-170]] | 16 | 576 | -/-/- | 28.8 |
+
+The full machine list (all 101 qualifying accelerators, the 60 unpriced
+included) is reproducible with `python tools/fit_matrix_35b.py`.
 
 ## 5. Why the cheap rows are cheap — read before buying
 
@@ -382,7 +444,7 @@ show*. These are the corpus's own gotcha records, not new claims:
 
 ## 7. Reproduce
 
-    python tools/fit_matrix_35b.py            # the full 98-row matrix, all three sections
+    python tools/fit_matrix_35b.py            # the full 101-row matrix, all three sections
     python tools/validate.py                  # record integrity (no new records added here)
 
 Every figure above is generated by that tool against the committed `data/`
