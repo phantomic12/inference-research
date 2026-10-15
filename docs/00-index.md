@@ -650,7 +650,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **AMD Infinity Fabric scale-up link (CDNA4: 153.6 GB/s per direction, 20% faster)** (`interconnect/amd-infinity-fabric-link-cdna4`) — 153.6 GB/s · Fully connected 8-GPU mesh (each GPU connects to 7 others). No switch. 7 links per GPU for GPU-to-GPU communication. Identical topology to CDNA3. The MI355X product page lists 'Infinity Fabric Links: 7' and 'Peak Infinity Fabric Link Bandwidth: 153 GB/s' (rounded). Scale-out link: 128 GB/s (unchanged from CDNA3).
 - **AMD xGMI (Socket/Inter-Chip Global Memory Interconnect)** (`interconnect/amd-xgmi`) — 50 GB/s · Point-to-point, no switch part. TWO distinct roles, and this is the part that is routinely misread: (1) DIE-TO-DIE, inside one package - on MI250X the two GCDs of one OAM module are joined by FOUR xGMI/Infinity Fabric links, which AMD gives as 4 x 25 GT/sec = 200 GB/sec peak transfer between the two GCDs, or 400 GB/sec bidirectional for the same; (2) DIE-TO-DEVICE, between accelerators - on MI210 (PCIe cards) xGMI is exposed through direct-connect xGMI BRIDGE CARDS in adjacent PCIe slots, giving dual and quad GPU hives, whereas the MI250X/MI250 OAM modules carry 8 links natively. On a multi-OAM MI300X node AMD's own architecture reference states the accelerator-side count is SEVEN Infinity Fabric links, used 'to form a fully connected 8-GPU system' - but the MI300X product page board table says 'Infinity Fabric Links: 8'. That is a real disagreement between two first-party AMD sources, not a typo: seven links is the minimum needed to make 8 nodes fully connected (each node needs a link to each of the other 7), so the board-table 8 is most likely counting an extra link of a different role (host or scale-out) rather than a mesh edge. Both figures are retained here; the typed link_count field carries the die-to-die value of 4 for MI250X, which is where this record's per-link rate is sourced. On CDNA3/MI300 the die-to-die topology is also a full mesh over up to 8 vertically stacked XCDs plus 4 I/O dies, so an MI300X is internally a single 8-way domain, not two halves.
 
-## Benchmarks (1441)
+## Benchmarks (1463)
 
 - **16GB VRAM: Llama 3.1 8B Q8_0 decode tokens/sec** (`benchmarks/local-16gb-13b-q4-decode`) — 40.0 tok/s - UNSOURCED, DO NOT CITE. Decommissioned 2026-10-04 (bq-): no cited source contains a decode-throughput measurement for this part and no run was performed. The number is retained only for history; the schema forbids nulling value/measured_by. · Llama 3.1 8B on ? via llama-cpp
 - **24GB VRAM: Llama 3.1 8B Q8_0 decode tokens/sec** (`benchmarks/local-24gb-13b-q8-decode`) — 50.0 tok/s - UNSOURCED, DO NOT CITE. Decommissioned 2026-10-04 (bq-): no cited source contains a decode-throughput measurement for this part and no run was performed. The number is retained only for history; the schema forbids nulling value/measured_by. · Llama 3.1 8B on ? via llama-cpp
@@ -684,6 +684,11 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **AWQ INT4-g128 WikiText-2 perplexity delta vs fp16, Llama-2 7B** (`benchmarks/awq-int4g128-wikitext2-ppl-delta-llama2-7b`) — 0.13 perplexity_delta (WikiText-2 ppl points, quantized minus FP16) · Llama-2 7B on ? via tinychat-awq
 - **AWQ INT4-g128 WikiText-2 perplexity delta vs fp16, Mistral-7B** (`benchmarks/awq-int4g128-wikitext2-ppl-delta-mistral-7b`) — 0.16 perplexity_delta (WikiText-2 ppl points, quantized minus FP16) · Mistral-7B-Instruct-v0.2 on ? via tinychat-awq
 - **AWS Inf2.48xlarge: 2280 FP16 TFLOPS (12-chip instance)** (`benchmarks/alt-aws-inf2-fp16-tps`) — 2280 TFLOPS FP16 · N/A (peak compute specification) on aws-inferentia2 via alt-neuron-compiler
+- **AWS Neuron Inf1: BERT-base-uncased fp32, inf1.xlarge, batch 3, latency-optimized** (`benchmarks/aws-inf1-bert-base-lat-opt-tput`) — 285.0 inferences/s (latency-optimized, seq len 128) · bert-base-uncased on aws-inferentia1 via alt-neuron-compiler
+- **AWS Neuron Inf1: BERT-base-uncased fp32, inf1.xlarge, batch 6, throughput-optimized** (`benchmarks/aws-inf1-bert-base-batch128-tput`) — 1181.0 inferences/s (batch-throughput-optimized, seq len 128) · bert-base-uncased on aws-inferentia1 via alt-neuron-compiler
+- **AWS Neuron Inf2: bert-large-uncased fp32, inf2.xlarge, batch 4, throughput-optimized** (`benchmarks/aws-inf2-bert-large-batch4-tput`) — 950.05 inferences/s (batch-throughput-optimized, seq len 128) · bert-large-uncased on aws-inferentia2 via alt-neuron-compiler
+- **AWS Neuron Inf2: flan-t5-xl, inf2.24xlarge TP8, batch 1, 128in/84out, throughput-optimized** (`benchmarks/aws-inf2-flan-t5-xl-tp8-b1-128io-tput`) — 117.61 tokens/s (input+output counted, TP8) · google/flan-t5-xl on aws-inferentia2 via alt-neuron-compiler
+- **AWS Neuron Trn1: bert-large-uncased fp32, trn1.2xlarge, batch 4, throughput-optimized** (`benchmarks/aws-trn1-bert-large-batch4-tput`) — 1104.44 inferences/s (batch-throughput-optimized, seq len 128) · bert-large-uncased on aws-trainium1 via alt-neuron-compiler
 - **AWS Neuron docs: ResNet-50 on inf1.xlarge batch, 2207 img/s (p50 18ms)** (`benchmarks/aws-neuron-inf1-resnet50-batch-inf-s`) — 2207.0 images/s (batch 10, fp16) · ResNet-50 on aws-inferentia1 via alt-neuron-compiler
 - **AWS Neuron docs: YOLOv4 on inf1.2xlarge real-time, 180 img/s (p50 40ms)** (`benchmarks/aws-neuron-inf1-yolov4-rt-inf-s`) — 180.0 images/s (batch 1, fp32) · YOLOv4 on aws-inferentia1 via alt-neuron-compiler
 - **AWS Neuron docs: bert-base-cased on inf1.xlarge batch, 1095 inf/s (p50 58ms)** (`benchmarks/aws-neuron-inf1-bert-base-batch-inf-s`) — 1095.0 inferences/s (encoder, batch 8, seq_len 128, fp32) · bert-base-cased on aws-inferentia1 via alt-neuron-compiler
@@ -1010,6 +1015,8 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **Google TPU v6e: 918 BF16 TFLOPS per chip** (`benchmarks/alt-tpu-v6e-bf16-tps`) — 918 TFLOPS BF16 · N/A (peak compute specification) on google-tpu-v6e via alt-tpu-perf-guide
 - **Google global fleet average annual PUE 1.09 in 2024, first sub-1.10 reading in six years, against a stated industry average of 1.56** (`benchmarks/pue-google-fleet-average-2024-1-09`) — 1.09 dimensionless PUE ratio (total facility energy / IT equipment energy). Not an accuracy score and not a speedup: 1.0 means the facility overhead is nil. · None on ? via ollama
 - **Groq LPU: no published inference throughput figure (honest negative)** (`benchmarks/alt-groq-no-throughput-figure`) — 0 tokens per second (not published) · N/A (no throughput figure published) on groq-lpu via alt-groq-lpu-arch
+- **GuideLLM (Red Hat): A100-PCIE-40GB, Ollama 0.9.2 (NUM_PARALLEL=32), Llama-3.1-8B fp16, peak aggregate output tok/s** (`benchmarks/guidellm-a100-pcie-40gb-llama31-8b-fp16-ollama-peak-tps`) — 41.0 output tok/s (aggregate at saturation, concurrency up to 256) · meta-llama/Llama-3.1-8B-Instruct on nvidia-a100-40gb-pcie via ollama
+- **GuideLLM (Red Hat): A100-PCIE-40GB, vLLM 0.9.1, Llama-3.1-8B fp16, peak aggregate output tok/s** (`benchmarks/guidellm-a100-pcie-40gb-llama31-8b-fp16-vllm-peak-tps`) — 793.0 output tok/s (aggregate at saturation, concurrency up to 256) · meta-llama/Llama-3.1-8B-Instruct on nvidia-a100-40gb-pcie via vllm
 - **H100 reference column for MI300X vs H100, vLLM/TRT-LLM, Llama 3.1 405B FP8 TP8: output token throughput at 128-in/4096-out** (`benchmarks/mi300x-vs-h100-vllm-llama31-405b-fp8-tp8-h100`) — 1957 output tok/s (aggregate over all in-flight requests) · Llama 3.1 405B on nvidia-h100-sxm via vllm
 - **H100 reference column for MI300X vs H100, vLLM/TRT-LLM, Llama 3.1 70B FP8 TP8 batch 1: end-to-end time-to-last-token** (`benchmarks/mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-ttlt-batch1-h100`) — 20923 ms (time to last token, end-to-end, batch 1, per request) · Llama 3.1 70B on nvidia-h100-sxm via vllm
 - **H100 reference column for MI300X vs H100, vLLM/TRT-LLM, Llama 3.1 70B FP8 TP8: output token throughput at 128-in/2048-out** (`benchmarks/mi300x-vs-h100-vllm-llama31-70b-fp8-tp8-h100`) — 15810 output tok/s (aggregate over all in-flight requests) · Llama 3.1 70B on nvidia-h100-sxm via vllm
@@ -1141,6 +1148,19 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **LBNL 2014 US PUE by space type - localized: 2.0 (component sum: 1 | 0.05 | 0.2 | 0.73 | 0.02 -> IT 1, transformer 0.05, UPS 0.20, cooling 0.73, lighting 0.02)** (`benchmarks/pue-lbnl-2016-us-localized-2014-2-0`) — 2.0 dimensionless PUE ratio (total facility energy / IT equipment energy), 2014 baseline. Not an accuracy score and not a speedup: 1.0 means the facility overhead is nil. · None on ? via ollama
 - **LBNL 2014 US PUE by space type - midtier: 1.9 (component sum: 1 | 0.05 | 0.2 | 0.63 | 0.02 -> IT 1, transformer 0.05, UPS 0.20, cooling 0.63, lighting 0.02)** (`benchmarks/pue-lbnl-2016-us-midtier-2014-1-9`) — 1.9 dimensionless PUE ratio (total facility energy / IT equipment energy), 2014 baseline. Not an accuracy score and not a speedup: 1.0 means the facility overhead is nil. · None on ? via ollama
 - **LBNL 2014 US PUE by space type - room: 2.5 (component sum: 1 | 0.05 | 0.2 | 1.23 | 0.02 -> IT 1, transformer 0.05, UPS 0.20, cooling 1.23, lighting 0.02)** (`benchmarks/pue-lbnl-2016-us-room-2014-2-5`) — 2.5 dimensionless PUE ratio (total facility energy / IT equipment energy), 2014 baseline. Not an accuracy score and not a speedup: 1.0 means the facility overhead is nil. · None on ? via ollama
+- **LLMCheck: Apple M3 Ultra (512GB), LM Studio, GLM 5.2 753B-A40B IQ1_S decode** (`benchmarks/llmcheck-m3-ultra-glm5-753b-iq1s-lmstudio-decode`) — 22.0 tok/s (decode, per-request) · GLM 5.2 753B-A40B on apple-m3-ultra via llama-cpp
+- **LLMCheck: Apple M3 Ultra (512GB), MLX, GLM 5.2 753B-A40B Q4_K_M decode** (`benchmarks/llmcheck-m3-ultra-glm5-753b-q4km-mlx-decode`) — 15.0 tok/s (decode, per-request) · GLM 5.2 753B-A40B on apple-m3-ultra via mlx-lm
+- **LLMCheck: Apple M4 Max, MLX, Qwen3.6-35B-A3B Q4_K_M decode** (`benchmarks/llmcheck-m4-max-qwen36-35b-a3b-mlx-decode`) — 48.0 tok/s (decode, per-request) · Qwen3.6-35B-A3B on apple-m4-max via mlx-lm
+- **LLMCheck: Apple M5 Max (128GB), MLX, Llama 3.3 70B Q4_K_M decode** (`benchmarks/llmcheck-m5-max-llama33-70b-q4km-mlx-decode`) — 12.0 tok/s (decode, per-request) · Llama 3.3 70B on local-apple-m5-max via mlx-lm
+- **LLMCheck: Apple M5 Max (128GB), MLX, Qwen3.5-35B-A3B Q4_K_M decode** (`benchmarks/llmcheck-m5-max-qwen35-35b-a3b-mlx-decode`) — 52.0 tok/s (decode, per-request) · Qwen3.5-35B-A3B on local-apple-m5-max via mlx-lm
+- **LLMCheck: Apple M5 Max (128GB), MLX, Qwen3.6-35B-A3B Q4_K_M decode** (`benchmarks/llmcheck-m5-max-qwen36-35b-a3b-mlx-decode`) — 55.0 tok/s (decode, per-request) · Qwen3.6-35B-A3B on local-apple-m5-max via mlx-lm
+- **LLMCheck: Apple M5 Max (128GB), Ollama, Llama 3.3 70B Q4_K_M decode** (`benchmarks/llmcheck-m5-max-llama33-70b-q4km-ollama-decode`) — 12.0 tok/s (decode, per-request) · Llama 3.3 70B on local-apple-m5-max via ollama
+- **LLMCheck: Apple M5 Max (64GB), Ollama, Qwen3.6-35B-A3B Q4_K_M decode** (`benchmarks/llmcheck-m5-max-qwen36-35b-a3b-ollama-decode`) — 48.0 tok/s (decode, per-request) · Qwen3.6-35B-A3B on local-apple-m5-max via ollama
+- **LLMCheck: Apple M5 Max, MLX, GLM-4.5-Air 106B-A?B Q4_K_M decode** (`benchmarks/llmcheck-m5-max-glm45-air-mlx-decode`) — 34.0 tok/s (decode, per-request) · GLM-4.5-Air on local-apple-m5-max via mlx-lm
+- **LLMCheck: Apple M5 Ultra (256GB), MLX, Qwen3-235B-A22B Q4_K_M decode** (`benchmarks/llmcheck-m5-ultra-qwen3-235b-mlx-decode`) — 37.0 tok/s (decode, per-request) · Qwen3-235B-A22B on local-apple-m5-ultra via mlx-lm
+- **LLMCheck: Apple M5 Ultra (512GB), MLX, Llama 3.1 405B Q4_K_M decode** (`benchmarks/llmcheck-m5-ultra-llama31-405b-q4km-mlx-decode`) — 4.0 tok/s (decode, per-request) · Llama 3.1 405B on local-apple-m5-ultra via mlx-lm
+- **LLMCheck: Apple M5 Ultra (96GB), MLX, Llama 3.3 70B Q4_K_M decode** (`benchmarks/llmcheck-m5-ultra-llama33-70b-q4km-mlx-decode`) — 24.0 tok/s (decode, per-request) · Llama 3.3 70B on local-apple-m5-ultra via mlx-lm
+- **LLMCheck: Apple M5 Ultra (96GB), MLX, Qwen3-Coder-Next 80B Q4_K_M decode** (`benchmarks/llmcheck-m5-ultra-qwen3-coder-next-mlx-decode`) — 72.0 tok/s (decode, per-request) · Qwen3-Coder-Next on local-apple-m5-ultra via mlx-lm
 - **LeaseWeb amd-epyc-9334-genoa-dual DeepSeek-R1-0528-Qwen3-8B FP16 TTFT s** (`benchmarks/lw-epyc9334-dual-deepseek8b-fp16-ttft`) — 8100.0 ms · DeepSeek-R1-0528-Qwen3-8B on amd-epyc-9334-genoa-dual via llama-cpp
 - **LeaseWeb amd-epyc-9334-genoa-dual DeepSeek-R1-0528-Qwen3-8B FP16 decode tok/s FP16** (`benchmarks/lw-epyc9334-dual-deepseek8b-fp16-tg`) — 8.1 tok/s (decode, single-request) · DeepSeek-R1-0528-Qwen3-8B on amd-epyc-9334-genoa-dual via llama-cpp
 - **LeaseWeb amd-epyc-9334-genoa-dual DeepSeek-R1-0528-Qwen3-8B Q4_K_M decode tok/s Q4_K_M** (`benchmarks/lw-epyc9334-dual-deepseek8b-q4-tg`) — 27.8 tok/s (decode, single-request) · DeepSeek-R1-0528-Qwen3-8B on amd-epyc-9334-genoa-dual via llama-cpp
@@ -1654,6 +1674,8 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **Tenstorrent Wormhole n300, tt-metal TP=2: Qwen2.5-7B decode tok/s per-user + aggregate (vendor-measured b32)** (`benchmarks/comm-tt-wormhole-n300-qwen25-7b-tp2-decode`) — 22.1 tok/s per user at batch-32; 707 tok/s aggregate · Qwen2.5-7B on tenstorrent-wormhole-n300 via niche-tt-metal
 - **Tesla P40 Llama-3.1-8B Q4_K_M decode (modelled)** (`benchmarks/comm-p40-llama31-8b-q4-tg-modelled`) — 35.0 tok/s decode (modelled) · Llama-3.1-8B on nvidia-tesla-p40 via llama-cpp
 - **Tesla V100 32GB Llama-3.1-8B Q4_K_M decode (homelab field guide claim)** (`benchmarks/comm-v100-32gb-llama3-8b-q4-decode-field-guide`) — 60.0 tok/s CLAIMED ('60+' on Pop!_OS); vramguide models 106 - treat 60-100 as the envelope · Llama-3.1-8B Q4_K_M on nvidia-v100-sxm2-32gb, nvidia-v100-pcie-32gb via llama-cpp
+- **Trainium3 vs Trainium2 on Amazon Bedrock: output tokens per megawatt ratio** (`benchmarks/aws-trn3-vs-trn2-bedrock-tokens-per-mw-ratio`) — 5.0 x higher output tokens per megawatt at similar latency per user (vendor claim) · unspecified (vendor claim, workload not stated) on aws-trainium3 via alt-neuron-compiler
+- **Trainium3 vs Trainium2 vendor-claimed performance ratio (Trn3 vs Trn2 UltraServer)** (`benchmarks/aws-trn3-vs-trn2-perf-ratio-vendor`) — 4.4 x faster than Trainium2 UltraServer (vendor claim, workload unstated) · unspecified (vendor claim, workload not stated) on aws-trainium3 via alt-neuron-compiler
 - **US average PUE for facilities serving AI equipment: 1.145 in 2024, modelled down to 1.136 in 2030** (`benchmarks/pue-us-facilities-serving-ai-equipment-2024-1-145`) — 1.145 dimensionless PUE ratio (total facility energy / IT equipment energy), 2024. Not an accuracy score and not a speedup: 1.145 means the facility draws 14.5% more than the IT equipment it houses. PUE is a ratio by DEFINITION and carries no faster/slower reading, which is why it belongs to dimensionless_ratio rather than speedup_ratio. · None on ? via ollama
 - **US national average PUE across all data center equipment: 1.45 in 2024, down from 1.55 in 2018; 1.36 projected for 2030 in the Reference Case** (`benchmarks/pue-national-average-us-all-equipment-2024-1-45`) — 1.45 dimensionless PUE ratio (total facility energy / IT equipment energy). Not an accuracy score and not a speedup: 1.0 means the facility overhead is nil. · None on ? via ollama
 - **Used RTX 3090 24GB, llama.cpp CUDA: Qwen3-8B Q4_K decode tok/s @4K ctx (Hardware Corner measured)** (`benchmarks/comm-rtx3090-qwen3-8b-q4-decode`) — 115.3 decode tok/s (TG, single-stream, batch-1, 4K context) · Qwen3-8B Q4_K_M (GGUF) on nvidia-rtx-3090 via llama-cpp
@@ -3219,13 +3241,14 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (2248)
+## Sources (2252)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
 - **AITER-enabled MLA layer inference on MI300X with matrix absorption** (`sources/amd-aiter-mla-mi300x`) — benchmark · AMD ROCm Blogs
 - **AWS Neuron docs — Inf1 Inference Performance tables** (`sources/aws-neuron-inf1-inference-benchmarks`) — benchmark · AWS
 - **AWS Neuron docs — Trn1/Trn1n Inference Performance tables** (`sources/aws-neuron-trn1-inference-benchmarks`) — benchmark · AWS
+- **AWS Neuron documentation: Inf2 Inference Performance tables** (`sources/aws-neuron-inf2-inference-performance`) — benchmark · AWS
 - **Artificial Analysis Llama 3.3 Instruct 70B provider comparison (independent TTFT / tps / price measurements)** (`sources/svc-src-artificialanalysis-llama33-70b-providers-2026-10-14`) — benchmark · Artificial Analysis
 - **Benchmark comparison on MacBook Pro M3 Max 128GB: Splash, Ollama (MLX), and Ollama (llama.cpp) across Qwen3.6-35B and Qwen3.8-27B** (`sources/src-incoai-splash-issue-37`) — benchmark · incoai / community
 - **Best practices for competitive inference optimization on AMD Instinct MI300X GPUs (ROCm Blogs)** (`sources/bench-amd-rocm-llm-inference-best-practices`) — benchmark · AMD
@@ -3243,6 +3266,7 @@ and t
 - **Intel: Accelerating LLM Inference on Intel Data Center GPUs using BigDL-LLM (ID 816988)** (`sources/intel-bigdl-llm-flex170-max-llm-inference`) — benchmark · Intel
 - **Intel: Performance Data for Intel Data Center GPU Flex Series 170 (OpenVINO/TF/PyTorch CV table)** (`sources/intel-flex170-ai-perf-table`) — benchmark · Intel
 - **Jeff Geerling sbc-reviews issue 80: Framework Desktop power** (`sources/jeff-geerling-sbc-reviews-issue-80-framework-desktop-power`) — benchmark · Jeff Geerling
+- **LLMCheck Apple Silicon LLM benchmark dataset (CSV export)** (`sources/llmcheck-net-benchmarks-csv`) — benchmark · llmcheck.net
 - **LeaseWeb: AMD EPYC LLM inference benchmark CPU vs GPU** (`sources/leaseweb-amd-epyc-llm-inference-benchmark-cpu-vs-gpu`) — benchmark · LeaseWeb
 - **Llama.cpp Meets Instinct: A New Era of Open-Source AI Acceleration (ROCm Blogs)** (`sources/bench-amd-llama-cpp-mi300x-deepseek`) — benchmark · AMD
 - **Long-Context Benchmarks: Who's Actually Fast at 128K Tokens? (GeneralCompute)** (`sources/bench-generalcompute-128k-ttft`) — benchmark · GeneralCompute
@@ -3294,6 +3318,7 @@ and t
 - **MLPerf v6.1 NVIDIA GB300 NVL72 slice, 8x GB300-288GB aarch64 across 2 nodes, llama2-70b-99.9 Offline run_1 harness summary log** (`sources/bench-mlperf-v6-1-nvidia-gb300-8gpu-llama2-offline-log`) — benchmark · MLCommons
 - **MLPerf v6.1 NVIDIA GB300 NVL72 slice, 8x GB300-288GB aarch64 across 2 nodes, llama2-70b-99.9 Server run_1 harness summary log** (`sources/bench-mlperf-v6-1-nvidia-gb300-8gpu-llama2-server-log`) — benchmark · MLCommons
 - **MLX-LM benchmark data for Qwen3-4B and Qwen3-30B-A3B across precisions (mlx-lm PR #552)** (`sources/bench-apple-mlx-lm-qwen3-benchmarks`) — benchmark · ml-explore (Apple) / community
+- **Markaicode: vLLM vs Ollama benchmark — Red Hat GuideLLM study on A100-PCIE-40GB** (`sources/markaicode-vllm-vs-ollama-guidellm-a100-pcie`) — benchmark · Markaicode (citing Red Hat Developer GuideLLM study, Aug 2025)
 - **NVIDIA TensorRT-LLM performance overview — trtllm-bench throughput tables (H100/H200/GH200/B200/GB200, Llama FP8/FP4)** (`sources/nvidia-tensorrt-llm-perf-overview`) — benchmark · NVIDIA
 - **PicClick eBay listing aggregator (asking prices)** (`sources/sup-price-picclick-ebay-asking`) — benchmark · PicClick
 - **Qualcomm Cloud AI 100 Ultra LLM inference performance slide deck (April 2024)** (`sources/qualcomm-cloud-ai100-ultra-llm-performance-apr2024`) — benchmark · Qualcomm
@@ -3342,6 +3367,7 @@ and t
 - **AMD: llama.cpp on AMD EPYC (ZenDNN backend)** (`sources/amd-llama-cpp-on-amd-epyc-zendnn-backend`) — blog · AMD
 - **AWS Trainium product page (Neuron SDK, Trainium3)** (`sources/asic-aws-trainium-product`) — blog · Amazon Web Services
 - **AWS Trainium3 Architecture (Neuron Docs)** (`sources/aws-trainium3-architecture-neuron-docs`) — blog
+- **AWS What's New: EC2 Trn3 UltraServers GA (Trainium3)** (`sources/aws-trn3-ultraservers-whats-new-dec2025`) — blog · AWS
 - **Accelerating Production LLMs with Combined Token/Embedding Speculators (arXiv:2404.19124)** (`sources/pap-eff-token-speculators`) — blog
 - **Achieving Top Inference Performance with the NVIDIA H100 Tensor Core GPU and NVIDIA TensorRT-LLM** (`sources/bench-nv-nvidia-h100-tensorrtllm-blog`) — blog · NVIDIA
 - **AcruxCore docs blog - How much overhead does an LLM gateway add? (five-path controlled measurement)** (`sources/dep-acruxcore-gateway-overhead-measurement`) — blog · AcruxCore (gateway vendor; self-interested, methodology disclosed)
@@ -5806,7 +5832,7 @@ and t
 
 ## Coverage
 
-Total records: **5743**
+Total records: **5769**
 
 | group | records |
 |---|---|
