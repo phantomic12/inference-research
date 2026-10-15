@@ -204,3 +204,5 @@ domain acts as a single GPU, so TP is free and EP is within the domain.
 - [02-flop-map.md](02-flop-map.md) §3.7c — the TP crossover derivation.
 - [08-cost-per-token.md](08-cost-per-token.md) — how the fabric affects $/Mtok.
 - [18-reliability.md](18-reliability.md) — what breaks when you cross the node boundary.
+- [21-deployment-topology.md](21-deployment-topology.md) — the layer above this one: gateway,
+  router, control plane and cold start, once the GPU shape is decided.

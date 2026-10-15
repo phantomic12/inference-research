@@ -13,6 +13,9 @@ Any two of the three being right is not enough. Most of the expensive failures i
 repo are a format record and a kernel matrix agreeing with each other while the running
 server does something else.
 
+For *why* weight-only 4-bit and W4A4 are different regimes, read
+[04-quant-selection.md](04-quant-selection.md) first; this doc assumes that distinction.
+
 ---
 
 ## 0. The decision rule, short form
@@ -607,6 +610,7 @@ they were is a category error.
 
 ## Related documents
 
+- [04-quant-selection.md](04-quant-selection.md) — the regime distinction (W4A16 vs W4A4) this table assumes.
 - [04-quant-selection.md](04-quant-selection.md) — the regime taxonomy (W4A16 vs W4A4),
   the per-accelerator native/emulated census, and the quality tables this document draws on.
   Read §3 of that doc as the base layer; read this one for the selection step.

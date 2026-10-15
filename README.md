@@ -2,7 +2,8 @@
 
 A structured, machine-readable knowledge base about LLM inference: accelerators,
 the FLOP classes that dominate them, inference engines, quantization formats,
-interconnect, and measured benchmarks.
+interconnect, measured benchmarks, known traps, models, papers, compilers,
+metric exposures, and where to buy or rent the hardware.
 
 Everything here is a JSON record with provenance. A new fact is one file in
 `data/`, not a paragraph in a wiki page. Prose lives in `docs/` and cites
@@ -18,17 +19,25 @@ record ids.
       interconnect/    one file per link technology: bandwidth, fabric, topologies
       benchmarks/      one file per measurement: tok/s, TTFT, methodology
       gotchas/         one file per known trap: driver, kernel, framework, config
+      models/          one file per model: architecture, parameter count, context
+      papers/          one file per paper: venue, claims, the records it informs
+      compilers/       one file per compiler / kernel DSL: targets, IR, maturity
+      metric-exposures/ one file per metric an engine exports: name, unit, semantics
+      supply/          one file per offer: purchase, used-market or per-GPU-hour price
       sources/         one file per source document, referenced by every other record
-    docs/              synthesized prose, every claim cites record ids
+    docs/              synthesized prose, every claim cites record ids (start at docs/README.md)
     schemas/           JSON Schema per record type
-    tools/             validate.py, new_record.py, query.py, index.py
+    site/              Astro site built from data/ and docs/
+    tools/             validate.py, new_record.py, query.py, index.py, cost_per_token.py,
+                       build_site_data.py, test_tools.py, crawler.sh
 
 ## Record shape
 
 Every record is a single JSON object with these common fields:
 
     id            stable slug, unique across the repo
-    type          one of: accelerator, flop, engine, quantization, interconnect, benchmark, gotcha, source
+    type          one of: accelerator, flop, engine, quantization, interconnect, benchmark,
+                  gotcha, model, paper, compiler, metric_exposure, supply, source
     name          human readable
     status        verified | draft | contested | deprecated
     confidence    0.0 - 1.0
@@ -39,6 +48,12 @@ Every record is a single JSON object with these common fields:
 `schemas/<type>.schema.json` defines the rest. Validate with:
 
     python tools/validate.py
+    python tools/test_tools.py
+
+`validate.py` also enforces two ratcheting budgets: dangling cross-record
+references (`tools/ref_budget.json`) and unresolvable `docs/` citations
+(`tools/docs_ref_budget.json`). Lower a budget in the same change that fixes a
+reference; never raise one to go green.
 
 ## Ingesting new knowledge
 
@@ -69,4 +84,10 @@ Field-by-field reference in [SCHEMA.md](SCHEMA.md).
 
 ## Current state
 
-See `docs/00-index.md` for the synthesized view.
+- `python tools/query.py stats` prints live record counts by type and status;
+  `python tools/query.py gaps` lists coverage holes.
+- [docs/README.md](docs/README.md) is the reading guide for the synthesized docs.
+- [docs/00-index.md](docs/00-index.md) is the generated catalogue of every record
+  (regenerate with `python tools/index.py`; CI fails if it is stale).
+- [docs/26-known-defects.md](docs/26-known-defects.md) is the standing ledger of
+  known, unfixed defects; check it before reporting one.

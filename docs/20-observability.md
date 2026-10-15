@@ -289,6 +289,8 @@ they are most worth having.
 
 ## Related documents
 
+- [24-metrics-surface-selection.md](24-metrics-surface-selection.md) — the per-engine matrix:
+  which of the metrics argued for here each engine can actually export, and under what name.
 - [19-production-operations.md](19-production-operations.md) — the autoscaling signal
   depends on this metric set being trustworthy.
 - [18-reliability.md](18-reliability.md) — the failures no metric in this set catches.

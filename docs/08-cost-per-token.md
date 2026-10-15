@@ -1,4 +1,4 @@
-# Cost per output token
+# 08 — Cost per output token
 
 This doc closes the gap that [01-hardware-selection.md](01-hardware-selection.md)
 listed as its #1 unanswered question: *"Cost per token. No price↔throughput join

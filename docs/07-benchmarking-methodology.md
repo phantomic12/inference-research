@@ -1,4 +1,4 @@
-# Benchmarking methodology and its pitfalls
+# 07 — Benchmarking methodology and its pitfalls
 
 Every number in `data/benchmarks/` is a measurement somebody took, under
 conditions they had to write down. This doc is about the conditions: which
@@ -289,4 +289,6 @@ that discusses them. Do not cite this doc as if it did.
 - [AGENTS.md](../AGENTS.md) — the ingest contract, including why
   `vendor_claim` and `*_basis` fields exist.
 - [SCHEMA.md](../SCHEMA.md) — the `benchmark` type, field by field.
-- `docs/06-glossary.md` — the domain vocabulary these pitfalls are phrased in.
+- [06-glossary.md](06-glossary.md) — the domain vocabulary these pitfalls are phrased in.
+- [10-testing-methodology.md](10-testing-methodology.md) — the correctness side: differential
+  oracles for silent corruption, where this doc covers performance measurement.

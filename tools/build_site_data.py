@@ -502,6 +502,24 @@ WIKILINK = re.compile(r"\[\[([^\[\]|]+?)(?:\|([^\]]*))?\]\]")
 DOC_MD_LINK = re.compile(r"\[([^\]]*)\]\((?:\.{1,2}/)*(?:docs/)?([A-Za-z0-9._-]+\.md)(#[^)]*)?\)")
 
 
+REPO_BLOB = "https://github.com/phantomic12/inference-research/blob/main/"
+
+def root_md_target(link: str, root: Path) -> str | None:
+    """The repo-root file a docs/ `[label](../NAME.md)` link names, or None.
+
+    AGENTS.md and SCHEMA.md live at the repo root, outside docs/, so they are
+    not doc stems. A `../NAME.md` link to one is still a real link when the file
+    exists there; any other shape (bare NAME.md, deeper paths) is not.
+    """
+    href = link.split("](", 1)[1][:-1].split("#", 1)[0]
+    if not href.startswith("../"):
+        return None
+    name = href[3:]
+    if "/" in name or not (root / name).is_file():
+        return None
+    return name
+
+
 def rewrite_docs(text: str, bare: dict[str, str], records: dict[str, dict],
                  doc_slugs: set[str]) -> str:
     """Resolve the doc wikilink grammar into site URLs.
@@ -549,6 +567,9 @@ def rewrite_docs(text: str, bare: dict[str, str], records: dict[str, dict],
         stem = target[:-3]
         if stem in doc_slugs:
             return f"[{label}](/docs/{stem}/)"
+        root_file = root_md_target(m.group(0), ROOT)
+        if root_file:
+            return f"[{label or root_file}]({REPO_BLOB}{root_file}{m.group(3) or ''})"
         return f"`{label or target}`" if not label else label
 
     return DOC_MD_LINK.sub(doc, body)

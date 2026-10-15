@@ -1,4 +1,4 @@
-# Known defects: the scope-boundary ledger
+# 26 — Known defects: the scope-boundary ledger
 
 **What this document is.** A single standing record of every defect a wave has
 found and could *not* fix because it lived outside that wave's write scope.
@@ -7,8 +7,9 @@ items were named three times by three different agents before anyone wrote them
 down. This document exists so that the fifth naming of an item is a lookup, not
 a discovery.
 
-**Status as of 2026-10-05**, against a corpus of **3873 records, 0 errors, 30
-dangling references against a budget of 30** (`python tools/validate.py`).
+**Status as of 2026-10-12**, against a corpus of **4098 records, 0 errors, 26
+dangling references against a budget of 26, and 0 unresolvable docs citations
+against a budget of 0** (`python tools/validate.py`).
 
 **How to use it.** If you are about to report a defect, check here first. If it
 is listed and still open, do not re-report it — either fix it if it is genuinely
@@ -47,10 +48,17 @@ prevent. `[[benchmarks/mi355x-mlperf-v6-0-llama2-70b-87gpu-offline-tokens]]`
 carries **87**, not 8 — and it now prices correctly at 87 GPUs ($717.97/Mtok,
 11978.28 tok/s per GPU), which is the proof that the gate works.
 
-**Extends past AMD.** The same fallback was also serving 7 NVIDIA MLPerf rows
-(Cisco H200, CoreWeave GB300, NVIDIA B300, GB300-NVL72 slices). Their GPU counts
-are stated but absent from `BENCH_JOIN`; each is a one-line entry away and its
-verbatim evidence string is already verified present.
+**Extends past AMD — FIXED 2026-10-12 for 6 of 7.** The same fallback was
+also serving 7 NVIDIA MLPerf rows (Cisco H200, CoreWeave GB300, NVIDIA B300,
+GB300-NVL72 slices). The two v6.1 GB300 Server rows were joined first; the four
+Offline rows (`bench-mlperf-v5-1-cisco-h200-tgp700w-llama2-70b-offline` at 8,
+`bench-mlperf-v6-1-coreweave-gb300-nvl72-llama2-70b-offline` at 72,
+`bench-mlperf-v6-1-nvidia-b300-llama2-70b-offline` at 8,
+`bench-mlperf-v6-1-nvidia-gb300-8gpu-llama2-70b-offline` at 8) are now in
+`BENCH_JOIN`, each quoting its own `Hardware:` line verbatim. The seventh,
+`bench-mlperf-v6-1-nvidia-b300-llama2-70b-server`, stays unpriceable **by
+design**: neither its unit nor its methodology states a device count, and the
+divisor may not be borrowed from its Offline twin or its `name`.
 
 #### D3 — `query.py get`/`refs` crashed with `KeyError: None` **FIXED 2026-10-08**
 
@@ -97,8 +105,11 @@ resolves every `[[dir/id]]` citation in every `docs/*.md` and fails on a new rot
 by a ratcheting budget in `tools/docs_ref_budget.json` (8 → 5, history in the
 file). Injection-tested: a planted `[[accelerators/does-not-exist]]` turns CI
 red and `--max-docs-dangling-refs 7` fails against the real count of 8. The
-remaining 5 are the `[label](../SCHEMA.md)` / `[label](../AGENTS.md)` class the
-renderer's grammar cannot express — real files, not rot. 131 tests pass.
+remaining 5 were the `[label](../SCHEMA.md)` / `[label](../AGENTS.md)` class:
+real files, not rot. **Fixed 2026-10-12:** `root_md_target()` in both
+`validate.py` and `build_site_data.py` resolves a `../NAME.md` link when
+`NAME.md` exists at the repo root (rendered as a GitHub blob link), and the
+budget is 0.
 
 #### D4b — the CXL family broke the PCIe direction convention it copied from **FIXED 2026-10-08**
 

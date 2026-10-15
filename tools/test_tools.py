@@ -543,6 +543,25 @@ class TestDocsCitations(Harness):
         self.assertIn("99-test.md:1 [the $/Mtok arithmetic]"
                       "(15-cost-per-token.md)", r.stdout)
 
+    def test_parent_link_to_repo_root_file_resolves(self):
+        """[label](../AGENTS.md) names a real file outside docs/, so it is a
+        link, not rot; the site renders it as a GitHub blob link."""
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/accelerators/acme-a100.json", self.good_accelerator())
+        (self.tmp / "ROOTDOC.md").write_text("# root\n", encoding="utf-8")
+        self.fixture_docs({"99-test.md": "See [the contract](../ROOTDOC.md).\n"})
+        r = self.validate("--max-docs-dangling-refs", "0")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("0 unresolvable docs citation(s)", r.stdout)
+
+    def test_parent_link_to_missing_root_file_is_reported(self):
+        self.write("data/sources/acme-spec.json", self.good_source())
+        self.write("data/accelerators/acme-a100.json", self.good_accelerator())
+        self.fixture_docs({"99-test.md": "See [gone](../NOPE.md).\n"})
+        r = self.validate("--max-docs-dangling-refs", "0")
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("99-test.md:1 [gone](NOPE.md)", r.stdout)
+
     def test_doc_stem_citation_always_resolves(self):
         """[[other-doc]] is a doc-to-doc link, not a record citation, so it
         resolves against the set of doc stems rather than against records."""
