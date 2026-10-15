@@ -28,7 +28,7 @@ yields **101 qualifying accelerators**, of which **41 have a usable purchase
 price** and 60 are bandwidth-qualified but have no bare-card/system price in
 `data/supply/`.
 
-**Exceptions to the `vram_gb` gate.** A `unified_memory` part (an APU/SoC
+**One exception to the `vram_gb` gate.** A `unified_memory` part (an APU/SoC
 whose GPU shares the CPU's LPDDR5x pool) leaves `vram_gb` null *on purpose* —
 there is no dedicated VRAM to report. The `>= 8` gate would silently drop it.
 For those, `tools/fit_matrix_35b.py` substitutes the **configured memory of the
@@ -36,15 +36,6 @@ cheapest linked supply record** (a whole system, so its RAM is the usable pool).
 Only [[accelerators/amd-radeon-8060s-ryzen-ai-max]] (Strix Halo, 128 GB
 configured) needs this override in the current corpus; the Apple Ultra parts
 already carry an explicit `vram_gb`.
-
-A *second* class of `vram_gb`-null record exists but is **not** overridden into
-the matrix: the **host-CPU inference** parts. [[accelerators/amd-epyc-9554-genoa]]
-and [[accelerators/amd-epyc-9454p-genoa]] are EPYC sockets whose "VRAM" is
-*whatever DDR5 the builder populates* — there is no single capacity number to
-substitute, and no bare-card price (the priced entity is a whole server build).
-They are documented in §4 as a capacity-dependent callout, not a table row:
-the roofline ceiling (460.8 GB/s → 23 tok/s on the 20 GB column) applies, but
-the fit flag is `?` because it is set by the DIMMs installed, not the chip.
 
 ## 2. The three fit columns and the one ceiling
 
@@ -99,11 +90,11 @@ record the price was read from.
 
 | rank | accelerator | VRAM | BW GB/s | Fits | 35B ceil *(derived)* | price | ← supply | $/tok-s *(derived)* |
 |---|---|---|---|---|---|---|---|---|
-| 1 | [[accelerators/nvidia-tesla-p100]] | 17 | 732 | -/-/- | 36.6 | $115 | [[supply/ebay-used-tesla-p100-16gb]] | **3.14** |
+| 1 | [[accelerators/nvidia-tesla-p100]] | 16 | 732 | -/-/- | 36.6 | $115 | [[supply/ebay-used-tesla-p100-16gb]] | **3.14** |
 | 2 | [[accelerators/intel-arc-b580]] | 12 | 456 | -/-/- | 22.8 | $200 | [[supply/newegg-refreshed-arc-b580]] | 8.77 |
-| 3 | [[accelerators/nvidia-v100-sxm2-32gb]] | 33 | 900 | **Y/Y/-** | 45.0 | $500 | [[supply/ebay-used-tesla-v100-sxm2-32gb]] | 11.11 |
-| 4 | [[accelerators/nvidia-tesla-m40]] | 25 | 288 | Y/Y/- | 14.4 | $189 | [[supply/used-nvidia-tesla-m40-market]] | 13.12 |
-| 5 | [[accelerators/amd-instinct-mi100]] | 32 | 1228 | **Y/Y/-** | 61.4 | $900 | [[supply/ebay-used-amd-mi100-32gb]] | 14.66 |
+| 3 | [[accelerators/nvidia-v100-sxm2-32gb]] | 32 | 900 | **Y/Y/-** | 45.0 | $500 | [[supply/ebay-used-tesla-v100-sxm2-32gb]] | 11.11 |
+| 4 | [[accelerators/amd-instinct-mi100]] | 32 | 1228 | **Y/Y/-** | 61.4 | $720 | [[supply/ebay-used-amd-mi100-32gb]] | 11.73 |
+| 5 | [[accelerators/nvidia-tesla-m40]] | 24 | 288 | Y/Y/- | 14.4 | $189 | [[supply/used-nvidia-tesla-m40-market]] | 13.12 |
 | 6 | [[accelerators/intel-gaudi2]] | 96 | 2460 | **Y/Y/Y** | 123.0 | $2,000 | [[supply/ebay-used-gaudi2-hl225-oam-module]] | 16.26 |
 | 7 | [[accelerators/nvidia-v100-pcie-32gb]] | 32 | 900 | **Y/Y/-** | 45.0 | $750 | [[supply/ebay-used-tesla-v100-pcie-32gb]] | 16.67 |
 | 8 | [[accelerators/nvidia-tesla-p40]] | 24 | 347 | Y/Y/- | 17.4 | $290 | [[supply/ebay-used-tesla-p40-24gb]] | 16.71 |
@@ -112,35 +103,34 @@ record the price was read from.
 | 11 | [[accelerators/nvidia-rtx-3090]] | 24 | 936 | **Y/Y/-** | 46.8 | $950 | [[supply/ebay-used-rtx3090-oct2026]] | 20.30 |
 | 12 | [[accelerators/nvidia-rtx-5090]] | 32 | 1792 | **Y/Y/-** | 89.6 | $1,999 | [[supply/nvidia-marketplace-geforce]] | 22.31 |
 | 13 | [[accelerators/huawei-ascend-310p]] | 24 | 205 | Y/Y/- | 10.2 | $265 | [[supply/taobao-used-huawei-ascend-310p]] | 25.88 |
-| 15 | [[accelerators/huawei-atlas-300i-pro]] | 24 | 205 | Y/Y/- | 10.2 | $265 | [[supply/taobao-used-huawei-atlas-300i-pro-24gb]] | 25.88 |
 | 14 | [[accelerators/amd-radeon-rx-9070-xt]] | 16 | 640 | -/-/- | 32.0 | $829 | [[supply/used-rx-9070-xt-market]] | 25.91 |
-| 16 | [[accelerators/intel-arc-pro-b60]] | 24 | 456 | Y/Y/- | 22.8 | $650 | [[supply/new-arc-pro-b60-24gb-retail-oct2026]] | 28.51 |
+| 15 | [[accelerators/intel-arc-pro-b60]] | 24 | 456 | Y/Y/- | 22.8 | $650 | [[supply/new-arc-pro-b60-24gb-retail-oct2026]] | 28.51 |
 | 16 | [[accelerators/cambricon-mlu370]] | 48 | 307 | Y/Y/Y | 15.4 | $450 | [[supply/ebay-used-cambricon-mlu370]] | 29.30 |
-| 18 | [[accelerators/amd-instinct-mi250]] | 128 | 3200 | **Y/Y/Y** | 160.0 | $4,950 | [[supply/ebay-used-amd-mi250x-128gb-oam]] | 30.94 |
-| 19 | [[accelerators/amd-instinct-mi250x]] | 128 | 3200 | **Y/Y/Y** | 160.0 | $4,950 | [[supply/ebay-used-amd-mi250x-128gb-oam]] | 30.94 |
-| 20 | [[accelerators/intel-arc-pro-b70]] | 32 | 608 | Y/Y/- | 30.4 | $949 | [[supply/newegg-new-arc-pro-b70-32gb]] | 31.22 |
-| 21 | [[accelerators/nvidia-a100-40gb-sxm4]] | 41 | 1555 | Y/Y/- | 77.8 | $2,499 | [[supply/ebay-used-a100-40gb-sxm4]] | 32.14 |
-| 22 | [[accelerators/nvidia-rtx-4090]] | 24 | 1008 | Y/Y/- | 50.4 | $2,000 | [[supply/ebay-used-consumer-gpu-market]] | 39.68 |
+| 17 | [[accelerators/amd-instinct-mi250]] | 128 | 3200 | **Y/Y/Y** | 160.0 | $4,950 | [[supply/ebay-used-amd-mi250x-128gb-oam]] | 30.94 |
+| 18 | [[accelerators/amd-instinct-mi250x]] | 128 | 3200 | **Y/Y/Y** | 160.0 | $4,950 | [[supply/ebay-used-amd-mi250x-128gb-oam]] | 30.94 |
+| 19 | [[accelerators/intel-arc-pro-b70]] | 32 | 608 | Y/Y/- | 30.4 | $949 | [[supply/newegg-new-arc-pro-b70-32gb]] | 31.22 |
+| 20 | [[accelerators/nvidia-a100-40gb-sxm4]] | 40 | 1555 | Y/Y/- | 77.8 | $2,499 | [[supply/ebay-used-a100-40gb-sxm4]] | 32.14 |
+| 21 | [[accelerators/nvidia-rtx-4090]] | 24 | 1008 | Y/Y/- | 50.4 | $2,000 | [[supply/ebay-used-consumer-gpu-market]] | 39.68 |
+| 22 | [[accelerators/amd-instinct-mi210]] | 64 | 1600 | **Y/Y/Y** | 80.0 | $4,000 | [[supply/ebay-used-amd-mi210-64gb]] | 50.00 |
 | 23 | [[accelerators/tenstorrent-wormhole-n300]] | 24 | 576 | Y/Y/- | 28.8 | $1,449 | [[supply/new-tenstorrent-wormhole-n300]] | 50.31 |
-| 24 | [[accelerators/amd-instinct-mi210]] | 64 | 1600 | **Y/Y/Y** | 80.0 | $4,180 | [[supply/ebay-used-amd-mi210-64gb]] | 52.25 |
 | 24 | [[accelerators/tenstorrent-blackhole-p150]] | 32 | 512 | Y/Y/- | 25.6 | $1,399 | [[supply/new-tenstorrent-blackhole-p150]] | 54.65 |
-| 26 | [[accelerators/qualcomm-ai100]] | 32 | 137 | Y/Y/- | 6.8 | $400 | [[supply/used-qualcomm-cloud-ai100-pcie]] | 58.39 |
-| 27 | [[accelerators/cambricon-mlu270]] | 16 | 102 | -/-/- | 5.1 | $317 | [[supply/ebay-used-cambricon-mlu270-s4]] | 61.91 |
-| 28 | [[accelerators/apple-m1-ultra]] | 128 | 800 | **Y/Y/Y** | 40.0 | $2,500 | [[supply/used-mac-studio-m1-ultra-128gb]] | 62.50 |
-| 29 | [[accelerators/tenstorrent-grayskull-e150]] | 8 | 118 | -/-/- | 5.9 | $400 | [[supply/used-tenstorrent-grayskull-e150]] | 67.80 |
-| 30 | [[accelerators/tenstorrent-wormhole-n150]] | 12 | 288 | -/-/- | 14.4 | $999 | [[supply/new-tenstorrent-wormhole-n150]] | 69.38 |
-| 31 | [[accelerators/nvidia-h100-sxm]] | 80 | 3350 | **Y/Y/Y** | 167.5 | $12,999 | [[supply/ebay-used-h100-sxm5-module]] | 77.61 |
-| 32 | [[accelerators/nvidia-a100-40gb-pcie]] | 40 | 1555 | Y/Y/- | 77.8 | $7,000 | [[supply/ebay-used-a100-40gb-pcie-card]] | 90.03 |
+| 25 | [[accelerators/qualcomm-ai100]] | 32 | 137 | Y/Y/- | 6.8 | $400 | [[supply/used-qualcomm-cloud-ai100-pcie]] | 58.39 |
+| 26 | [[accelerators/cambricon-mlu270]] | 16 | 102 | -/-/- | 5.1 | $317 | [[supply/ebay-used-cambricon-mlu270-s4]] | 61.91 |
+| 27 | [[accelerators/apple-m1-ultra]] | 128 | 800 | **Y/Y/Y** | 40.0 | $2,500 | [[supply/used-mac-studio-m1-ultra-128gb]] | 62.50 |
+| 28 | [[accelerators/tenstorrent-grayskull-e150]] | 8 | 118 | -/-/- | 5.9 | $400 | [[supply/used-tenstorrent-grayskull-e150]] | 67.80 |
+| 29 | [[accelerators/tenstorrent-wormhole-n150]] | 12 | 288 | -/-/- | 14.4 | $999 | [[supply/new-tenstorrent-wormhole-n150]] | 69.38 |
+| 30 | [[accelerators/nvidia-h100-sxm]] | 80 | 3350 | **Y/Y/Y** | 167.5 | $12,999 | [[supply/ebay-used-h100-sxm5-module]] | 77.61 |
+| 31 | [[accelerators/nvidia-a100-40gb-pcie]] | 40 | 1555 | Y/Y/- | 77.8 | $7,000 | [[supply/ebay-used-a100-40gb-pcie-card]] | 90.03 |
 | 32 | [[accelerators/apple-m2-ultra]] | 192 | 800 | **Y/Y/Y** | 40.0 | $3,700 | [[supply/used-mac-studio-m2-ultra-192gb]] | 92.50 |
-| 34 | [[accelerators/nvidia-rtx-pro-6000-blackwell]] | 96 | 1792 | **Y/Y/Y** | 89.6 | $8,650 | [[supply/new-rtx-pro-6000-blackwell-96gb]] | 96.54 |
-| 35 | [[accelerators/nvidia-a100-80gb-sxm4]] | 80 | 2039 | **Y/Y/Y** | 102.0 | $10,450 | [[supply/ebay-used-accelerator-market]] | 102.50 |
-| 36 | [[accelerators/nvidia-a100-80gb-pcie]] | 80 | 1935 | **Y/Y/Y** | 96.8 | $12,099 | [[supply/ebay-used-a100-80gb-pcie]] | 125.05 |
-| 37 | [[accelerators/amd-radeon-8060s-ryzen-ai-max]] | 128* | 256 | **Y/Y/Y** | 12.8 | $1,900 | [[supply/new-minisforum-ms-s1-max-128gb]] | 148.44 |
-| 38 | [[accelerators/amd-ryzen-ai-max-395-framework-desktop]] | 128 | 256 | **Y/Y/Y** | 12.8 | $2,099 | [[supply/new-beelink-gtr9-pro-strix-halo-128gb-2]] | 163.98 |
-| 39 | [[accelerators/apple-m3-max]] | 128 | 400 | **Y/Y/Y** | 20.0 | $3,400 | [[supply/used-macbook-pro-m3-max-128gb]] | 170.00 |
-| 40 | [[accelerators/apple-m4-max]] | 128 | 546 | **Y/Y/Y** | 27.3 | $4,700 | [[supply/used-macbook-pro-m4-max-128gb]] | 172.16 |
+| 33 | [[accelerators/nvidia-rtx-pro-6000-blackwell]] | 96 | 1792 | **Y/Y/Y** | 89.6 | $8,650 | [[supply/new-rtx-pro-6000-blackwell-96gb]] | 96.54 |
+| 34 | [[accelerators/nvidia-a100-80gb-sxm4]] | 80 | 2039 | **Y/Y/Y** | 102.0 | $10,450 | [[supply/ebay-used-accelerator-market]] | 102.50 |
+| 35 | [[accelerators/nvidia-a100-80gb-pcie]] | 80 | 1935 | **Y/Y/Y** | 96.8 | $12,099 | [[supply/ebay-used-a100-80gb-pcie]] | 125.05 |
+| 36 | [[accelerators/amd-radeon-8060s-ryzen-ai-max]] | 128* | 256 | **Y/Y/Y** | 12.8 | $1,900 | [[supply/new-minisforum-ms-s1-max-128gb]] | 148.44 |
+| 37 | [[accelerators/amd-ryzen-ai-max-395-framework-desktop]] | 128 | 256 | **Y/Y/Y** | 12.8 | $2,099 | [[supply/new-beelink-gtr9-pro-strix-halo-128gb-2]] | 163.98 |
+| 38 | [[accelerators/apple-m3-max]] | 128 | 400 | **Y/Y/Y** | 20.0 | $3,400 | [[supply/used-macbook-pro-m3-max-128gb]] | 170.00 |
+| 39 | [[accelerators/apple-m4-max]] | 128 | 546 | **Y/Y/Y** | 27.3 | $4,700 | [[supply/used-macbook-pro-m4-max-128gb]] | 172.16 |
 | 40 | [[accelerators/apple-m3-ultra]] | 512 | 819 | **Y/Y/Y** | 41.0 | $9,000 | [[supply/used-mac-studio-m3-ultra-512gb]] | 219.78 |
-| 42 | [[accelerators/nvidia-h100-pcie]] | 80 | 2000 | **Y/Y/Y** | 100.0 | $43,000 | [[supply/used-h100-80gb-pcie-market]] | 430.00 |
+| 41 | [[accelerators/nvidia-h100-pcie]] | 80 | 2000 | **Y/Y/Y** | 100.0 | $43,000 | [[supply/used-h100-80gb-pcie-market]] | 430.00 |
 
 \* The 8060s Strix Halo row is `unified_memory`: its record leaves `vram_gb`
 null; the 128 GB shown is the configured LPDDR5x pool of the cheapest linked
@@ -161,7 +151,7 @@ See §1 and §6.
   speak, and they rank high — but for the 35B-A3B job they are a *near-miss*,
   not an answer. The first row that actually fits **35B-A3B** is
   [[accelerators/nvidia-v100-sxm2-32gb]] at **$500** (rank 3), and
-  [[accelerators/amd-instinct-mi100]] at **$900** (rank 5) is the cheapest part
+  [[accelerators/amd-instinct-mi100]] at **$720** (rank 4) is the cheapest part
   with both a `Y` on 35B *and* >1 TB/s of bandwidth (61.4 tok/s derived
   ceiling — faster than a 3090 for less money). All are traps unless you
   read §5.
@@ -174,35 +164,32 @@ See §1 and §6.
   deployable without a baseboard or a ROCm workaround. The
   [[accelerators/amd-radeon-rx-7900-xtx]] still undercuts both on $/tok-s
   ($875 used, rank 9) but needs the ROCm path.
-- **New in this pass — the used-Tesla and Tenstorrent slices filled in, and a
-  capacity-dependent CPU class appeared.** The pass-2 ingest added bare-card
-  used prices that were missing before: [[accelerators/nvidia-tesla-p100]] (16
-  GB, **$115** — cheapest sticker in the whole table),
-  [[accelerators/tenstorrent-wormhole-n300]] (24 GB, $1,449, a *new* retail card
-  that fits 35B), [[accelerators/cambricon-mlu270]] (16 GB, $317), and
-  [[accelerators/tenstorrent-grayskull-e150]] (8 GB, $400). It also re-priced
-  existing rows: Gaudi2 down to **$2,000** (was $2,100), MI250/X to **$4,950**
-  (was $5,450), A100-40GB-PCIe to **$7,000** (was $7,500), RTX PRO 6000 to
-  **$8,650** (was $16,624 — nearly halved), 3090 Ti to **$950** (was $1,240).
-  The Oct-15 pass added one qualifying row — [[accelerators/apple-m2-max]] (96
-  GB, 400 GB/s, unpriced — a whole MacBook, §4) — and, more importantly, the
-  first **host-CPU inference** records: the EPYC sockets in §4's
-  capacity-dependent callout, where a *measured* 63.1 tok/s on a ~3B-active MoE
-  ([[benchmarks/comm-epyc-9454p-qwen3-moe-30b-decode]]) makes the roofline's
-  "understates MoE" caveat concrete. The second Strix Halo record
+- **New in this pass — the used-Tesla and Tenstorrent slices filled in, and the
+  Oct-14 ingest repriced four rows.** The
+  pass-2 ingest added bare-card used prices that were missing before:
+  [[accelerators/nvidia-tesla-p100]] (16 GB, **$115** — cheapest sticker in the
+  whole table), [[accelerators/tenstorrent-wormhole-n300]] (24 GB, $1,449, a
+  *new* retail card that fits 35B), [[accelerators/cambricon-mlu270]] (16 GB,
+  $317), and [[accelerators/tenstorrent-grayskull-e150]] (8 GB, $400). The
+  merged Oct-14 ingest also re-priced existing records: MI100 to **$720** (was
+  $900, now rank 4 and the cheapest >1 TB/s fit), MI210 to **$4,000** (was
+  $4,180), the M1 Ultra Studio to **$2,500** (was $2,600), Gaudi2 to **$2,000**
+  (was $2,100), MI250/X to **$4,950** (was $5,450), A100-40GB-PCIe to **$7,000**
+  (was $7,500), RTX PRO 6000 to **$8,650** (was $16,624 — nearly halved), 3090
+  Ti to **$950** (was $1,240). The second Strix Halo record
   ([[accelerators/amd-ryzen-ai-max-395-framework-desktop]]) is the same silicon
   as the 8060s row, priced at the Beelink whole-system $2,099.
-- **This refresh — capacity-matched Apple joins.** Two new rows enter at the
-  bottom: [[accelerators/apple-m3-max]] (whole 128 GB MacBook Pro, $3,400,
-  rank 38) and [[accelerators/apple-m4-max]] (128 GB, $4,700, rank 39).
-  Applying the same capacity-match rule *backwards* re-priced
-  [[accelerators/apple-m3-ultra]]: its record carries `vram_gb=512` (the max
-  config), so the previously-joined $3,700 **96 GB** SKU was pricing a fifth of
-  the pool the `Y/Y/Y` flag claims — the honest join is the 512 GB Studio at
-  **$9,000** (rank 40, was rank 32). [[accelerators/apple-m1-ultra]] also
-  re-priced $2,600 → **$2,500** after its supply record's Oct-14 correction.
-  All capacity-mismatched SKUs (M1-Ultra-64GB, M3-Ultra-96/256GB,
-  Framework-192GB) are listed in §6.
+- **Capacity-matched joins added three Apple rows and corrected one.** A
+  whole-system price is only honest when the configured pool matches the
+  `vram_gb` the fit flag claims. Joined this pass: [[accelerators/apple-m3-max]]
+  at **$3,400** (128 GB MacBook Pro SKU = record's 128 GB) and
+  [[accelerators/apple-m4-max]] at **$4,700** (128 GB SKU) — both fit all three
+  targets. Corrected: [[accelerators/apple-m3-ultra]]'s record carries
+  `vram_gb=512`; the $3,700 96 GB Studio row priced *less pool than the fit flag
+  claims*, so it is replaced by the capacity-matched 512 GB SKU at **$9,000**
+  ([[supply/used-mac-studio-m3-ultra-512gb]]). The same rule drops the
+  $1,850 64 GB M1-Ultra Studio and the $3,750 192 GB Strix Halo board — both
+  price a smaller pool than their record's `vram_gb` (§6).
 - **The stretch goal (70B, needs ≥48 GB) got *cheaper*.** The cheapest
   single-accelerator 70B fit by sticker is still the MLU370 at $450 — but its
   307 GB/s bus makes it a capacity fit, not a usable one. The biggest move is
@@ -211,11 +198,12 @@ See §1 and §6.
   to rank 33 — now the cheapest *drop-in* 70B card with >1 TB/s of bandwidth
   that is also a normal PCIe workstation card. Below it: Strix Halo at $1,900
   (whole mini-PC, bandwidth-capped — see §5) and the drop-in-but-OAM Gaudi2 at
-  $2,000 (§5). Then [[accelerators/apple-m2-ultra]] at $3,700 (whole Mac
-  Studio), [[accelerators/amd-instinct-mi210]] at $4,180, the MI250/X OAM pair
-  at $4,950, [[accelerators/apple-m3-ultra]] at $9,000 (the 512 GB SKU — the
-  only capacity that honestly matches its `vram_gb=512` fit flag, §6), and a
-  jump to [[accelerators/nvidia-a100-80gb-sxm4]] at $10,450.
+  $2,000 (§5). Then [[accelerators/apple-m1-ultra]] /
+  [[accelerators/apple-m2-ultra]] at $2,500/$3,700 (whole Mac Studios),
+  [[accelerators/apple-m3-max]] / [[accelerators/apple-m4-max]] at
+  $3,400/$4,700 (whole MacBooks),
+  [[accelerators/amd-instinct-mi210]] at $4,000, the MI250/X OAM pair at
+  $4,950, and a jump to [[accelerators/nvidia-a100-80gb-sxm4]] at $10,450.
 
 ## 4. Qualified but no purchase price — the "fits, can't price it" list
 
@@ -223,11 +211,11 @@ These records satisfy the bandwidth/fit rule but have **no bare-card or
 system purchase price** in `data/supply/` (they may have a *rental* price in
 the cloud records — that is a different join, see `tools/cost_per_token.py`).
 Listed because a future supply pass can close them; sorted by 35B ceiling.
-The Oct-15 ingest pushed the rest of the accelerator corpus up here — the
-whole Blackwell/TPU-v6/v7/MI350X/GH200/Trainium/CloudMatrix/Ascend generation
-now qualifies on bandwidth but has no bare-card asking price. The giant first
-row is the 384-chip CloudMatrix supernode: it fits trivially and its ceiling
-is a rack-scale figure, not a buyable part.
+The merged Oct-14/15 ingest pushed the rest of the accelerator corpus up here —
+the whole Blackwell/TPU-v6/v7/MI350X/GH200/Trainium/CloudMatrix/Ascend
+generation now qualifies on bandwidth but has no bare-card asking price. The
+giant first row is the 384-chip CloudMatrix supernode: it fits trivially and
+its ceiling is a rack-scale figure, not a buyable part.
 
 | accelerator | VRAM | BW GB/s | Fits | 35B ceil *(derived)* | note |
 |---|---|---|---|---|---|
@@ -280,31 +268,9 @@ is a rack-scale figure, not a buyable part.
 | [[accelerators/qualcomm-ai200]] | 128 | 548 | Y/Y/Y | 27.4 | no price record |
 | [[accelerators/huawei-ascend-950dt]] | 96 | 500 | Y/Y/Y | 25.0 | no price record |
 | [[accelerators/huawei-atlas-300i-duo]] | 96 | 408 | Y/Y/Y | 20.4 | no price record |
-| [[accelerators/apple-m2-max]] | 96 | 400 | Y/Y/Y | 20.0 | whole MacBook; no bare-silicon price |
+| [[accelerators/apple-m2-max]] | 96 | 400 | Y/Y/Y | 20.0 | whole MacBook; no capacity-matched price |
 | [[accelerators/local-apple-m5-pro]] | 64 | 307 | Y/Y/Y | 15.3 | unreleased/rumoured part; no price |
 | [[accelerators/nvidia-l4]] | 24 | 300 | Y/Y/- | 15.0 | no price record |
-
-### The host-CPU class — `vram_gb`-null, capacity-dependent (not in the matrix count)
-
-The two EPYC records are excluded from the 101-row count because `vram_gb` is
-null and the `>= 8` gate drops them (see §1). They are listed here as a
-**capacity-dependent** class — the "VRAM" is whatever DDR5 you populate:
-
-| accelerator | capacity | BW GB/s | 35B ceil *(derived)* | note |
-|---|---|---|---|---|
-| [[accelerators/amd-epyc-9554-genoa]] | DIMM-dependent | 460.8 | 23.0 | 64-core Genoa, 12-channel DDR5 |
-| [[accelerators/amd-epyc-9454p-genoa]] | DIMM-dependent | 460.8 | 23.0 | 48-core Genoa, 12-channel DDR5 |
-
-Neither has a bare-card price (the priced entity is a whole server build — see
-[[supply/used-epyc-9004-genoa-build-384gb]], $7,500 with 384 GB populated), so
-no `$/tok-s` is computed and they do not rank. They are listed because the
-corpus's own measured run on the 9454P
-([[benchmarks/comm-epyc-9454p-qwen3-moe-30b-decode]]) recorded **63.1 tok/s** on
-a ~3B-active MoE — the strongest *measured* single-socket MoE decode in this
-price class, and ~2.7× the dense-equivalent roofline the table uses. This is
-the §2 "ceiling understates MoE" effect at its most extreme: a ~460 GB/s host
-CPU is where the dense roofline is most pessimistic, and the MoE target class
-is exactly what a 12-channel DDR5 socket is good at.
 
 ### Qualified on bandwidth but cannot hold 35B-A3B (all unpriced)
 
@@ -349,7 +315,7 @@ show*. These are the corpus's own gotcha records, not new claims:
   that matters), both are passive cards needing a shroud+blower, and their
   EPS-12V power connector is *not* a PCIe 8-pin. The P40's DP4A INT8 path is the
   floor buy; the M40 is not a cheaper P40.
-- **MI100's $900 needs a ROCm tax.** [[gotchas/gotcha-mi100-multigpu-rocm-segfault]]
+- **MI100's $720 needs a ROCm tax.** [[gotchas/gotcha-mi100-multigpu-rocm-segfault]]
   records that MI100 is the best $/(GB·TB/s) in the used slice but multi-GPU
   segfaults on bare-metal ROCm and wants a PCIe-passthrough VM — and gfx908 is
   maintenance-tier on the ROCm matrix.
@@ -396,6 +362,16 @@ show*. These are the corpus's own gotcha records, not new claims:
   *purchase* prices. They answer different questions and neither substitutes
   for the other. A `Y` here and a cheap $/tok-s do not mean the part serves the
   model well at concurrency.
+- **Capacity-matched joins only for whole-system rows.** A whole-system price
+  is joined only when the configured memory matches the accelerator record's
+  `vram_gb` — otherwise the sticker would price a smaller pool than the fit
+  flag claims. Dropped on that rule: `used-mac-studio-m1-ultra-64gb` ($1,850,
+  64 GB vs the record's 128 GB), `used-mac-studio-m3-ultra-96gb` ($3,700) and
+  `used-mac-studio-m3-ultra-256gb` ($6,250) (both below the record's 512 GB —
+  the joined row is `used-mac-studio-m3-ultra-512gb` at $9,000), and
+  `new-framework-desktop-strix-halo-192gb-pro-495` ($3,750, 192 GB vs the
+  record's explicit `vram_gb=128`). `apple-m2-max` (`vram_gb=96`) has no
+  capacity-matched whole-system supply record at all, so it stays unpriced.
 - **Deliberately dropped joins** (the raw `accelerator_ids` link would
   over-attribute, per the same trap `tools/cost_per_token.py` documents):
   - `ebay-used-accelerator-market` ($10,449.95) is **one A100 80GB SXM4**
@@ -410,21 +386,6 @@ show*. These are the corpus's own gotcha records, not new claims:
     band lives in `notes` and is not the headline price. 5080 not joined.
   - `new-retail-rtx-4090-3090-consumer` headline $3,299 is the **4090** median;
     the 3090 median is $1,514 in notes. 3090 not joined at $3,299.
-  - **Capacity-mismatched whole-system SKUs are not joined.** A unified-memory
-    Mac/Strix-Halo price is only honest against a fit flag when the chassis's
-    configured RAM *equals* the accelerator record's `vram_gb` (which is the
-    pool the `Y` was computed against):
-    - `used-mac-studio-m1-ultra-64gb` ($1,850) — the cheapest M1 Ultra sticker,
-      but 64 GB < the record's `vram_gb=128` (which is the *max* config). The
-      128 GB SKU at $2,500 is joined instead.
-    - `used-mac-studio-m3-ultra-96gb` ($3,700) and
-      `used-mac-studio-m3-ultra-256gb` ($6,250) — both price less pool than the
-      `apple-m3-ultra` record's `vram_gb=512` fit flag claims. Only the
-      512 GB SKU at $9,000 is joined. (The M2 Ultra's record carries
-      `vram_gb=192`, so its $3,700 / 192 GB row *is* an honest match.)
-    - `new-framework-desktop-strix-halo-192gb-pro-495` ($3,750) — a 192 GB SKU
-      against the `amd-ryzen-ai-max-395-framework-desktop` record's explicit
-      `vram_gb=128`. Not joined.
 - **Whole-system rows kept for context but not mis-joined:**
   `used-dgx1-8x-v100` and `used-dgx1-8xv100-32gb-chassis` ($4,000) are **8-GPU**
   servers → ~$500/GPU-equivalent
@@ -434,6 +395,16 @@ show*. These are the corpus's own gotcha records, not new claims:
   `ebay-used-a100-40gb-rack-liquidator` ($249,000) is a 32-GPU rack;
   `used-8x-h100-sxm-node-system` ($180,000) is an 8-GPU server. None are
   bare-card prices.
+- **CPU-host records are the class the `vram_gb` gate is built around.**
+  `amd-epyc-9554-genoa`, `amd-epyc-9454p-genoa` and `amd-epyc-9334-genoa-dual`
+  are `vram_gb`-null `unified_memory` host CPUs — their resident pool is the
+  DDR5 channels, not a VRAM figure the record can honestly report. Their linked
+  supply rows price the CPU alone (`used-epyc-9354-genoa-cpu`, $2,000 — no RAM,
+  so no resident pool) or a mismatched self-build
+  (`used-epyc-9004-genoa-build-384gb`, $7,500 for CPU+board+384 GB), so neither
+  is joined. They sit in §4's class even though the tool cannot list them:
+  the gotcha their records carry — CPU decode is channel-bound, ~7 tok/s on
+  70B Q4 on a 12-channel Genoa — is the answer for that workload class.
 - **Edge/SBC whole-board prices are not accelerator prices.**
   `new-raspberry-pi-ai-hat-2` ($200, Hailo-10H + a Pi 5),
   `new-rockchip-rk3588-sbc` ($140, RK3588 board) and
