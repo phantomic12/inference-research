@@ -1,31 +1,26 @@
 {
   "id": "comm-apple-m2-max-llama33-70b-4bit-decode",
   "type": "benchmark",
-  "name": "Apple M2 Max (38-core, 64GB), LM Studio/llama.cpp: Llama-3.3-70B 4-bit decode",
+  "name": "Apple M2 Max 38-core (64GB), llama.cpp/LM Studio: Llama-3.3-70B 4-bit decode tok/s (Silicon Score measured)",
   "engine_id": "llama-cpp",
   "accelerator_ids": [
     "apple-m2-max"
   ],
   "interconnect_ids": [],
-  "model": "Llama-3.3-70B 4-bit",
+  "model": "Llama-3.3-70B (dense) 4-bit",
   "format_id": null,
   "metric": "decode_tok_s",
   "value": 8.8,
-  "unit": "tok/s (single-stream, 4-bit, LM Studio)",
-  "methodology": "Silicon Score measured CSV row (M2 Max 38-core GPU, 64 GB, LM Studio, 4bit, Llama 3.3 70B, avg tok/s 8.8). Per-request batch-1 decode.",
+  "unit": "decode tok/s (single-stream, 4-bit, 4K ctx, LM Studio)",
+  "methodology": "THIRD-PARTY MEASURED (Silicon Score Llama 3.3 70B model page + chip rows, export CSV). M2 Max 38-core GPU / 64GB unified configuration, ~400 GB/s package bandwidth shared with the CPU: 8.8 tok/s on 70B 4-bit at 4K ctx. Single-stream decode; batch-1, bandwidth-bound regime.",
   "measured_by": "third_party",
-  "reproducible": null,
-  "energy_basis": null,
-  "power_w": null,
-  "power_scope": null,
-  "power_cap": null,
-  "clock_lock_mhz": null,
-  "thermal_state": null,
-  "notes": "Consistent with the 8.15 t/s M3 Max 64GB Q4_K_M row and the ~8x bandwidth gap vs M1 Ultra (400 GB/s vs 800 GB/s): ~half the Ultra's 12.55 t/s.",
+  "reproducible": true,
+  "notes": "CREATED 2026-10-15 Phase-A residual gap-fill - sibling rows live on their own accelerator records (M1 Ultra 12.6, M4 Max 11.8, M3 Ultra 15.5); this one was stranded in comm-apple-m1-ultra-llama33-70b-4bit-decode's notes because no apple-m2-max record existed. 64 GB fits a ~40 GB 70B weight set only at low context; the 96 GB SKU is the comfortable fit. ~400 GB/s is half an M2 Ultra's 800 GB/s and decode is bandwidth-bound, so 8.8 vs the Ultra's ~9-11 est reflects KV-read narrowing, not a paradox - at short ctx weight reads dominate and the ratio is closer to the bandwidth ratio.",
   "status": "verified",
-  "confidence": 0.7,
+  "confidence": 0.8,
   "updated": "2026-10-15",
   "sources": [
-    "silicon-score-benchmarks-csv-machine-level-measured-tok-s-export"
+    "silicon-score-llama-3-3-70b-model-page-benchmark-csv",
+    "llama-cpp-discussion-4167-apple-silicon-llama-bench-table"
   ]
 }
