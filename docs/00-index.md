@@ -650,7 +650,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **AMD Infinity Fabric scale-up link (CDNA4: 153.6 GB/s per direction, 20% faster)** (`interconnect/amd-infinity-fabric-link-cdna4`) — 153.6 GB/s · Fully connected 8-GPU mesh (each GPU connects to 7 others). No switch. 7 links per GPU for GPU-to-GPU communication. Identical topology to CDNA3. The MI355X product page lists 'Infinity Fabric Links: 7' and 'Peak Infinity Fabric Link Bandwidth: 153 GB/s' (rounded). Scale-out link: 128 GB/s (unchanged from CDNA3).
 - **AMD xGMI (Socket/Inter-Chip Global Memory Interconnect)** (`interconnect/amd-xgmi`) — 50 GB/s · Point-to-point, no switch part. TWO distinct roles, and this is the part that is routinely misread: (1) DIE-TO-DIE, inside one package - on MI250X the two GCDs of one OAM module are joined by FOUR xGMI/Infinity Fabric links, which AMD gives as 4 x 25 GT/sec = 200 GB/sec peak transfer between the two GCDs, or 400 GB/sec bidirectional for the same; (2) DIE-TO-DEVICE, between accelerators - on MI210 (PCIe cards) xGMI is exposed through direct-connect xGMI BRIDGE CARDS in adjacent PCIe slots, giving dual and quad GPU hives, whereas the MI250X/MI250 OAM modules carry 8 links natively. On a multi-OAM MI300X node AMD's own architecture reference states the accelerator-side count is SEVEN Infinity Fabric links, used 'to form a fully connected 8-GPU system' - but the MI300X product page board table says 'Infinity Fabric Links: 8'. That is a real disagreement between two first-party AMD sources, not a typo: seven links is the minimum needed to make 8 nodes fully connected (each node needs a link to each of the other 7), so the board-table 8 is most likely counting an extra link of a different role (host or scale-out) rather than a mesh edge. Both figures are retained here; the typed link_count field carries the die-to-die value of 4 for MI250X, which is where this record's per-link rate is sourced. On CDNA3/MI300 the die-to-die topology is also a full mesh over up to 8 vertically stacked XCDs plus 4 I/O dies, so an MI300X is internally a single 8-way domain, not two halves.
 
-## Benchmarks (1516)
+## Benchmarks (1526)
 
 - **16GB VRAM: Llama 3.1 8B Q8_0 decode tokens/sec** (`benchmarks/local-16gb-13b-q4-decode`) — 40.0 tok/s - UNSOURCED, DO NOT CITE. Decommissioned 2026-10-04 (bq-): no cited source contains a decode-throughput measurement for this part and no run was performed. The number is retained only for history; the schema forbids nulling value/measured_by. · Llama 3.1 8B on ? via llama-cpp
 - **24GB VRAM: Llama 3.1 8B Q8_0 decode tokens/sec** (`benchmarks/local-24gb-13b-q8-decode`) — 50.0 tok/s - UNSOURCED, DO NOT CITE. Decommissioned 2026-10-04 (bq-): no cited source contains a decode-throughput measurement for this part and no run was performed. The number is retained only for history; the schema forbids nulling value/measured_by. · Llama 3.1 8B on ? via llama-cpp
@@ -666,6 +666,15 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **8xH200 SXM-141GB (MaxQ), MLPerf v4.1 llama2-70b Server: 23113.14 completed tok/s at 5767.2 W mean = 0.2495 J/output token** (`benchmarks/h200-8x-mlperf-v4-1-maxq-llama2-70b-server-energy-per-token`) — 23113.14 completed tokens/s (MLPerf 'Completed tokens per second') AT 5767.2 W MEAN WHOLE-NODE DRAW - i.e. 0.2495 J/output token; watts in the unit because the metric enum has no energy metric · Llama 2 70B (MLPerf 'llama2-70b-99.9') on nvidia-h200-sxm via tensorrt-llm
 - **8xH200 SXM-141GB (MaxQ), MLPerf v4.1 mixtral-8x7b Offline: 48987.9 output tok/s at 5854.3 W mean = 0.1195 J/output token** (`benchmarks/h200-8x-mlperf-v4-1-maxq-mixtral-8x7b-offline-energy-per-token`) — 48987.9 output tokens/s (MLPerf 'Tokens per second', aggregate) AT 5854.3 W MEAN WHOLE-NODE DRAW - i.e. 0.1195 J/output token; watts in the unit because the metric enum has no energy metric · Mixtral 8x7B (MLPerf 'mixtral-8x7b') on nvidia-h200-sxm via tensorrt-llm
 - **8xH200 SXM-141GB, MLPerf v4.1 llama2-70b Offline throughput under MaxP (no power measurement) vs MaxQ: 31302.7 vs 25262.1 tok/s** (`benchmarks/h200-8x-mlperf-v4-1-maxp-llama2-70b-offline-vs-maxq`) — 31302.7 output tokens/s (MLPerf 'Tokens per second', aggregate), non-power MaxP submission, NO POWER FIGURE PUBLISHED FOR THIS RUN - the comparison value is 25262.1 tok/s at 5806.9 W for the MaxQ submission of the same benchmark · Llama 2 70B (MLPerf 'llama2-70b-99.9') on nvidia-h200-sxm via tensorrt-llm
+- **A100 40GB PCIe MiniCPM5-1B F16 decode (llamabench, llama.cpp b9935)** (`benchmarks/llamabench-a100pcie40-minicpm5-1b-decode-tg128`) — 361 tok/s decode (tg128, per-request batch-1); top prefill 24868 tok/s · MiniCPM5-1B on nvidia-a100-40gb-pcie via llama-cpp
+- **A100 40GB PCIe Qwen3.5-4B UD-Q4_K_XL decode (llamabench, llama.cpp b9935)** (`benchmarks/llamabench-a100pcie40-qwen35-4b-decode-tg128`) — 166 tok/s decode (tg128, per-request batch-1); top prefill 5306 tok/s · Qwen3.5-4B on nvidia-a100-40gb-pcie via llama-cpp
+- **A100 40GB PCIe Qwen3.5-9B UD-Q4_K_XL decode (llamabench, llama.cpp b9935)** (`benchmarks/llamabench-a100pcie40-qwen35-9b-decode-tg128`) — 125 tok/s decode (tg128, per-request batch-1); top prefill 4009 tok/s · Qwen3.5-9B on nvidia-a100-40gb-pcie via llama-cpp
+- **A100 40GB PCIe Qwen3.6-27B UD-Q4_K_XL decode (llamabench, llama.cpp b9935)** (`benchmarks/llamabench-a100pcie40-qwen36-27b-decode-tg128`) — 43.9 tok/s decode (tg128, per-request batch-1); top prefill 1262 tok/s · Qwen3.6-27B on nvidia-a100-40gb-pcie via llama-cpp
+- **A100 40GB PCIe Qwen3.6-35B-A3B (MoE, ~3.5B active) UD-Q4_K_XL decode (llamabench, llama.cpp b9935)** (`benchmarks/llamabench-a100pcie40-qwen36-35b-a3b-decode-tg128`) — 136 tok/s decode (tg128, per-request batch-1); top prefill 3413 tok/s · Qwen3.6-35B-A3B (MoE, ~3.5B active) on nvidia-a100-40gb-pcie via llama-cpp
+- **A100 40GB PCIe gemma-4-12B-it UD-Q4_K_XL decode (llamabench, llama.cpp b9935)** (`benchmarks/llamabench-a100pcie40-gemma4-12b-decode-tg128`) — 86.4 tok/s decode (tg128, per-request batch-1); top prefill 2930 tok/s · gemma-4-12B-it on nvidia-a100-40gb-pcie via llama-cpp
+- **A100 40GB PCIe gemma-4-26B-A4B-it (MoE, ~4B active) UD-Q4_K_XL decode (llamabench, llama.cpp b9935)** (`benchmarks/llamabench-a100pcie40-gemma4-26b-a4b-decode-tg128`) — 128 tok/s decode (tg128, per-request batch-1); top prefill 4115 tok/s · gemma-4-26B-A4B-it (MoE, ~4B active) on nvidia-a100-40gb-pcie via llama-cpp
+- **A100 40GB PCIe gemma-4-31B-it UD-Q4_K_XL decode (llamabench, llama.cpp b9935)** (`benchmarks/llamabench-a100pcie40-gemma4-31b-decode-tg128`) — 41.2 tok/s decode (tg128, per-request batch-1); top prefill 1197 tok/s · gemma-4-31B-it on nvidia-a100-40gb-pcie via llama-cpp
+- **A100 40GB PCIe gpt-oss-20b (MoE) F16 decode (llamabench, llama.cpp b9935)** (`benchmarks/llamabench-a100pcie40-gpt-oss-20b-decode-tg128`) — 187 tok/s decode (tg128, per-request batch-1); top prefill 5568 tok/s · gpt-oss-20b (MoE) on nvidia-a100-40gb-pcie via llama-cpp
 - **A100 40GB PCIe llama.cpp b9935: Ornith-1.0-35B Q4_K_M decode** (`benchmarks/llamabench-a100pcie40-ornith10-35b-q4km-tg128`) — 148 tok/s decode (tg128, batch-1, ctx 0.5k, FA on); prefill 3321 t/s · Ornith-1.0-35B Q4_K_M on nvidia-a100-40gb-pcie via llama-cpp
 - **A100 40GB PCIe llama.cpp b9935: Ornith-1.0-35B Q4_K_M prefill** (`benchmarks/llamabench-a100pcie40-ornith10-35b-q4km-pp`) — 3321 tok/s prefill (ctx 0.5k, FA on); decode 148 t/s tg128 · Ornith-1.0-35B Q4_K_M on nvidia-a100-40gb-pcie via llama-cpp
 - **A100 40GB PCIe llama.cpp b9935: Qwen3.5-4B UD-Q4_K_XL decode** (`benchmarks/llamabench-a100pcie40-qwen35-4b-q4kxl-tg128`) — 166 tok/s decode (tg128, batch-1, ctx 0.5k, FA on); prefill 5306 t/s · Qwen3.5-4B UD-Q4_K_XL on nvidia-a100-40gb-pcie via llama-cpp
@@ -684,6 +693,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **A100 40GB PCIe llama.cpp b9935: gemma-4-31B-it UD-Q4_K_XL prefill** (`benchmarks/llamabench-a100pcie40-gemma4-31b-q4kxl-pp`) — 1197 tok/s prefill (ctx 0.5k, FA on); decode 41.2 t/s tg128 · gemma-4-31B-it UD-Q4_K_XL on nvidia-a100-40gb-pcie via llama-cpp
 - **A100 40GB PCIe llama.cpp b9935: gpt-oss-20B F16 decode** (`benchmarks/llamabench-a100pcie40-gpt-oss-20b-f16-tg128`) — 187 tok/s decode (tg128, batch-1, ctx 0.5k, FA on); prefill 5568 t/s · gpt-oss-20B F16 on nvidia-a100-40gb-pcie via llama-cpp
 - **A100 40GB PCIe llama.cpp b9935: gpt-oss-20B F16 prefill** (`benchmarks/llamabench-a100pcie40-gpt-oss-20b-f16-pp`) — 5568 tok/s prefill (ctx 0.5k, FA on); decode 187 t/s tg128 · gpt-oss-20B F16 on nvidia-a100-40gb-pcie via llama-cpp
+- **A100 40GB PCIe ornith-1.0-35b Q4_K_M decode (llamabench, llama.cpp b9935)** (`benchmarks/llamabench-a100pcie40-ornith-1-0-35b-decode-tg128`) — 148 tok/s decode (tg128, per-request batch-1); top prefill 3321 tok/s · ornith-1.0-35b on nvidia-a100-40gb-pcie via llama-cpp
 - **A100 40GB SXM4 Llama-3-70B Q4_K_M decode (sibling-derived estimate)** (`benchmarks/comm-a100-40gb-sxm4-est-llama3-70b-q4-decode`) — 18.0 tok/s (ESTIMATE - not measured) · Llama-3-70B Q4_K_M (GGUF) on nvidia-a100-40gb-sxm4 via llama-cpp
 - **A100 40GB SXM4 llama.cpp b10808: Ornith-1.5-35B-A3B Q4_K_M (MoE, 3B active) decode** (`benchmarks/llamabench-a100sxm40-ornith15-35b-a3b-q4km-tg128`) — 148 tok/s decode (tg128, batch-1, ctx 0.5k, FA on, kv q8_0); prefill 3291 t/s · Ornith-1.5-35B-A3B Q4_K_M (MoE, 3B active) on nvidia-a100-40gb-sxm4 via llama-cpp
 - **A100 40GB SXM4 llama.cpp b10808: Ornith-1.5-9B Q4_K_M decode** (`benchmarks/llamabench-a100sxm40-ornith15-9b-q4km-tg128`) — 129 tok/s decode (tg128, batch-1, ctx 0.5k, FA on, kv q8_0); prefill 4052 t/s · Ornith-1.5-9B Q4_K_M on nvidia-a100-40gb-sxm4 via llama-cpp
@@ -3299,7 +3309,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (2255)
+## Sources (2256)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -4892,6 +4902,7 @@ and t
 - **llama.cpp tools/quantize README** (`sources/quant-llamacpp-quantize-readme`) — repo · ggml-org
 - **llama.cpp tools/quantize/quantize.cpp QUANT_OPTIONS table** (`sources/qlab2-quantize-options-table`) — repo · ggml-org
 - **llama.cpp tools/rpc/README.md: the RPC backend is labelled proof-of-concept, fragile and insecure** (`sources/comm-llamacpp-rpc-upstream-readme`) — repo · llama.cpp upstream repository
+- **llamabench.ai — community crowdsourced llama.cpp results, NVIDIA A100 PCIe 40GB board page** (`sources/llamabench-ai-a100pcie40`) — repo · llamabench.ai (crowdsourced, submitter @wmeddie)
 - **llamafile GitHub repo** (`sources/cpuedge-llamafile-github`) — repo · Mozilla AI (mozilla-ai)
 - **llamafile Supported Systems docs** (`sources/cpuedge-llamafile-support-docs`) — repo · Mozilla AI (mozilla-ai)
 - **llamafile Supported Systems docs (IQ-quants on NVIDIA section)** (`sources/qlab2-llamafile-support-docs`) — repo · Mozilla AI (mozilla-ai)
@@ -5893,7 +5904,7 @@ and t
 
 ## Coverage
 
-Total records: **5830**
+Total records: **5841**
 
 | group | records |
 |---|---|
