@@ -1,0 +1,23 @@
+{
+  "id": "gotcha-dual-socket-numa-does-not-double-decode",
+  "type": "gotcha",
+  "name": "Dual-socket EPYC does not double 70B decode - NUMA domain splitting gives ~1.3-1.6x",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-15",
+  "sources": [
+    "leaseweb-amd-epyc-llm-inference-benchmark-cpu-vs-gpu",
+    "llama-cpp-discussion-19480-cpu-inference-thread-epyc-9454p-ryzen",
+    "runaihome-cpu-vs-gpu-llm-inference-home-lab-2026-dram-crisis"
+  ],
+  "class": "config",
+  "affects": [
+    "amd-epyc-9334-genoa-dual"
+  ],
+  "concepts": [],
+  "symptom": "A 2P Genoa box (24 channels, ~920 GB/s aggregate) reads like it should double single-socket 70B decode. It does not: NUMA domain splitting means the model spans both sockets memory unevenly and the interconnect tax eats the gain, so measured uplift is ~1.3-1.6x a single socket.",
+  "root_cause": "llama.cpp --numa distribute and RPC backends help but cannot fully hide socket-to-socket bandwidth asymmetry on a model split across two NUMA domains; the CPU-side interconnect is not transparent like a GPU NVLink plane.",
+  "workaround": "Populate every channel on BOTH sockets (see gotcha-cpu-inference-must-populate-all-memory-channels) and use ik_llama.cpp -numa distribute or RPC backends; expect ~1.3-1.6x not 2x.",
+  "severity": "minor",
+  "notes": "Dual EPYC 9334 measured ~26-28 tok/s on gpt-oss-20b / DeepSeek-8B Q4-class (LeaseWeb 2026). For a single-user 70B decode, a fully-populated 1P Genoa at ~7 tok/s is usually the better buy than 2P complexity."
+}

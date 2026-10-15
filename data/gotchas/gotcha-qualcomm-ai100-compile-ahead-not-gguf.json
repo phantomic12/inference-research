@@ -1,29 +1,24 @@
 {
   "id": "gotcha-qualcomm-ai100-compile-ahead-not-gguf",
   "type": "gotcha",
-  "name": "Qualcomm Cloud AI 100 works, but is compile-ahead - not load-a-GGUF",
+  "name": "Qualcomm Cloud AI 100 runs LLMs, but only via ahead-of-time compile - not load-a-GGUF",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-15",
+  "sources": [
+    "qualcomm-cloud-ai-sdk-vllm-serving-path",
+    "quic-efficient-transformers-hf-qpc-compile-pipeline-for-cloud-ai",
+    "chihaoy-ai-100-server-qwen3-30b-4x-cloud-ai100",
+    "demoaiexperience-qualcomm-ai100-llama-70b-repo"
+  ],
   "class": "toolchain",
   "affects": [
     "qualcomm-ai100"
   ],
-  "concepts": [
-    "qaic",
-    "qpc",
-    "awq-int4",
-    "mxfp6",
-    "compile-ahead"
-  ],
-  "symptom": "Everything is quantized-compile-ahead (AWQ-INT4/mxfp6 via quic/efficient-transformers -> QPC): there is no 'load a GGUF and go' path.",
-  "root_cause": "The public cloud-ai-sdk (BSD-3) vLLM container ghcr.io/quic/cloud_ai_inference_vllm runs Meta-Llama-3.1-8B-Instruct-AWQ-INT4 out of the box, and third parties have run 70B (DemoAIExperience) and Qwen3-30B on 4x cards (chihaoy) - but it needs the QAic platform SDK installed and a compile-and-serve pipeline.",
-  "workaround": "The SDK is real and public - viable for someone who wants the journey. Sweet spot for a single 32GB card is 7-8B INT4; single-card decode tok/s is not cleanly published.",
+  "concepts": [],
+  "symptom": "A used Qualcomm Cloud AI 100 PCIe card (~$200-600, 32GB LPDDR4x) looks like cheap 8B-capable silicon, and it technically is - but only through the QPC compile-and-serve pipeline: quic/efficient-transformers converts an HF checkpoint to a Qualcomm Package (QPC) with AWQ-INT4/mxfp6 quantization and mxint8 KV cache, then the ghcr.io/quic/cloud_ai_inference_vllm container serves it. There is no GGUF path, no load-and-go.",
+  "root_cause": "The card is a fixed-compile NPU: models must be compiled to QPC with a specific quantization recipe (AWQ-INT4 / mxfp6) before serving. vLLM is available but as a Qualcomm container image, not upstream.",
+  "workaround": "Use the public SDK: qualcomm/cloud-ai-sdk (BSD-3) + quic/efficient-transformers for HF->QPC compile + ghcr.io/quic/cloud_ai_inference_vllm for serving. Meta-Llama-3.1-8B-Instruct-AWQ-INT4 runs out of the box. Expert-only; if you cannot drive a compile pipeline it becomes a paperweight.",
   "severity": "major",
-  "notes": "Verdict 'viable-ish / expert trap': if you can't drive a compile-and-serve QPC pipeline it becomes a paperweight.",
-  "status": "verified",
-  "confidence": 0.7,
-  "updated": "2026-10-15",
-  "sources": [
-    "qualcomm-cloud-ai-sdk-github-repo",
-    "qualcomm-cloud-ai-sdk-vllm-serving-path",
-    "demoaiexperience-qualcomm-ai100-llama-70b-repo"
-  ]
+  "notes": "Verdict class \"viable-ish / expert trap\": the SDK is genuinely public and runs open models (Llama-3.1-8B AWQ-INT4, Qwen3-30B on 4x cards, even Llama-3.3-70B demos exist), but it is a compile-and-serve platform, not an inference-device ecosystem. Sweet spot for a single 32GB card is 7-8B INT4."
 }
