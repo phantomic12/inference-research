@@ -1,30 +1,31 @@
 {
-  "id": "apple-m2-max",
-  "type": "accelerator",
-  "name": "Apple M2 Max (38-core GPU, MacBook Pro 16-inch, Jan 2023)",
-  "status": "verified",
-  "confidence": 0.8,
-  "updated": "2026-10-15",
-  "sources": [
-    "apple-macbook-pro-16-inch-2023-m2-max-tech-specs"
-  ],
-  "vendor": "apple",
-  "architecture": "m-series (M2 Max)",
-  "release_year": 2023,
-  "process_nm": 5,
-  "form_factors": [
-    "socs"
-  ],
-  "vram_gb": 96,
-  "memory_type": "lpddr5 unified",
-  "memory_bus_bit": null,
-  "memory_bandwidth_gbps": 400,
-  "memory_bandwidth_basis": "Apple tech specs (support.apple.com/en-us/111340): M2 Max = 400 GB/s unified memory bandwidth across both GPU bins (30-core and 38-core). Unified pool, shared with CPU - not a dedicated VRAM bus.",
-  "onchip_cache": null,
-  "flops": [],
-  "tdp_w": null,
-  "interconnect": [],
-  "unified_memory": true,
-  "consumer": true,
-  "notes": "M2 Max: 12-core CPU, 30- or 38-core GPU, 16-core Neural Engine, up to 96 GB unified memory, 400 GB/s. Included as the portable mid-tier between M1/M2 Ultra and M3/M4 Max. NOTE: unlike M3 Max (where the 14-core-CPU config drops to 300 GB/s), M2 Max holds 400 GB/s on both GPU bins per Apple's spec page - the config trap does not apply here.\n\nUNIFIED MEMORY IS NOT VRAM: the GPU cannot address the whole pool; bandwidth is shared with CPU/Neural Engine; bigger capacity does not mean faster decode. See the standing caveat on apple-m3-max.\n\ntdp_w null: Apple publishes no per-SoC power figure for the laptop.\n\nMEMORY_BUS_WIDTH: null. Apple publishes memory BANDWIDTH only, never a bus width in bits for M-series parts; not back-computed (LPDDR5X pin rates vary by SKU). NO FIGURE WAS BACK-COMPUTED FROM BANDWIDTH.\n\nInference read: 400 GB/s shared unified bandwidth -> measured 8.8 tok/s on Llama-3.3-70B 4-bit (siliconscore row, see comm-apple-m2-max-llama33-70b-4bit-tg). 64 GB SKUs only fit a 70B Q4 at low context; the 96 GB top config is the capacity play."
+ "id": "apple-m2-max",
+ "type": "accelerator",
+ "name": "Apple M2 Max (MacBook Pro / Mac Studio, 2023)",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-10-15",
+ "sources": [
+  "silicon-score-llama-3-3-70b-model-page-benchmark-csv",
+  "llama-cpp-discussion-4167-apple-silicon-llama-bench-table"
+ ],
+ "vendor": "apple",
+ "architecture": "m-series (M2 Max)",
+ "release_year": 2023,
+ "process_nm": 5,
+ "form_factors": [
+  "socs"
+ ],
+ "vram_gb": 96,
+ "memory_type": "lpddr5 unified",
+ "memory_bus_bit": null,
+ "memory_bandwidth_gbps": 400,
+ "memory_bandwidth_basis": "Apple tech specs: M2 Max unified-memory bandwidth is 400 GB/s for the 38-core GPU configuration (300 GB/s on the lower 30-core bin). Package-level, shared with CPU. Research file (research-big-memory.md) cites ~400 GB/s.",
+ "onchip_cache": null,
+ "flops": [],
+ "tdp_w": null,
+ "interconnect": [],
+ "unified_memory": true,
+ "consumer": true,
+ "notes": "Added in the Phase-A gap-fill for the Oct-14 research ingest: research-big-memory.md cites a measured 8.8 tok/s Llama-3.3-70B 4-bit on the M2 Max 38-core 64GB, but the repo had no apple-m2-max record for the benchmark to join to. vram_gb 96 is the max configurable unified pool (64GB and 96GB SKUs; the measured row is the 64GB MacBook Pro which fits a 70B Q4 only at low context). Bandwidth 400 GB/s is roughly half an M1/M2 Ultra's 800 GB/s, which is exactly why the measured 70B decode (~8.8 t/s) lands near half the M1 Ultra's 12.6 t/s - decode scales almost perfectly with memory bandwidth on this class."
 }
