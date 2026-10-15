@@ -1,0 +1,30 @@
+{
+  "id": "vllm-qwen35-35b-hybrid-fp8kv-256k",
+  "type": "kv_efficiency",
+  "name": "Qwen3.5-35B-A3B hybrid (linear + every-4th full attention) with FP8 KV on vLLM: 20.5 KiB/token base, fully recovers 1M-context AUC in the fp8-KV validation",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-04",
+  "sources": [
+    "ctx-src-vllm-fp8-kvcache-2026-04",
+    "model-cn-qwen35-hybrid-card",
+    "mbl-cfg-qwen3-5-35b-a3b"
+  ],
+  "model": "Qwen3.5-35B-A3B (hybrid Gated DeltaNet, 30 linear + 10 full-attention layers)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 1048576,
+  "kv_bytes_per_token": 10240,
+  "kv_bytes_per_token_basis": "10 full-attention layers x 2 kv heads x 256 head_dim x 2 (K+V) x 1 byte (fp8) = 10 x 2 x 256 x 2 = 10,240 B/token. The bf16 model record carries 20,480 B/token — only the 10 full-attention layers carry a KV cache; the 30 linear-attention layers hold a fixed-size recurrent state that does not grow with context. If all 40 layers cached like a normal GQA stack, bf16 would be 81,920 B/token — the hybrid architecture is already a 4x KV reduction before dtype.",
+  "kv_cache_dtype": "fp8",
+  "attention_variant": "hybrid",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Two facts joined because they are the same deployment shape. ARCHITECTURE (model record): Qwen3.5-35B-A3B is the first Qwen with hybrid linear+full attention — 30 Gated DeltaNet layers + 10 full-attention layers (every 4th), context 262144 native. MEASUREMENT (vLLM fp8-KV validation, 2026-04-22): the Qwen3.5-27B sibling at 1M context 'fully recovers aggregate AUC' on uncalibrated FP8 KV — the best long-context recovery figure in that source, attributed to the hybrid cache being small enough that fp8 error has less KV to corrupt. context_length 1048576 records the 1M measurement point; the model's native max is 262144, so 1M implies rope extension in the benchmark harness, noted rather than hidden. measured_* stay null: the source reports AUC recovery, not TTFT/tok-s, at this context.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "The type's existence proof that attention_variant and kv_cache_dtype are independent levers that multiply: MLA/hybrid architecture shrinks WHAT is cached (4x here), fp8 shrinks each cached byte (2x), and the compound is why a 35B MoE can carry 1M context where a dense GQA 70B cannot carry 128K. This is also the cleanest counter-example to 'KV quant always costs quality at long context': the same source that documents the Hopper 13%-vs-91% needle failure at 128K reports full AUC recovery at 1M on this family — the difference is backend (FA3 two-level accumulation) and cache size, not the dtype alone. Record the pairing: 262144 native context vs the 1M measurement point is stated in methodology so nobody quotes 'Qwen3.5 does 1M' from this record."
+}

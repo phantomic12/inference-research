@@ -1,0 +1,32 @@
+{
+  "id": "sglang-dsv41-fp8kv-128k-cold-prefill",
+  "type": "kv_efficiency",
+  "name": "SGLang serving DeepSeek-V4.1-Flash on 8x RTX PRO 6000: fp8 KV cache, 128K cold prefill at chunked_prefill_size=2048",
+  "status": "draft",
+  "confidence": 0.8,
+  "updated": "2026-10-04",
+  "sources": [
+    "ev-sglang-issue-40877-production-deepseek-v41-flash"
+  ],
+  "model": "DeepSeek-V4.1-Flash (MXFP4 experts, 1M context enabled)",
+  "engine_id": "sglang",
+  "accelerator_ids": [
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "interconnect_ids": [
+    "pcie-gen5"
+  ],
+  "context_length": 131072,
+  "kv_bytes_per_token": 35136,
+  "kv_bytes_per_token_basis": "61 layers x (kv_lora_rank 512 + qk_rope_head_dim 64) x 1 byte (fp8_e4m3) = 61 x 576 = 35,136 B/token. MLA latent cache, so the GQA formula does not apply; the bf16 latent size on the DeepSeek-V3 skeleton is 70,272 B/token and fp8 halves it. V4.1-Flash shares the MLA skeleton but this record's figure is derived from the V3 family geometry named in the source, not re-measured.",
+  "kv_cache_dtype": "fp8",
+  "attention_variant": "mla",
+  "prefix_reuse": "radix",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": 6853.0,
+  "methodology": "SINGLE-STREAM cold prefill of one 128K-token prompt on a production SGLang config: 8x RTX PRO 6000 Blackwell Max-Q 96 GB (SM120, PCIe only, no NVLink), TP=8/EP=8/DP=1, context_length 1,048,576, kv_cache_dtype fp8_e4m3, mem_fraction_static 0.72, max_running_requests 16, attention_backend dsv4, moe_runner_backend flashinfer_mxfp4, chunked_prefill_size 2048, CUDA graph decode on / prefill graph disabled. Tokens counted from the response usage field. A/B re-run read 6,765 tok/s (-1.3%); chunked_prefill_size 4096 -> 6,301, 1024 -> 6,012; flashmla prefill backend -> 6,845; 32K prompt -> ~7,196 tok/s. quant_method null: --kv-cache-dtype fp8 is a plain engine storage dtype, not a named KV-quant method.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "The KV-cache story in this record is the fp8_e4m3 dtype: it is what lets a 1M-token context_length fit the KV pool on 8x96 GB at all, and the reporter's diagnosis ('GPU util ~87% at 220 W of 600 W -> communication-bound on PCIe') says the prefill ceiling is the fabric, not KV capacity. measured_ttft_ms_at_ctx is null because the source reports a prefill RATE, not a TTFT, at this context (TTFT would conflate prefill time with queueing on a production box). Companion record sglang-radix-hit-112k-prefix is the cache-hit side of the same deployment. Sibling benchmark records: [[benchmarks/ev-sglang-dsv41-production-128k-prefill-tps]] (same run, metric-shaped record) and [[benchmarks/ev-vllm-dsv41-production-128k-prefill-tps-eager]] (vLLM 4,584 tok/s on the same hardware, eager fallback path — most of the ~1.5x gap is eager-vs-CUDA-graph, not scheduler)."
+}

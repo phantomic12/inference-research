@@ -117,6 +117,16 @@ TEMPLATES = {
         "histogram_buckets": [], "labels": [], "enabled_by_default": None,
         "phase_scoped": None, "verified_negatively": None, "notes": "",
     },
+    "kv_efficiency": {
+        "model": None, "engine_id": None, "accelerator_ids": [],
+        "interconnect_ids": [], "context_length": None,
+        "kv_bytes_per_token": None, "kv_bytes_per_token_basis": None,
+        "kv_cache_dtype": None, "attention_variant": None,
+        "prefix_reuse": None, "quant_method": None,
+        "measured_ttft_ms_at_ctx": None, "measured_tps_at_ctx": None,
+        "methodology": None, "measured_by": None, "reproducible": None,
+        "notes": "",
+    },
 }
 
 

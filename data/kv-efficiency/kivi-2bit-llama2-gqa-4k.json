@@ -1,0 +1,29 @@
+{
+  "id": "kivi-2bit-llama2-gqa-4k",
+  "type": "kv_efficiency",
+  "name": "KIVI asymmetric 2-bit KV (2-bit keys / 4-bit values) on Llama-2-class GQA models: ~8x KV compression for a ~2-5% perplexity delta",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-15",
+  "sources": [
+    "qlab-kivi-paper",
+    "pap-quant-kivi"
+  ],
+  "model": "Llama-2-7B/13B (GQA-1 on 7B; Llama-3-8B also evaluated)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 4096,
+  "kv_bytes_per_token": 40960,
+  "kv_bytes_per_token_basis": "Llama-2-7B MHA: 32 layers x 32 kv heads x 128 head_dim x 2 (K+V) x 0.1875 bytes-equivalent average (2-bit keys + 4-bit values = 3 bits avg / 16) = 262,144 x 3/16 = 49,152 B/token theoretical. 40,960 records the practical per-token resident after KIVI keeps a residual full-precision window (~128 recent tokens) — an approximation, stated as one because the paper reports batch-level compression (peak memory ~2.6x smaller incl. weights, KV alone approaching the ~8x theoretical) rather than a clean per-token figure.",
+  "kv_cache_dtype": "kivi",
+  "attention_variant": "gqa",
+  "prefix_reuse": "none",
+  "quant_method": "kivi-asymmetric-2k4v",
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Research-harness measurement, not a production serving run: KIVI (arXiv:2402.02750), tuning-free asymmetric KV quant — keys per-channel at 2 bits, values per-token at 4 bits, plus a residual window of recent tokens kept full-precision because keys are the sensitive tensor. WikiText-2 perplexity delta on Llama-2/Llama-3 reported ~2-5% at this setting; GSM8K and long-context (LongBench) degradation within noise on most tasks. No TTFT/throughput published in a form this schema can hold — the value of the record is the KV size / quality trade-off, so measured_* are null rather than filled with a derived guess. engine_id vllm records the partial vLLM integration path, not that this number came from vLLM.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "The ASYMMETRY is the finding worth keeping: 2-bit keys work because key outliers are per-channel (a per-channel quant groups the outliers together), while values tolerate only ~4 bits per-token — the two tensors are NOT interchangeable and a symmetric 2-bit KV quant fails badly on the same models, which is why kv_cache_dtype gets a dedicated 'kivi' member rather than 'int2'. Real-world engine support is still partial (vLLM partial, llama.cpp none; ktransformers research), so this is closer to research-only deployment than the fp8 record. The quality delta in the research file ('~2-5% ppl delta on Llama-2/3') is the honest range; the paper's own tables are task-dependent and Llama-3-8B reads better than Llama-2-7B."
+}
