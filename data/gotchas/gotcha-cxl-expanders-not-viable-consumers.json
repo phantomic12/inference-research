@@ -1,0 +1,34 @@
+{
+ "id": "gotcha-cxl-expanders-not-viable-consumers",
+ "type": "gotcha",
+ "name": "CXL memory expanders are not viable for consumer low-budget LLM inference",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-14",
+ "sources": [
+  "servethehome-marvell-structera-x-cxl-3-2-memory-expanders",
+  "link-cxl-about",
+  "src5-cxl-docs"
+ ],
+ "class": "hardware",
+ "affects": [
+  "cxl-2-0",
+  "cxl-3-x",
+  "cxl-4-0"
+ ],
+ "concepts": [
+  "cxl",
+  "cxl.mem",
+  "memory-expander",
+  "capacity-vs-bandwidth",
+  "latency",
+  "server-only",
+  "e3s",
+  "root-complex"
+ ],
+ "symptom": "A builder chasing 'more memory for a 70B+ model' looks at CXL expander announcements (Marvell Structera X 2404/2504/3406/3506, Astera Leo 2/Leo X, Samsung CMM, XCENA MX1) and expects to plug one into a desktop board to add cheap capacity. No retail channel sells them, and even if one were bought it would enumerate as nothing on a consumer board.",
+ "root_cause": "Three structural blockers. (1) FORM FACTOR + CHANNEL: every shipping CXL expander is an E3.S/E3.C PCIe-CEM module or board aimed at hyperscaler/server DDR-reclamation (Marvell's Oct-2026 Structera X 3506 does 6x DDR5 channels / up to 6TB per controller for cloud DRAM reclamation, sold to server OEMs, not Newegg). (2) ROOT COMPLEX: CXL 2.0+ requires the CPU/root complex to support CXL; consumer Intel/AMD platforms do not enable CXL on their PCIe root ports. You need Sapphire Rapids/Genoa-or-newer, at which point you already have 8-12 DDR5 channels and do not need the expander. (3) BANDWIDTH, NOT LATENCY, IS THE BINDING CONSTRAINT: CXL.mem adds ~200-400 ns over local DRAM, which for decode (bandwidth-bound, latency-tolerant) is actually fine - but a single PCIe 5.0 x16 CXL link tops out ~64 GB/s, WORSE than a single DDR5 channel pair. CXL is a capacity play, not a bandwidth play, and does not help 70B decode speed at all.",
+ "workaround": "Do not plan a low-budget build around a CXL expander. For capacity-tokens-per-dollar today the real paths are: used Apple Silicon unified memory (M1/M2/M3 Ultra, ~800 GB/s), AMD Strix Halo 128GB mini-PCs (~256 GB/s, best MoE value), a fully-populated EPYC Genoa 12-channel server (~460 GB/s), or a parted-out 8x V100 DGX-1 (~900 GB/s/GPU). Revisit CXL only when consumer chipsets ship CXL root ports - no earlier than ~2027 Nova Lake / Medusa-class platforms, and that is optimistic. Where CXL will eventually help: cheap far-memory CAPACITY so a 400B-class model loads, with a GPU doing decode from fast memory - a load-time fix, not a decode-speed fix.",
+ "severity": "minor",
+ "notes": "This is a status-check gotcha, not a defect: it exists so a reader does not mistake CXL-expander press coverage for a purchasable capacity path. Distinct from w8r-cxl-family-broke-the-pcie-direction-convention (a bandwidth-direction arithmetic defect in the interconnect records). Verdict carried forward from research-big-memory.md section 5: 'not viable for consumers in late 2026, and probably not in 2027 either.'"
+}

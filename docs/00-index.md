@@ -2085,7 +2085,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **vllm on intel-arc-pro-b70: Qwen3.5-27B fp8-e4m3 tg128 tok/s (bentech, dual B70+B60 vLLM FP8 pipeline-parallel)** (`benchmarks/bentech-b70-qwen35-27b-fp8-dual-tg`) — 13.3 tok/s (tg128, batch-1 per-request) · Qwen3.5-27B on intel-arc-pro-b70, intel-arc-pro-b60 via vllm
 - **vllm-ascend v0.17.0 on Huawei Atlas 300I Pro (Ascend 310P3, 24GB LPDDR4X): Qwen3-4B FP16, ~9 tok/s decode** (`benchmarks/vllm-ascend-atlas300ipro-qwen3-4b-fp16-decode`) — 9.0 ~tok/s decode (reporter's rounded figure) · Qwen/Qwen3-4B (FP16, ~8GB weights) on huawei-atlas-300i-pro via niche-vllm-ascend
 
-## Gotchas (441)
+## Gotchas (442)
 
 - **"Nobody publishes this price" is usually "no OEM publishes this price" - and that distinction hides a closable gap** (`gotchas/w5s-a-negative-about-one-channel-is-not-a-negative-about-the-market`) — [blocker] measurement · A whole hardware generation is recorded as unpriceable, and the finding is repeated until it becomes load-bearing. docs/08-cost-per-token.md states 'Every AMD MI300X/MI325X/MI355X benchmark is unprice
 - **/health returns 200 before the model is loaded, so a liveness-style readiness probe routes traffic to a replica that will fail every request for minutes** (`gotchas/ops-health-endpoint-lies-about-readiness`) — [blocker] operations · After a rollout, a fraction of requests fail with connection errors or immediate 500s against newly-created pods that Kubernetes reports as Ready. The failure window is the model load time and it vari
@@ -2463,6 +2463,7 @@ and t
 - **Apple Silicon unified memory enables 70B+ model execution on consumer devices, but autoregressive decode speed is strictly bounded by LPDDR package bandwidth** (`gotchas/gotcha-apple-unified-memory-bandwidth-decode-ceiling`) — [minor] hardware · Practitioners purchasing 64GB-128GB Macs frequently expect high decode throughput for 70B models based on the large unified pool, but observe single-user batch-1 decode speeds of only 8-15 tokens/seco
 - **BlueField DPU offloads network processing but not GPU compute or NCCL collectives** (`gotchas/nic-bluefield-dpu-offload-limits`) — [minor] hardware · BlueField DPU is sometimes described as offloading 'AI workloads' or 'collective communication', but it actually offloads network, storage, and security processing - not GPU compute or NCCL collective
 - **CUDA MPS on top of MIG caps the 48-client limit proportionally to Compute Instance size, and gives up the error isolation that justified MIG** (`gotchas/mgpu-mps-max-clients-scale-down-on-mig`) — [minor] hardware · Stacking MPS over MIG produces a lower client ceiling than the headline 48: 'CUDA MPS is supported on top of MIG. The only limitation is that the maximum number of clients (48) is lowered proportional
+- **CXL memory expanders are not viable for consumer low-budget LLM inference** (`gotchas/gotcha-cxl-expanders-not-viable-consumers`) — [minor] hardware · A builder chasing 'more memory for a 70B+ model' looks at CXL expander announcements (Marvell Structera X 2404/2504/3406/3506, Astera Leo 2/Leo X, Samsung CMM, XCENA MX1) and expects to plug one into 
 - **Cache-aware routing has no way to rebuild its map of which KV blocks live where: the placement view is built from a live event stream, so any router or replica restart leaves it permanently wrong, and the result is silently worse routing rather than an error** (`gotchas/dep-kv-aware-router-view-cannot-be-rebuilt-after-restart`) — [minor] framework · Prefix-cache hit rates drop after a restart and never fully recover, with no error and no unhealthy worker. This is the expected behaviour of the current design, not a bug report: SGLang's own RFC enu
 - **Community consensus on where the quantization quality cliff is: below Q4 is unusable, and below Q8 is unusable for code - but this is forum opinion, and the one measurement in the thread does not test it** (`gotchas/comm-community-quant-quality-floor-opinion`) — [minor] format · The recurring practitioner judgement in r/LocalLLaMA, stated plainly by timschwartz: 'Quantization is lossy compression. It shaves off a few IQ points in exchange for making it smaller. Stuff below Q4
 - **Consensus with a real justification: SGLang is preferred over vLLM specifically for multinode setup and for prefix-heavy structured workloads, and its simpler deployment path is the cited reason** (`gotchas/sent-sglang-multinode-and-prefix-consensus`) — [minor] toolchain · The multinode case is stated bluntly by a practitioner who has run both at tp=16: 'For multinode, I much prefer SGLang's simple setup vs Ray - the docs for vLLM are barely adequate for setting up Ray 
@@ -5792,13 +5793,13 @@ and t
 
 ## Coverage
 
-Total records: **5729**
+Total records: **5730**
 
 | group | records |
 |---|---|
 | severity:major | 269 |
 | severity:blocker | 86 |
-| severity:minor | 83 |
+| severity:minor | 84 |
 | backend:cuda | 78 |
 | flop bound:memory | 58 |
 | vendor:nvidia | 55 |
