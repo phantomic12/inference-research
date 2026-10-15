@@ -115,7 +115,7 @@
 - **NVIDIA GB10 Grace Blackwell (DGX Spark)** (`accelerators/nvidia-gb10`) — nvidia blackwell + grace (GB10) 2025 · 128 GB lpddr5x unified · 273 GB/s · 140 W
 - **NVIDIA GB200 NVL72 (per-accelerator)** (`accelerators/nvidia-gb200-nvl72`) — nvidia blackwell 2024 · 186 GB HBM3e · 8000 GB/s · 1200 W
 - **NVIDIA GB300 (Blackwell Ultra GPU as fitted in the GB300 NVL72 rack, per-GPU figures)** (`accelerators/nvidia-gb300`) — nvidia blackwell-ultra 2025 · 279 GB hbm3e · 8000 GB/s · 1400 W
-- **NVIDIA GH200 Grace Hopper (96GB HBM3)** (`accelerators/nvidia-gh200`) — nvidia hopper + grace (GH100/Grace) 2023 · 96 GB hbm3 + lpddr5x unified · 4000 GB/s
+- **NVIDIA GH200 Grace Hopper** (`accelerators/nvidia-gh200`) — nvidia Hopper + Grace (NVLink-C2C) 2023 · 96 GB HBM3 · 4000 GB/s · 1000 W
 - **NVIDIA GeForce RTX 3060 12GB** (`accelerators/nvidia-rtx-3060`) — nvidia ampere (GA106) 2021 · 12 GB gddr6 · 360 GB/s · 170 W
 - **NVIDIA GeForce RTX 3070** (`accelerators/nvidia-rtx-3070`) — nvidia ampere (GA104) 2020 · 8 GB gddr6 · 448 GB/s · 220 W
 - **NVIDIA GeForce RTX 3080 10GB** (`accelerators/nvidia-rtx-3080-10gb`) — nvidia ampere (GA102) 2020 · 10 GB gddr6x · 760 GB/s · 320 W
