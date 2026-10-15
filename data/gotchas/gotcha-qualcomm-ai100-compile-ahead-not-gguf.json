@@ -1,0 +1,29 @@
+{
+  "id": "gotcha-qualcomm-ai100-compile-ahead-not-gguf",
+  "type": "gotcha",
+  "name": "Qualcomm Cloud AI 100 works, but is compile-ahead - not load-a-GGUF",
+  "class": "toolchain",
+  "affects": [
+    "qualcomm-ai100"
+  ],
+  "concepts": [
+    "qaic",
+    "qpc",
+    "awq-int4",
+    "mxfp6",
+    "compile-ahead"
+  ],
+  "symptom": "Everything is quantized-compile-ahead (AWQ-INT4/mxfp6 via quic/efficient-transformers -> QPC): there is no 'load a GGUF and go' path.",
+  "root_cause": "The public cloud-ai-sdk (BSD-3) vLLM container ghcr.io/quic/cloud_ai_inference_vllm runs Meta-Llama-3.1-8B-Instruct-AWQ-INT4 out of the box, and third parties have run 70B (DemoAIExperience) and Qwen3-30B on 4x cards (chihaoy) - but it needs the QAic platform SDK installed and a compile-and-serve pipeline.",
+  "workaround": "The SDK is real and public - viable for someone who wants the journey. Sweet spot for a single 32GB card is 7-8B INT4; single-card decode tok/s is not cleanly published.",
+  "severity": "major",
+  "notes": "Verdict 'viable-ish / expert trap': if you can't drive a compile-and-serve QPC pipeline it becomes a paperweight.",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-15",
+  "sources": [
+    "qualcomm-cloud-ai-sdk-github-repo",
+    "qualcomm-cloud-ai-sdk-vllm-serving-path",
+    "demoaiexperience-qualcomm-ai100-llama-70b-repo"
+  ]
+}
