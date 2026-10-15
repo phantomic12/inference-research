@@ -3,6 +3,13 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
+**Verified 2026-10-15** against `main` after the Phase-A ingest
+(`ingest/research-oct14`, merged) and the Phase-C benchmark backfill: the
+selection rule yields 98 qualifying accelerators / 39 purchase-priced, and every
+table row below re-derives clean from `python tools/fit_matrix_35b.py` — no row
+changed since the p5 refresh, which means the Oct-14 used-market ingest wave is
+fully reflected.
+
 **Scope, set by the commissioning brief.** The target class is a **35B-A3B
 Mixture-of-Experts** model (~3B active parameters at decode), a **~27B dense**
 model, and **Llama-3.3-70B at Q4** as the stretch goal. The question is narrow:
