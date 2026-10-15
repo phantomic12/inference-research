@@ -1,0 +1,31 @@
+{
+  "id": "dsim-h800-deepseekv3-d32-b128-2mb-tps",
+  "type": "benchmark",
+  "name": "DeepSeek_Simulator H800: DeepSeek-V3 decode 3121 tok/s/device (d=32 b_mla=128, two-microbatch overlap)",
+  "engine_id": "sglang",
+  "accelerator_ids": [
+    "nvidia-h800-80gb"
+  ],
+  "interconnect_ids": [],
+  "model": "deepseek-ai/DeepSeek-V3",
+  "format_id": "fp8-e4m3",
+  "metric": "tps_aggregate",
+  "value": 3121.0,
+  "unit": "tok/s per device (simulated decode aggregate, EP degree d=32, per-rank batch 128)",
+  "methodology": "MEASURED-KERNEL SIMULATION (shenh10/DeepSeek_Simulator, commit 7c691017). DeepSeek V3/R1 decode phase: real DeepGEMM + FlashMLA kernels timed on H800-80G silicon, then recombined into throughput for expert-parallel configs that do not fit one node. Table values are tok/s PER DEVICE aggregate decode (attention-DP, MoE-EP; 'd' = data/expert-parallel degree, 'b_mla' = per-rank batch). Two-microbatch overlapping = DeepSeek official overlap; single-batch = compute-comm overlap. NOT an end-to-end serving number - a model-driven ceiling, filed as draft. Row: d=32, tp=1, b_mla=128; single-batch 2782 vs two-microbatch 3121 tok/s - recorded the two-microbatch peak.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "energy_basis": null,
+  "power_w": null,
+  "power_scope": null,
+  "power_cap": null,
+  "clock_lock_mhz": null,
+  "thermal_state": null,
+  "notes": "SIMULATED ceiling - real measured kernels (DeepGEMM/FlashMLA on H800) but a recombination model for the cluster-level number, not a serving trace. Do NOT quote alongside end-to-end sglang/vLLM numbers; compare within the simulator's own rows.",
+  "status": "draft",
+  "confidence": 0.4,
+  "updated": "2026-10-15",
+  "sources": [
+    "deepseek-simulator-h800-h20-results"
+  ]
+}
