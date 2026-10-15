@@ -1,0 +1,19 @@
+{
+  "id": "gotcha-cxl-memory-expander-not-viable-for-consumers",
+  "type": "gotcha",
+  "name": "CXL memory expanders are server-only - no retail channel, no consumer root-complex support",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-15",
+  "sources": [
+    "servethehome-marvell-structera-x-cxl-3-2-memory-expanders"
+  ],
+  "class": "hardware",
+  "affects": [],
+  "concepts": [],
+  "symptom": "A hobbyist who wants \"more memory for a 70B model\" finds CXL expander cards (Marvell Structera X, Astera Leo, Samsung CMM) and assumes they can drop one into a desktop. They cannot: every shipping CXL memory module is an E3.S/E3.C or PCIe-CEM card aimed at hyperscaler/server platforms, CXL 2.0+ requires CPU/root-complex support that consumer Intel/AMD platforms do not enable, and a CXL.mem device enumerates as nothing on a consumer board.",
+  "root_cause": "CXL expanders are sold OEM-only (no retail channel), and CXL.mem needs the host CPU to expose CXL on its root ports - only Sapphire Rapids/Genoa-class servers and newer do. A single PCIe 5.0 x16 CXL link is also only ~64 GB/s, worse than a single DDR5 channel pair, so it is a capacity play not a bandwidth play: it cannot speed up 70B decode.",
+  "workaround": "None for consumers in late-2026. Revisit when consumer chipsets ship CXL root ports (earliest ~2027 Nova Lake / Medusa-class, optimistic).",
+  "severity": "major",
+  "notes": "CXL latency (~200-400ns over local DRAM) is actually fine for bandwidth-bound decode - the blocker is purely host support and retail availability, not the protocol itself."
+}
