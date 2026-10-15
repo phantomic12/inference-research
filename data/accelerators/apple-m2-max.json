@@ -1,31 +1,31 @@
 {
- "id": "apple-m2-max",
- "type": "accelerator",
- "name": "Apple M2 Max (MacBook Pro / Mac Studio, 2023)",
- "status": "verified",
- "confidence": 0.8,
- "updated": "2026-10-15",
- "sources": [
-  "silicon-score-llama-3-3-70b-model-page-benchmark-csv",
-  "llama-cpp-discussion-4167-apple-silicon-llama-bench-table"
- ],
- "vendor": "apple",
- "architecture": "m-series (M2 Max)",
- "release_year": 2023,
- "process_nm": 5,
- "form_factors": [
-  "socs"
- ],
- "vram_gb": 96,
- "memory_type": "lpddr5 unified",
- "memory_bus_bit": null,
- "memory_bandwidth_gbps": 400,
- "memory_bandwidth_basis": "Apple tech specs: M2 Max unified-memory bandwidth is 400 GB/s for the 38-core GPU configuration (300 GB/s on the lower 30-core bin). Package-level, shared with CPU. Research file (research-big-memory.md) cites ~400 GB/s.",
- "onchip_cache": null,
- "flops": [],
- "tdp_w": null,
- "interconnect": [],
- "unified_memory": true,
- "consumer": true,
- "notes": "Added in the Phase-A gap-fill for the Oct-14 research ingest: research-big-memory.md cites a measured 8.8 tok/s Llama-3.3-70B 4-bit on the M2 Max 38-core 64GB, but the repo had no apple-m2-max record for the benchmark to join to. vram_gb 96 is the max configurable unified pool (64GB and 96GB SKUs; the measured row is the 64GB MacBook Pro which fits a 70B Q4 only at low context). Bandwidth 400 GB/s is roughly half an M1/M2 Ultra's 800 GB/s, which is exactly why the measured 70B decode (~8.8 t/s) lands near half the M1 Ultra's 12.6 t/s - decode scales almost perfectly with memory bandwidth on this class."
+  "id": "apple-m2-max",
+  "type": "accelerator",
+  "name": "Apple M2 Max (MacBook Pro 14/16-inch & Mac Studio, 2023)",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-15",
+  "sources": [
+    "silicon-score-llama-3-3-70b-model-page-benchmark-csv",
+    "llama-cpp-discussion-4167-apple-silicon-llama-bench-table"
+  ],
+  "vendor": "apple",
+  "architecture": "m-series (M2 Max)",
+  "release_year": 2023,
+  "process_nm": 5,
+  "form_factors": [
+    "socs"
+  ],
+  "vram_gb": 96,
+  "memory_type": "lpddr5 unified",
+  "memory_bus_bit": 512,
+  "memory_bandwidth_gbps": 400,
+  "memory_bandwidth_basis": "Apple-published ~400 GB/s for the M2 Max with 38-core GPU (the 30-core GPU configuration is listed at 300 GB/s). Unified-memory bandwidth, package-level, shared with the CPU. The 38-core / 96 GB pairing is the one Silicon Score benchmarks on a 70B model.",
+  "onchip_cache": null,
+  "flops": [],
+  "tdp_w": null,
+  "interconnect": [],
+  "unified_memory": true,
+  "consumer": true,
+  "notes": "CREATED 2026-10-15 Phase-A residual gap-fill: the big-memory research file cites an M2 Max 38-core 64GB row at 8.8 tok/s on Llama-3.3-70B 4-bit (Silicon Score), but no apple-m2-max record existed to hang that benchmark on - it lived only in comm-apple-m1-ultra-llama33-70b-4bit-decode's notes. M2 Max sits one die below M2 Ultra: 12-core CPU, 30- or 38-core GPU, 400 GB/s on the 38-core part (300 GB/s on the 30-core), up to 96 GB unified.\n\nCAPACITY-vs-BANDWIDTH caveat that matters for this part: the 64 GB configuration (the one benchmarked) can only hold a 70B 4-bit model at LOW context - the model is ~40 GB of weights and KV headroom shrinks fast past 4-8k ctx. The 96 GB SKU is the comfortable 70B fit. 400 GB/s is roughly HALF an M2 Ultra's 800 GB/s, and batch-1 decode is bandwidth-bound, so M2 Max lands near half the Ultra's tok/s on the same model (measured 8.8 vs ~9-11 est on the Ultra - the gap narrows because KV reads, not just weight reads, dominate at long ctx).\n\nUNIFIED MEMORY IS NOT VRAM - same caveats as the rest of the Apple block: the advertised capacity is shared with the OS/CPU and the bandwidth ceiling serves the whole system, not a private GPU bus. tdp_w is null: Apple publishes no per-SoC power figure for the laptop or the Studio it sits in.\n\nSources: benchmark row from Silicon Score Llama-3.3-70B page (8.8 tok/s, 38-core, 64GB, 4-bit); bandwidth/config bounds from Apple tech specs as republished in the same Silicon Score machine rows and the llama.cpp #4167 M-series table."
 }
