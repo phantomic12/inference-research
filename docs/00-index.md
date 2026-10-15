@@ -2796,7 +2796,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (2227)
+## Sources (2228)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -3302,6 +3302,7 @@ and t
 - **llama.cpp Discussion #15013 — Performance of llama.cpp on Nvidia CUDA (community scoreboard)** (`sources/llama-cpp-discussion-15013-nvidia-cuda-scoreboard`) — forum · GitHub / ggml-org
 - **llama.cpp Discussion #15021 — Performance of llama.cpp on AMD ROCm/HIP (community scoreboard)** (`sources/llama-cpp-discussion-15021-amd-rocm-scoreboard`) — forum · GitHub / ggml-org
 - **llama.cpp PR #28398: hardware v_perm_b32 for Q1_0 vec_dot on AMD (+110% decode on gfx1201)** (`sources/bench-llamacpp-pr-28398-radeon-r9700-q1`) — forum · llama.cpp contributors (community)
+- **llama.cpp discussion #19480 — CPU inference thread (EPYC 9454P / Ryzen)** (`sources/llama-cpp-discussion-19480-cpu-inference-thread-epyc-9454p-ryzen`) — forum
 - **llama.cpp discussion #2824: MI100 multi-GPU measured tok/s** (`sources/llama-cpp-discussion-2824-mi100-multi-gpu-measured-tok-s`) — forum · llama.cpp community
 - **llama.cpp discussion #3167: CPU channel population effect** (`sources/llama-cpp-discussion-3167-cpu-channel-population-effect`) — forum · llama.cpp community
 - **llama.cpp discussion: RX 7900 XTX ROCm llama-bench vs 3090/4090** (`sources/llama-cpp-discussion-rx-7900-xtx-rocm-vs-3090-4090-bench`) — forum · GitHub / ggml-org
@@ -5362,7 +5363,7 @@ and t
 
 ## Coverage
 
-Total records: **5299**
+Total records: **5300**
 
 | group | records |
 |---|---|
