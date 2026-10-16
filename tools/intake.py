@@ -217,28 +217,15 @@ def cmd_commit(args) -> int:
         print("\nrefusing to commit: eligible set has validation errors (use --force to override)")
         return rc
 
-    # Build the exact tree we are about to commit (HEAD + eligible), and index
-    # THAT. Indexing the working tree would fold in other agents' in-flight
-    # records into the index without folding them into the commit.
-    index_text = None
-    tmp = Path(tempfile.mkdtemp(prefix="intake-commit-"))
-    try:
-        build_overlay(tmp, state["eligible"])
-        index_text = generate_index(tmp)
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
-
+    # docs/00-index.md is generated in CI and gitignored, so intake no longer
+    # builds or stages it. Committing it made every concurrent branch conflict
+    # on a file that is fully derived from data/.
     git("checkout", "-b", args.branch, check=False)
     for item in state["eligible"]:
         rel = item["path"].relative_to(ROOT)
         git("add", "--", str(rel), check=False)
     for p in state["deleted"]:
         git("add", "--", str(p.relative_to(ROOT)), check=False)
-    if index_text is not None:
-        idx = ROOT / "docs" / "00-index.md"
-        idx.parent.mkdir(parents=True, exist_ok=True)
-        idx.write_text(index_text, encoding="utf-8")
-        git("add", "--", "docs/00-index.md", check=False)
 
     body = args.message
     if state["counts"]:
