@@ -3,12 +3,17 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
-> **Refresh note (docs/fit-matrix-oct14, Oct-16).** Re-run of
-> `python tools/fit_matrix_35b.py` against current `main` (162 accelerator
-> records, 214 supply records, 1,595 benchmarks). The selection rule now
+> **Refresh note (docs/fit-matrix-oct16-p6, Oct-16).** Re-run of
+> `python tools/fit_matrix_35b.py` against local `main` `e128197` (162
+> accelerator records, 214 supply records, 1,595 benchmarks — the Phase-C
+> Oct-16 p7 benchmark backfill on top of `origin/main`). The selection rule
 > yields **118 qualifying accelerators**, of which **42 have a usable
 > purchase price** and 76 are bandwidth-qualified but unpriced (57 of those
-> fit 35B-A3B, 19 do not). Three things moved since the Oct-15 pass-3 doc:
+> fit 35B-A3B, 19 do not). The ranked $/tok-s table is unchanged from the
+> Oct-16 `docs/fit-matrix-oct14` refresh; what this pass does is land that
+> table on the tree that actually contains the Atlas join and the four §4b
+> rows, and quote two measured values at the record's own precision. Three
+> things moved since the Oct-15 pass-3 doc:
 >
 > - **One new priced row.** [[accelerators/huawei-atlas-300i-pro]] (24 GB,
 >   204.8 GB/s) is the card-level record of the same 310P-class silicon as
@@ -313,21 +318,21 @@ numbers themselves come from the cited records.
 | accelerator | BW GB/s | ceiling *(derived)* | measured tok/s | × over floor *(derived)* | benchmark record |
 |---|---|---|---|---|---|
 | [[accelerators/nvidia-rtx-5090]] | 1792 | 89.6 | 234.3 | 2.6× | [[benchmarks/hc-rtx5090-qwen3-30b-a3b-q4kxl-4k-tg128]] |
-| [[accelerators/nvidia-rtx-4090]] | 1008 | 50.4 | 109.6 | 2.2× | [[benchmarks/hwcorner-rtx-4090-qwen3-30b-a3b-q4kxl-decode-16k]] |
-| [[accelerators/nvidia-rtx-3090-ti]] | 1008 | 50.4 | 98.3 | 1.9× | [[benchmarks/hwcorner-rtx-3090-ti-qwen3-30b-a3b-q4kxl-decode-16k]] |
-| [[accelerators/nvidia-rtx-6000-ada]] | 960 | 48.0 | 104.9 | 2.2× | [[benchmarks/hwcorner-rtx-6000-ada-qwen3-30b-a3b-q4kxl-decode-16k]] |
+| [[accelerators/nvidia-rtx-4090]] | 1008 | 50.4 | 109.57 | 2.2× | [[benchmarks/hwcorner-rtx-4090-qwen3-30b-a3b-q4kxl-decode-16k]] |
+| [[accelerators/nvidia-rtx-3090-ti]] | 1008 | 50.4 | 98.25 | 1.9× | [[benchmarks/hwcorner-rtx-3090-ti-qwen3-30b-a3b-q4kxl-decode-16k]] |
+| [[accelerators/nvidia-rtx-6000-ada]] | 960 | 48.0 | 104.88 | 2.2× | [[benchmarks/hwcorner-rtx-6000-ada-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/nvidia-rtx-5070-ti]] | 896 | 44.8 | 111.1 | 2.5× | [[benchmarks/hwcorner-rtx-5070-ti-qwen3-30b-a3b-q4kxl-decode-16k]] |
-| [[accelerators/nvidia-rtx-4080]] | 716.8 | 35.8 | 85.0 | 2.4× | [[benchmarks/hwcorner-rtx-4080-qwen3-30b-a3b-q4kxl-decode-16k]] |
+| [[accelerators/nvidia-rtx-4080]] | 716.8 | 35.8 | 85.04 | 2.4× | [[benchmarks/hwcorner-rtx-4080-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/local-apple-m5-max]] | 614 | 30.7 | 128.0 | 4.2× | [[benchmarks/ss-m5max-48-qwen35-35b-mlx-4bit-tg]] *(MLX path; llama.cpp Q4_K_M row lands 89.4 → 2.9×, [[benchmarks/ss-m5max-48-qwen35-35b-llamacpp-q4km-tg]])* |
-| [[accelerators/apple-m4-max]] | 546 | 27.3 | 113.3 | 4.2× | [[benchmarks/mlx-m4-max-qwen3-30b-a3b-4bit-decode-tok-s]] |
-| [[accelerators/apple-m4-max]] | 546 | 27.3 | 92.1 | 3.4× | [[benchmarks/ss-m4max-40core-qwen3-30b-mlx-q4-tg]] *(second, community run on the same part)* |
+| [[accelerators/apple-m4-max]] | 546 | 27.3 | 113.33 | 4.2× | [[benchmarks/mlx-m4-max-qwen3-30b-a3b-4bit-decode-tok-s]] |
+| [[accelerators/apple-m4-max]] | 546 | 27.3 | 92.09 | 3.4× | [[benchmarks/ss-m4max-40core-qwen3-30b-mlx-q4-tg]] *(second, community run on the same part)* |
 | [[accelerators/amd-epyc-9454p-genoa]] | 460.8 | 23.0 | 63.1 | 2.7× | [[benchmarks/comm-epyc-9454p-qwen3-moe-30b-decode]] |
 | [[accelerators/local-apple-m5-pro]] | 307 | 15.3 | 41.9 | 2.7× | [[benchmarks/ss-m5pro-64-qwen35-35b-llamacpp-q4kl-tg]] |
-| [[accelerators/amd-radeon-8060s-ryzen-ai-max]] | 256 | 12.8 | 72.4 | 5.7× | [[benchmarks/lhl-8060s-qwen3-30b-a3b-ud-q4-k-xl-vulkan-tg1]] *(best of 20 Strix Halo runs; the pass-7 row [[benchmarks/kyuz0-strix-8060s-qwen36-35b-a3b-q4kxl-vulkan-radv-tg128]] at 60.4 → 4.7× still stands)* |
+| [[accelerators/amd-radeon-8060s-ryzen-ai-max]] | 256 | 12.8 | 72.35 | 5.7× | [[benchmarks/lhl-8060s-qwen3-30b-a3b-ud-q4-k-xl-vulkan-tg1]] *(best of 20 Strix Halo runs; the pass-7 row [[benchmarks/kyuz0-strix-8060s-qwen36-35b-a3b-q4kxl-vulkan-radv-tg128]] at 60.43 → 4.7× still stands)* |
 | [[accelerators/nvidia-rtx-pro-6000-blackwell]] | 1792 | 89.6 | 198.7 | 2.2× | [[benchmarks/hc26-rtxpro6000-qwen3-30b-a3b-q4k-tg-4k]] *(4k context; the same card's 256k row is 38.4 and is a context effect, not a roofline one)* |
 | [[accelerators/nvidia-a100-40gb-sxm4]] | 1555 | 77.8 | 148 | 1.9× | [[benchmarks/llamabench-a100sxm40-ornith15-35b-a3b-q4km-tg128]] |
 | [[accelerators/nvidia-a100-40gb-pcie]] | 1555 | 77.8 | 136 | 1.7× | [[benchmarks/llamabench-a100pcie40-qwen36-35b-a3b-q4kxl-tg128]] |
-| [[accelerators/nvidia-rtx-a6000]] | 768 | 38.4 | 75.4 | 2.0× | [[benchmarks/hwcorner-rtx-a6000-qwen3-30b-a3b-q4kxl-decode-16k]] |
+| [[accelerators/nvidia-rtx-a6000]] | 768 | 38.4 | 75.35 | 2.0× | [[benchmarks/hwcorner-rtx-a6000-qwen3-30b-a3b-q4kxl-decode-16k]] |
 
 Three reads:
 
@@ -347,7 +352,7 @@ Three reads:
   is monotonic in bandwidth.
 - **The cheapest *measured* A3B answer is still the 3090-Ti class.** Of the
   parts with both a price and a measured run, [[accelerators/nvidia-rtx-3090-ti]]
-  at $950 with 98.3 measured tok/s (~$9.67/measured-tok/s, derived) is the
+  at $950 with 98.25 measured tok/s (~$9.67/measured-tok/s, derived) is the
   cheapest verified fit — the roofline ranks it #10 on $/tok-s, the
   measurement says its real margin over the floor (1.9×) is the *worst* of
   the measured set, and it still beats everything cheaper that was measured.
