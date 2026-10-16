@@ -198,11 +198,13 @@ PRICE_JOIN = {
     #   apple-m2-max (vram_gb=96) has NO capacity-matched whole-system supply
     #     record — the M2-Max gap-fill ingest added the accelerator but no 96 GB
     #     Mac Studio/MacBook Pro SKU — so it stays unpriced in §4.
-    #   amd-epyc-9454p-genoa / amd-epyc-9554-genoa / amd-epyc-9334-genoa-dual are
-    #     vram_gb-null DDR5 host CPUs (unified_memory); the Genoa supply rows
-    #     price the CPU alone ($2,000, no RAM = no resident pool) or a 384 GB
-    #     self-build ($7,500, capacity-mismatched vs whatever pool the reader
-    #     assumes) — neither joined; the host class is documented in §4.
+    #   amd-epyc-9454p-genoa and amd-epyc-9334-genoa-dual stay unpriced: they
+    #     are vram_gb-null DDR5 host CPUs and no supply row prices a memory
+    #     pool configured for them. amd-epyc-9554-genoa IS joined, below, to
+    #     used-epyc-9004-genoa-build-384gb ($7,500) — the 384 GB the build
+    #     record configures is the UNIFIED_MEM_GB override, so the fit flag
+    #     and the sticker describe the same machine. The $2,000 CPU-only row
+    #     (used-epyc-9354-genoa-cpu) is still NOT joined: it prices no RAM.
     # Strix Halo pass-2 whole systems, joined to the OTHER Strix Halo
     #   accelerator record (the SoC-in-Framework part, vram_gb=128 explicit).
     #   Both records describe the same silicon; the 8060s one is joined above
@@ -222,11 +224,16 @@ PRICE_JOIN = {
     # --- ingest/research-oct14 pass-3/4 gap-fill records ---------------------
     # Apple silicon whole-system prices (Studio / MacBook Pro); the price buys
     #   the whole box but the accelerator record is the SoC's GPU, joined below.
-    "used-mac-studio-m1-ultra-64gb":    {"apple-m1-ultra": 1850.0},  # 64 GB config
-    "used-mac-studio-m3-ultra-256gb":   {"apple-m3-ultra": 6250.0},  # 256 GB config
-    "used-mac-studio-m3-ultra-512gb":   {"apple-m3-ultra": 9000.0},  # 512 GB config
-    "used-macbook-pro-m3-max-128gb":    {"apple-m3-max": 3400.0},
-    "used-macbook-pro-m4-max-128gb":    {"apple-m4-max": 4700.0},
+    # Capacity-match note (same trap as the comment above this block):
+    #   used-mac-studio-m1-ultra-64gb ($1,850) is a 64 GB chassis against
+    #     apple-m1-ultra vram_gb=128. Joining it makes min() report $1,850 and
+    #     $46.25/tok-s for a fit flag that needs 128 GB. The 128 GB row at
+    #     $2,500 (joined above) is the honest match.
+    #   used-mac-studio-m3-ultra-256gb ($6,250) is a 256 GB chassis against
+    #     apple-m3-ultra vram_gb=512. Joining it makes min() report $6,250 and
+    #     $152.63/tok-s for a fit flag that needs 512 GB. The 512 GB row at
+    #     $9,000 (joined above) is the honest match. Both dropped SKUs are
+    #     noted in the doc §6. The MacBook Pro joins are also above.
     # Strix Halo 192 GB PRO 495 Framework Desktop (newest pass-4 SKU).
     "new-framework-desktop-strix-halo-192gb-pro-495":
         {"amd-ryzen-ai-max-395-framework-desktop": 3750.0},

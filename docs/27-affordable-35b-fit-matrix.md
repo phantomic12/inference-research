@@ -3,6 +3,14 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
+> **Refresh note (docs/fit-matrix-oct14, Oct-16, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `b7921d5` (184 accelerator records, 218 supply records, 2,742 benchmarks). The selection rule now yields **138 qualifying / 43 priced / 95 unpriced** (63 of the unpriced fit 35B-A3B, 32 do not). Two things actually moved; the rest of the ranked order did not:
+>
+> - **One new priced row.** [[accelerators/amd-epyc-9554-genoa]] (vram_gb null, unified DDR5 host) is joined to the whole 384 GB self-build [[supply/used-epyc-9004-genoa-build-384gb]] at $7,500. The 384 GB figure is the configured pool of that supply record (`UNIFIED_MEM_GB` in the tool), so the `Y/Y/Y` flag and the sticker describe the same machine. Ceiling 23.0 tok/s *(derived)* → **$325.52/tok-s *(derived)***, rank 42, one slot above the H100 PCIe. The $2,000 CPU-only row is not joined (it prices no RAM).
+> - **Six fit-but-unpriced rows the previous table dropped.** [[accelerators/nvidia-rtx-pro-5000-72gb-blackwell]], [[accelerators/nvidia-rtx-pro-5000-blackwell]], [[accelerators/nvidia-l40]], [[accelerators/nvidia-rtx-a5000]], [[accelerators/nvidia-rtx-pro-4000-blackwell]], [[accelerators/amd-radeon-pro-v620]]. They were already in `data/accelerators/`; §4 now lists them. The near-miss (does-not-fit) count went from 19 to 32 for the same reason — those ids are named in the §4 close, not given their own table.
+> - **A stale generator join was removed before this table was written.** The tool briefly joined [[supply/used-mac-studio-m1-ultra-64gb]] ($1,850) and [[supply/used-mac-studio-m3-ultra-256gb]] ($6,250) onto records whose `vram_gb` is 128 and 512. That would have ranked M1 Ultra at $46.25/tok-s and M3 Ultra at $152.63/tok-s for fit flags the sticker does not buy. Both stay dropped; the table keeps the capacity-matched rows ($2,500 / 128 GB and $9,000 / 512 GB).
+>
+> Ranked order of the other 42 priced rows is unchanged from the note below, including the RTX 5070 Ti measured cell at **111.11** tok/s.
+>
 > **Refresh note (docs/fit-matrix-oct14, Oct-16).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `069e36f` (162 accelerator records, 214 supply records). Selection rule still yields **118 qualifying / 42 priced / 76 unpriced** (57 of the unpriced fit 35B-A3B, 19 do not). Ranked $/tok-s order is unchanged from the p6 table already on this tree. The only numeric edit is §4b: the RTX 5070 Ti measured decode cell is restored to the benchmark record's own value, **111.11** tok/s ([[benchmarks/hwcorner-rtx-5070-ti-qwen3-30b-a3b-q4kxl-decode-16k]]), not the rounded 111.1 the p6 prose left behind. `2.5×` vs the 44.8 tok/s ceiling is unchanged (111.11/44.8 = 2.48, still 2.5× *(derived)*).
 >
 > **Refresh note (docs/fit-matrix-oct16-p6, Oct-16).** Re-run of
@@ -59,11 +67,10 @@ re-run it. Nothing here is a measurement.
 
 ## 1. The selection rule (which records got a row)
 
-*This build merges the Phase-C pass-5 ingest (Argonne LLM-Inference-Bench,
-MLPerf v3.0 QAic, and the five-card hardware-corner Qwen3-30B-A3B 16k sweep).
-Pass 5 added measured records but no new accelerator or supply records, so the
-qualifying/price counts and the §3 ranking are unchanged from the pass-4 build;
-what changed is §2's calibration material.*
+*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `b7921d5`
+(184 accelerators, 218 supply). The selection rule is unchanged; the counts
+moved because six previously-omitted fit rows are now listed and one host-CPU
+price join landed. See the refresh note above.*
 
 An accelerator record gets a row when **all** of these hold:
 
@@ -73,18 +80,19 @@ An accelerator record gets a row when **all** of these hold:
 
 The `<= $3,000` arm exists so that a cheap-but-slow card (the used-Tesla slice)
 is not filtered out by the bandwidth floor before its price can speak. That rule
-yields **118 qualifying accelerators**, of which **42 have a usable purchase
-price** and 76 are bandwidth-qualified but have no bare-card/system price in
-`data/supply/` (57 of those fit 35B-A3B; 19 qualify and do not).
+yields **138 qualifying accelerators**, of which **43 have a usable purchase
+price** and 95 are bandwidth-qualified but have no bare-card/system price in
+`data/supply/` (63 of those fit 35B-A3B; 32 qualify and do not).
 
 **One exception to the `vram_gb` gate.** A `unified_memory` part (an APU/SoC
-whose GPU shares the CPU's LPDDR5x pool) leaves `vram_gb` null *on purpose* —
+whose GPU shares the CPU's memory pool) leaves `vram_gb` null *on purpose* —
 there is no dedicated VRAM to report. The `>= 8` gate would silently drop it.
 For those, `tools/fit_matrix_35b.py` substitutes the **configured memory of the
 cheapest linked supply record** (a whole system, so its RAM is the usable pool).
-Only [[accelerators/amd-radeon-8060s-ryzen-ai-max]] (Strix Halo, 128 GB
-configured) needs this override in the current corpus; the Apple Ultra parts
-already carry an explicit `vram_gb`.
+Two records need the override: [[accelerators/amd-radeon-8060s-ryzen-ai-max]]
+(Strix Halo, 128 GB configured) and [[accelerators/amd-epyc-9554-genoa]] (the
+384 GB DDR5 pool of [[supply/used-epyc-9004-genoa-build-384gb]]). The Apple
+Ultra parts already carry an explicit `vram_gb`.
 
 ## 2. The three fit columns and the one ceiling
 
@@ -207,14 +215,18 @@ every $/tok-s cell is *(derived)*: `ceiling = memory_bandwidth_gbps / 20` and
 | 39 | [[accelerators/apple-m3-max]] | 128 | 400 | **Y/Y/Y** | 20.0 | $3,400 | [[supply/used-macbook-pro-m3-max-128gb]] | 170.00 |
 | 40 | [[accelerators/apple-m4-max]] | 128 | 546 | **Y/Y/Y** | 27.3 | $4,700 | [[supply/used-macbook-pro-m4-max-128gb]] | 172.16 |
 | 41 | [[accelerators/apple-m3-ultra]] | 512 | 819 | **Y/Y/Y** | 41.0 | $9,000 | [[supply/used-mac-studio-m3-ultra-512gb]] | 219.78 |
-| 42 | [[accelerators/nvidia-h100-pcie]] | 80 | 2000 | **Y/Y/Y** | 100.0 | $43,000 | [[supply/used-h100-80gb-pcie-market]] | 430.00 |
+| 42 | [[accelerators/amd-epyc-9554-genoa]] | 384* | 460.8 | **Y/Y/Y** | 23.0 | $7,500 | [[supply/used-epyc-9004-genoa-build-384gb]] | 325.52 |
+| 43 | [[accelerators/nvidia-h100-pcie]] | 80 | 2000 | **Y/Y/Y** | 100.0 | $43,000 | [[supply/used-h100-80gb-pcie-market]] | 430.00 |
 
-\* The 8060s Strix Halo row is `unified_memory`: its record leaves `vram_gb`
-null; the 128 GB shown is the configured LPDDR5x pool of the cheapest linked
-supply record ([[supply/new-minisforum-ms-s1-max-128gb]]). The sibling
+\* Two rows are `unified_memory` and the capacity shown is not the
+record's `vram_gb` (that field is null). The 8060s Strix Halo 128 GB is the
+configured LPDDR5x pool of the cheapest linked supply record
+([[supply/new-minisforum-ms-s1-max-128gb]]). The EPYC 9554 384 GB is the
+configured DDR5 pool of [[supply/used-epyc-9004-genoa-build-384gb]] — a whole
+self-build, not a bare CPU. The sibling
 `amd-ryzen-ai-max-395-framework-desktop` record carries an explicit
-`vram_gb=128` for the same silicon, priced at the Beelink whole-system row.
-See §1 and §6.
+`vram_gb=128` for the same Strix Halo silicon, priced at the Beelink
+whole-system row. See §1 and §6.
 
 ### The headline read
 
@@ -247,13 +259,16 @@ See §1 and §6.
   MLU370 at $450 (307 GB/s — a capacity fit, not a usable one), then Gaudi 2
   at $2,000 (OAM, §5) and the MI250/X pair at $4,950 (same OAM caveat). The
   cheapest *drop-in PCIe* 70B card with >1 TB/s remains
-  [[accelerators/nvidia-rtx-pro-6000-blackwell]] at $8,650 (rank 36, 89.6
-  tok/s ceiling *(derived)*). [[accelerators/apple-m3-ultra]] is no longer
-  priced off the 96 GB Studio: the 512 GB record now joins
-  [[supply/used-mac-studio-m3-ultra-512gb]] at $9,000 (rank 41, $219.78/tok-s
-  *(derived)*), which is the memory the `Y/Y/Y` flag is actually computed
-  against. Strix Halo at $1,900 still fits 70B on paper and is still
-  bandwidth-capped (§5).
+  [[accelerators/nvidia-rtx-pro-6000-blackwell]] at $8,650 (rank 34, 89.6
+  tok/s ceiling *(derived)*). [[accelerators/apple-m3-ultra]] stays on the
+  512 GB Studio ([[supply/used-mac-studio-m3-ultra-512gb]], $9,000, rank 41,
+  $219.78/tok-s *(derived)*) — the memory the `Y/Y/Y` flag is computed
+  against. The new row is a host, not a GPU:
+  [[accelerators/amd-epyc-9554-genoa]] at $7,500 for a 384 GB DDR5 self-build
+  (rank 42, 23.0 tok/s ceiling *(derived)*, $325.52/tok-s *(derived)*). It
+  fits 70B because the pool is 384 GB, and it is slow because 12-channel
+  DDR5 is 460.8 GB/s. Strix Halo at $1,900 still fits 70B on paper and is
+  still bandwidth-capped (§5).
 
 ## 4. Qualified but no purchase price — the "fits, can't price it" list
 
@@ -261,10 +276,12 @@ These records satisfy the bandwidth/fit rule and **fit 35B-A3B** but have
 **no bare-card or system purchase price** in `data/supply/` (they may have a
 *rental* price in the cloud records — that is a different join, see
 `tools/cost_per_token.py`). Listed so a future supply pass can close them;
-sorted by the 35B ceiling *(derived)*. 57 rows, up from 52: the additions are
-[[accelerators/nvidia-dgx-1-8x-v100]], [[accelerators/nvidia-rtx-a6000]],
-[[accelerators/nvidia-a40]], [[accelerators/nvidia-rtx-5000-ada]],
-[[accelerators/apple-m1-max]] and [[accelerators/apple-m2-max]].
+sorted by the 35B ceiling *(derived)*. 63 rows. This pass adds the six the
+previous table omitted: [[accelerators/nvidia-rtx-pro-5000-72gb-blackwell]]
+and [[accelerators/nvidia-rtx-pro-5000-blackwell]] (both 1,344 GB/s),
+[[accelerators/nvidia-l40]], [[accelerators/nvidia-rtx-a5000]],
+[[accelerators/nvidia-rtx-pro-4000-blackwell]], and
+[[accelerators/amd-radeon-pro-v620]].
 
 | accelerator | VRAM | BW GB/s | Fits | 35B ceil *(derived)* | note |
 |---|---|---|---|---|---|
@@ -296,6 +313,8 @@ sorted by the 35B ceiling *(derived)*. 57 rows, up from 52: the additions are
 | [[accelerators/google-tpu-v6e]] | 32 | 1,638 | **Y/Y/-** | 81.9 | cloud only |
 | [[accelerators/biren-br100]] | 64 | 1,600 | **Y/Y/Y** | 80.0 | no price record |
 | [[accelerators/huawei-ascend-910b]] | 64 | 1,400 | **Y/Y/Y** | 70.0 | no price record |
+| [[accelerators/nvidia-rtx-pro-5000-72gb-blackwell]] | 72 | 1,344 | **Y/Y/Y** | 67.2 | no bare-card price in supply/ |
+| [[accelerators/nvidia-rtx-pro-5000-blackwell]] | 48 | 1,344 | **Y/Y/Y** | 67.2 | no bare-card price in supply/ |
 | [[accelerators/google-tpu-v4]] | 32 | 1,200 | **Y/Y/-** | 60.0 | cloud only |
 | [[accelerators/local-apple-m5-ultra]] | 512 | 1,200 | **Y/Y/Y** | 60.0 | no bare-part price |
 | [[accelerators/amd-radeon-instinct-mi50x]] | 32 | 1,024 | **Y/Y/-** | 51.2 | no price record |
@@ -306,19 +325,23 @@ sorted by the 35B ceiling *(derived)*. 57 rows, up from 52: the additions are
 | [[accelerators/nvidia-dgx-1-8x-v100]] | 256 | 900 | **Y/Y/Y** | 45.0 | 8-GPU server; the $4,000 chassis rows are system prices, not joined (see §6) |
 | [[accelerators/nvidia-rtx-pro-4500-blackwell]] | 32 | 896 | **Y/Y/-** | 44.8 | no price record |
 | [[accelerators/amd-radeon-pro-w7900]] | 48 | 864 | **Y/Y/Y** | 43.2 | no price record |
+| [[accelerators/nvidia-l40]] | 48 | 864 | **Y/Y/Y** | 43.2 | no bare-card price in supply/; Ada sibling of the L40S |
 | [[accelerators/nvidia-l40s]] | 48 | 864 | **Y/Y/Y** | 43.2 | cloud/rental only; second-highest ridge in the repo per docs/09 |
 | [[accelerators/aws-inferentia2]] | 32 | 820 | **Y/Y/-** | 41.0 | AWS only |
 | [[accelerators/apple-m4-ultra]] | 192 | 819 | **Y/Y/Y** | 41.0 | no bare-part price; whole-Mac-Studio silicon |
 | [[accelerators/aws-trainium1]] | 32 | 800 | **Y/Y/-** | 40.0 | AWS only |
 | [[accelerators/moore-threads-s4000]] | 48 | 768 | **Y/Y/Y** | 38.4 | no price record |
+| [[accelerators/nvidia-rtx-a5000]] | 24 | 768 | **Y/Y/-** | 38.4 | no bare-card price in supply/ |
 | [[accelerators/nvidia-rtx-a6000]] | 48 | 768 | **Y/Y/Y** | 38.4 | no bare-card price in supply/ |
 | [[accelerators/nvidia-a40]] | 48 | 696 | **Y/Y/Y** | 34.8 | no bare-card price in supply/ |
+| [[accelerators/nvidia-rtx-pro-4000-blackwell]] | 24 | 672 | **Y/Y/-** | 33.6 | no bare-card price in supply/ |
 | [[accelerators/amd-radeon-ai-pro-r9700]] | 32 | 640 | **Y/Y/-** | 32.0 | no price record |
 | [[accelerators/cambricon-mlu370-x8]] | 48 | 614.4 | **Y/Y/Y** | 30.7 | dual-die card; no price record |
 | [[accelerators/local-apple-m5-max]] | 128 | 614 | **Y/Y/Y** | 30.7 | no bare-part price |
 | [[accelerators/nvidia-a10]] | 24 | 600 | **Y/Y/-** | 30.0 | cloud/distributor only |
 | [[accelerators/nvidia-rtx-5000-ada]] | 32 | 576 | **Y/Y/-** | 28.8 | no bare-card price in supply/ |
 | [[accelerators/qualcomm-ai200]] | 128 | 548 | **Y/Y/Y** | 27.4 | no price record |
+| [[accelerators/amd-radeon-pro-v620]] | 32 | 512 | **Y/Y/-** | 25.6 | no price record |
 | [[accelerators/huawei-ascend-950dt]] | 96 | 500 | **Y/Y/Y** | 25.0 | no price record |
 | [[accelerators/huawei-atlas-300i-duo]] | 96 | 408 | **Y/Y/Y** | 20.4 | no price record (the 24 GB Pro sibling is priced; this Duo is not) |
 | [[accelerators/apple-m1-max]] | 64 | 400 | **Y/Y/Y** | 20.0 | no bare-part price; laptop/desktop silicon |
@@ -326,17 +349,23 @@ sorted by the 35B ceiling *(derived)*. 57 rows, up from 52: the additions are
 | [[accelerators/local-apple-m5-pro]] | 64 | 307 | **Y/Y/Y** | 15.3 | no bare-part price |
 | [[accelerators/nvidia-l4]] | 24 | 300 | **Y/Y/-** | 15.0 | cloud/distributor only |
 
-Nineteen further accelerators qualify on the bandwidth-or-price rule and do
+Thirty-two further accelerators qualify on the bandwidth-or-price rule and do
 **not** fit 35B-A3B (all unpriced). The highest-bandwidth near-misses, all
-`-/-/-` except the 20 GB Ada which fits 27B only: [[accelerators/amd-radeon-pro-vii]]
+`-/-/-` except the two 20 GB parts which fit 27B only: [[accelerators/amd-radeon-pro-vii]]
 (16 GB, 1024 GB/s), [[accelerators/nvidia-rtx-5080]] (16 GB, 960),
 [[accelerators/nvidia-rtx-3080-ti]] (12 GB, 912),
 [[accelerators/nvidia-rtx-5070-ti]] (16 GB, 896),
+[[accelerators/google-tpu-v5e]] (16 GB, 819),
+[[accelerators/amd-radeon-rx-7900-xt]] (20 GB, 800, `-/Y/-`),
+[[accelerators/nvidia-rtx-3080-10gb]] (10 GB, 760),
 [[accelerators/nvidia-rtx-4080-super]] / [[accelerators/nvidia-rtx-4080]],
-[[accelerators/nvidia-rtx-4070-ti-super]], and
-[[accelerators/nvidia-rtx-4000-ada]] (20 GB, 360 GB/s, fits 27B only —
-`-/Y/-`). The full 118-row list, including these 19, is
-`python tools/fit_matrix_35b.py`.
+[[accelerators/google-tpu-v2]] (16 GB, 700),
+[[accelerators/local-nvidia-rtx-5070]] (12 GB, 672),
+[[accelerators/nvidia-rtx-4070-ti-super]],
+[[accelerators/amd-radeon-rx-9070]] (16 GB, 640),
+[[accelerators/nvidia-rtx-a4500]] (20 GB, 640, `-/Y/-`), and
+[[accelerators/nvidia-rtx-4000-ada]] (20 GB, 360 GB/s, `-/Y/-`). The full
+138-row list, including these 32, is `python tools/fit_matrix_35b.py`.
 
 ## 4b. Roofline vs. measured — the A3B-MoE cross-check
 
@@ -453,14 +482,24 @@ show*. These are the corpus's own gotcha records, not new claims:
   [[supply/new-gmktec-evo-x2-strix-halo-128gb]],
   [[supply/new-beelink-gtr9-pro-strix-halo-128gb-2]],
   [[supply/new-gmktec-evo-x3-strix-halo-128gb]]) are whole mini-PCs/boards, plus
-  the DGX-1 (below) and — new this pass — two whole **MacBook Pro laptops**,
-  [[supply/used-macbook-pro-m3-max-128gb]] ($3,400) and
-  [[supply/used-macbook-pro-m4-max-128gb]] ($4,700). Dividing a whole-system
-  price by a per-device ceiling is an apples/orange flagged here, not hidden —
-  the laptop rows price the screen, battery and logic board as well as the
-  unified pool, which is why they sit at the bottom of the ranking despite a
-  `Y/Y/Y` fit. These parts are listed because no bare-silicon price exists,
-  and for the unified-memory rows the *system* is the product.
+  the DGX-1 (below), two whole **MacBook Pro laptops**
+  ([[supply/used-macbook-pro-m3-max-128gb]] $3,400 and
+  [[supply/used-macbook-pro-m4-max-128gb]] $4,700), and — new this pass — a
+  whole **EPYC self-build**, [[supply/used-epyc-9004-genoa-build-384gb]]
+  ($7,500: used CPU + SP5 board + 384 GB DDR5 + chassis, joined to
+  [[accelerators/amd-epyc-9554-genoa]]). Dividing a whole-system price by a
+  per-device ceiling is an apples/orange flagged here, not hidden — the
+  laptop rows price the screen, battery and logic board as well as the
+  unified pool, and the Genoa row prices the DRAM and the motherboard, which
+  is why both sit at the bottom of the ranking despite a `Y/Y/Y` fit. These
+  parts are listed because no bare-silicon price exists, and for the
+  unified-memory rows the *system* is the product.
+  **Capacity-mismatched Apple SKUs stay unjoined.**
+  [[supply/used-mac-studio-m1-ultra-64gb]] ($1,850) is a 64 GB chassis against
+  a record whose `vram_gb` is 128; [[supply/used-mac-studio-m3-ultra-256gb]]
+  ($6,250) and [[supply/used-mac-studio-m3-ultra-96gb]] ($3,700) price less
+  pool than the M3 Ultra record's 512 GB. Joining either would rank a cheaper
+  machine against a fit flag it does not have.
 - **Derived, not measured.** `docs/08-cost-per-token.md` joins *measured*
   benchmarks to *rental* prices; this doc joins *roofline ceilings* to
   *purchase* prices. They answer different questions and neither substitutes
@@ -500,7 +539,7 @@ show*. These are the corpus's own gotcha records, not new claims:
 
 ## 7. Reproduce
 
-    python tools/fit_matrix_35b.py            # the full 118-row matrix, all three sections
+    python tools/fit_matrix_35b.py            # the full 138-row matrix, all three sections
     python tools/validate.py                  # record integrity (no new records added here)
 
 Every figure above is generated by that tool against the committed `data/`
