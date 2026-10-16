@@ -1,0 +1,31 @@
+name: auto-merge
+
+# Enables GitHub's native auto-merge on pull requests targeting main, so a PR
+# merges itself once its required checks pass. This replaces the agent-driven
+# merge loop: no runner token can merge, and GitHub performs the merge only
+# after branch protection is satisfied, so a red CI run can never land.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    runs-on: ubuntu-latest
+    # Drafts, and anything marked to hold back, are left for a person.
+    if: >-
+      github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'hold') &&
+      !contains(github.event.pull_request.labels.*.name, 'do-not-merge')
+    steps:
+      - uses: actions/checkout@v7
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: >-
+          gh pr merge "$PR" --squash --auto --repo "${{ github.repository }}"
