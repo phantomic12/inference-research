@@ -22,14 +22,11 @@ jobs:
         run: python tools/validate.py
       - name: Tool self-tests
         run: python tools/test_tools.py
-      - name: Check index is regenerated
-        run: |
-          python tools/index.py
-          if ! git diff --quiet -- docs/00-index.md; then
-            echo "docs/00-index.md is stale. Run: python tools/index.py && git commit"
-            git --no-pager diff -- docs/00-index.md
-            exit 1
-          fi
+      - name: Generate index
+        # docs/00-index.md is generated and gitignored. It used to be committed,
+        # which made every data-touching branch conflict on it. CI regenerates
+        # it so the catalogue is always current without being a merge hotspot.
+        run: python tools/index.py
       - name: Report coverage
         run: |
           python tools/query.py stats
