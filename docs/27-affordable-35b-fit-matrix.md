@@ -223,19 +223,21 @@ See §1 and §6.
   deployable without a baseboard or a ROCm workaround. The
   [[accelerators/amd-radeon-rx-7900-xtx]] still undercuts both on $/tok-s
   ($875 used, rank 9) but needs the ROCm path.
-- **New in this pass — two whole-laptop joins and a measured sanity check.** Two
-  `used-market` supply records landed since pass 5 that the curated join can
-  price cleanly: [[supply/used-macbook-pro-m3-max-128gb]] ($3,400) and
+- **The laptop joins are still in the table, and they are not the news.**
+  [[supply/used-macbook-pro-m3-max-128gb]] ($3,400) and
   [[supply/used-macbook-pro-m4-max-128gb]] ($4,700) price whole MacBook Pros,
-  putting [[accelerators/apple-m3-max]] and [[accelerators/apple-m4-max]] in
-  the ranked table at 39/40 — still, after the M3 Ultra re-rank — `Y/Y/Y` fits on the 128 GB unified pool, but
-  the $/tok-s is poor because a laptop's BOM is mostly not GPU bandwidth.
-  They are the only new priced rows; every other Phase-C record is a
-  benchmark, not a price.
-- **The headline read is unchanged** — the pass-6/7 wave added *measurements*,
-  not prices, so the ranked columns above are identical to pass 5. What the
-  new records change is §4b: the roofline can now be checked against 18
-  third-party decode runs on the actual A3B-MoE model class.
+  so [[accelerators/apple-m3-max]] and [[accelerators/apple-m4-max]] sit at
+  ranks 39/40 — `Y/Y/Y` on a 128 GB unified pool, poor $/tok-s because a
+  laptop's BOM is mostly not GPU bandwidth. The row this pass actually adds
+  is the card-level 310P record, [[accelerators/huawei-atlas-300i-pro]] at
+  rank 14, tied with the die-level [[accelerators/huawei-ascend-310p]].
+- **The ranked columns are not identical to pass 5.** Pass 6/7 added
+  measurements, and those still live in §4b (18 third-party A3B-MoE decode
+  runs). This refresh also corrects three cells the published table had
+  drifted from their records: MI100 is $720 not $900 (rank 4), M1 Ultra is
+  $2,500 not $2,600 (rank 28), MI210 is $4,000 not $4,180 (rank 23), and
+  M3 Ultra is the capacity-matched $9,000 / 512 GB join at rank 41 rather
+  than the 96 GB chassis at $3,700. §4b itself is unchanged.
 - **The stretch goal (70B, needs ≥48 GB) got *cheaper*.** The cheapest
   single-accelerator 70B fit by sticker is still the MLU370 at $450 — but its
   307 GB/s bus makes it a capacity fit, not a usable one. The biggest move is
