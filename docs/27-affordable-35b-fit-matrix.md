@@ -3,6 +3,8 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
+> **Refresh note (docs/fit-matrix-oct14, Oct-16).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `069e36f` (162 accelerator records, 214 supply records). Selection rule still yields **118 qualifying / 42 priced / 76 unpriced** (57 of the unpriced fit 35B-A3B, 19 do not). Ranked $/tok-s order is unchanged from the p6 table already on this tree. The only numeric edit is §4b: the RTX 5070 Ti measured decode cell is restored to the benchmark record's own value, **111.11** tok/s ([[benchmarks/hwcorner-rtx-5070-ti-qwen3-30b-a3b-q4kxl-decode-16k]]), not the rounded 111.1 the p6 prose left behind. `2.5×` vs the 44.8 tok/s ceiling is unchanged (111.11/44.8 = 2.48, still 2.5× *(derived)*).
+>
 > **Refresh note (docs/fit-matrix-oct16-p6, Oct-16).** Re-run of
 > `python tools/fit_matrix_35b.py` against local `main` `e128197` (162
 > accelerator records, 214 supply records, 1,595 benchmarks — the Phase-C
@@ -321,7 +323,7 @@ numbers themselves come from the cited records.
 | [[accelerators/nvidia-rtx-4090]] | 1008 | 50.4 | 109.57 | 2.2× | [[benchmarks/hwcorner-rtx-4090-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/nvidia-rtx-3090-ti]] | 1008 | 50.4 | 98.25 | 1.9× | [[benchmarks/hwcorner-rtx-3090-ti-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/nvidia-rtx-6000-ada]] | 960 | 48.0 | 104.88 | 2.2× | [[benchmarks/hwcorner-rtx-6000-ada-qwen3-30b-a3b-q4kxl-decode-16k]] |
-| [[accelerators/nvidia-rtx-5070-ti]] | 896 | 44.8 | 111.1 | 2.5× | [[benchmarks/hwcorner-rtx-5070-ti-qwen3-30b-a3b-q4kxl-decode-16k]] |
+| [[accelerators/nvidia-rtx-5070-ti]] | 896 | 44.8 | 111.11 | 2.5× | [[benchmarks/hwcorner-rtx-5070-ti-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/nvidia-rtx-4080]] | 716.8 | 35.8 | 85.04 | 2.4× | [[benchmarks/hwcorner-rtx-4080-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/local-apple-m5-max]] | 614 | 30.7 | 128.0 | 4.2× | [[benchmarks/ss-m5max-48-qwen35-35b-mlx-4bit-tg]] *(MLX path; llama.cpp Q4_K_M row lands 89.4 → 2.9×, [[benchmarks/ss-m5max-48-qwen35-35b-llamacpp-q4km-tg]])* |
 | [[accelerators/apple-m4-max]] | 546 | 27.3 | 113.33 | 4.2× | [[benchmarks/mlx-m4-max-qwen3-30b-a3b-4bit-decode-tok-s]] |
