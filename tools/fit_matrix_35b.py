@@ -218,6 +218,30 @@ PRICE_JOIN = {
     # gaudi2-8x-oam-tray-supermicro-820gh ($11,995) is an 8-MODULE OAM tray,
     #   ~$1,500/module-equivalent (derived), a system price not a module price.
     # ebay-used-a100-40gb-rack-liquidator ($249,000) is a 32-GPU rack.
+
+    # --- ingest/research-oct14 pass-3/4 gap-fill records ---------------------
+    # Apple silicon whole-system prices (Studio / MacBook Pro); the price buys
+    #   the whole box but the accelerator record is the SoC's GPU, joined below.
+    "used-mac-studio-m1-ultra-64gb":    {"apple-m1-ultra": 1850.0},  # 64 GB config
+    "used-mac-studio-m3-ultra-256gb":   {"apple-m3-ultra": 6250.0},  # 256 GB config
+    "used-mac-studio-m3-ultra-512gb":   {"apple-m3-ultra": 9000.0},  # 512 GB config
+    "used-macbook-pro-m3-max-128gb":    {"apple-m3-max": 3400.0},
+    "used-macbook-pro-m4-max-128gb":    {"apple-m4-max": 4700.0},
+    # Strix Halo 192 GB PRO 495 Framework Desktop (newest pass-4 SKU).
+    "new-framework-desktop-strix-halo-192gb-pro-495":
+        {"amd-ryzen-ai-max-395-framework-desktop": 3750.0},
+    # EPYC Genoa CPU-inference hosts: the priced entity is a whole self-build
+    #   (used-epyc-9004-genoa-build-384gb, ~$7.5k for CPU+board+384GB DDR5) or a
+    #   bare used CPU (used-epyc-9354-genoa-cpu, ~$2k). Both point at the Genoa
+    #   host-CPU accelerator record; the $2k CPU-only row would over-attribute
+    #   (no RAM/board in the price), so the build price is the honest join and
+    #   the CPU-only row is noted but NOT joined (same over-attribution trap as
+    #   the DGX-1 row above).
+    "used-epyc-9004-genoa-build-384gb": {"amd-epyc-9554-genoa": 7500.0},
+    # used-epyc-9354-genoa-cpu: CPU-only $2,000, no board/RAM -> NOT joined.
+    # used-epyc-7003-milan-host-512gb ($2,000, 512GB DDR4 ~205 GB/s): the host
+    #   is a complete 8ch-DDR4 Milan box but there is NO Milan/7003 accelerator
+    #   record in data/accelerators/ to join against -> left unjoined.
 }
 
 # ---------------------------------------------------------------------------
@@ -239,6 +263,12 @@ UNIFIED_MEM_GB = {
     #   128 GB is the shared pool; ~110 GB is allocatable to the GPU on the
     #   shipping firmware, which still clears the 70B-Q4 48 GB threshold.
     "amd-radeon-8060s-ryzen-ai-max": 128.0,
+    # EPYC 9554 Genoa 1P host: the only linked supply record that prices a
+    #   complete machine (used-epyc-9004-genoa-build-384gb) configures ~384 GB
+    #   of 12-channel DDR5. The CPU-only supply row is deliberately not joined
+    #   (it prices no memory). 384 GB is the configured pool, read off that
+    #   record's name/price_basis, not invented.
+    "amd-epyc-9554-genoa": 384.0,
 }
 
 def effective_vram(a):
