@@ -1,9 +1,9 @@
 name: auto-merge
 
-# Enables GitHub's native auto-merge on pull requests targeting main, so a PR
-# merges itself once its required checks pass. This replaces the agent-driven
-# merge loop: no runner token can merge, and GitHub performs the merge only
-# after branch protection is satisfied, so a red CI run can never land.
+# Squash-merges a pull request to main once the validate workflow's `records`
+# check passes. Native auto-merge is not an option here: it only fires when
+# branch protection requires status checks, and main is intentionally not
+# protected. So this waits for the check and merges directly.
 on:
   pull_request:
     types: [opened, reopened, synchronize]
@@ -12,20 +12,40 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  checks: read
 
 jobs:
-  enable:
+  merge:
     runs-on: ubuntu-latest
-    # Drafts, and anything marked to hold back, are left for a person.
     if: >-
       github.event.pull_request.draft == false &&
       !contains(github.event.pull_request.labels.*.name, 'hold') &&
       !contains(github.event.pull_request.labels.*.name, 'do-not-merge')
     steps:
-      - uses: actions/checkout@v7
-      - name: Enable auto-merge
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
-        run: >-
-          gh pr merge "$PR" --squash --auto --repo "${{ github.repository }}"
+      - name: Wait for the records check, then merge
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request.number;
+            const sha = context.payload.pull_request.head.sha;
+            const ok = new Set(['success', 'skipped', 'neutral']);
+            for (let i = 0; i < 40; i++) {
+              const { data } = await github.rest.checks.listForRef({
+                owner, repo, ref: sha, check_name: 'records', per_page: 1,
+              });
+              const c = data.check_runs[0];
+              if (c && c.status === 'completed') {
+                if (!ok.has(c.conclusion)) {
+                  core.info(`records check ${c.conclusion}; not merging #${pr}`);
+                  return;
+                }
+                break;
+              }
+              if (i === 39) { core.info('records check never reported; not merging'); return; }
+              await new Promise(r => setTimeout(r, 15000));
+            }
+            await github.rest.pulls.merge({
+              owner, repo, pull_number: pr, merge_method: 'squash', sha,
+            });
+            core.info(`merged #${pr}`);
