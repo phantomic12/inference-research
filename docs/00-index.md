@@ -354,7 +354,7 @@
 - **llama.cpp MMQ: INT8 activation quantization with per-arch tile configs, no tensor cores** (`flops/llamacpp-mmq-int8-dp4a-gemm`) — memory bound · A different answer to the same problem, and the reason llama.cpp's quantized numbers are not comparable to Marlin's or Machete's. MMQ quantizes the ACTIVATIONS to q8_1 blocks of 32 elements and performs the dot product in INT8 accumulating to INT32, using DP4A where available. So the multiply-accumulates are integer SIMT instructions, not tensor-core MMAs - the FLOP:byte ratio the tensor cores exploit is not available at all. It buys portability: per-arch config headers exist for Ampere, Blackwell, CDNA, GCN, RDNA2/3/4/5 and Pascal (DP4A), the block size is a fixed 32 with three different scale/data layouts, MMQ_ITER_K is 256 (512 for FP4) and MMQ_NWARPS is 8. Notably, DP4A is used only while fp16 tensor cores are unavailable or the batch is small (MMQ_DP4A_MAX_BATCH_SIZE 64), which is itself a tensor-core-adjacent threshold.
 - **oneDNN Graph API and IPEX Fusion for Transformer Inference** (`flops/xpu-onednn-graph-fusion`) — memory bound
 
-## Inference engines (117)
+## Inference engines (118)
 
 - **AirLLM** (`engines/niche-airllm`) — cuda, cpu, metal · Answering 'can this model run on this GPU' when the answer is technically yes but practically miserable - a 70B on a 4GB card is a real capability that no other engine in this repo offers; Demonstrati
 - **Android NNAPI (vendor-neutral on-device acceleration API)** (`engines/niche-android-nnapi`) — nnapi (cpu/gpu/npu via vendor drivers) · Understanding WHY the on-device Android ecosystem looks the way it does - NNAPI's retirement is the reason GPU and XNNPACK delegates are the current story; Reading the historical path from a vendor-ne
@@ -445,6 +445,7 @@
 - **Triton Inference Server** (`engines/niche-triton-inference-server`) — cuda, tensorrt, onnx, openvino, python, cpu, inferentia · Serving a portfolio of many different models from many different frameworks behind one HTTP/gRPC contract - Triton's actual design target; Non-LLM workloads at scale: vision, speech, recommendation, c · tracing: per-request
 - **Triton Inference Server** (`engines/triton-inference-server`) — cuda, tensorrt, onnxruntime, openvino, pytorch, rapids-fil, inferentia, cpu · Organisations already standardised on Triton who need embedding and rerank served alongside everything else, with one operational surface and one observability stack.; Full RAG serving pipelines: embe · tracing: per-request
 - **Triton Inference Server (observability surface: request-shaped core metrics, LLM metrics only if a backend registers them)** (`engines/obs-triton-observability`) — cuda, rocm, cpu, inferentia · Serving many different model types behind one endpoint where a uniform request-level metric set matters more than LLM-specific insight; Tracing an ensemble or BLS request end to end, since each compos · tracing: per-request
+- **VibeSys bespoke serving engine (agent-built)** (`engines/vibesys-bespoke-engine`) — rocm, hip · single-deployment peak-goodput serving where agents write the engine
 - **WebAssembly (WASM) inference** (`engines/local-wasm`) — wasm-simd, wasm-threads · Cross-platform inference in browsers and standalone runtimes; Server-side inference with WASM sandboxing (Wasmtime, WasmEdge); Applications requiring near-native performance without native compilation
 - **WebGPU (in-browser inference)** (`engines/local-webgpu`) — webgpu, wasm-simd · Zero-install LLM inference in the browser; Web applications that need local inference without server dependency; Cross-platform deployment (Windows, macOS, Linux, ChromeOS) via browser; Small models (
 - **WebLLM** (`engines/niche-webllm`) — webgpu, wasm, cpu · Client-side inference where the data must not leave the device - the actual reason this exists and the one thing nothing else does; Zero-ops prototypes and demos: no API key, no server, no cost, works
@@ -672,7 +673,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **AMD Infinity Fabric scale-up link (CDNA4: 153.6 GB/s per direction, 20% faster)** (`interconnect/amd-infinity-fabric-link-cdna4`) — 153.6 GB/s · Fully connected 8-GPU mesh (each GPU connects to 7 others). No switch. 7 links per GPU for GPU-to-GPU communication. Identical topology to CDNA3. The MI355X product page lists 'Infinity Fabric Links: 7' and 'Peak Infinity Fabric Link Bandwidth: 153 GB/s' (rounded). Scale-out link: 128 GB/s (unchanged from CDNA3).
 - **AMD xGMI (Socket/Inter-Chip Global Memory Interconnect)** (`interconnect/amd-xgmi`) — 50 GB/s · Point-to-point, no switch part. TWO distinct roles, and this is the part that is routinely misread: (1) DIE-TO-DIE, inside one package - on MI250X the two GCDs of one OAM module are joined by FOUR xGMI/Infinity Fabric links, which AMD gives as 4 x 25 GT/sec = 200 GB/sec peak transfer between the two GCDs, or 400 GB/sec bidirectional for the same; (2) DIE-TO-DEVICE, between accelerators - on MI210 (PCIe cards) xGMI is exposed through direct-connect xGMI BRIDGE CARDS in adjacent PCIe slots, giving dual and quad GPU hives, whereas the MI250X/MI250 OAM modules carry 8 links natively. On a multi-OAM MI300X node AMD's own architecture reference states the accelerator-side count is SEVEN Infinity Fabric links, used 'to form a fully connected 8-GPU system' - but the MI300X product page board table says 'Infinity Fabric Links: 8'. That is a real disagreement between two first-party AMD sources, not a typo: seven links is the minimum needed to make 8 nodes fully connected (each node needs a link to each of the other 7), so the board-table 8 is most likely counting an extra link of a different role (host or scale-out) rather than a mesh edge. Both figures are retained here; the typed link_count field carries the die-to-die value of 4 for MI250X, which is where this record's per-link rate is sourced. On CDNA3/MI300 the die-to-die topology is also a full mesh over up to 8 vertically stacked XCDs plus 4 I/O dies, so an MI300X is internally a single 8-way domain, not two halves.
 
-## Benchmarks (2705)
+## Benchmarks (2739)
 
 - **16GB VRAM: Llama 3.1 8B Q8_0 decode tokens/sec** (`benchmarks/local-16gb-13b-q4-decode`) — 40.0 tok/s - UNSOURCED, DO NOT CITE. Decommissioned 2026-10-04 (bq-): no cited source contains a decode-throughput measurement for this part and no run was performed. The number is retained only for history; the schema forbids nulling value/measured_by. · Llama 3.1 8B on ? via llama-cpp
 - **24GB VRAM: Llama 3.1 8B Q8_0 decode tokens/sec** (`benchmarks/local-24gb-13b-q8-decode`) — 50.0 tok/s - UNSOURCED, DO NOT CITE. Decommissioned 2026-10-04 (bq-): no cited source contains a decode-throughput measurement for this part and no run was performed. The number is retained only for history; the schema forbids nulling value/measured_by. · Llama 3.1 8B on ? via llama-cpp
@@ -748,6 +749,8 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **AWS Neuron docs: bert-base-uncased on trn1.2xlarge, real-time, 2085 inf/s (p50 0.94ms)** (`benchmarks/aws-neuron-trn1-bert-base-rt-inf-s`) — 2085.45 inferences/s (encoder fwd pass, batch-1, latency-optimized) · bert-base-uncased on aws-trainium1 via alt-neuron-compiler
 - **AWS Neuron docs: google/flan-t5-xl on trn1.32xlarge TP=8, 122.52 tok/s (in+out)** (`benchmarks/aws-neuron-trn1-google-flan-t5-xl-tp8-128io-tps`) — 122.52 tok/s (in+out tokens, batch-1, TP=8 over 16-chip trn1.32xlarge) · google/flan-t5-xl on aws-trainium1 via alt-neuron-compiler
 - **AWS Neuron docs: t5-3b on trn1.32xlarge TP=8, 116.29 tok/s (in+out)** (`benchmarks/aws-neuron-trn1-t5-3b-tp8-128io-tps`) — 116.29 tok/s (in+out tokens, batch-1, TP=8 over 16-chip trn1.32xlarge) · t5-3b on aws-trainium1 via alt-neuron-compiler
+- **AWS Neuron: trn1.32xlarge (Trainium1), NeuronX Distributed, google/flan-t5-xl, TP=8, batch 1, throughput-opt** (`benchmarks/aws-trn1-neuronxd-flant5xl-fp32-tp8-b1-tps`) — 122.52 tok/s (counts input+output tokens; TP=8 across 16 Trainium chips) · google/flan-t5-xl on aws-trainium1 via alt-neuron-compiler
+- **AWS Neuron: trn1.32xlarge (Trainium1), NeuronX Distributed, t5-3b, TP=8, batch 1, throughput-opt** (`benchmarks/aws-trn1-neuronxd-t53b-fp32-tp8-b1-tps`) — 116.29 tok/s (counts input+output tokens; TP=8 across 16 Trainium chips) · t5-3b on aws-trainium1 via alt-neuron-compiler
 - **AWS Trn2.48xlarge: 20.8 FP8 PFLOPS (16-chip instance)** (`benchmarks/alt-aws-trn2-fp8-tps`) — 20.8 PFLOPS FP8 · N/A (peak compute specification) on aws-trainium2 via alt-neuron-compiler
 - **Adding MI50s over PCIe makes decode WORSE, not better: gpt-oss-120B MXFP4 tg8192 falls 71.2 -> 33.9 -> 21.3 -> 14.3 tok/s from 2 to 4 to 6 to 8 cards under -sm tensor** (`benchmarks/comm-mi50-8x-gpt-oss-120b-mxfp4-decode-collapse`) — 14.32 tok/s · gpt-oss-120b MXFP4 MoE (59.02 GiB) on amd-radeon-instinct-mi50x via llama-cpp
 - **Aggregate output throughput, MPT-7B static batch 64, 1x A100** (`benchmarks/mpt7b-a100-bs64-aggregate-output-tps`) — 800.0 output tokens/s aggregate across all in-flight requests (64 concurrent) · MPT-7B (FP16) on ? via fastertransformer
@@ -1035,6 +1038,28 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **Argonne: A100 40GB SXM x1, vLLM 0.6.1, Mistral-7B FP16, 128io, b1** (`benchmarks/argonne-a100sxm40-vllm-mistral-7b-fp16-b1-128io-tps`) — 148.5 tok/s aggregate (batch*(in+out)/latency) · mistralai/Mistral-7B-v0.1 on nvidia-a100-40gb-sxm4 via vllm
 - **Argonne: A100 40GB SXM x4 TP, DeepSpeed-MII, Llama-2-70B FP16, 128io, b64** (`benchmarks/argonne-a100sxm40-dsmii-llama2-70b-fp16-4x-b64-128io-tps`) — 1804.2 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Llama-2-70b-hf on nvidia-a100-40gb-sxm4 via niche-deepspeed-mii
 - **Argonne: A100 40GB SXM x4 TP, TensorRT-LLM 0.11.0, Llama-2-70B FP16, 128io, b64** (`benchmarks/argonne-a100sxm40-trtllm-llama2-70b-fp16-4x-b64-128io-tps`) — 2526.0 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Llama-2-70b-hf on nvidia-a100-40gb-sxm4 via tensorrt-llm
+- **Argonne: A100-40GB SXM x1, DeepSpeed-MII, Meta-Llama-3-8B FP16, 128io, batch 1** (`benchmarks/argonne-a100sxm40-nichedeepspeedmii-metallama38b-fp16-b1-128io-tps`) — 107.0 tok/s aggregate (batch 1, single request) · meta-llama/Meta-Llama-3-8B on nvidia-a100-40gb-sxm4 via niche-deepspeed-mii
+- **Argonne: A100-40GB SXM x1, DeepSpeed-MII, Mistral-7B-v0.1 FP16, 128io, batch 1** (`benchmarks/argonne-a100sxm40-nichedeepspeedmii-mistral7bv01-fp16-b1-128io-tps`) — 116.3 tok/s aggregate (batch 1, single request) · mistralai/Mistral-7B-v0.1 on nvidia-a100-40gb-sxm4 via niche-deepspeed-mii
+- **Argonne: A100-40GB SXM x1, TensorRT-LLM 0.11.0, Llama-2-7b-hf FP16, 128io, batch 1** (`benchmarks/argonne-a100sxm40-tensorrtllm-llama27bhf-fp16-b1-128io-tps`) — 169.0 tok/s aggregate (batch 1, single request) · meta-llama/Llama-2-7b-hf on nvidia-a100-40gb-sxm4 via tensorrt-llm
+- **Argonne: A100-40GB SXM x1, TensorRT-LLM 0.11.0, Meta-Llama-3-8B FP16, 128io, batch 1** (`benchmarks/argonne-a100sxm40-tensorrtllm-metallama38b-fp16-b1-128io-tps`) — 143.7 tok/s aggregate (batch 1, single request) · meta-llama/Meta-Llama-3-8B on nvidia-a100-40gb-sxm4 via tensorrt-llm
+- **Argonne: A100-40GB SXM x1, TensorRT-LLM 0.11.0, Mistral-7B-v0.1 FP16, 128io, batch 1** (`benchmarks/argonne-a100sxm40-tensorrtllm-mistral7bv01-fp16-b1-128io-tps`) — 153.1 tok/s aggregate (batch 1, single request) · mistralai/Mistral-7B-v0.1 on nvidia-a100-40gb-sxm4 via tensorrt-llm
+- **Argonne: A100-40GB SXM x1, llama.cpp, Llama-2-7b-hf FP16, 128io, batch 1** (`benchmarks/argonne-a100sxm40-llamacpp-llama27bhf-fp16-b1-128io-tps`) — 58.9 tok/s aggregate (batch 1, single request) · meta-llama/Llama-2-7b-hf on nvidia-a100-40gb-sxm4 via llama-cpp
+- **Argonne: A100-40GB SXM x1, llama.cpp, Meta-Llama-3-8B FP16, 128io, batch 1** (`benchmarks/argonne-a100sxm40-llamacpp-metallama38b-fp16-b1-128io-tps`) — 53.1 tok/s aggregate (batch 1, single request) · meta-llama/Meta-Llama-3-8B on nvidia-a100-40gb-sxm4 via llama-cpp
+- **Argonne: A100-40GB SXM x1, vLLM 0.6.1, Llama-2-7b-hf FP16, 128io, batch 1** (`benchmarks/argonne-a100sxm40-vllm-llama27bhf-fp16-b1-128io-tps`) — 154.9 tok/s aggregate (batch 1, single request) · meta-llama/Llama-2-7b-hf on nvidia-a100-40gb-sxm4 via vllm
+- **Argonne: A100-40GB SXM x1, vLLM 0.6.1, Meta-Llama-3-8B FP16, 128io, batch 1** (`benchmarks/argonne-a100sxm40-vllm-metallama38b-fp16-b1-128io-tps`) — 140.2 tok/s aggregate (batch 1, single request) · meta-llama/Meta-Llama-3-8B on nvidia-a100-40gb-sxm4 via vllm
+- **Argonne: A100-40GB SXM x1, vLLM 0.6.1, Mistral-7B-v0.1 FP16, 128io, batch 1** (`benchmarks/argonne-a100sxm40-vllm-mistral7bv01-fp16-b1-128io-tps`) — 148.5 tok/s aggregate (batch 1, single request) · mistralai/Mistral-7B-v0.1 on nvidia-a100-40gb-sxm4 via vllm
+- **Argonne: GH200 x1, TensorRT-LLM 0.11.0, Llama-2-7b-hf FP16, 2048io, batch 1** (`benchmarks/argonne-gh200-trtllm-llama27bhf-fp16-b1-2048io-tps`) — 334.6 tok/s aggregate (batch 1, single request) · meta-llama/Llama-2-7b-hf on nvidia-gh200 via tensorrt-llm
+- **Argonne: GH200 x1, TensorRT-LLM 0.11.0, Meta-Llama-3-8B FP16, 2048io, batch 1** (`benchmarks/argonne-gh200-trtllm-metallama38b-fp16-b1-2048io-tps`) — 327.8 tok/s aggregate (batch 1, single request) · meta-llama/Meta-Llama-3-8B on nvidia-gh200 via tensorrt-llm
+- **Argonne: GH200 x1, TensorRT-LLM 0.11.0, Mistral-7B-v0.1 FP16, 2048io, batch 1** (`benchmarks/argonne-gh200-trtllm-mistral7bv01-fp16-b1-2048io-tps`) — 348.8 tok/s aggregate (batch 1, single request) · mistralai/Mistral-7B-v0.1 on nvidia-gh200 via tensorrt-llm
+- **Argonne: GH200 x1, llama.cpp, Llama-2-7b-hf FP16, 2048io, batch 1** (`benchmarks/argonne-gh200-llamacpp-llama27bhf-fp16-b1-2048io-tps`) — 116.4 tok/s aggregate (batch 1, single request) · meta-llama/Llama-2-7b-hf on nvidia-gh200 via llama-cpp
+- **Argonne: GH200 x1, llama.cpp, Meta-Llama-3-8B FP16, 2048io, batch 1** (`benchmarks/argonne-gh200-llamacpp-metallama38b-fp16-b1-2048io-tps`) — 100.5 tok/s aggregate (batch 1, single request) · meta-llama/Meta-Llama-3-8B on nvidia-gh200 via llama-cpp
+- **Argonne: GH200 x1, llama.cpp, Mistral-7B-v0.1 FP16, 2048io, batch 1** (`benchmarks/argonne-gh200-llamacpp-mistral7bv01-fp16-b1-2048io-tps`) — 103.8 tok/s aggregate (batch 1, single request) · mistralai/Mistral-7B-v0.1 on nvidia-gh200 via llama-cpp
+- **Argonne: GH200 x1, llama.cpp, Qwen2-7B FP16, 2048io, batch 1** (`benchmarks/argonne-gh200-llamacpp-qwen27b-fp16-b1-2048io-tps`) — 104.6 tok/s aggregate (batch 1, single request) · Qwen/Qwen2-7B on nvidia-gh200 via llama-cpp
+- **Argonne: GH200 x1, vLLM 0.6.1, DeciLM-7B FP16, 2048io, batch 1** (`benchmarks/argonne-gh200-vllm-decilm7b-fp16-b1-2048io-tps`) — 277.5 tok/s aggregate (batch 1, single request) · Deci/DeciLM-7B on nvidia-gh200 via vllm
+- **Argonne: GH200 x1, vLLM 0.6.1, Llama-2-7b-hf FP16, 2048io, batch 1** (`benchmarks/argonne-gh200-vllm-llama27bhf-fp16-b1-2048io-tps`) — 278.9 tok/s aggregate (batch 1, single request) · meta-llama/Llama-2-7b-hf on nvidia-gh200 via vllm
+- **Argonne: GH200 x1, vLLM 0.6.1, Meta-Llama-3-8B FP16, 2048io, batch 1** (`benchmarks/argonne-gh200-vllm-metallama38b-fp16-b1-2048io-tps`) — 267.8 tok/s aggregate (batch 1, single request) · meta-llama/Meta-Llama-3-8B on nvidia-gh200 via vllm
+- **Argonne: GH200 x1, vLLM 0.6.1, Qwen1.5-7B FP16, 2048io, batch 1** (`benchmarks/argonne-gh200-vllm-qwen157b-fp16-b1-2048io-tps`) — 249.5 tok/s aggregate (batch 1, single request) · Qwen/Qwen1.5-7B on nvidia-gh200 via vllm
+- **Argonne: GH200 x1, vLLM 0.6.1, Qwen2-7B FP16, 2048io, batch 1** (`benchmarks/argonne-gh200-vllm-qwen27b-fp16-b1-2048io-tps`) — 262.8 tok/s aggregate (batch 1, single request) · Qwen/Qwen2-7B on nvidia-gh200 via vllm
 - **Argonne: PVC x1 llama.cpp Llama-2-7B FP16 128io b1** (`benchmarks/argonne-pvc-llamacpp-llama2-7b-fp16-b1-128io-tps`) — 22.18 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Llama-2-7b-hf on xpu-intel-dc-gpu-max-1550 via llama-cpp
 - **Argonne: PVC x1 llama.cpp Llama-2-7B FP16 128io b64** (`benchmarks/argonne-pvc-llamacpp-llama2-7b-fp16-b64-128io-tps`) — 43.1 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Llama-2-7b-hf on xpu-intel-dc-gpu-max-1550 via llama-cpp
 - **Argonne: PVC x1 llama.cpp Mixtral-8x7B FP16 128io b1** (`benchmarks/argonne-pvc-llamacpp-mixtral-8x7b-fp16-b1-128io-tps`) — 7.0 tok/s aggregate (batch*(in+out)/latency) · mistralai/Mixtral-8x7B-v0.1 on xpu-intel-dc-gpu-max-1550 via llama-cpp
@@ -2798,6 +2823,8 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **Strix Halo 8060S llama.cpp b6702 ROCm: Qwen3-30B-A3B UD-Q4_K_XL tg128 4.98 tok/s (depth 130560)** (`benchmarks/shhl-8060s-qwen3-30b-a3b-udq4-rocm-tg128-d130560`) — 4.98 tok/s per-request decode (llama-bench tg128, batch 1, depth 130560) · Qwen3-30B-A3B UD-Q4_K_XL GGUF on amd-radeon-8060s-ryzen-ai-max via llama-cpp
 - **Strix Halo 8060S llama.cpp b6702 ROCm: Qwen3-30B-A3B UD-Q4_K_XL tg128 63.95 tok/s (depth 0)** (`benchmarks/shhl-8060s-qwen3-30b-a3b-udq4-hipblaslt-tg128`) — 63.95 tok/s per-request decode (llama-bench tg128, batch 1, depth 0) · Qwen3-30B-A3B UD-Q4_K_XL GGUF on amd-radeon-8060s-ryzen-ai-max via llama-cpp
 - **Strix Halo 8060S llama.cpp b6702 ROCm: Qwen3-30B-A3B UD-Q4_K_XL tg128 64.17 tok/s (depth 0)** (`benchmarks/shhl-8060s-qwen3-30b-a3b-udq4-rocm-tg128`) — 64.17 tok/s per-request decode (llama-bench tg128, batch 1, depth 0) · Qwen3-30B-A3B UD-Q4_K_XL GGUF on amd-radeon-8060s-ryzen-ai-max via llama-cpp
+- **SyFI/VibeSys: 4x MI300A, bespoke agent-built engine, Qwen3.5-397B-A17B MXFP4, 96 sessions, goodput** (`benchmarks/syfi-mi300a-vibesys-bespoke-qwen35-397b-mxfp4-96sess-goodput`) — 2242.0 tok/s aggregate goodput (96 concurrent sessions, SLO-filtered) · amd/Qwen3.5-397B-A17B-MXFP4 on amd-instinct-mi300a via vibesys-bespoke-engine
+- **SyFI/VibeSys: 4x MI300A, tuned SGLang 0.5.18, Qwen3.5-397B-A17B MXFP4, 48 sessions, goodput** (`benchmarks/syfi-mi300a-sglang-tuned-qwen35-397b-mxfp4-48sess-goodput`) — 961.0 tok/s aggregate goodput (48 concurrent sessions, SLO-filtered) · amd/Qwen3.5-397B-A17B-MXFP4 on amd-instinct-mi300a via sglang
 - **TTFT, MPT-7B, 512-token prompt, batch size 1, 1x A100 40GB** (`benchmarks/mpt7b-a100-bs1-ttft-ms`) — 46.0 milliseconds to first token (512-token prompt, batch size 1) · MPT-7B (FP16) on ? via fastertransformer
 - **TensorRT-LLM: Llama 2 70B FP8 on 8x H100 80GB, single-request latency at batch size 1** (`benchmarks/trtllm-llama2-70b-h100-fp8-batch1-request-latency`) — 1700 ms per full request (batch 1; source states 'a single inference in 1.7 seconds') · Llama-2-70b (TensorRT-LLM FP8 build) on nvidia-h100-sxm via tensorrt-llm
 - **TensorRT-LLM: Llama 3.1 405B FP8 on 8x H100 SXM 80GB (TP=8), ISL/OSL 1000/2000** (`benchmarks/trtllm-llama31-405b-fp8-h100-tp8-tps`) — 2884.69 output tokens/s (aggregate, 8 GPUs) · nvidia/Llama-3.1-405B-Instruct-FP8 on nvidia-h100-sxm via tensorrt-llm
@@ -3302,6 +3329,14 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **sglang DeepSeek-V3 FP8 on 16x H800 (TP16): 266 tok/s aggregate @32 concurrent** (`benchmarks/sglang-h800x16-deepseekv3-fp8-c32-tps`) — 266.11 tok/s generated (aggregate over 32 concurrent requests) · deepseek-ai/DeepSeek-V3 on nvidia-h800-80gb via sglang
 - **sglang DeepSeek-V3 FP8 on 16x H800 (TP16): 459 tok/s aggregate @64 concurrent** (`benchmarks/sglang-h800x16-deepseekv3-fp8-c64-tps`) — 459.36 tok/s generated (aggregate over 64 concurrent requests) · deepseek-ai/DeepSeek-V3 on nvidia-h800-80gb via sglang
 - **sglang DeepSeek-V3 FP8 on 16x H800 (TP16, 2 nodes): 622 tok/s aggregate @96 concurrent** (`benchmarks/sglang-h800x16-deepseekv3-fp8-c96-tps`) — 622.05 tok/s generated (aggregate over 96 concurrent requests, avg 253 output tok each) · deepseek-ai/DeepSeek-V3 on nvidia-h800-80gb via sglang
+- **siliconscore: M4 Ultra 192GB, DeepSeek R1 Distill Llama 70B Q4_K_M, MLX, avg decode** (`benchmarks/siliconscore-m4ultra-deepseek-r1-distill-llama-70b-q4km-mlx-lm-decode`) — 16.0 tok/s · DeepSeek R1 Distill Llama 70B on apple-m4-ultra via mlx-lm
+- **siliconscore: M4 Ultra 192GB, Llama 3.3 70B Q4_K_M, MLX, avg decode** (`benchmarks/siliconscore-m4ultra-llama-33-70b-q4km-mlx-lm-decode`) — 18.0 tok/s · Llama 3.3 70B on apple-m4-ultra via mlx-lm
+- **siliconscore: M4 Ultra 192GB, Llama 4 Scout 17B-16E Q4_K_M, MLX, avg decode** (`benchmarks/siliconscore-m4ultra-llama-4-scout-17b-16e-q4km-mlx-lm-decode`) — 30.0 tok/s · Llama 4 Scout 17B-16E on apple-m4-ultra via mlx-lm
+- **siliconscore: M4 Ultra 192GB, Mistral Small 4 119B Q4_K_M, MLX, avg decode** (`benchmarks/siliconscore-m4ultra-mistral-small-4-119b-q4km-mlx-lm-decode`) — 45.0 tok/s · Mistral Small 4 119B on apple-m4-ultra via mlx-lm
+- **siliconscore: M4 Ultra 192GB, Qwen 2.5 72B Q4_K_M, Ollama, avg decode** (`benchmarks/siliconscore-m4ultra-qwen-25-72b-q4km-ollama-decode`) — 15.0 tok/s · Qwen 2.5 72B on apple-m4-ultra via ollama
+- **siliconscore: M4 Ultra 192GB, Qwen 3 235B-A22B Q4_K_M, MLX, avg decode** (`benchmarks/siliconscore-m4ultra-qwen-3-235b-a22b-q4km-mlx-lm-decode`) — 22.0 tok/s · Qwen 3 235B-A22B on apple-m4-ultra via mlx-lm
+- **siliconscore: M4 Ultra 192GB, Qwen 3 32B Q4_K_M, Ollama, avg decode** (`benchmarks/siliconscore-m4ultra-qwen-3-32b-q4km-ollama-decode`) — 32.0 tok/s · Qwen 3 32B on apple-m4-ultra via ollama
+- **siliconscore: M4 Ultra 192GB, gpt-oss 120B Q4_K_M, MLX, avg decode** (`benchmarks/siliconscore-m4ultra-gpt-oss-120b-q4km-mlx-lm-decode`) — 10.0 tok/s · gpt-oss 120B on apple-m4-ultra via mlx-lm
 - **ss-m3ultra-256-glm5-mlx-4bit decode** (`benchmarks/ss-m3ultra-256-glm5-mlx-4bit-tg`) — 16.7 tok/s (avg) · GLM-5 (MLX 4-bit) on apple-m3-ultra via mlx-lm
 - **ss-m3ultra-256-qwen35-122b-mlx-mxfp4 decode** (`benchmarks/ss-m3ultra-256-qwen35-122b-mlx-mxfp4-tg`) — 57.0 tok/s (avg) · Qwen3.5-122B-A10B (MLX MXFP4) on apple-m3-ultra via mlx-lm
 - **ss-m3ultra-512-qwen3-235b-lmstudio-4bit decode** (`benchmarks/ss-m3ultra-512-qwen3-235b-lmstudio-4bit-tg`) — 27.36 tok/s (avg) · Qwen 3 235B-A22B (4bit LM Studio) on apple-m3-ultra via llama-cpp
@@ -4545,7 +4580,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (2300)
+## Sources (2301)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -4596,6 +4631,7 @@ and t
 - **Intel: Accelerating LLM Inference on Intel Data Center GPUs using BigDL-LLM (ID 816988)** (`sources/intel-bigdl-llm-flex170-max-llm-inference`) — benchmark · Intel
 - **Intel: Performance Data for Intel Data Center GPU Flex Series 170 (OpenVINO/TF/PyTorch CV table)** (`sources/intel-flex170-ai-perf-table`) — benchmark · Intel
 - **Jeff Geerling sbc-reviews issue 80: Framework Desktop power** (`sources/jeff-geerling-sbc-reviews-issue-80-framework-desktop-power`) — benchmark · Jeff Geerling
+- **Koyeb GPU LLM Benchmarks (vLLM benchmarking cli)** (`sources/koyeb-gpu-benchmarks-vllm-cli`) — benchmark · Koyeb
 - **LLMCheck Apple Silicon LLM benchmark dataset (CSV export)** (`sources/llmcheck-net-benchmarks-csv`) — benchmark · llmcheck.net
 - **LeaseWeb: AMD EPYC LLM inference benchmark CPU vs GPU** (`sources/leaseweb-amd-epyc-llm-inference-benchmark-cpu-vs-gpu`) — benchmark · LeaseWeb
 - **Llama.cpp Meets Instinct: A New Era of Open-Source AI Acceleration (ROCm Blogs)** (`sources/bench-amd-llama-cpp-mi300x-deepseek`) — benchmark · AMD
@@ -7205,7 +7241,7 @@ and t
 
 ## Coverage
 
-Total records: **7142**
+Total records: **7178**
 
 | group | records |
 |---|---|
@@ -7216,7 +7252,7 @@ Total records: **7142**
 | vendor:nvidia | 65 |
 | flop bound:memory | 58 |
 | flop bound:compute | 42 |
-| backend:rocm | 37 |
+| backend:rocm | 38 |
 | flop bound:both | 35 |
 | vendor:asic-other | 35 |
 | backend:cpu | 34 |
@@ -7227,8 +7263,8 @@ Total records: **7142**
 | backend:vulkan | 18 |
 | flop bound:interconnect | 16 |
 | vendor:apple | 15 |
+| backend:hip | 11 |
 | flop bound:launch_overhead | 11 |
-| backend:hip | 10 |
 | backend:npu | 8 |
 | backend:tpu | 8 |
 | vendor:google | 8 |
