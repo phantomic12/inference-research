@@ -3,6 +3,8 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
+> **Refresh note (docs/fit-matrix-oct14, Oct-16, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `bd282fe` (200 accelerator records, 218 supply records, 2,995 benchmarks — #176 and #177 on top of `5b1cadc`). The selection rule now yields **148 qualifying / 43 priced / 105 unpriced** (68 of the unpriced fit 35B-A3B, 37 do not). The ranked $/tok-s table is unchanged: every priced cell was re-diffed against the generator and matches (price, ceiling, fit flags, supply id, order). #177 is a services telemetry re-read and touches no accelerator, supply, or benchmark. #176 adds no purchase price. What it does add is a bandwidth that was previously null: [[accelerators/furiosaai-rngd-renegade]] moved from `memory_bandwidth_gbps: null` / `vram_gb: null` to **48 GB HBM3 at 1,500 GB/s** (vendor product page, cited on the record). 48 ≥ 24, 48 ≥ 20 and 48 ≥ 48, so the fit flags are **Y/Y/Y**; the 35B ceiling is 1500/20 = **75.0 tok/s** *(derived)*, which slots it in §4 between [[accelerators/biren-br100]] (80.0) and [[accelerators/huawei-ascend-910b]] (70.0). It stays unpriced: the only Furiosa supply row, [[supply/furiosaai-rngd-eval-only-channel]], has `price_usd: null`, `kind: oem-direct`, and its `accelerator_ids` still point at the Warboy, not the RNGD. The seven new benchmarks are vendor ranges and multi-card aggregates (4× EXAONE 3.5 32B batch-1 decode, 4× Qwen3-32B aggregate TPS, a Hot Chips ~10B range, a GPT-J 6B queries/s figure). None is a single-card batch-1 A3B decode, so none enters §4b and none moves a rank.
+>
 > **Refresh note (docs/fit-matrix-oct16-3090-a3b, Oct-16, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `5b1cadc` (200 accelerator records, 218 supply records, 2,988 benchmarks — the Phase-C Oct-16 p20 llama.cpp Vulkan #10879 rows for 12 previously uncovered cards, #172, on top of `ece538c`). The selection rule now yields **147 qualifying / 43 priced / 104 unpriced** (67 of the unpriced fit 35B-A3B, 37 do not). The ranked $/tok-s table is unchanged: every priced cell was re-diffed against the generator and matches (price, ceiling, fit flags, supply id, order), and #172 adds no purchase price. What it does add to the *gate* is five bandwidth-qualified cards that fit nothing in this doc's model class, all `-/-/-`, all unpriced, so they extend the §4 close rather than the table: [[accelerators/amd-radeon-rx-6800]] (16 GB, 512 GB/s, 35B ceiling 25.6 tok/s *(derived)*), [[accelerators/nvidia-rtx-2070-super]] and [[accelerators/nvidia-rtx-3060-ti]] (both 8 GB, 448 GB/s, ceiling 22.4 *(derived)*), [[accelerators/amd-radeon-rx-6750-xt]] (12 GB, 432 GB/s, ceiling 21.6 *(derived)*) and [[accelerators/amd-radeon-rx-6700-xt]] (12 GB, 384 GB/s, ceiling 19.2 *(derived)*). The other seven new records miss the gate: [[accelerators/amd-radeon-rx-7600]] (288 GB/s), [[accelerators/amd-radeon-rx-6650-xt]] (280), [[accelerators/amd-radeon-rx-6600-xt]] (256) and [[accelerators/amd-radeon-rx-6600]] (224) are under 300 GB/s with no `<= $3,000` purchase record, and [[accelerators/intel-arc-b570]], [[accelerators/nvidia-gtx-1080-ti]] and [[accelerators/nvidia-rtx-a2000]] have a null bandwidth. The 44 new benchmarks are Llama-2-7B Q4_0, so none of them is an A3B measurement. What this pass actually lands is a hole in §4b: the part the headline calls the honest mainstream buy, [[accelerators/nvidia-rtx-3090]], had a full Qwen3-30B-A3B Q4_K depth sweep in the corpus since #147 and was never cited. The 4090, 6000 Ada and A6000 sweeps from the same ingest were in the same state. None of them moves a rank — they are the same lab, the same model, a longer context than the one cell §4b already quoted.
 >
 > - **RTX 3090, rank 11, now has the sweep.** [[accelerators/nvidia-rtx-3090]] (24 GB, 936 GB/s, 35B ceiling 46.8 tok/s *(derived)*, $950 → $20.30/tok-s *(derived)*). Hardware Corner's March 2026 llama.cpp table measures Qwen3 30B A3B (Q4_K), batch 1, at **179.0 / 98.3 / 58.8 / 32.8** tok/s for 4k / 16k / 32k / 64k ([[benchmarks/hc26-3090-qwen3-30b-a3b-tg-4k]], [[benchmarks/hc26-3090-qwen3-30b-a3b-tg-16k]], [[benchmarks/hc26-3090-qwen3-30b-a3b-tg-32k]], [[benchmarks/hc26-3090-qwen3-30b-a3b-tg-64k]]). Against the 46.8 floor that is **3.8× / 2.1× / 1.3× / 0.70×** *(derived)* (179.0/46.8 = 3.82, 98.3/46.8 = 2.10, 58.8/46.8 = 1.26, 32.8/46.8 = 0.70). The floor is crossed between 32k and 64k — the same context shape §4b already records on the PRO 5000, just one bucket earlier. A second 4k cell on the same card, same quant, is **153.6** ([[benchmarks/hc26-3090-qwen3-30b-a3b-q4k-4k-tg]], 153.6/46.8 = **3.3×** *(derived)*); the two pages do not agree at 4k, so both are kept and neither is averaged. At the 179.0 cell the $950 sticker is **$5.31 per measured tok/s** *(derived, 950/179.0)*, under the 3090 Ti's $9.67 at its 16k cell — different context depths, so that is not a re-rank, it is why the 3090 now leads the *measured* cheap-fit read at short context and loses it once the KV is deep.
@@ -109,11 +111,11 @@ re-run it. Nothing here is a measurement.
 
 ## 1. The selection rule (which records got a row)
 
-*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `2e37ebe`
-(188 accelerators, 218 supply, 2,884 benchmarks). The selection rule is
-unchanged. The counts moved: **142 qualifying / 43 priced / 99 unpriced**
-(67 of the unpriced fit 35B-A3B, 32 do not), up from 138 / 43 / 95. The four
-new rows are all unpriced. See the refresh note above.*
+*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `bd282fe`
+(200 accelerators, 218 supply, 2,995 benchmarks). The selection rule is
+unchanged. The counts moved: **148 qualifying / 43 priced / 105 unpriced**
+(68 of the unpriced fit 35B-A3B, 37 do not). The one new row is unpriced.
+See the refresh note above.*
 
 An accelerator record gets a row when **all** of these hold:
 
@@ -123,7 +125,7 @@ An accelerator record gets a row when **all** of these hold:
 
 The `<= $3,000` arm exists so that a cheap-but-slow card (the used-Tesla slice)
 is not filtered out by the bandwidth floor before its price can speak. That rule
-yields **142 qualifying accelerators**, of which **43 have a usable purchase
+yields **148 qualifying accelerators**, of which **43 have a usable purchase
 price** and 99 are bandwidth-qualified but have no bare-card/system price in
 `data/supply/` (67 of those fit 35B-A3B; 32 qualify and do not).
 
@@ -319,7 +321,10 @@ These records satisfy the bandwidth/fit rule and **fit 35B-A3B** but have
 **no bare-card or system purchase price** in `data/supply/` (they may have a
 *rental* price in the cloud records — that is a different join, see
 `tools/cost_per_token.py`). Listed so a future supply pass can close them;
-sorted by the 35B ceiling *(derived)*. 67 rows. This pass adds the four
+sorted by the 35B ceiling *(derived)*. 68 rows. This pass adds
+[[accelerators/furiosaai-rngd-renegade]] (48 GB, 1,500 GB/s, ceiling 75.0
+*(derived)*, **Y/Y/Y**, no purchase price — see the refresh note). The prior
+pass added the four
 #167 records: [[accelerators/nvidia-rtx-4090-d]] (1,008 GB/s, tied on ceiling
 with the priced 4090), [[accelerators/nvidia-rtx-5090-laptop]] (896 GB/s,
 tied with the PRO 4500 Blackwell), [[accelerators/nvidia-quadro-rtx-8000]]
@@ -355,6 +360,7 @@ not) — both 672 GB/s, tied with the PRO 4000 Blackwell.
 | [[accelerators/cambricon-mlu590]] | 192 | 2,400 | **Y/Y/Y** | 120.0 | no price record |
 | [[accelerators/google-tpu-v6e]] | 32 | 1,638 | **Y/Y/-** | 81.9 | cloud only |
 | [[accelerators/biren-br100]] | 64 | 1,600 | **Y/Y/Y** | 80.0 | no price record |
+| [[accelerators/furiosaai-rngd-renegade]] | 48 | 1,500 | **Y/Y/Y** | 75.0 | eval-only, no retail price ([[supply/furiosaai-rngd-eval-only-channel]] is `price_usd: null` and still points at the Warboy); bandwidth is a vendor claim |
 | [[accelerators/huawei-ascend-910b]] | 64 | 1,400 | **Y/Y/Y** | 70.0 | no price record |
 | [[accelerators/nvidia-rtx-pro-5000-72gb-blackwell]] | 72 | 1,344 | **Y/Y/Y** | 67.2 | no bare-card price in supply/ |
 | [[accelerators/nvidia-rtx-pro-5000-blackwell]] | 48 | 1,344 | **Y/Y/Y** | 67.2 | no bare-card price in supply/ |
@@ -418,7 +424,7 @@ thirty-seven are new with #172 and sit at the bottom of that list, all
 [[accelerators/nvidia-rtx-3060-ti]] (both 8 GB, 448 GB/s, 22.4),
 [[accelerators/amd-radeon-rx-6750-xt]] (12 GB, 432 GB/s, 21.6) and
 [[accelerators/amd-radeon-rx-6700-xt]] (12 GB, 384 GB/s, 19.2). The full
-147-row list, including these 37, is `python tools/fit_matrix_35b.py`.
+148-row list, including these 37, is `python tools/fit_matrix_35b.py`.
 
 ## 4b. Roofline vs. measured — the A3B-MoE cross-check
 
@@ -609,7 +615,7 @@ show*. These are the corpus's own gotcha records, not new claims:
 
 ## 7. Reproduce
 
-    python tools/fit_matrix_35b.py            # the full 147-row matrix, all three sections (GB10 is outside the gate; see the Oct-16 p19 note)
+    python tools/fit_matrix_35b.py            # the full 148-row matrix, all three sections (GB10 is outside the gate; see the Oct-16 p19 note)
     python tools/validate.py                  # record integrity (no new records added here)
 
 Every figure above is generated by that tool against the committed `data/`
