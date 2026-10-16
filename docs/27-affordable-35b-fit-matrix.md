@@ -3,7 +3,17 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
-> **Refresh note (docs/fit-matrix-oct14, Oct-16, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `a2e890e` (188 accelerator records, 218 supply records, 2,944 benchmarks — the Phase-C Oct-16 p19 official DGX Spark llama-bench rows, #169, on top of `1b2f366`). The selection rule still yields **142 qualifying / 43 priced / 99 unpriced** (67 of the unpriced fit 35B-A3B, 32 do not). The ranked $/tok-s table is unchanged: every priced cell was re-diffed against the generator and matches (price, ceiling, fit flags, supply id, order). #169 adds no purchase price and no accelerator. What it does add is the first **maintainer** llama.cpp decode series on a part this doc already treats as outside the gate, and the model is the 30B-A3B class:
+> **Refresh note (docs/fit-matrix-oct16-3090-a3b, Oct-16, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `5b1cadc` (200 accelerator records, 218 supply records, 2,988 benchmarks — the Phase-C Oct-16 p20 llama.cpp Vulkan #10879 rows for 12 previously uncovered cards, #172, on top of `ece538c`). The selection rule now yields **147 qualifying / 43 priced / 104 unpriced** (67 of the unpriced fit 35B-A3B, 37 do not). The ranked $/tok-s table is unchanged: every priced cell was re-diffed against the generator and matches (price, ceiling, fit flags, supply id, order), and #172 adds no purchase price. What it does add to the *gate* is five bandwidth-qualified cards that fit nothing in this doc's model class, all `-/-/-`, all unpriced, so they extend the §4 close rather than the table: [[accelerators/amd-radeon-rx-6800]] (16 GB, 512 GB/s, 35B ceiling 25.6 tok/s *(derived)*), [[accelerators/nvidia-rtx-2070-super]] and [[accelerators/nvidia-rtx-3060-ti]] (both 8 GB, 448 GB/s, ceiling 22.4 *(derived)*), [[accelerators/amd-radeon-rx-6750-xt]] (12 GB, 432 GB/s, ceiling 21.6 *(derived)*) and [[accelerators/amd-radeon-rx-6700-xt]] (12 GB, 384 GB/s, ceiling 19.2 *(derived)*). The other seven new records miss the gate: [[accelerators/amd-radeon-rx-7600]] (288 GB/s), [[accelerators/amd-radeon-rx-6650-xt]] (280), [[accelerators/amd-radeon-rx-6600-xt]] (256) and [[accelerators/amd-radeon-rx-6600]] (224) are under 300 GB/s with no `<= $3,000` purchase record, and [[accelerators/intel-arc-b570]], [[accelerators/nvidia-gtx-1080-ti]] and [[accelerators/nvidia-rtx-a2000]] have a null bandwidth. The 44 new benchmarks are Llama-2-7B Q4_0, so none of them is an A3B measurement. What this pass actually lands is a hole in §4b: the part the headline calls the honest mainstream buy, [[accelerators/nvidia-rtx-3090]], had a full Qwen3-30B-A3B Q4_K depth sweep in the corpus since #147 and was never cited. The 4090, 6000 Ada and A6000 sweeps from the same ingest were in the same state. None of them moves a rank — they are the same lab, the same model, a longer context than the one cell §4b already quoted.
+>
+> - **RTX 3090, rank 11, now has the sweep.** [[accelerators/nvidia-rtx-3090]] (24 GB, 936 GB/s, 35B ceiling 46.8 tok/s *(derived)*, $950 → $20.30/tok-s *(derived)*). Hardware Corner's March 2026 llama.cpp table measures Qwen3 30B A3B (Q4_K), batch 1, at **179.0 / 98.3 / 58.8 / 32.8** tok/s for 4k / 16k / 32k / 64k ([[benchmarks/hc26-3090-qwen3-30b-a3b-tg-4k]], [[benchmarks/hc26-3090-qwen3-30b-a3b-tg-16k]], [[benchmarks/hc26-3090-qwen3-30b-a3b-tg-32k]], [[benchmarks/hc26-3090-qwen3-30b-a3b-tg-64k]]). Against the 46.8 floor that is **3.8× / 2.1× / 1.3× / 0.70×** *(derived)* (179.0/46.8 = 3.82, 98.3/46.8 = 2.10, 58.8/46.8 = 1.26, 32.8/46.8 = 0.70). The floor is crossed between 32k and 64k — the same context shape §4b already records on the PRO 5000, just one bucket earlier. A second 4k cell on the same card, same quant, is **153.6** ([[benchmarks/hc26-3090-qwen3-30b-a3b-q4k-4k-tg]], 153.6/46.8 = **3.3×** *(derived)*); the two pages do not agree at 4k, so both are kept and neither is averaged. At the 179.0 cell the $950 sticker is **$5.31 per measured tok/s** *(derived, 950/179.0)*, under the 3090 Ti's $9.67 at its 16k cell — different context depths, so that is not a re-rank, it is why the 3090 now leads the *measured* cheap-fit read at short context and loses it once the KV is deep.
+> - **RTX 4090, same sweep, higher multiplier.** [[accelerators/nvidia-rtx-4090]] already had the 16k cell at 109.57 (2.2×). The March table's other depths are **207.3 / 139.2 / 105.1 / 68.2** at 4k / 16k / 32k / 64k ([[benchmarks/hc26-4090-qwen3-30b-a3b-tg-4k]], [[benchmarks/hc26-4090-qwen3-30b-a3b-tg-16k]], [[benchmarks/hc26-4090-qwen3-30b-a3b-tg-32k]], [[benchmarks/hc26-4090-qwen3-30b-a3b-tg-64k]]) against the 50.4 ceiling → **4.1× / 2.8× / 2.1× / 1.4×** *(derived)* (207.3/50.4 = 4.11, 139.2/50.4 = 2.76, 105.1/50.4 = 2.09, 68.2/50.4 = 1.35). The 16k cell (139.2) is a different page from the 109.57 already in §4b; both stand. The card never crosses the floor inside 64k. $2,000 / 207.3 = **$9.65 per measured tok/s** *(derived)* at 4k — essentially the 3090 Ti's 16k figure, at a quarter of the context.
+> - **RTX 6000 Ada and RTX A6000, unpriced, same shape.** [[accelerators/nvidia-rtx-6000-ada]] (48 GB, 960 GB/s, ceiling 48.0 *(derived)*, §4) goes **199.6 / 120.1 / 74.3 / 40.8** at 4k / 16k / 32k / 64k ([[benchmarks/hc26-6000ada-qwen3-30b-a3b-tg-4k]], [[benchmarks/hc26-6000ada-qwen3-30b-a3b-tg-16k]], [[benchmarks/hc26-6000ada-qwen3-30b-a3b-tg-32k]], [[benchmarks/hc26-6000ada-qwen3-30b-a3b-tg-64k]]) → **4.2× / 2.5× / 1.5× / 0.85×** *(derived)* (199.6/48.0 = 4.16, 120.1/48.0 = 2.50, 74.3/48.0 = 1.55, 40.8/48.0 = 0.85). The floor is crossed between 32k and 64k, same as the 3090. [[accelerators/nvidia-rtx-a6000]] (48 GB, 768 GB/s, ceiling 38.4) already had 75.35 at 16k; the 4k cell is **131.2** ([[benchmarks/hc26-a6000-qwen3-30b-a3b-q4k-4k-tg]], 131.2/38.4 = **3.4×** *(derived)*). Neither has a purchase price, so neither enters §3.
+> - **Two siblings, not a new rank.** The 3090 Ti's 32k cell is **91.97** ([[benchmarks/hwcorner-rtx-3090-ti-qwen3-30b-q4kxl-decode-32k]], 91.97/50.4 = **1.8×** *(derived)*), next to the 98.25 already quoted at 16k — the Ti does not have the 3090's 4k cell, so the two cards are not comparable at short context from this corpus. The 5090's second 4k page is **226.1** ([[benchmarks/hc26-5090-qwen3-30b-a3b-q4k-4k-tg]], 226.1/89.6 = **2.5×** *(derived)*) beside the 234.3 already in §4b; same quant, same depth, two pages, 4% apart. Not averaged.
+> - **Dense 27B on the same 3090, under the floor, as the ceiling predicts.** Qwen3.5 27B (Q4_K) decodes at **33.5** tok/s at 4k and **28.8** at 64k ([[benchmarks/hc26-3090-qwen35-27b-q4k-4k-tg]], [[benchmarks/hc26-3090-qwen35-27b-q4k-64k-tg]]) against the 27B ceiling of 936/16 = **58.5** tok/s *(derived)* → 33.5/58.5 = **0.57×** at 4k *(derived)*. That is the dense half-the-floor §4b already records on the PRO 5000, now on the card this doc actually recommends. The MoE-vs-dense gap on one card is 179.0 vs 33.5 at the same 4k bucket — the reason the 35B-A3B column, not the 27B column, is what a 24 GB card is for. The named 35B target in MXFP4 on the same card is **111.2** at 4k ([[benchmarks/hc26-3090-qwen35-35b-mxfp4-4k-tg]], 111.2/46.8 = **2.4×** *(derived)*), below the Q4_K 30B-A3B cell because MXFP4 is a different byte count, not because the card got slower.
+> - **Arc Pro B60, priced, fits, and the measured 35B-A3B is slow.** [[accelerators/intel-arc-pro-b60]] (rank 16, 24 GB, 456 GB/s, ceiling 22.8 *(derived)*, $650 → $28.51/tok-s *(derived)*) has a SYCL llama.cpp row of Qwen3.5-35B-A3B at **Q8** — not Q4 — decoding at **8.3** tok/s ([[benchmarks/comm-arc-pro-b60-qwen35-35b-a3b-q8-sycl-tg]]). 8.3/22.8 = **0.36×** the Q4 floor *(derived)*. Q8 reads about twice the bytes the floor assumes, so the ratio is a lower bound on a Q4 run and still well under it; the record's own note calls it a capacity win, not a speed win. It does not enter the §4b short-context table: wrong quant, and one number with no depth. $650/8.3 = **$78.31 per measured tok/s** *(derived)*, an order of magnitude worse than the 3090's 4k cell.
+
+> **Refresh note (docs/fit-matrix-oct14, Oct-16, prior pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `a2e890e`
+ (188 accelerator records, 218 supply records, 2,944 benchmarks — the Phase-C Oct-16 p19 official DGX Spark llama-bench rows, #169, on top of `1b2f366`). The selection rule still yields **142 qualifying / 43 priced / 99 unpriced** (67 of the unpriced fit 35B-A3B, 32 do not). The ranked $/tok-s table is unchanged: every priced cell was re-diffed against the generator and matches (price, ceiling, fit flags, supply id, order). #169 adds no purchase price and no accelerator. What it does add is the first **maintainer** llama.cpp decode series on a part this doc already treats as outside the gate, and the model is the 30B-A3B class:
 >
 > - **DGX Spark GB10, measured, and it does not qualify.** [[accelerators/nvidia-gb10]] is the same shape as the Jetson AGX Thor row already in the note below: 128 GB unified LPDDR5x at **273 GB/s**. That clears the 24 GB fit bar and misses the 300 GB/s bandwidth floor, and there is no purchase-price supply record at `<= $3,000`, so the selection rule keeps it out of the 142. The official ggml table (build 11fb327bf, CUDA, flash attention, batch 1) runs **Qwen3-Coder-30B-A3B-Instruct Q8_0** — 30.25 GiB on disk, not the 20 GB Q4 the ceiling assumes — at tg32 **61.06** tok/s with no prior context ([[benchmarks/ggml-cuda-gb10-spark-qwen3-coder-30b-a3b-tg32-d0-b7941]]), then **54.77 / 48.02 / 40.23 / 30.21** after 4k / 8k / 16k / 32k of depth ([[benchmarks/ggml-cuda-gb10-spark-qwen3-coder-30b-a3b-tg32-d4096-b7941]], [[benchmarks/ggml-cuda-gb10-spark-qwen3-coder-30b-a3b-tg32-d8192-b7941]], [[benchmarks/ggml-cuda-gb10-spark-qwen3-coder-30b-a3b-tg32-d16384-b7941]], [[benchmarks/ggml-cuda-gb10-spark-qwen3-coder-30b-a3b-tg32-d32768-b7941]]). The same arithmetic the ceiling column uses gives 273/20 = **13.7** tok/s *(derived)*, so the depth-0 row lands at 61.06/13.7 = **4.5×** that floor *(derived)* and the 32k row at 30.21/13.7 = **2.2×** *(derived)*. Q8 reads more bytes than the Q4 the floor assumes, so 4.5× is a lower bound on how far a Q4 A3B would sit above it, not a Q4 measurement. pp2048 at depth 0 is **2,986.97** tok/s ([[benchmarks/ggml-cuda-gb10-spark-qwen3-coder-30b-a3b-pp2048-d0-b7941]]). It does not enter §3 or §4b: no price, and the part is outside the selection rule. The bandwidth match with Thor is exact (both 273 GB/s) and the decode is not — Thor's third-party Qwen3.6-35B-A3B **FP8** row is 14.6 tok/s, this Q8_0 A3B row is 61.06 — different quant, different engine, same bus.
 > - **The same box, three other MoEs, none of them the 35B-A3B target.** gpt-oss-20b MXFP4 decodes at **83.43** tg32 ([[benchmarks/ggml-cuda-gb10-spark-gptoss20b-tg32-d0-b7941]], 11.27 GiB), 83.43/13.7 = **6.1×** the 20 GB ceiling *(derived)* — the wrong byte count for a 20B MXFP4, same caveat the RTX 4080/5080 note already uses. gpt-oss-120b MXFP4 is **58.72** ([[benchmarks/ggml-cuda-gb10-spark-gptoss120b-tg32-d0-b7941]], 59.02 GiB) → **4.3×** *(derived)*, and it is the model that actually uses the 128 GB pool. GLM-4.7-Flash Q8_0, which llama-bench labels `deepseek2 30B.A3B`, is **48.68** ([[benchmarks/ggml-cuda-gb10-spark-glm47-flash-tg32-d0-b7941]], 29.65 GiB) → **3.6×** *(derived)*. None of the three is a Q4 35B-A3B, so none enters §4b. The earlier third-party gpt-oss-120b CUDA cell on this part stays where it was (52.87, a different build); the maintainer number is 58.72.
@@ -386,7 +396,7 @@ not) — both 672 GB/s, tied with the PRO 4000 Blackwell.
 | [[accelerators/local-apple-m5-pro]] | 64 | 307 | **Y/Y/Y** | 15.3 | no bare-part price |
 | [[accelerators/nvidia-l4]] | 24 | 300 | **Y/Y/-** | 15.0 | cloud/distributor only |
 
-Thirty-two further accelerators qualify on the bandwidth-or-price rule and do
+Thirty-seven further accelerators qualify on the bandwidth-or-price rule and do
 **not** fit 35B-A3B (all unpriced). The highest-bandwidth near-misses, all
 `-/-/-` except the two 20 GB parts which fit 27B only: [[accelerators/amd-radeon-pro-vii]]
 (16 GB, 1024 GB/s), [[accelerators/nvidia-rtx-5080]] (16 GB, 960),
@@ -401,8 +411,14 @@ Thirty-two further accelerators qualify on the bandwidth-or-price rule and do
 [[accelerators/nvidia-rtx-4070-ti-super]],
 [[accelerators/amd-radeon-rx-9070]] (16 GB, 640),
 [[accelerators/nvidia-rtx-a4500]] (20 GB, 640, `-/Y/-`), and
-[[accelerators/nvidia-rtx-4000-ada]] (20 GB, 360 GB/s, `-/Y/-`). The full
-142-row list, including these 32, is `python tools/fit_matrix_35b.py`.
+[[accelerators/nvidia-rtx-4000-ada]] (20 GB, 360 GB/s, `-/Y/-`). Five of the
+thirty-seven are new with #172 and sit at the bottom of that list, all
+`-/-/-`: [[accelerators/amd-radeon-rx-6800]] (16 GB, 512 GB/s, 35B ceiling
+25.6 tok/s *(derived)*), [[accelerators/nvidia-rtx-2070-super]] and
+[[accelerators/nvidia-rtx-3060-ti]] (both 8 GB, 448 GB/s, 22.4),
+[[accelerators/amd-radeon-rx-6750-xt]] (12 GB, 432 GB/s, 21.6) and
+[[accelerators/amd-radeon-rx-6700-xt]] (12 GB, 384 GB/s, 19.2). The full
+147-row list, including these 37, is `python tools/fit_matrix_35b.py`.
 
 ## 4b. Roofline vs. measured — the A3B-MoE cross-check
 
@@ -416,11 +432,12 @@ numbers themselves come from the cited records.
 
 | accelerator | BW GB/s | ceiling *(derived)* | measured tok/s | × over floor *(derived)* | benchmark record |
 |---|---|---|---|---|---|
-| [[accelerators/nvidia-rtx-5090]] | 1792 | 89.6 | 234.3 | 2.6× | [[benchmarks/hc-rtx5090-qwen3-30b-a3b-q4kxl-4k-tg128]] |
+| [[accelerators/nvidia-rtx-5090]] | 1792 | 89.6 | 234.3 | 2.6× | [[benchmarks/hc-rtx5090-qwen3-30b-a3b-q4kxl-4k-tg128]] *(4k; a second page on the same card, same quant, same depth is 226.1 → 2.5× [[benchmarks/hc26-5090-qwen3-30b-a3b-q4k-4k-tg]], 226.1/89.6 = 2.52 *(derived)*. The two are not averaged.)* |
 | [[accelerators/nvidia-rtx-pro-5000-blackwell]] | 1344 | 67.2 | 188.8 | 2.8× | [[benchmarks/hc-rtxpro5000-qwen3-30b-a3b-4k-tg]] *(4k; 16k is 148.5 → 2.2×, [[benchmarks/hc-rtxpro5000-qwen3-30b-a3b-16k-tg]]. #163 continues the same series: 123.2 at 32k → 1.8× [[benchmarks/hc26-pro5000-qwen3-30ba3b-tg-32k]], 91.9 at 64k → 1.4× [[benchmarks/hc26-pro5000-qwen3-30ba3b-tg-64k]], 61.4 at 128k → 0.91× [[benchmarks/hc26-pro5000-qwen3-30ba3b-tg-128k]], 37.0 at 256k → 0.55× [[benchmarks/hc26-pro5000-qwen3-30ba3b-tg-256k]]. All ÷ 67.2, *(derived)*. The floor is crossed between 64k and 128k. Unpriced — §4, not §3.)* |
-| [[accelerators/nvidia-rtx-4090]] | 1008 | 50.4 | 109.57 | 2.2× | [[benchmarks/hwcorner-rtx-4090-qwen3-30b-a3b-q4kxl-decode-16k]] |
-| [[accelerators/nvidia-rtx-3090-ti]] | 1008 | 50.4 | 98.25 | 1.9× | [[benchmarks/hwcorner-rtx-3090-ti-qwen3-30b-a3b-q4kxl-decode-16k]] |
-| [[accelerators/nvidia-rtx-6000-ada]] | 960 | 48.0 | 104.88 | 2.2× | [[benchmarks/hwcorner-rtx-6000-ada-qwen3-30b-a3b-q4kxl-decode-16k]] |
+| [[accelerators/nvidia-rtx-4090]] | 1008 | 50.4 | 207.3 | 4.1× | [[benchmarks/hc26-4090-qwen3-30b-a3b-tg-4k]] *(4k; same series 139.2 at 16k → 2.8× [[benchmarks/hc26-4090-qwen3-30b-a3b-tg-16k]], 105.1 at 32k → 2.1× [[benchmarks/hc26-4090-qwen3-30b-a3b-tg-32k]], 68.2 at 64k → 1.4× [[benchmarks/hc26-4090-qwen3-30b-a3b-tg-64k]]. All ÷ 50.4, *(derived)*. The 109.57 cell at 16k [[benchmarks/hwcorner-rtx-4090-qwen3-30b-a3b-q4kxl-decode-16k]] is a different page and still stands. The card stays above the floor through 64k.)* |
+| [[accelerators/nvidia-rtx-3090-ti]] | 1008 | 50.4 | 98.25 | 1.9× | [[benchmarks/hwcorner-rtx-3090-ti-qwen3-30b-a3b-q4kxl-decode-16k]] *(16k; the 32k cell on the same card is 91.97 → 1.8×, [[benchmarks/hwcorner-rtx-3090-ti-qwen3-30b-q4kxl-decode-32k]], 91.97/50.4 = 1.82 *(derived)*. No 4k cell in the corpus.)* |
+| [[accelerators/nvidia-rtx-3090]] | 936 | 46.8 | 179.0 | 3.8× | [[benchmarks/hc26-3090-qwen3-30b-a3b-tg-4k]] *(4k; same Q4_K series is 98.3 at 16k → 2.1× [[benchmarks/hc26-3090-qwen3-30b-a3b-tg-16k]], 58.8 at 32k → 1.3× [[benchmarks/hc26-3090-qwen3-30b-a3b-tg-32k]], 32.8 at 64k → 0.70× [[benchmarks/hc26-3090-qwen3-30b-a3b-tg-64k]]. All ÷ 46.8, *(derived)*. The floor is crossed between 32k and 64k. A second 4k page on this card is 153.6 → 3.3× [[benchmarks/hc26-3090-qwen3-30b-a3b-q4k-4k-tg]]; the two are not averaged.)* |
+| [[accelerators/nvidia-rtx-6000-ada]] | 960 | 48.0 | 199.6 | 4.2× | [[benchmarks/hc26-6000ada-qwen3-30b-a3b-tg-4k]] *(4k; same series 120.1 at 16k → 2.5× [[benchmarks/hc26-6000ada-qwen3-30b-a3b-tg-16k]], 74.3 at 32k → 1.5× [[benchmarks/hc26-6000ada-qwen3-30b-a3b-tg-32k]], 40.8 at 64k → 0.85× [[benchmarks/hc26-6000ada-qwen3-30b-a3b-tg-64k]]. All ÷ 48.0, *(derived)*. The floor is crossed between 32k and 64k. The 104.88 cell at 16k [[benchmarks/hwcorner-rtx-6000-ada-qwen3-30b-a3b-q4kxl-decode-16k]] is a different page and still stands. Unpriced — §4.)* |
 | [[accelerators/nvidia-rtx-5070-ti]] | 896 | 44.8 | 111.11 | 2.5× | [[benchmarks/hwcorner-rtx-5070-ti-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/nvidia-rtx-4080]] | 716.8 | 35.8 | 85.04 | 2.4× | [[benchmarks/hwcorner-rtx-4080-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/local-apple-m5-max]] | 614 | 30.7 | 128.0 | 4.2× | [[benchmarks/ss-m5max-48-qwen35-35b-mlx-4bit-tg]] *(MLX path; llama.cpp Q4_K_M row lands 89.4 → 2.9×, [[benchmarks/ss-m5max-48-qwen35-35b-llamacpp-q4km-tg]])* |
@@ -432,16 +449,21 @@ numbers themselves come from the cited records.
 | [[accelerators/nvidia-rtx-pro-6000-blackwell]] | 1792 | 89.6 | 198.7 | 2.2× | [[benchmarks/hc26-rtxpro6000-qwen3-30b-a3b-q4k-tg-4k]] *(4k context; the same card's 256k row is 38.4 and is a context effect, not a roofline one)* |
 | [[accelerators/nvidia-a100-40gb-sxm4]] | 1555 | 77.8 | 148 | 1.9× | [[benchmarks/llamabench-a100sxm40-ornith15-35b-a3b-q4km-tg128]] |
 | [[accelerators/nvidia-a100-40gb-pcie]] | 1555 | 77.8 | 136 | 1.7× | [[benchmarks/llamabench-a100pcie40-qwen36-35b-a3b-q4kxl-tg128]] |
-| [[accelerators/nvidia-rtx-a6000]] | 768 | 38.4 | 75.35 | 2.0× | [[benchmarks/hwcorner-rtx-a6000-qwen3-30b-a3b-q4kxl-decode-16k]] |
+| [[accelerators/nvidia-rtx-a6000]] | 768 | 38.4 | 131.2 | 3.4× | [[benchmarks/hc26-a6000-qwen3-30b-a3b-q4k-4k-tg]] *(4k; the 16k cell already quoted is 75.35 → 2.0× [[benchmarks/hwcorner-rtx-a6000-qwen3-30b-a3b-q4kxl-decode-16k]]. 131.2/38.4 = 3.42, *(derived)*. Unpriced — §4.)* |
 
 Three reads:
 
-- **The ordering is the same.** No measured row overturns the bandwidth
-  ordering — a ~2–6× multiplier on a floor does not reorder the ranking, it
-  lifts the low-BW rows hardest. The RTX 5090 still leads on both lists.
-  The new RTX PRO 5000 Blackwell cell (188.8 tok/s, 2.8×) slots between the
-  5090 and the PRO 6000 on bandwidth and on the measurement, which is what
-  the floor predicts.
+- **The ordering is the same at one context depth, and it is not at 4k.**
+  The 16k cells this section was built on sit in a ~2–2.6× band and do not
+  reorder the bandwidth ranking. The 4k cells now cited do reorder *within*
+  a generation: the 3090 at 179.0 (3.8×) and the 6000 Ada at 199.6 (4.2×)
+  both clear the 4090's *16k* number and do not clear the 4090's own 4k
+  number (207.3). The RTX 5090 still leads the short-context list (234.3).
+  The RTX PRO 5000 Blackwell cell (188.8 tok/s, 2.8×) still slots between
+  the 5090 and the PRO 6000 on bandwidth and on the 4k measurement, which
+  is what the floor predicts. What the new sweep adds is the depth at which
+  the floor stops being a floor: 3090 and 6000 Ada cross it between 32k and
+  64k, the PRO 5000 between 64k and 128k.
 - **The floor is ~2–6× low, and *where* it is lowest is systematic.** The
   tightest-margin parts (Strix Halo now at 5.7× on its best run, M5 Max and
   M4 Max at 4.2×) are exactly the bandwidth-starved ones — the MoE reads only
@@ -453,14 +475,21 @@ Three reads:
   cross-part gaps. **Do not use the ceiling column to compare a MoE target
   across architectures** — it ranks $/tok-s correctly only because the error
   is monotonic in bandwidth.
-- **The cheapest *measured* A3B answer is still the 3090-Ti class.** Of the
-  parts with both a price and a measured run, [[accelerators/nvidia-rtx-3090-ti]]
-  at $950 with 98.25 measured tok/s (~$9.67/measured-tok/s, derived) is the
-  cheapest verified fit — the roofline ranks it #10 on $/tok-s, the
-  measurement says its real margin over the floor (1.9×) is the *worst* of
-  the measured set, and it still beats everything cheaper that was measured.
-  Strix Halo's 5.7× multiplier is why [[gotchas/gotcha-strix-halo-moe-not-dense]]
-  calls the MoE target the workload that part is *for*.
+- **The cheapest *measured* A3B answer depends on the context depth.** At the
+  16k cell this section used to quote, [[accelerators/nvidia-rtx-3090-ti]] at
+  $950 with 98.25 tok/s is still ~$9.67/measured-tok/s *(derived)*, and its
+  1.9× margin was the worst of the set that had been cited. The 3090's own
+  sweep, now in the table, changes the short-context read and not the deep
+  one: **179.0 tok/s at 4k** on the same $950 sticker is **$5.31/measured-tok/s
+  *(derived, 950/179.0)***, the cheapest verified fit at that depth, at
+  **3.8×** its floor — no longer the worst margin. By 64k the same card is at
+  32.8 tok/s and **under** the floor (0.70×), while the 4090 is still above it
+  (68.2, 1.4×) and costs $9.65/measured-tok/s at its 4k cell *(derived,
+  2000/207.3)*. The Ti still has no 4k cell here, so it cannot be compared to
+  the 3090 at short context. Strix Halo's 5.7× multiplier (10.2× on the
+  depth-0 wiki row, which is a different protocol and not the cell this
+  paragraph ranks on) is why [[gotchas/gotcha-strix-halo-moe-not-dense]] calls
+  the MoE target the workload that part is *for*.
 
 ## 5. Why the cheap rows are cheap — read before buying
 
@@ -580,7 +609,7 @@ show*. These are the corpus's own gotcha records, not new claims:
 
 ## 7. Reproduce
 
-    python tools/fit_matrix_35b.py            # the full 142-row matrix, all three sections (GB10 is outside the gate; see the Oct-16 p19 note)
+    python tools/fit_matrix_35b.py            # the full 147-row matrix, all three sections (GB10 is outside the gate; see the Oct-16 p19 note)
     python tools/validate.py                  # record integrity (no new records added here)
 
 Every figure above is generated by that tool against the committed `data/`
