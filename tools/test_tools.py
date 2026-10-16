@@ -1780,8 +1780,11 @@ class TestSchemaAuthorityBackfill(Harness):
         for r in self.records("benchmark"):
             if r.get("power_w") is None:
                 continue
-            self.assertIsNotNone(
-                r.get("clock_lock_mhz"),
+            # The field must be PRESENT. null is a real answer — the schema
+            # defines it as "clocks were unlocked" — so only a missing key is a
+            # record that never said whether the clocks were locked.
+            self.assertIn(
+                "clock_lock_mhz", r,
                 f"{r['id']} records watts without saying whether clocks were locked")
 
     def test_power_scope_node_and_device_are_both_used(self):
