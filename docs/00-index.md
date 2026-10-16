@@ -3943,7 +3943,7 @@ and t
 - **SambaNova Cloud inference** (`services/svc-sambanova-cloud`) — sambanova · $0.6/$1.2 per Mtok · 98.0 tok/s · TTFT 770.0 ms
 - **Together AI serverless inference** (`services/svc-together-serverless`) — together · $1.04/$1.04 per Mtok · 43.0 tok/s · TTFT 740.0 ms
 
-## Models (160)
+## Models (161)
 
 - **Jamba-1.5-Large** (`models/jamba-1-5-large`) — hybrid-attention-ssm · hybrid: interleaved Transformer + Mamba blocks with MoE · 262,144 ctx
 - **Olmo 3 7B** (`models/olmo-3-7b`) — dense 7.3B · 524,288 B/token KV · full MHA (no GQA) + 3:1 sliding-window/global (sliding_window 4096) · attn on 8 layers · 65,536 ctx
@@ -4089,6 +4089,7 @@ and t
 - **Falcon-H1-7B-Base** (`models/falcon-h1-7b-base`) — hybrid-attention-ssm 7.58565B · 45,056 B/token KV · GQA in parallel with Mamba-2 on every layer · attn on 44 layers · 262,144 ctx
 - **Falcon3 7B Instruct** (`models/falcon3-7b-instruct`) — dense 7.45555B · 114,688 B/token KV · GQA · 32,768 ctx
 - **Hunyuan-A13B-Instruct** (`models/hunyuan-a13b`) — moe 13/80B active · 131,072 B/token KV · GQA (standard; no MLA - kv_lora_rank explicitly null) · 32,768 ctx
+- **Hy-Memory-30B-A3B** (`models/hy-memory-30b-a3b`) — moe 3/30.06B active · 98,304 B/token KV · GQA (32 query heads / 4 kv heads, head_dim 128); dense first layer then MoE · 262,144 ctx
 - **TinyLlama-1.1B-Chat-v1.0** (`models/tinyllama-1-1b-chat`) — dense 1.1B · 22,528 B/token KV · GQA (32 query / 4 KV, ratio 8) · 2,048 ctx
 - **Unsloth DeepSeek-R1-Distill-Llama-8B (GGUF quant set)** (`models/unsloth-deepseek-r1-distill-llama-8b-gguf`) — dense 8.03026B · 131,072 B/token KV · GQA · 131,072 ctx
 - **Unsloth Hermes-4-405B (GGUF quant set)** (`models/unsloth-hermes-4-405b-gguf`) — dense 405.853B · 516,096 B/token KV · GQA · 131,072 ctx
@@ -4390,7 +4391,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (2293)
+## Sources (2295)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -5210,6 +5211,7 @@ and t
 - **How Much Dense Attention is Necessary? Oracle-Guided Sparse Prefill for Full/GQA Layers in Hybrid Long-Context Models (arXiv:2606.07703) - the authors' own report behind the SOTA2/WizWand TTFT leaderboard** (`sources/w8-src-arxiv-2606-07703-dense-attention-oracle`) — paper · SOTA2 Research (formerly WizWand) - Hongxing Wang, Harenome Razanajato, Zhen Zhang, Yujie Yuan, Hongsheng Liu
 - **HuBERT-EE: Early Exiting HuBERT for Efficient Speech Recognition (arXiv:2204.06328)** (`sources/pap-mm-hubert-ee`) — paper · arXiv
 - **HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction of Hidden Units (arXiv:2106.07447)** (`sources/pap-mm-hubert`) — paper · arXiv
+- **Hy-Memory-30B-A3B: Attributed Reinforcement Learning for Long-Term Memory Writing (arXiv:2610.22196)** (`sources/arxiv-hy-memory-30b-a3b`) — paper · arXiv
 - **Hydra: Sequentially-Dependent Draft Heads for Medusa Decoding** (`sources/sd-hydra-paper`) — paper · arXiv (Ankner, Parthasarathy, Nrusimha, Rinard, Ragan-Kelley, Brandon)
 - **Hydra: Sequentially-Dependent Draft Heads for Medusa Decoding (arXiv:2402.05109)** (`sources/mkt-hydra-draft-heads`) — paper · arXiv
 - **Hyena Hierarchy: Towards Larger Convolutional Language Models** (`sources/pap-arch-2302-10866`) — paper · arXiv
@@ -6123,6 +6125,7 @@ and t
 - **sm_120 (consumer/workstation Blackwell) FP8 status: NVIDIA's own kernels do not serve tensor/token-scaled FP8 GROUPED/MoE GEMM on SM_120 - a library-routing gap, not an absent FP8 path** (`sources/vb-sm120-fp8-no-cuda-path-cutlass-unvalidated`) — repo · vLLM project / NVIDIA CUTLASS upstream
 - **teknium/OpenHermes-2.5-Mistral-7B config.json** (`sources/mbl-cfg-openhermes-2-5-mistral-7b`) — repo · Hugging Face
 - **teknium/OpenHermes-2.5-Mistral-7B model repo** (`sources/hf-eco-openhermes-2-5-mistral-7b`) — repo · teknium
+- **tencent/Hy-Memory-30B-A3B model card and config.json** (`sources/hf-hy-memory-30b-a3b`) — repo · Tencent Hunyuan
 - **tenstorrent/tt-inference-server — model serving reference** (`sources/tenstorrent-tt-inference-server-model-serving-reference`) — repo · Tenstorrent
 - **tenstorrent/tt-metal tech_reports — Grayskull-era and Wormhole notes** (`sources/tenstorrent-tt-metal-tech-reports-grayskull-era-and-wormhole-not`) — repo · Tenstorrent
 - **thenlper/gte-large config.json** (`sources/hf-embed-gte-large`) — repo · Hugging Face
@@ -7022,7 +7025,7 @@ and t
 
 ## Coverage
 
-Total records: **6959**
+Total records: **6962**
 
 | group | records |
 |---|---|
