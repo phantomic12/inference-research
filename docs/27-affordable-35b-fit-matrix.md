@@ -3,7 +3,11 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
-> **Refresh note (docs/fit-matrix-oct14, Oct-16, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `b7921d5` (184 accelerator records, 218 supply records, 2,742 benchmarks). The selection rule now yields **138 qualifying / 43 priced / 95 unpriced** (63 of the unpriced fit 35B-A3B, 32 do not). Two things actually moved; the rest of the ranked order did not:
+> **Refresh note (docs/fit-matrix-oct14, Oct-16, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `37c67d2` (184 accelerator records, 218 supply records, 2,801 benchmarks — the llama.cpp Llama-2-7B scoreboard backfill, #159, on top of `b7921d5`). The selection rule still yields **138 qualifying / 43 priced / 95 unpriced** (63 of the unpriced fit 35B-A3B, 32 do not). The ranked $/tok-s table is unchanged: every priced cell was re-diffed against the generator and matches (price, ceiling, fit flags, supply id, order). #159 adds no purchase price and no A3B-class measurement — its rows are Llama-2-7B Q4_0 — so it cannot move this ranking. What this pass does land is one measured A3B row the previous table never cited:
+>
+> - **RTX PRO 5000 Blackwell, measured.** [[accelerators/nvidia-rtx-pro-5000-blackwell]] (48 GB, 1,344 GB/s, §4, unpriced) has a third-party Qwen3-30B-A3B Q4_K decode of **188.8** tok/s at 4k ([[benchmarks/hc-rtxpro5000-qwen3-30b-a3b-4k-tg]]) against a 67.2 tok/s ceiling *(derived)* — **2.8×** the floor (188.8/67.2 = 2.81, *(derived)*). The same card at 16k is 148.5 ([[benchmarks/hc-rtxpro5000-qwen3-30b-a3b-16k-tg]]), 2.2×. That is the first measured A3B number for a part this doc lists only as "fits, can't price it," and it sits between the RTX 5090 (234.3) and the RTX PRO 6000 Blackwell (198.7) on the same lab's 4k protocol. The 72 GB sibling still has no public row. It does not enter §3: there is still no bare-card price.
+>
+> **Refresh note (docs/fit-matrix-oct14, Oct-16, prior pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `b7921d5` (184 accelerator records, 218 supply records, 2,742 benchmarks). The selection rule now yields **138 qualifying / 43 priced / 95 unpriced** (63 of the unpriced fit 35B-A3B, 32 do not). Two things actually moved; the rest of the ranked order did not:
 >
 > - **One new priced row.** [[accelerators/amd-epyc-9554-genoa]] (vram_gb null, unified DDR5 host) is joined to the whole 384 GB self-build [[supply/used-epyc-9004-genoa-build-384gb]] at $7,500. The 384 GB figure is the configured pool of that supply record (`UNIFIED_MEM_GB` in the tool), so the `Y/Y/Y` flag and the sticker describe the same machine. Ceiling 23.0 tok/s *(derived)* → **$325.52/tok-s *(derived)***, rank 42, one slot above the H100 PCIe. The $2,000 CPU-only row is not joined (it prices no RAM).
 > - **Six fit-but-unpriced rows the previous table dropped.** [[accelerators/nvidia-rtx-pro-5000-72gb-blackwell]], [[accelerators/nvidia-rtx-pro-5000-blackwell]], [[accelerators/nvidia-l40]], [[accelerators/nvidia-rtx-a5000]], [[accelerators/nvidia-rtx-pro-4000-blackwell]], [[accelerators/amd-radeon-pro-v620]]. They were already in `data/accelerators/`; §4 now lists them. The near-miss (does-not-fit) count went from 19 to 32 for the same reason — those ids are named in the §4 close, not given their own table.
@@ -380,6 +384,7 @@ numbers themselves come from the cited records.
 | accelerator | BW GB/s | ceiling *(derived)* | measured tok/s | × over floor *(derived)* | benchmark record |
 |---|---|---|---|---|---|
 | [[accelerators/nvidia-rtx-5090]] | 1792 | 89.6 | 234.3 | 2.6× | [[benchmarks/hc-rtx5090-qwen3-30b-a3b-q4kxl-4k-tg128]] |
+| [[accelerators/nvidia-rtx-pro-5000-blackwell]] | 1344 | 67.2 | 188.8 | 2.8× | [[benchmarks/hc-rtxpro5000-qwen3-30b-a3b-4k-tg]] *(4k context; the same card's 16k row is 148.5 → 2.2×, [[benchmarks/hc-rtxpro5000-qwen3-30b-a3b-16k-tg]]. Unpriced — §4, not §3.)* |
 | [[accelerators/nvidia-rtx-4090]] | 1008 | 50.4 | 109.57 | 2.2× | [[benchmarks/hwcorner-rtx-4090-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/nvidia-rtx-3090-ti]] | 1008 | 50.4 | 98.25 | 1.9× | [[benchmarks/hwcorner-rtx-3090-ti-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/nvidia-rtx-6000-ada]] | 960 | 48.0 | 104.88 | 2.2× | [[benchmarks/hwcorner-rtx-6000-ada-qwen3-30b-a3b-q4kxl-decode-16k]] |
@@ -401,6 +406,9 @@ Three reads:
 - **The ordering is the same.** No measured row overturns the bandwidth
   ordering — a ~2–6× multiplier on a floor does not reorder the ranking, it
   lifts the low-BW rows hardest. The RTX 5090 still leads on both lists.
+  The new RTX PRO 5000 Blackwell cell (188.8 tok/s, 2.8×) slots between the
+  5090 and the PRO 6000 on bandwidth and on the measurement, which is what
+  the floor predicts.
 - **The floor is ~2–6× low, and *where* it is lowest is systematic.** The
   tightest-margin parts (Strix Halo now at 5.7× on its best run, M5 Max and
   M4 Max at 4.2×) are exactly the bandwidth-starved ones — the MoE reads only
