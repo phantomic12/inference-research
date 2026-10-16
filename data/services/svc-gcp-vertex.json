@@ -17,10 +17,10 @@
   ],
   "price_input_per_mtok_usd": 0.72,
   "price_output_per_mtok_usd": 0.72,
-  "price_basis": "USD per 1M TOKENS, representative model Meta Llama 3.3 70B via Vertex AI Model-as-a-Service partner-model table, observed 2026-10-14 ($0.72 in = $0.72 out, symmetric; batch $0.36/$0.36). Other MaaS rows same-day: Llama 4 Scout $0.25/$0.70, Llama 4 Maverick $0.35/$1.15, gpt-oss-120b $0.09/$0.36, gpt-oss-20b $0.07/$0.25, DeepSeek-V3.2 $0.56/$1.68, Qwen3-235B $0.22/$0.88, GLM-5 $1.00/$3.20, Mistral Medium 3 $0.40/$2.00. First-party Gemini rows are a separate table (Gemini 3.8 Flash intro $0.75/$3.75 through 2026-12-31, then $1.50/$7.50). Non-global endpoints add 10%.",
-  "context_window": 131072,
-  "measured_ttft_ms": 4440.0,
-  "measured_tps": 98.0,
+  "price_basis": "USD per 1M TOKENS, representative model Llama 3.3 70B on Vertex AI at $0.72 in / $0.72 out (batch $0.36/$0.36), from cloud.google.com/vertex-ai/generative-ai/pricing fetched 2026-10-16. This confirms the 2026-10-14 OpenRouter Google Vertex row, which was the only place the number lived before. Same page, same day: Llama 4 Scout $0.25/$0.70, Llama 4 Maverick $0.35/$1.15, gpt-oss-120b $0.09/$0.36, DeepSeek-V3.2 $0.56/$1.68, Qwen3-235B-A22B-Instruct-2507 $0.22/$0.88. Vertex prices per model and per SKU (global vs non-global on Gemini); the Llama 3.3 row above is the single on-demand rate published, not a regional matrix.",
+  "context_window": 128000,
+  "measured_ttft_ms": 680.0,
+  "measured_tps": 149.9,
   "measurement_source": "artificial-analysis",
   "regions": [
     "global",
@@ -29,11 +29,13 @@
     "europe-west4",
     "asia-northeast1"
   ],
-  "notes": "Two services under one endpoint family: first-party Gemini (per-model global/non-global tables, non-global +10%) and the partner-model MaaS catalog where open weights (Llama, DeepSeek, Qwen, GLM, gpt-oss, Mistral) are served on Google's own infrastructure with Google-set prices. Measured figures are OpenRouter's 2026-10-14 P50 on Google Vertex's llama-3.3-70b endpoint: 98 tok/s but 4.44s latency - the slowest TTFT on that table, an order of magnitude behind Groq, which is the finding that matters for latency-sensitive callers. Vertex also sells tuned-model endpoints at 1.5x base price.",
+  "notes": "2026-10-16 refresh. The $0.72/$0.72 price is now sourced from Google's own pricing page, not only from OpenRouter's pass-through row. Measured speed moved: OpenRouter's 2026-10-14 P50 for the Vertex row on llama-3.3-70b was 4.44s latency / 98 tok/s; Artificial Analysis on 2026-10-16 measures Vertex at 0.68s median first chunk (the LOWEST TTFT of 11 providers) and 149.9 output tok/s. Both are kept: the old pair is OpenRouter production traffic, the new pair is AA's benchmark, and the record now carries the third-party measurement because measurement_source is a single enum. Previous measured values: ttft 4440 ms, tps 98. Two services under one endpoint family: first-party Gemini (per-model global/non-global tables, non-global +10%) and the partner-model MaaS catalog where open weights (Llama, DeepSeek, Qwen, GLM, gpt-oss, Mistral) are served on Google's own infrastructure with Google-set prices. Measured figures are OpenRouter's 2026-10-14 P50 on Google Vertex's llama-3.3-70b endpoint: 98 tok/s but 4.44s latency - the slowest TTFT on that table, an order of magnitude behind Groq, which is the finding that matters for latency-sensitive callers. Vertex also sells tuned-model endpoints at 1.5x base price.",
   "status": "verified",
-  "confidence": 0.85,
-  "updated": "2026-10-14",
+  "confidence": 0.88,
+  "updated": "2026-10-16",
   "sources": [
+    "svc-src-artificialanalysis-llama33-70b-providers-2026-10-16",
+    "svc-src-gcp-vertex-genai-pricing-2026-10-16",
     "svc-src-gcp-vertex-genai-pricing-2026-10-14",
     "svc-src-openrouter-provider-table-2026-10-14",
     "svc-src-artificialanalysis-llama33-70b-providers-2026-10-14"
