@@ -1958,5 +1958,44 @@ class TestSchemaAuthorityBackfill(Harness):
         self.assertNotIn("hardware_parameters", REF_FIELDS.get("flop", {}))
 
 
+class TestModelRanking(unittest.TestCase):
+    """tools/rank_models.py is the local-model ranking. It must stay a pure
+    function of data/models: every ranked model traceable to a record, ordered
+    by decode cost, and reproducible."""
+
+    def test_ranking_runs_and_cites_real_records(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "rank_models", ROOT / "tools" / "rank_models.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        models = mod.load()
+        self.assertGreater(len(models), 0, "no model records found")
+
+        kept = [mod.row(r, 4096) for r in models if mod.eligible(r)]
+        self.assertGreater(len(kept), 0, "nothing ranked")
+        kept.sort(key=lambda r: (r["q4_gb"], r["name"]))
+
+        # cheapest first, strictly
+        costs = [r["q4_gb"] for r in kept]
+        self.assertEqual(costs, sorted(costs))
+
+        # every citation resolves to a record that exists
+        ids = {r["_rid"] for r in models}
+        for r in kept:
+            self.assertIn(r["rid"], ids)
+
+        # a model that is not open weights never appears
+        for r in kept:
+            rec = next(m for m in models if m["_rid"] == r["rid"])
+            self.assertTrue(rec["open_weights"])
+
+        # output uses the repo's [[type/id]] citation form
+        text = mod.render(kept[:5], 4096, skipped=0)
+        self.assertIn("[[models/", text)
+        self.assertIn("| Rank |", text)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
