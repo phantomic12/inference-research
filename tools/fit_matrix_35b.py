@@ -146,6 +146,11 @@ PRICE_JOIN = {
     "used-tenstorrent-grayskull-e150":  {"tenstorrent-grayskull-e150": 400.0},
     "used-qualcomm-cloud-ai100-pcie":   {"qualcomm-ai100": 400.0},
     "taobao-used-huawei-ascend-310p":   {"huawei-ascend-310p": 265.0},
+    # taobao-used-huawei-atlas-300i-pro-24gb ($265) prices the same 310P-class
+    #   silicon under its card-level record id (24 GB, 204.8 GB/s). The
+    #   accelerator records split die (ascend-310p) vs card (atlas-300i-pro);
+    #   both are real records, so both get the join.
+    "taobao-used-huawei-atlas-300i-pro-24gb": {"huawei-atlas-300i-pro": 265.0},
     # RX 7900 XTX: a cheaper peer/eBay used channel ($875) than the Newegg
     #   refurb-retail row already joined above ($1,405). Both are real asking
     #   prices; min() picks the cheaper one for the ranked table.
