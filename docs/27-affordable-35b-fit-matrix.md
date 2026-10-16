@@ -41,6 +41,13 @@ cheapest one cost per unit of decode throughput.
 > landed after the last refresh (RTX PRO 6000 Blackwell, A100 40 GB SXM4,
 > A100 40 GB PCIe, RTX A6000).
 
+> *This pass (`docs/fit-matrix-oct14-r8`, Oct-16).* Same tree as the p6 note
+> above (`e128197` plus the p6 doc). Re-ran `python tools/fit_matrix_35b.py`:
+> still **118 qualifying / 42 priced / 76 unpriced**, ranked $/tok-s order
+> unchanged. The only edit versus the p6 doc is quoting the §4b measured
+> decode values at the benchmark record's own precision, including the RTX
+> 5070 Ti cell the p6 doc still rounded (111.1 vs the record's 111.11).
+>
 > *Prior refresh (docs/fit-matrix-oct14, third refresh):* re-run on the
 > Phase-C Oct-15 pass-3 tree. Ranked table then 41 priced rows; §4 at 52.
 
@@ -321,7 +328,7 @@ numbers themselves come from the cited records.
 | [[accelerators/nvidia-rtx-4090]] | 1008 | 50.4 | 109.57 | 2.2× | [[benchmarks/hwcorner-rtx-4090-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/nvidia-rtx-3090-ti]] | 1008 | 50.4 | 98.25 | 1.9× | [[benchmarks/hwcorner-rtx-3090-ti-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/nvidia-rtx-6000-ada]] | 960 | 48.0 | 104.88 | 2.2× | [[benchmarks/hwcorner-rtx-6000-ada-qwen3-30b-a3b-q4kxl-decode-16k]] |
-| [[accelerators/nvidia-rtx-5070-ti]] | 896 | 44.8 | 111.1 | 2.5× | [[benchmarks/hwcorner-rtx-5070-ti-qwen3-30b-a3b-q4kxl-decode-16k]] |
+| [[accelerators/nvidia-rtx-5070-ti]] | 896 | 44.8 | 111.11 | 2.5× | [[benchmarks/hwcorner-rtx-5070-ti-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/nvidia-rtx-4080]] | 716.8 | 35.8 | 85.04 | 2.4× | [[benchmarks/hwcorner-rtx-4080-qwen3-30b-a3b-q4kxl-decode-16k]] |
 | [[accelerators/local-apple-m5-max]] | 614 | 30.7 | 128.0 | 4.2× | [[benchmarks/ss-m5max-48-qwen35-35b-mlx-4bit-tg]] *(MLX path; llama.cpp Q4_K_M row lands 89.4 → 2.9×, [[benchmarks/ss-m5max-48-qwen35-35b-llamacpp-q4km-tg]])* |
 | [[accelerators/apple-m4-max]] | 546 | 27.3 | 113.33 | 4.2× | [[benchmarks/mlx-m4-max-qwen3-30b-a3b-4bit-decode-tok-s]] |
