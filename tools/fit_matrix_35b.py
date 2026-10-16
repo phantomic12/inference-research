@@ -146,25 +146,11 @@ PRICE_JOIN = {
     "used-tenstorrent-grayskull-e150":  {"tenstorrent-grayskull-e150": 400.0},
     "used-qualcomm-cloud-ai100-pcie":   {"qualcomm-ai100": 400.0},
     "taobao-used-huawei-ascend-310p":   {"huawei-ascend-310p": 265.0},
-    # taobao-used-huawei-atlas-300i-pro-24gb ($265) prices the same 310P-class
+    # taobao-used-huawei-atlas-300i-pro-24gb (\$265) prices the same 310P-class
     #   silicon under its card-level record id (24 GB, 204.8 GB/s). The
     #   accelerator records split die (ascend-310p) vs card (atlas-300i-pro);
     #   both are real records, so both get the join.
     "taobao-used-huawei-atlas-300i-pro-24gb": {"huawei-atlas-300i-pro": 265.0},
-    # --- Dec-2026 price-refresh wave (research-price-refresh, captured
-    #   2026-10-14). Later observations of parts already joined, not cheaper
-    #   channels: min() keeps the lowest ask, so none of these move a ranked
-    #   cell. They are joined so the doc can cite the fresher record beside
-    #   the cell it did not displace. Two siblings are deliberately NOT
-    #   joined, under the same capacity-match rule as the rest of this map:
-    #   used-mac-studio-m3-ultra-96gb-dec-refresh ($5,200) prices a 96 GB
-    #     chassis against apple-m3-ultra vram_gb=512 — the same mismatch that
-    #     already drops used-mac-studio-m3-ultra-96gb ($3,700).
-    #   new-framework-desktop-pro-495-192gb-premium ($6,799) prices a 192 GB
-    #     SKU against amd-ryzen-ai-max-395-framework-desktop vram_gb=128.
-    "ebay-used-amd-mi100-32gb-dec-refresh": {"amd-instinct-mi100": 720.0},
-    "ebay-used-rtx3090-dec-refresh":        {"nvidia-rtx-3090": 1700.0},
-    "used-mac-studio-m1-ultra-128gb-dec-refresh": {"apple-m1-ultra": 3400.0},
     # RX 7900 XTX: a cheaper peer/eBay used channel ($875) than the Newegg
     #   refurb-retail row already joined above ($1,405). Both are real asking
     #   prices; min() picks the cheaper one for the ranked table.
