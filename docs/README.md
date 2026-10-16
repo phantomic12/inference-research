@@ -1,7 +1,7 @@
 # Reading guide
 
 `docs/` is the synthesized layer over `data/`. Every quantitative claim cites a record
-(`[[type/id]]`); [00-index.md](00-index.md) is the generated catalogue of every record.
+(`[[type/id]]`); `tools/index.py` regenerates the catalogue of every record (`docs/00-index.md`, generated in CI and not stored in the repo).
 Numbers in a doc are a snapshot of the corpus at writing time — the cited record is the
 source of truth.
 
