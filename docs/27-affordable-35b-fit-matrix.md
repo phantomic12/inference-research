@@ -3,7 +3,14 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
-> **Refresh note (docs/fit-matrix-oct14, Oct-16, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `1c2a269` (184 accelerator records, 218 supply records, 2,876 benchmarks — the Phase-C Oct-16 p17 tt-metal matrix rows, #165, on top of `3438151`). The selection rule still yields **138 qualifying / 43 priced / 95 unpriced** (63 of the unpriced fit 35B-A3B, 32 do not). The ranked $/tok-s table is unchanged: every priced cell was re-diffed against the generator and matches (price, ceiling, fit flags, supply id, order). #165 adds no purchase price and no accelerator. What it does add is the first tt-metal decode numbers on three parts this doc already ranks, and none of them is an A3B-class model, so none of them enters §4b or moves a rank:
+> **Refresh note (docs/fit-matrix-oct14, Oct-16, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `2e37ebe` (188 accelerator records, 218 supply records, 2,884 benchmarks — the Phase-C Oct-16 p18 llama.cpp #15013 rows, #167, on top of `ed08dce`). The selection rule now yields **142 qualifying / 43 priced / 99 unpriced** (67 of the unpriced fit 35B-A3B, 32 do not). The ranked $/tok-s table is unchanged: every priced cell was re-diffed against the generator and matches (price, ceiling, fit flags, supply id, order). #167 adds no purchase price. What it does add is four accelerator records, all of which clear the 8 GB / 300 GB/s gate and none of which has a supply row, plus the first llama.cpp Llama-2-7B Q4_0 tg128 cell on a part §4 already listed:
+>
+> - **RTX 4090 D, new, unpriced, fits 35B/27B and not 70B.** [[accelerators/nvidia-rtx-4090-d]] is the China-only AD102-250 cut: 24 GB, **the same 1,008 GB/s** as [[accelerators/nvidia-rtx-4090]], TGP 425 W instead of 450 W. 35B ceiling 1,008/20 = **50.4** tok/s *(derived)* — identical to the priced 4090 at rank 22. It slots into §4 between the MI50/MI60 pair (51.2) and the RTX 6000 Ada (48.0). The scoreboard row is Llama-2-7B Q4_0, not an A3B model, so it does not enter §4b: tg128 **191.57** tok/s ([[benchmarks/llamacpp-cuda-rtx-4090-d-llama27b-q40-fa-tg128]]) and pp512 **12,506.97** ([[benchmarks/llamacpp-cuda-rtx-4090-d-llama27b-q40-fa-pp512]]). Dividing the 7B decode by the 20 GB 35B denominator — the only ceiling this doc computes, and the wrong byte count for a 3.56 GiB model — gives 191.57/50.4 = **3.80×** *(derived)*. That ratio is a small-model calibration, not a claim the card decodes a 35B-A3B at 192 tok/s. No street price, so it cannot take the 4090's rank.
+> - **RTX 5090 Laptop, new, unpriced, same fit shape.** [[accelerators/nvidia-rtx-5090-laptop]] is a GB203 mobile part, 24 GB GDDR7, **896 GB/s**, TGP up to 175 W. 35B ceiling 896/20 = **44.8** tok/s *(derived)*, tied with [[accelerators/nvidia-rtx-pro-4500-blackwell]] (same bus, same bandwidth, a 32 GB workstation card). It does not fit 70B. tg128 **158.14** ([[benchmarks/llamacpp-cuda-rtx-5090-laptop-llama27b-q40-fa-tg128]]), pp512 **7,641.89** ([[benchmarks/llamacpp-cuda-rtx-5090-laptop-llama27b-q40-fa-pp512]]). 158.14/44.8 = **3.53×** the 20 GB ceiling *(derived)*, same caveat: the model is Llama-2-7B. The scoreboard prints a 384-bit bus; the accelerator record keeps the 256-bit spec and does not trust that width. Not a desktop 5090 (1,792 GB/s, rank 12) and not priced as a bare GPU — the part ships inside a laptop.
+> - **Quadro RTX 8000 and Quadro RTX 6000, new, unpriced, same 672 GB/s.** Turing TU102, not the RTX 6000 Ada and not the RTX PRO 6000 Blackwell. [[accelerators/nvidia-quadro-rtx-8000]] is **48 GB** so it fits 70B (`Y/Y/Y`); [[accelerators/nvidia-quadro-rtx-6000]] is **24 GB** and does not (`Y/Y/-`). Both ceiling at 672/20 = **33.6** tok/s *(derived)*, tied with [[accelerators/nvidia-rtx-pro-4000-blackwell]]. The 8000's extra 24 GB buys the stretch model and buys no bandwidth. tg128 is **91.88** on the 8000 ([[benchmarks/llamacpp-cuda-quadro-rtx-8000-llama27b-q40-fa-tg128]]) and **93.11** on the 6000 ([[benchmarks/llamacpp-cuda-quadro-rtx-6000-llama27b-q40-fa-tg128]]) — within 2% of each other, which is what equal bandwidth predicts. 93.11/33.6 = **2.77×** and 91.88/33.6 = **2.73×** *(derived)*, again against a 7B model, so neither enters §4b. pp512 is 2,934.33 and 2,941.85 ([[benchmarks/llamacpp-cuda-quadro-rtx-8000-llama27b-q40-fa-pp512]], [[benchmarks/llamacpp-cuda-quadro-rtx-6000-llama27b-q40-fa-pp512]]).
+> - **RTX PRO 4500 Blackwell, already in §4, now has its tg128 cell.** [[accelerators/nvidia-rtx-pro-4500-blackwell]] (32 GB, 896 GB/s, ceiling 44.8 *(derived)*, unpriced). The pp512 sibling was already stored; #167 adds tg128 **168.9** ([[benchmarks/llamacpp-cuda-rtx-pro-4500-blackwell-llama27b-q40-fa-tg128]]). 168.9/44.8 = **3.77×** the 20 GB ceiling *(derived)*. Same Llama-2-7B protocol as the three new cards, so the four tg128 numbers are comparable to each other and not to the §4b A3B column. 168.9 vs the 5090 Laptop's 158.14 on the same 896 GB/s is a power-cap gap (workstation card vs a 95–175 W mobile SKU), not a bandwidth gap.
+
+> **Refresh note (docs/fit-matrix-oct14, Oct-16, prior pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `1c2a269` (184 accelerator records, 218 supply records, 2,876 benchmarks — the Phase-C Oct-16 p17 tt-metal matrix rows, #165, on top of `3438151`). The selection rule still yields **138 qualifying / 43 priced / 95 unpriced** (63 of the unpriced fit 35B-A3B, 32 do not). The ranked $/tok-s table is unchanged: every priced cell was re-diffed against the generator and matches (price, ceiling, fit flags, supply id, order). #165 adds no purchase price and no accelerator. What it does add is the first tt-metal decode numbers on three parts this doc already ranks, and none of them is an A3B-class model, so none of them enters §4b or moves a rank:
 >
 > - **Wormhole n300, rank 24, and the only one of the three that fits 35B-A3B.** [[accelerators/tenstorrent-wormhole-n300]] (24 GB, 576 GB/s, 35B ceiling 28.8 tok/s *(derived)*, $1,449 → $50.31/tok-s *(derived)*). The vendor's own tt-metal matrix measures **Llama-3.2-11B-Vision** at **18.1** tok/s per user, TP=2 across both chips, batch 16, input length 128 ([[benchmarks/ttmetal-n300-llama32-11b-vision-tp2-b16-tpsu]]; aggregate 289.6 = 18.1 × 16, not a per-request rate). TTFT on that row is 714 ms ([[benchmarks/ttmetal-n300-llama32-11b-vision-tp2-b16-ttft]]). Dividing the per-user figure by the 20 GB 35B ceiling — the only ceiling this doc computes, and the wrong byte count for an 11B vision model at batch 16 — gives 18.1/28.8 = **0.63×** *(derived)*. That is under the floor, which is what a concurrent per-user rate on a smaller model looks like against a batch-1 dense-equivalent denominator. It does not re-rank the row.
 > - **Wormhole n150, rank 30, does not fit 35B-A3B.** [[accelerators/tenstorrent-wormhole-n150]] is 12 GB / 288 GB/s, ceiling 14.4 tok/s *(derived)*, $999 → $69.38/tok-s *(derived)*, fits `-/-/-`. The vendor matrix's LLM row is **Mamba-2.8B** at **14.1** tok/s per user at batch 32 ([[benchmarks/ttmetal-n150-mamba-2p8b-b32-tpsu]]; aggregate 451.2). 14.1/14.4 = **0.98×** the 20 GB ceiling *(derived)* — a coincidence of denominators, not evidence the 12 GB card holds a 24 GB model. The speech row on the same card, Whisper distil-large-v3 at **105.0** tok/s batch 1 ([[benchmarks/ttmetal-n150-whisper-distil-large-v3-b1-tpsu]], TTFT 163 ms [[benchmarks/ttmetal-n150-whisper-distil-large-v3-b1-ttft]]), is an encoder-decoder audio model, not a 35B decode, so it is not divided into the ceiling.
@@ -87,10 +94,11 @@ re-run it. Nothing here is a measurement.
 
 ## 1. The selection rule (which records got a row)
 
-*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `1c2a269`
-(184 accelerators, 218 supply, 2,876 benchmarks). The selection rule is
-unchanged and the counts are unchanged from the prior pass (138 / 43 / 95).
-See the refresh note above.*
+*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `2e37ebe`
+(188 accelerators, 218 supply, 2,884 benchmarks). The selection rule is
+unchanged. The counts moved: **142 qualifying / 43 priced / 99 unpriced**
+(67 of the unpriced fit 35B-A3B, 32 do not), up from 138 / 43 / 95. The four
+new rows are all unpriced. See the refresh note above.*
 
 An accelerator record gets a row when **all** of these hold:
 
@@ -100,9 +108,9 @@ An accelerator record gets a row when **all** of these hold:
 
 The `<= $3,000` arm exists so that a cheap-but-slow card (the used-Tesla slice)
 is not filtered out by the bandwidth floor before its price can speak. That rule
-yields **138 qualifying accelerators**, of which **43 have a usable purchase
-price** and 95 are bandwidth-qualified but have no bare-card/system price in
-`data/supply/` (63 of those fit 35B-A3B; 32 qualify and do not).
+yields **142 qualifying accelerators**, of which **43 have a usable purchase
+price** and 99 are bandwidth-qualified but have no bare-card/system price in
+`data/supply/` (67 of those fit 35B-A3B; 32 qualify and do not).
 
 **One exception to the `vram_gb` gate.** A `unified_memory` part (an APU/SoC
 whose GPU shares the CPU's memory pool) leaves `vram_gb` null *on purpose* —
@@ -296,12 +304,12 @@ These records satisfy the bandwidth/fit rule and **fit 35B-A3B** but have
 **no bare-card or system purchase price** in `data/supply/` (they may have a
 *rental* price in the cloud records — that is a different join, see
 `tools/cost_per_token.py`). Listed so a future supply pass can close them;
-sorted by the 35B ceiling *(derived)*. 63 rows. This pass adds the six the
-previous table omitted: [[accelerators/nvidia-rtx-pro-5000-72gb-blackwell]]
-and [[accelerators/nvidia-rtx-pro-5000-blackwell]] (both 1,344 GB/s),
-[[accelerators/nvidia-l40]], [[accelerators/nvidia-rtx-a5000]],
-[[accelerators/nvidia-rtx-pro-4000-blackwell]], and
-[[accelerators/amd-radeon-pro-v620]].
+sorted by the 35B ceiling *(derived)*. 67 rows. This pass adds the four
+#167 records: [[accelerators/nvidia-rtx-4090-d]] (1,008 GB/s, tied on ceiling
+with the priced 4090), [[accelerators/nvidia-rtx-5090-laptop]] (896 GB/s,
+tied with the PRO 4500 Blackwell), [[accelerators/nvidia-quadro-rtx-8000]]
+(48 GB, fits 70B) and [[accelerators/nvidia-quadro-rtx-6000]] (24 GB, does
+not) — both 672 GB/s, tied with the PRO 4000 Blackwell.
 
 | accelerator | VRAM | BW GB/s | Fits | 35B ceil *(derived)* | note |
 |---|---|---|---|---|---|
@@ -339,10 +347,12 @@ and [[accelerators/nvidia-rtx-pro-5000-blackwell]] (both 1,344 GB/s),
 | [[accelerators/local-apple-m5-ultra]] | 512 | 1,200 | **Y/Y/Y** | 60.0 | no bare-part price |
 | [[accelerators/amd-radeon-instinct-mi50x]] | 32 | 1,024 | **Y/Y/-** | 51.2 | no price record |
 | [[accelerators/amd-radeon-instinct-mi60]] | 32 | 1,024 | **Y/Y/-** | 51.2 | no price record |
+| [[accelerators/nvidia-rtx-4090-d]] | 24 | 1,008 | **Y/Y/-** | 50.4 | China-only 4090 cut; same 1,008 GB/s, no bare-card price |
 | [[accelerators/nvidia-rtx-6000-ada]] | 48 | 960 | **Y/Y/Y** | 48.0 | cloud/rental only; 48 GB fit, thin BW |
 | [[accelerators/nvidia-a30]] | 24 | 933 | **Y/Y/-** | 46.6 | enterprise-distributor only |
 | [[accelerators/google-tpu-v3]] | 32 | 900 | **Y/Y/-** | 45.0 | cloud only |
 | [[accelerators/nvidia-dgx-1-8x-v100]] | 256 | 900 | **Y/Y/Y** | 45.0 | 8-GPU server; the $4,000 chassis rows are system prices, not joined (see §6) |
+| [[accelerators/nvidia-rtx-5090-laptop]] | 24 | 896 | **Y/Y/-** | 44.8 | mobile GB203, not the desktop 5090; no bare-GPU price |
 | [[accelerators/nvidia-rtx-pro-4500-blackwell]] | 32 | 896 | **Y/Y/-** | 44.8 | no price record |
 | [[accelerators/amd-radeon-pro-w7900]] | 48 | 864 | **Y/Y/Y** | 43.2 | no price record |
 | [[accelerators/nvidia-l40]] | 48 | 864 | **Y/Y/Y** | 43.2 | no bare-card price in supply/; Ada sibling of the L40S |
@@ -354,6 +364,8 @@ and [[accelerators/nvidia-rtx-pro-5000-blackwell]] (both 1,344 GB/s),
 | [[accelerators/nvidia-rtx-a5000]] | 24 | 768 | **Y/Y/-** | 38.4 | no bare-card price in supply/ |
 | [[accelerators/nvidia-rtx-a6000]] | 48 | 768 | **Y/Y/Y** | 38.4 | no bare-card price in supply/ |
 | [[accelerators/nvidia-a40]] | 48 | 696 | **Y/Y/Y** | 34.8 | no bare-card price in supply/ |
+| [[accelerators/nvidia-quadro-rtx-6000]] | 24 | 672 | **Y/Y/-** | 33.6 | Turing TU102, not the 6000 Ada; no price record |
+| [[accelerators/nvidia-quadro-rtx-8000]] | 48 | 672 | **Y/Y/Y** | 33.6 | 48 GB Turing; fits 70B, same BW as the 6000; no price record |
 | [[accelerators/nvidia-rtx-pro-4000-blackwell]] | 24 | 672 | **Y/Y/-** | 33.6 | no bare-card price in supply/ |
 | [[accelerators/amd-radeon-ai-pro-r9700]] | 32 | 640 | **Y/Y/-** | 32.0 | no price record |
 | [[accelerators/cambricon-mlu370-x8]] | 48 | 614.4 | **Y/Y/Y** | 30.7 | dual-die card; no price record |
@@ -385,7 +397,7 @@ Thirty-two further accelerators qualify on the bandwidth-or-price rule and do
 [[accelerators/amd-radeon-rx-9070]] (16 GB, 640),
 [[accelerators/nvidia-rtx-a4500]] (20 GB, 640, `-/Y/-`), and
 [[accelerators/nvidia-rtx-4000-ada]] (20 GB, 360 GB/s, `-/Y/-`). The full
-138-row list, including these 32, is `python tools/fit_matrix_35b.py`.
+142-row list, including these 32, is `python tools/fit_matrix_35b.py`.
 
 ## 4b. Roofline vs. measured — the A3B-MoE cross-check
 
@@ -563,7 +575,7 @@ show*. These are the corpus's own gotcha records, not new claims:
 
 ## 7. Reproduce
 
-    python tools/fit_matrix_35b.py            # the full 138-row matrix, all three sections
+    python tools/fit_matrix_35b.py            # the full 142-row matrix, all three sections
     python tools/validate.py                  # record integrity (no new records added here)
 
 Every figure above is generated by that tool against the committed `data/`
