@@ -672,7 +672,7 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **AMD Infinity Fabric scale-up link (CDNA4: 153.6 GB/s per direction, 20% faster)** (`interconnect/amd-infinity-fabric-link-cdna4`) — 153.6 GB/s · Fully connected 8-GPU mesh (each GPU connects to 7 others). No switch. 7 links per GPU for GPU-to-GPU communication. Identical topology to CDNA3. The MI355X product page lists 'Infinity Fabric Links: 7' and 'Peak Infinity Fabric Link Bandwidth: 153 GB/s' (rounded). Scale-out link: 128 GB/s (unchanged from CDNA3).
 - **AMD xGMI (Socket/Inter-Chip Global Memory Interconnect)** (`interconnect/amd-xgmi`) — 50 GB/s · Point-to-point, no switch part. TWO distinct roles, and this is the part that is routinely misread: (1) DIE-TO-DIE, inside one package - on MI250X the two GCDs of one OAM module are joined by FOUR xGMI/Infinity Fabric links, which AMD gives as 4 x 25 GT/sec = 200 GB/sec peak transfer between the two GCDs, or 400 GB/sec bidirectional for the same; (2) DIE-TO-DEVICE, between accelerators - on MI210 (PCIe cards) xGMI is exposed through direct-connect xGMI BRIDGE CARDS in adjacent PCIe slots, giving dual and quad GPU hives, whereas the MI250X/MI250 OAM modules carry 8 links natively. On a multi-OAM MI300X node AMD's own architecture reference states the accelerator-side count is SEVEN Infinity Fabric links, used 'to form a fully connected 8-GPU system' - but the MI300X product page board table says 'Infinity Fabric Links: 8'. That is a real disagreement between two first-party AMD sources, not a typo: seven links is the minimum needed to make 8 nodes fully connected (each node needs a link to each of the other 7), so the board-table 8 is most likely counting an extra link of a different role (host or scale-out) rather than a mesh edge. Both figures are retained here; the typed link_count field carries the die-to-die value of 4 for MI250X, which is where this record's per-link rate is sourced. On CDNA3/MI300 the die-to-die topology is also a full mesh over up to 8 vertically stacked XCDs plus 4 I/O dies, so an MI300X is internally a single 8-way domain, not two halves.
 
-## Benchmarks (2687)
+## Benchmarks (2704)
 
 - **16GB VRAM: Llama 3.1 8B Q8_0 decode tokens/sec** (`benchmarks/local-16gb-13b-q4-decode`) — 40.0 tok/s - UNSOURCED, DO NOT CITE. Decommissioned 2026-10-04 (bq-): no cited source contains a decode-throughput measurement for this part and no run was performed. The number is retained only for history; the schema forbids nulling value/measured_by. · Llama 3.1 8B on ? via llama-cpp
 - **24GB VRAM: Llama 3.1 8B Q8_0 decode tokens/sec** (`benchmarks/local-24gb-13b-q8-decode`) — 50.0 tok/s - UNSOURCED, DO NOT CITE. Decommissioned 2026-10-04 (bq-): no cited source contains a decode-throughput measurement for this part and no run was performed. The number is retained only for history; the schema forbids nulling value/measured_by. · Llama 3.1 8B on ? via llama-cpp
@@ -1025,6 +1025,15 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **Argonne MI300X vLLM Mixtral-8x7B b64** (`benchmarks/argonne-mi300x-vllm-mixtral-8x7b-fp16-b64-128io-tps`) — 3715.4 tok/s aggregate · mistralai/Mixtral-8x7B-v0.1 on amd-instinct-mi300x via vllm
 - **Argonne MI300X vLLM Qwen2-7B b64** (`benchmarks/argonne-mi300x-vllm-qwen2-7b-fp16-b64-128io-tps`) — 5771.7 tok/s aggregate (batch*(in+out)/lat) · Qwen/Qwen2-7B on amd-instinct-mi300x via vllm
 - **Argonne SN40L x8 SambaFlow Llama-3-8B b16** (`benchmarks/argonne-sn40l-sambaflow-llama3-8b-8x-b16-128io-tps`) — 7381.3 tok/s aggregate · meta-llama/Meta-Llama-3-8B on sambanova-sn40l via sambaflow-sambanova-rdu-runtime
+- **Argonne: A100 40GB SXM x1, TensorRT-LLM 0.11.0, Llama-2-7B FP16, 128io, b1** (`benchmarks/argonne-a100sxm40-trtllm-llama2-7b-fp16-b1-128io-tps`) — 169.0 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Llama-2-7b-hf on nvidia-a100-40gb-sxm4 via tensorrt-llm
+- **Argonne: A100 40GB SXM x1, llama.cpp CUDA, Llama-2-7B FP16, 128io, b1** (`benchmarks/argonne-a100sxm40-llamacpp-llama2-7b-fp16-b1-128io-tps`) — 58.9 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Llama-2-7b-hf on nvidia-a100-40gb-sxm4 via llama-cpp
+- **Argonne: A100 40GB SXM x1, vLLM 0.6.1, Llama-2-7B FP16, 128io, b1** (`benchmarks/argonne-a100sxm40-vllm-llama2-7b-fp16-b1-128io-tps`) — 154.9 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Llama-2-7b-hf on nvidia-a100-40gb-sxm4 via vllm
+- **Argonne: A100 40GB SXM x1, vLLM 0.6.1, Llama-2-7B FP16, 128io, b64** (`benchmarks/argonne-a100sxm40-vllm-llama2-7b-fp16-b64-128io-tps`) — 4919.5 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Llama-2-7b-hf on nvidia-a100-40gb-sxm4 via vllm
+- **Argonne: A100 40GB SXM x1, vLLM 0.6.1, Llama-3-8B FP16, 128io, b1** (`benchmarks/argonne-a100sxm40-vllm-llama3-8b-fp16-b1-128io-tps`) — 140.2 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Meta-Llama-3-8B on nvidia-a100-40gb-sxm4 via vllm
+- **Argonne: A100 40GB SXM x1, vLLM 0.6.1, Llama-3-8B FP16, 128io, b64** (`benchmarks/argonne-a100sxm40-vllm-llama3-8b-fp16-b64-128io-tps`) — 4981.9 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Meta-Llama-3-8B on nvidia-a100-40gb-sxm4 via vllm
+- **Argonne: A100 40GB SXM x1, vLLM 0.6.1, Mistral-7B FP16, 128io, b1** (`benchmarks/argonne-a100sxm40-vllm-mistral-7b-fp16-b1-128io-tps`) — 148.5 tok/s aggregate (batch*(in+out)/latency) · mistralai/Mistral-7B-v0.1 on nvidia-a100-40gb-sxm4 via vllm
+- **Argonne: A100 40GB SXM x4 TP, DeepSpeed-MII, Llama-2-70B FP16, 128io, b64** (`benchmarks/argonne-a100sxm40-dsmii-llama2-70b-fp16-4x-b64-128io-tps`) — 1804.2 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Llama-2-70b-hf on nvidia-a100-40gb-sxm4 via niche-deepspeed-mii
+- **Argonne: A100 40GB SXM x4 TP, TensorRT-LLM 0.11.0, Llama-2-70B FP16, 128io, b64** (`benchmarks/argonne-a100sxm40-trtllm-llama2-70b-fp16-4x-b64-128io-tps`) — 2526.0 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Llama-2-70b-hf on nvidia-a100-40gb-sxm4 via tensorrt-llm
 - **Argonne: PVC x1 llama.cpp Llama-2-7B FP16 128io b1** (`benchmarks/argonne-pvc-llamacpp-llama2-7b-fp16-b1-128io-tps`) — 22.18 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Llama-2-7b-hf on xpu-intel-dc-gpu-max-1550 via llama-cpp
 - **Argonne: PVC x1 llama.cpp Llama-2-7B FP16 128io b64** (`benchmarks/argonne-pvc-llamacpp-llama2-7b-fp16-b64-128io-tps`) — 43.1 tok/s aggregate (batch*(in+out)/latency) · meta-llama/Llama-2-7b-hf on xpu-intel-dc-gpu-max-1550 via llama-cpp
 - **Argonne: PVC x1 llama.cpp Mixtral-8x7B FP16 128io b1** (`benchmarks/argonne-pvc-llamacpp-mixtral-8x7b-fp16-b1-128io-tps`) — 7.0 tok/s aggregate (batch*(in+out)/latency) · mistralai/Mixtral-8x7B-v0.1 on xpu-intel-dc-gpu-max-1550 via llama-cpp
@@ -3202,6 +3211,10 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **llama.cpp ROCm on RX 7900 GRE 16GB: Llama-2-7B Q4_0 FA-on tg128 decode tok/s** (`benchmarks/llamacpp-rocm-rx7900gre-llama27b-q40-fa-tg128`) — 97.53 tok/s (tg128, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-7900-gre via llama-cpp
 - **llama.cpp ROCm on RX 7900 XT 20GB: Llama-2-7B Q4_0 FA-on pp512 prefill tok/s** (`benchmarks/llamacpp-rocm-rx7900xt-llama27b-q40-fa-pp512`) — 3261.75 tok/s (pp512, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-7900-xt via llama-cpp
 - **llama.cpp ROCm on RX 7900 XT 20GB: Llama-2-7B Q4_0 FA-on tg128 decode tok/s** (`benchmarks/llamacpp-rocm-rx7900xt-llama27b-q40-fa-tg128`) — 112.3 tok/s (tg128, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-7900-xt via llama-cpp
+- **llama.cpp ROCm on RX 7900 XTX: Llama-2-7B Q4_0 FA-off pp512 (#15021)** (`benchmarks/llamacpp-rocm-7900xtx-llama27b-q40-nofa-pp512`) — 3552.27 tok/s (pp512, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-7900-xtx via llama-cpp
+- **llama.cpp ROCm on RX 7900 XTX: Llama-2-7B Q4_0 FA-off tg128 (#15021)** (`benchmarks/llamacpp-rocm-7900xtx-llama27b-q40-nofa-tg128`) — 167.11 tok/s (tg128, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-7900-xtx via llama-cpp
+- **llama.cpp ROCm on RX 7900 XTX: Llama-2-7B Q4_0 FA-on pp512 (#15021)** (`benchmarks/llamacpp-rocm-7900xtx-llama27b-q40-fa-pp512`) — 3874.25 tok/s (pp512, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-7900-xtx via llama-cpp
+- **llama.cpp ROCm on RX 7900 XTX: Llama-2-7B Q4_0 FA-on tg128 (#15021)** (`benchmarks/llamacpp-rocm-7900xtx-llama27b-q40-fa-tg128`) — 170.12 tok/s (tg128, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-7900-xtx via llama-cpp
 - **llama.cpp ROCm on RX 9060 XT 16GB: Llama-2-7B Q4_0 FA-off pp512 prefill tok/s** (`benchmarks/llamacpp-rocm-rx9060xt-llama27b-q40-nofa-pp512`) — 1419.67 tok/s (pp512, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-9060-xt via llama-cpp
 - **llama.cpp ROCm on RX 9060 XT 16GB: Llama-2-7B Q4_0 FA-off tg128 decode tok/s** (`benchmarks/llamacpp-rocm-rx9060xt-llama27b-q40-nofa-tg128`) — 67.58 tok/s (tg128, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-9060-xt via llama-cpp
 - **llama.cpp ROCm on RX 9060 XT 16GB: Llama-2-7B Q4_0 FA-on pp512 prefill tok/s** (`benchmarks/llamacpp-rocm-rx9060xt-llama27b-q40-fa-pp512`) — 1479.27 tok/s (pp512, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-9060-xt via llama-cpp
@@ -3210,6 +3223,10 @@ WHAT THE FABRIC DOES NOT PUBLISH: no per-link rate at any level, no lane count, 
 - **llama.cpp ROCm on RX 9070 16GB: Llama-2-7B Q4_0 FA-on tg128 decode tok/s** (`benchmarks/llamacpp-rocm-rx9070-llama27b-q40-fa-tg128`) — 115.32 tok/s (tg128, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-9070 via llama-cpp
 - **llama.cpp ROCm on RX 9070 XT 16GB: Llama-2-7B Q4_0 FA-on pp512 prefill tok/s** (`benchmarks/llamacpp-rocm-rx9070xt-llama27b-q40-fa-pp512`) — 4903.51 tok/s (pp512, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-9070-xt via llama-cpp
 - **llama.cpp ROCm on RX 9070 XT 16GB: Llama-2-7B Q4_0 FA-on tg128 decode tok/s** (`benchmarks/llamacpp-rocm-rx9070xt-llama27b-q40-fa-tg128`) — 97.28 tok/s (tg128, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-9070-xt via llama-cpp
+- **llama.cpp ROCm on RX 9070 XT: Llama-2-7B Q4_0 FA-off pp512** (`benchmarks/llamacpp-rocm-9070xt-llama27b-q40-nofa-pp512`) — 5055.19 tok/s (pp512, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-9070-xt via llama-cpp
+- **llama.cpp ROCm on RX 9070 XT: Llama-2-7B Q4_0 FA-off tg128** (`benchmarks/llamacpp-rocm-9070xt-llama27b-q40-nofa-tg128`) — 101.27 tok/s (tg128, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-9070-xt via llama-cpp
+- **llama.cpp ROCm on RX 9070 XT: Llama-2-7B Q4_0 FA-on pp512** (`benchmarks/llamacpp-rocm-9070xt-llama27b-q40-fa-pp512`) — 4903.51 tok/s (pp512, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-9070-xt via llama-cpp
+- **llama.cpp ROCm on RX 9070 XT: Llama-2-7B Q4_0 FA-on tg128** (`benchmarks/llamacpp-rocm-9070xt-llama27b-q40-fa-tg128`) — 97.28 tok/s (tg128, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-rx-9070-xt via llama-cpp
 - **llama.cpp ROCm on Radeon 8060S (System Shared): Llama-2-7B Q4_0 noFA pp512 prefill tok/s (scoreboard #15021)** (`benchmarks/llamacpp-rocm-8060s-run2-llama27b-q40-nofa-pp512`) — 351.36 tok/s (pp512, batch 512) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-8060s-ryzen-ai-max via llama-cpp
 - **llama.cpp ROCm on Radeon 8060S (System Shared): Llama-2-7B Q4_0 noFA tg128 decode tok/s (scoreboard #15021)** (`benchmarks/llamacpp-rocm-8060s-run2-llama27b-q40-nofa-tg128`) — 47.97 tok/s (tg128, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-8060s-ryzen-ai-max via llama-cpp
 - **llama.cpp ROCm on Radeon PRO V620 32GB: Llama-2-7B Q4_0 FA-on pp512 prefill tok/s** (`benchmarks/llamacpp-rocm-prov620-llama27b-q40-fa-pp512`) — 1256.86 tok/s (pp512, per-request, batch 1) · llama-2-7b.Q4_0.gguf (TheBloke, 3.56 GiB, 6.74B params) on amd-radeon-pro-v620 via llama-cpp
@@ -3813,7 +3830,7 @@ and t
 - **vLLM's 'Your GPU does not have native support for FP4' warning fires on weight-only NVFP4 checkpoints, and gets quoted as evidence the silicon lacks FP4 kernels** (`gotchas/nvfp4-marlin-warning-blames-gpu-for-weight-only-checkpoint`) — [minor] measurement · prepare_nvfp4_moe_layer_for_marlin() emits 'Your GPU does not have native support for FP4 computation but FP4 quantization is being used. Weight-only FP4 compression will be used leveraging the Marlin
 - **vLLM's query_marlin_supported_quant_types returns [] below compute capability 75 and SGLang's identical-named function returns [] below 80, so on Turing the two engines disagree about whether Marlin exists** (`gotchas/vllm-and-sglang-disagree-on-where-marlin-starts`) — [minor] framework · The same AWQ or GPTQ checkpoint on the same Turing GPU (T4, RTX 20-series) is served by a Marlin kernel in vLLM and by something else — Triton W4A16, or an error — in SGLang. Any statement of the form
 
-## Where to buy / source hardware (214)
+## Where to buy / source hardware (218)
 
 - **Used single-socket EPYC 9004 'Genoa' build (12ch DDR5, ~384GB)** (`supply/used-epyc-9004-genoa-build-384gb`) — AMD (CPU); Supermicro/ASRock board; used-market RAM · US · $7,500.0 · in-stock · ASKING/component cost for a complete 1P Genoa box: used 9354 CPU ~$2,000 + SP5 b
 - **Used AMD RX 7900 XTX 24GB (eBay/peer market)** (`supply/ebay-used-rx-7900-xtx-market-oct2026`) — AMD (OEM); eBay/private resellers · US · $875.0 · in-stock · ASKING price, used-market $800-950 Oct-2026. Distinct from the Newegg open-box c
@@ -3985,6 +4002,10 @@ and t
 - **Price re-verification sweep of the supply directory, observed 2026-10-05 against records observed 2026-10-03/04** (`supply/w5s-price-staleness-audit-2026-10-05`) — unknown · unknown · NO price_usd, deliberately, and this is the finding rather than an omission: thi
 - **Reconciliation of the 'only ~40% of throughput benchmarks are priceable' claim against the corpus as it stands on 2026-10-05** (`supply/w5s-throughput-priceable-coverage-2026-10-05`) — unknown · unknown · NO price_usd, deliberately: this is a reconciliation of the price-then-throughpu
 - **Uptime Institute PUE data - NEGATIVE: 2026 survey behind download wall** (`supply/ppl-sup-uptime-pue-negative`) — Global · unknown · No price recorded. PUE is a ratio, not a price. The Uptime Institute 2026 survey · EAR 742.6(a)(6)(iii)(A) + EAR 744.23/744.6 (Entity, Unverifi
+- **Ebay Used Amd Mi100 32Gb Dec2026** (`supply/ebay-used-amd-mi100-32gb-dec2026`) — US · $720.0 · in-stock · ASKING price, per-card. Dec-2026 PicClick scrape observed $635-$1,940 for used M
+- **Ebay Used Rtx3090 Dec2026 Spike** (`supply/ebay-used-rtx3090-dec2026-spike`) — US · $1,700.0 · in-stock · ASKING price, per-card. Dec-2026 PicClick scrape observed $1,430-$2,220 real ask
+- **Used Mac Studio M1 Ultra 128Gb Dec2026** (`supply/used-mac-studio-m1-ultra-128gb-dec2026`) — US · $3,400.0 · in-stock · ASKING/used-complete-system price. Dec-2026 observed $2,899-$4,049 for a used Ma
+- **Used Mac Studio M3 Ultra 96Gb Dec2026** (`supply/used-mac-studio-m3-ultra-96gb-dec2026`) — US · $5,250.0 · in-stock · ASKING/used-complete-system price. Dec-2026 observed $4,899-$5,599 for a used Ma
 - **Used NVIDIA DGX-1 / clone 8x V100 32GB chassis** (`supply/used-dgx1-8xv100-32gb-chassis`) — US · $4,000.0 · in-stock · ASKING/used-complete-system. Complete DGX-1 (8x V100 32GB) asking $3,000-6,000; 
 - **Used RTX 3090 24GB - Oct-2026 repriced band** (`supply/used-rtx-3090-market-oct2026-spike`) — US · $950.0 · in-stock · ASKING/tracker avg. Hardware Corner price tracker: $750 Nov-2025 -> ~$950 Feb-20
 - **Used RTX 3090 Ti 24GB - Oct-2026 band** (`supply/used-rtx-3090-ti-market-oct2026`) — US · $950.0 · in-stock · ASKING/used band ~$900-1,000 Oct-2026, tracking the 3090. PERISHABLE-FIGURE STAM
@@ -4495,7 +4516,7 @@ and t
 - **wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations** (`papers/wav2vec2`) — speech · neurips · 2020 · arXiv:2006.11477 · in-production
 - **wav2vec: Unsupervised Pre-training for Speech Recognition** (`papers/wav2vec`) — speech · interspeech · 2019 · arXiv:1904.05862 · in-upstream-engine
 
-## Sources (2298)
+## Sources (2299)
 
 - **AI Inference on AMD Ryzen AI Max Processor (ROCm Blogs)** (`sources/bench-amd-ryzen-ai-max-uma-ollama`) — benchmark · AMD
 - **AITER integration into SGLang for DeepSeek-R1 inference on MI300X** (`sources/amd-aiter-sglang-deepseek`) — benchmark · AMD ROCm Blogs
@@ -5014,6 +5035,7 @@ and t
 - **PicClick eBay aggregator: Tesla P40 24GB asking listings** (`sources/picclick-ebay-aggregator-tesla-p40-24gb-asking-listings`) — forum · PicClick / eBay
 - **PicClick eBay aggregator: Tesla V100 32GB PCIe asking listings** (`sources/picclick-ebay-aggregator-tesla-v100-32gb-pcie-asking-listings`) — forum · PicClick / eBay
 - **PicClick eBay aggregator: Tesla V100 32GB SXM2 asking listings** (`sources/picclick-ebay-aggregator-tesla-v100-32gb-sxm2-asking-listings`) — forum · PicClick / eBay
+- **PicClick/eBay price-refresh scrape Dec-2026 (cron)** (`sources/picclick-ebay-price-refresh-dec2026-cron`) — forum · PicClick / eBay
 - **PicClick/eBay used-GPU asking-price refresh sweep (Oct-14 pull, Dec-2026 deltas)** (`sources/src-picclick-used-gpu-dec-refresh-oct14`) — forum · PicClick (eBay mirror) / cron subagent capture
 - **ROCm issue #4625: rocBLAS 6.4.0 ships no TensileLibrary for gfx906** (`sources/comm-rocm-issue-4625-tensile-gfx906`) — forum · AMD (ROCm) / user ye-luo
 - **ROCm issue #5215: [Feature] Add support for Instinct MI50/MI60 (gfx906)** (`sources/comm-rocm-issue-5215-mi50-support`) — forum · AMD (ROCm) / user William-Droin
@@ -7132,7 +7154,7 @@ and t
 
 ## Coverage
 
-Total records: **7069**
+Total records: **7091**
 
 | group | records |
 |---|---|
