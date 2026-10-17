@@ -48,4 +48,9 @@ jobs:
             await github.rest.pulls.merge({
               owner, repo, pull_number: pr, merge_method: 'squash', sha,
             });
+            const head = context.payload.pull_request.head;
+            if (head.repo.full_name === context.payload.repository.full_name) {
+              await github.rest.git.deleteRef({ owner, repo, ref: 'heads/' + head.ref });
+              core.info(`deleted branch ${head.ref}`);
+            }
             core.info(`merged #${pr}`);
