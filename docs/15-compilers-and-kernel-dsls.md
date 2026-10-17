@@ -96,6 +96,26 @@ the measured warm-up traps are in [05-known-traps.md](05-known-traps.md).
   HipKittens port) and [[compilers/torch-compile-torchinductor]] — plus the graph-level
   [[compilers/apache-tvm]], [[compilers/iree]], [[compilers/mlir]] and [[compilers/onnx-runtime]].
 
+## 3a. Where a hand-written kernel still wins on Tenstorrent
+
+TT-Metal's own programming model removes the usual reason to fuse. A tensor kept in
+per-core L1 is readable by the next op without a round trip to DRAM, so a chain of
+ops is already fused as long as every input and output lives in L1
+([[papers/tt-metal-flashattention-wormhole]]). The fused kernel is only worth writing
+when the algorithm itself changes the work. Attention is that case: the scores matrix
+must not materialize, and causal attention must not compute the upper triangle.
+
+The Wormhole FlashAttention report measures that fused op at 20x the stack's own
+unfused softmax attention on average, and between 9x and 44x, at a fixed 16k tokens
+([[flops/tt-metal-flash-decode-kv-split]]). The same report shows the op is not purely
+bandwidth-bound: BFP8, at about half the bytes of BF16, is only moderately faster, not
+twice as fast. Decode is the bandwidth-bound half, and the kernel that ships for it
+splits the KV sequence across cores and reduces the partial softmax over the on-chip
+network — but only for multi-query attention on a single token
+([[gotchas/tt-metal-decode-attention-is-mqa-only]]). A grouped-query model, which is
+most models shipped since Llama-2, does not run on it. The report names the missing
+piece: multicast one K and V head to the cores holding the query heads of that group.
+
 ## 4. What the records cannot answer
 
 - **No compile-time benchmark records.** `compile_time_seconds` is prose-level in most

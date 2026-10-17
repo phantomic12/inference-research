@@ -1,0 +1,15 @@
+{
+  "id": "tt-metal-flashattention-wormhole",
+  "type": "paper",
+  "name": "FlashAttention on Tenstorrent's Wormhole Architecture",
+  "arxiv_id": null,
+  "venue": "other",
+  "category": "attention",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-17",
+  "sources": [
+    "tt-metal-flashattention-wormhole-report"
+  ],
+  "notes": "Vendor tech report by Colman Glagovich, committed to tenstorrent/tt-metal on 2024-09-04 (commit 0f7aa9bb, PR #12228). No arXiv id and no conference venue, so venue is 'other' and the real venue is the tt-metal tech_reports directory. It ports the FlashAttention-2 algorithm \u2014 Q parallelized across processors, online softmax over KV chunks \u2014 plus FlashAttention-3's pipelined data movement, onto Wormhole. The result that transfers to a hand-written stack is not the 20x headline but why a fused kernel is needed at all. On TT-Metal, keeping a tensor in per-core L1 (the report calls this L1 sharding) already fuses a chain of ops without a fused kernel, because the next op reads the previous op's output out of SRAM instead of DRAM. FlashAttention is the case where that is not enough: the algorithm itself changes the work, causal attention skips the upper triangle, and the scores matrix never materializes. Against the stack's own unfused softmax attention, which writes intermediates to DRAM, the fused op is on average 20x faster and between 9x and 44x across the shapes tested (hidden dim fixed at 2048, head dims 64/128/256, sequence 512 to 16k, batch set so the total is 16k tokens). BFP8, where 16 values share one exponent and each keeps 7 mantissa bits, is only moderately faster than BF16 rather than the 2x the halved bandwidth would predict, which the report reads as the op leaving the bandwidth-bound regime and becoming bound by the matmul or the softmax. The report also names what the kernel does not do: no destination-register reuse, no automatic destination-register accumulation, no pipelining of matmul against softmax on separate compute units, and no on-chip multicast of K and V \u2014 which it calls out as the way to cut DRAM traffic for multi-query attention, since every query head in a group reads the same K and V. The 20x is the vendor's own number against its own baseline."
+}

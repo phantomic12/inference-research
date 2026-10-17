@@ -1,0 +1,53 @@
+{
+  "id": "tt-metal-flash-decode-kv-split",
+  "type": "flop",
+  "name": "TT-Metal Flash-Decode: split the KV cache across Tensix cores, reduce over the NoC",
+  "class": "decode_attention",
+  "arithmetic_intensity": "Decode attention reads the whole KV cache for one query token, so bytes moved grow with sequence length while the matmul is a single query row against that cache. The prefill kernel's own report finds the fused op is not fully bandwidth-bound \u2014 BFP8 is only moderately faster than BF16, not the 2x the halved datum size would give \u2014 but decode has far less arithmetic per byte read, so the split is a bandwidth play: more cores reading different KV chunks at once, then a reduction of the partial softmax statistics.",
+  "bound_by": "memory",
+  "scales_with": [
+    "kv sequence length (the dimension the kernel splits across cores)",
+    "batch size (one axis of the parallelization; a position of -1 skips that batch index)",
+    "number of KV heads (MQA only: the kernel does not parallelize over query heads)",
+    "k_chunk_size (unpaged default is min(512, the largest power-of-two divisor of the sequence length); paged decode defaults to 32 when no program config is set)"
+  ],
+  "affected_by_hardware": [
+    "tenstorrent-wormhole-n150",
+    "tenstorrent-wormhole-n300"
+  ],
+  "hardware_parameters": [
+    {
+      "parameter": "memory_bandwidth",
+      "effect": "The kernel exists to put more cores onto one KV cache read. The prefill report's evidence that the fused op is only partly bandwidth-bound is the BFP8-versus-BF16 gap being well under 2x; decode reads the same cache with one query row, so bandwidth is the tighter constraint and the split is what raises the number of cores issuing DRAM reads.",
+      "basis": "recorded",
+      "magnitude": "BFP8 datum is about half a BF16 datum; the measured speedup of BFP8 over BF16 is moderate, not 2x (prefill op, vendor's own report)",
+      "values_for": [
+        "tenstorrent-wormhole-n150",
+        "tenstorrent-wormhole-n300"
+      ]
+    },
+    {
+      "parameter": "shared_memory_capacity",
+      "effect": "Each Tensix core's L1 holds the Q, K and V chunks it is working on, double-buffered so the reader fills the next chunk while compute consumes the current one. The chunk size is bounded by that L1, which is why the kernel takes an explicit k_chunk_size rather than streaming the whole sequence through one core.",
+      "basis": "recorded",
+      "values_for": [
+        "tenstorrent-wormhole-n150",
+        "tenstorrent-wormhole-n300"
+      ]
+    }
+  ],
+  "workarounds": [
+    "Parallelize over batch and over the KV sequence, not over query heads: the decode op only supports multi-query attention, so a grouped-query model has to be lowered to one KV head per group before this kernel applies",
+    "Keep the K chunk a power of two. Unpaged decode defaults to min(512, the largest power-of-two divisor of the sequence length), and paged decode falls back to 32 when no program config is supplied",
+    "Pass cur_pos as -1 for a batch slot that has no work rather than launching a shorter program; the kernel skips that index",
+    "On the prefill side, do not write a fused kernel until L1 sharding stops being enough: a chain of ops whose inputs and outputs all live in per-core L1 already avoids the DRAM round trip, and the fused op is only worth it when the algorithm itself changes"
+  ],
+  "notes": "Two sources, two kernels, one conclusion. The 2024-09-04 Wormhole FlashAttention report ([[papers/tt-metal-flashattention-wormhole]]) covers the prefill op: Q is split across cores, KV is chunked, the online softmax stays in L1, and the fused op beats the stack's own DRAM-spilling softmax attention by 20x on average (9x to 44x) at a fixed 16k tokens, hidden dim 2048, head dims 64/128/256. The current decode op, documented on the TT-NN SDPA decode page as read 2026-10-17, is the inference-relevant half: it is Flash-Decode, it splits the KV sequence across cores, and it only handles multi-query attention on a single token. The reduction of partial results across the cores that share one head is a tree over the on-chip network, and the compute kernel on main caps it at six rounds (MAX_TREE_REDUCTION_ROUNDS is 6 in sdpa_flash_decode.cpp). That cap is the practical limit on how finely one head's KV can be split before the reduction depth runs out; it is read from the kernel source, which is not separately sourced here, so treat the number six as a code fact rather than a measured limit. What the report explicitly leaves on the table, and what a hand-written kernel can still take, is multicasting one K and V head to every core holding a query head from the same group. The report names that as the way to cut DRAM traffic for multi-query attention, and the decode kernel has still not generalized past MQA. Vendor numbers throughout; the 20x is against Tenstorrent's own baseline, not against a GPU FlashAttention.",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-17",
+  "sources": [
+    "tt-metal-flashattention-wormhole-report",
+    "ttnn-sdpa-decode-api"
+  ]
+}
