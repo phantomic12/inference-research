@@ -3,7 +3,12 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
-> **Refresh note (docs/fit-matrix-oct14, Oct-17, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `2d884b8` (226 accelerator records, 218 supply records, 4,167 benchmarks — #235 and #234 on top of `a641583`). The selection rule still yields **159 qualifying / 43 priced / 116 unpriced** (69 of the unpriced fit 35B-A3B, 47 do not). Every priced cell was re-diffed against the generator: id, VRAM, bandwidth, the three fit flags, the 35B ceiling, the supply id, the price, the derived $/tok-s, and the order all match, so **the ranked table does not move** and no rank below is renumbered. Neither commit adds an accelerator or a purchase price. #234 files a vendor headline for the Hailo-10H (9.9 tok/s on Llama-3.2-1B, [[benchmarks/comm-hailo-10h-llama32-1b-compiled-tps]]); that part is under the 8 GB gate and was never a row. #235 is the one that lands on parts this doc already lists.
+> **Refresh note (docs/fit-matrix-oct14, Oct-17, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `80aee58` (226 accelerator records, 218 supply records, 4,167 benchmarks — #238 and #237 on top of `2d884b8`). The selection rule still yields **159 qualifying / 43 priced / 116 unpriced** (69 of the unpriced fit 35B-A3B, 47 do not). Every priced cell was re-diffed against the generator: id, VRAM, bandwidth, the three fit flags, the 35B ceiling, the supply id, the price, the derived $/tok-s, and the order all match, so **the ranked table does not move** and no rank below is renumbered. Neither commit adds an accelerator or a purchase price.
+>
+> - **LLaDA2.2-mini is a model, not a row.** [[models/llada2-2-mini]] is a 16.256B diffusion MoE with 1.4B active and `kv_cache_bytes_per_token` 0. The BF16 checkpoint is about 32 GB, which clears the 24 GB 35B-A3B bar as a weight footprint and is not the 20 GB Q4 denominator this doc divides by. The card publishes no absolute tok/s for the mini, so there is no measured cell to set against a ceiling and nothing enters §3 or §4b.
+> - **The OpenRouter Llama 3.3 70B re-read is a hosted service, not a card.** #237 moves the Groq row on [[services/svc-openrouter]] from 0.51 s / 198 tok/s to 0.52 s / 191 tok/s. List prices did not move. A hosted tok/s is not `memory_bandwidth_gbps / 20`, so it does not re-rank §3. The stretch goal this doc prices is still Llama-3.3-70B Q4 resident on a single device at 48 GB.
+>
+> **Refresh note (docs/fit-matrix-oct14, Oct-17, prior pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `2d884b8` (226 accelerator records, 218 supply records, 4,167 benchmarks — #235 and #234 on top of `a641583`). The selection rule still yields **159 qualifying / 43 priced / 116 unpriced** (69 of the unpriced fit 35B-A3B, 47 do not). Every priced cell was re-diffed against the generator: id, VRAM, bandwidth, the three fit flags, the 35B ceiling, the supply id, the price, the derived $/tok-s, and the order all match, so **the ranked table does not move** and no rank below is renumbered. Neither commit adds an accelerator or a purchase price. #234 files a vendor headline for the Hailo-10H (9.9 tok/s on Llama-3.2-1B, [[benchmarks/comm-hailo-10h-llama32-1b-compiled-tps]]); that part is under the 8 GB gate and was never a row. #235 is the one that lands on parts this doc already lists.
 >
 > - **M4 Max stays rank 40, and the new llama.cpp cells sit next to the MLX ones already in §4b.** [[accelerators/apple-m4-max]] stays 128 GB / 546 GB/s, **Y/Y/Y**, $4,700 ([[supply/used-macbook-pro-m4-max-128gb]]), **$172.16/(tok/s)** *(derived)*. Ceilings: 546/20 = **27.3**, 546/16 = **34.125**, 546/40 = **13.65** tok/s *(derived)*. llama.cpp b8353, Metal, llama-bench pp512/tg128, batch 1, decodes Qwen3.5-35B-A3B Q4_K_M at **91.47** tok/s at depth 0 and **82.31** at depth 8192 ([[benchmarks/llamacpp-m4max128-qwen35-35b-a3b-q4km-d0-tg128]], [[benchmarks/llamacpp-m4max128-qwen35-35b-a3b-q4km-d8192-tg128]]); prefill is **1,125.86** and **903.14** ([[benchmarks/llamacpp-m4max128-qwen35-35b-a3b-q4km-d0-pp512]], [[benchmarks/llamacpp-m4max128-qwen35-35b-a3b-q4km-d8192-pp512]]). 91.47/27.3 = **3.35×** and 82.31/27.3 = **3.02×** the 35B floor *(derived)*. 82.31/91.47 = **0.900×** *(derived)* — filling 8192 of KV costs about a tenth of the decode, and 903.14/1125.86 = **0.802×** of the prefill. Set against the two rows already in §4b, 91.47/113.33 = **0.807×** the MLX 4-bit cell and 91.47/92.09 = **0.993×** the community MLX Q4 cell *(derived)*. The two MLX numbers and this llama.cpp one are different engines and different files, so they are not averaged; the new cell is the one within 1% of the lower MLX reading. The dense sibling on the same machine is under its own floor: Qwen3.5-27B Q4_K_M decodes at **24.18** at depth 0 and **22.64** at depth 8192 ([[benchmarks/llamacpp-m4max128-qwen35-27b-q4km-d0-tg128]], [[benchmarks/llamacpp-m4max128-qwen35-27b-q4km-d8192-tg128]]), 24.18/34.125 = **0.71×** and 22.64/34.125 = **0.66×** the 27B floor *(derived)*. 91.47/24.18 = **3.78×** *(derived)* on one machine, two models, and again the MoE is the one above the floor. On the $4,700 sticker that is **$51.38/measured-tok/s** at the depth-0 MoE cell *(derived, 4700/91.47)* and **$194.38** at the dense one *(derived, 4700/24.18)* — a whole laptop, not a bare card, so neither figure re-ranks §3.
 >
@@ -262,14 +267,13 @@ re-run it. Nothing here is a measurement.
 
 ## 1. The selection rule (which records got a row)
 
-*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `2d884b8`
+*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `80aee58`
 (226 accelerators, 218 supply, 4,167 benchmarks). The selection rule is
-unchanged and the counts did not move with #235 or #234: **159 qualifying /
+unchanged and the counts did not move with #238 or #237: **159 qualifying /
 43 priced / 116 unpriced** (69 of the unpriced fit 35B-A3B, 47 do not).
-#235 adds llama.cpp cells for the M4 Max and the M1 Max, both already rows,
-and no purchase price. #234 adds a Hailo-10H vendor cell for a 1B model; that
-part is under the 8 GB gate. The prior stamp, kept in the note above, was
-`a641583` / 4,152 benchmarks. See the refresh note above.*
+#238 adds [[models/llada2-2-mini]] and no accelerator. #237 re-reads hosted
+Llama 3.3 70B telemetry and no purchase price. The prior stamp, kept in the
+note above, was `2d884b8` / 4,167 benchmarks. See the refresh note above.*
 
 An accelerator record gets a row when **all** of these hold:
 
