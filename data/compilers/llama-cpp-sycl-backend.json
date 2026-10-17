@@ -1,0 +1,49 @@
+{
+  "id": "llama-cpp-sycl-backend",
+  "type": "compiler",
+  "name": "llama.cpp SYCL backend (hand-written kernels over oneDNN, oneMKL and joint_matrix)",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-17",
+  "sources": [
+    "llama-cpp-sycl-backend-doc",
+    "sycl-ext-oneapi-matrix-joint-matrix-spec"
+  ],
+  "repo": "ggml-org/llama.cpp",
+  "language": "C++",
+  "license": "MIT",
+  "first_release_year": 2024,
+  "category": "kernel-dsl",
+  "target_backends": [
+    "spirv"
+  ],
+  "input_languages": [
+    "cutlass-cpp"
+  ],
+  "output_artifacts": [
+    "spirv"
+  ],
+  "compilation_strategy": "jit",
+  "autotuning": false,
+  "production_ready": true,
+  "production_evidence": [
+    "The backend ships binary release packages (llama-b5377-bin-win-sycl-x64.zip and the Ubuntu 24.04 FP32/FP16 packages) and is the path llama.cpp documents for Intel GPUs",
+    "Its own docs list verified devices: Data Center GPU Max 1550 and 1100, Flex 170, Arc A770/A730M/A750, Arc B580, and built-in Arc GPUs in Meteor Lake, Arrow Lake and Lunar Lake"
+  ],
+  "strengths": [
+    "It is the only public kernel source that shows, with a measured number, where a hand-written kernel beats the vendor math library on Intel XMX: the XMX dequant-GEMM paths dequantize weights straight into the joint_matrix tiles instead of dequantizing to a full-precision buffer and calling oneDNN, and the docs say this speeds pp512 of Qwen3-30B-A3B UD-IQ3_XXS by about 50% on an Arc Pro B60",
+    "The fallback boundary is explicit and runtime-switchable. Batches of more than 64 tokens per expert, or row lengths that are not a multiple of 256 (32 for IQ4_NL and Q8_0), drop back to the library GEMM, and GGML_SYCL_XMX_GATHER_TYPES=0 disables the paths entirely without a rebuild",
+    "Three attention paths coexist and are selectable per call: the native SYCL flash-attention kernel, oneDNN fused SDPA (GGML_SYCL_FA_ONEDNN, the default), and oneMKL GEMM flash attention (GGML_SYCL_ENABLE_MKL_FA) which only activates for quantized KV, batch size at least 1024 and prompt length at least 1024",
+    "One kernel source covers the whole Xe family the docs list as verified, from Arc A-series through Battlemage to Ponte Vecchio, so a kernel written against joint_matrix reaches both the cheap card and the 128 GB HBM2e part"
+  ],
+  "weaknesses": [
+    "The joint_matrix API it depends on is an experimental DPC++ extension whose own spec says shipping products should not rely on it, and an unsupported (M, N, K, type) combination throws errc::kernel_not_supported rather than degrading",
+    "No ahead-of-time compilation: the docs list missed AOT as a known issue, so the first launch pays a JIT compile and SYCL_CACHE_PERSISTENT is explicitly not recommended because mixing cached and rebuilt binaries crashes",
+    "NVIDIA and AMD support was removed in 2026.02 because the oneAPI plugins for those GPUs are no longer installable, so this is an Intel-only backend despite SYCL being nominally portable",
+    "The 50% figure is the backend authors' own example for one model, one quant and one card. The same docs' changelog shows the opposite direction elsewhere: flash attention's performance impact 'depends on the LLM', and the 2026.09 note that oneAPI 2026.1 tripled prompt processing on an Arc B570 (1331 vs 434 t/s) is a compiler-version effect, not a kernel effect",
+    "input_languages and output_artifacts are approximate: the schema has no entry for SYCL/DPC++ or for a Level Zero binary, so cutlass-cpp and spirv are the closest enum values and do not describe what this backend actually consumes or emits"
+  ],
+  "learning_curve": "high",
+  "compile_time_seconds": null,
+  "notes": "Filed as a compiler record rather than an engine record because the repo already tracks llama.cpp as an engine and the thing worth recording here is the kernel technique, not the runtime. The technique that transfers to a hand-written stack: on XMX the bandwidth-bound decode and MoE-prefill GEMMs are limited by the dequantize step, not by the matrix unit. Dequantizing each weight tile directly into the joint_matrix operand (the 'XMX gather' paths) overlaps the dequant with the DPAS issue and removes the full-precision weight buffer. The docs name the joint_matrix shapes the paths may pick, per architecture: on Xe2, Xe3 and Xe-HPC (which is Ponte Vecchio) f16 8x16x16, 16x16x16, 32x64x16 and 32x64x32, tf32 8x16x8 and bf16 8x16x16; on Xe-HPG (Arc A770, Arrow Lake-H) only f16 8x8x16 and bf16 8x8x16. Accumulation is always f32. The operand type is chosen at runtime by GGML_SYCL_DYNAMIC_PRECISION: F16 is fastest but overflows above 65504, BF16 keeps the f32 range with a 7-bit mantissa, TF32 keeps the f16 mantissa and the f32 range but is about 30% slower and needs Xe2, Xe3 or Xe-HPC, and F32 turns the XMX paths off. The best supported combination is picked automatically and logged as fg_pick_combo. Weight formats the paths accept, as a bitmask: IQ4_NL, IQ3_S, IQ4_XS, IQ3_XXS, IQ2_XXS, IQ2_XS, IQ2_S, IQ1_S, IQ1_M, plus Q8_0, Q4_K, Q5_K and Q6_K for the MoE MUL_MAT_ID path only. Two separate, older optimizations are not this one and should not be conflated with it. The reorder optimization (scales split from weights for coalesced loads) landed for Q4_0, Q4_K, Q5_K, Q6_K and Q8_0 in 2026.04-05 and is what [[sycl-quant-reorder-gap-makes-some-quants-4x-slower]] measures. The 2025.2 Q4_0 MUL_MAT optimization raised llama-2-7b.Q4_0.gguf decode by 39 to 73 tok/s (+87%) on a Max 1550, 39 to 50 (+28%) on Flex 170, 42 to 55 (+30%) on Arc A770, 13 to 16 (+23%) on Meteor Lake and 14 to 17 (+21%) on Arrow Lake-H; the docs give no baseline configuration beyond the model file, so those five rows are the backend's own claim. Also in the 2026.04-05 changelog and not separately quantified: fused MoE. The docs name oneDNN as the default GEMM library since 2024.8, which is the thing the XMX paths beat inside their tile constraints and lose to outside them — see [[sycl-xmx-dequant-gemm-falls-back-past-tile-constraints]]. Vendor-claim status: every number above comes from the backend's own documentation, written by the people who ship the kernel, so treat them as the authors' measurements rather than as an independent result. target_backends uses spirv because that is the schema's nearest value to a Level Zero/SPIR-V stack; the backend does not target CUDA, ROCm, HIP, Metal or Vulkan."
+}
