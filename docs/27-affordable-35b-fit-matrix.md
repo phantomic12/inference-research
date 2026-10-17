@@ -3,6 +3,11 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
+> **Refresh note (docs/fit-matrix-oct17-p10, Oct-17, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `c9ca28e` (209 accelerator records, 218 supply records, 3,549 benchmarks — #206 on top of `5bebcc4`). The selection rule now yields **154 qualifying / 43 priced / 111 unpriced** (68 of the unpriced fit 35B-A3B, 43 do not). Every priced cell was re-diffed against the generator: id, VRAM, bandwidth, the three fit flags, the 35B ceiling, the supply id, the price, the derived $/tok-s, and the order all match, so **the ranked table does not move** and no rank below is renumbered. #206 adds two accelerators and no purchase price. Both clear the bandwidth floor and fit none of the three workloads, so both land in the does-not-fit list and neither enters §3 or §4:
+>
+> - **Arc A750 qualifies and does not fit.** [[accelerators/intel-arc-a750]] is 8 GB GDDR6 at **512 GB/s**, 225 W. 8 GB misses the 24 GB 35B-A3B bar, the 20 GB 27B bar and the 48 GB 70B bar (`-/-/-`); 512 GB/s clears the 300 GB/s floor, which is why it qualifies with no purchase price. Ceiling 512/20 = **25.6** tok/s *(derived)* — tied with [[accelerators/amd-radeon-rx-6800]] / [[accelerators/amd-radeon-rx-6800-xt]] / [[accelerators/amd-radeon-rx-6900-xt]], which are 16 GB at the same bus. The 27B column is 512/16 = **32.0** tok/s *(derived)* and the 70B column is 512/40 = **12.8** tok/s *(derived)*. The only measured rows are llama-2-7b Q4_0 (3.56 GiB), batch-1, Vulkan, build c1b1876: noFA pp512 **1,075.94** / tg128 **42.66** ([[benchmarks/llamacpp-vulkan-arc-a750-llama27b-q40-nofa-pp512]], [[benchmarks/llamacpp-vulkan-arc-a750-llama27b-q40-nofa-tg128]]) and FA pp512 **303.37** / tg128 **43.96** ([[benchmarks/llamacpp-vulkan-arc-a750-llama27b-q40-fa-pp512]], [[benchmarks/llamacpp-vulkan-arc-a750-llama27b-q40-fa-tg128]]). Against the 25.6 floor the faster decode is 43.96/25.6 = **1.72×** *(derived)* — a 3.56 GiB file, not a 20 GB one, so the multiple is a small-model calibration and not evidence the 8 GB card holds the 24 GB model. FA regresses prefill hard on this chip (1,075.94/303.37 = **3.55×** *(derived)* slower); decode barely moves (43.96/42.66 = **1.03×** *(derived)*). Neither row enters §4b.
+> - **Radeon Pro W5700 qualifies and does not fit.** [[accelerators/amd-radeon-pro-w5700]] is 8 GB GDDR6 at **448 GB/s**, 205 W, RDNA1 Navi 10. Same `-/-/-` miss; 448 GB/s clears the floor. Ceiling 448/20 = **22.4** tok/s *(derived)* — tied with [[accelerators/amd-radeon-rx-5700-xt]], [[accelerators/nvidia-rtx-2070-super]], [[accelerators/nvidia-rtx-3060-ti]], [[accelerators/nvidia-rtx-3070]] and [[accelerators/nvidia-rtx-5060-ti]]. The 27B column is 448/16 = **28.0** tok/s *(derived)* and the 70B column is 448/40 = **11.2** tok/s *(derived)*. llama-2-7b Q4_0, batch-1, Vulkan, build 23bc779: noFA pp512 **449.85** / tg128 **68.55** ([[benchmarks/llamacpp-vulkan-radeon-pro-w5700-llama27b-q40-nofa-pp512]], [[benchmarks/llamacpp-vulkan-radeon-pro-w5700-llama27b-q40-nofa-tg128]]) and FA pp512 **446.98** / tg128 **71.30** ([[benchmarks/llamacpp-vulkan-radeon-pro-w5700-llama27b-q40-fa-pp512]], [[benchmarks/llamacpp-vulkan-radeon-pro-w5700-llama27b-q40-fa-tg128]]). Against the 22.4 floor the faster decode is 71.30/22.4 = **3.18×** *(derived)*, again a 3.56 GiB file. FA is a wash on prefill (449.85/446.98 = **1.01×** *(derived)*) and a small decode gain (71.30/68.55 = **1.04×** *(derived)*). The W5700X (40 CU, 16 GB) is a different board and is not this record. Neither row enters §4b. No purchase price on either card, so no $/tok-s cell.
+
 > **Refresh note (docs/fit-matrix-oct17-p9, Oct-17, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `6b863a4` (207 accelerator records, 218 supply records, 3,541 benchmarks — #203 on top of `e68a507`). The selection rule still yields **152 qualifying / 43 priced / 109 unpriced** (68 of the unpriced fit 35B-A3B, 41 do not). Every priced cell was re-diffed against the generator: id, VRAM, bandwidth, the three fit flags, the 35B ceiling, the supply id, the price, the derived $/tok-s, and the order all match, so **the ranked table does not move** and no rank below is renumbered. #203 adds one accelerator and no purchase price. The new card does not clear the gate:
 >
 > - **Arc Pro B50 does not qualify.** [[accelerators/intel-arc-pro-b50]] is 16 GB GDDR6 at **224 GB/s**, 70 W, half-height. 16 GB misses the 24 GB 35B-A3B bar and the 20 GB 27B bar (`-/-/-`), and 224 GB/s misses the 300 GB/s bandwidth floor. There is no purchase-price supply record at `<= $3,000` (no `data/supply/` row names this id), so the selection rule keeps it out of the 152 — the same shape as RTX PRO 2000 Blackwell, except that card clears the bandwidth floor and this one does not. The arithmetic the ceiling column uses gives 224/20 = **11.2** tok/s *(derived)*, 224/16 = **14.0** tok/s *(derived)* on the 27B column, and 224/40 = **5.6** tok/s *(derived)* on the 70B column. It does not enter §3 or §4. The record's own note says a 4-bit 14B fits and a 4-bit 32B dense does not, which is the same 16 GB miss the fit flags encode.
@@ -171,14 +176,13 @@ re-run it. Nothing here is a measurement.
 
 ## 1. The selection rule (which records got a row)
 
-*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `af598e8`
-(206 accelerators, 218 supply, 3,539 benchmarks). The selection rule is
-unchanged and the counts did not move: **152 qualifying / 43 priced /
-109 unpriced** (68 of the unpriced fit 35B-A3B, 41 do not). #201 adds no
-accelerator and no purchase price — the new rows are Database Mart tables
-for [[accelerators/nvidia-a100-40gb-pcie]] (rank 32), [[accelerators/nvidia-a40]]
-(§4) and [[accelerators/nvidia-rtx-a4000]] (does not fit). See the refresh
-note above.*
+*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `c9ca28e`
+(209 accelerators, 218 supply, 3,549 benchmarks). The selection rule is
+unchanged; the counts moved by the two new cards: **154 qualifying /
+43 priced / 111 unpriced** (68 of the unpriced fit 35B-A3B, 43 do not).
+#206 adds [[accelerators/intel-arc-a750]] and
+[[accelerators/amd-radeon-pro-w5700]], both 8 GB, both bandwidth-qualified,
+both `-/-/-`, and no purchase price. See the refresh note above.*
 
 An accelerator record gets a row when **all** of these hold:
 
@@ -188,9 +192,9 @@ An accelerator record gets a row when **all** of these hold:
 
 The `<= $3,000` arm exists so that a cheap-but-slow card (the used-Tesla slice)
 is not filtered out by the bandwidth floor before its price can speak. That rule
-yields **152 qualifying accelerators**, of which **43 have a usable purchase
-price** and 109 are bandwidth-qualified but have no bare-card/system price in
-`data/supply/` (68 of those fit 35B-A3B; 41 qualify and do not).
+yields **154 qualifying accelerators**, of which **43 have a usable purchase
+price** and 111 are bandwidth-qualified but have no bare-card/system price in
+`data/supply/` (68 of those fit 35B-A3B; 43 qualify and do not).
 
 **One exception to the `vram_gb` gate.** A `unified_memory` part (an APU/SoC
 whose GPU shares the CPU's memory pool) leaves `vram_gb` null *on purpose* —
@@ -465,7 +469,7 @@ not) — both 672 GB/s, tied with the PRO 4000 Blackwell.
 | [[accelerators/local-apple-m5-pro]] | 64 | 307 | **Y/Y/Y** | 15.3 | no bare-part price |
 | [[accelerators/nvidia-l4]] | 24 | 300 | **Y/Y/-** | 15.0 | cloud/distributor only |
 
-Forty-one further accelerators qualify on the bandwidth-or-price rule and do
+Forty-three further accelerators qualify on the bandwidth-or-price rule and do
 **not** fit 35B-A3B (all unpriced). The highest-bandwidth near-misses, all
 `-/-/-` except the two 20 GB parts which fit 27B only: [[accelerators/amd-radeon-pro-vii]]
 (16 GB, 1024 GB/s), [[accelerators/nvidia-rtx-5080]] (16 GB, 960),
@@ -495,8 +499,14 @@ on bandwidth, and the highest-bandwidth near-miss in the set),
 [[accelerators/amd-radeon-rx-vega-64]] (8 GB, 484 GB/s, ceiling 24.2 *(derived)*)
 and [[accelerators/amd-radeon-rx-vega-56]] (8 GB, 410 GB/s, ceiling 20.5
 *(derived)*). [[accelerators/nvidia-titan-v]] shipped in the same ingest and is
-not one of the 41: its bandwidth is null, so it never clears the gate. The full
-152-row list, including these 41, is `python tools/fit_matrix_35b.py`.
+not one of the 43: its bandwidth is null, so it never clears the gate. Two of
+the forty-three are new with #206 and sit in that same does-not-fit list, both
+`-/-/-` and both unpriced: [[accelerators/intel-arc-a750]] (8 GB, 512 GB/s,
+35B ceiling 25.6 tok/s *(derived)* — tied with the 16 GB RX 6800 / 6800 XT /
+6900 XT on bandwidth) and [[accelerators/amd-radeon-pro-w5700]] (8 GB, 448 GB/s,
+ceiling 22.4 tok/s *(derived)* — tied with the RX 5700 XT and the RTX 2070
+SUPER / 3060 Ti / 3070). The full 154-row list, including these 43, is
+`python tools/fit_matrix_35b.py`.
 
 ## 4b. Roofline vs. measured — the A3B-MoE cross-check
 
