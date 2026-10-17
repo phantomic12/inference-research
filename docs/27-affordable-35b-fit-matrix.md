@@ -3,6 +3,14 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
+> **Refresh note (docs/fit-matrix-oct14-p215, Oct-17, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `c45efa7` (226 accelerator records, 218 supply records, 3,728 benchmarks — #214 and #215 on top of `2ae5d01`). The selection rule now yields **159 qualifying / 43 priced / 116 unpriced** (69 of the unpriced fit 35B-A3B, 47 do not). Every priced cell was re-diffed against the generator: id, VRAM, bandwidth, the three fit flags, the 35B ceiling, the supply id, the price, the derived $/tok-s, and the order all match, so **the ranked table does not move** and no rank below is renumbered. #214 adds sixteen accelerators and 123 llama.cpp scoreboard rows; #215 re-reads six service rows. None of the new accelerators has a purchase-price supply record, so the priced set stays 43.
+>
+> - **Five of the sixteen clear the gate. One fits 35B-A3B, and the fit is the board, not the GPU the benchmark measured.** [[accelerators/nvidia-tesla-k80]] is a dual-GK210 board, `vram_gb` **24** and `memory_bandwidth_gbps` **480** (the record's own basis: 240 GB/s and 12 GB per GK210, summed). 24 ≥ 20+4 and 24 ≥ 16+4, so the flags are **Y/Y/-** and the ceilings are 480/20 = **24.0**, 480/16 = **30.0**, 480/40 = **12.0** tok/s *(derived)*. It enters §4 between [[accelerators/huawei-ascend-950dt]] (25.0) and [[accelerators/huawei-atlas-300i-duo]] (20.4). The record's notes say the scoreboard row is one GPU of the pair, and the benchmark notes print **12 GB / 384-bit**. One GK210 is 12 GB, which misses the 24 GB bar, so the `Y` is a board total a single context cannot see. No purchase price.
+> - **The other four clear the bandwidth floor and fit nothing.** All `-/-/-`, all unpriced, all in the does-not-fit list: [[accelerators/nvidia-titan-xp]] (12 GB, 547.7 GB/s, 35B ceiling 547.7/20 = **27.4** tok/s *(derived)*, between the Arc A770 at 28.0 and the RX 6800 XT at 25.6), [[accelerators/amd-instinct-mi25]] (16 GB HBM2, 484 GB/s, ceiling **24.2** *(derived)* — tied with [[accelerators/amd-radeon-rx-vega-64]], and the record notes that ROCm support for gfx900 ended years ago), [[accelerators/nvidia-rtx-2060-super]] (8 GB, 448 GB/s, ceiling **22.4** *(derived)* — tied with the RX 5700 XT, the RTX 2070 SUPER / 3060 Ti / 3070, the RTX 5060 Ti and the RTX A4000) and [[accelerators/nvidia-quadro-rtx-4000]] (8 GB, 416 GB/s, ceiling **20.8** *(derived)*, between the RX 6750 XT at 21.6 and the RX Vega 56 at 20.5). 27B ceilings are 547.7/16 = **34.2**, 484/16 = **30.3**, 448/16 = **28.0**, 416/16 = **26.0** tok/s *(derived)*; none of the four reaches the 20 GB the 27B column needs.
+> - **The other eleven never reach the gate.** Below 8 GB: [[accelerators/nvidia-gtx-1060-6gb]], [[accelerators/nvidia-gtx-1660]], [[accelerators/nvidia-p106-100]] and [[accelerators/nvidia-rtx-4050-laptop]] (all 6 GB), [[accelerators/nvidia-quadro-p2000]] (5 GB), [[accelerators/nvidia-quadro-p1000]] and [[accelerators/nvidia-quadro-t1000]] (both 4 GB). At or above 8 GB but under 300 GB/s and with no `<= $3,000` purchase price: [[accelerators/nvidia-gtx-1070-ti]] (8 GB, 256 GB/s), [[accelerators/nvidia-jetson-agx-orin-64gb]] (64 GB unified LPDDR5, 204.8 GB/s) and [[accelerators/nvidia-tesla-p4]] (8 GB, 192 GB/s). [[accelerators/amd-radeon-880m]] is `unified_memory` with both `vram_gb` and `memory_bandwidth_gbps` null, and it is not in the generator's configured-pool override, so the gate drops it. None enters §3 or §4.
+> - **Every new scoreboard cell is Llama-2-7B Q4_0, 3.56 GiB, not the 35B-A3B.** llama-bench, pp512/tg128, batch 1, full offload, per-request ([[sources/llama-cpp-discussion-15013-nvidia-cuda-scoreboard]], and the ROCm half [[sources/llama-cpp-discussion-15021-amd-rocm-scoreboard]]). 3.56/20 = **0.18** of the weight the ceiling divides by *(derived)*, so a ratio above 1× is the small-file case, not evidence the 20 GB model runs. The five that cleared the gate, FA where both exist: K80 **14.27** tok/s ([[benchmarks/llamacpp-scoreboard-tesla-k80-fa-tg128]], no-FA **13.80** [[benchmarks/llamacpp-scoreboard-tesla-k80-nofa-tg128]]). 14.27/24.0 = **0.59×** the board ceiling *(derived)* and 13.80/24.0 = **0.58×**; 14.27/13.80 = **1.03×** *(derived)*. Read against one GK210 the same cells are 14.27/12.0 = **1.19×** and 13.80/12.0 = **1.15×** *(derived, 240/20 = 12.0)* — still a 7B file, and the prefill pair is 133.36 vs 133.14, **1.00×** *(derived)*. TITAN Xp no-FA **76.08** ([[benchmarks/llamacpp-scoreboard-titan-xp-nofa-tg128]], FA **73.84** [[benchmarks/llamacpp-scoreboard-titan-xp-fa-tg128]]): 76.08/27.4 = **2.78×** *(derived)*, 73.84/27.4 = **2.70×**, 76.08/73.84 = **1.03×**. MI25 has no FA row: **63.94** ([[benchmarks/llamacpp-scoreboard-instinct-mi25-nofa-tg128]]), 63.94/24.2 = **2.64×** *(derived)*. RTX 2060 SUPER FA **61.13** ([[benchmarks/llamacpp-scoreboard-rtx-2060-super-fa-tg128]], no-FA **60.04** [[benchmarks/llamacpp-scoreboard-rtx-2060-super-nofa-tg128]]): 61.13/22.4 = **2.73×**, 60.04/22.4 = **2.68×**, 61.13/60.04 = **1.02×** *(derived)*. Quadro RTX 4000 FA **67.62** ([[benchmarks/llamacpp-scoreboard-quadro-rtx-4000-fa-tg128]], no-FA **65.62** [[benchmarks/llamacpp-scoreboard-quadro-rtx-4000-nofa-tg128]]): 67.62/20.8 = **3.25×**, 65.62/20.8 = **3.15×**, 67.62/65.62 = **1.03×** *(derived)*. None of these is an A3B measurement, so none enters §4b, and none has a price, so none re-ranks §3.
+> - **#215 moves hosted tok/s, which this table does not rank.** The third OpenRouter re-read of Llama 3.3 70B touches [[services/svc-openrouter]], [[services/svc-deepinfra]], [[services/svc-novita]], [[services/svc-sambanova-cloud]], [[services/svc-gcp-vertex]] and [[services/svc-together-serverless]]. Those are service records, not purchase prices, so no $/tok-s cell changes.
+
 > **Refresh note (docs/fit-matrix-oct14, Oct-17, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `2e3d05f` (210 accelerator records, 218 supply records, 3,605 benchmarks — #211 and #212 on top of `add09bf`). The selection rule still yields **154 qualifying / 43 priced / 111 unpriced** (68 of the unpriced fit 35B-A3B, 43 do not). Every priced cell was re-diffed against the generator: id, VRAM, bandwidth, the three fit flags, the 35B ceiling, the supply id, the price, the derived $/tok-s, and the order all match, so **the ranked table does not move** and no rank below is renumbered. #211 adds a model record and fills one active-param field; #212 re-reads six service rows. Neither adds an accelerator, a supply row, or a benchmark, so the gate is the same 154 the previous note counted.
 >
 > - **The new model is the dense 27B this table already uses 16 GB for, and it does not change the byte count.** [[models/qwen3-8-27b]] is Qwen3.8-27B, dense hybrid, `params_b` **27.781** and `active_params_b` **27.781** (safetensors total 27,781,427,952 BF16; the card rounds it to 27B). The 27B column stays `weights = 16 GB` + 4 GB KV, needing `vram_gb >= 20`. Nothing in the new record is a measured Q4 file size, so the 16 GB assumption is not revised here. The card's own comparison (Terminal Bench 2.1 73.0 vs 63.4, SWE-bench Pro 61.7 vs 53.5, GPQA Diamond 89.2 vs 87.8 against Qwen3.6-27B) is a quality claim, not a bandwidth one, and it does not enter §3.
@@ -191,12 +199,12 @@ re-run it. Nothing here is a measurement.
 
 ## 1. The selection rule (which records got a row)
 
-*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `2e3d05f`
-(210 accelerators, 218 supply, 3,605 benchmarks). The selection rule is
-unchanged and the counts are unchanged from the #206 note: **154 qualifying /
-43 priced / 111 unpriced** (68 of the unpriced fit 35B-A3B, 43 do not).
-#211 and #212 add a model record, one active-param fill, and a services
-re-read — no accelerator and no purchase price. See the refresh note above.*
+*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `c45efa7`
+(226 accelerators, 218 supply, 3,728 benchmarks). The selection rule is
+unchanged and the counts moved with #214: **159 qualifying / 43 priced /
+116 unpriced** (69 of the unpriced fit 35B-A3B, 47 do not). #214 adds
+sixteen accelerators and no purchase price; five clear the gate. See the
+refresh note above.*
 
 An accelerator record gets a row when **all** of these hold:
 
@@ -206,9 +214,9 @@ An accelerator record gets a row when **all** of these hold:
 
 The `<= $3,000` arm exists so that a cheap-but-slow card (the used-Tesla slice)
 is not filtered out by the bandwidth floor before its price can speak. That rule
-yields **154 qualifying accelerators**, of which **43 have a usable purchase
-price** and 111 are bandwidth-qualified but have no bare-card/system price in
-`data/supply/` (68 of those fit 35B-A3B; 43 qualify and do not).
+yields **159 qualifying accelerators**, of which **43 have a usable purchase
+price** and 116 are bandwidth-qualified but have no bare-card/system price in
+`data/supply/` (69 of those fit 35B-A3B; 47 qualify and do not).
 
 **One exception to the `vram_gb` gate.** A `unified_memory` part (an APU/SoC
 whose GPU shares the CPU's memory pool) leaves `vram_gb` null *on purpose* —
@@ -402,7 +410,10 @@ These records satisfy the bandwidth/fit rule and **fit 35B-A3B** but have
 **no bare-card or system purchase price** in `data/supply/` (they may have a
 *rental* price in the cloud records — that is a different join, see
 `tools/cost_per_token.py`). Listed so a future supply pass can close them;
-sorted by the 35B ceiling *(derived)*. 68 rows. This pass adds
+sorted by the 35B ceiling *(derived)*. 69 rows. This pass adds
+[[accelerators/nvidia-tesla-k80]] (24 GB board total, 480 GB/s, ceiling 24.0
+*(derived)*, **Y/Y/-** — dual GK210, and the scoreboard row is one 12 GB GPU;
+see the refresh note). The prior pass added
 [[accelerators/furiosaai-rngd-renegade]] (48 GB, 1,500 GB/s, ceiling 75.0
 *(derived)*, **Y/Y/Y**, no purchase price — see the refresh note). The prior
 pass added the four
@@ -477,13 +488,14 @@ not) — both 672 GB/s, tied with the PRO 4000 Blackwell.
 | [[accelerators/qualcomm-ai200]] | 128 | 548 | **Y/Y/Y** | 27.4 | no price record |
 | [[accelerators/amd-radeon-pro-v620]] | 32 | 512 | **Y/Y/-** | 25.6 | no price record |
 | [[accelerators/huawei-ascend-950dt]] | 96 | 500 | **Y/Y/Y** | 25.0 | no price record |
+| [[accelerators/nvidia-tesla-k80]] | 24 | 480 | **Y/Y/-** | 24.0 | dual GK210, 12 GB / 240 GB/s per GPU; scoreboard row is one GPU; no price |
 | [[accelerators/huawei-atlas-300i-duo]] | 96 | 408 | **Y/Y/Y** | 20.4 | no price record (the 24 GB Pro sibling is priced; this Duo is not) |
 | [[accelerators/apple-m1-max]] | 64 | 400 | **Y/Y/Y** | 20.0 | no bare-part price; laptop/desktop silicon |
 | [[accelerators/apple-m2-max]] | 96 | 400 | **Y/Y/Y** | 20.0 | no bare-part price; named 35B-A3B Q4_K_M measured at 58.56 tok/s on the 30-core / 32 GB SKU (2.93× the 20.0 ceiling, *(derived)* — the record's 400 GB/s is the 38-core figure; see the Oct-17 #209 note) |
 | [[accelerators/local-apple-m5-pro]] | 64 | 307 | **Y/Y/Y** | 15.3 | no bare-part price |
 | [[accelerators/nvidia-l4]] | 24 | 300 | **Y/Y/-** | 15.0 | cloud/distributor only |
 
-Forty-three further accelerators qualify on the bandwidth-or-price rule and do
+Forty-seven further accelerators qualify on the bandwidth-or-price rule and do
 **not** fit 35B-A3B (all unpriced). The highest-bandwidth near-misses, all
 `-/-/-` except the two 20 GB parts which fit 27B only: [[accelerators/amd-radeon-pro-vii]]
 (16 GB, 1024 GB/s), [[accelerators/nvidia-rtx-5080]] (16 GB, 960),
@@ -519,8 +531,15 @@ the forty-three are new with #206 and sit in that same does-not-fit list, both
 35B ceiling 25.6 tok/s *(derived)* — tied with the 16 GB RX 6800 / 6800 XT /
 6900 XT on bandwidth) and [[accelerators/amd-radeon-pro-w5700]] (8 GB, 448 GB/s,
 ceiling 22.4 tok/s *(derived)* — tied with the RX 5700 XT and the RTX 2070
-SUPER / 3060 Ti / 3070). The full 154-row list, including these 43, is
-`python tools/fit_matrix_35b.py`.
+SUPER / 3060 Ti / 3070). Four of the forty-seven are new with #214 and sit in
+that same does-not-fit list, all `-/-/-` and all unpriced:
+[[accelerators/nvidia-titan-xp]] (12 GB, 547.7 GB/s, 35B ceiling 27.4 tok/s
+*(derived)*), [[accelerators/amd-instinct-mi25]] (16 GB, 484 GB/s, ceiling
+24.2 *(derived)* — tied with the RX Vega 64), [[accelerators/nvidia-rtx-2060-super]]
+(8 GB, 448 GB/s, ceiling 22.4 *(derived)* — tied with the RX 5700 XT and the
+RTX 2070 SUPER / 3060 Ti / 3070) and [[accelerators/nvidia-quadro-rtx-4000]]
+(8 GB, 416 GB/s, ceiling 20.8 *(derived)*). The full 159-row list, including
+these 47, is `python tools/fit_matrix_35b.py`.
 
 ## 4b. Roofline vs. measured — the A3B-MoE cross-check
 
@@ -716,7 +735,7 @@ show*. These are the corpus's own gotcha records, not new claims:
 
 ## 7. Reproduce
 
-    python tools/fit_matrix_35b.py            # the full 154-row matrix, all three sections (GB10, Jetson AGX Thor, TITAN V, RTX PRO 2000 Blackwell, Arc Pro B50 and the base M4 are outside the gate; see the Oct-16 p19 note, the Oct-17 #183 note, the Oct-17 #197 note, the Oct-17 #199 note, the Oct-17 #203 note and the Oct-17 #209 note)
+    python tools/fit_matrix_35b.py            # the full 159-row matrix, all three sections (GB10, Jetson AGX Thor, TITAN V, RTX PRO 2000 Blackwell, Arc Pro B50, the base M4, the GTX 1070 Ti, Jetson AGX Orin 64GB, Tesla P4 and Radeon 880M are outside the gate; see the Oct-16 p19 note, the Oct-17 #183 note, the Oct-17 #197 note, the Oct-17 #199 note, the Oct-17 #203 note, the Oct-17 #209 note and the Oct-17 #214 note)
     python tools/validate.py                  # record integrity (no new records added here)
 
 Every figure above is generated by that tool against the committed `data/`
