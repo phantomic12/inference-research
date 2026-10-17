@@ -1,0 +1,29 @@
+{
+  "id": "gotcha-rk3588-rkllm-trap-for-7b",
+  "type": "gotcha",
+  "name": "RK3588 RKLLM is a trap for 7B+ models — ChatGLM3-6B already down to ~5 tok/s",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-14",
+  "sources": [
+    "airockchip-rknn-llm-benchmark-md-rk3588-tok-s"
+  ],
+  "class": "hardware",
+  "affects": [
+    "rockchip-rk3588-npu"
+  ],
+  "concepts": [
+    "rkllm",
+    "rk3588",
+    "edge-inference",
+    "npu",
+    "w8a8",
+    "no-7b",
+    "bandwidth-wall"
+  ],
+  "symptom": "An RK3588 SBC ($80-200) bought to run a 7B-class open model technically loads one but is unusable: the vendor's own RKLLM w8a8 benchmark table shows ChatGLM3-6B — the largest model they even benchmark — already down to 4.98 tok/s decode, so a real 7B/8B lands ~3-4 tok/s.",
+  "root_cause": "The RK3588 NPU is a 6 TOPS edge part and decode is memory-bandwidth bound. The measured curve falls off hard with size (Qwen2-0.5B 41.6 tok/s, Qwen2.5-1.5B 16.7, Phi3-3.8B 7.45, ChatGLM3-6B 4.98, all w8a8, 128-in/64-out), and a 7B w8a8 only just fits a 16GB board once weights plus KV are counted.",
+  "workaround": "Treat it as what it is: a fine sub-4B on-device assistant or VLM demo. Do not buy an RK3588 board expecting interactive 7B+ chat — for that goal a used GPU beats it by a wide margin.",
+  "severity": "major",
+  "notes": "Vendor-measured numbers, not third-party. Verdict from the exotic-silicon sweep: TRAP for 7B+, legit edge toy below ~4B. The 4.98 tok/s ChatGLM3-6B row is recorded as comm-rk3588-chatglm3-6b-tg and comm-rk3588-chatglm3-6b-decode."
+}
