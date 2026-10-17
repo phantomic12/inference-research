@@ -15,8 +15,8 @@
   ],
   "price_input_per_mtok_usd": 0.135,
   "price_output_per_mtok_usd": 0.4,
-  "price_basis": "USD per 1M TOKENS, representative model meta-llama/llama-3.3-70b-instruct, observed 2026-10-14 on OpenRouter's provider table ($0.135 in / $0.40 out - the second-cheapest row there, behind only DeepInfra Turbo). Novita's own pricing page the same day puts the cheap end lower still on Chinese-vendor models: GLM-4.7-Flash $0.07/$0.40, GLM-4.5-Air $0.13/$0.85, ERNIE-4.5-21B-A3B $0.07/$0.28, Stheno-8B $0.05/$0.05. Batch API 50% off both directions on supported models. provider='other' per the enum; the record name carries the provider.",
-  "context_window": 131072,
+  "price_basis": "USD per 1M TOKENS, representative model meta-llama/llama-3.3-70b-instruct, re-verified 2026-10-17 on Novita's own model page and pricing table: $0.135 in / $0.40 out, Context Length 12K, Max Output 12K, bf16, serverless. The same split was the 2026-10-14 OpenRouter Novita row. Artificial Analysis's FAQ the week of 2026-10-16 states $0.14/$0.40; output matches and input differs by half a cent, so the price stays contested (see notes) rather than being overwritten. Novita's 2026-10-14 pricing page puts the cheap end lower still on other families (GLM-4.7-Flash $0.07/$0.40, ERNIE-4.5-21B-A3B $0.07/$0.28). Batch API 50% off both directions on supported models. provider='other' per the enum; the record name carries the provider.",
+  "context_window": 12288,
   "measured_ttft_ms": 1770.0,
   "measured_tps": 45.0,
   "measurement_source": "artificial-analysis",
@@ -24,11 +24,13 @@
     "us",
     "apac"
   ],
-  "notes": "CONTESTED on the input price, 2026-10-16. The price fields still hold the 2026-10-14 OpenRouter provider-table row: Novita $0.135 in / $0.400 out on llama-3.3-70b-instruct. Artificial Analysis's Llama 3.3 70B FAQ the same week states Novita at $0.14 per 1M input and $0.40 per 1M output (blended $0.16). Output matches; input differs by half a cent and the two pages may be rounding or measuring a different tier. Per repo rules both values are kept and the record is contested rather than silently overwritten. AA speed for Novita on this model: 45 tok/s median, 1.77s median first chunk, context 131k \u2014 against the OpenRouter 2026-10-14 P50 of 0.58s / 41 tok/s. The cheap-API outlier this phase was told to hunt: Novita undercuts Together ~7.7x on the same Llama 3.3 70B ($0.135 vs $1.04 input) and runs at 41 tok/s measured - mid-pack speed, floor-tier price. 200+ models including GPU-instance rental alongside the token API; the GPU hourly side is supply-type data. Lower uptime than the top tier on OpenRouter's table (97.77% 3d vs Groq's 100%), which is part of what the discount buys.",
+  "notes": "2026-10-17 context correction, price still contested. Novita's model page and pricing table both print Context Length 12K (12288) for meta-llama/llama-3.3-70b-instruct, and the sample request sets max_tokens=12288. The previous context_window of 131072 was Artificial Analysis's comparison-table cell and OpenRouter's native-window figure, not the cap Novita exposes on this serverless endpoint. 12288 is what a caller can actually send. Price fields stay $0.135/$0.40 because that is Novita's own page, agreeing with the 2026-10-14 OpenRouter row. Artificial Analysis's FAQ states $0.14/$0.40: output matches, input differs by half a cent, so status stays contested with both values recorded. AA speed (45 tok/s median, 1.77s first chunk) is kept; the OpenRouter 2026-10-14 P50 was 0.58s / 41 tok/s. Novita undercuts Together about 7.7x on this model ($0.135 vs $1.04 input) at mid-pack speed, which is the cheap-API outlier this record type exists to surface. The 12K window is the trade next to the price: DeepInfra serves the same model at $0.10/$0.32 with a 131072 context. 200+ models, plus GPU-instance rental that belongs in supply records. OpenRouter's table had Novita at 97.77% 3d uptime versus Groq at 100%.",
   "status": "contested",
-  "confidence": 0.7,
-  "updated": "2026-10-16",
+  "confidence": 0.78,
+  "updated": "2026-10-17",
   "sources": [
+    "svc-src-novita-llama33-model-page-2026-10-17",
+    "svc-src-novita-pricing-page-2026-10-17",
     "svc-src-novita-pricing-page-2026-10-14",
     "svc-src-openrouter-provider-table-2026-10-14",
     "svc-src-artificialanalysis-llama33-70b-providers-2026-10-16"
