@@ -3,6 +3,13 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
+> **Refresh note (docs/fit-matrix-oct14, Oct-17, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `2c7fa57` (205 accelerator records, 218 supply records, 3,301 benchmarks — #183 and #184 on top of `6180a58`). The selection rule now yields **152 qualifying / 43 priced / 109 unpriced** (68 of the unpriced fit 35B-A3B, 41 do not). Every priced cell was re-diffed against the generator: id, VRAM, bandwidth, the three fit flags, the 35B ceiling, the supply id, the price, the derived $/tok-s, and the order all match, so **the ranked table does not move** and no rank below is renumbered. #184 is a services price refresh and touches no accelerator, supply, or benchmark. #183 adds no purchase price. What it adds to the gate is four bandwidth-qualified cards that fit nothing in this doc's model class, all `-/-/-`, all unpriced, so they extend the §4 close rather than §3 or §4:
+>
+> - **Radeon VII, the interesting near-miss.** [[accelerators/amd-radeon-vii]] is 16 GB of HBM2 at **1,024 GB/s** — the same bus the record's notes give [[accelerators/amd-radeon-pro-vii]], and the same 35B ceiling, 1024/20 = **51.2** tok/s *(derived)*. 16 GB is under the 24 GB the 35B-A3B fit needs and under the 20 GB the 27B fit needs, so the flags stay `-/-/-` and the card does not enter §3. The record stores the page's bandwidth row and not its "4 Gbps" speed row: those two disagree (4 Gbps × 4096 bit / 8 = 2,048 GB/s), and the record leaves that disagreement in its notes rather than averaging it. llama.cpp Vulkan #10879, Llama-2-7B Q4_0, tg128 is **101.19** with flash attention ([[benchmarks/llamacpp-vulkan-radeonvii-llama27b-q40-fa-tg128]]) and **110.86** without ([[benchmarks/llamacpp-vulkan-radeonvii-llama27b-q40-nofa-tg128]]). Dividing by the 20 GB ceiling — the wrong byte count for a 3.56 GiB model — gives 101.19/51.2 = **2.0×** and 110.86/51.2 = **2.2×** *(derived)*. That is a small-model calibration, not a claim the card decodes a 35B-A3B at 100 tok/s; 16 GB cannot hold the 24 GB the fit flag requires. pp512 is 1,059.14 / 1,007.19 ([[benchmarks/llamacpp-vulkan-radeonvii-llama27b-q40-fa-pp512]], [[benchmarks/llamacpp-vulkan-radeonvii-llama27b-q40-nofa-pp512]]).
+> - **Arc A770 16GB, same shape, half the bus.** [[accelerators/intel-arc-a770]] is 16 GB GDDR6 at **560 GB/s**, ceiling 560/20 = **28.0** tok/s *(derived)*, also `-/-/-`. tg128 is **52.56** with flash attention ([[benchmarks/llamacpp-vulkan-a770-llama27b-q40-fa-tg128]]) and **53.07** without ([[benchmarks/llamacpp-vulkan-a770-llama27b-q40-nofa-tg128]]) → 52.56/28.0 = **1.9×** *(derived)*, same 7B caveat. The 8 GB A770 is a different card and is not this record. pp512 is 1,073.85 / 1,119.68 ([[benchmarks/llamacpp-vulkan-a770-llama27b-q40-fa-pp512]], [[benchmarks/llamacpp-vulkan-a770-llama27b-q40-nofa-pp512]]).
+> - **Vega 64 and Vega 56, 8 GB, fit nothing here.** [[accelerators/amd-radeon-rx-vega-64]] is 8 GB HBM2 at **484 GB/s**, ceiling 484/20 = **24.2** tok/s *(derived)*. [[accelerators/amd-radeon-rx-vega-56]] is 8 GB at **410 GB/s**, ceiling 410/20 = **20.5** *(derived)*. Both are under every fit threshold in §2. tg128 is **63.43** / **67.70** on the 64 ([[benchmarks/llamacpp-vulkan-vega64-llama27b-q40-fa-tg128]], [[benchmarks/llamacpp-vulkan-vega64-llama27b-q40-nofa-tg128]]) and **50.23** / **52.66** on the 56 ([[benchmarks/llamacpp-vulkan-vega56-llama27b-q40-fa-tg128]], [[benchmarks/llamacpp-vulkan-vega56-llama27b-q40-nofa-tg128]]). 63.43/24.2 = **2.6×** and 50.23/20.5 = **2.5×** *(derived)*, again against Llama-2-7B, so neither enters §4b.
+> - **TITAN V does not qualify, so it is not one of the 152.** [[accelerators/nvidia-titan-v]] is 12 GB HBM2 with `memory_bandwidth_gbps: null` — the product page and the launch note print no bandwidth, and the record refuses to substitute one. Null bandwidth fails the `>= 300` arm, and there is no linked purchase-price record at `<= $3,000`, so the selection rule keeps it out. Its #10879 tg128 of **100.69** / **109.21** ([[benchmarks/llamacpp-vulkan-titanv-llama27b-q40-fa-tg128]], [[benchmarks/llamacpp-vulkan-titanv-llama27b-q40-nofa-tg128]]) is therefore not divided into a ceiling this doc does not have a bandwidth for. All twenty new rows are Llama-2-7B Q4_0, so none of them is an A3B measurement and none moves a rank.
+
 > **Refresh note (docs/fit-matrix-oct14, Oct-17, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `6180a58` (200 accelerator records, 218 supply records, 3,281 benchmarks — #181 on top of `2925c06`). The selection rule is unchanged and still yields **148 qualifying / 43 priced / 105 unpriced** (68 of the unpriced fit 35B-A3B, 37 do not). Every priced cell was re-diffed against the generator: id, VRAM, bandwidth, the three fit flags, the 35B ceiling, the supply id, the price, the derived $/tok-s, and the order all match, so **the ranked table does not move** and no rank below is renumbered. #181 adds no accelerator and no purchase price.
 >
 > - **The new rows are not the 35B-A3B workload, and they are not cited as measurements here.** #181 is 231 third-party llama.cpp rows from geerlingguy/ai-benchmarks issues #36, #39, #40, #45 and #46, covering [[accelerators/nvidia-rtx-2080-ti]] (11 GB, new to this doc), [[accelerators/nvidia-rtx-a4000]] (16 GB, new to this doc), [[accelerators/nvidia-rtx-3080-ti]] (12 GB), [[accelerators/nvidia-rtx-3060]] (12 GB) and [[accelerators/nvidia-rtx-4070-ti]] (12 GB). All five have `vram_gb` under 24, so none clears the 35B-A3B fit (20 GB weights + 4 GB KV) or the 70B fit; the 16 GB A4000 also misses the 27B fit (16 + 4). They sit in the 37-row does-not-fit set, not in §3 or §4. The models are TinyLlama 1.1B, Llama-3.2-3B, Llama-2-7B, Llama-2-13B, DeepSeek-R1-Distill-Qwen-14B and gpt-oss-20b, all Q4_K_M — every one of them is the wrong byte count for the 20 GB ceiling, so none enters §4b.
@@ -121,11 +128,11 @@ re-run it. Nothing here is a measurement.
 
 ## 1. The selection rule (which records got a row)
 
-*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `bd282fe`
-(200 accelerators, 218 supply, 2,995 benchmarks). The selection rule is
-unchanged. The counts moved: **148 qualifying / 43 priced / 105 unpriced**
-(68 of the unpriced fit 35B-A3B, 37 do not). The one new row is unpriced.
-See the refresh note above.*
+*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `2c7fa57`
+(205 accelerators, 218 supply, 3,301 benchmarks). The selection rule is
+unchanged. The counts moved: **152 qualifying / 43 priced / 109 unpriced**
+(68 of the unpriced fit 35B-A3B, 41 do not). The four new rows are unpriced
+and fit nothing in this model class. See the refresh note above.*
 
 An accelerator record gets a row when **all** of these hold:
 
@@ -135,9 +142,9 @@ An accelerator record gets a row when **all** of these hold:
 
 The `<= $3,000` arm exists so that a cheap-but-slow card (the used-Tesla slice)
 is not filtered out by the bandwidth floor before its price can speak. That rule
-yields **148 qualifying accelerators**, of which **43 have a usable purchase
-price** and 99 are bandwidth-qualified but have no bare-card/system price in
-`data/supply/` (67 of those fit 35B-A3B; 32 qualify and do not).
+yields **152 qualifying accelerators**, of which **43 have a usable purchase
+price** and 109 are bandwidth-qualified but have no bare-card/system price in
+`data/supply/` (68 of those fit 35B-A3B; 41 qualify and do not).
 
 **One exception to the `vram_gb` gate.** A `unified_memory` part (an APU/SoC
 whose GPU shares the CPU's memory pool) leaves `vram_gb` null *on purpose* —
@@ -412,7 +419,7 @@ not) — both 672 GB/s, tied with the PRO 4000 Blackwell.
 | [[accelerators/local-apple-m5-pro]] | 64 | 307 | **Y/Y/Y** | 15.3 | no bare-part price |
 | [[accelerators/nvidia-l4]] | 24 | 300 | **Y/Y/-** | 15.0 | cloud/distributor only |
 
-Thirty-seven further accelerators qualify on the bandwidth-or-price rule and do
+Forty-one further accelerators qualify on the bandwidth-or-price rule and do
 **not** fit 35B-A3B (all unpriced). The highest-bandwidth near-misses, all
 `-/-/-` except the two 20 GB parts which fit 27B only: [[accelerators/amd-radeon-pro-vii]]
 (16 GB, 1024 GB/s), [[accelerators/nvidia-rtx-5080]] (16 GB, 960),
@@ -433,8 +440,17 @@ thirty-seven are new with #172 and sit at the bottom of that list, all
 25.6 tok/s *(derived)*), [[accelerators/nvidia-rtx-2070-super]] and
 [[accelerators/nvidia-rtx-3060-ti]] (both 8 GB, 448 GB/s, 22.4),
 [[accelerators/amd-radeon-rx-6750-xt]] (12 GB, 432 GB/s, 21.6) and
-[[accelerators/amd-radeon-rx-6700-xt]] (12 GB, 384 GB/s, 19.2). The full
-148-row list, including these 37, is `python tools/fit_matrix_35b.py`.
+[[accelerators/amd-radeon-rx-6700-xt]] (12 GB, 384 GB/s, 19.2). Four of the
+forty-one are new with #183 and sit in that same does-not-fit list, all
+`-/-/-` and all unpriced: [[accelerators/amd-radeon-vii]] (16 GB, 1,024 GB/s,
+35B ceiling 51.2 tok/s *(derived)* — tied with [[accelerators/amd-radeon-pro-vii]]
+on bandwidth, and the highest-bandwidth near-miss in the set),
+[[accelerators/intel-arc-a770]] (16 GB, 560 GB/s, ceiling 28.0 *(derived)*),
+[[accelerators/amd-radeon-rx-vega-64]] (8 GB, 484 GB/s, ceiling 24.2 *(derived)*)
+and [[accelerators/amd-radeon-rx-vega-56]] (8 GB, 410 GB/s, ceiling 20.5
+*(derived)*). [[accelerators/nvidia-titan-v]] shipped in the same ingest and is
+not one of the 41: its bandwidth is null, so it never clears the gate. The full
+152-row list, including these 41, is `python tools/fit_matrix_35b.py`.
 
 ## 4b. Roofline vs. measured — the A3B-MoE cross-check
 
@@ -625,7 +641,7 @@ show*. These are the corpus's own gotcha records, not new claims:
 
 ## 7. Reproduce
 
-    python tools/fit_matrix_35b.py            # the full 148-row matrix, all three sections (GB10 is outside the gate; see the Oct-16 p19 note)
+    python tools/fit_matrix_35b.py            # the full 152-row matrix, all three sections (GB10 and TITAN V are outside the gate; see the Oct-16 p19 note and the Oct-17 #183 note)
     python tools/validate.py                  # record integrity (no new records added here)
 
 Every figure above is generated by that tool against the committed `data/`
