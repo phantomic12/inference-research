@@ -3,6 +3,13 @@
 Which recorded accelerators can hold a ~35B-class model, and what does the
 cheapest one cost per unit of decode throughput.
 
+> **Refresh note (docs/fit-matrix-oct14, Oct-17, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `2e3d05f` (210 accelerator records, 218 supply records, 3,605 benchmarks — #211 and #212 on top of `add09bf`). The selection rule still yields **154 qualifying / 43 priced / 111 unpriced** (68 of the unpriced fit 35B-A3B, 43 do not). Every priced cell was re-diffed against the generator: id, VRAM, bandwidth, the three fit flags, the 35B ceiling, the supply id, the price, the derived $/tok-s, and the order all match, so **the ranked table does not move** and no rank below is renumbered. #211 adds a model record and fills one active-param field; #212 re-reads six service rows. Neither adds an accelerator, a supply row, or a benchmark, so the gate is the same 154 the previous note counted.
+>
+> - **The new model is the dense 27B this table already uses 16 GB for, and it does not change the byte count.** [[models/qwen3-8-27b]] is Qwen3.8-27B, dense hybrid, `params_b` **27.781** and `active_params_b` **27.781** (safetensors total 27,781,427,952 BF16; the card rounds it to 27B). The 27B column stays `weights = 16 GB` + 4 GB KV, needing `vram_gb >= 20`. Nothing in the new record is a measured Q4 file size, so the 16 GB assumption is not revised here. The card's own comparison (Terminal Bench 2.1 73.0 vs 63.4, SWE-bench Pro 61.7 vs 53.5, GPQA Diamond 89.2 vs 87.8 against Qwen3.6-27B) is a quality claim, not a bandwidth one, and it does not enter §3.
+> - **The Q4 measurement of that model was already on file, on a part §3 already prices.** [[accelerators/apple-m3-max]] is rank 39 (128 GB, 400 GB/s, 27B ceiling 400/16 = **25.0** tok/s *(derived)*, $3,400 → $170.00/tok-s *(derived)* from [[supply/used-macbook-pro-m3-max-128gb]]). Ollama's llama.cpp backend runs Qwen3.8-27B Q4_K_M at **12.0** tok/s ([[benchmarks/ollama-m3-max-qwen3-8-27b-llamacpp-decode-tok-s]]). 12.0/25.0 = **0.48×** that ceiling *(derived)* — under the floor, the same shape the M2 Max IQ3_S cell already shows at 0.43× and the R9700 UD-Q4_K_XL cell at 0.77×, on different silicon and different protocols, so the three ratios are not a ranking. The MLX sibling on the same machine is **42.5** tok/s ([[benchmarks/ollama-m3-max-qwen3-8-27b-mlx-decode-tok-s]]), `format_id` null, methodology says NVFP4. 42.5/25.0 = **1.70×** *(derived)*, and 42.5/12.0 = **3.54×** *(derived)* between the two backends. NVFP4 is not Q4_K_M, so the 1.70× is not a Q4 reading and it does not enter §4b. $3,400/12.0 = **$283.33 per measured Q4 tok/s** *(derived)* — not a re-rank; the ranking stays on the 20 GB ceiling.
+> - **GLM-5.3's filled active-param field is the wrong model class.** [[models/glm-5-3]] is 753.3B total with `active_params_b` now **40** (the card's figure; the record's notes keep the 40.93B config arithmetic beside it). A 40B-active MoE is not the 35B-A3B, the 27B dense, or the 70B dense this table fits, and the fill adds no accelerator and no price.
+> - **#212 moves hosted tok/s, which this table does not rank.** The OpenRouter re-read moves the Groq row on Llama 3.3 70B from 0.50 s / 198 tok/s to 0.49 s / 209 tok/s, and the DeepInfra, Novita, SambaNova, Vertex and Together P50s move in notes. Those are service records ([[services/svc-openrouter]], [[services/svc-deepinfra]], [[services/svc-novita]], [[services/svc-sambanova-cloud]], [[services/svc-gcp-vertex]], [[services/svc-together-serverless]]), not purchase prices, so no $/tok-s cell changes.
+
 > **Refresh note (docs/fit-matrix-oct17-p11, Oct-17, this pass).** Re-ran `python tools/fit_matrix_35b.py` on local `main` `42edb33` (210 accelerator records, 218 supply records, 3,605 benchmarks — #209 on top of `c9ca28e`). The selection rule still yields **154 qualifying / 43 priced / 111 unpriced** (68 of the unpriced fit 35B-A3B, 43 do not). Every priced cell was re-diffed against the generator: id, VRAM, bandwidth, the three fit flags, the 35B ceiling, the supply id, the price, the derived $/tok-s, and the order all match, so **the ranked table does not move** and no rank below is renumbered. #209 adds one accelerator and no purchase price. The new chip does not clear the gate, and the one new row that is the named 35B-A3B target sits on a part §4 already lists:
 >
 > - **Base M4 does not qualify.** [[accelerators/local-apple-m4]] is a Mac mini base M4, 24 GB unified LPDDR5X at **120 GB/s**. 24 GB meets the 35B-A3B bar and the 27B bar and misses the 48 GB 70B bar (`Y/Y/-`), but 120 GB/s misses the 300 GB/s bandwidth floor, and there is no purchase-price supply record at `<= $3,000` (no `data/supply/` row names this id), so the selection rule keeps it out of the 154 — the same shape as GB10 and Jetson AGX Thor, at less than half their bandwidth. The arithmetic the ceiling column uses gives 120/20 = **6.0** tok/s *(derived)*, 120/16 = **7.5** tok/s *(derived)* on the 27B column, and 120/40 = **3.0** tok/s *(derived)* on the 70B column. It does not enter §3 or §4. The record's own note says the comment does not print a GPU-core count, so this is the base M4 and not the M4 Pro or the M4 Max already ranked at 40.
@@ -184,13 +191,12 @@ re-run it. Nothing here is a measurement.
 
 ## 1. The selection rule (which records got a row)
 
-*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `c9ca28e`
-(209 accelerators, 218 supply, 3,549 benchmarks). The selection rule is
-unchanged; the counts moved by the two new cards: **154 qualifying /
+*This build is a re-run of `tools/fit_matrix_35b.py` on `main` `2e3d05f`
+(210 accelerators, 218 supply, 3,605 benchmarks). The selection rule is
+unchanged and the counts are unchanged from the #206 note: **154 qualifying /
 43 priced / 111 unpriced** (68 of the unpriced fit 35B-A3B, 43 do not).
-#206 adds [[accelerators/intel-arc-a750]] and
-[[accelerators/amd-radeon-pro-w5700]], both 8 GB, both bandwidth-qualified,
-both `-/-/-`, and no purchase price. See the refresh note above.*
+#211 and #212 add a model record, one active-param fill, and a services
+re-read — no accelerator and no purchase price. See the refresh note above.*
 
 An accelerator record gets a row when **all** of these hold:
 
@@ -710,7 +716,7 @@ show*. These are the corpus's own gotcha records, not new claims:
 
 ## 7. Reproduce
 
-    python tools/fit_matrix_35b.py            # the full 152-row matrix, all three sections (GB10, Jetson AGX Thor, TITAN V and RTX PRO 2000 Blackwell are outside the gate; see the Oct-16 p19 note, the Oct-17 #183 note, the Oct-17 #197 note and the Oct-17 #199 note)
+    python tools/fit_matrix_35b.py            # the full 154-row matrix, all three sections (GB10, Jetson AGX Thor, TITAN V, RTX PRO 2000 Blackwell, Arc Pro B50 and the base M4 are outside the gate; see the Oct-16 p19 note, the Oct-17 #183 note, the Oct-17 #197 note, the Oct-17 #199 note, the Oct-17 #203 note and the Oct-17 #209 note)
     python tools/validate.py                  # record integrity (no new records added here)
 
 Every figure above is generated by that tool against the committed `data/`
