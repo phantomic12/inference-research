@@ -1,0 +1,33 @@
+{
+  "id": "sycl-xmx-dequant-gemm-falls-back-past-tile-constraints",
+  "type": "gotcha",
+  "name": "The XMX dequant-into-tile GEMM silently falls back to the library GEMM past its tile constraints",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-17",
+  "sources": [
+    "llama-cpp-sycl-backend-doc",
+    "sycl-ext-oneapi-matrix-joint-matrix-spec"
+  ],
+  "class": "kernel",
+  "affects": [
+    "llama-cpp",
+    "intel-arc-pro-b60",
+    "intel-arc-a770",
+    "xpu-intel-dc-gpu-max-1550"
+  ],
+  "concepts": [
+    "sycl",
+    "xmx",
+    "joint-matrix",
+    "dequant-gemm",
+    "onednn",
+    "moe",
+    "prefill"
+  ],
+  "symptom": "A hand-written XMX dequant-GEMM that is clearly faster than oneDNN on one shape is the same speed as oneDNN, or slower, on the next shape, with no error and no log line unless you read the kernel-selection trace. On the llama.cpp SYCL backend the fast path only runs for batches of at most 64 tokens per expert and for row lengths that are a multiple of 256, or 32 for IQ4_NL and Q8_0. Everything else uses the library GEMM. The one number the docs attach to the fast path — about 50% faster pp512 on Qwen3-30B-A3B UD-IQ3_XXS on an Arc Pro B60 — is therefore a statement about shapes that satisfy those constraints, not about XMX GEMM in general.",
+  "root_cause": "The XMX matrix unit only executes fixed (M, N, K) tiles, so a kernel that dequantizes straight into the tile has to pick one of the combinations the hardware actually implements. sycl_ext_oneapi_matrix documents those for Intel XMX: on Ponte Vecchio and Battlemage, int8xint8 accumulates into int32 at M<=8, N=16, K=32, while fp16 and bf16 accumulate into fp32 at 16x16x16 or at M<=8, N=16, K=16, and tf32 is M<=8, N=16, K=8. A GEMM whose dimensions are not a multiple of the chosen tile cannot fill it, and at that point the dequant-into-tile trick saves nothing because the kernel would pad or tail-loop anyway. The backend therefore declines the fast path and calls the library GEMM, which already handles arbitrary shapes and is the better choice once the batch is large enough to be compute-bound. A second, hardware-level version of the same trap sits under the kernel: joint_matrix_load and joint_matrix_store on PVC and Battlemage require the base pointer to be 4-byte aligned, stride times the element size to be a multiple of 8 and no more than 224 bytes, and the row index to be a multiple of 4 divided by the element size. Missing any of these does not fail the kernel; the driver switches to a slower load/store unless IGC_JointMatrixLoadStoreOpt is set.",
+  "workaround": "Size the kernel's tile to a combination the spec lists for the target architecture, and keep the contracted dimension a multiple of that tile's K. In the llama.cpp backend, check the fg_pick_combo log line to see which combination was actually selected, and set GGML_SYCL_XMX_GATHER_SHAPES to a single bit to force one combination when comparing. Treat a batch above 64 tokens per expert as a library-GEMM problem rather than a hand-written-kernel problem. For the load/store constraints, pad rows so the stride stays within 224 bytes per element stride, or set IGC_JointMatrixLoadStoreOpt=1 and accept the slower path instead of guessing why a tile kernel missed bandwidth.",
+  "severity": "major",
+  "notes": "This is the transferable part of [[llama-cpp-sycl-backend]]. The 50% gain and the 64-token and 256-row thresholds are the backend authors' own description of their kernel, from docs/backend/SYCL.md read 2026-10-17, not an independent measurement. The tile shapes and the stride cap of 224 bytes are from the Intel joint_matrix spec, which also warns that the extension is experimental. The practical consequence for someone writing kernels rather than using llama.cpp: the hand-written kernel wins on the memory-bound, small-batch, awkward-quant case (a MoE expert at a few tokens, or a 2-4 bit quant the vendor library has no kernel for), and it loses the moment the shape is not a multiple of the tile or the batch is wide enough that the matrix unit, not the dequant, is the limit. That boundary is exactly analogous to where a Marlin-style kernel stops beating cuBLAS, and it is the reason to keep the vendor library call as the fallback rather than replacing it."
+}
