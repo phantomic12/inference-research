@@ -65,11 +65,11 @@ const description = 'Which models are worth running: capability against system r
         <thead>
           <tr>
             <th>Model</th>
-            <th>Capability</th>
-            <th>Active</th>
-            <th>Weights</th>
-            <th>KV / user</th>
-            <th>Need</th>
+            <th class="num">Capability</th>
+            <th class="num">Active</th>
+            <th class="num">Weights</th>
+            <th class="num">KV / user</th>
+            <th class="num">Need</th>
             <th>Offload</th>
           </tr>
         </thead>
@@ -146,17 +146,17 @@ const description = 'Which models are worth running: capability against system r
 
     tbody.innerHTML = shown.map((r) => {
       const n = need(r, users);
-      const benches = r.benchmarks.map((b) => `${b.name} ${b.pct}`).join(', ');
-      const flag = r.vendor_only ? ' <em>(vendor)</em>' : '';
-      return `<tr>
-        <td><a href="${base}r/models/${r.id}/">${r.name}</a></td>
-        <td class="cost-cell">${r.capability === null ? '—' : r.capability.toFixed(1)}${flag}</td>
-        <td>${r.active_params_b}B</td>
-        <td>${r.weights_q4_gib} GB</td>
-        <td>${r.kv_8k_gib === null ? '—' : r.kv_8k_gib + ' GB'}</td>
-        <td class="cost-cell">${n === null ? '—' : n + ' GB'}</td>
+      const benches = r.benchmarks.map((b) => `${b.name} ${b.pct}`).join(' · ');
+      const flag = r.vendor_only ? ' <span class="vendor-flag">vendor</span>' : '';
+      return `<tr class="model-row">
+        <td><a href="${base}r/models/${r.id}/">${r.name}</a>${benches ? `<div class="bench-line">${benches}</div>` : ''}</td>
+        <td class="num cost-cell">${r.capability === null ? '—' : r.capability.toFixed(1)}${flag}</td>
+        <td class="num">${r.active_params_b}B</td>
+        <td class="num">${r.weights_q4_gib} GB</td>
+        <td class="num">${r.kv_8k_gib === null ? '—' : r.kv_8k_gib + ' GB'}</td>
+        <td class="num cost-cell">${n === null ? '—' : n + ' GB'}</td>
         <td>${r.offload_friendly ? 'yes' : '—'}</td>
-      </tr>${benches ? `<tr><td colspan="7" class="sub">${benches}</td></tr>` : ''}`;
+      </tr>`;
     }).join('');
 
     const counter = document.querySelector('[data-count]');
