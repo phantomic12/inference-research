@@ -1,0 +1,31 @@
+{
+  "id": "llamacpp-qwen3-8b-rtx4080-64k",
+  "type": "kv_efficiency",
+  "name": "Qwen3-8B Q4_K on an RTX 4080 16GB at 64K: 39.0 tok/s decode, 937.9 tok/s prefill, f16 KV at 144 KiB/token",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-18",
+  "sources": [
+    "hardware-corner-rtx-4080-llm-benchmarks",
+    "mbl-cfg-qwen3-8b"
+  ],
+  "model": "Qwen3-8B Q4_K (GGUF), f16 KV",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "nvidia-rtx-4080"
+  ],
+  "interconnect_ids": [],
+  "context_length": 65536,
+  "kv_bytes_per_token": 147456,
+  "kv_bytes_per_token_basis": "36 layers x 8 kv heads x 128 head_dim x 2 (K+V) x 2 bytes (llama.cpp default f16 KV; the Q4_K is the weight quant, not the cache) = 147,456 B/token, the geometry in models/qwen3-8b and mbl-cfg-qwen3-8b. The page does not print a resident-KV byte count. At 65,536 tokens that is 147,456 x 65,536 = 9.00 GiB of KV on a 16 GB card, which is why the same table has no 128k cell for this model.",
+  "kv_cache_dtype": "fp16",
+  "attention_variant": "gqa",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": 39.0,
+  "methodology": "Hardware Corner per-SKU llama.cpp table, single RTX 4080 (16 GB GDDR6X, 716 GB/s as printed). Qwen3 8B Q4_K token-generation row: 102.7 t/s at 4k, 77.9 at 16k, 59.0 at 32k, 39.0 at 64k. The 64k cell is the longest context the page published for this model on this card; the 128k and 256k cells are dashes. Prompt processing at the same 64k depth is 937.9 t/s (6,177.9 at 4k, 3,809.8 at 16k, 1,968.4 at 32k). measured_tps_at_ctx is the 64k token-generation cell, batch-1 per-request decode. measured_ttft_ms_at_ctx is null: the page publishes prefill tok/s, not a time-to-first-token. The page does not publish the llama.cpp build hash, CUDA version, or the exact prompt and output lengths inside the 64k bucket.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "Closes the bandwidth axis of the 16 GB Qwen3-8B row. The cache is identical to the 4060 Ti and 5060 Ti records: 147,456 B/token, 9.00 GiB at 64k, and no 128k cell, because 9 GiB of f16 KV plus the Q4_K weights fills a 16 GB card. What changes is the bus. At the same 64k depth decode is 13.0 t/s on the 4060 Ti (288 GB/s), 20.7 t/s on the 5060 Ti (448 GB/s) and 39.0 t/s here (716 GB/s); prefill is 392.1, 650.3 and 937.9 t/s. Three cards, one KV geometry, and the speed ranks with bandwidth while the context ceiling does not: the same page's gpt-oss 20B MXFP4 row still generates 60.0 t/s at 128k. The cliff on this card is 102.7 t/s at 4k to 39.0 at 64k (2.6x). Confidence 0.7 matches the source: a third-party table with no build hash."
+}
