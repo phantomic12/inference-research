@@ -452,6 +452,11 @@ completely different hardware.
     active_params_b     number|null   activated per token; equals params_b for dense
     num_experts         int|null
     experts_per_token   int|null
+    benchmarks          array         published scores used to rank capability.
+                       Each item: {name, score, scale, higher_is_better, source,
+                       vendor_claim}. score/scale is comparable across models
+                       (scale is the maximum, 100 for a percentage). vendor_claim
+                       marks a number the lab published itself
     shared_expert       bool|null     always-on shared expert adds to per-token active
     hidden_size         int|null
     num_layers          int|null
