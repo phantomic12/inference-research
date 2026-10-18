@@ -1,0 +1,42 @@
+{
+  "id": "hobbit-mixed-precision-expert-offload",
+  "type": "paper",
+  "name": "HOBBIT: A Mixed Precision Expert Offloading System for Fast MoE Inference",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-18",
+  "sources": [
+    "pap-hobbit-mixed-precision-expert-offload-arxiv"
+  ],
+  "arxiv_id": "2411.01433",
+  "venue": "arxiv-preprint",
+  "venue_kind": null,
+  "venue_track": null,
+  "year": 2024,
+  "category": "moe",
+  "authors": [
+    "Peng Tang",
+    "Jiacheng Liu",
+    "Xiaofeng Hou",
+    "Yifei Pu",
+    "Jing Wang",
+    "Pheng-Ann Heng",
+    "Chao Li",
+    "Minyi Guo"
+  ],
+  "affiliations": [
+    "Shanghai Jiao Tong University",
+    "The Chinese University of Hong Kong"
+  ],
+  "problem": "With routed experts in host RAM or on SSD, a cache miss costs more than the layer's compute, so prefetch and LRU/LFU never hide it. On one Mixtral-8x7B layer the authors time expert loading at about 85.5% of the step on an RTX 4090 and 94.5% on a Jetson Orin. A full-precision fetch of a Mixtral layer over a 32 GB/s PCIe 4.0 link is about 80 ms against about 3 ms of RTX 4090 compute. Skipping the miss (AdapMoE) drops accuracy; a static per-expert bit-width (EdgeMoE) does not follow the token.",
+  "mechanism": "Keep non-expert weights resident and hold two copies of every routed expert in host RAM or on SSD, one high-precision and one low-precision (float16 plus int4, or int8 plus int2). On a cache miss, rank the top-k experts by gate magnitude and score expert i as the sum of the normalized gate magnitudes of the experts ranked above it. Load high precision when the score is at most T1, low precision between T1 and T2, and skip above T2. The top-ranked expert always stays high precision. For Mixtral-8x7B they set T1=0.6 and T2=0.9, which puts about 67% of selections in high precision, 30% in low precision, and 3% skipped. Prefetch reuses the current layer's gate input: cosine similarity of consecutive gate inputs is high and top-1 next-layer prediction averages 96% (about 90% two or three layers out). A stacked GEMM evaluates the next p gate matrices in one shot, p in 1 to 3, and stops at the first layer whose experts are not cached. Predicted experts are pinned. A wrong prefetch cannot be cancelled mid cudaMemcpy, so the penalty copy is the low-precision expert, which is what makes prefetch net-positive. The GPU cache is two pools. Eviction priority is a weighted sum of LRU (last-use over token index), sequence-level LFU, LHU (how often that expert was requested at high precision this sequence), and farthest-layer distance. Weights are fit on a calibration set. Records reset per sequence. A scheduler thread issues the loads; the main thread waits only for on-demand experts. A second mode runs the miss on the CPU instead of fetching it, which they treat as secondary because edge CPUs are weak. Built as about 8,000 lines of C/C++ on llama.cpp, replacing llama.cpp's layer-spill with expert-only spill.",
+  "hardware_relevance": [
+    "nvidia-rtx-4090",
+    "nvidia-jetson-agx-orin-64gb"
+  ],
+  "speedup_reported": "Authors' own batch-1 numbers, Alpaca prompts of 16 or 128 tokens and outputs of 32 or 128. Jetson AGX Orin 32 GB unified memory, int8 experts with int2 as the low-precision copy, vs MoE-Infinity: 3.64x decode on Mixtral-8x7B and 9.93x on Phi-MoE, prefill latency down 60% and 72%. Same box vs llama.cpp: 13.0x and 18.9x decode, prefill down 79% and 80%, inflated by llama.cpp page faults once GPU allocations starve the unified-memory file cache. RTX 4090 24 GB, 256 GB host RAM, PCIe 4.0 (they quote 32 GB/s), float16 experts with int4 as the low-precision copy, vs MoE-Offloading: 3.21x and 3.29x decode, prefill down 51% and 54%. Vs MoE-Infinity on the same 4090: 2.30x and 3.92x decode, prefill down 14% and 29%. RTX 4090 plus CPU compute vs Fiddler: 0.99x decode on Mixtral-8x7B and 1.46x on Phi-MoE, prefill down 42% and 85%; their CPU expert is 5 ms vs Fiddler's 3 ms on Mixtral because llama.cpp's CPU GEMM loses to PyTorch. Ablation: dynamic precision loading alone is 1.19x to 1.57x, largest on the Orin and on the bigger Mixtral expert. Prefetch alone on float16 is 1.01x decode on Mixtral and slightly negative on Phi-MoE, and about 1.05x once the low-precision copy exists; prefill drops about 10% because prefill touches every expert and prediction is then perfect. The four-term cache cuts miss penalty 4.69-8.68% vs LRU and 2.13-4.19% vs LFU. Accuracy (Table 3): Mixtral float16 to float16+int4 moves GSM8K from 0.52 to 0.51 and TruthfulQA truth/info from 0.49/0.94 to 0.49/0.93; Phi-MoE float16 to float16+int4 moves GSM8K from 0.83 to 0.82. They also report that quantizing under 20% of experts costs at most 1% perplexity, while a 10% expert-skip costs more than 1%.",
+  "adoption": "research-only",
+  "open_weights": null,
+  "code_url": null,
+  "notes": "VENUE: the abs page has no comment and Crossref on 2026-10-18 returned no proceedings deposit, so venue stays arxiv-preprint. Year is the v2 revision year. CODE: the paper says the system is 8,000 lines on llama.cpp but the HTML links no repository, and a GitHub search on 2026-10-18 found none, so code_url is null and open_weights is null rather than false. WHAT TRANSFERS to a hand-written stack that already streams routed experts from RAM: (1) store a second, 4x-smaller copy of each routed expert and fetch that copy when the gate says the expert is not the top one \u2014 this is the only lever that attacks bytes per miss, which is the actual bottleneck once loading is 85% or more of the step; (2) the importance test is the gate scalar, not a profile, and the top-ranked expert is never quantized, which is why GSM8K moves by 0.01; (3) prefetch of the next layer from this layer's gate input is accurate (96% top-1) but still loses unless the speculative copy is the small one, because a DMA cannot be cancelled; (4) keep two cache pools and prefer retaining experts that have been used at high precision, since a high-precision miss costs 4x a low-precision miss at int4-for-float16. WHAT DOES NOT TRANSFER: the 9.93x and the 13-19x vs llama.cpp are Jetson unified-memory results where the baseline is paging off a slow SSD, not a discrete GPU with the checkpoint already in host RAM. On the 4090 with 256 GB host RAM the honest gains are 2.3-3.9x against MoE-Infinity and MoE-Offloading, at batch 1, on Mixtral-8x7B (top-2 of 8) and Phi-MoE (top-2 of 16). The decode-time prefetch gain is only about 1.05x; almost all the speed is the smaller miss, not the overlap. The low-precision copy is a second resident copy, so host RAM must hold both, and there is no measured path for fine-grained experts (64-256 per layer) where the gate-magnitude proxy and the 96% next-layer prediction were not tested. Expert compute stays in llama.cpp's own GEMM; they do not contribute a low-bit kernel, and on the CPU path that GEMM is slower than PyTorch (5 ms vs 3 ms)."
+}
