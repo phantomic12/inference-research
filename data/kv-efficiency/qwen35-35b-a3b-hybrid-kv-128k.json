@@ -1,0 +1,28 @@
+{
+  "id": "qwen35-35b-a3b-hybrid-kv-128k",
+  "type": "kv_efficiency",
+  "name": "Qwen3.5-35B-A3B hybrid KV at 128K versus full GQA",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-18",
+  "sources": [
+    "mbl-cfg-qwen3-5-35b-a3b"
+  ],
+  "model": "Qwen3.5-35B-A3B (models/qwen3-5-35b-a3b)",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 131072,
+  "kv_bytes_per_token": 20480,
+  "kv_bytes_per_token_basis": "config.json via models/qwen3-5-35b-a3b: 40 layers, of which 10 are full_attention (indices 3,7,11,15,19,23,27,31,35,39) and 30 are linear_attention (Gated DeltaNet, fixed recurrent state, no growing KV). Full-attention KV = 10 layers x 2 kv heads x head_dim 256 x 2 tensors x 2 bytes (bf16) = 20,480 B/token. If all 40 layers were cached as GQA at the same heads and head_dim: 40 x 2 x 256 x 2 x 2 = 81,920 B/token, a 4.0x reduction (81920/20480). The linear layers are not free of state, but that state does not grow with context, so it is excluded from kv_bytes_per_token the same way the model record excludes it.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "hybrid",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Derived from the model config, not a timed run. No timed run was published for this record, so both measured_* fields are null. engine_id is llama-cpp only to name the engine that serves this checkpoint; it did not produce the number. context_length 131072 is the length the footprint comparison is stated at; the model max_position_embeddings is 262144. Geometry source is the catalog config snapshot mbl-cfg-qwen3-5-35b-a3b, cross-checked against the model record that already stores kv_cache_bytes_per_token=20480.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Closes the hybrid-attention footprint gap for the small Qwen3.5 MoE, which the catalog tracks but no kv_efficiency row covers. REDUCTION VERSUS FULL GQA ON THE SAME SKELETON: 4.0x (81,920 vs 20,480 B/token), because only every 4th layer caches KV. AT 128K: 131072 x 20480 = 2.68e9 bytes, 2.50 GiB of growing KV. The same context as full GQA would be 10.0 GiB. That is what lets a 35B-total / 3B-active model hold 128k on a 16-24 GB consumer card beside the quantized weights; the previous-generation Qwen3-30B-A3B stores 98,304 B/token (models/qwen3-30b-a3b), 4.8x more per token, so 128k of its KV is 12.0 GiB. No quality delta is claimed: the linear layers are the architecture, not a lossy compression of a full cache. No speed is attached because this run did not find a published long-context tok/s for this checkpoint that was not already a catalog benchmark."
+}

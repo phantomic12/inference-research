@@ -1,0 +1,29 @@
+{
+  "id": "turboquant-llama31-8b-3p5bit-kv",
+  "type": "kv_efficiency",
+  "name": "TurboQuant 3.5-bit KV on Llama-3.1-8B quality-neutral",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-18",
+  "sources": [
+    "arxiv-2504-19874-turboquant",
+    "google-research-turboquant-blog"
+  ],
+  "model": "Llama-3.1-8B-Instruct (models/llama-3-1-8b)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 104000,
+  "kv_bytes_per_token": 28672,
+  "kv_bytes_per_token_basis": "bf16 resident KV from models/llama-3-1-8b is 32 layers x 8 kv heads x head_dim 128 x 2 tensors x 2 bytes = 131,072 B/token. TurboQuant at 3.5 bits per channel is 3.5/16 of that: 131072 x 3.5 / 16 = 28,672 B/token (28 KiB). The 16 in the divisor is the bf16 storage width, not a measured compression ratio. Google Research states the same operating point as at least a 6x KV-memory reduction (16/3.5 = 4.6x on the bit-width alone; their 6x figure includes the layout they measured, not this arithmetic).",
+  "kv_cache_dtype": "turboquant",
+  "attention_variant": "gqa",
+  "prefix_reuse": "none",
+  "quant_method": "turboquant-3.5bit-per-channel",
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "VENDOR CLAIM. The paper result is a research prototype. engine_id is vllm because that is the serving engine that later grew a TurboQuant KV path; this row is not a vLLM benchmark. arXiv:2504.19874 abstract (2025-04-28): KV-cache quantization with absolute quality neutrality at 3.5 bits per channel and marginal quality degradation at 2.5 bits per channel. Google Research blog (2026-03-24) applies the method to needle-in-a-haystack on long context and reports perfect downstream results at a KV-memory reduction of at least 6x; the same post captions the LongBench comparison on Llama-3.1-8B-Instruct. The paper PDF did not load from this host, so no per-benchmark score is copied from a figure. No TTFT or tok/s is stated at a context length, so both measured_* fields stay null. context_length 104000 is the upper end of the document sweep named in the paper abstract page (document size varied from 4k to 104k tokens on Llama-3.1-8B-Instruct), not a serving measurement.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "vendor_claim. Closes the TurboQuant hole: the collection had KIVI 2-bit and FP8 KV, but no TurboQuant row, and the schema already has kv_cache_dtype=turboquant. QUALITY COST, stated rather than scored: absolute quality neutrality at 3.5 bits per channel, marginal degradation at 2.5 bits per channel (paper abstract). The Google blog separately says 3-bit KV with no accuracy compromise on Gemma and Mistral, and perfect needle-in-a-haystack at >=6x less KV memory. Those are author claims; the paper body, which has the LongBench numbers, did not load, so this record does not invent a perplexity delta. FOOTPRINT: 28,672 B/token versus 131,072 bf16, so a 128k context drops from 16 GiB of KV to 3.5 GiB, which is the difference between fitting beside an 8B weight on a 16 GB consumer card and not. The blog also claims 4-bit TurboQuant computes attention logits up to 8x faster than fp32 keys on H100 versus a JAX baseline; that is an attention-logit microbenchmark, not end-to-end tok/s, and it is not recorded as measured_tps_at_ctx. Do not combine the 6x memory claim and the 8x logit claim into one speedup. engine_id is vllm because that is the serving engine with a TurboQuant KV path (kv_cache_dtype turboquant_k8v4); the paper result itself was a research prototype, not a vLLM measurement."
+}

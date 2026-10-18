@@ -1,0 +1,28 @@
+{
+  "id": "lmcache-turboquant-4bit-dram-tier-100k",
+  "type": "kv_efficiency",
+  "name": "LMCache TurboQuant 4-bit KV host-DRAM tier hit rate",
+  "status": "verified",
+  "confidence": 0.65,
+  "updated": "2026-10-18",
+  "sources": [
+    "amd-rocm-4bit-kv-lmcache-mi355x"
+  ],
+  "model": "MiniMax-M2.5 FP8 (not a models/ record; TP=2)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 100000,
+  "kv_bytes_per_token": 134,
+  "kv_bytes_per_token_basis": "VENDOR figure, per token per head, not per token for the whole model. AMD reports the middle-layer TurboQuant slot as packed uint8 at 134 B/token/head, against 512 B/token/head for the bf16 boundary layers (4 of them, left in bf16). 512/134 = 3.82x smaller per head on the quantized layers, which matches their ~3.76x smaller KV statement. The model layer count and head count are not in the post, so a whole-model B/token is not derived. 134 is recorded because it is the only byte figure the source states; see notes.",
+  "kv_cache_dtype": "turboquant",
+  "attention_variant": "hybrid",
+  "prefix_reuse": "custom",
+  "quant_method": "turboquant-4bit-packed-uint8-middle-layers",
+  "measured_ttft_ms_at_ctx": 53000,
+  "measured_tps_at_ctx": null,
+  "methodology": "VENDOR CLAIM. AMD ROCm blog, 2026-08-28. vLLM V1 plus LMCache, ROCm 7.2.3, 2x Instinct MI355X (288 GB HBM each, gfx950), MiniMax-M2.5 FP8, tensor parallel 2. 20-minute replay of 739 anonymized Claude Code sessions, 32 concurrent users, context about 100k tokens, warm shared prefix about 12k tokens, SLO p95 TTFT under 60 s. Equal-memory config C: GPU prefix cache plus a 128 GB CPU-DRAM L2. TurboQuant arm: 385 of 739 requests completed, p95 TTFT 53 s, HBM-resident KV 648,064 tokens, LMCache hit rate 86.8 percent. Same config, bf16 KV: 189 requests, p95 TTFT 140 s, 201,280 tokens resident, hit rate 75.2 percent. measured_ttft_ms_at_ctx is the p95 TTFT (53 s = 53000 ms) at the ~100k context, not a median and not a single-request cold TTFT. No tok/s is published, so measured_tps_at_ctx is null. Bytes moved over the run, HBM to DRAM and back: 1.94 TB TurboQuant vs 3.30 TB bf16.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "vendor_claim. Closes the host-DRAM KV-tiering gap: the collection had vLLM APC and SGLang radix prefix reuse, but no measurement of a CPU-DRAM tier with a hit rate and the bytes it moves. HIT RATE: LMCache L2 hit rate rises from 75.2 percent (bf16) to 86.8 percent (4-bit TurboQuant) at the same HBM+DRAM budget, because 4-bit KV keeps 3.2x more tokens resident in HBM (648,064 vs 201,280). BANDWIDTH: 1.94 TB copied versus 3.30 TB over the same 20 minutes, about 1.7x less data, and 50 s of copy time versus 70 s. QUALITY COST: 4-bit KV within about 1 point of bf16 on the three benchmarks they ran; the DRAM round-trip itself adds essentially nothing (RULER delta +0.4 / -0.1 / 0.0 points at 16k/64k/128k versus the same requests served from HBM). HARDWARE CAVEAT: the measurement is on MI355X, not a consumer card. It is recorded anyway because the quantity that matters for the low-VRAM bias is the DRAM tier, and the post shows the 4-bit working set matching bf16-at-256GB with a 68 GB DRAM tier, a 4x smaller host buffer. MiniMax-M2.5 is not in models/. accelerator_ids is empty because this repo has no MI355X accelerator record, and a dangling id would fail validation. kv_bytes_per_token is per head, not per token for the model; do not multiply it by context as if it were a model-level figure."
+}
