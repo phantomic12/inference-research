@@ -1,0 +1,31 @@
+{
+  "id": "llamacpp-gemma4-26b-a4b-rtx3090-256k",
+  "type": "kv_efficiency",
+  "name": "Gemma 4 26B-A4B on one RTX 3090 at 256K: 83.0 tok/s at 128K and 64.4 tok/s at 256K, the sliding window holding KV to 21,280 B/token",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-18",
+  "sources": [
+    "mbl-cfg-gemma-4-26b-a4b",
+    "hardware-corner-gpu-llm-benchmarks-rtx-3090-2026-03"
+  ],
+  "model": "Gemma 4 26B-A4B (models/gemma-4-26b-a4b; 25 sliding-window layers, window 1024, plus 5 full-attention layers), Q4_K GGUF",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "nvidia-rtx-3090"
+  ],
+  "interconnect_ids": [],
+  "context_length": 262144,
+  "kv_bytes_per_token": 21280,
+  "kv_bytes_per_token_basis": "Effective resident KV at 262,144 tokens, bf16, for an engine that honors the window. text_config: 25 sliding_attention layers, sliding_window 1024, 8 kv heads, head_dim 256; 5 full_attention layers at 0-based indices 5, 11, 17, 23, 29, 2 global kv heads, global_head_dim 512. Sliding: 25 x 8 x 256 x 2 (K+V) x 2 bytes x 1,024 tokens = 209,715,200 B, which is 800 B/token once spread over 262,144 tokens. Full: 5 x 2 x 512 x 2 x 2 = 20,480 B/token, and these layers grow with context. Sum = 800 + 20,480 = 21,280 B/token. The model's published kv_cache_bytes_per_token of 225,280 is the per-token rate if every layer grew. Naive full-context GQA on the local geometry (30 x 8 x 256 x 2 x 2) is 245,760 B/token. 245,760 / 21,280 = 11.55x.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "sliding",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": 64.4,
+  "methodology": "THIRD-PARTY MEASURED speed, derived footprint. Hardware Corner RTX 3090 per-card page, tables dated March 2026, llama.cpp llama-bench, single RTX 3090 24 GB, batch-1 per-request. Gemma4 26B (Q4_K) token-generation row, the only model on the page with a filled 256k cell: 119.4 t/s at 4k, 115.0 at 16k, 107.5 at 32k, 98.9 at 64k, 83.0 at 128k, 64.4 at 256k. Prompt processing at 256k is 671.4 t/s (3,625.6 at 4k, 1,147.1 at 128k). measured_tps_at_ctx is the 256k token-generation cell, which is the context_length this record states. measured_ttft_ms_at_ctx is null: the page publishes prefill tok/s, not a time-to-first-token. The page does not print a llama.cpp build hash or the flash-attention flag on this row (the Qwen3 rows on the same card annotate CUDA, -fa 1). KV dtype is the bf16 geometry from config.json; the Q4_K is the weight quant and the page does not say the cache was quantized. The figure assumes llama.cpp keeps the rotating window its Gemma-4 architecture class declares; an engine that ignores sliding_window allocates the full 225,280 B/token instead.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "Closes the missing speed on a footprint the collection already derived. gemma4-26b-a4b-swa-128k-effective-kv computes 22,080 B/token at 128K and leaves both measured fields null, and it says so. This is the same skeleton on a 24 GB card, timed. AT 256K: 262,144 x 21,280 = 5.20 GiB of resident KV, against 60.00 GiB for the naive full-context GQA and 55.00 GiB for the no-window allocation \u2014 neither fits a 3090, and the model still decodes at 64.4 tok/s. AT 128K the same run is 83.0 tok/s with 22,080 B/token (2.70 GiB). The decode cliff is shallow for a 64x jump in context: 119.4 tok/s at 4k to 64.4 at 256k, 1.85x, because 25 of 30 layers read a fixed 1,024-token window and only the 5 global layers grow. Prefill falls harder, 3,625.6 to 671.4 t/s (5.4x), which is the global-layer prefill plus the windowed prefill of a 26B MoE, not the KV read. No quality cost: the window is the architecture, not a truncation of a full cache. The same page's dense Gemma4 31B dies at 32k (31.4 tok/s, no 64k cell), which is the comparison that makes the window the reason rather than the card."
+}
