@@ -1,0 +1,25 @@
+{
+  "id": "moe-core-prefetch-depth-and-full-layer-baseline",
+  "type": "gotcha",
+  "name": "Prefetching more than one predicted expert, and quoting a full-layer-prefetch baseline, both misstate the MoE-CORE decode result",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-18",
+  "sources": [
+    "pap-moe-core-arxiv"
+  ],
+  "class": "measurement",
+  "affects": [],
+  "concepts": [
+    "moe",
+    "expert-offload",
+    "prefetch",
+    "host-ram",
+    "decode"
+  ],
+  "symptom": "A hand-written expert-offload decode loop that prefetches the top three predicted experts of the next layer is slower than the same loop prefetching one, and a reported 30x decode speedup against 'vLLM prefetch' does not survive contact with a load-on-demand baseline at the same output cap.",
+  "root_cause": "MoE-CORE (arXiv:2610.01950) bounds the prefetch count by how many expert copies the overlap window can hide: remaining compute of the current layer plus attention of the next, minus launch overhead, times host-to-device bandwidth, divided by expert bytes. On DeepSeek-V4-Flash-W4A8, GSM8K, batch 1, that window fits about one expert. Measured TPOT is 42.6 ms with no prefetch, 36.0 ms at depth one, 35.9 ms at depth two, and 36.5 ms at depth three, while exact hit rate only moves from 92.43% to 93.81% to 94.05%. The third copy is no longer hidden, so it adds latency. Separately, Table 1's vLLM prefetch column stages complete expert layers (two resident plus two rotating buffers on DeepSeek) and is capped at 128 output tokens against 1K for MoE-CORE and load-on-demand, so its 1268.9-1269.1 ms DeepSeek TPOT and 5941.5-5941.8 ms GLM TPOT are not the same measurement. The paper's own load-on-demand column, same 1K cap, is the comparable one: 62.1-70.6 ms versus 38.0-44.8 ms on DeepSeek (1.39-1.75x) and 229.1-244.8 ms versus 206.6-220.5 ms on GLM.",
+  "workaround": "Cap speculative expert copies at the overlap window, and start at one expert per layer; add a second only if a measurement shows the copy still finishes before the next gate. Quote decode speedups against synchronous load-on-demand at the same output length, not against a baseline that transfers a whole expert layer per step. Treat the approximate-substitution path as optional: it lifted effective availability from 92.43% to 99.972% but raised batch-1 TPOT from 36.0 to 37.7 ms.",
+  "severity": "major",
+  "notes": "Numbers are the authors' measurements on one Ascend 950PR under an 84 GB NPU-memory cap, read from the arXiv HTML on 2026-10-18. The depth sweep and the 36.0 ms ablation figure are a different configuration from Table 1's 38.0-44.8 ms DeepSeek band; both are reported and neither is reconciled in the text. No GPU or PCIe bandwidth is stated, so the one-expert default is a property of that platform's overlap window, not a universal constant."
+}
