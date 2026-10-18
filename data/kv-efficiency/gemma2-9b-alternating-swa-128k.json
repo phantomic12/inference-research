@@ -1,0 +1,30 @@
+{
+  "id": "gemma2-9b-alternating-swa-128k",
+  "type": "kv_efficiency",
+  "name": "Gemma 2 9B alternating sliding window at 128K: 177,408 B/token effective, 1.94x under the naive full cache",
+  "status": "verified",
+  "confidence": 0.84,
+  "updated": "2026-10-18",
+  "sources": [
+    "gemma2-report-alternating-swa",
+    "model-fr-hf-config-gemma-2-9b",
+    "model-fr-gemma-2-report"
+  ],
+  "model": "Gemma 2 9B (models/gemma-2-9b; 42 layers, 8 kv heads, head_dim 256, sliding_window 4096, alternating local/global)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 131072,
+  "kv_bytes_per_token": 177408,
+  "kv_bytes_per_token_basis": "Effective resident KV at 131,072 tokens, bf16, for an engine that honors the alternating pattern. models/gemma-2-9b stores the naive rate: 42 layers x 8 kv heads x 256 head_dim x 2 (K+V) x 2 bytes = 344,064 B/token, which is what an engine pays when it ignores sliding_window. Gemma 2 interleaves local and global 1:1, so 21 layers are global and 21 are local with window 4096. Global: 21 x 8 x 256 x 2 x 2 = 172,032 B/token, growing with context. Local layers at the full rate would be the same 172,032 B/token; the window caps them at 4096 tokens, so 172,032 x 4096 = 704,643,072 B total, which spread over 131,072 tokens is 5,376 B/token. Sum = 172,032 + 5,376 = 177,408 B/token. 344,064 / 177,408 = 1.94x. The model-record note says 'about half'; half of 344,064 is 172,032, the global layers alone, and the local window adds the remaining 5,376.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "sliding",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Derived from models/gemma-2-9b (42 layers, 8 kv heads, head_dim 256, sliding_window 4096) plus the Gemma 2 report's 1:1 local/global interleave. Not a timed run, so both measured fields stay null. The config snapshot model-fr-hf-config-gemma-2-9b confirms sliding_window 4096; it does not list per-layer types, so the 21/21 split is the report's alternating pattern, which the model record already restates. context_length 131072 is the comparison point used by the other hybrid rows. Gemma 2 9B's trained context is 8192, so the 128K figure is the cache cost if the window were the only limit, not a context the model was trained to use.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Closes the alternating-window gap for a catalog model whose naive KV rate is the most expensive small-model figure in the collection. models/gemma-2-9b stores 344,064 B/token and warns that the real cache is about half because local layers keep only 4096 tokens. This row computes that half. REDUCTION VERSUS FULL GQA ON THE SAME SKELETON: 344,064 / 177,408 = 1.94x at a 128K comparison point. The global 21 layers dominate (172,032 B/token); the 21 local layers add 5,376 B/token once their 4096-token window is spread over 128K. AT 8K, which is the context Gemma 2 9B was actually trained for: the local window is half the context (4096/8192), so the local layers contribute 172,032 x 4096 / 8192 = 86,016 B/token and the total is 258,048 B/token, a 1.33x reduction against 344,064. Absolute cache at 8K is 2.01 GiB instead of 2.69 GiB. The interesting saving is at long context, where the local half stops growing: at 32K the effective rate is 172,032 + 172,032 x 4096/32768 = 193,536 B/token, 1.78x under the naive rate, and the cache is 6.19 GiB instead of 11.0 GiB. That is the difference between holding a long Gemma 2 context on a 24 GB card and the naive allocation using the card for cache alone. No quality cost: the window is trained, not a compression. CAVEAT: Gemma 2 was not trained past 8192, so the 128K column is a footprint comparison, not a usable context. An engine that ignores sliding_window still allocates 344,064 B/token, which is the overpay the model record already flags. The 21/21 split is the report's alternating pattern; the config confirms the window size but does not enumerate per-layer types."
+}

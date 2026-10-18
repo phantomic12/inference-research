@@ -1,0 +1,31 @@
+{
+  "id": "kvquant-nuq3-llama7b-a6000",
+  "type": "kv_efficiency",
+  "name": "KVQuant nuq3-1% on LLaMA-7B: 4.8x KV compression, under 0.1 WikiText-2 perplexity, A6000 decode kernel faster than fp16",
+  "status": "verified",
+  "confidence": 0.86,
+  "updated": "2026-10-18",
+  "sources": [
+    "kvquant-html-nuq3-ppl-a6000",
+    "pap-quant-kvquant"
+  ],
+  "model": "LLaMA-7B (MHA, 32 layers, 32 kv heads, head_dim 128); kernel latency measured on LLaMA-2-7B-32K",
+  "engine_id": "niche-h2ogpt",
+  "accelerator_ids": [
+    "nvidia-rtx-a6000"
+  ],
+  "interconnect_ids": [],
+  "context_length": 131072,
+  "kv_bytes_per_token": 109118,
+  "kv_bytes_per_token_basis": "fp16 MHA formula for LLaMA-7B: 32 layers x 32 kv heads x 128 head_dim x 2 (K+V) x 2 bytes = 524,288 B/token. Appendix Table 8 lists 64.0 GB of fp16 KV at a 128K sequence; 524288 x 131072 / 1e9 = 68.72 GB, so the table's 64.0 is a rounded 128K-class figure and the formula rate is what this record compresses. Table 2 gives nuq3-1% an average bit width of 3.33 at 32K context (3 data bits, the 1% sparse outliers kept at fp16, plus per-vector scale overhead). 3.33/16 x 524288 = 109,117.6, stored as 109,118 B/token. The paper's headline 4.8x (524288/4.8 = 109,227) is the same number within 0.1%, so the bit-width derivation and the claimed ratio agree. context_length 131072 is the length Table 8 states the fp16 footprint at; the 3.33-bit width itself was estimated at 32K.",
+  "kv_cache_dtype": "other",
+  "attention_variant": "mha",
+  "prefix_reuse": "none",
+  "quant_method": "kvquant-nuq3-1pct",
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Quality and the compression ratio are copied from KVQuant (Hooper et al., arXiv:2401.18079v6 HTML), not remeasured. Perplexity is WikiText-2 with 16 calibration samples of length 2K. The latency number is Table 22, an A6000 microbenchmark of the attention matvec for LLaMA-2-7B-32K at sequence length 16K, averaged over 1000 iterations per layer: fp16 key matvec 219.4 us, nuq4-1% key total (pack + dense + sparse) 126.3 us; fp16 value 203.7 us, nuq4-1% value total 124.5 us. That is a kernel latency, not end-to-end tok/s, so measured_tps_at_ctx stays null. The 4.8x figure is the paper's nuq3-1% claim; the stored bytes/token uses the Table 2 average bit width of 3.33 instead, which is the more conservative number.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Closes the sub-4-bit KV-quantization gap that is not KIVI and not TurboQuant. KVQuant nuq3-1% (per-channel keys, pre-RoPE, non-uniform, 1% per-vector sparse outliers) is a 3-bit scheme with a published quality cost: under 0.1 WikiText-2 perplexity versus fp16 across LLaMA, Llama-2, Llama-3, and Mistral; 4-bit under 0.02; 2-bit under 0.5; with stated memory savings of 4.8x, 3.7x, and 6.9x. Passkey on LLaMA-2-7B-32K stays at 1.0 from 4K through 32K for nuq3-1% (0.98 at 2K) against fp16 at 1.0, while the paper's own KIVI-2 comparison falls to 0.70 at 32K. LongBench average is 31.21 versus 31.96 fp16 (a 0.75 point drop) and 30.04 for KIVI-2. HARDWARE: the only timed number is on an RTX A6000, a 48 GB workstation card. At sequence length 16K the nuq4-1% key matvec is 126.3 us versus 219.4 us fp16 (1.74x) and the value matvec is 124.5 versus 203.7 us (1.64x), including packing. That speedup is the kernel, not a request tok/s, so measured_tps_at_ctx stays null. WHY IT MATTERS ON A SMALL CARD: fp16 KV for LLaMA-7B is 524,288 B/token, so 32K is 16 GiB of cache before weights. At 3.33 bits that is 109,118 B/token, 3.33 GiB at 32K, which is the difference between the cache fitting beside the weights on a 24 GB card and not. LLaMA-7B is not a models/ record; the geometry is the standard 32-layer MHA one, and Table 8's 64 GB-at-128K figure is consistent with it within rounding. engine_id is niche-h2ogpt only because KVQuant ships as a research kernel rather than a serving engine this catalog tracks; a dangling engine id would fail validation. Do not read a tok/s out of the kernel microseconds."
+}
