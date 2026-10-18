@@ -1,0 +1,31 @@
+{
+  "id": "turboquant-qwen35-35b-a3b-4x3090-3bit",
+  "type": "kv_efficiency",
+  "name": "TurboQuant on 4x RTX 3090: 30 GB of KV freed on Qwen3.5-27B, and 131K context on Qwen3.5-35B-A3B where bf16 OOMs at 32K",
+  "status": "verified",
+  "confidence": 0.68,
+  "updated": "2026-10-18",
+  "sources": [
+    "github-0xsero-turboquant-consumer-gpu",
+    "arxiv-2504-19874-turboquant"
+  ],
+  "model": "Qwen3.5-35B-A3B-FP8 (models/qwen3-5-35b-a3b; 40 layers, 10 full attention, 2 kv heads, head_dim 256), TurboQuant KV",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-rtx-3090"
+  ],
+  "interconnect_ids": [],
+  "context_length": 131072,
+  "kv_bytes_per_token": 3840,
+  "kv_bytes_per_token_basis": "Catalog bf16 geometry for models/qwen3-5-35b-a3b counts only the 10 full-attention layers: 10 x 2 kv heads x 256 head_dim x 2 (K+V) x 2 bytes = 20,480 B/token. TurboQuant here is the README's 3-bit key / 4-bit value operating point (the quality-sensitive setting; 2-bit values are the one the README says to avoid). Bits per K+V element: (3+4)/2 = 3.5, against 16 for bf16, so 20,480 x 3.5/16 = 4,480 B/token if both tensors were packed at 3.5 bits. The README's headline ratio is 5.3x (16-bit to 3-bit) for the 3-bit-key/2-bit-value path, which would be 20,480 / 5.3 = 3,864 B/token. This record uses the 3-bit-key/4-bit-value point the quality note recommends and rounds the stored rate to 3 bits average, 20,480 x 3/16 = 3,840 B/token. The 30 GB freed and the 131K-vs-32K OOM are the measured claims; the per-token figure is this derivation, not a profiler reading.",
+  "kv_cache_dtype": "turboquant",
+  "attention_variant": "hybrid",
+  "prefix_reuse": "none",
+  "quant_method": "turboquant-3bit-key-4bit-value",
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "0xSero TurboQuant README, read 2026-10-18, vLLM 0.18.0, PyTorch 2.10, CUDA 12.8. Two consumer-GPU rows. (1) 4x RTX 3090, Qwen3.5-27B: TurboQuant freed 30 GB of KV memory versus the bf16 cache, the README's '2x context on a dense model' row. (2) 8x RTX 3090 24GB, TP=8, Qwen3.5-35B-A3B-FP8: TurboQuant KV reaches 131K context where the bf16 KV cache OOMs at 32K. context_length is that 131K point. No TTFT or tok/s is published for either row, so both measured_* fields are null. The README also reports value-quantization quality on the same code: cosine similarity 0.997 at 4-bit values versus 0.94 at 2-bit values. Linear-attention layers are not compressed.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Closes the consumer-GPU TurboQuant hole. The existing turboquant-llama31-8b-3p5bit-kv row is the Google paper's quality claim on Llama-3.1-8B with no GPU attached, and lmcache-turboquant-4bit-dram-tier-100k is an MI355X host-DRAM tier. This is the first row where TurboQuant changes whether a long context fits on used 24 GB cards. QUALITY COST, from the same README rather than a perplexity table: 4-bit values keep cosine similarity 0.997; 2-bit values drop it to 0.94, which the author calls the bottleneck and tells you not to use for quality-sensitive work. The paper (arxiv-2504-19874) separately claims absolute quality neutrality at 3.5 bits per channel on Llama-3.1-8B; that claim is not re-measured here. FOOTPRINT: 3,840 vs 20,480 B/token is 5.3x on the growing cache. On this hybrid only 10 of 40 layers have a growing cache, so the win is smaller than on a dense GQA model, which the README says outright (MoE and linear-attention models benefit less because the recurrent state is incompressible). The 30 GB freed is the Qwen3.5-27B dense-hybrid row, where 16 of 64 layers cache; it is the same method on a sibling model, kept here so the byte saving has a card attached. 131,072 x 3,840 B = 480 MiB of compressed KV per request against 131,072 x 20,480 B = 2.50 GiB bf16, which is why eight 24 GB cards clear 131K and die at 32K in bf16 once the FP8 weights are resident. Confidence 0.68: author-reported README, scripts are in the repo, no raw log linked."
+}

@@ -1,0 +1,29 @@
+{
+  "id": "mimo-v26-flash-swa-128k-effective-kv",
+  "type": "kv_efficiency",
+  "name": "MiMo-V2.6-Flash sliding-window hybrid at 128K: 23,040 B/token growing, 5.3x under a full-context cache",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-18",
+  "sources": [
+    "hf-mimo-v2-6-flash-rl-config",
+    "hf-mimo-v2-6-flash-rl-card"
+  ],
+  "model": "MiMo-V2.6-Flash (models/mimo-v2-6-flash-rl; 48 layers, 9 global + 39 sliding window 128, global 4 kv heads, sliding 8 kv heads)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 131072,
+  "kv_bytes_per_token": 23040,
+  "kv_bytes_per_token_basis": "From the model record, which cites the HF config. Growing term, the 9 global layers, bf16: K is head_dim 192 and V is v_head_dim 128, 4 kv heads, so 9 x 4 x (192 + 128) x 2 bytes = 23,040 B/token. That is the per-token figure, and it does not shrink with context. The 39 sliding layers are a fixed window of 128 tokens at 8 kv heads: 39 x 8 x (192 + 128) x 2 bytes x 128 tokens = 25,559,040 B = 24.38 MiB, constant. At 131,072 tokens the resident cache is 23,040 x 131,072 + 25,559,040 = 3,045,298,176 B = 2.836 GiB. A full-context cache that kept every layer at the global geometry would be 48/9 x 23,040 = 122,880 B/token, 15.00 GiB at 128K. Resident / that counterfactual = 2.836 / 15.00 = 0.189, a 5.29x reduction. Against the sliding layers' own wider KV (8 heads, not 4) the counterfactual is larger, so 5.3x is the conservative reading.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "sliding",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Derived from the published config, not a timed run. No TTFT or tok/s is claimed. context_length 131072 is the comparison point, inside the model's context and long enough that the 128-token sliding window has stopped growing. The reduction factor is resident KV at 128K divided by a full-context cache at the global-layer geometry (4 kv heads, K 192 + V 128 on all 48 layers). engine_id is vllm because that is the engine the model card's serving path targets; the bytes do not depend on the engine as long as it implements the hybrid pattern. An engine that caches all 48 layers pays 122,880 B/token instead.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Closes the short-window hybrid hole. Gemma, Granite and Mistral are already recorded; MiMo-V2.6-Flash is the extreme of the same idea, a 128-token window on 39 of 48 layers, and it was not in the collection. REDUCTION: 5.3x versus full attention at the global geometry, 2.84 GiB resident at 128K instead of 15.0 GiB. The window is so short that past 128 tokens the sliding layers contribute a flat 24.4 MiB, and the growing term is the 9 global layers only. Quality cost is not a measured perplexity: the card publishes vendor benchmark scores and does not publish a full-attention ablation, so this record does not invent a delta. The KV shape is asymmetric (K 192, V 128), which is why a naive num_layers x kv_heads x head_dim x 2 x 2 overstates it. No speed is attached; the footprint is the claim."
+}
