@@ -1,0 +1,31 @@
+{
+  "id": "vllm-qwen35-9b-hybrid-kv-40k-measured",
+  "type": "kv_efficiency",
+  "name": "Qwen3.5-9B hybrid KV at 40K, measured decode vs dense Qwen3-8B",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-18",
+  "sources": [
+    "sotaaz-kv-measured-qwen35-9b-a100",
+    "hf-config-qwen3-5-9b"
+  ],
+  "model": "Qwen3.5-9B (Qwen/Qwen3.5-9B, hybrid Gated DeltaNet, 32 layers, 8 full-attention)",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-a100-80gb-pcie"
+  ],
+  "interconnect_ids": [],
+  "context_length": 40960,
+  "kv_bytes_per_token": 32768.0,
+  "kv_bytes_per_token_basis": "Derived from the official config.json: only the 8 full-attention layers cache KV. 8 layers x 4 kv heads x head_dim 256 x 2 (K and V) x 2 bytes (bf16) = 32,768 B/token. A dense GQA model with all 32 layers would be 131,072 B/token, so the hybrid layout is exactly 4x smaller. The 24 linear-attention layers keep a fixed recurrent state instead of a per-token cache: 24 layers x (16 key heads x 128 + 32 value heads x 128) x 4 bytes (the config stores it in fp32) = 589,824 bytes, 0.56 MiB, constant in context length.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "hybrid",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": 69.7,
+  "methodology": "vLLM 0.28.0 (+cu129) on one A100 80GB PCIe (driver 535.288.01, CUDA 12.2), transformers 5.16.1. Qwen3.5-9B and Qwen3-8B both bf16, max_model_len 40960, gpu_memory_utilization 0.90, batch 1. Decode throughput measured at 32,768 and 40,960 tokens of context. The byte rate is computed from config; the speed and the concurrency ratio are the authors own runs.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Third-party measurement, not a vendor claim. Closes the measured-speed gap for the hybrid class: the collection had derived byte rates for hybrid models (qwen35-35b-a3b, granite-4, gemma-4) but no timed decode at a stated context. At 40,960 tokens Qwen3.5-9B decodes at 69.7 tok/s against Qwen3-8B at 56.3 tok/s, and at 32,768 it is 93.9 against 63.4. The gap widens with context, which is what a cache that only grows on 8 of 32 layers should do. CONCURRENCY, the number that matters on a small card: the same 54.94 GiB of free memory holds 35.1 concurrent 40K requests for the hybrid model and 9.77 for the dense one, a 3.6x advantage. REDUCTION VERSUS FULL GQA ON THE SAME SKELETON: 131,072 / 32,768 = 4.0x, and it does not depend on context length because the linear layers contribute a fixed 0.56 MiB rather than a windowed cache. Absolute bf16 cache at 40K is 1.25 GiB instead of 5.0 GiB. CAVEAT: the linear-attention state is fp32 in the config and is not included in the per-token rate; at 0.56 MiB it does not move the comparison. No quality delta is stated, because the hybrid layout is how the model was trained, not a codec applied afterwards. The card is an A100 80GB, above the consumer-GPU preference, but the quantity measured is the cache footprint and the single-stream decode it produces, and both transfer to a smaller card."
+}

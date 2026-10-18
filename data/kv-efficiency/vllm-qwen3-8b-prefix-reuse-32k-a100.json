@@ -1,0 +1,30 @@
+{
+  "id": "vllm-qwen3-8b-prefix-reuse-32k-a100",
+  "type": "kv_efficiency",
+  "name": "vLLM prefix caching on Qwen3-8B: 9.58x at 32K shared, nothing past the cache",
+  "status": "verified",
+  "confidence": 0.76,
+  "updated": "2026-10-18",
+  "sources": [
+    "sotaaz-kv-measured-qwen35-9b-a100"
+  ],
+  "model": "Qwen3-8B (Qwen/Qwen3-8B, dense GQA, 36 layers, 8 kv heads, head_dim 128)",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-a100-80gb-pcie"
+  ],
+  "interconnect_ids": [],
+  "context_length": 32768,
+  "kv_bytes_per_token": 147456.0,
+  "kv_bytes_per_token_basis": "Derived from the official config.json: 36 layers x 8 kv heads x head_dim 128 x 2 (K and V) x 2 bytes (bf16) = 147,456 B/token. This is the unreduced dense-GQA rate; prefix caching changes how often the cache is recomputed, not how many bytes a token occupies, so the byte rate is stated only to size the cache the hit rate is measured against.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "gqa",
+  "prefix_reuse": "apc",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "vLLM 0.28.0 (+cu129) on one A100 80GB PCIe (driver 535.288.01, CUDA 12.2), transformers 5.16.1, Qwen3-8B bf16, max_model_len 40960, gpu_memory_utilization 0.90. Prefix workload: 32 requests sharing a prefix, each with a 256-token unique suffix and 64 output tokens, greedy. Speedup measured at shared-prefix lengths of 512, 2048, 8192 and 32768 tokens. A second run used 64 distinct 8,192-token documents (540,672 tokens) against a cache that holds 400,032 tokens.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Third-party measurement, not a vendor claim. Closes the measured-hit-rate gap for automatic prefix caching: the collection has two SGLang radix rows but nothing for vLLM APC, and nothing that shows the speedup scaling with prefix length. MEASURED REUSE: wall-clock speedup of 1.00x at 512 shared tokens, 1.62x at 2,048, 3.02x at 8,192 and 9.58x at 32,768 shared tokens. The 9.58x is a prefill speedup, not a capacity gain; the post is explicit that the cache holds the same number of tokens either way. THE CLIFF: a working set of 64 documents totalling 540,672 tokens against a 400,032-token cache, only 35 percent over capacity, gave a second-pass speedup of 0.996x. First pass 49.458 seconds, second pass 49.652. Crossing the cache boundary did not cost a fraction of the benefit, it cost all of it, because every document had been evicted before it came around again. That is the number a long-context deployment on a small card needs: prefix caching pays only while the working set fits. CAVEAT: the card is an A100 80GB. The shape of the result (speedup grows with prefix length, then drops to nothing past capacity) is a property of the cache policy and transfers; the absolute 9.58x does not, because it depends on prefill cost on that GPU."
+}

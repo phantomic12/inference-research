@@ -1,0 +1,29 @@
+{
+  "id": "gemma3n-e2b-shared-kv-swa-32k",
+  "type": "kv_efficiency",
+  "name": "Gemma 3n E2B shared-KV sliding window at 32K",
+  "status": "verified",
+  "confidence": 0.74,
+  "updated": "2026-10-18",
+  "sources": [
+    "hf-config-gemma3n-e2b-unsloth",
+    "model-fr-google-gemma-3n-doc"
+  ],
+  "model": "Gemma 3n E2B (google/gemma-3n-E2B-it, 30 layers, 2 kv heads, head_dim 256, sliding_window 512, 10 KV-shared layers)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 32768,
+  "kv_bytes_per_token": 17408.0,
+  "kv_bytes_per_token_basis": "Derived from the unsloth mirror of the config, because the official repo is license-gated. Of 30 layers only the first 20 allocate KV (num_kv_shared_layers 10); those 20 split into 16 sliding-window layers and 4 full layers. Per layer, per token, a full layer costs 2 kv heads x head_dim 256 x 2 (K and V) x 2 bytes = 2,048 B. At context C the effective rate is (16 x 2,048 x 512 + 4 x 2,048 x C) / C. At C = 32,768 that is 17,408 B/token. The naive rate with every layer full and unshared is 30 x 2,048 = 61,440 B/token.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "sliding",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "No engine was timed. The byte rate is derived from config.json (text_config: 30 layers, 8 query heads, 2 kv heads, head_dim 256, sliding_window 512, num_kv_shared_layers 10, layer_types 24 sliding plus 6 full, max_position_embeddings 32768) and the reduction is computed from it. vllm is named because it is the engine the catalog uses for derived attention rows and it implements Gemma 3n; the config itself names no engine. The config was read from the unsloth mirror on 2026-10-18.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Closes the KV-sharing gap. The collection has sliding-window rows (Gemma 2, Gemma 3, Gemma 4, Mistral) but none where later layers reuse an earlier layers KV instead of allocating their own, and Gemma 3n is the catalog model that does it. TWO REDUCTIONS, KEPT SEPARATE. KV sharing alone is 30/20 = 1.5x, and it is the part that does not depend on context length. The sliding window on the 16 local layers is the rest: at 32,768 tokens the combined effective rate is 17,408 B/token against a naive 61,440, which is 3.53x overall. The window part grows with context and the sharing part does not, so quoting only the 3.53x would overstate the saving at short context. ABSOLUTE: the bf16 cache at 32K is 0.53 GiB instead of 1.88 GiB, which is what lets the E2B hold a 32K context on a 4-6 GB card next to its weights. The catalog model record lists kv_cache_bytes_per_token 61,440, the naive figure, so this row is the effective one. CAVEATS: the config is a mirror (the official file is gated), the first-20-layers reading of num_kv_shared_layers follows the field name and the model record rather than a profiler trace, and no quality cost is stated because both the window and the sharing are trained in. Googles own doc (model-fr-google-gemma-3n-doc) describes per-layer embeddings cached to fast storage, which is a weight-side saving and is not counted here."
+}
