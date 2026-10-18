@@ -1,0 +1,30 @@
+{
+  "id": "llama-cpp-gptoss20b-rtx3090-fa-131k",
+  "type": "kv_efficiency",
+  "name": "RTX 3090 gpt-oss-20B MXFP4 Flash Attention decode at 131k",
+  "status": "verified",
+  "confidence": 0.65,
+  "updated": "2026-10-18",
+  "sources": [
+    "hardware-corner-gptoss-20b-rtx3090-fa-sweep"
+  ],
+  "model": "gpt-oss-20B MXFP4 (lmstudio-community gpt-oss-20b-MXFP4.gguf; models/gpt-oss-20b)",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "nvidia-rtx-3090"
+  ],
+  "interconnect_ids": [],
+  "context_length": 131000,
+  "kv_bytes_per_token": 49152,
+  "kv_bytes_per_token_basis": "Taken from models/gpt-oss-20b, which already derives the resident bf16 KV as 49,152 B/token: 12 full-attention layers (of 24) x 8 kv heads x head_dim 64 x 2 tensors x 2 bytes. The other 12 layers are sliding-window attention with window 128, so their KV is bounded by the window rather than by context length and is not in this per-token figure. This record does not recompute a different number; the 131k cell is a speed measurement at that geometry.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "hybrid",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": 60.0,
+  "methodology": "THIRD-PARTY MEASURED. Hardware Corner, Allan Witt, Linux llama.cpp server with Flash Attention, table updated 2025-10-26. Single RTX 3090 24 GB, full GPU offload, model lmstudio-community gpt-oss-20b-MXFP4.gguf. Context column 131,000 tokens: prompt processing 402.27 tok/s, token generation 60 tok/s. One stream, not an aggregate across concurrent requests. The page does not publish the llama.cpp build, the flash-attention flag, batch size, or the prompt and generation lengths inside the cell, so measured_tps_at_ctx is the token-generation column and measured_ttft_ms_at_ctx is left null rather than invented from the prefill rate. Same page, same FA run, for the cliff: 174.29 tok/s generation at 4,000 tokens, 138.20 at 32,000, 125.65 at 65,000, 60 at 131,000.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Closes the long-context speed gap for a catalog model on a 24 GB consumer card. The catalog already has llama.cpp gpt-oss-20B MXFP4 decode on an RTX 4080 SUPER at the 128k tier (benchmarks/hwc26-rtx-4080-super-gptoss-20b-mxfp4-tg-128k, also 60.0 tok/s) but nothing on the 3090, and no kv_efficiency row that pairs the speed with the hybrid KV geometry. WHAT MAKES 131k FIT: the model record stores 49,152 B/token because only 12 of 24 layers are full attention. 131000 x 49152 = 6.44e9 bytes, about 6.0 GiB of KV, which is why a 24 GB card still has room beside the MXFP4 weights. A full-MHA stack at the same head geometry (24 layers x 64 query heads x 64 x 2 x 2) would be 24/12 x 64/8 = 16x larger, about 96 GiB of KV, and would not fit. The same FA table shows why the fit is not free: generation falls from 174.29 tok/s at 4k to 60 tok/s at 131k, a 2.9x slowdown, while prompt processing falls from 1465.59 to 402.27 tok/s. Without Flash Attention the same page cannot pass 50k context on this card. KV dtype is recorded as the model bf16 geometry; the page does not say the KV cache was quantized."
+}
