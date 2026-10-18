@@ -1,0 +1,45 @@
+{
+  "id": "xpu-gaudi-moe-routed-expert-gather",
+  "type": "flop",
+  "name": "Gaudi routed-expert gather: beat the dense MoE pass only while few experts are live",
+  "class": "moe_experts",
+  "bound_by": "memory",
+  "scales_with": [
+    "number of distinct routed experts per step (the gather reads min(E_local, tokens * top_k) experts)",
+    "local expert count on the rank (the dense baseline reads all of them)",
+    "expert weight bytes (FP8 per-channel here; the byte ratio scales with expert width)",
+    "batch size (the path is disabled once tokens * top_k exceeds 0.4 of local experts)"
+  ],
+  "affected_by_hardware": [
+    "intel-gaudi2",
+    "intel-gaudi3"
+  ],
+  "hardware_parameters": [
+    {
+      "parameter": "memory_bandwidth",
+      "effect": "The Habana mixture_of_experts op and the unfused fallback both read every local expert's weights from HBM on every step, because a data-dependent gather produces dynamic shapes and the SynapseAI graph compiler rejects those. The hand-written gather instead index_selects only g = min(E_local, tokens * top_k) experts and keeps g static (padded with zero-weight experts, no torch.nonzero, no host branch) so the graph still compiles. Expert-weight bytes moved drop by up to E_local/g; at batch 1 and top_k 8 that is at most 8 experts.",
+      "basis": "recorded",
+      "magnitude": "byte reduction bounded by E_local/g, with g = min(E_local, tokens*top_k); at most 8 experts read at batch 1 for top_k 8",
+      "values_for": [
+        "intel-gaudi2",
+        "intel-gaudi3"
+      ]
+    }
+  ],
+  "workarounds": [
+    "Keep the gathered count a function of the bucketed token count only. The moment g depends on which experts the router actually picked, the shape changes per step and the HPU graph recompiles or refuses to capture.",
+    "Fuse the per-expert up/gate projections into one wide GEMM over concatenated weights, [T,H] x [H, g*2I]. A Python loop that issues one matmul per expert serializes the graph; the in-code note puts that loop at roughly 0.3-1.4 tok/s against roughly 11 tok/s for the chunked batched form.",
+    "Do not fp8-quantize the down-projection activation. The silu output has too wide a range for a 3-bit mantissa (the kernel comment estimates a 2-6% precision loss), and the HPU fp8 GEMM ops only accept fp8 activations, so the down projection has to dequantize its weights and run in fp32.",
+    "Gate the path on the gathered-to-local expert ratio, not on an absolute token count. The author's sweep found the win tracks that ratio and crosses over near 0.4 of local experts; high expert-parallel deployments with wide experts cross earlier.",
+    "Leave the stock fused op in place above the crossover and for any activation or quant scheme the gather does not implement. The shipped gate is silu plus dynamic per-channel FP8 only, and it is off by default."
+  ],
+  "status": "verified",
+  "confidence": 0.72,
+  "updated": "2026-10-18",
+  "sources": [
+    "vllm-gaudi-pr-1673-minimax-m3-moe-decode-gather",
+    "vllm-gaudi-pr-1731-fp8-moe-gather-combine",
+    "vllm-gaudi-hpu-moe-combine-kernel"
+  ],
+  "notes": "WHAT TRANSFERS to a hand-written stack that streams routed experts from host RAM. The Gaudi constraint is the same shape as the offload problem, just with HBM in place of RAM: the vendor library cannot skip the experts a token did not route to, because skipping them makes the launch shape depend on the router output and the compiler will not accept that. The fix that ships is to gather a STATIC count of experts, g = min(E_local, tokens * top_k), sorted by hit count and padded with zero-weight experts so every real hit is included and the padding contributes exact +0.0. That is the trick worth copying. A host-RAM prefetch can do the same thing: issue a fixed-width DMA of g expert slots per step, fill the unused slots with whatever is cheapest, and never branch the kernel on the router's actual cardinality. Two things about it are easy to get wrong. First, the win is a bandwidth win and it dies once g is a large fraction of E_local. The merged docs put the measured crossover at about 0.4 of local experts on the Qwen 3.5 family (35B, 122B, 397B) across several expert-parallel widths, and say the path has only been seen to help that family; the gate defaults to off and the ratio is left tunable because the author called the threshold 'not entirely clear'. Second, the speedups are the author's own and unreproduced: the PR #1731 opening comment says 'like 2x' on Qwen 3.6 35B-A3B at batch 1 on Gaudi 2, 'nearly 2x' on Qwen 3.5 122B and 1.5x on 397B, shrinking toward batch 8, with no prompt length, output length or raw tok/s. Treat those as a direction, not a number to budget against. The earlier MiniMax-M3 path (PR #1656/#1673) is the same idea for an activation the fused kernel cannot run, and it is the one that states the byte bound explicitly (up to E_local/g fewer expert-weight bytes) while reporting no tok/s at all; its gather is on by default below 16 tokens. Neither path overlaps a host fetch with compute, so a stack whose experts live in RAM still has to add the prefetch; what this contributes is the proof that a static-width gather beats an all-experts read, and the ratio at which it stops being worth it. The 0.3-1.4 vs 11 tok/s loop-versus-bmm comparison is an author's code comment in _unfused_swigluoai_moe, not a benchmark, and it measures launch serialization rather than bandwidth. vendor_claim is not a field on this record type; the numbers above are author self-reports from the vllm-gaudi tree, which is Intel-maintained, so they should be read as vendor-side claims."
+}

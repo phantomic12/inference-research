@@ -1,0 +1,15 @@
+{
+  "id": "vllm-gaudi-hpu-moe-combine-kernel",
+  "type": "source",
+  "name": "vllm-gaudi gathered-expert MoE kernels (hpu_moe_combine.py and hpu_fused_moe.py, main branch)",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-18",
+  "url": "https://github.com/vllm-project/vllm-gaudi/blob/main/vllm_gaudi/ops/hpu_moe_combine.py",
+  "publisher": "vllm-project",
+  "kind": "repo",
+  "published": null,
+  "accessed": "2026-10-18",
+  "archived_url": null,
+  "notes": "Read from raw main on 2026-10-18: vllm_gaudi/ops/hpu_moe_combine.py (143 lines, gather_silu_fp8_moe) and vllm_gaudi/ops/hpu_fused_moe.py (_unfused_swigluoai_moe and _gather_swigluoai_moe). The module docstring states the kernel facts used here: only g = min(E_local, tokens*K) distinct routed experts are read from HBM and computed (at most 8 at batch 1 for K=8) instead of the Habana mixture_of_experts op's fixed per-layer stage pipeline; g is kept static with no torch.nonzero and no host branch so the path captures into a compiled HPU graph; the up/gate projection collapses the G per-expert GEMMs into one wide fp8_gemm_v2 over concatenated expert weights [T,H] x [H, G*2I] with fp32 accumulation and never dequantizes w13 to fp32; the down projection dequantizes w2 to fp32 and runs a plain bmm because fp8-quantizing the silu activation would lose roughly 2-6% precision (3 mantissa bits) and miss the 2-ULP bar, and the HPU fp8 GEMM ops accept only fp8 activations. The hpu_fused_moe.py comment states the constraint that forces the whole design: a data-dependent gather would produce dynamic shapes, which the HPU graph compiler rejects, and a per-expert Python loop issues one matmul per expert and serializes the graph. Both files are the implementation, so they support mechanism claims; the performance numbers they contain are the author's own and are cited from the PR records, not from this file."
+}

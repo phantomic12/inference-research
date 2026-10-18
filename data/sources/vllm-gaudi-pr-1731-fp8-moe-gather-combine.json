@@ -1,0 +1,15 @@
+{
+  "id": "vllm-gaudi-pr-1731-fp8-moe-gather-combine",
+  "type": "source",
+  "name": "vllm-gaudi PR #1731: custom gathered-expert FP8 MoE combine for the Qwen 3.5 family",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-18",
+  "url": "https://github.com/vllm-project/vllm-gaudi/pull/1731",
+  "publisher": "vllm-project",
+  "kind": "repo",
+  "published": "2026-09-09",
+  "accessed": "2026-10-18",
+  "archived_url": null,
+  "notes": "PR #1731 by NatTuck, merged 2026-09-09 as commit bc3d6d5c8f, adding vllm_gaudi/ops/hpu_moe_combine.py (gather_silu_fp8_moe) and the VLLM_HPU_MOE_GATHER gate in vllm_gaudi/ops/hpu_fp8.py. The opening comment states the claim verbatim: 'This speeds up Qwen3.5/3.6 token generation significantly at low batch size on Gaudi 2 - like 2x on Qwen 3.6 35B-A3B at BS=1. Also speeds up Qwen3.5-122B (nearly 2x) and 397B (1.5x) significantly, with smaller gains as BS increases up to about BS=8.' No prompt length, output length, precision beyond FP8, concurrency definition, or raw tok/s table is attached, so the figures are an author's self-report, not a reproducible benchmark. In the review thread on 2026-09-05 the author says the original gate (tokens*top_k <= 64) came from one test of Qwen 3.6 35B on a single HPU at concurrency 1, and that a later sweep over the 35B, 122B and 397B sizes showed the win tracks the fraction of local experts gathered rather than the absolute token count; the threshold was 'not entirely clear' and left tunable. The merged docs (docs/configuration/env_variables.md, read on main 2026-10-18) state that the default VLLM_HPU_MOE_GATHER_RATIO of 0.4 is based on a crossover sweep across the Qwen 3.5 MoE family (35B / 122B / 397B) at several expert-parallel levels, that the optimization has only been observed to help that family, and that the cutoff lands around 0.4 of local experts, with high-EP deployments of wide experts losing sooner. The code of the gate, read on main 2026-10-18, restricts the path to silu, dynamic (not static) activation quantization, and the per-channel FP8 weight layout."
+}
