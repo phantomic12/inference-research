@@ -1,0 +1,31 @@
+{
+  "id": "llamacpp-qwen3-8b-rtx4070s-32k",
+  "type": "kv_efficiency",
+  "name": "Qwen3-8B Q4_K on an RTX 4070 SUPER 12GB at 32K: 42.2 tok/s decode, and the 64K cell is empty",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-18",
+  "sources": [
+    "hardware-corner-rtx-4070-super-llm-benchmark-page-2026-03",
+    "mbl-cfg-qwen3-8b"
+  ],
+  "model": "Qwen3-8B Q4_K (GGUF), f16 KV",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "nvidia-rtx-4070-super"
+  ],
+  "interconnect_ids": [],
+  "context_length": 32768,
+  "kv_bytes_per_token": 147456,
+  "kv_bytes_per_token_basis": "36 layers x 8 kv heads x 128 head_dim x 2 (K+V) x 2 bytes (llama.cpp default f16 KV; the Q4_K is the weight quant, not the cache) = 147,456 B/token, the same geometry as models/qwen3-8b and mbl-cfg-qwen3-8b. The page does not print a resident-KV byte count. At 32,768 tokens that is 147,456 x 32,768 = 4.50 GiB of KV. At 65,536 it would be 9.00 GiB, which on a 12 GB card does not leave room for the Q4_K weights.",
+  "kv_cache_dtype": "fp16",
+  "attention_variant": "gqa",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": 42.2,
+  "methodology": "Hardware Corner per-SKU llama.cpp table, page header 'Updated Benchmarks: March 2026', single RTX 4070 SUPER (12 GB GDDR6X, 504 GB/s as printed). Qwen3 8B Q4_K token-generation row: 75.4 t/s at 4k, 56.2 at 16k, 42.2 at 32k, and a dash at 64k, 128k and 256k. Prompt processing at the same 32k depth is 1,595.7 t/s (4,321.7 at 4k, 2,525.8 at 16k). measured_tps_at_ctx is the 32k token-generation cell, batch-1 per-request decode, and 32,768 is the longest context the page published for this model on this card. measured_ttft_ms_at_ctx is null: the page publishes prefill tok/s, not a time-to-first-token. The page does not publish the llama.cpp build hash, CUDA version, or the exact prompt and output lengths inside the 32k bucket.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "Closes the 12 GB ceiling the 16 GB rows leave implicit. On the RTX 5060 Ti 16GB the same Qwen3-8B Q4_K with the same f16 KV still has a 64k cell (20.7 t/s, llamacpp-qwen3-8b-rtx5060ti-64k) and on the RTX 4060 Ti 16GB it does too (13.0 t/s). On this 12 GB card the 64k cell is a dash, and the arithmetic says why: 9.00 GiB of KV plus the Q4_K weights does not fit in 12 GB, while 4.50 GiB at 32k does. Bandwidth is not the constraint. This card's 504 GB/s is faster than the 5060 Ti's 448 GB/s, and at the shared 32k depth it shows: 42.2 t/s and 1,595.7 t/s prefill here against 38.9 t/s and 1,098.5 t/s prefill on the 5060 Ti. The faster card is the one that cannot hold the longer cache. Confidence 0.7 matches the source: a third-party table with no build hash."
+}

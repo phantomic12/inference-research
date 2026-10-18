@@ -1,0 +1,31 @@
+{
+  "id": "llamacpp-qwen3-8b-rtx5060ti-64k",
+  "type": "kv_efficiency",
+  "name": "Qwen3-8B Q4_K on an RTX 5060 Ti 16GB at 64K: 20.7 tok/s decode, 650.3 tok/s prefill, f16 KV at 144 KiB/token",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-18",
+  "sources": [
+    "hardware-corner-rtx-5060-ti-16gb-llm-benchmark-page-2026-03",
+    "mbl-cfg-qwen3-8b"
+  ],
+  "model": "Qwen3-8B Q4_K (GGUF), f16 KV",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "nvidia-rtx-5060-ti"
+  ],
+  "interconnect_ids": [],
+  "context_length": 65536,
+  "kv_bytes_per_token": 147456,
+  "kv_bytes_per_token_basis": "36 layers x 8 kv heads x 128 head_dim x 2 (K+V) x 2 bytes (llama.cpp default f16 KV; the Q4_K is the weight quant, not the cache) = 147,456 B/token. The page does not print a resident-KV byte count, so this is the model-record geometry from mbl-cfg-qwen3-8b, not a measured allocation. At 65,536 tokens that is 147,456 x 65,536 = 9.00 GiB of KV on a 16 GB card, which is why the same table has no 128k cell for this model.",
+  "kv_cache_dtype": "fp16",
+  "attention_variant": "gqa",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": 20.7,
+  "methodology": "Hardware Corner per-SKU llama.cpp table, page header 'Updated Benchmarks: March 2026', single RTX 5060 Ti 16GB (16 GB GDDR7, 448 GB/s as printed). Qwen3 8B Q4_K token-generation row: 72.6 t/s at 4k, 53.2 at 16k, 38.9 at 32k, 20.7 at 64k. The 64k cell is the longest context the page published for this model on this card; the 128k and 256k cells are dashes. Prompt processing at the same 64k depth is 650.3 t/s (2,987.4 at 4k, 1,812.6 at 16k, 1,098.5 at 32k). measured_tps_at_ctx is the 64k token-generation cell, batch-1 per-request decode. measured_ttft_ms_at_ctx is null: the page publishes prefill tok/s, not a time-to-first-token. The page does not publish the llama.cpp build hash, CUDA version, or the exact prompt and output lengths inside the 64k bucket.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "Closes the 16 GB / GDDR7 hole next to the existing RTX 4060 Ti 16GB row (llamacpp-qwen3-8b-rtx4060ti-64k, 13.0 t/s at the same 64k and the same 147,456 B/token). Same model, same Q4_K weights, same f16 KV, same 9.00 GiB cache: decode is 20.7 t/s here against 13.0 on the 4060 Ti, and prefill is 650.3 t/s against 392.1, which tracks the bandwidth step from 288 GB/s GDDR6 to 448 GB/s GDDR7 rather than any change in the cache. The cliff is the same shape: 72.6 t/s at 4k falls to 20.7 at 64k (3.5x), and the table stops there because 9 GiB of f16 KV plus the Q4_K weights leaves no 128k cache on 16 GB. The same page's gpt-oss 20B MXFP4 row still generates 44.8 t/s at 128k, the sliding-window contrast: a full GQA-8 cache is what makes 64k the ceiling, not the 8B weights. Confidence 0.7 matches the source: a third-party table with no build hash."
+}
