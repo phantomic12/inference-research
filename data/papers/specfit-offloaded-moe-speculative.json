@@ -1,0 +1,42 @@
+{
+  "id": "specfit-offloaded-moe-speculative",
+  "type": "paper",
+  "name": "SpecFit: Not All Draft Tokens Cost the Same in Offloaded MoE Inference",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-18",
+  "sources": [
+    "pap-specfit-offloaded-moe-arxiv",
+    "chlience-specfit-github-repository"
+  ],
+  "arxiv_id": "2610.15417",
+  "venue": "arxiv-preprint",
+  "venue_kind": null,
+  "venue_track": null,
+  "year": 2026,
+  "category": "speculative-decoding",
+  "authors": [
+    "Hongliang Cao",
+    "Xiuyu Li",
+    "Siqi Wang",
+    "Ziming Wang",
+    "Jingmin Zhu",
+    "Hailong Yang"
+  ],
+  "affiliations": [
+    "Beihang University",
+    "Monash University",
+    "The Hong Kong University of Science and Technology"
+  ],
+  "problem": "With routed experts in host RAM, the host-to-device copy is on the decode critical path, and speculative verification makes it worse: every draft token, including the ones the target rejects, routes its own experts, so a larger draft tree moves more expert bytes. On this cost, verifying more tokens per cycle can be slower than autoregressive decoding.",
+  "mechanism": "Keep the EAGLE-3 drafter and the target router unchanged, and change only which ancestor-closed subtree is verified and how deep the drafter is allowed to go. Score a subtree S by the ratio of predicted committed tokens to predicted cycle time. The reward is 1 plus the sum of the draft path probabilities of the nodes in S. The time is a per-node-count intercept plus beta times the sum, over layers, of the size of the union of the experts those nodes route to, so a node pays only for experts no other selected node already covers. Enumerate the legal subtrees exactly: the candidate pool is a top-2 expansion, depth at most 5, at most 18 nodes, and the verified subtree has at most 7 draft nodes, which is small enough that the NP-complete ratio decision is solved by a depth-first walk carrying per-layer expert bitmaps. After each drafted level, rerun the same search and stop drafting when the winning subtree takes nothing from the newest level, because a deeper node can only be taken together with an ancestor the search has already rejected. Fit the intercepts and beta once by nonnegative least squares on GSM8K calibration probes and freeze them; with the cache, beta is 0.211 ms per expert of demand on an A100 and 0.206 ms on an RTX 4090, and with the cache cleared before every forward it is 0.408 ms and 0.782 ms. The measured runs take routes from an atlas built outside the request timer. A deployed selector needs a route predictor instead: the paper estimates a linear head over the 48 by 128 experts at 12.6M parameters, about three expert slots of memory and about 25 MFLOP per node, and a simulated predictor at 60 percent accuracy loses almost none of the speedup because wrong experts rarely coincide across nodes. Selection itself is 2.82 ms median per cycle on GSM8K and 1.43 ms on summarization, under one percent of decode time. The target then verifies the chosen subtree with its own router and copies only the experts that subtree misses from pinned host memory.",
+  "hardware_relevance": [
+    "nvidia-a100-40gb-pcie",
+    "nvidia-rtx-4090"
+  ],
+  "speedup_reported": "On Qwen3-30B-A3B-Instruct-2507 (48 MoE layers, 128 experts, top-8), batch size 1, all experts in pinned host memory, 48 GPU expert slots per layer with LRU, single A100 PCIe 40GB: SpecFit decodes at 8.27 tok/s on 40 CNN/DailyMail articles, 21.6 percent above EAGLE-3 with the same cache (6.80 tok/s) and 1.77x autoregressive (4.67 tok/s), and at 10.79 tok/s on 80 GSM8K questions, 7.0 percent above cached EAGLE-3 (10.08) and 2.29x autoregressive (4.70). The abstract's 1.97x and 1.72x compare SpecFit to vanilla EAGLE-3, which is EAGLE-3 with the cache cleared before every forward (4.21 and 6.26 tok/s). With the cache, SpecFit verifies 2.88 draft nodes per cycle against EAGLE-3's 7.00 on summarization and commits 2.21 tokens against 2.54, but the cycle drops from 371.7 ms to 265.8 ms and host-to-device expert copies fall from 73.4 to 57.2 per output token; on GSM8K the same comparison is 5.09 against 7.00 nodes, 4.01 against 4.35 tokens, 370.4 ms against 429.8 ms, and 82.0 against 92.7 copies per token. The gain grows as the cache shrinks: 21.6, 24.3, and 29.2 percent at 48, 24, and 12 slots per layer, and 31.6 percent with no cache, because the selected trees stay identical while transfer time becomes a larger share of the cycle. On an RTX 4090 24GB with 32 slots per layer the GSM8K gain is 10.8 percent (6.70 against 6.05 tok/s) and 18.1 percent with the cache cleared. A simulated 60 percent accurate route predictor still reaches 2.26x autoregressive against 2.27x with exact routes.",
+  "adoption": "research-only",
+  "code_url": "https://github.com/Chlience/SpecFit",
+  "open_weights": false,
+  "notes": "What transfers to a hand-written stack is the selection rule, not a kernel. The verified set should be chosen by expected tokens over expert-union size, and the drafter should stop when the next level adds experts but no winning node. Two things make it cheap to copy. The search only needs per-layer expert bitmaps and path probabilities, and at a pool of 18 nodes with a cap of 7 it is an enumeration, a couple of milliseconds, so it does not need the vendor library. And the target still executes every expert its own router picks, so the rule does not change model output; it only changes which draft tokens are allowed to cause a host-to-device copy. The limit is the route information. The published numbers use an atlas of true routes built outside the timer, and the paper leaves training a predictor to future work. A predictor that only shares experts across nodes is enough: at 60 percent accuracy the speedup barely moves, because a wrong expert is paid once and a shared correct expert is what the union saves. The gain is largest where acceptance is short and the cache is small. On summarization EAGLE-3 accepts 1.54 of 7 draft nodes and SpecFit wins 21.6 percent; on GSM8K it accepts 3.35 of 7 and SpecFit wins 7.0 percent. Without any cache, vanilla EAGLE-3 is slower than autoregressive on summarization (4.21 against 4.67 tok/s), which is the case the rule exists for. It does not overlap the copy with compute and it does not prefetch; it runs on an on-demand LRU cache and only reduces how many experts a cycle asks for. That composes with a prefetcher rather than replacing one, and it composes badly with a method that drops or substitutes low-score experts, which this one refuses to do. The beta fit is the portability hook: refit the intercepts and the per-expert coefficient on the machine, and a slower host link (0.782 ms per expert on the RTX 4090 with the cache cleared, against 0.408 ms on the A100) raises the penalty on a wide tree by itself. The paper also reports that the ratio-per-cycle rule is not the throughput-optimal rule, which needs a global lambda; on the recorded pools the gap is 0.74 percent of lambda on summarization and 0.95 percent on GSM8K, and the two rules pick different trees in about a quarter of cycles. Doubling beta lowers selected nodes from 2.88 to 2.35 on summarization and from 5.09 to 4.54 on GSM8K."
+}
