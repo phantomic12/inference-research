@@ -1,0 +1,31 @@
+{
+  "id": "vllm-qwen38-27b-apc-150k-rtx5090",
+  "type": "kv_efficiency",
+  "name": "vLLM automatic prefix caching on one RTX 5090: a 150K Qwen3.8-27B replay falls from 53.2 s to 2.3 s at 93.5 percent hit",
+  "status": "verified",
+  "confidence": 0.62,
+  "updated": "2026-10-18",
+  "sources": [
+    "senn-tech-vllm-prefix-caching-qwen38-5090",
+    "hf-qwen3-8-27b-card"
+  ],
+  "model": "Qwen3.8-27B (models/qwen3-8-27b; 64 layers, 16 full attention, 4 kv heads, head_dim 256)",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-rtx-5090"
+  ],
+  "interconnect_ids": [],
+  "context_length": 150000,
+  "kv_bytes_per_token": 65536,
+  "kv_bytes_per_token_basis": "The post does not say the KV dtype, so this is the bf16 model geometry, not a measured allocation. models/qwen3-8-27b, full-attention layers only: 16 layers x 4 kv heads x 256 head_dim x 2 (K+V) x 2 bytes = 65,536 B/token. The 48 Gated DeltaNet layers hold a fixed recurrent state and do not add a per-token term. At 150,000 tokens that is 65,536 x 150,000 = 9.16 GiB of KV, which fits one 32 GB RTX 5090 beside a quantized 27B. A full 64-layer GQA-4 cache would be 262,144 B/token and 36.6 GiB, which would not.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "hybrid",
+  "prefix_reuse": "apc",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": 2300,
+  "measured_tps_at_ctx": null,
+  "methodology": "Senn Tech, prefix caching enabled 2026-08-19, post dated 2026-09-02. Single RTX 5090 (the hermes host), vLLM with --enable-prefix-caching and --enable-prompt-tokens-details, model Qwen3.8-27B. A 150,000-token replay prompt with identical system instructions and tool schema: cold 53.2 s, warm 2.3 s, measured cache hit rate 93.5 percent. measured_ttft_ms_at_ctx is the warm 2.3 s. The cold 53.2 s is the same prompt with the cache empty. The post does not publish decode tok/s, so measured_tps_at_ctx is null. A second host, 4x RTX 5090 and 128 GB VRAM, ran four days at roughly 78 million prefill tokens and 5.9 million generated tokens with an aggregate prefix hit rate of 43-45 percent; reused documents and tool schemas landed at 70-90 percent cached. vLLM version and weight quant are not stated.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "Closes the single-GPU prefix-reuse hole. The collection's prefix rows are SGLang radix (a 112K synthetic prefix and a Chatbot Arena hit rate) and one vLLM APC sweep on an A100. This is automatic prefix caching on a 32 GB consumer card, with a hit rate and the latency it buys. HIT RATE: 93.5 percent on the 150K replay, so about 140,250 of 150,000 tokens were not recomputed. LATENCY: 53.2 s cold to 2.3 s warm is 23x on that one prompt. The steady-state number is less flattering and is the one to quote for a mixed workload: 43-45 percent hit over four days on the 4x 5090 host, because short ad-hoc requests hit near zero while long reused documents hit 70-90 percent. KV bytes per token are unchanged by APC; what changes is how many of those bytes are recomputed. Bandwidth moved: a 93.5 percent hit skips prefill reads of 0.935 x 150,000 x 65,536 = 8.56 GiB of KV writes and the attention that produced them. Confidence 0.62 because the post names neither the vLLM build nor the weight quant, and it does not say whether 53.2 s includes decode."
+}

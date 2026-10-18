@@ -1,0 +1,31 @@
+{
+  "id": "llamacpp-qwen38-27b-rtx4090-q4kv-197k",
+  "type": "kv_efficiency",
+  "name": "Qwen3.8-27B q4 KV at 197K on an RTX 4090: 26.6 tok/s decode, 121.5 s to first token",
+  "status": "verified",
+  "confidence": 0.72,
+  "updated": "2026-10-18",
+  "sources": [
+    "computingforgeeks-qwen38-27b-4090-262k",
+    "hf-qwen3-8-27b-card"
+  ],
+  "model": "Qwen3.8-27B UD-Q4_K_XL (models/qwen3-8-27b; 64 layers, 16 full attention, 4 kv heads, head_dim 256), q4_0 KV, MTP off",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "nvidia-rtx-4090"
+  ],
+  "interconnect_ids": [],
+  "context_length": 196971,
+  "kv_bytes_per_token": 16384,
+  "kv_bytes_per_token_basis": "q4_0 stores K and V at 4 bits, so the bf16 geometry is divided by 4. Catalog geometry for models/qwen3-8-27b, full-attention layers only: 16 layers x 4 kv heads x 256 head_dim x 2 (K+V) x 2 bytes = 65,536 B/token at bf16. At q4_0 that is 65,536 / 4 = 16,384 B/token. The post's own f16 measurement agrees with the bf16 figure: 8K to 64K added 3,640 MiB for 57,344 tokens, 3,640 x 1024 x 1024 / 57,344 = 66,570 B/token, within 2 percent of 65,536. At 196,971 tokens, 16,384 B/token is 3.00 GiB of KV, which is why the same 24 GB card holds a 262,144-token q4_0 cache at 22.2 GiB total and refuses 262K at q8_0.",
+  "kv_cache_dtype": "int4",
+  "attention_variant": "hybrid",
+  "prefix_reuse": "none",
+  "quant_method": "gguf-q4_0-kv",
+  "measured_ttft_ms_at_ctx": 121500,
+  "measured_tps_at_ctx": 26.6,
+  "methodology": "ComputingForGeeks, September 2026, one RTX 4090 24GB, Ubuntu 24.04, llama.cpp build b11200. llama-server -ngl 99 -fa on -c 262144 -ctk q4_0 -ctv q4_0 --jinja, weights unsloth UD-Q4_K_XL, MTP draft head not loaded. Prompt was a 196,971-token log dump with one planted line 60 percent of the way in; thinking off; the model returned the planted passphrase. Prefill 121.5 s, which is 1,621 tok/s and is recorded as measured_ttft_ms_at_ctx. Generation at that depth was 26.6 tok/s over the 9-token answer, recorded as measured_tps_at_ctx (per-request decode, batch 1). VRAM 22.2 GiB immediately after the request. The same table's empty-context decode at 262K/q4_0 is 46.5 tok/s, so 26.6 is the depth cost, not the allocation cost. No raw JSON is published.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "Closes the measured long-context hole on a 24 GB consumer card. The collection's longest measured consumer-GPU row was Qwen3-8B f16 KV at 64K on a 4060 Ti (13.0 tok/s) and gpt-oss-20B at 131K on a 3090; nothing measured a ~200K prompt on 24 GB. q4_0 KV is what makes it fit: the post says 262K at q8_0 does not load and 262K at q4_0 does, at 22.2 GiB. Quality check is a needle, not a perplexity: the planted passphrase was recovered, so this quant did not destroy retrieval at 197K on this one prompt. That is one needle, not a benchmark delta. The hybrid layout is the other half: only 16 of 64 layers grow a cache, so f16 KV is already 65,536 B/token rather than the 262,144 a full GQA-4 stack would cost (4x). q4_0 then takes another 4x, to 16,384 B/token. Decode falls from 46.5 tok/s at an empty 262K allocation to 26.6 tok/s once the cache is actually full. Confidence 0.72 matches the source: named build and flags, no raw log."
+}
