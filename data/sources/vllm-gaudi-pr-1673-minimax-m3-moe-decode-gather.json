@@ -1,0 +1,15 @@
+{
+  "id": "vllm-gaudi-pr-1673-minimax-m3-moe-decode-gather",
+  "type": "source",
+  "name": "vllm-gaudi PR #1673: routed-expert gather for MiniMax-M3 decode (port of #1656)",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-18",
+  "url": "https://github.com/vllm-project/vllm-gaudi/pull/1656",
+  "publisher": "vllm-project",
+  "kind": "repo",
+  "published": "2026-07-30",
+  "accessed": "2026-10-18",
+  "archived_url": null,
+  "notes": "PR #1656 'Improve MiniMax-M3 MoE decode performance after upstream merge' by Iryna Boiko (iboiko@habana.ai), merged 2026-07-30, ported onto main as commit baba7cb9d6 on 2026-07-31 (PR #1673). The PR body is the primary statement of the technique: the dense SwiGLU-OAI path reads every local expert's weights for every token, and at small token counts the distinct experts touched are at most tokens*K, so the new _gather_swigluoai_moe gathers only G = min(E_local, tokens*K) routed experts via index_select and streams up to E_local/G fewer expert-weight bytes per token. It states the path is bit-exact with the dense path (same fp32 SwiGLU-OAI math, same per-chunk accumulation order, absent experts contribute exact +0.0) and static-shaped so G depends only on the bucketed token count. Env defaults stated there and confirmed in vllm_gaudi/envs.py on main 2026-10-18: VLLM_MINIMAX_M3_MOE_DECODE_GATHER defaults true, VLLM_MINIMAX_M3_MOE_GATHER_MAX_TOKENS defaults 16, VLLM_MINIMAX_M3_MOE_TOKEN_TILE defaults 512. The body gives no measured tok/s, no model size, and no device, so it supports the mechanism and the byte-ratio bound but not a speedup. The dense-path comment it builds on (a Python loop over experts serializes the HPU graph at roughly 0.3-1.4 tok/s while the chunked bmm reaches roughly 11 tok/s) lives in the code comment of _unfused_swigluoai_moe in vllm_gaudi/ops/hpu_fused_moe.py, read on main 2026-10-18, and is an author's in-code note rather than a benchmark table."
+}
