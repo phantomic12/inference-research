@@ -32,5 +32,39 @@
   "open_weights": true,
   "license": "Apache-2.0",
   "notes": "ADDED 2026-10-18. Open-weight vision-language MoE from the February 2026 Qwen3.5 series (HF API createdAt 2026-02-24). RUNNABLE WITH EXPERT OFFLOAD: the language model is 121.349B but the card activates 10B per token and routes only 8 of 256 experts, so the per-token expert traffic is a small slice of the checkpoint and the expert bank can sit in system RAM. PARAMS: safetensors index total_size 250,173,007,840 bytes is 125.087B BF16 parameters, but that includes a vision tower and an MTP block. Per-tensor shapes from the 39 shard headers split it into language_model 121,348,687,872, mtp 2,523,679,232, lm_head 762,839,040 and vision 451,290,864. params_b is the language-model count (121.349). active_params_b is the card 10B figure, not a count derived here. flops_per_token_active = 2 x 10.0e9 = 2.0e10 is the schema one-pass approximation.\n\nBEATS models/qwen3-6-35b-a3b, the catalog best ~10B-and-under active record with a published MMLU-Pro number, on MMLU-Pro: 86.7 vs 85.2. Both numbers are vendor claims from the two cards and were not re-run on one harness here. Same offload class in the sense that both route 8 experts per token out of 256 and keep a single-digit-to-10B active footprint; this one is the larger active size (10B vs 3B), which is the class the comparison is made in, and it still beats the smaller model on this benchmark. It also edges that record on LiveCodeBench v6 (75.6 vs 75.4). It does NOT beat it on GPQA Diamond (86.6 vs 86.7) and its SWE-bench Verified 72.2 is below the 76.0 on models/qwen3-6-35b-a3b and the 74.2 on models/ornith-1-5-35b-a3b, so those are not the qualifying comparisons. The card own Qwen3-235B-A22B-2507 row is 84.4 on MMLU-Pro; models/qwen3-235b-a22b carries no benchmark numbers, so that row is context only.\n\nGEOMETRY from config.json fetched 2026-10-18 (commit dc4d348443bc): top-level model_type qwen3_5_moe, text_config model_type qwen3_5_moe_text, hidden 3072, 48 layers, 32 query heads, 2 kv heads, head_dim 256, so gqa_ratio 16. MoE: 256 experts, 8 per token, moe_intermediate_size 1024, shared_expert_intermediate_size 1024 so shared_expert is true. silu, vocab 248320. Attention is hybrid: layer_types is 36 linear_attention and 12 full_attention, full_attention_interval 4. Linear block: linear_num_key_heads 16, linear_num_value_heads 64, key and value head dim 128. KV (bf16, full-attention layers only): 12 x 2 kv heads x 256 x 2 (K and V) x 2 bytes = 24,576 B/token. The 36 linear-attention layers hold a fixed recurrent state, not a growing cache, so they are not in kv_cache_bytes_per_token. RoPE is native mrope: rope_type default, rope_theta 10000000, partial_rotary_factor 0.25, mrope_interleaved true, mrope_section [11, 11, 10], no rope_scaling key. License Apache-2.0, confirmed from the repo LICENSE file.",
-  "context_scaling_method": "mrope"
+  "context_scaling_method": "mrope",
+  "benchmarks": [
+    {
+      "name": "MMLU-Pro",
+      "score": 86.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-5-122b-a10b-card",
+      "vendor_claim": true
+    },
+    {
+      "name": "LiveCodeBench v6",
+      "score": 75.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-5-122b-a10b-card",
+      "vendor_claim": true
+    },
+    {
+      "name": "GPQA Diamond",
+      "score": 86.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-5-122b-a10b-card",
+      "vendor_claim": true
+    },
+    {
+      "name": "SWE-bench Verified",
+      "score": 72.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-5-122b-a10b-card",
+      "vendor_claim": true
+    }
+  ]
 }
