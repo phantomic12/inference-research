@@ -1,0 +1,35 @@
+{
+  "id": "promoe-proactive-expert-prefetch",
+  "type": "paper",
+  "name": "ProMoE: Fast MoE-based LLM Serving using Proactive Caching",
+  "arxiv_id": "2410.22134",
+  "venue": "arxiv-preprint",
+  "year": 2025,
+  "category": "moe",
+  "authors": [
+    "Xiaoniu Song",
+    "Zihang Zhong",
+    "Rong Chen",
+    "Haibo Chen"
+  ],
+  "affiliations": [
+    "Shanghai Jiao Tong University",
+    "Zhejiang University"
+  ],
+  "problem": "With routed experts in host RAM, a cache miss is only discovered when the expert's GEMM is about to run, so the PCIe fetch sits on the critical path. On decoder-only MoE the expert access distribution is close to uniform, so a bigger LRU cache barely helps: with half the experts cached, the blocking fetch is still 60.4% of decode time and 82.7% of prefill time.",
+  "mechanism": "Predict the next layer's experts before the gate runs, and fetch them while the current layer computes. A per-layer two-layer MLP of about 2 million parameters, trained once offline on gate input/output traces, scores experts from the current layer's hidden state; the CPU forward is about 200 microseconds, small against a layer's millisecond of compute. Stride prefetching predicts one layer further ahead so the prediction and the copy run at the same time, costing about 5 points of accuracy. The copy itself is a single worker thread over a two-priority queue: predicted experts are low priority, and the moment the gate returns, the actually selected experts preempt as high priority (early preemption), so a miss is never discovered late. Each expert is split into three chunks, one per linear layer, because a CUDA async copy cannot be cancelled mid-flight and the worst wait is then one chunk. Experts already resident run first and the missing one runs last (reordered inference), which is legal because expert outputs are only summed. The cache is a per-layer LRU in one preallocated contiguous region, so the predictor only changes what is fetched, not the eviction policy.",
+  "hardware_relevance": [
+    "nvidia-rtx-4090"
+  ],
+  "speedup_reported": "Authors' own numbers, one RTX 4090 24 GB, i9-14900K, 128 GB host DRAM, PCIe 4.0 at 32 GB/s unidirectional, ShareGPT, batch 1. Against transformers with LRU, static, and random expert caches plus MoE-Infinity and Fiddler: prefill 2.20x average and 3.21x best, decode 2.07x average and 5.02x best. Against llama.cpp with the same three caches: prefill 1.78x average and 2.35x best, decode 1.34x average and 1.56x best. The llama.cpp gain is smaller because its MoE block is already faster, so the same hidden fetch is a smaller share of the step. At a 50% cache rate the prefill and decode speedups are 2.34x and 2.28x over LRU; at 20% they fall to 1.55x and 1.33x, and at 70% to 1.48x and 1.69x. Raising the batch from 1 to 4 drops the prefill and decode speedups from 2.34x and 2.28x to 1.38x and 1.59x. Predictor accuracy averages 84.7%, against 58.3% for a token-id lookup and 66.9% for the skip-gate predictor on Qwen2-MoE.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": false,
+  "notes": "VENUE: no conference comment on the abs page and no Crossref proceedings deposit found on 2026-10-18 (title query and author query for Xiaoniu Song both empty), so venue is arxiv-preprint. Year is the v3 revision year, not the 2024 submission year. WHAT TRANSFERS to a hand-written stack that already streams routed experts from RAM: (1) start the fetch at the gate, not at the GEMM, because the expert set for a layer is known the instant the router returns and every layer of compute after that is free overlap; (2) copy experts in chunks no bigger than one linear, since an in-flight DMA cannot be cancelled and a whole-expert copy blocks the expert you actually missed; (3) run the experts already in VRAM before the one still arriving, which is free because their outputs are summed; (4) predict from the hidden state on the host CPU, not from the token id and not by replaying the next gate, and look one layer further ahead than you need so the prediction itself is off the copy's critical path. The learned predictor is optional: the scheduling (early preemption, chunked copy, reordered execution) helps any prefetch policy, including the skip-gate guess. WHAT DOES NOT TRANSFER: every number is one RTX 4090 at batch 1 over PCIe 4.0, and the speedup shrinks both when the GPU-side MoE kernel gets faster (the llama.cpp column) and when the batch grows, because more tokens activate more experts and there is less idle compute to hide the copy behind. The 84.7% accuracy is on traces drawn from the same domain as the training set. No code is released, so the result is not reproducible from this source.",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-18",
+  "sources": [
+    "pap-promoe-arxiv"
+  ]
+}
