@@ -1,0 +1,28 @@
+{
+  "id": "kivi-2bit-llama3-8b-gqa-8k",
+  "type": "kv_efficiency",
+  "name": "KIVI-2 on Llama-3-8B-Instruct: 2-bit KV, LongBench average 45.21 to 44.37, 7.1x smaller than bf16 at the 8K window",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-18",
+  "sources": [
+    "qlab-kivi-paper"
+  ],
+  "model": "Llama-3-8B-Instruct (GQA, 32 layers, 8 kv heads, 32 query heads, head_dim 128, 8K context)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 8192,
+  "kv_bytes_per_token": 18432,
+  "kv_bytes_per_token_basis": "KIVI keeps a full-precision residual of the most recent R tokens and quantizes only the grouped history, so a flat 2-bit figure overstates the savings. Grouped, 2-bit, group size 32: 32 layers x 8 kv heads x 128 head_dim x 2 (K+V) x 2/8 bytes = 16,384 B/token. Residual at R=128, bf16: 128 tokens x 32 x 8 x 128 x 2 x 2 = 16,777,216 B, which is 2,048 B/token when spread over the 8,192-token context the model and this record use. Sum = 16,384 + 2,048 = 18,432 B/token, the same convention as kivi-2bit-llama2-13b-mha-4k (grouped term counted at the full sequence, residual amortized over the context). The bf16 GQA cache on the same skeleton is 32 x 8 x 128 x 2 x 2 = 131,072 B/token, so the reduction is 7.11x at 8,192 tokens (131072/18432) and falls toward 8x only as context grows well past the residual. The exact stored amount is slightly smaller, because the grouped term covers S-R tokens rather than S: (8192-128)/8192 x 16,384 + 2,048 = 18,176 B/token, 7.21x. The field keeps the convention rather than the exact one. Keys are quantized per-channel and values per-token. Geometry is the paper's own statement (8 KV heads, not 32) cross-checked against the NousResearch Meta-Llama-3-8B config: 32 layers, 32 query heads, 8 kv heads, hidden 4096, so head_dim 128.",
+  "kv_cache_dtype": "kivi",
+  "attention_variant": "gqa",
+  "prefix_reuse": "none",
+  "quant_method": "kivi-2bit-per-channel-k-per-token-v",
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "KIVI paper (arXiv 2402.02750v2), Appendix D Table 8, Llama-3-8B-Instruct on LongBench. The paper states the model has an 8K context and applies group-query attention with 8 KV heads instead of the full 32, and that both KIVI-2 and KIVI-4 use group size 32 and residual length 128, with the baseline in full precision. No TTFT or tok/s is published for this model, so both measured fields are null. The paper's throughput claim (2.35x to 3.47x, up to 4x batch) is measured on Llama-2-7B on one A100 80GB while raising batch size to the memory wall, and is not copied into measured_tps_at_ctx. context_length 8192 is the model's context, which is also the length the residual amortization assumes. engine_id is vllm because that is the runtime the KIVI release integrates with; the paper's accuracy table is an LM-Eval / LongBench run, not a vLLM serving measurement.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "The existing KIVI rows are Llama-2-7B GQA and Llama-2-13B MHA. This is the Llama-3 row the paper's own appendix publishes and the collection skipped, and it is the one that matters for the catalog's 8B reference model: same 32x8x128 skeleton as Llama-3.1-8B, so the same 131,072 B/token bf16 cache, on an 8K window instead of 128K. QUALITY, Table 8, is the small one: LongBench average 45.21 full precision to 44.37 with KIVI-2, a drop of 0.84 points, while KIVI-4 is 45.31, slightly above the baseline. The loss is not uniform. LCC falls 57.00 to 50.84 and RepoBench-P falls 51.22 to 46.65, and those two code tasks are where the 0.84 comes from; NarrativeQA is 21.71 to 21.35, Qasper 44.24 to 43.17, HotpotQA 46.82 to 46.79, and TriviaQA moves the other way (90.23 to 90.54). 2-bit is the rate this record stores. 4-bit would be 32 x 8 x 128 x 2 x 4/8 = 32,768 B/token grouped plus the same 2,048 residual, 34,816 B/token, 3.76x under bf16, for a benchmark average that does not move. The 7B sibling's GSM8K (13.50 to 12.74) is a different model and is not cited as this model's quality cost. No speed is attached because the paper never times Llama-3."
+}

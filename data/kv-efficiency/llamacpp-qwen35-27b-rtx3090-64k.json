@@ -1,0 +1,31 @@
+{
+  "id": "llamacpp-qwen35-27b-rtx3090-64k",
+  "type": "kv_efficiency",
+  "name": "Qwen3.5-27B hybrid KV on one RTX 3090 at 64K: 16,384 B/token, 28.8 tok/s where a full-GQA cache would not fit",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-18",
+  "sources": [
+    "mbl-cfg-qwen3-5-27b",
+    "hardware-corner-gpu-llm-benchmarks-rtx-3090-2026-03"
+  ],
+  "model": "Qwen3.5-27B (Qwen/Qwen3.5-27B, dense hybrid Gated DeltaNet, 64 layers, 16 full-attention), Q4_K GGUF",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "nvidia-rtx-3090"
+  ],
+  "interconnect_ids": [],
+  "context_length": 65536,
+  "kv_bytes_per_token": 16384,
+  "kv_bytes_per_token_basis": "Only the 16 full-attention layers grow a cache. text_config of Qwen/Qwen3.5-27B: 64 layers, full_attention_interval 4, full layers at 0-based indices 3,7,...,63 (16 of them), num_key_value_heads 4, head_dim 256, dtype bfloat16. 16 x 4 x 256 x 2 (K+V) x 2 bytes = 16,384 B/token. The other 48 layers are linear_attention (Gated DeltaNet: linear_num_key_heads 16, linear_num_value_heads 48, key/value head dim 128, conv kernel 4) and hold a fixed recurrent state, which is excluded from kv_bytes_per_token the same way the model record excludes it for Qwen3.5-35B-A3B. If all 64 layers cached GQA at these heads: 64 x 4 x 256 x 2 x 2 = 65,536 B/token, a 4.0x reduction (65536/16384). A full MHA at the same head_dim (64 x 24 query heads x 256 x 2 x 2) would be 393,216 B/token, 24.0x larger.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "hybrid",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": 28.8,
+  "methodology": "THIRD-PARTY MEASURED speed, derived footprint. Hardware Corner RTX 3090 per-card page, tables dated March 2026, llama.cpp llama-bench, single RTX 3090 24 GB, batch-1 per-request. Qwen3.5 27B (Q4_K) token-generation row: 33.5 t/s at 4k, 32.3 at 16k, 31.0 at 32k, 28.8 at 64k; the 128k and 256k cells are dashes. Prompt processing at the same 64k depth is 678.9 t/s (1,104.2 at 4k, 977.4 at 16k, 848.2 at 32k). measured_tps_at_ctx is the 64k token-generation cell. measured_ttft_ms_at_ctx is null because the page publishes prefill tok/s, not a time-to-first-token. The page does not publish the llama.cpp build hash, the flash-attention flag (the Qwen3 rows on this card annotate CUDA, -fa 1; this row does not), or the prompt and output lengths inside the 64k bucket. KV dtype is the bf16 geometry from config.json; the page does not say the KV cache was quantized, and the Q4_K is the weight quant.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "Closes the measured long-context gap for the dense Qwen3.5 hybrid, which the catalog did not track at all \u2014 the existing Qwen3.5 KV rows are the 35B-A3B and the 9B. WHY 64K FITS AND 128K IS A DASH: 65,536 x 16,384 = 1.00 GiB of growing KV. The same 64K as full GQA on this skeleton would be 4.00 GiB, and as MHA 24.00 GiB, which on its own exceeds the 24 GB card. The 128k cell being empty is therefore not the KV: 128k of this hybrid cache is 2.00 GiB. It is the Q4_K weights of a 27B dense model (order 15 GB) plus activations plus the linear-layer state leaving no room for a second gigabyte of context, which is the low-VRAM case this collection is for. QUALITY: no delta is claimed. The linear layers are the architecture, not a lossy compression of a full cache. SPEED AT DEPTH barely moves: 33.5 tok/s at 4k to 28.8 at 64k, a 14% drop, which is what a cache that does not grow with three quarters of the layers looks like. Contrast the same page's dense Qwen3-32B, whose 16k cell is already the last one (30.3 tok/s) because every layer caches. The page prints 986 GB/s and GDDR6 for this card; the accelerator record holds 936 GB/s GDDR6X from NVIDIA's own table, and this record does not adopt the page's bandwidth figure."
+}

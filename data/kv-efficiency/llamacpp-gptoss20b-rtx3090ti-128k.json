@@ -1,0 +1,30 @@
+{
+  "id": "llamacpp-gptoss20b-rtx3090ti-128k",
+  "type": "kv_efficiency",
+  "name": "RTX 3090 Ti, gpt-oss-20B MXFP4 at 128K: 61.5 tok/s decode, hybrid KV at 49,152 B/token",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-18",
+  "sources": [
+    "hardware-corner-rtx-3090-ti-llm-benchmark-page-2026-03"
+  ],
+  "model": "GPT-OSS 20B (models/gpt-oss-20b; 24 layers, 12 sliding window 128 + 12 full attention, 8 kv heads, head_dim 64), MXFP4 GGUF",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "nvidia-rtx-3090-ti"
+  ],
+  "interconnect_ids": [],
+  "context_length": 131072,
+  "kv_bytes_per_token": 49152,
+  "kv_bytes_per_token_basis": "The model record's own derivation, kept identical to llama-cpp-gptoss20b-rtx3090-fa-131k so the two cards compare: 24 layers x 8 kv heads x 64 head_dim x 2 (K+V) x 2 bytes = 49,152 B/token. The model record stores that full-attention-equivalent rate and flags the window as a caveat rather than folding it in, and this record does the same. A full MHA at the same head geometry (24 layers x 64 query heads x 64 x 2 x 2) would be 786,432 B/token, 16.0x larger: 24/12 of the layers actually attend times 64/8 heads. Folding the window in, which the field deliberately does not, would put the 12 sliding layers at 12 x 8 x 64 x 2 x 2 x 128 tokens = 3,145,728 B, i.e. 24 B/token spread over 131,072, plus 24,576 B/token for the 12 full layers, about 24,600 B/token and 2.0x under the number stored here.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "hybrid",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": 61.5,
+  "methodology": "THIRD-PARTY MEASURED. Hardware Corner RTX 3090 Ti per-card page, llama.cpp llama-bench, Ubuntu 24.04, CUDA 12.8, single RTX 3090 Ti 24 GB GDDR6X, 1,008 GB/s, batch-1 per-request. gpt-oss 20B (MXFP4) token-generation row: 160.3 t/s at 4k, 137.6 at 16k, 119.7 at 32k, 94.9 at 64k, 61.5 at 128k; the 256k cell is a dash. Prompt processing at 128k is 936.4 t/s (4,805.4 at 4k, 3,440.1 at 16k, 2,521.3 at 32k, 1,666.5 at 64k). measured_tps_at_ctx is the 128k token-generation cell. measured_ttft_ms_at_ctx is null: the page publishes prefill tok/s, not a time-to-first-token. The page does not publish the llama.cpp build hash or the flash-attention flag. KV dtype is the bf16 geometry from the model record; the page does not say the cache was quantized, and MXFP4 is the weight quant. The same cell is already benchmark hc26-3090ti-gptoss-20b-tg-128k; this record adds the footprint that benchmark does not carry.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "Closes the 3090 Ti half of a pair the collection only had for the plain 3090. llama-cpp-gptoss20b-rtx3090-fa-131k records 60.0 tok/s at 131k on a 3090 from the December 2025 ranking table. This is the March 2026 per-card page for the Ti, at the 128k tier, 61.5 tok/s. The two are not the same measurement and are not pooled: the ranking and the per-card pages disagree on shared cells (the 3090 Ti source notes Qwen3 8B at 16k is 93.6 here and 126.94 on the ranking), so this record cites only the per-card page. WHY 128K FITS: 131,072 x 49,152 = 6.00 GiB of KV beside the MXFP4 weights on a 24 GB card. The full-MHA equivalent at this head geometry is 16x larger, about 96 GiB, and would not fit. The speed is not free: generation falls from 160.3 tok/s at 4k to 61.5 at 128k, 2.61x, and prefill from 4,805.4 to 936.4 t/s, 5.13x, which is the 12 full-attention layers' KV read growing while the 12 windowed layers stay at 128 tokens. The bandwidth the page prints (1,008 GB/s) matches the accelerator record for the 3090 Ti."
+}
