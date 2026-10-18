@@ -1,0 +1,40 @@
+{
+  "id": "hybrimoe-hybrid-cpu-gpu-scheduling",
+  "type": "paper",
+  "name": "HybriMoE: Hybrid CPU-GPU Scheduling and Cache Management for Efficient MoE Inference",
+  "arxiv_id": "2504.05897",
+  "venue": "other",
+  "venue_track": "main",
+  "venue_kind": "conference",
+  "year": 2025,
+  "category": "moe",
+  "authors": [
+    "Shuzhang Zhong",
+    "Yanfan Sun",
+    "Ling Liang",
+    "Runsheng Wang",
+    "Ru Huang",
+    "Meng Li"
+  ],
+  "affiliations": [
+    "Peking University",
+    "Beihang University"
+  ],
+  "problem": "With routed experts in host RAM and only a slice of them cached in VRAM, a cache miss is usually paid as a host-to-device copy. On a memory-bound decode step that copy costs more than computing the expert where it already sits. The existing hybrid systems pick the CPU experts with a static map, and MoE routing is too unstable for a static map to stay balanced.",
+  "mechanism": "Three decisions, and the first is the one that transfers to a hand-written stack. On a miss, do not fetch the expert: run it on the CPU, because the decode step is memory-bound and the transfer dominates the compute. The split is recomputed inside the layer, not fixed in advance. A miss is the difference between the routed set and the cached set. Each miss is simulated twice, once as a CPU expert and once as a GPU load, and the simulated CPU and GPU finish times are balanced by moving the simulated miss that shrinks the gap. Where the miss lands is what the scheduler outputs: CPU execution, or a prefetch onto the GPU. The second decision is which layer to spend the prefetch on. The next layer is not always the one that needs it. A priority queue orders candidate experts by routing score, the copy volume already committed to that layer, and whether the layer is imminent, and the prefetch goes to the highest-priority expert that is not already cached. The third decision is which cached expert to evict. Minus Recent Score adds the routing scores of the recent steps and subtracts the most recent one, so an expert that scored high only on the last token is not protected, which is the failure the authors measure in LRU. Attention, shared experts and the non-expert weights stay resident; only routed experts are in the cache. The CPU side uses the llama.cpp kernels already in kTransformers, including AMX on the Intel host they measure, so a hand-written port needs a fast host GEMM and not a new device kernel. The GPU side is the resident expert cache plus the prefetch.",
+  "hardware_relevance": [
+    "nvidia-rtx-a6000"
+  ],
+  "speedup_reported": "Against kTransformers on one RTX A6000 (48 GB) plus a Xeon Gold 6426Y, Q4_K_M experts, expert cache at 25/50/75 percent of the routed pool: average 1.33x lower prefill TTFT and 1.70x higher decode throughput, across Mixtral-8x7B, DeepSeek-V2-Lite (15.7B) and Qwen2-57B-A14B, inputs about 32 to 1024 tokens. On Qwen2 at a 25 percent cache the ablation attributes 1.21x prefill and 1.14x decode to the dynamic split, 1.08x and 1.19x to impact-driven prefetch, and 1.13x and 1.34x to Minus Recent Score. At 25 percent cache MRS raises the hit rate over LRU by 6 to 8 points (Mixtral 30.2 to 36.2 percent, DeepSeek 47.7 to 52.7, Qwen2 45.0 to 52.8); at 75 percent the gap narrows (Mixtral 83.3 vs 80.6).",
+  "adoption": "research-only",
+  "code_url": "https://github.com/PKU-SEC-Lab/HybriMoE",
+  "open_weights": false,
+  "notes": "DAC 2025 is confirmed by Crossref DOI 10.1109/dac63849.2025.11133274 (62nd ACM/IEEE Design Automation Conference, issued 2025-06-22), but the venue enum has no dac member, so venue is other and the real venue is recorded here. venue_kind is conference. Numbers are from the arXiv v1 PDF, which the abs page says was accepted; the IEEE proceedings PDF was not read. The 1.33x and 1.70x are averages against kTransformers, which the paper treats as the state-of-the-art hybrid baseline, not against a GPU-resident run. llama.cpp is the other baseline and is much slower at prefill because it pins whole expert layers to the CPU; the paper notes llama.cpp is closer at decode, where each expert is one token and the static map hurts less. Table I quantifies the static-map failure: on Mixtral with 50 percent of experts fixed on the CPU, the average per-layer GPU load is 3.53 experts and the CPU load is 4.47, so the CPU side is slower despite doing the larger share. The scheduler does not change bytes per token except by raising the hit rate. A miss that the simulator assigns to the CPU moves zero expert bytes and spends host RAM bandwidth instead, which is the right trade only while the device copy is slower than the host GEMM. The ablation says prefetching gains more at decode than prefill, and the dynamic split gains more at prefill, where the GPU expert workload is large and a static CPU share stalls the GPU. Implementation is a fork of ktransformers 0.2.0 (Section V), not an upstream merge. The repo README example is DeepSeek-V2-Lite Q4_K_M with cache_size 16 and prefetch_size 0, which is a smaller setup than the paper. No accuracy delta is reported; the method does not quantize or approximate the experts.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-18",
+  "sources": [
+    "pap-hybrimoe-hybrid-cpu-gpu-scheduling-arxiv",
+    "repo-pku-sec-lab-hybrimoe"
+  ]
+}
