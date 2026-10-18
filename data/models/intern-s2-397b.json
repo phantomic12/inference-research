@@ -1,0 +1,70 @@
+{
+  "id": "intern-s2-397b",
+  "type": "model",
+  "name": "Intern-S2-397B",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-18",
+  "sources": [
+    "hf-intern-s2-397b-card",
+    "hf-intern-s2-397b-config"
+  ],
+  "family": "intern-s",
+  "vendor": "Shanghai AI Laboratory",
+  "release_year": 2026,
+  "architecture": "moe",
+  "params_b": 403.423,
+  "active_params_b": 17.0,
+  "num_experts": 512,
+  "experts_per_token": 10,
+  "shared_expert": true,
+  "hidden_size": 4096,
+  "num_layers": 60,
+  "num_kv_heads": 2,
+  "head_dim": 256,
+  "gqa_ratio": 16.0,
+  "max_position_embeddings": 262144,
+  "context_scaling": "native to 262144: rope_type default, rope_theta 10000000, partial_rotary_factor 0.25, mrope interleaved with mrope_section [11, 11, 10]; no rope_scaling key in config.json",
+  "activation": "silu",
+  "attention_variant": "GQA plus gated linear attention: 45 of 60 layers are linear_attention and 15 are full_attention, one every fourth layer",
+  "kv_cache_bytes_per_token": 15360,
+  "flops_per_token_active": 34000000000.0,
+  "open_weights": true,
+  "license": "Apache-2.0",
+  "notes": "ADDED 2026-10-18. Shanghai AI Laboratory's scientific multimodal model, weights public 2026-09-13 (HF API createdAt 2026-09-13T03:20:35Z). It is a continued training of the Qwen3.5-397B-A17B stack, not a new architecture: the config is model_type qwen3_5_moe with the same text geometry as models/qwen3-5-397b-a17b. RUNNABLE WITH EXPERT OFFLOAD: the checkpoint is 403.423B parameters but only 17B is activated per token, and the routing is 10 of 512 experts plus one shared expert, so the per-token expert traffic is a small slice of the BF16 checkpoint and the expert bank can sit in system RAM while the 15 full-attention layers stay resident. Ten experts per token is the same routing width as models/qwen3-5-397b-a17b. A dense model at this size would decode at RAM bandwidth. PARAMS: HF safetensors metadata totals 403,423,094,768 (BF16 403,423,086,128 plus F32 8,640), 25,165,824 above models/qwen3-5-397b-a17b's 403,397,928,944, which is the vision tower and the MTP block on top of the same language-model body, so params_b is 403.423. active_params_b is 17.0, carried over from the base model's card rather than re-derived: this card's figure never states an active count, and the text config matches the base field for field (hidden 4096, 60 layers, 512 experts, 10 per token, moe_intermediate_size 1024, shared_expert_intermediate_size 1024). flops_per_token_active = 2 x 17e9 = 3.4e10 is the schema one-pass approximation off that inherited active count.\n\nWHY IT QUALIFIES. The comparison figure (figs/intern-s2-397b.jpg, read by OCR 2026-10-18, so the trailing digits are read from a rendered table) puts Intern-S2-397B at SWE-bench Pro 68.54 against 43.55 in its own Qwen3.5-397B-A17B column, and at MMLU-Pro 89.77 against 87.80 in that same column. Both beat the base inside one vendor table. Against the catalog, MMLU-Pro 89.77 beats the 87.8 vendor claim on models/qwen3-5-397b-a17b, which is the same base model and the catalog's best published MMLU-Pro in the ~17B-active class, and SWE-bench Pro 68.54 is a benchmark the base record does not have a number for at all. It does NOT beat models/naive-n0-5-flash, whose notes record SWE-bench Pro at 73.6, nor models/ling-3-1-flash at 68.74, so the qualifying win is the ~17B-active class against models/qwen3-5-397b-a17b, not the wider catalog. Terminal-Bench 2.1 at 64.04 does not beat the catalog's best and the figure's footnote says it was run with Terminus 2, so it is recorded but is not the win. The figure also says the SWE-bench Pro run used anti-hack configurations to stop the model reading the answers. All of these are vendor claims and were not re-run here.\n\nGEOMETRY from config.json fetched 2026-10-18: top-level model_type qwen3_5_moe, architectures Qwen3_5MoeForConditionalGeneration. text_config model_type qwen3_5_moe_text: hidden 4096, 60 layers, layer_types 45 linear_attention and 15 full_attention with full_attention_interval 4, so a full attention layer sits every fourth layer. Attention heads 32 / kv heads 2 / head_dim 256, so gqa_ratio 16. Gated linear attention: linear_num_key_heads 16, linear_num_value_heads 64, key and value head dim 128, conv kernel 4. MoE: num_experts 512, num_experts_per_tok 10, moe_intermediate_size 1024, shared_expert_intermediate_size 1024, mlp_only_layers empty so every layer is MoE, mtp_num_hidden_layers 1. rope_parameters: rope_type default, rope_theta 10000000, partial_rotary_factor 0.25, mrope_interleaved true, mrope_section [11, 11, 10], no rope_scaling key, so the 262,144 context is native mRoPE. vocab 251392, hidden_act silu. vision_config: hidden 1152, depth 27, 16 heads, patch 16, out_hidden_size 4096. KV (bf16, full-attention layers only): 15 layers x 2 kv heads x 256 x 2 (K and V) x 2 bytes = 30,720 B/token. The 45 linear-attention layers carry a fixed-size recurrent state instead of a growing cache and are not in that number. License Apache-2.0.",
+  "context_scaling_method": "mrope",
+  "benchmarks": [
+    {
+      "name": "SWE-bench Pro",
+      "score": 68.54,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-intern-s2-397b-card",
+      "vendor_claim": true
+    },
+    {
+      "name": "Terminal-Bench 2.1",
+      "score": 64.04,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-intern-s2-397b-card",
+      "vendor_claim": true
+    },
+    {
+      "name": "MMLU-Pro",
+      "score": 89.77,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-intern-s2-397b-card",
+      "vendor_claim": true
+    },
+    {
+      "name": "SWE-bench Multilingual",
+      "score": 84.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-intern-s2-397b-card",
+      "vendor_claim": true
+    }
+  ]
+}

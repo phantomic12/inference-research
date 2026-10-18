@@ -1,0 +1,51 @@
+{
+  "id": "deepseek-v4-pro-0813",
+  "type": "model",
+  "name": "DeepSeek-V4-Pro-0813",
+  "status": "verified",
+  "confidence": 0.84,
+  "updated": "2026-10-18",
+  "sources": [
+    "hf-deepseek-v4-pro-0813-card",
+    "hf-deepseek-v4-pro-0813-config"
+  ],
+  "family": "deepseek-v4",
+  "vendor": "DeepSeek",
+  "release_year": 2026,
+  "architecture": "moe",
+  "params_b": 1600,
+  "active_params_b": 49,
+  "num_experts": 384,
+  "experts_per_token": 6,
+  "shared_expert": true,
+  "hidden_size": 7168,
+  "num_layers": 61,
+  "num_kv_heads": 1,
+  "head_dim": 512,
+  "gqa_ratio": 128.0,
+  "max_position_embeddings": 1048576,
+  "context_scaling": "YaRN (factor 16, original 65536)",
+  "activation": "silu",
+  "attention_variant": "MLA variant with compressed KV, sliding_window 128, sparse indexer index_topk 1024; kv_lora_rank absent from config",
+  "kv_cache_bytes_per_token": null,
+  "flops_per_token_active": 98000000000.0,
+  "open_weights": true,
+  "license": "MIT",
+  "notes": "ADDED 2026-10-18. The post-trained DeepSeek-V4-Pro checkpoint, weights public 2026-08-13 (HF API createdAt 2026-08-13T03:05:06Z). This is NOT a quantization repackage of models/deepseek-v4-pro: that record is the preview, and the 0813 card describes a separate post-training pass aimed at agentic tasks on the same model structure. RUNNABLE WITH EXPERT OFFLOAD: 1.6T stored but only 49B activated per token, and the routing is 6 of 384 experts plus one shared expert, so the per-token expert traffic is a small slice of the checkpoint and the expert bank can sit in system RAM. Six experts per token is narrower than the 8-expert routing of models/mimo-v2-6-pro-rl, which is the direction that keeps offloaded decode fast. A dense model at this size would decode at RAM bandwidth. The published weights are the same FP4/FP8 mixed release as the preview: safetensors metadata totals 1,650,497,936,906 parameters, dominated by I8 (1,623,497,637,888) and F8_E4M3 (23,952,621,568) with BF16 (2,954,820,352) and F32 (90,530,058), so the checkpoint on disk is far below a 1.6T BF16 dump. params_b stays 1600 and active_params_b stays 49, the vendor nameplate that models/deepseek-v4-pro already records, because the 0813 config is byte-for-byte the same geometry. flops_per_token_active = 2 x 49e9 = 9.8e10 is the schema one-pass approximation.\n\nWHY IT QUALIFIES. The card's own eval-results widget reports Terminal-Bench 2.1 at 87.9, marked as the vendor's own testing. That beats models/deepseek-v4-pro, the preview this checkpoint post-trains, which has no Terminal-Bench number at all, and it beats models/mimo-v2-6-flash-rl's 87.6 and models/naive-n0-5-flash's 86.7 on the same benchmark. It does NOT beat models/mimo-v2-6-pro-rl, whose notes record Terminal-Bench 2.1 at 89.9, so the qualifying win is against the preview and against models/mimo-v2-6-flash-rl in the ~15B-active class, not against the 42B-active flagship. The number is a vendor claim and was not re-run here. The same widget lists Toolathlon Verified at 74.1, which is not one of the benchmarks this catalog ranks on and is recorded only as context.\n\nGEOMETRY from config.json fetched 2026-10-18, identical to the preview config behind models/deepseek-v4-pro: model_type deepseek_v4, 61 layers, hidden 7168, 128 attention heads, num_key_value_heads 1, head_dim 512, qk_rope_head_dim 64, q_lora_rank 1536, and no kv_lora_rank key, so the DeepSeek-V2/V3 latent formula does not apply. MoE: n_routed_experts 384, n_shared_experts 1, num_experts_per_tok 6, moe_intermediate_size 3072, routed_scaling_factor 2.5, topk_method noaux_tc. compress_ratios has 61 layers plus 3 MTP slots: 1 sliding (ratio 0), 30 CSA (ratio 4), 31 HCA (ratio 128), with sliding_window 128 and index_topk 1024. kv_cache_bytes_per_token stays null for the same reason as models/deepseek-v4-pro: every compressor layer keeps its sliding-window KV plus a growing compressed list plus, on CSA layers, an indexer series, and the three interleave, so a single number would need the overlap accounting in the modeling code. The naive GQA reading (61 x 1 x 512 x 2 x 2 = 124,928 B/token) overstates it, because the 31 HCA layers charge about 16 B/token/layer. max_position_embeddings 1048576 with rope_scaling YaRN factor 16 over an original 65536, vocab 129280, num_nextn_predict_layers 1, quantization_config quant_method fp8. License MIT. The card names vLLM and SGLang and points at the SGLang cookbook for the FP4 low-latency configuration.",
+  "kv_lora_rank": null,
+  "qk_rope_head_dim": 64,
+  "qk_nope_head_dim": null,
+  "v_head_dim": null,
+  "context_scaling_method": "yarn",
+  "kv_compression": "per-layer compress_ratios (config), length 64 = 61 layers plus 3 MTP slots: 1 sliding (ratio 0), 30 CSA (ratio 4) and 31 HCA (ratio 128) over the 61 layers, paired with sliding_window 128 and index_topk 1024. Same split as models/deepseek-v4-pro.",
+  "benchmarks": [
+    {
+      "name": "Terminal-Bench 2.1",
+      "score": 87.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-deepseek-v4-pro-0813-card",
+      "vendor_claim": true
+    }
+  ]
+}
