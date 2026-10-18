@@ -1,0 +1,36 @@
+{
+  "id": "qmoe-sub-1-bit-compression",
+  "type": "paper",
+  "name": "QMoE: Practical Sub-1-Bit Compression of Trillion-Parameter Models",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-18",
+  "sources": [
+    "pap-qmoe-sub-1-bit-arxiv",
+    "repo-ist-daslab-qmoe"
+  ],
+  "arxiv_id": "2310.16795",
+  "venue": "arxiv-preprint",
+  "venue_kind": null,
+  "venue_track": null,
+  "year": 2023,
+  "category": "quantization",
+  "authors": [
+    "Elias Frantar",
+    "Dan Alistarh"
+  ],
+  "affiliations": [
+    "Institute of Science and Technology Austria"
+  ],
+  "problem": "A trillion-parameter MoE does not fit in GPU memory at all: SwitchTransformer-c2048 is 1.6 trillion parameters and 3.2 TB in bfloat16, and the bytes that matter at decode are the routed expert, which is read once per token. Standard sparse formats do not help, because a bitmask costs 1 bit per weight and column indices cost 10 to 13 bits, both larger than the ternary payload they would index. A variable-length entropy code would be smaller but cannot be decoded by a warp, since each symbol's position depends on the length of every symbol before it.",
+  "mechanism": "Quantize only the expert matrices, with GPTQ, to ternary (values 0, 1, 2) or to 2-bit; dense layers stay uncompressed. Ternary experts are about 90 percent zeros (88.6 percent on c2048, standard deviation under 5 percent), so the storage problem is entropy, not sparsity metadata. Encode each row independently with a static dictionary of 2^16 codewords, each a fixed 16-bit word that expands to a variable number of ternary pairs (at most 14 pairs, generated as the 2^16 most probable sequences under P(0)=p0 and P(1)=P(2)=(1-p0)/2, with p0 about 0.885). The dictionary is shared across matrices, so it is not stored per expert, and it is kept sorted from most to least probable so lookups hit L1. Each codeword maps to two UINT32 blobs holding up to 7 pairs each, stored at 2 bits per ternary value plus a 4-bit pair count that is duplicated so each half of the warp reads one INT32; the 2-bit layout is deliberate, because a packed base-3 encoding would need division in the inner loop. The decode kernel assigns one warp of 32 threads to one row and consumes 32 codewords per step: the warp loads them, each thread expands its own, and the products are warp-reduced into the output. Rows are packed into one contiguous buffer with a row-offset table. Encoding is a longest-prefix match against a trie, one thread per row, and is not on the inference path. Because a codeword is fixed width, there is no cross-symbol dependency inside the warp and no base-3 arithmetic in the inner loop. On the real c2048 ternary weights the scheme reaches 20.07x against bfloat16, 21.11x on weights drawn from the fitted distribution, about 20 percent short of that distribution's 25.40x Shannon limit at p0=0.885. The kernel as published is a matrix-vector product: when the gate routes more than one token to an expert it launches one GEMV per token, and the paper says the fix for large token counts is either an inner loop over tokens or a full decompress followed by a dense matmul.",
+  "hardware_relevance": [
+    "nvidia-rtx-a6000",
+    "nvidia-rtx-3090"
+  ],
+  "speedup_reported": "Authors' own numbers. SwitchTransformer-c2048, 1.6T parameters, compressed from 3142 GB bfloat16 to 158.6 GB, 19.81x overall and 20.07x on the MoE modules only, which is 0.807 bits per parameter; moe-only is above 16x on base128 (7B) and large128 (26B) as well. C4 masked-LM validation loss, 128 validation samples, QMoE at the default calibration size (10K samples for 128-expert models, 160K for c2048): c2048 bfloat16 1.18, 2-bit 1.20 (1.7 percent relative), ternary 1.26 (6.7 percent relative); round-to-nearest ternary is 2.15. RedPajama out-of-domain losses for c2048 move from 1.31/0.99/1.15/1.20 to 1.42/1.13/1.22/1.32 (arxiv/github/stackexchange/wiki) at ternary. Isolated compressed GEMV against PyTorch bfloat16 cuBLAS is faster on every expert shape tested, up to 35 percent on some shapes, with the smallest matrix under 0.02 ms and the largest under 0.05 ms. End to end, one C4 prompt decoded to 128 tokens, the compressed model is under 5 percent slower than an estimated bfloat16 baseline; the baseline is not a real run, because bfloat16 c2048 would need more than 65 A6000s or more than 130 3090s, and the estimate reuses one expert's weights for every expert, which the authors call a lower bound. Compression of c2048 takes 16.0 hours on one 48 GB A6000 at the default calibration size (13.3 h at half, 20.8 h at double), and the paper says the host needs a few hundred GB of RAM. The under-5-percent figure is the authors' claim and is measured against that simulated baseline, not against a resident uncompressed model.",
+  "adoption": "research-only",
+  "open_weights": true,
+  "code_url": "https://github.com/IST-DASLab/qmoe",
+  "notes": "VENUE: the abs page has no comment and Crossref title and bibliographic queries on 2026-10-18 returned no proceedings deposit, so venue stays arxiv-preprint. Year is the v1 submission year; there is no later revision on the abs page. CODE: Apache-2.0, CUDA kernels in sub1_cuda_kernel.cu, pinned to torch 2.0.0+cu117 and transformers 4.28.0. The README links compressed checkpoints at huggingface.co/ISTA-DASLab/switch-base-128_qmoe, switch-large-128_qmoe and switch-c-2048_qmoe, which is why open_weights is true; those checkpoints are in the custom dictionary format, not GGUF or GPTQ, so nothing else loads them. The repository showed 4 commits on main when read on 2026-10-18. WHAT TRANSFERS to a hand-written stack that streams routed experts from host RAM: (1) the byte reduction is the whole result. A ternary expert is about 90 percent zeros, and a static 16-bit-codeword dictionary stores it at under 1 bit per parameter, which is the quantity that sets how long the RAM-to-device copy takes; (2) the kernel that makes that format usable is a warp-per-row GEMV that expands one fixed-width codeword per step, so the decode has no sequential dependency and no base-3 math in the inner loop — a bitmask or CSR index would cost more bits than the values; (3) it is a GEMV. The moment two tokens land on one expert the published kernel runs them one at a time and loses to a dense matmul, and the paper's own end-to-end number is already slightly slower than uncompressed for that reason; (4) only the routed experts are compressed. Attention, the router and the dense layers stay full precision and are exactly the weights a low-VRAM offload stack should keep resident; (5) the accuracy claim is a masked-LM validation loss on SwitchTransformers, not a task score on a modern decoder MoE, and the 35 percent and sub-5-percent figures are the authors' own, on A6000 and 3090 only. The end-to-end comparison is against a simulated bfloat16 baseline, not a measured one."
+}
