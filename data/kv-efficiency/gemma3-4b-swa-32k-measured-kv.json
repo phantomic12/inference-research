@@ -1,0 +1,29 @@
+{
+  "id": "gemma3-4b-swa-32k-measured-kv",
+  "type": "kv_efficiency",
+  "name": "Gemma 3 4B sliding-window hybrid at 32K: Google measures 4.7 GB of 8-bit KV, 4.8x under a full-context cache",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-10-18",
+  "sources": [
+    "gemma3-report-swa-kv-table3",
+    "hf-config-gemma3-4b-it-unsloth"
+  ],
+  "model": "Gemma 3 4B (models/gemma-3-4b-it; 34 layers, 4 kv heads, head_dim 256, sliding_window 1024, sliding_window_pattern 6)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 32768,
+  "kv_bytes_per_token": 28160,
+  "kv_bytes_per_token_basis": "Effective resident KV at 32,768 tokens for an engine that honors sliding_window. Config (unsloth mirror of google/gemma-3-4b-it): 34 layers, 4 kv heads, head_dim 256, sliding_window 1024, sliding_window_pattern 6. Pattern 6 is 5 local layers then 1 global, so the 34 layers split 28 local + 6 global (indices 5,11,17,23,29 are global and layer 33, past the last complete group, is global too). Full-context GQA rate, bf16: 34 x 4 x 256 x 2 (K+V) x 2 bytes = 139,264 B/token. Global layers only: 6/34 of that = 24,576 B/token, growing with context. Local layers at the full rate would be 28/34 x 139,264 = 114,688 B/token; the 1024 window caps them, so spread over 32,768 tokens they contribute 114,688 x 1024/32768 = 3,584 B/token. Sum = 24,576 + 3,584 = 28,160 B/token in bf16. Table 3's +KV column is an 8-bit cache (caption: 'quantized in 8 bits'), so the comparable rate is half: 14,080 B/token. 139,264 / 28,160 = 4.95x against the bf16 full-context cache; the 8-bit full-context equivalent would be 69,632 B/token, and 69,632 / 14,080 = 4.95x the same way. The byte rate recorded is the bf16 one, because kv_bytes_per_token is defined against the model's bf16 geometry and the dtype field below is bf16.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "sliding",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Not a timed run: measured_ttft and measured_tps stay null. The byte rate is derived from the gemma-3-4b-it text config (34 layers, 4 kv heads, head_dim 256, sliding_window 1024, sliding_window_pattern 6) and checked against Table 3 of the Gemma 3 report, which gives the memory of the raw bf16 4B checkpoint as 8.0 GB and the same checkpoint plus a 32,768-token KV cache quantized in 8 bits as 12.7 GB. The difference, 4.7 GB, is the cache. No engine was timed. vllm is named because it is the engine the catalog uses for derived attention rows and it implements Gemma 3's hybrid cache; the report itself only names llama.cpp as the reference for its weight-quantization formats, and this row does not use those formats.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "vendor_claim on the 4.7 GB, since it is Google's own table; the layer split is recomputed from the config. Closes the measured-footprint gap for Gemma 3, which the collection previously only had as a Gemma 4 sliding-window derivation. REDUCTION VERSUS FULL GQA ON THE SAME SKELETON: 139,264 / 28,160 = 4.95x at 32K in bf16. CHECK AGAINST THE TABLE: 14,080 B/token (the 8-bit rate) x 32,768 tokens = 461,373,440 bytes = 0.430 GiB. Table 3's +KV delta is 12.7 - 8.0 = 4.7 GB, about ten times larger. The gap is the vision tower and the embedding table, not a wrong layer count: Table 1 lists the 4B as 417M vision-encoder parameters plus 675M embedding parameters, and the report says the vision encoder is shared and frozen. Those weights are in the checkpoint but not in the text-tower KV formula, so the table cannot be divided back into a per-token rate. The formula stands; the table confirms the order (a 32K cache is a few GB, not tens) and is the vendor's own measurement of the whole footprint. AT 128K, which this 4B was trained to: local layers still contribute 114,688 x 1024/131072 = 896 B/token, global layers stay 24,576, total 25,472 B/token, 5.47x under the 139,264 full rate. Absolute bf16 cache at 128K is 3.11 GiB instead of 17.0 GiB, which is what makes a 128K context fit beside the weights on a 16 GB card. The 1B model is excluded: the report caps it at 32K and its pattern is not this config. No quality cost is stated for the 5:1 window itself; section 5.2 says perplexity barely moves when the local:global ratio changes, and the window is trained rather than applied after the fact. CAVEAT: the unsloth mirror sets unsloth_fixed, and the official config is gated, so the 28/6 split rests on the mirror plus the report's stated 5:1 pattern."
+}

@@ -1,0 +1,30 @@
+{
+  "id": "transformers-quanto-int4-kv-llama2-7b-chat",
+  "type": "kv_efficiency",
+  "name": "Transformers Quanto int4 KV on Llama-2-7B-chat: LongBench within 0.5 points of fp16",
+  "status": "verified",
+  "confidence": 0.66,
+  "updated": "2026-10-18",
+  "sources": [
+    "hf-blog-kv-cache-quantization-quanto"
+  ],
+  "model": "Llama-2-7B-chat (32 layers, 32 kv heads, head_dim 128, MHA)",
+  "engine_id": "vllm",
+  "accelerator_ids": [
+    "nvidia-a100-80gb-sxm4"
+  ],
+  "interconnect_ids": [],
+  "context_length": 131072,
+  "kv_bytes_per_token": 131072,
+  "kv_bytes_per_token_basis": "Llama-2-7B geometry, which the blog restates as 32 layers, 32 kv heads, head_dim 128: fp16 KV = 32 x 32 x 128 x 2 (K+V) x 2 bytes = 524,288 B/token. The blog's own worked example uses the same formula (2 x 2 x 32 x 32 x 128 x 10,000 tokens is about 5 GB). Quanto int4 stores 4 bits per element, so the quantised rate is 524,288 x (4/16) = 131,072 B/token, a 4x cut, before the residual. The implementation keeps a residual full-precision cache of residual_length 128 tokens per the config used for the LongBench numbers (nbits=4, group_size=64, residual_length=128, per_token=True). At a 128K context that residual is 128/131072 of the cache, so 524,288 x 128/131072 = 512 B/token of extra fp16 data, and the blended rate is 131,072 + 512 = 131,584 B/token. The recorded rate is the quantised 131,072 B/token. The residual is not folded in: it is a fixed 128 tokens, so its cost per token shrinks as context grows (512 B/token at 128K, 4,096 B/token at 16K) and quoting one blended number would hide that.",
+  "kv_cache_dtype": "int4",
+  "attention_variant": "mha",
+  "prefix_reuse": "none",
+  "quant_method": "quanto-int4-per-token-g64-residual128",
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Quality numbers are Hugging Face's own LongBench run of meta-llama/Llama-2-7b-chat-hf under the Hugging Face transformers library with cache_implementation=quantized, backend quanto, nbits=4, group_size=64, residual_length=128, per_token=True, compared with the same model at fp16. Both keys and values are quantised per token, which is the difference from KIVI. No tok/s or TTFT figure is printed; the latency and memory results are plots, so measured_ttft_ms_at_ctx and measured_tps_at_ctx stay null. The 128k and 40k token capacities are the blog's statement for an 80GB A100 with Flash Attention enabled, quantised cache versus half-precision cache. Batch size and the exact prompt length of the LongBench tasks are not stated.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "vendor_claim. Closes the plain-int4, per-token KV gap. The collection's 4-bit rows are ExLlamaV2's Hadamard Q4 and TurboQuant's 3.5-bit vector quantiser; neither is the quantiser a Transformers user actually turns on, and neither publishes a per-task table against fp16. QUALITY COST, LongBench, fp16 to Quanto int4 (higher is better): TREC 63.0 to 63.0 (0), SAMSum 41.12 to 41.3 (+0.18), TriviaQA 84.28 to 84.76 (+0.48), HotPotQA 30.08 to 30.04 (-0.04), Passage_retrieval_en 8.5 to 9.5 (+1.0). Four of five tasks are flat or slightly up; the largest move is +1.0 on passage retrieval, which is small relative to the int2 collapse on the same table (SAMSum 41.12 to 14.04, TriviaQA 84.28 to 63.64, Passage_retrieval_en 8.5 to 4.82). So int4 is close to free and int2 is not, on this setup. Perplexity is only shown as a plot, so no perplexity delta is quoted. FOOTPRINT: the blog says int4 gives roughly a 2.5x memory saving rather than the 4x the element width implies, because of the 128-token fp16 residual, the per-group scales (group_size 64), and the quantisation metadata. The 4x figure in the basis is the element width only. CAPACITY: with Flash Attention on an 80GB A100 the post says the quantised cache reaches 128k tokens where the fp16 cache reaches 40k, a 3.2x context increase, consistent with a saving closer to 2.5x than to 4x once the residual and the weights are counted. CAVEATS: the LongBench prompt lengths are not given, so context_length is the 128k capacity claim and not the length of those tasks. The A100-80GB figure is a single-GPU capacity statement, not a latency. Per-token quantisation of the keys is the opposite of what KIVI recommends, and the int2 column shows that choice hurting; the int4 column does not. Confidence is 0.66 because the source is a blog post and the memory and speed evidence is a chart rather than a table. ENGINE: the run is the Hugging Face transformers library with the quanto backend, which has no engine record of its own. vllm is the required engine_id and did not produce these numbers."
+}

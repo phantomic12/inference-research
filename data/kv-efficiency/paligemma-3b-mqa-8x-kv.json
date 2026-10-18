@@ -1,0 +1,28 @@
+{
+  "id": "paligemma-3b-mqa-8x-kv",
+  "type": "kv_efficiency",
+  "name": "PaliGemma 3B text tower MQA: 1 KV head of 8, 18,432 B/token, 8x under full MHA",
+  "status": "verified",
+  "confidence": 0.74,
+  "updated": "2026-10-18",
+  "sources": [
+    "gguf-paligemma-3b-mqa-header"
+  ],
+  "model": "PaliGemma 3B mix 224 text tower (models/paligemma-3b-mix-224; Gemma-2B decoder, 18 layers, 8 query heads, 1 KV head, head_dim 256)",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 8192,
+  "kv_bytes_per_token": 18432,
+  "kv_bytes_per_token_basis": "GGUF v3 header of abetlen/paligemma-3b-mix-224-gguf text-model Q4_K_M, parsed for models/paligemma-3b-mix-224: architecture gemma, block_count 18, attention.head_count 8, attention.head_count_kv 1, attention.key_length 256, attention.value_length 256, context_length 8192. KV bytes per token, bf16 = 18 layers x 1 kv head x 256 head_dim x 2 (K+V) x 2 bytes = 18,432. The same skeleton with multi-head attention (8 KV heads, one per query head) would be 18 x 8 x 256 x 2 x 2 = 147,456 B/token. 147,456 / 18,432 = 8x, which is exactly the query-head to KV-head ratio. MQA is the case of GQA where the group count equals the query-head count.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "mqa",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Derived from the GGUF header of the text tower, not a timed run, so both measured fields are null. context_length 8192 is the context_length stored in that header. The GGUF file itself is Q4_K_M weights; the KV rate is the bf16 cache the runtime allocates, not the weight quant. engine_id is llama-cpp because the measurement source is a GGUF conversion meant for it. The official config.json is gated and was not re-read.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Closes the MQA gap. Every other attention row in the collection is GQA, MLA, sliding window, or a hybrid; none is single-KV-head MQA, and PaliGemma is the catalog model that actually uses it. REDUCTION VERSUS FULL MHA ON THE SAME SKELETON: 147,456 / 18,432 = 8.0x. ABSOLUTE CACHE AT THE 8,192 CONTEXT THE HEADER DECLARES: 18,432 x 8,192 = 150,994,944 bytes = 144 MiB. Full MHA on the same decoder would be 1,152 MiB, eight times more, for a 3B model whose weights already fit in a few GB. That is the whole point of MQA on a small vision-language model: the cache stops mattering. The reduction is free in the sense that it is the trained architecture; there is no perplexity delta to report because there is no compressed-versus-uncompressed pair. CAVEATS: the header is a third-party conversion of a gated checkpoint, text tower only, so the vision tower's own attention cache is not included. The model record already stores 18,432 B/token from the same header; this row adds the MHA comparison and the absolute cache at 8K, which the model record does not state. Confidence is 0.74 because the official config could not be opened."
+}
