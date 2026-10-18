@@ -1,0 +1,28 @@
+{
+  "id": "kivi-2bit-llama2-13b-mha-4k",
+  "type": "kv_efficiency",
+  "name": "KIVI-2 on Llama-2-13B MHA: 4x smaller KV than bf16, GSM8K 22.67 to 20.77",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-18",
+  "sources": [
+    "qlab-kivi-paper"
+  ],
+  "model": "Llama-2-13B (MHA, 40 layers, 40 kv heads)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 4096,
+  "kv_bytes_per_token": 128000,
+  "kv_bytes_per_token_basis": "KIVI keeps a full-precision residual of the most recent R tokens and quantizes only the grouped history, so a flat 2-bit figure overstates the savings. Grouped, 2-bit: 40 layers x 40 kv heads x 128 head_dim x 2 (K+V) x 2/8 bytes = 102,400 B/token. Residual at R=128, bf16: 128 x 40 x 40 x 128 x 2 x 2 = 104,857,600 B, which is 25,600 B/token when spread over the 4,096-token context this record uses (the LongBench cap for this model). Sum = 102,400 + 25,600 = 128,000 B/token. The bf16 MHA cache on the same skeleton is 40 x 40 x 128 x 2 x 2 = 819,200 B/token, so the reduction is 6.4x at 4,096 tokens and falls toward 8x only as context grows well past the residual. Group size is 32 and the key is quantized per-channel, the value per-token.",
+  "kv_cache_dtype": "kivi",
+  "attention_variant": "mha",
+  "prefix_reuse": "none",
+  "quant_method": "kivi-2bit-per-channel-k-per-token-v",
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "KIVI paper (arXiv 2402.02750v2), Table 3 generation-task comparison and the LongBench evaluation, both on Llama-2-13B. KIVI-2 is the asymmetric 2-bit scheme: keys quantized per-channel, values per-token, group size 32, residual length 128 kept in fp16. No TTFT or tok/s is published for the 13B model, so both measured fields are null. The paper's throughput claim (2.35x to 3.47x, up to 4x batch) is measured on Llama-2-7B on one A100 80GB while raising batch size to the memory wall, and is recorded in notes rather than copied into measured_tps_at_ctx, because that number is a throughput at a larger batch, not decode tok/s at one context length. context_length 4096 is the LongBench maximum used for this model, which is also the length the residual amortization above assumes.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "The existing KIVI record is the GQA case (Llama-2-7B, 8 kv heads, 4K). This one is the MHA case the paper's own table makes the more expensive: Llama-2-13B has 40 kv heads, so bf16 KV is 819,200 B/token and a 4K sequence is 3.125 GiB of cache before any batching. KIVI-2 brings the effective rate to 128,000 B/token at 4K, 6.4x smaller, which is the difference between batch 1 and the 4x batch the paper reports on the 7B sibling. QUALITY, from the same table, is not free on the hard task: GSM8K goes from 22.67 (fp16) to 20.77 (KIVI-2), a drop of 1.90 points, while CoQA is flat (66.37 to 66.23) and TruthfulQA moves the other way (29.53 to 29.84). LongBench average for Llama-2-13B is 44.85 fp16 vs 44.69 KIVI-2. The naive symmetric 2-bit (per-token K and V) collapses GSM8K to 4.55 on this model, which is why the record names the per-channel-key / per-token-value split instead of calling it plain int2. quant_method records that split. The paper's 2.6x peak-memory reduction includes the weights and is a 7B number, so it is not used as kv_bytes_per_token."
+}

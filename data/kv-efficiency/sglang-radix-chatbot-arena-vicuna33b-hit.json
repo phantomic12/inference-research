@@ -1,0 +1,29 @@
+{
+  "id": "sglang-radix-chatbot-arena-vicuna33b-hit",
+  "type": "kv_efficiency",
+  "name": "SGLang RadixAttention in Chatbot Arena: 74.1 percent cache hit on Vicuna-33B, 1.7x lower first-token latency",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-18",
+  "sources": [
+    "flop-sglang",
+    "hf-config-vicuna-33b-v1-3"
+  ],
+  "model": "Vicuna-33B (Llama-1 33B MHA skeleton, 60 layers, 52 heads, head_dim 128)",
+  "engine_id": "sglang",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 2048,
+  "kv_bytes_per_token": 1996800,
+  "kv_bytes_per_token_basis": "Vicuna-33B follows the Llama-33B skeleton: 60 layers x 52 heads x 128 head_dim x 2 (K+V) x 2 bytes (fp16) = 1,996,800 B/token. MHA, no GQA, which is why the number is large: one 2,048-token conversation is 1,996,800 x 2,048 = 3.81 GiB of KV, and a second turn that reuses the history does not allocate it again. The paper does not print this byte count; it is the model geometry so the 74.1% hit rate below has a size attached. context_length 2048 is the model's trained context, used because the paper does not state the context length of the Arena traffic.",
+  "kv_cache_dtype": "fp16",
+  "attention_variant": "mha",
+  "prefix_reuse": "radix",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "SGLang paper (arXiv 2312.07104v2), production-deployment paragraph. SGLang served open-weight models in Chatbot Arena with one worker per low-traffic model. After one month the authors report a RadixAttention cache hit rate of 74.1% for Vicuna-33B and 52.4% for LLaVA-Next-34B, where hit rate is defined in the paper as cached prompt tokens divided by prompt tokens. Hits came from shared system messages, reused example images, and multi-turn chat history. The same paragraph states this reduced first-token latency by 1.7x on average for Vicuna-33B. No absolute TTFT in milliseconds and no tok/s are published, so both measured fields stay null and the 1.7x is kept in notes. The paper also says cache-aware scheduling reaches 96% of the optimal hit rate on its benchmark suite, which is a lab figure and is not substituted for the 74.1% production number.",
+  "measured_by": "vendor",
+  "reproducible": false,
+  "notes": "The collection's only radix record is a lab trace: a 112K prefix reused exactly once. This is the production counterpart, and it is a hit rate rather than a microbenchmark. 74.1% of Vicuna-33B prompt tokens in a month of Chatbot Arena traffic were served from the radix tree, and that cut first-token latency 1.7x. Because Vicuna-33B is MHA, each reused token is 1,996,800 bytes that do not have to be recomputed or reallocated; at the 2,048-token context that is up to 3.81 GiB of KV per conversation that a second turn would otherwise rebuild. The LLaVA-Next-34B worker in the same deployment only reached 52.4%, so the hit rate is workload-shaped, not an engine constant. Two limits the paper states and this record keeps: RadixAttention does not speed up decode, only prefill, and the Arena number is the authors measuring their own serving stack (measured_by vendor) with no public trace to replay (reproducible false)."
+}
