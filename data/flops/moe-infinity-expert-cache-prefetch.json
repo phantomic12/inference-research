@@ -1,0 +1,34 @@
+{
+ "id": "moe-infinity-expert-cache-prefetch",
+ "type": "flop",
+ "name": "Sparsity-aware expert cache: request-level activation trace driving prefetch and eviction under host-RAM expert offload",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-18",
+ "sources": [
+  "pap-moe-infinity-arxiv",
+  "src-moe-infinity-github"
+ ],
+ "class": "moe_experts",
+ "arithmetic_intensity": "The expert GEMM is unchanged. What changes is the byte term. With experts resident in host DRAM, a decode step moves k experts per layer over PCIe instead of reading all E experts from HBM, so the step is interconnect-bound at PCIe bandwidth rather than HBM-bound at the full expert footprint. Appendix B.2 says one I/O thread on pinned host memory plus DMA saturates PCIe 4.0, which they state as 32 GB/s, while the Table 1 caption says 24 GB/s for the same A5000 link. The two figures disagree and both are kept. A cache hit removes that transfer entirely. A wrong prefetch consumes the same bytes and additionally stalls the on-demand fetch behind it, which is why idle time, not GEMM time, dominates the Table 1 baselines. The predictor is a host-side cosine match: 21 us per query at 1K stored matrices and 226 us at 10K, against a token they time well above 120 ms, so the trace itself is not on the critical path.",
+ "bound_by": "interconnect",
+ "scales_with": [
+  "experts_per_token times expert_bytes, the PCIe payload per layer. Mixtral few large experts move more bytes per hit than Switch many small ones, and the paper own worst case is Mixtral at 836 ms",
+  "expert_cache_bytes left after the KV cache. DeepSeek-V2-Lite activates 3 GB per step; the buffer falls from above 3 GB below 32K context to 2 GB at 64K and 1 GB at 128K, after which the cache misses and on-demand fetch adds 137 ms",
+  "pcie_generation. One thread saturates PCIe 4.0; they add threads per GPU for newer PCIe",
+  "trace_warmup. The first iterations of a request have no request-level activation matrix, so prefetch cannot be scored and the first tokens pay full on-demand latency",
+  "batch_size. The skew the cache exploits is per request; pooled over 1000 sequences the reuse histogram flattens and the priority score stops distinguishing experts"
+ ],
+ "affected_by_hardware": [
+  "nvidia-rtx-a5000"
+ ],
+ "hardware_parameters": [],
+ "workarounds": [
+  "Pin expert buffers and issue the prefetch as async DMA from a dedicated I/O thread so the copy overlaps the current layer GEMM; one such thread is enough for PCIe 4.0",
+  "Score eviction by the matched request trace with an early-layer bias, not by LRU and not by next-index prefetch, since both evict the expert the next layer of this request needs",
+  "Keep the KV cache, attention and shared experts resident. Offloading the KV cache next to the experts makes the two streams contend, which is the long-context failure measured in vLLM",
+  "When the expert buffer drops below one step of activated bytes, stop prefetching and fall back to on-demand fetch rather than filling the link with predicted experts",
+  "Rebuild the trace per request. A collection of about 120 historical request matrices saturated latency across 290 tasks; matching more does not help and the cosine query grows from 21 us to 226 us"
+ ],
+ "notes": "Companion to papers/moe-infinity-sparsity-aware-expert-cache. The byte saving is a scheduling decision, not a kernel: a hand-written stack that already overlaps expert DMA with compute gets the win by changing which expert it fetches and which it evicts, using a request-scoped count matrix. It does not reduce bytes per expert, because the paper has no low-bit path, so it stacks with and does not replace a 2-4 bit expert GEMM. PCIe bandwidth is recorded as the authors stated it, 32 GB/s in Appendix B.2 and 24 GB/s in the Table 1 caption, without picking one. The 3.1-16.7x (abstract and Table 1) and 2.7-13.7x (Section 6) ranges are the authors claims against other offload systems, not against a fully resident GPU."
+}

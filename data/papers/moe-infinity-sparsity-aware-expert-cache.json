@@ -1,0 +1,37 @@
+{
+ "id": "moe-infinity-sparsity-aware-expert-cache",
+ "type": "paper",
+ "name": "MoE-Infinity: Efficient MoE Inference on Personal Machines with Sparsity-Aware Expert Cache",
+ "status": "verified",
+ "confidence": 0.85,
+ "updated": "2026-10-18",
+ "sources": [
+  "pap-moe-infinity-arxiv",
+  "src-moe-infinity-github"
+ ],
+ "arxiv_id": "2401.14361",
+ "venue": "arxiv-preprint",
+ "year": 2025,
+ "category": "moe",
+ "authors": [
+  "Leyang Xue",
+  "Yao Fu",
+  "Zhan Lu",
+  "Chuanhao Sun",
+  "Luo Mai",
+  "Mahesh Marina"
+ ],
+ "affiliations": [
+  "University of Edinburgh"
+ ],
+ "problem": "On a single-user machine the whole MoE does not fit in VRAM, so routed experts live in host RAM and every decode step pays a PCIe fetch. Next-layer prefetch (DeepSpeed, Mixtral-Offloading) and LRU (vLLM, llama.cpp) both assume the next expert is either the next index or the least-recently-used one, so they pull experts this request will not touch and stall the GPU on the ones it will.",
+ "mechanism": "Keep attention, shared experts and the KV cache resident on the GPU; offload only routed experts (90-99% of parameters) to pinned host DRAM and DMA them. Trace two Expert Activation Matrices per request: an iteration-level EAM (tokens per expert so far this forward pass, zeros below the current layer) and a request-level EAM (running counts since the request started, prefill and decode traced separately). Match the current iteration EAM against a fixed-capacity collection of historical request EAMs by cosine distance, row-normalize the matched matrices into an activation likelihood, then decay that likelihood by layer distance (1-(i-l)/L) so the next layer is prefetched first. Evict the cached expert with the lowest priority p = (pEAM[layer, expert] + eps) * (1 - layer/L) / row_sum, which also prefers keeping early-layer experts because prefetch confidence is worst there. One I/O thread per GPU on pinned memory saturates PCIe 4.0; experts are hash-assigned across GPUs and pre-partitioned by NUMA. The trace match itself is a CPU GEMM: 21 us per query at 1K stored matrices, 226 us at 10K, under 1% of a token they time above 120 ms.",
+ "hardware_relevance": [
+  "nvidia-rtx-a5000"
+ ],
+ "speedup_reported": "Authors own numbers, single RTX A5000 24GB over PCIe 4.0, host DRAM sized to hold the whole checkpoint (32 GB for DeepSeek-V2-Lite, 128 GB for Mixtral-8x7B, 64 GB for Switch, 256 GB for NLLB, 1 TB for Arctic). Abstract and Table 1: 3.1-16.7x lower time-per-output-token than vLLM, Ollama, DeepSpeed and BrainStorm on DeepSeek-V2-Lite. Table 1 attributes the gap to GPU idle time from inaccurate prefetch plus a low expert-cache hit rate (DeepSpeed 513 ms idle and 737 ms average TPOT; Mixtral-Offloading 754 ms idle and 1250 ms average TPOT). Section 6 instead states 2.7-13.7x over strong baselines, a different range from the abstract, left unresolved here. Section 5.1: Switch, NLLB and DeepSeek decode at 155 ms, 531 ms and 155 ms, which the authors call comparable to the model fully resident, using 1 GPU instead of 8 (NLLB) or 4 (Switch). Mixtral-8x7B is the worst case (few, large experts, high activation ratio) at 836 ms, only 1.4x over BrainStorm and Mixtral-Offloading. Long context on DeepSeek-V2-Lite with LongBench, 4K to 128K: activated experts are 3 GB per decode step; once the KV cache shrinks the expert buffer below that (2 GB at 64K, 1 GB at 128K) the cache misses and on-demand fetch adds 137 ms, still less than vLLM because MoE-Infinity never offloads the KV cache. An expert-activation-matrix collection of 120 entries, about 3% of requests in a 290-task mix, saturates latency. After a task shift, latency recovers in at most about 50 requests within a dataset and about 30 across datasets (Table 3).",
+ "adoption": "research-only",
+ "code_url": "https://github.com/EfficientMoE/MoE-Infinity",
+ "open_weights": true,
+ "notes": "VENUE: no conference comment on the abs page and no Crossref proceedings deposit found on 2026-10-18, so venue is arxiv-preprint even though v3 is dated 2025-03-12. Year is the v3 revision year, not the 2024 submission year. The author list is the six-author v3 HTML list; the abs page omits Chuanhao Sun. WHAT TRANSFERS to a hand-written stack that already streams routed experts from RAM: (1) the residency split, where attention, shared experts and the whole KV cache stay in VRAM and only routed experts move, because KV-fetch traffic contends with expert prefetch and is what makes the vLLM long-context curve blow up; (2) do not prefetch by expert index or by LRU, since both evict the expert the next layer of THIS request needs (Figure 6); (3) the predictor is a request-scoped count matrix plus a cosine match, not a learned router, and it is cheap enough to run on the host CPU between layers; (4) early layers get cache priority and late layers get prefetch priority, because the trace is uninformative until a few layers have routed. WHAT DOES NOT TRANSFER: the 3.1-16.7x is against offload baselines that prefetch badly, measured at batch 1 on one A5000, and the abstract and the conclusion quote different ranges. A Mixtral-shaped MoE with 8 large experts only gains 1.4x. The trace is useless across requests: expert reuse flattens once 1000 sequences are pooled, so a concurrent batch should not share one activation matrix. The first iterations of a request have no trace and fall back to prefetch only; warmup caching is left as future work. There is no low-bit expert path, so checkpoints stay full precision and bytes per expert are avoided rather than reduced."
+}
