@@ -1,6 +1,7 @@
 # 27 — Paper reading map: the 282 paper records by topic and adoption
 
 <!-- written 2026-10-12 against 281 paper records. Counts are a snapshot; regenerate the tables from data/papers/ if they drift. 2026-10-18: quantization 36 -> 37, research-only 132 -> 133, for [[papers/qmoe-sub-1-bit-compression]]. -->
+<!-- 2026-10-18: moe 15 -> 16, research-only 133 -> 134, for [[papers/specprefetch-window-aware-expert-prefetch]]. The tables below remain the 2026-10-12 snapshot plus the QMoE row. -->
 
 The repo holds a paper record for every method that shapes an inference decision, but
 until now almost none were cited from `docs/`. This map makes them navigable: one
@@ -254,9 +255,9 @@ result until an engine record says otherwise.
 | [[papers/w4p-specexec-consumer-speculative|SpecExec: Massively Parallel Speculative Decoding for Interactive LLM Inference on Consumer Devices]] | 2024 | `research-only` |
 | [[papers/magicdec-long-context-specdec|MagicDec: Breaking the Latency-Throughput Tradeoff for Long Context Generation with Speculative Decoding]] | 2025 | `research-only` |
 
-### moe (15)
+### moe (16)
 
-4 in-production, 5 in-upstream-engine, 6 research-only. Synthesis: [13-model-compatibility.md](13-model-compatibility.md), [17-deployment-shape.md](17-deployment-shape.md).
+4 in-production, 5 in-upstream-engine, 7 research-only. Synthesis: [13-model-compatibility.md](13-model-compatibility.md), [17-deployment-shape.md](17-deployment-shape.md).
 
 | paper | year | adoption |
 |---|---|---|
@@ -275,6 +276,7 @@ result until an engine record says otherwise.
 | [[papers/w4p-fiddler-cpu-gpu-moe-orchestration|Fiddler: CPU-GPU Orchestration for Fast Inference of Mixture-of-Experts Models]] | 2025 | `research-only` |
 | [[papers/w4p-megascale-infer-disaggregated-expert-parallelism|MegaScale-Infer: Serving Mixture-of-Experts at Scale with Disaggregated Expert Parallelism]] | 2025 | `research-only` |
 | [[papers/w4p-moe-lightning-hierarchical-roofline|MoE-Lightning: High-Throughput MoE Inference on Memory-constrained GPUs]] | 2025 | `research-only` |
+| [[papers/specprefetch-window-aware-expert-prefetch|SpecPrefetch: Parameter-Efficient Expert Prefetching for Sparse MoE Foundation Models]] | 2026 | `research-only` |
 
 ### other (12)
 

@@ -1,0 +1,36 @@
+{
+ "id": "specprefetch-window-aware-expert-prefetch",
+ "type": "paper",
+ "name": "SpecPrefetch: Parameter-Efficient Expert Prefetching for Sparse MoE Foundation Models",
+ "status": "verified",
+ "confidence": 0.78,
+ "updated": "2026-10-18",
+ "sources": [
+  "pap-specprefetch-expert-prefetch-arxiv",
+  "repo-wei390-specprefetch"
+ ],
+ "arxiv_id": "2607.24787",
+ "venue": "arxiv-preprint",
+ "year": 2026,
+ "category": "moe",
+ "authors": [
+  "Jinwei Kong",
+  "Runqi Meng",
+  "Fanyi Wang",
+  "Wentao Qiu",
+  "Haotian Hu",
+  "Yongjian Zhou",
+  "Zhenhua Ge"
+ ],
+ "affiliations": [],
+ "problem": "With routed experts off the accelerator, the expert set for a layer is known only after that layer's router runs, so the copy sits on the critical path: the paper measures exposed expert loading at 67% of per-layer decode latency on a GPU and 52% under a mobile cold cache. Predicting further ahead does not remove the limit, because the overlap window only hides about two expert transfers, and a top-4 or top-8 candidate set exceeds that window in 37% and 89% of events.",
+ "mechanism": "Attach one low-rank adapter per adjacent MoE-layer pair and use it only to order the next layer's transfer. At layer l the adapter maps the router input x through z = B A x, with A in R^{r x D} and B in R^{n x r}, then a softmax, and sums the per-token probabilities over the batch into one priority per expert. All L-1 adapters cost (L-1) r (D+n) parameters and are trained by KL distillation of the frozen next-layer router's full distribution, so the relative order is what is learned, not a hard top-K. The native router still chooses the executed experts, so a wrong prediction changes latency and never the output. Transfers are asynchronous and capped by a profiled budget M_max equal to how many experts the measured overlap window can actually move; experts already resident or already in flight are skipped, the rest are taken in priority order, and anything the router then needs that did not arrive is loaded on demand. The budget is the whole point: Figure 4 raises ReadyRecall from 82.1% to 97.5% by raising M_max, and throughput peaks at M_max=8 and then falls, because the extra copies past the window only add I/O.",
+ "hardware_relevance": [],
+ "speedup_reported": "Authors' own numbers. Figure 1, Qwen3-VL-30B-A3B: exposed expert loading is 67% of per-layer decode latency on the GPU and 52% under mobile cold cache; the measured prefetch window covers about two expert transfers, and top-4 / top-8 candidate demand exceeds that window in 37% / 89% of events. Table 2, ExpertRecall at budgets {K/2, K, K+2} with K=8 on Qwen3-VL-30B-A3B and K=6 on DeepSeek-VL2-Tiny: the caption states the maximum recall at 4 and at 3 candidates is 50%, and says SpecPrefetch covers the next layer with substantially fewer trainable parameters than the learned-predictor baselines, without printing the parameter totals. Section 4.4, 4-bit DeepSeek-VL2-Tiny (11 MoE layers, 64 routed experts, top-6, 1.94 MB per quantized expert) on a Snapdragon 8 Elite with an Adreno 825, experts on storage, batch decode: Table 4, cold-cache NVMe, OFF (no prediction, no prefetch) 3.753 +/- 0.164 tok/s, PRED0 (prediction and control path, no transfers) 3.730 +/- 0.113 tok/s (-0.53%), SpecPrefetch 4.055 +/- 0.129 tok/s (+8.12% over OFF). Table 5, same budget M_max=8: ReadyRecall 23.4% for naive previous-token prefetch against 91.7% for SpecPrefetch, and throughput +6.97% under cold NVMe and +15.43% under the slow-storage emulation, where naive prefetch is slower than doing nothing. Figure 4: throughput peaks at M_max=8 and declines at larger budgets while ReadyRecall keeps rising from 82.1% to 97.5%. Figure 5: against the compute-optimized runtime the gain is about 20% under the Slow UFS emulation and 17.02% under the slowest SD-card emulation, and small once physical NVMe already hides the load. Predictor training, not inference: 1 epoch, AdamW, lr 1e-4, bf16, max length 4096 (DeepSeek-VL2-Tiny) or 2048 (Qwen3-VL-30B-A3B), on 2x8 A800-SXM4-80GB.",
+ "adoption": "research-only",
+ "code_url": "https://github.com/wei390/SpecPrefetch",
+ "open_weights": true,
+ "notes": "VENUE: the abs page and the v2 HTML name no venue. A title search on 2026-10-18 found only the arXiv copies, so venue stays arxiv-preprint. Year is the 2026 submission year. Affiliations are not stated in the HTML header, so the field is left empty rather than guessed. WHAT TRANSFERS to a hand-written stack that keeps attention and shared experts resident and streams routed experts from RAM. (1) Bound the prefetch by the overlap window, not by the router's K. On the measured model the window hides about two expert copies, and issuing the top-8 overshoots it in 89% of events; Figure 4 then shows recall still climbing (82.1% to 97.5%) while throughput has already peaked at M_max=8 and fallen. A hand-written prefetcher should profile how many experts the resident compute (attention plus shared expert) can cover and stop there. (2) Predict priority, and let the real router decide. Because the adapter never replaces the gate, a miss is only an on-demand load and the tokens are identical to the uncached model. That is the property a kernel stack wants: the predictor is a scheduling hint, and the GEMM, the quant format, and the KV cache are untouched. (3) Aggregate per token before issuing the copy. Summing the softmax over the batch means one expert wanted by many tokens is fetched once, which is the right order when several sequences share the link. (4) The adapter is small enough to run on the host. Cost is (L-1) r (D+n) parameters, one matvec of the current hidden state per layer, and Table 4 measures the prediction-plus-control path at -0.53% when it issues no copies, so it is not the thing to optimize. WHAT DOES NOT TRANSFER: every throughput number is a phone. The 8.12%, 15.43%, 17.02%, and about-20% gains are 4-bit DeepSeek-VL2-Tiny on a Snapdragon 8 Elite with experts on NVMe or on an emulated slower bus, against the authors' own offload runtime, and the paper says the experiment varies storage latency rather than shared bandwidth contention. It does not measure host DRAM over PCIe, and it does not say which GPU produced the 67% stall in Figure 1. On a fast link the paper's own Figure 5 shows the gain collapsing, which lines up with the separate finding that speculative prefetch can slow decode once the mandatory misses already fill the link. The abstract's 'up to 20%' is the Slow UFS emulation, not the physical-NVMe result. CODE: the paper says code and weights come out on acceptance and links nothing. The GitHub repo at code_url trains and evaluates the DeepSeek-VL2-Tiny predictor and simulates an LRU cache; it does not implement the window-aware copy, and the paper does not cite it. Its README recall@6 of 0.8961 on ChartQA (n=2500) is a different quantity from the paper's ReadyRecall and is not used above.",
+ "venue_kind": null,
+ "venue_track": null
+}
