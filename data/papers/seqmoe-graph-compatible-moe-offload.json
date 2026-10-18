@@ -1,0 +1,42 @@
+{
+  "id": "seqmoe-graph-compatible-moe-offload",
+  "type": "paper",
+  "name": "SeqMoE: Toward Full-Load Performance via Predictive and Graph-Compatible MoE Offloading",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-10-18",
+  "sources": [
+    "pap-seqmoe-graph-compatible-moe-offload-arxiv"
+  ],
+  "arxiv_id": "2609.12978",
+  "venue": "arxiv-preprint",
+  "venue_track": null,
+  "year": 2026,
+  "category": "moe",
+  "authors": [
+    "Zihan Wang",
+    "Yuqi Wang",
+    "Lei Gong",
+    "Cheng Tang",
+    "Wenqi Lou",
+    "Teng Wang",
+    "Chao Wang",
+    "Xuehai Zhou"
+  ],
+  "affiliations": [
+    "University of Science and Technology of China"
+  ],
+  "problem": "With low VRAM and a lot of host RAM, an MoE decode step only needs a few experts, but those experts are known only after the router runs, so the host-to-device copy lands on the critical path. A predictor that looks one to three layers ahead cannot fill that gap: the paper measures that on Qwen3-30B-FP8 over PCIe 4.0 one layer of compute overlaps the transfer of only 1.39 experts on average. And the offload itself fights the thing that makes decode fast, because a fused MoE kernel and a captured graph both assume a fixed expert layout and no host synchronization.",
+  "mechanism": "Three decisions, and only the third one is the part that transfers to a hand-written kernel stack. First, treat the per-layer expert activation as a sequence and predict it with a small sequence model that runs entirely on the device, so one forecast covers several future tokens and every layer rather than the next one to three layers. The forecast feeds both a prefetch schedule (job sequencing with deadlines, so the expert that would otherwise miss is the one that gets the bandwidth) and a probabilistic Belady eviction (evict the cached expert whose next predicted use is furthest away, instead of LRU). Second, share one pool of cache slots across every MoE layer, all at one fixed base address with layout [num_slots, dim0, dim1]. A lookup table rewrites expert_id to slot_id, so the unmodified fused MoE kernel still sees the contiguous layout it was written for, and the slot count can exceed the expert count without changing kernel latency. That is the same shape as a global expert scratch: attention, shared experts and non-expert weights stay resident, and only routed experts move. Third, the orchestration rule that makes the copy disappear from the critical path. The device owns prediction, cache metadata and the miss copy, and it starts the miss copy itself from a kernel on the main stream out of a pinned, mapped host pool, so the graph never has to wait for the host to notice a miss. The prefetcher is the only thing on the CPU: it reads the GPU's position and a miss flag out of a mapped control region, and it issues the prefetch with an async copy on a separate stream. The GPU never waits for it. A monotonically increasing tag per slot is what keeps the two sides honest: the GPU only commits a prefetched expert into the cache when the tag the CPU wrote back matches the tag it assigned, so a stale or superseded copy cannot land in the wrong slot. Prefill is the exception the paper states outright. Many tokens at once activate a wide expert union, so sparsity stops helping; they drop graph capture for prefill and prefetch by offline activation frequency instead, keeping e slots free for the misses.",
+  "hardware_relevance": [
+    "nvidia-rtx-4090",
+    "nvidia-rtx-5090",
+    "nvidia-rtx-pro-6000-blackwell"
+  ],
+  "speedup_reported": "Authors' own numbers, no independent reproduction, and the absolute tok/s live only in Figure 6, which the HTML does not transcribe, so only the percentages are recorded. Section 9.2, decode, batch 1, cache at 45% of experts (40% for Qwen3.6): 84.82% of full-load throughput on Qwen3-30B-A3B-FP8, 75.69% on Qwen3.6-35B-A3B-BF16, 79.20% on GPT-OSS-120B-MXFP4 and 76.65% on DeepSeek-V4-Flash, averaged to 80.22% of full-load in the abstract, against an eager offload that Section 1 puts at about 2% of full-load. The abstract states a 96.97% average hit rate at that residency; Section 9.5 puts the average miss rate at 3.25% and says the on-demand stall is still the largest single component of decode time, which is the paper's own evidence that a miss costs more than its rate suggests. Section 9.4: predicting the top k+3 experts one step ahead recalls 90.90%, 88.39%, 90.76% and 85.81% of the actually activated experts on those four models, and extending the same predictor to eight recursive steps drops recall by 3.58 percentage points on average. Section 9.5: the predictor costs 3.46% of execution time and the cache-management kernels 2.05%, with predictor footprints of 120 MB, 228 MB, 112 MB and 223 MB. Section 2.2: on Qwen3-30B-FP8 with an RTX 4090 over PCIe 4.0, one layer of compute overlaps 1.39 expert transfers, which is the number that says a one-layer lookahead cannot hide the copy. Hardware in Section 9.1: RTX 4090 24 GB with 120 GB host RAM over PCIe 4.0, RTX 5090 32 GB with 120 GB host RAM over PCIe 5.0, RTX PRO 6000 Blackwell 96 GB with 256 GB host RAM over PCIe 5.0. Full-load is all weights resident, with pipeline parallelism when one GPU cannot hold them.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": false,
+  "notes": "The technique that transfers to a hand-written stack is the orchestration, not the sequence model. Four rules, all in Section 8.2, and none of them is CUDA-specific. The predictor and the cache metadata run on the device, inside the captured graph, so a forecast does not round-trip to the host. A miss copy is started by the device from a pinned, mapped host allocation, so the graph never blocks on the host noticing the miss. The prefetcher is the only host thread, it communicates through a mapped control region rather than a sync, and it copies on a stream the compute never waits on. A per-slot tag is the only synchronization: the device commits a prefetched expert only when the tag matches, which is what lets the host schedule freely without racing the kernel. The placement rule in Section 8.1 is the other half. One slot pool shared by every MoE layer, at one fixed base address, with a table that rewrites expert_id to slot_id, means the fused expert kernel is untouched and the resident set (attention, shared experts, non-expert weights) never moves. The paper measures that a slot count larger than the expert count does not change fused-kernel latency. What does not transfer cleanly: the predictor is trained per model, the implementation is a Hugging Face hook rather than an engine, and the paper's own Section 8.4 says prefill does not get this treatment because a long prompt activates too many experts for the overlap to hold. The 1.39-experts-per-layer overlap is the reason a shallow cross-layer predictor is the wrong tool here, and it is also the reason the long-horizon forecast matters: the window has to be several tokens, not one layer. Compared with a working-set pager that bets on reuse because batch-1 decode has nothing to overlap against, this design bets the other way: it spends a 120-228 MB on-device predictor to manufacture the overlap, and it says the remaining 3% miss rate is what still dominates the time. Both can be true for different models; the paper does not test a reuse-heavy trace against a low-locality one. vendor_claim does not apply: these are the authors' measurements, not a vendor's.",
+  "venue_kind": null
+}
