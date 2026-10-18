@@ -1,0 +1,172 @@
+---
+import Base from '../layouts/Base.astro';
+
+const title = 'Worth Running';
+const description = 'Which models are worth running: capability against system requirements, for one user and for many, and how the state-of-the-art quants change the cost.';
+---
+
+<Base title={title} description={description} nav="worth">
+  <main class="wrap" data-pagefind-body>
+    <nav class="breadcrumb">
+      <a href={import.meta.env.BASE_URL}>index</a> / <span>worth running</span>
+    </nav>
+
+    <div class="page-head">
+      <h1>Worth Running</h1>
+      <p class="sub">
+        Models ranked by capability against what they actually need. Weights are
+        estimated at <strong>4-bit</strong> and count only the parameters active per
+        token, so a mixture-of-experts model is priced by the experts it routes, not
+        its total size. Memory is shown for <strong>one user</strong> and for
+        <strong>16 concurrent users</strong> at an 8k context — the KV cache is the
+        part that grows with users. <em>Offload</em> marks models that stay fast when
+        the routed experts sit in system RAM.
+      </p>
+    </div>
+
+    <div class="join-controls" data-worth-controls>
+      <div class="control">
+        <label for="w-fit">Fits in</label>
+        <select id="w-fit" data-filter="fit">
+          <option value="">anything</option>
+          <option value="16">16 GB</option>
+          <option value="24">24 GB</option>
+          <option value="48">48 GB</option>
+          <option value="64">64 GB</option>
+          <option value="128">128 GB</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="w-users">Users</label>
+        <select id="w-users" data-filter="users">
+          <option value="single">one</option>
+          <option value="multi">16 concurrent</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="w-offload">Offload</label>
+        <select id="w-offload" data-filter="offload">
+          <option value="">all</option>
+          <option value="friendly">stays fast in RAM</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="w-scored">Show</label>
+        <select id="w-scored" data-filter="scored">
+          <option value="scored">scored only</option>
+          <option value="">including unscored</option>
+        </select>
+      </div>
+      <span class="control-count" data-count></span>
+    </div>
+
+    <div class="cost-table-wrap">
+      <table class="cost-table" data-worth-table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Capability</th>
+            <th>Active</th>
+            <th>Weights</th>
+            <th>KV / user</th>
+            <th>Need</th>
+            <th>Offload</th>
+          </tr>
+        </thead>
+        <tbody data-worth-body></tbody>
+      </table>
+    </div>
+
+    <h2>What the quant changes</h2>
+    <p class="sub">
+      The same weights at a lower bit-width. State-of-the-art schemes hold quality
+      well past naive 4-bit, which is what moves a model from "needs a datacenter"
+      to "fits one card". Quality retention is against the lab's own full-precision
+      baseline and is a vendor claim.
+    </p>
+    <div class="cost-table-wrap">
+      <table class="cost-table">
+        <thead>
+          <tr><th>Scheme</th><th>Bits</th><th>Quality kept</th><th>Where it runs</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>GSQ-RCO (ISTA-DASLab)</td><td>3.5</td>
+            <td>task-lossless vs the base</td><td>stock llama.cpp GGUF</td>
+          </tr>
+          <tr>
+            <td>NVFP4 / MXFP4</td><td>4</td>
+            <td>within a point of FP16 on reasoning</td><td>Blackwell native; emulated elsewhere</td>
+          </tr>
+          <tr>
+            <td>QAT 2-bit (Nemotron 3.5 Bolt)</td><td>2</td>
+            <td>beats larger 16-bit models on the lab's table</td><td>24 GB, vLLM nightly</td>
+          </tr>
+          <tr>
+            <td>Ternary (Bonsai)</td><td>1.72</td>
+            <td>98% of FP16 benchmark average, vendor claim</td><td>needs a forked llama.cpp</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</Base>
+
+<script>
+  interface Bench { name: string; pct: number; vendor_claim: boolean; }
+  interface Row {
+    id: string; name: string; active_params_b: number; total_params_b: number | null;
+    weights_q4_gib: number; kv_8k_gib: number | null; single_user_gib: number;
+    multi_user_gib: number | null; offload_friendly: boolean;
+    capability: number | null; benchmarks: Bench[]; vendor_only: boolean;
+  }
+
+  const base = import.meta.env.BASE_URL;
+  const tbody = document.querySelector('[data-worth-body]') as HTMLElement;
+  let rows: Row[] = [];
+
+  function need(r: Row, users: string): number | null {
+    return users === 'multi' ? r.multi_user_gib : r.single_user_gib;
+  }
+
+  function render() {
+    const fit = (document.querySelector('[data-filter="fit"]') as HTMLSelectElement).value;
+    const users = (document.querySelector('[data-filter="users"]') as HTMLSelectElement).value;
+    const offload = (document.querySelector('[data-filter="offload"]') as HTMLSelectElement).value;
+    const scored = (document.querySelector('[data-filter="scored"]') as HTMLSelectElement).value;
+    const cap = fit ? Number(fit) : Infinity;
+
+    const shown = rows.filter((r) => {
+      if (scored === 'scored' && r.capability === null) return false;
+      if (offload === 'friendly' && !r.offload_friendly) return false;
+      const n = need(r, users);
+      if (n === null || n > cap) return false;
+      return true;
+    });
+
+    tbody.innerHTML = shown.map((r) => {
+      const n = need(r, users);
+      const benches = r.benchmarks.map((b) => `${b.name} ${b.pct}`).join(', ');
+      const flag = r.vendor_only ? ' <em>(vendor)</em>' : '';
+      return `<tr>
+        <td><a href="${base}r/models/${r.id}/">${r.name}</a></td>
+        <td class="cost-cell">${r.capability === null ? '—' : r.capability.toFixed(1)}${flag}</td>
+        <td>${r.active_params_b}B</td>
+        <td>${r.weights_q4_gib} GB</td>
+        <td>${r.kv_8k_gib === null ? '—' : r.kv_8k_gib + ' GB'}</td>
+        <td class="cost-cell">${n === null ? '—' : n + ' GB'}</td>
+        <td>${r.offload_friendly ? 'yes' : '—'}</td>
+      </tr>${benches ? `<tr><td colspan="7" class="sub">${benches}</td></tr>` : ''}`;
+    }).join('');
+
+    const counter = document.querySelector('[data-count]');
+    if (counter) counter.textContent = `${shown.length} models`;
+  }
+
+  document.querySelector('[data-worth-controls]')?.addEventListener('change', render);
+
+  const resp = await fetch(`${base}joined/worth_running.json`);
+  const data = await resp.json();
+  rows = data.rows;
+  render();
+</script>
