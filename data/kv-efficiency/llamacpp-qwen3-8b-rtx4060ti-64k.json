@@ -1,0 +1,31 @@
+{
+  "id": "llamacpp-qwen3-8b-rtx4060ti-64k",
+  "type": "kv_efficiency",
+  "name": "Qwen3-8B Q4_K on an RTX 4060 Ti 16GB at 64K: 13.0 tok/s decode, 392.1 tok/s prefill, f16 KV at 144 KiB/token",
+  "status": "verified",
+  "confidence": 0.7,
+  "updated": "2026-10-18",
+  "sources": [
+    "hardware-corner-rtx-4060-ti-16gb-llm-benchmark-page-2026-03",
+    "mbl-cfg-qwen3-8b"
+  ],
+  "model": "Qwen3-8B Q4_K (GGUF), f16 KV",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "nvidia-rtx-4060-ti"
+  ],
+  "interconnect_ids": [],
+  "context_length": 65536,
+  "kv_bytes_per_token": 147456,
+  "kv_bytes_per_token_basis": "36 layers x 8 kv heads x 128 head_dim x 2 (K+V) x 2 bytes (llama.cpp default f16 KV; the Q4_K is the weight quant, not the cache) = 147,456 B/token. The page does not print a resident-KV byte count, so this is the model-record geometry, not a measured allocation. At 65,536 tokens that is 147,456 x 65,536 = 9.00 GiB of KV on a 16 GB card, which is why the same table has no 128k cell for this model.",
+  "kv_cache_dtype": "fp16",
+  "attention_variant": "gqa",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": 13.0,
+  "methodology": "Hardware Corner per-SKU llama.cpp table, page header 'Updated Benchmarks: March 2026', single RTX 4060 Ti 16GB (16 GB GDDR6, 288 GB/s as printed). Qwen3 8B Q4_K token-generation row: 45.8 t/s at 4k, 34.3 at 16k, 25.5 at 32k, 13.0 at 64k. The 64k cell is the longest context the page published for this model on this card; the 128k and 256k cells are dashes. Prompt processing at the same 64k depth is 392.1 t/s (2,675.2 at 4k, 1,480.8 at 16k, 760.3 at 32k). measured_tps_at_ctx is the 64k token-generation cell, batch-1 per-request decode. measured_ttft_ms_at_ctx is null: the page publishes prefill tok/s, not a time-to-first-token. The page does not publish the llama.cpp build hash, CUDA version, or the exact prompt and output lengths inside the 64k bucket.",
+  "measured_by": "third_party",
+  "reproducible": false,
+  "notes": "Closes the low-VRAM long-context hole the 24 GB records leave open. On a 16 GB / 288 GB/s card, Qwen3-8B Q4_K decode falls from 45.8 t/s at 4k to 13.0 t/s at 64k (3.5x) while prefill falls from 2,675 t/s to 392 t/s (6.8x), and the table stops there: no 128k cell, because 9 GiB of f16 KV plus the Q4_K weights does not leave a 128k cache. The same page's gpt-oss 20B MXFP4 row still generates 31.1 t/s at 128k, which is the sliding-window contrast (see gemma4-26b-a4b-swa-128k-effective-kv for the same mechanism derived): a full GQA-8 cache is what makes 64k the ceiling on 16 GB, not the 8B weights. Confidence 0.7 matches the source: a third-party table with no build hash."
+}

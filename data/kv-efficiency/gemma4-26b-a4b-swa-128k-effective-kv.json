@@ -1,0 +1,28 @@
+{
+  "id": "gemma4-26b-a4b-swa-128k-effective-kv",
+  "type": "kv_efficiency",
+  "name": "Gemma 4 26B-A4B sliding-window hybrid at 128K: 22,080 B/token effective, 11.1x under a full-context GQA cache",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-18",
+  "sources": [
+    "mbl-cfg-gemma-4-26b-a4b"
+  ],
+  "model": "Gemma 4 26B-A4B (25 sliding-window layers, window 1024, plus 5 full-attention layers)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 131072,
+  "kv_bytes_per_token": 22080,
+  "kv_bytes_per_token_basis": "Effective resident KV at 131,072 tokens, bf16, for an engine that honors the window. Sliding: 25 layers x 8 kv heads x 256 head_dim x 2 (K+V) x 2 bytes x 1,024 tokens = 209,715,200 B, i.e. 1,600 B/token once spread over 131,072 tokens. Full: 5 layers x 2 global kv heads x 512 global_head_dim x 2 x 2 bytes = 20,480 B/token, and these layers grow with context. Sum = 1,600 + 20,480 = 22,080 B/token. The model's published kv_cache_bytes_per_token of 225,280 is the per-token rate if every layer grew, which is the overpay an engine charges when it ignores sliding_window. Naive full-context GQA on the local geometry (30 x 8 x 256 x 2 x 2) would be 245,760 B/token. 245,760 / 22,080 = 11.13x.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "sliding",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Derived from the Gemma 4 26B-A4B config.json, not from a serving run, so both measured fields stay null. text_config enumerates 30 layers of which 25 are sliding_attention (sliding_window 1024, 8 kv heads, head_dim 256) and 5 are full_attention at 0-based indices 5, 11, 17, 23, 29 (2 global kv heads, global_head_dim 512). context_length 131072 is the repo's 128K comparison point; the model's max_position_embeddings is 262144, so the same derivation at native context is 1,600 x (131072/262144) + 20,480 = 21,280 B/token and the reduction against the naive 245,760 is 11.5x. The figure assumes the engine keeps a rotating window on the sliding layers. An engine without local-attention support allocates the full 225,280 B/token instead, which is the KV overpay the model record already warns about.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "The collection had no sliding-window reduction. This is the one that matters on a small card: at 128K the hybrid cache is 22,080 B/token, 11.1x under a full-context GQA stack of the same local geometry and 10.2x under the model's own naive 225,280 B/token figure. At 128K one sequence is 131,072 x 22,080 = 2.69 GiB instead of 27.5 GiB. Two things the derivation does not hide: the full layers use a different head geometry (2 heads x 512, not 8 x 256), so a single-formula GQA estimate is wrong in either direction; and the reduction only exists in an engine that implements the rotating window. No speed is claimed because no run was found that publishes tok/s for this checkpoint at 128K."
+}
