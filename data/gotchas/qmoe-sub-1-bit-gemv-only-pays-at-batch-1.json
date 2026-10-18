@@ -1,0 +1,30 @@
+{
+  "id": "qmoe-sub-1-bit-gemv-only-pays-at-batch-1",
+  "type": "gotcha",
+  "name": "The QMoE sub-1-bit expert kernel is a GEMV, and it loses as soon as two tokens share an expert",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-18",
+  "sources": [
+    "pap-qmoe-sub-1-bit-arxiv"
+  ],
+  "class": "kernel",
+  "affects": [
+    "nvidia-rtx-a6000",
+    "nvidia-rtx-3090"
+  ],
+  "concepts": [
+    "moe",
+    "expert-offload",
+    "sub-1-bit",
+    "ternary",
+    "dictionary-coding",
+    "gemv",
+    "decode"
+  ],
+  "symptom": "A sub-1-bit expert kernel that benchmarks faster than bfloat16 per layer comes out slower end to end, and the gap grows with the batch. On the published QMoE kernels the isolated compressed matrix-vector product beats PyTorch bfloat16 cuBLAS on every expert shape, by up to 35 percent, but the same weights decoded to 128 tokens are under 5 percent slower than the uncompressed baseline. Nothing errors and nothing logs; the kernel is doing exactly what it was written to do.",
+  "root_cause": "The kernel assigns one warp to one row and consumes one fixed-width codeword per step, which only makes sense for a single input vector. When the router sends more than one token to the same expert, the implementation launches a separate matrix-vector product per token, while the uncompressed baseline runs one matrix-matrix multiply for all of them. The paper states this directly and offers two remedies: add an inner loop over tokens, or decompress the expert fully and then call a dense matmul once the token count is large. The second option gives up the bandwidth saving that justified the format, because the decompressed expert is back to its full size for the multiply. The under-5-percent end-to-end figure is itself measured against a simulated baseline that points every expert at one copy of the weights, which the authors call a lower bound on the real uncompressed cost, so the gap against a genuinely resident model is not what was measured.",
+  "workaround": "Use the dictionary-coded ternary expert for the batch-1 decode path, where the expert is read once per token and the copy from host RAM dominates. Once a prefill or a batched decode puts several tokens on one expert, decompress that expert and call the ordinary matmul, which is the paper's own advice. Do not cite the 35 percent per-layer figure as an end-to-end speedup, and do not cite the under-5-percent figure as a comparison against a model that was actually resident.",
+  "severity": "major",
+  "notes": "The numbers are the paper's own, from arXiv:2310.16795 section 5.3, read from the v1 HTML. The per-layer comparison is against PyTorch bfloat16 cuBLAS on the expert matrix shapes of the SwitchTransformer family, on A6000 and 3090, with the smallest matrix under 0.02 ms and the largest under 0.05 ms. The end-to-end run is one C4 prompt to 128 tokens. The uncompressed c2048 baseline was not run: the paper says it would need more than 65 A6000s or more than 130 3090s, against 4 and 8 for the compressed model. See [[papers/qmoe-sub-1-bit-compression]]."
+}

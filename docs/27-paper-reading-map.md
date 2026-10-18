@@ -1,6 +1,6 @@
-# 27 — Paper reading map: the 281 paper records by topic and adoption
+# 27 — Paper reading map: the 282 paper records by topic and adoption
 
-<!-- written 2026-10-12 against 281 paper records. Counts are a snapshot; regenerate the tables from data/papers/ if they drift. -->
+<!-- written 2026-10-12 against 281 paper records. Counts are a snapshot; regenerate the tables from data/papers/ if they drift. 2026-10-18: quantization 36 -> 37, research-only 132 -> 133, for [[papers/qmoe-sub-1-bit-compression]]. -->
 
 The repo holds a paper record for every method that shapes an inference decision, but
 until now almost none were cited from `docs/`. This map makes them navigable: one
@@ -14,7 +14,7 @@ record's `adoption` evidence before treating it as settled.
 |---|---|---|
 | `in-production` | 76 | the method ships in a production system named in the record |
 | `in-upstream-engine` | 67 | merged into an open engine (vLLM, SGLang, llama.cpp, TRT-LLM, ...) |
-| `research-only` | 132 | paper results only; buys nothing without custom kernels or code |
+| `research-only` | 133 | paper results only; buys nothing without custom kernels or code |
 | `abandoned` | 5 | superseded or unmaintained |
 | `unknown` | 1 | not established from sources |
 
@@ -35,9 +35,9 @@ result until an engine record says otherwise.
 
 ## Topics
 
-### quantization (36)
+### quantization (37)
 
-4 in-production, 4 in-upstream-engine, 28 research-only. Synthesis: [23-quantization-selection.md](23-quantization-selection.md), [04-quant-selection.md](04-quant-selection.md).
+4 in-production, 4 in-upstream-engine, 29 research-only. Synthesis: [23-quantization-selection.md](23-quantization-selection.md), [04-quant-selection.md](04-quant-selection.md).
 
 | paper | year | adoption |
 |---|---|---|
@@ -54,6 +54,7 @@ result until an engine record says otherwise.
 | [[papers/moqe|Mixture of Quantized Experts (MoQE): Complementary Effect of Low-bit Quantization and Robustness]] | 2023 | `research-only` |
 | [[papers/paper-zeroquant-v2|ZeroQuant-V2: Exploring Post-training Quantization in LLMs from Comprehensive Study to Low Rank Compensation]] | 2023 | `research-only` |
 | [[papers/quip|QuIP: 2-Bit Quantization of Large Language Models With Guarantees]] | 2023 | `research-only` |
+| [[papers/qmoe-sub-1-bit-compression|QMoE: Practical Sub-1-Bit Compression of Trillion-Parameter Models]] | 2023 | `research-only` |
 | [[papers/mx-ftptq|Post Training Quantization of Large Language Models with Microscaling Formats]] | 2024 | `research-only` |
 | [[papers/paper-atom|Atom: Low-bit Quantization for Efficient and Accurate LLM Serving]] | 2024 | `research-only` |
 | [[papers/paper-bitnet-b158|The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits]] | 2024 | `research-only` |

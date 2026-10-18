@@ -565,7 +565,11 @@ they were is a category error.
 4. **Format quality deltas are overwhelmingly Llama-3.1-8B or Llama-2-7B.** No format has a
    controlled delta on a modern MoE, which is exactly where quantization behaviour is
    hardest — and MXFP4-MoE is the place where the format and the model structure are
-   recorded as possibly mismatched.
+   recorded as possibly mismatched. The sub-1-bit exception,
+   [[papers/qmoe-sub-1-bit-compression]], reports a masked-LM validation loss on
+   SwitchTransformers (c2048 ternary 1.26 against a bfloat16 1.18) rather than a task
+   score, and its kernel only wins as a batch-1 GEMV
+   ([[gotchas/qmoe-sub-1-bit-gemv-only-pays-at-batch-1]]).
 5. **The W4A4 speed claim on Blackwell is vendor-only.** The 3.5x memory and 25x/50x
    energy figures in [[quantization/nvfp4]] are labelled "marketing, not measurements" by
    the record itself.
