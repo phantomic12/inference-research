@@ -1,0 +1,37 @@
+{
+  "id": "duoserve-moe-dual-phase-expert-prefetch",
+  "type": "paper",
+  "name": "DuoServe-MoE: Dual-Phase Expert Prefetch and Caching for LLM Inference QoS Assurance",
+  "arxiv_id": "2509.07379",
+  "venue": "arxiv-preprint",
+  "venue_track": "unknown",
+  "year": 2026,
+  "category": "moe",
+  "authors": [
+    "Yuning Zhang",
+    "Grant Pinkert",
+    "Nan Yang",
+    "Yanli Li",
+    "Dong Yuan"
+  ],
+  "affiliations": [
+    "The University of Sydney"
+  ],
+  "problem": "With routed experts in host RAM, prefill and decode want opposite schedules. Prefill activates experts densely across many tokens, so a cache that tries to hold them blows peak GPU memory. Decode activates only the top-k per step, so a fetch discovered at the gate sits on the critical path and inflates tail latency. One policy across both phases gets either the OOM or the stall.",
+  "mechanism": "Split the schedule by phase and keep the GPU expert cache sized to k, the number of experts a token actually routes to, not to the expert pool. Non-MoE weights stay resident (the paper says they are about 10% of the checkpoint). Prefill does not predict: after the gate, tokens are grouped by expert so each expert is fetched once, and two streams overlap the work. The communication stream pulls the next expert from the CPU cache while the computation stream runs the resident one, with a sync after each fetch because a PCIe copy is slower than the expert GEMM and cannot be cancelled. Decode predicts the next layer. Offline, a trace of 2.5% of the task dataset builds a per-layer popularity vector and a consecutive-layer affinity matrix. A seven-layer MLP (hidden widths 2048 down to 64, batch-norm, ReLU, dropout 0.1, binary cross-entropy, multi-label over the expert pool) takes the flattened history of selected experts plus those two matrices and scores the next layer. It runs on a third GPU stream while the current layer experts compute, costing about 0.6 ms and about 300 MB, and the copy of the predicted experts starts as soon as the first resident expert finishes. Two sync points cover a miss: prefetch must land before the first expert GEMM, and the gate real selection is compared with the cache and re-fetched from the CPU cache on a mismatch. Collection plus training takes at most 9 hours on the same machine and does not modify the model.",
+  "hardware_relevance": [
+    "nvidia-rtx-a5000",
+    "nvidia-rtx-a6000"
+  ],
+  "speedup_reported": "Authors own numbers, single request, PCIe 4.0 at 16 GT/s, 128 GB host RAM. Two boxes: AMD Threadripper PRO 3945WX with an RTX A5000 24 GB (Ubuntu 20.04), and a Threadripper PRO 5955WX with an RTX A6000 48 GB (Ubuntu 24.04). Models: Mixtral-8x7B and Mixtral-8x22B at 4-bit AWQ, Qwen3-30B-A3B in FP8, DeepSeekMoE-16B in full precision, all under vLLM quant operators. Datasets SQuAD and Orca-Math. Against on-demand fetch (Hugging Face Accelerate) and layer-wise full prefetch (MoESys): TTFT 1.78x to 5.34x, end-to-end latency 1.42x to 7.55x, with the range spanning models, datasets, and both GPUs rather than one setting. On Qwen3-30B-A3B the TTFT gain is over 5x versus full-layer prefetch and about 1.95x to 1.99x versus on-demand fetch. End-to-end versus on-demand fetch averages 1.72x on Orca-Math and 1.67x on SQuAD. Peak GPU memory sits just above on-demand fetch and well under full-layer prefetch and MoE-Infinity: Mixtral-8x7B 3.91 GB versus 3.63 / 4.24 / 15.24 GB, Mixtral-8x22B 8.44 GB versus 8.06 / 9.13 GB with MoE-Infinity OOM on the A5000, Qwen3-30B-A3B 1.54 GB versus 1.24 / 1.80 / 7.67 GB, DeepSeekMoE-16B 2.28 GB versus 1.98 / 2.95 / 11.35 GB. Exact-top-k prediction accuracy is 54.16% to 66.85% against MoE-Infinity 36.13% to 44.33%; at-least-half is 90.31% to 99.1% against 76.83% to 84.22% (Table III). P50/P95 and the batch-1-to-12 throughput curves are figures only, with no numeric readout.",
+  "adoption": "research-only",
+  "code_url": null,
+  "open_weights": null,
+  "notes": "VENUE: no conference comment on the v2 HTML. Crossref on 2026-10-18 returned only SSRN posted-content DOI 10.2139/ssrn.5551142 (Elsevier BV, container empty, issued year 2025, title worded Cache Scheduling for Efficient MoE LLM Inference rather than the arXiv title). That is a preprint deposit, not proceedings, so venue stays arxiv-preprint and venue_track unknown. Year is the v2 revision year, not the 2025 submission year. WHAT TRANSFERS to a hand-written stack that already streams routed experts from RAM: (1) do not use one prefetch policy for both phases. Prefill should pipeline expert-at-a-time, computing the resident expert while the next one copies, because the gate union is too wide to prefetch and too wide to hold. Decode is where a predictor earns its place, because only k experts move per layer. (2) size the on-device expert cache to k, not to a fraction of the pool. That is the whole memory result: peak stays within 0.3 GB of pure on-demand fetch while the copy is hidden. (3) the predictor input that matters is the previous layer selection plus a static popularity and affinity table, not the hidden state, so it can run on the host or on a side stream without touching the GEMM. (4) a miss must preempt: the gate real ids are compared with the cache before the GEMM and a wrong expert is re-fetched, the same early-preemption idea as ProMoE but checked at expert granularity rather than chunk granularity. WHAT DOES NOT TRANSFER: the 1.78x-7.55x band is against on-demand fetch and full-layer prefetch, not against a stack that already overlaps the copy, and no single cell is broken out per model and GPU. Exact-top-k accuracy is only 54-67%, so on a top-2 model a miss still re-fetches one expert about a third of the time, and the paper own sync point exists because prefetch latency exceeds the expert GEMM. The prefill pipeline assumes the PCIe copy is slower than the expert compute; on a low-bit expert small enough that the GEMM is the short pole, the sync-after-every-expert schedule stops hiding anything. Batching densifies the union and the paper says the gain shrinks as batch grows, with no numeric throughput in the text. The predictor is trained per task dataset (2.5% of it, up to 9 hours) and is a GPU-side PyTorch MLP, so a hand-written non-CUDA backend has to re-host it. No code is linked.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-18",
+  "sources": [
+    "pap-duoserve-moe-arxiv"
+  ]
+}
