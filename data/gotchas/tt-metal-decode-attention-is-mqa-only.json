@@ -1,0 +1,31 @@
+{
+  "id": "tt-metal-decode-attention-is-mqa-only",
+  "type": "gotcha",
+  "name": "TT-Metal's decode attention kernel only implements multi-query attention",
+  "class": "kernel",
+  "affects": [
+    "niche-tt-metal",
+    "tenstorrent-wormhole-n150",
+    "tenstorrent-wormhole-n300"
+  ],
+  "concepts": [
+    "tt-metal",
+    "flash-decode",
+    "mqa",
+    "gqa",
+    "paged-kv",
+    "decode-attention"
+  ],
+  "symptom": "A decode attention call that is fast on a multi-query model does not accept a grouped-query model on the same kernel. The scaled-dot-product attention decode op states that its implementation is Flash-Decode and that it currently only supports MQA while decoding a single token. Query heads are not a parallelization axis; the op parallelizes over the batch and over the K/V sequence length, and the output head count is the query head count padded up to the tile height rather than a real multi-head result.",
+  "root_cause": "Decode attention on one token is bandwidth-bound, so the kernel spends its cores on reading more of the KV cache in parallel and reducing the partial softmax statistics over the on-chip network, instead of on computing many query heads. That split only pays when every core in a group reads the same K and V, which is exactly multi-query attention. Grouped-query attention breaks the assumption: cores working on different query heads within a group still share K and V, but the kernel has no path to multicast one K and V head to several query heads. The 2024 Wormhole FlashAttention report names that multicast as future work and does not implement it.",
+  "workaround": "Lower grouped-query attention to multi-query attention for the decode step by repeating the KV head across the group, and accept the extra KV bandwidth that costs, or keep grouped-query attention and write the multicast the report describes: one core reads the K and V head and the on-chip network delivers it to the cores holding the query heads of that group. For the chunk size, leave the default alone unless measuring \u2014 unpaged decode uses min(512, the largest power-of-two divisor of the sequence length), and paged decode uses 32 when no program config is passed.",
+  "severity": "major",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-17",
+  "sources": [
+    "ttnn-sdpa-decode-api",
+    "tt-metal-flashattention-wormhole-report"
+  ],
+  "notes": "The constraint is the vendor's own statement on the SDPA decode API page, read 2026-10-17, not an inference from the kernel source. It is the decode-side counterpart of [[tt-metal-flash-decode-kv-split]]: the same kernel family that is 20x faster than unfused attention in prefill ([[papers/tt-metal-flashattention-wormhole]]) will not run a grouped-query decode at all. Most models shipped since Llama-2 use grouped-query attention, so this is the common case rather than an edge case."
+}
