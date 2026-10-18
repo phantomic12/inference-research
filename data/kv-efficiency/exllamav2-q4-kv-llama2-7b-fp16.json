@@ -1,0 +1,28 @@
+{
+  "id": "exllamav2-q4-kv-llama2-7b-fp16",
+  "type": "kv_efficiency",
+  "name": "ExLlamaV2 Hadamard Q4 KV on Llama-2-7B FP16: 4x smaller cache, +0.14 Pile perplexity",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-10-18",
+  "sources": [
+    "exllamav2-qcache-eval-q4-fp8"
+  ],
+  "model": "Llama-2-7B FP16 (MHA, 32 layers, 32 kv heads, head_dim 128)",
+  "engine_id": "exllamav2",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 512,
+  "kv_bytes_per_token": 131072,
+  "kv_bytes_per_token_basis": "Llama-2-7B is MHA: 32 layers x 32 kv heads x 128 head_dim x 2 (K+V) x 2 bytes = 524,288 B/token at fp16. ExLlamaV2 Q4 cache stores keys and values at 4 bits after a Hadamard rotation, so the data payload is 4/16 of that, 131,072 B/token, a 4.0x reduction. Scales and the rotation workspace are not in the published doc, so they are not added; 131,072 is the data payload only. The eval context is 512 tokens (10 rows of 512 from The Pile), which is too short for the compression to change whether a model fits, and is recorded as context_length because that is the length the quality number was measured at.",
+  "kv_cache_dtype": "int4",
+  "attention_variant": "mha",
+  "prefix_reuse": "none",
+  "quant_method": "exl2-q4-hadamard",
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Token-level perplexity on The Pile, 10 rows of 512 tokens, from the ExLlamaV2 qcache_eval.md table for the post-0.0.18 method (Hadamard rotation on keys and values). Llama-2-7B FP16 weights: FP16 cache perplexity 10.91, Q4 cache 11.05, FP8 cache 11.24. The Q4-minus-FP16 delta is +0.14 perplexity. No tok/s and no TTFT are published for the cache modes, so both measured fields stay null. The pre-0.0.18 Q4 column (11.16 on this row) is the method the doc says was replaced and is not the number used.",
+  "measured_by": "vendor",
+  "reproducible": true,
+  "notes": "vendor_claim. Closes the consumer-engine 4-bit KV gap: the collection's 4-bit rows are TurboQuant and NVFP4-on-Blackwell, neither of which is what a 24 GB card actually runs. ExLlamaV2's Q4 cache is the one that ships in the local engine, and the author's own table says it costs +0.14 Pile perplexity on Llama-2-7B FP16 (10.91 to 11.05) while FP8 costs more (+0.33, to 11.24). The same table shows the delta shrinking as the weights get larger: Mistral-7B-Instruct FP16 is 12.69 for both FP16 and Q4 cache, a zero delta, and the 4.0 bpw Mistral row is 12.90 for both. FOOTPRINT: 524,288 B/token fp16 down to 131,072 B/token of Q4 data, 4.0x. At 4K that is 2 GiB instead of 8 GiB, which on a 24 GB card is the room a 13B MHA model needs for context. CAVEAT: the perplexity was measured at 512 tokens, so it does not prove the delta stays at +0.14 at long context. No card is named, so accelerator_ids is empty. Llama-2-7B is not a models/ row; the geometry is the standard MHA one."
+}

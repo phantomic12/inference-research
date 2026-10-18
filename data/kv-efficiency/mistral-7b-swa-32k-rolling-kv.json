@@ -1,0 +1,30 @@
+{
+  "id": "mistral-7b-swa-32k-rolling-kv",
+  "type": "kv_efficiency",
+  "name": "Mistral-7B rolling KV buffer at 32K: 16,384 B/token effective, 8x under a full-context GQA cache",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-18",
+  "sources": [
+    "hf-mistral-7b-v01-config-sliding-4096",
+    "pap-eff-mistral-7b",
+    "fct2-hf-config-mistral-7b"
+  ],
+  "model": "Mistral-7B-v0.1 (32 layers, GQA 8 kv heads, head_dim 128, sliding_window 4096)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 32768,
+  "kv_bytes_per_token": 16384,
+  "kv_bytes_per_token_basis": "Effective resident KV at the model's native 32,768 context, bf16, for an engine that keeps the rolling buffer of size sliding_window instead of the full prompt. Geometry from config.json: 32 layers x 8 kv heads x 128 head_dim x 2 (K+V) x 2 bytes = 131,072 B/token if every layer grew with context. The window is 4096, so the cache holds 4096 tokens, not 32768: 32 x 8 x 128 x 2 x 2 x 4096 = 536,870,912 B total, which is 16,384 B per token of the 32,768-token context (536870912/32768). Reduction versus the full-context GQA cache: 131072/16384 = 8.0x, which is exactly context_length/sliding_window. The same derivation the Mistral paper gives as 8x for a 32K sequence with a 4K window.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "sliding",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Derived from the Mistral-7B-v0.1 config.json (sliding_window 4096, 32 layers, 8 kv heads, head_dim 128) and the rolling-buffer claim in the Mistral 7B paper, not from a timed serving run, so both measured fields stay null. context_length is max_position_embeddings, 32768. The figure assumes the engine actually implements the rolling buffer. vLLM and llama.cpp both have a sliding-window path; an engine that ignores sliding_window allocates the full 131,072 B/token instead. The catalog's openhermes-2-5-mistral-7b record stores that full 131,072 figure and does not apply the window, which is the overpay this record exists to quantify.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Closes the sliding-window gap for the model that introduced the rolling buffer. The collection's only sliding-window row is Gemma 4 26B-A4B, which mixes 25 local layers with 5 global ones. Mistral-7B is the pure case: every layer is windowed at 4096, so at the 32K context the resident cache is 8.0x smaller than full GQA on the same skeleton (16,384 vs 131,072 B/token). AT 32K: 512 MiB of KV instead of 4 GiB. That is what makes a 32K Mistral context cheap on a 8-16 GB card once the weights are quantized; the weights, not the cache, are the thing that fills the card. No quality cost is claimed because the window is the trained architecture, not a lossy compression of a full cache. The paper's own wording is a 2x speedup over vanilla attention at 16K sequence length from the rolling buffer plus chunking; that is an author claim about attention time, not a measured tok/s on a named card, so it is not stored as measured_tps_at_ctx. Mistral-7B-v0.1 itself is not a models/ row; the finetune openhermes-2-5-mistral-7b is, and it has the same geometry with the window ignored."
+}
