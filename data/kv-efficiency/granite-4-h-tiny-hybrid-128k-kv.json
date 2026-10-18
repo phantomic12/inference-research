@@ -1,0 +1,28 @@
+{
+  "id": "granite-4-h-tiny-hybrid-128k-kv",
+  "type": "kv_efficiency",
+  "name": "Granite 4.0 H Tiny hybrid at 128K: 4 attention layers of 40, 8,192 B/token, 10x under full GQA",
+  "status": "verified",
+  "confidence": 0.86,
+  "updated": "2026-10-18",
+  "sources": [
+    "mbl-cfg-granite-4-0-h-tiny"
+  ],
+  "model": "Granite 4.0 H Tiny (models/granite-4-0-h-tiny; 40 layers, 4 attention + 36 Mamba-2, 4 kv heads, head_dim 128)",
+  "engine_id": "vllm",
+  "accelerator_ids": [],
+  "interconnect_ids": [],
+  "context_length": 131072,
+  "kv_bytes_per_token": 8192,
+  "kv_bytes_per_token_basis": "config.json (ibm-granite/granite-4.0-h-tiny), read raw 2026-10-18 and already parsed into models/granite-4-0-h-tiny: 40 layers of which layer_types lists attention at 0-based indices 5, 15, 25, 35 and mamba everywhere else, so 4 attention layers. num_attention_heads 12, num_key_value_heads 4, hidden_size 1536, so head_dim = 1536/12 = 128. No sliding window and position_embedding_type is nope, so each attention layer keeps the whole context. KV bytes per token, bf16 = 4 attention layers x 4 kv heads x 128 head_dim x 2 (K+V) x 2 bytes = 8,192. The 36 Mamba-2 layers carry a fixed state (mamba_d_state 128, mamba_n_heads 48, mamba_d_head 64) that does not grow with context, so it is not in this per-token rate. Full GQA on all 40 layers would be 40 x 4 x 128 x 2 x 2 = 81,920 B/token. 81,920 / 8,192 = 10x.",
+  "kv_cache_dtype": "bf16",
+  "attention_variant": "hybrid",
+  "prefix_reuse": "none",
+  "quant_method": null,
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": null,
+  "methodology": "Derived from the granite-4.0-h-tiny config, not a timed run, so both measured fields are null. context_length 131072 is max_position_embeddings in that config, and the model record already stores kv_cache_bytes_per_token 8192 for the same geometry. vLLM lists the architecture as supported; no specific vLLM build was timed.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Closes the hybrid-Mamba gap: the collection's hybrid row is Qwen3.5-35B-A3B, which keeps 10 of 40 layers as full attention. Granite 4.0 H Tiny keeps 4 of 40, and it is a small model aimed at a single consumer GPU. REDUCTION VERSUS FULL GQA ON THE SAME SKELETON: 81,920 / 8,192 = 10.0x, equal to 40/4 because the attention layers are ordinary GQA with no window and no latent compression. ABSOLUTE CACHE AT 128K: 8,192 x 131,072 = 1,073,741,824 bytes = 1.00 GiB. The same context with attention on every layer would be 10.0 GiB, which on a 16 GB card is the difference between the cache fitting beside the weights and the cache taking the card. The Mamba-2 state is real but constant: 36 layers x 48 heads x 128 state x 64 head dim is on the order of tens of MB once, not per token, so it does not change the 128K comparison. No quality number is attached; the hybrid pattern is the trained architecture, not a post-hoc compression. CAVEAT: an engine that does not implement the hybrid cache and instead allocates KV for all 40 layers pays the 81,920 B/token rate. The model record's own note already warns about that class of mistake."
+}
