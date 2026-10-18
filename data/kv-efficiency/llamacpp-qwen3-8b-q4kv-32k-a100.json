@@ -1,0 +1,30 @@
+{
+  "id": "llamacpp-qwen3-8b-q4kv-32k-a100",
+  "type": "kv_efficiency",
+  "name": "llama.cpp q4_0 KV on Qwen3-8B: 3.6x smaller cache, +1% perplexity, half the decode",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-18",
+  "sources": [
+    "sotaaz-llamacpp-kv-quant-qwen3-8b-a100"
+  ],
+  "model": "Qwen3-8B Q4_K_M (Qwen/Qwen3-8B, dense GQA, 36 layers, 8 kv heads, head_dim 128)",
+  "engine_id": "llama-cpp",
+  "accelerator_ids": [
+    "nvidia-a100-80gb-pcie"
+  ],
+  "interconnect_ids": [],
+  "context_length": 32768,
+  "kv_bytes_per_token": 39976.96,
+  "kv_bytes_per_token_basis": "Measured, not derived. llama.cpp reported the q4_0 KV cache at 1.22 GiB for 32,768 tokens, which is 1.22 x 1024^3 / 32,768 = 39,976.96 B/token. The same run reported the f16 cache at 4.38 GiB, 143,523.84 B/token, against the 147,456 B/token the config predicts (36 layers x 8 kv heads x head_dim 128 x 2 x 2 bytes). The 2.7 percent gap between measured f16 and the formula is llama.cpp block and type overhead, so the measured figure is the one recorded. The q4_0 cache is 4.38 / 1.22 = 3.59x smaller than the measured f16 cache.",
+  "kv_cache_dtype": "int4",
+  "attention_variant": "gqa",
+  "prefix_reuse": "none",
+  "quant_method": "gguf-q4_0-kv",
+  "measured_ttft_ms_at_ctx": null,
+  "measured_tps_at_ctx": 41.2,
+  "methodology": "llama.cpp ggml-org master commit 69320fe (2026-09-02), CUDA build for sm80, on one A100 80GB PCIe, driver 535. Qwen3-8B Q4_K_M (4.68 GiB of weights), -fa 1 -ngl 99, llama-bench two-run averages. KV cache types f16, q8_0 and q4_0. Cache size reported by the engine at 32,768 tokens; decode speed measured at 65,536 tokens of depth; perplexity on wikitext-2, 3 chunks, at 32,768 context. The harness and raw JSON are linked from the source.",
+  "measured_by": "third_party",
+  "reproducible": true,
+  "notes": "Third-party measurement, not a vendor claim. Closes the measured-footprint gap for 4-bit KV: the collections 4-bit rows are ExLlamaV2 Q4, Quanto int4 and TurboQuant, and each of them derives its byte rate from the dtype width. This one is the cache size llama.cpp actually allocated. QUALITY COST, measured on the same run: wikitext-2 perplexity at 32K is 8.41 for f16, 8.41 for q8_0 and 8.49 for q4_0, so q4_0 costs about 1 percent perplexity and q8_0 costs none. SPEED COST, which the dtype-width rows do not capture: at 64K depth f16 decodes at 81.6 tok/s, q8_0 at 44.7 (55 percent) and q4_0 at 41.2 (50 percent). The cache is 3.59x smaller but decode is twice as slow, because the dequantization is memory-latency bound at batch 1. A 4 October 2026 update on a later build holds the same shape: 56 and 53 percent of f16 at 64K. WHAT IT BUYS ON A SMALL CARD: the 32K cache drops from 4.38 GiB to 1.22 GiB, which is the difference between a 32K context fitting beside the 4.68 GiB of Q4 weights on a 8 GB card and not fitting. CAVEAT: the card is an A100 80GB PCIe. The cache sizes and the perplexity are properties of the format and transfer directly; the tok/s figures are for that GPU and that commit (69320fe, sm80) and a later build or a different card will move them. q5_1 and a mixed q8_0/q4_0 setting silently fell back to CPU prefill in the same run, so those are not recorded."
+}
