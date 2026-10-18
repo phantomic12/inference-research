@@ -300,6 +300,84 @@ def build_roofline() -> dict:
 # main
 # ===========================================================================
 
+def build_worth_running() -> dict:
+    _CONTEXT_TOKENS = 8192
+    _MULTI_USERS = 16
+    models = load(DIRS["model"])
+    rows = []
+    for stem, r in models.items():
+        if r.get("open_weights") is False:
+            continue
+        active = r.get("active_params_b")
+        total = r.get("params_b")
+        if not isinstance(active, (int, float)) or active <= 0:
+            continue
+        weights = active * 4 / 8  # 4-bit GGUF-class, GiB
+        kv_bpt = r.get("kv_cache_bytes_per_token")
+        kv = None
+        if isinstance(kv_bpt, (int, float)) and kv_bpt > 0:
+            kv = kv_bpt * _CONTEXT_TOKENS / (1024 ** 3)
+
+        scored = []
+        for b in r.get("benchmarks") or []:
+            if not isinstance(b, dict):
+                continue
+            score, scale = b.get("score"), b.get("scale")
+            if not (isinstance(score, (int, float)) and isinstance(scale, (int, float)) and scale > 0):
+                continue
+            if b.get("higher_is_better", True) is False:
+                continue
+            scored.append({
+                "name": b.get("name"),
+                "score": score,
+                "scale": scale,
+                "pct": round(score / scale * 100, 1),
+                "vendor_claim": bool(b.get("vendor_claim", False)),
+                "source": b.get("source"),
+            })
+        capability = round(sum(s["pct"] for s in scored) / len(scored), 1) if scored else None
+
+        experts = r.get("experts_per_token")
+        moe = bool(r.get("num_experts"))
+        # A dense model that spills into RAM moves every weight per token, so it
+        # only offloads well when there is nothing to spill.
+        offload_friendly = moe and active <= 12
+
+        single = round(weights + (kv or 0), 1)
+        multi = round(weights + (kv or 0) * _MULTI_USERS, 1) if kv else None
+
+        rows.append({
+            "id": stem,
+            "name": r.get("name"),
+            "family": r.get("family"),
+            "active_params_b": active,
+            "total_params_b": total,
+            "moe": moe,
+            "experts_per_token": experts,
+            "weights_q4_gib": round(weights, 1),
+            "kv_8k_gib": round(kv, 2) if kv else None,
+            "single_user_gib": single,
+            "multi_user_gib": multi,
+            "offload_friendly": offload_friendly,
+            "capability": capability,
+            "benchmarks": scored,
+            "vendor_only": bool(scored) and all(s["vendor_claim"] for s in scored),
+        })
+
+    rows.sort(key=lambda x: (-(x["capability"] or -1), x["single_user_gib"]))
+    return {
+        "assumptions": {
+            "quant_bits": 4,
+            "context_tokens": _CONTEXT_TOKENS,
+            "multi_users": _MULTI_USERS,
+            "weights_basis": "active_params_b * 4 bits / 8, GiB. MoE counts only the experts routed per token.",
+            "capability_basis": "mean of score/scale across the model's `benchmarks` entries. Null until a record cites benchmarks. Vendor-published scores are flagged, not excluded.",
+        },
+        "rows": rows,
+    }
+
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -321,9 +399,37 @@ def main() -> None:
         json.dumps(roof, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"  {len(roof['accelerators'])} accelerators, {len(roof['flop_classes'])} flop classes")
 
+    print("Building worth-running ranking...")
+    worth = build_worth_running()
+    (OUT / "worth_running.json").write_text(
+        json.dumps(worth, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    scored = sum(1 for r in worth["rows"] if r["capability"] is not None)
+    print(f"  {len(worth['rows'])} runnable models, {scored} with a capability score")
+
     total = sum(f.stat().st_size for f in OUT.rglob("*.json"))
     print(f"\n  {total / 1024:.0f} KB total under {OUT.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":
     main()
+
+
+# ===========================================================================
+# 4. WORTH RUNNING — capability vs system requirements
+# ===========================================================================
+
+# Capability is not comparable across the repo's `quality` benchmarks: they mix
+# perplexity deltas, acceptance lengths and accuracy on different harnesses.
+# Instead each model record carries `benchmarks`, a list of
+# {name, score, scale, higher_is_better, source, vendor_claim}. The capability
+# index is the mean of score/scale over the higher-is-better entries, in
+# [0, 100]. Requirements come from the structured fields:
+#   weights_q4_gib = active_params_b * 4 / 8          (4-bit weights)
+#   kv_gib        = kv_cache_bytes_per_token * N / 1024**3
+# Single user = batch 1 at 8k context. Multi user = 16 concurrent at 8k, where
+# the KV cache is what grows. Offload-friendliness is whether the model is MoE
+# with a small active footprint, since only the routed experts move per token.
+
+_CONTEXT_TOKENS = 8192
+_MULTI_USERS = 16
+
