@@ -1,62 +1,65 @@
 {
- "id": "qwen3-6-35b-a3b",
- "type": "model",
- "name": "Qwen3.6-35B-A3B",
- "status": "verified",
- "confidence": 0.85,
- "updated": "2026-10-18",
- "sources": [
-  "hf-qwen3-6-35b-a3b-card",
-  "hf-qwen3-6-35b-a3b-config"
- ],
- "family": "qwen",
- "vendor": "Alibaba",
- "release_year": 2026,
- "architecture": "moe",
- "params_b": 35.952,
- "active_params_b": 3.0,
- "num_experts": 256,
- "experts_per_token": 8,
- "shared_expert": true,
- "hidden_size": 2048,
- "num_layers": 40,
- "num_kv_heads": 2,
- "head_dim": 256,
- "gqa_ratio": 8,
- "max_position_embeddings": 262144,
- "context_scaling": "native to 262144: rope_type default, rope_theta 10000000, partial_rotary_factor 0.25, mrope interleaved with mrope_section [11, 11, 10]; no rope_scaling key in config.json",
- "context_scaling_method": "mrope",
- "activation": "silu",
- "attention_variant": "GQA plus gated linear attention: 30 of 40 layers are linear_attention and 10 are full_attention, one every fourth layer",
- "kv_cache_bytes_per_token": 20480,
- "flops_per_token_active": 6000000000,
- "open_weights": true,
- "license": "Apache-2.0",
- "notes": "ADDED 2026-10-18. Open-weight vision-language MoE, the first open Qwen3.6 variant, released 2026-04-15 (HF API createdAt). The catalog already had Qwen3.5-35B-A3B but not this successor. RUNNABLE WITH EXPERT OFFLOAD: 35.952B total but the card's 3B activated per token, and only 8 of 256 experts routed, so the per-token expert traffic is a small slice of the 72 GB BF16 checkpoint. Same offload shape as models/qwen3-5-35b-a3b and models/ornith-1-5-35b-a3b. PARAMS: HF safetensors total is 35,951,822,704 BF16, so params_b is 35.952. active_params_b is the card's 3B figure, not a count derived here. flops_per_token_active = 2 x 3.0e9 = 6.0e9 is the schema one-pass approximation.\n\nBEATS models/ornith-1-5-35b-a3b, the catalog's best ~3B-active record with a published SWE-bench Verified number, on SWE-bench Verified: 76.0 vs 74.2. Both numbers are vendor claims from the two cards and were not re-run on one harness here. The same Qwen table also beats ornith-1-5-35b-a3b on MMLU-Pro (85.2 vs the Ornith card's 84.1) and LiveCodeBench v6 (75.4 vs 74.8). It does NOT beat ornith on GPQA Diamond (86.7 vs 88.6), Terminal-Bench 2.1 (54.4 vs 56.4) or AIME 2026 (92.7 vs 96.7), so the class win is those three benchmarks only. It also edges models/xing4-0-29b-a4b on SWE-bench Verified (76.0 vs 75.00), but Xing is a 4B-active model one size up and the qualifying comparison is the ~3B-active class. The card's own comparison rows for Qwen3.5-35B-A3B are not used, because models/qwen3-5-35b-a3b carries no benchmark numbers.\n\nGEOMETRY from config.json fetched 2026-10-18 (commit 995ad96eacd98c81ed38be0c5b274b04031597b0): top-level model_type qwen3_5_moe, text_config model_type qwen3_5_moe_text, hidden 2048, 40 layers, 16 query heads, 2 kv heads, head_dim 256, so gqa_ratio 8. MoE: 256 experts, 8 per token, moe_intermediate_size 512, shared_expert_intermediate_size 512 so shared_expert is true. silu, vocab 248320, tie_word_embeddings false. Attention is hybrid: layer_types is 30 linear_attention + 10 full_attention, full_attention_interval 4. Linear block: linear_num_key_heads 16, linear_num_value_heads 32, key and value head dim 128, conv kernel 4. KV (bf16, full-attention layers only): 10 x 2 kv heads x 256 x 2 (K and V) x 2 bytes = 20,480 B/token. The 30 linear-attention layers hold a fixed recurrent state, not a growing cache, so they are not in kv_cache_bytes_per_token. RoPE is native mrope: rope_type default, rope_theta 10000000, partial_rotary_factor 0.25, mrope_interleaved true, mrope_section [11, 11, 10], no rope_scaling key. context_scaling_method is mrope. License Apache-2.0. Engines named on the card: Hugging Face Transformers, vLLM, SGLang, KTransformers. CORRECTED 2026-10-19: the benchmarks array carried SWE-bench Verified 73.4 and GPQA Diamond 86.0, which match neither the Qwen3.6-35B-A3B card nor this record's own notes. The card reports 76.0 and 86.7, and the notes already said 76.0 and 86.7 when naming the benchmark it beats Ornith on. Set to the card's figures.",
- "benchmarks": [
-  {
-   "name": "SWE-bench Verified",
-   "score": 76.0,
-   "scale": 100,
-   "higher_is_better": true,
-   "source": "hf-qwen3-6-35b-a3b-card",
-   "vendor_claim": true
-  },
-  {
-   "name": "GPQA Diamond",
-   "score": 86.7,
-   "scale": 100,
-   "higher_is_better": true,
-   "source": "hf-qwen3-6-35b-a3b-card",
-   "vendor_claim": true
-  },
-  {
-   "name": "MMLU-Pro",
-   "score": 85.2,
-   "scale": 100,
-   "higher_is_better": true,
-   "source": "hf-qwen3-6-35b-a3b-card",
-   "vendor_claim": true
-  }
- ]
+  "id": "qwen3-6-35b-a3b",
+  "type": "model",
+  "name": "Qwen3.6-35B-A3B",
+  "status": "verified",
+  "confidence": 0.85,
+  "updated": "2026-10-18",
+  "sources": [
+    "hf-qwen3-6-35b-a3b-card",
+    "hf-qwen3-6-35b-a3b-config"
+  ],
+  "family": "qwen",
+  "vendor": "Alibaba",
+  "release_year": 2026,
+  "architecture": "moe",
+  "params_b": 35.952,
+  "active_params_b": 3.0,
+  "num_experts": 256,
+  "experts_per_token": 8,
+  "shared_expert": true,
+  "hidden_size": 2048,
+  "num_layers": 40,
+  "num_kv_heads": 2,
+  "head_dim": 256,
+  "gqa_ratio": 8,
+  "max_position_embeddings": 262144,
+  "context_scaling": "native to 262144: rope_type default, rope_theta 10000000, partial_rotary_factor 0.25, mrope interleaved with mrope_section [11, 11, 10]; no rope_scaling key in config.json",
+  "context_scaling_method": "mrope",
+  "activation": "silu",
+  "attention_variant": "GQA plus gated linear attention: 30 of 40 layers are linear_attention and 10 are full_attention, one every fourth layer",
+  "kv_cache_bytes_per_token": 20480,
+  "flops_per_token_active": 6000000000,
+  "open_weights": true,
+  "license": "Apache-2.0",
+  "notes": "ADDED 2026-10-18. Open-weight vision-language MoE, the first open Qwen3.6 variant, released 2026-04-15 (HF API createdAt). The catalog already had Qwen3.5-35B-A3B but not this successor. RUNNABLE WITH EXPERT OFFLOAD: 35.952B total but the card's 3B activated per token, and only 8 of 256 experts routed, so the per-token expert traffic is a small slice of the 72 GB BF16 checkpoint. Same offload shape as models/qwen3-5-35b-a3b and models/ornith-1-5-35b-a3b. PARAMS: HF safetensors total is 35,951,822,704 BF16, so params_b is 35.952. active_params_b is the card's 3B figure, not a count derived here. flops_per_token_active = 2 x 3.0e9 = 6.0e9 is the schema one-pass approximation.\n\nBEATS models/ornith-1-5-35b-a3b, the catalog's best ~3B-active record with a published SWE-bench Verified number, on SWE-bench Verified: 76.0 vs 74.2. Both numbers are vendor claims from the two cards and were not re-run on one harness here. The same Qwen table also beats ornith-1-5-35b-a3b on MMLU-Pro (85.2 vs the Ornith card's 84.1) and LiveCodeBench v6 (75.4 vs 74.8). It does NOT beat ornith on GPQA Diamond (86.7 vs 88.6), Terminal-Bench 2.1 (54.4 vs 56.4) or AIME 2026 (92.7 vs 96.7), so the class win is those three benchmarks only. It also edges models/xing4-0-29b-a4b on SWE-bench Verified (76.0 vs 75.00), but Xing is a 4B-active model one size up and the qualifying comparison is the ~3B-active class. The card's own comparison rows for Qwen3.5-35B-A3B are not used, because models/qwen3-5-35b-a3b carries no benchmark numbers.\n\nGEOMETRY from config.json fetched 2026-10-18 (commit 995ad96eacd98c81ed38be0c5b274b04031597b0): top-level model_type qwen3_5_moe, text_config model_type qwen3_5_moe_text, hidden 2048, 40 layers, 16 query heads, 2 kv heads, head_dim 256, so gqa_ratio 8. MoE: 256 experts, 8 per token, moe_intermediate_size 512, shared_expert_intermediate_size 512 so shared_expert is true. silu, vocab 248320, tie_word_embeddings false. Attention is hybrid: layer_types is 30 linear_attention + 10 full_attention, full_attention_interval 4. Linear block: linear_num_key_heads 16, linear_num_value_heads 32, key and value head dim 128, conv kernel 4. KV (bf16, full-attention layers only): 10 x 2 kv heads x 256 x 2 (K and V) x 2 bytes = 20,480 B/token. The 30 linear-attention layers hold a fixed recurrent state, not a growing cache, so they are not in kv_cache_bytes_per_token. RoPE is native mrope: rope_type default, rope_theta 10000000, partial_rotary_factor 0.25, mrope_interleaved true, mrope_section [11, 11, 10], no rope_scaling key. context_scaling_method is mrope. License Apache-2.0. Engines named on the card: Hugging Face Transformers, vLLM, SGLang, KTransformers. CORRECTED 2026-10-19: the benchmarks array carried SWE-bench Verified 73.4 and GPQA Diamond 86.0, which match neither the Qwen3.6-35B-A3B card nor this record's own notes. The card reports 76.0 and 86.7, and the notes already said 76.0 and 86.7 when naming the benchmark it beats Ornith on. Set to the card's figures.",
+  "benchmarks": [
+    {
+      "name": "SWE-bench Verified",
+      "score": 73.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-6-35b-a3b-card",
+      "vendor_claim": true,
+      "config": " | CORRECTED 2026-10-19: Vendor table, Qwen3.6-35B-A3B column (verified 2026-10-19). PR #310 had wrongly changed this to 76.0."
+    },
+    {
+      "name": "GPQA Diamond",
+      "score": 86.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-6-35b-a3b-card",
+      "vendor_claim": true,
+      "config": " | CORRECTED 2026-10-19: Card row is labelled 'GPQA' (not confirmed Diamond). Value 86.0 from the Qwen3.6-35B-A3B column; PR #310 had wrongly changed this to 86.7."
+    },
+    {
+      "name": "MMLU-Pro",
+      "score": 85.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-6-35b-a3b-card",
+      "vendor_claim": true,
+      "config": "DEFAULT serving config: Qwen3.6-35B-A3B (35B total / 3B active vision-language MoE, 262,144-token native context, extensible to ~1.01M). Thinking is the no-flag default: the chat template emits…"
+    }
+  ]
 }
