@@ -68,7 +68,7 @@ def model_keys(mid, rec):
             keys.add(norm(('%sba%sb' % (int(p), round(a, 1))).replace('.', '')))
     return {k for k in keys if len(k) >= 5}
 
-def candidate_cols(grids, keys):
+def candidate_cols(grids, keys, hints=()):
     cands = []
     for gi, g in enumerate(grids):
         hdr = g[0]
@@ -82,6 +82,8 @@ def candidate_cols(grids, keys):
             for k in keys:
                 if k and (k in hn or hn in k):
                     score = max(score, len(k))
+            if any(x in hn for x in hints):
+                score += 8
             if score:
                 cands.append((score, gi, ci, h))
     cands.sort(reverse=True)
@@ -114,6 +116,14 @@ def num(s):
         return float(s)
     m = re.search(r'-?\d+(?:\.\d+)?', str(s).replace(',', ''))
     return float(m.group(0)) if m else None
+
+def hint_words(bms):
+ w=set()
+ for b in bms:
+  c=(b.get("config") or "").lower()
+  for k in ("max","nothink","non-think","instruct","it column","base","thinking"):
+   if k in c: w.add(k)
+ return w
 
 def find_row(grid, name, ci):
     raw = norm(str(name).replace('+', 'plus'))
@@ -175,7 +185,7 @@ def check(mid):
         return mid, 'no-tables', []
     keys = model_keys(mid, rec)
     bms = rec.get('benchmarks') or []
-    cands = candidate_cols(grids, keys)
+    cands = candidate_cols(grids, keys, hint_words(bms))
     if not cands:
         return mid, 'no-column', []
     best = None
