@@ -3,6 +3,7 @@
 <!-- written 2026-10-12 against 281 paper records. Counts are a snapshot; regenerate the tables from data/papers/ if they drift. 2026-10-18: quantization 36 -> 37, research-only 132 -> 133, for [[papers/qmoe-sub-1-bit-compression]]. -->
 <!-- 2026-10-18: moe 15 -> 16, research-only 133 -> 134, for [[papers/specprefetch-window-aware-expert-prefetch]]. The tables below remain the 2026-10-12 snapshot plus the QMoE row. -->
 <!-- 2026-10-18: moe 16 -> 17, research-only 134 -> 135, for [[papers/seqmoe-graph-compatible-moe-offload]]. -->
+<!-- 2026-10-18: moe 17 -> 18, research-only 135 -> 136, for [[papers/hybrimoe-hybrid-cpu-gpu-scheduling]]. -->
 
 The repo holds a paper record for every method that shapes an inference decision, but
 until now almost none were cited from `docs/`. This map makes them navigable: one
@@ -16,7 +17,7 @@ record's `adoption` evidence before treating it as settled.
 |---|---|---|
 | `in-production` | 76 | the method ships in a production system named in the record |
 | `in-upstream-engine` | 67 | merged into an open engine (vLLM, SGLang, llama.cpp, TRT-LLM, ...) |
-| `research-only` | 135 | paper results only; buys nothing without custom kernels or code |
+| `research-only` | 136 | paper results only; buys nothing without custom kernels or code |
 | `abandoned` | 5 | superseded or unmaintained |
 | `unknown` | 1 | not established from sources |
 
@@ -256,9 +257,9 @@ result until an engine record says otherwise.
 | [[papers/w4p-specexec-consumer-speculative|SpecExec: Massively Parallel Speculative Decoding for Interactive LLM Inference on Consumer Devices]] | 2024 | `research-only` |
 | [[papers/magicdec-long-context-specdec|MagicDec: Breaking the Latency-Throughput Tradeoff for Long Context Generation with Speculative Decoding]] | 2025 | `research-only` |
 
-### moe (17)
+### moe (18)
 
-4 in-production, 5 in-upstream-engine, 7 research-only. Synthesis: [13-model-compatibility.md](13-model-compatibility.md), [17-deployment-shape.md](17-deployment-shape.md).
+4 in-production, 5 in-upstream-engine, 8 research-only. Synthesis: [13-model-compatibility.md](13-model-compatibility.md), [17-deployment-shape.md](17-deployment-shape.md).
 
 | paper | year | adoption |
 |---|---|---|
@@ -278,6 +279,7 @@ result until an engine record says otherwise.
 | [[papers/w4p-megascale-infer-disaggregated-expert-parallelism|MegaScale-Infer: Serving Mixture-of-Experts at Scale with Disaggregated Expert Parallelism]] | 2025 | `research-only` |
 | [[papers/w4p-moe-lightning-hierarchical-roofline|MoE-Lightning: High-Throughput MoE Inference on Memory-constrained GPUs]] | 2025 | `research-only` |
 | [[papers/specprefetch-window-aware-expert-prefetch|SpecPrefetch: Parameter-Efficient Expert Prefetching for Sparse MoE Foundation Models]] | 2026 | `research-only` |
+| [[papers/hybrimoe-hybrid-cpu-gpu-scheduling|HybriMoE: Hybrid CPU-GPU Scheduling and Cache Management for Efficient MoE Inference]] | 2025 | `research-only` |
 | [[papers/seqmoe-graph-compatible-moe-offload|SeqMoE: Toward Full-Load Performance via Predictive and Graph-Compatible MoE Offloading]] | 2026 | `research-only` |
 
 ### other (12)
