@@ -410,11 +410,20 @@ def build_worth_running() -> dict:
     # in the catalog, so 100 means "best known on this test" and models scored on
     # different tests can be ranked against each other. `bench_count` is reported
     # so a model carried by a single benchmark is visible rather than hidden.
+    # Only a benchmark reported by >=2 models can rank anything. With a single
+    # reporter the catalog max IS that model, so the row would read 100 and hand a
+    # model a free perfect score for every test only it ran. Count reporters first.
+    _reporters = {}
+    for r in rows:
+        for b in r["benchmarks"]:
+            if b["name"]:
+                _reporters.setdefault(b["name"], set()).add(r.get("id"))
     best = {}
     for r in rows:
         for b in r["benchmarks"]:
-            if b["name"] and b["pct"] > best.get(b["name"], 0):
-                best[b["name"]] = b["pct"]
+            nm = b["name"]
+            if nm and len(_reporters.get(nm, ())) >= 2 and b["pct"] > best.get(nm, 0):
+                best[nm] = b["pct"]
     # A benchmark whose catalog best is at or near the ceiling cannot discriminate:
     # everyone who runs it scores ~the same. Flagged so a ranking carried by such
     # tests is visible rather than flattering.
@@ -430,13 +439,24 @@ def build_worth_running() -> dict:
             rel = min(b["pct"] / top * 100, 100.0)
             b["relative"] = round(rel, 1)
             b["saturated"] = top >= SATURATED
-            by_axis.setdefault(_axis_for(b["name"]), []).append(rel)
+            ax = _axis_for(b["name"])
+            if ax == "other":
+                # An incomparable grab-bag (OpenCompass, OCRBench, MMBench...). Each
+                # would otherwise be its own axis at 100. Shown on the row, never
+                # averaged into capability.
+                b["relative"] = round(rel, 1)
+                continue
+            by_axis.setdefault(ax, []).append(rel)
         if by_axis:
             per_axis = {k: round(sum(v) / len(v), 1) for k, v in by_axis.items()}
             r["axes"] = per_axis
-            r["capability"] = round(sum(per_axis.values()) / len(per_axis), 1)
-            r["bench_count"] = len(r["benchmarks"])
+            # A single axis is not a capability score. A model whose only comparable
+            # test is the one it leads would otherwise read 100 and top the table on
+            # one row. Report the axis profile, but do not rank on it.
+            r["capability"] = (round(sum(per_axis.values()) / len(per_axis), 1)
+                               if len(per_axis) >= 2 else None)
             r["axis_count"] = len(per_axis)
+            r["bench_count"] = len(r["benchmarks"])
             r["capability_basis"] = ("mean across capability axes; each axis is the mean of "
                                      "score/best-known-score for the benchmarks in it, x100. "
                                      "One capability counts once however many rows it has.")
