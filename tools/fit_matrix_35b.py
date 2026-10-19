@@ -251,6 +251,24 @@ PRICE_JOIN = {
     #   record in data/accelerators/ to join against -> left unjoined.
 
     # --- Oct-19 street-price pass (regional-reseller / tracker rows) --------
+    # A100 40 GB PCIe: a dated 2026-10-19 eBay-used ask of $4,495 (GPUDojo
+    #   tracker) is a newer observation of the same part than the $7,000/$7,500
+    #   joins above. Prefer the newer reading; the older values stay in their own
+    #   records' provenance.
+    "used-market-nvidia-a100-40gb-pcie-ebay-used-listing-tracked-by-gpudojo-2026-10-19":
+        {"nvidia-a100-40gb-pcie": 4495.0},
+    # RTX 5070 12 GB: $839.99 Newegg new-retail is the cheapest verified in-stock
+    #   ask. It fits no modelled workload (-/-/-); joined to anchor the current-gen
+    #   consumer floor against the 3090/5090 rows. The eBay-used $749 and B&H
+    #   $869.99 rows for this card are context, not the headline.
+    "regional-reseller-local-nvidia-rtx-5070-newegg-new-retail-gigabyte-geforce-rtx-5070-windforce-oc-12g-item-14-932-777-tracked-by-gpudojo-2026-10-18":
+        {"local-nvidia-rtx-5070": 839.99},
+    # NOT joined on purpose: the MI60 AliExpress asks ($267.99/$271.69) are
+    #   variant listings that may ship an MI50, and the V100 SXM2 AliExpress ask
+    #   ($240.99) is a 16GB/32GB variant listing whose 32GB selection may price
+    #   above the headline. Both are recorded at confidence 0.3 with the
+    #   conflation named in notes; joining either would put a possibly-wrong part
+    #   into the $/tok-s ranking.
     # Added with the #314/#315 worth-score commits. Each of these is a
     #   single-part listing whose price_basis names one accelerator id, so the
     #   join is the part the sticker actually prices. Exceptions called out.
