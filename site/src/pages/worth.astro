@@ -25,6 +25,17 @@ const description = 'Which models are worth running: capability against system r
         8k context, the part that grows with users. <em>Offload</em> marks models
         that stay fast when the routed experts sit in system RAM.
       </p>
+      <p class="sub">
+        <strong>Capability</strong> is relative, not a raw average. Each benchmark is
+        scored against the best result recorded for that same benchmark in the
+        catalog, so 100 means "best known on this test" and a model tested on AIME and
+        MMLU-Pro can be compared with one tested on SWE-bench and Terminal-Bench.
+        Averaging raw percentages would instead rank a model by which tests it
+        happened to be run on. The line under each name lists the tests and their
+        relative scores; <strong>thin</strong> marks a ranking carried by only one or
+        two benchmarks, and <strong>vendor</strong> marks scores the lab published
+        about itself.
+      </p>
     </div>
 
     <div class="join-controls" data-worth-controls>
@@ -68,7 +79,7 @@ const description = 'Which models are worth running: capability against system r
         <thead>
           <tr>
             <th>Model</th>
-            <th class="num">Capability</th>
+            <th class="num">Capability<br><span class="th-note">vs best known</span></th>
             <th class="num">Active</th>
             <th class="num">Resident</th>
             <th class="num">Read / token</th>
@@ -123,6 +134,7 @@ const description = 'Which models are worth running: capability against system r
     weights_q4_gib: number; traffic_q4_gib: number; kv_8k_gib: number | null; single_user_gib: number;
     multi_user_gib: number | null; offload_friendly: boolean;
     capability: number | null; benchmarks: Bench[]; vendor_only: boolean;
+    bench_count?: number; thin?: boolean;
   }
 
   const base = import.meta.env.BASE_URL;
@@ -150,11 +162,12 @@ const description = 'Which models are worth running: capability against system r
 
     tbody.innerHTML = shown.map((r) => {
       const n = need(r, users);
-      const benches = r.benchmarks.map((b) => `${b.name} ${b.pct}`).join(' · ');
+      const benches = r.benchmarks.map((b) => `${b.name} ${b.relative ?? b.pct}`).join(' · ');
+      const cov = r.bench_count ? `${r.bench_count} ${r.bench_count === 1 ? 'test' : 'tests'} · ` : '';
       const flag = r.vendor_only ? ' <span class="vendor-flag">vendor</span>' : '';
       return `<tr class="model-row">
-        <td><a href="${base}r/models/${r.id}/">${r.name}</a>${benches ? `<div class="bench-line">${benches}</div>` : ''}</td>
-        <td class="num cost-cell">${r.capability === null ? '—' : r.capability.toFixed(1)}${flag}</td>
+        <td><a href="${base}r/models/${r.id}/">${r.name}</a>${benches ? `<div class="bench-line">${cov}${benches}</div>` : ''}</td>
+        <td class="num cost-cell">${r.capability === null ? '—' : r.capability.toFixed(1)}${r.thin ? ' <span class="thin-flag" title="scored on only 1-2 benchmarks">thin</span>' : ''}${flag}</td>
         <td class="num">${r.active_params_b}B</td>
         <td class="num">${r.weights_q4_gib} GB</td>
         <td class="num">${r.traffic_q4_gib} GB</td>

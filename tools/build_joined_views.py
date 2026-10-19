@@ -341,7 +341,7 @@ def build_worth_running() -> dict:
                 "vendor_claim": bool(b.get("vendor_claim", False)),
                 "source": b.get("source"),
             })
-        capability = round(sum(s["pct"] for s in scored) / len(scored), 1) if scored else None
+        capability = None  # set below, once the catalog best per benchmark is known
 
         experts = r.get("experts_per_token")
         moe = bool(r.get("num_experts"))
@@ -371,6 +371,33 @@ def build_worth_running() -> dict:
             "vendor_only": bool(scored) and all(s["vendor_claim"] for s in scored),
         })
 
+    # A raw mean of score/scale is NOT comparable across models: a model scored on
+    # AIME 2026 and MMLU-Pro averages high, one scored on SWE-bench Verified and
+    # Terminal-Bench averages low, and the difference is the test mix, not the model.
+    # Score each benchmark relative to the best result recorded for THAT benchmark
+    # in the catalog, so 100 means "best known on this test" and models scored on
+    # different tests can be ranked against each other. `bench_count` is reported
+    # so a model carried by a single benchmark is visible rather than hidden.
+    best = {}
+    for r in rows:
+        for b in r["benchmarks"]:
+            if b["name"] and b["pct"] > best.get(b["name"], 0):
+                best[b["name"]] = b["pct"]
+    for r in rows:
+        if not r["benchmarks"]:
+            continue
+        rel = []
+        for b in r["benchmarks"]:
+            top = best.get(b["name"])
+            if top:
+                rel.append(min(b["pct"] / top * 100, 100.0))
+                b["relative"] = round(b["pct"] / top * 100, 1)
+        if rel:
+            r["capability"] = round(sum(rel) / len(rel), 1)
+            r["bench_count"] = len(r["benchmarks"])
+            r["capability_basis"] = "mean of score/best-known-score across the model's benchmarks, x100"
+            r["thin"] = len(rel) <= 2
+
     rows.sort(key=lambda x: (-(x["capability"] or -1), x["single_user_gib"]))
     return {
         "assumptions": {
@@ -379,7 +406,7 @@ def build_worth_running() -> dict:
             "multi_users": _MULTI_USERS,
             "weights_basis": "params_b * 4 bits / 8, GiB: the whole checkpoint at 4-bit, which is what has to be resident. MoE expert offload moves most of it to system RAM but does not remove it.",
             "traffic_basis": "active_params_b * 4 bits / 8, GiB: weights touched per token. This is what decode bandwidth scales with, not what must fit.",
-            "capability_basis": "mean of score/scale across the model's `benchmarks` entries. Null until a record cites benchmarks. Vendor-published scores are flagged, not excluded.",
+            "capability_basis": "mean over the model's benchmarks of score / best-known score for THAT benchmark in this catalog, x100. Relative, so models tested on different benchmarks stay comparable; 100 = best recorded on that test. `bench_count` reports coverage and `thin` marks 1-2 test rankings. Vendor-published scores are flagged, not excluded.",
         },
         "rows": rows,
     }
