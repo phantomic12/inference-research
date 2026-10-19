@@ -1,0 +1,28 @@
+{
+  "id": "gotcha-hermes4-column-semantics-and-readings",
+  "type": "gotcha",
+  "name": "Hermes-4-405B card publishes score(non-reasoning) pairs, and two readings disagree on both the column meaning and the values",
+  "class": "measurement",
+  "affects": [
+    "hermes-4-405b",
+    "qwen3-5-397b-a17b"
+  ],
+  "concepts": [
+    "benchmark provenance",
+    "reasoning column",
+    "hybrid reasoning models"
+  ],
+  "symptom": "The same card yields two different numbers for one benchmark, and it is not clear which column represents the model as served. Hermes-4-405B cells are formatted \"score(non-reasoning)\", e.g. MATH-500 96.2(73.8), AIME 2024 81.9(11.4), GPQA Diamond 70.6(39.4), MMLU 87.2(73.6).",
+  "root_cause": "Hermes-4-405B is a hybrid reasoning model, so every benchmark has a thinking and a non-thinking figure. One pass recorded the first (thinking) value; a second pass emitted both columns and tagged the thinking column as NOT the default, on the reading that reasoning is OFF by default. Both readings also differ by about 0.1 on several cells (MATH-500 96.2 vs 96.3, GPQA 70.6 vs 70.5, MMLU-Pro 80.6 vs 80.5), which indicates a transcription slip somewhere rather than a different column. Qwen3.5-397B-A17B has the same shape of disagreement in the other direction: recorded SWE-bench Verified 76.4 and GPQA 88.4 versus 79.0 and 89.2 in the second reading.",
+  "workaround": "Do not pick a value. The recorded figures are kept as-is and the config string states the dispute. To settle it, read the primary source directly and record which column the vendor designates as the default serving configuration.",
+  "severity": "major",
+  "status": "contested",
+  "confidence": 0.4,
+  "updated": "2026-10-19",
+  "sources": [
+    "hermes-4-tech-report",
+    "hf-eco-hermes-4-405b",
+    "hf-qwen3-5-397b-a17b-card"
+  ],
+  "notes": "Flagged on 2026-10-19 by the config-provenance audit. AGENTS.md: never resolve a numeric conflict by picking the number you like; keep both, mark contested, and add a gotcha when the reason for the split is knowable."
+}
