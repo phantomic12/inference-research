@@ -249,6 +249,80 @@ PRICE_JOIN = {
     # used-epyc-7003-milan-host-512gb ($2,000, 512GB DDR4 ~205 GB/s): the host
     #   is a complete 8ch-DDR4 Milan box but there is NO Milan/7003 accelerator
     #   record in data/accelerators/ to join against -> left unjoined.
+
+    # --- Oct-19 street-price pass (regional-reseller / tracker rows) --------
+    # Added with the #314/#315 worth-score commits. Each of these is a
+    #   single-part listing whose price_basis names one accelerator id, so the
+    #   join is the part the sticker actually prices. Exceptions called out.
+    #   RTX 3090: duplicate of the $950 ebay-used-rtx3090-oct2026 row already
+    #     joined; min() keeps $950 either way, joined for the fresher cites.
+    "ebay-used-rtx-3090-asking-oct2026":   {"nvidia-rtx-3090": 950.0},
+    # Arc Pro B60: the $649.99 new-retail ask is a cent under the $650
+    #   oct-2026 retail row already joined.
+    "regional-reseller-intel-arc-pro-b60-newegg-sold-and-shipped-by-newegg-new-retail-2026-10-19":
+        {"intel-arc-pro-b60": 649.99},
+    # Quadro RTX 8000: the record's own note calls $2,199.99 the cheapest 48 GB
+    #   RTX 8000 on the page, "just under the $3,000 matrix cutoff" — 48 GB at
+    #   672 GB/s is the highest-capacity sub-$3,000 card found this pass.
+    "regional-reseller-nvidia-quadro-rtx-8000-newegg-marketplace-refurbished-oem-reseller-2026-10-19":
+        {"nvidia-quadro-rtx-8000": 2199.99},
+    # RTX PRO 5000 Blackwell (48 GB, 1,344 GB/s): the $7,849.99 new ask is
+    #   above the $3,000 price gate, so this row qualifies on bandwidth. The
+    #   record cross-checks $7,700-$8,000 as the real US street and says not to
+    #   use the $9,999 marketplace listings.
+    "regional-reseller-nvidia-rtx-pro-5000-blackwell-retailer-newegg-sold-and-shipped-by-newegg-2026-10-19":
+        {"nvidia-rtx-pro-5000-blackwell": 7849.99},
+    # W7900 (48 GB, 864 GB/s) at the B&H new-retail ask; the record notes B&H
+    #   is the cheaper US channel than the $4,398 Newegg marketplace seller.
+    "regional-reseller-amd-radeon-pro-w7900-retailer-b-h-photo-video-2026-10-19":
+        {"amd-radeon-pro-w7900": 3995.0},
+    # V620 (32 GB, 512 GB/s): $830 is the cheaper of two Newegg refurb listings
+    #   for the same card ($1,249.99 is the other), per the record's notes.
+    "regional-reseller-amd-radeon-pro-v620-retailer-newegg-marketplace-seller-serverque-2026-10-19":
+        {"amd-radeon-pro-v620": 830.0},
+    # RX 9070 (16 GB, 640 GB/s) new-retail ask. The record's tracker also shows
+    #   a $649.97 used eBay ask, but the joined figure is the listed price_usd.
+    "regional-reseller-amd-radeon-rx-9070-amazon-via-videocardprices-com-tracker-2026-10-19":
+        {"amd-radeon-rx-9070": 799.99},
+    # Arc A770 16 GB at the buyable refurb ask. The record warns a $199.99
+    #   Sparkle listing exists but is OUT OF STOCK, and that 8 GB A770 variants
+    #   must not be priced against the 16 GB card — so $409 is the join.
+    "regional-reseller-intel-arc-a770-newegg-marketplace-seller-c-n-e-technology-2026-10-19":
+        {"intel-arc-a770": 409.0},
+    # RTX 3060 12 GB: NEW-retail ask. The record itself says the used/refurb
+    #   market is materially cheaper and is the right $/tok-s comparator, but
+    #   no used 3060 row exists in supply/, so the observed new ask is joined.
+    "regional-reseller-nvidia-rtx-3060-newegg-sold-and-shipped-by-newegg-new-retail-2026-10-19":
+        {"nvidia-rtx-3060": 499.99},
+    # Tesla P40: $343.59 refurb refurb ask is ABOVE the $290 used-market row
+    #   already joined, so min() keeps $290 and this row is a price check only.
+    "regional-reseller-nvidia-tesla-p40-newegg-marketplace-refurbished-server-pull-reseller-2026-10-19":
+        {"nvidia-tesla-p40": 343.59},
+    # MI50X (32 GB, 1,024 GB/s): $271.69 is the cheapest 32 GB-TITLED MI50
+    #   listing on the page and is listed in the record's own explicitly-32GB
+    #   spread. LOW confidence: the record says many MI50 titles mix "16GB
+    #   32GB" and the headline price is often the 16 GB variant, and it puts
+    #   the realistic 32 GB street at ~$270-$400. Joined because the
+    #   accelerator record is the 32 GB part and the listing is 32 GB-titled,
+    #   with the caveat carried into the doc refresh note.
+    "regional-reseller-amd-radeon-instinct-mi50x-aliexpress-marketplace-cn-seller-ships-to-us-2026-10-19":
+        {"amd-radeon-instinct-mi50x": 271.69},
+    # Radeon VII (16 GB, 1,024 GB/s): join the USED tracker average ($269),
+    #   which the record says is the honest street ("best real street price is
+    #   roughly $240-$290 used").
+    "used-market-amd-radeon-vii-price-tracker-aggregate-used-marketplace-2026-10-18":
+        {"amd-radeon-vii": 269.0},
+    # NOT joined (deliberate):
+    #   regional-reseller-amd-radeon-vii-retailer-newegg-...-2026-10-19
+    #     ($784.99) — the record's own notes carry an OUTLIER WARNING ("~2.9x
+    #     the $269 used-market average - do NOT use for $/tok ranking"). The
+    #     $269 tracker row above is the join.
+    #   regional-reseller-amd-radeon-pro-vii-amazon-...-2026-10-19 ($1,399
+    #     new) — same record says the USED street for this 2019 Vega card is
+    #     ~$300-350 and that $1,399 "badly overstates the realistic buy-in".
+    #     No used Pro VII row exists in supply/, so the Pro VII stays unpriced
+    #     in §4 rather than rank on a gouge (same rule as the radeon-vii
+    #     outlier above).
 }
 
 # ---------------------------------------------------------------------------
