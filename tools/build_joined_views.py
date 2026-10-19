@@ -312,7 +312,13 @@ def build_worth_running() -> dict:
         total = r.get("params_b")
         if not isinstance(active, (int, float)) or active <= 0:
             continue
-        weights = active * 4 / 8  # 4-bit GGUF-class, GiB
+        if not isinstance(total, (int, float)) or total <= 0:
+            continue
+        # The whole checkpoint is resident somewhere even when experts are offloaded
+        # to RAM. Pricing only the active slice reported a 600B MoE as 14 GB, which
+        # is the per-token read, not the memory it occupies.
+        weights = total * 4 / 8  # 4-bit GGUF-class, GiB: the resident file
+        traffic = active * 4 / 8  # 4-bit: weights read per decode step
         kv_bpt = r.get("kv_cache_bytes_per_token")
         kv = None
         if isinstance(kv_bpt, (int, float)) and kv_bpt > 0:
@@ -355,6 +361,7 @@ def build_worth_running() -> dict:
             "moe": moe,
             "experts_per_token": experts,
             "weights_q4_gib": round(weights, 1),
+            "traffic_q4_gib": round(traffic, 1),
             "kv_8k_gib": round(kv, 2) if kv else None,
             "single_user_gib": single,
             "multi_user_gib": multi,
@@ -370,7 +377,8 @@ def build_worth_running() -> dict:
             "quant_bits": 4,
             "context_tokens": _CONTEXT_TOKENS,
             "multi_users": _MULTI_USERS,
-            "weights_basis": "active_params_b * 4 bits / 8, GiB. MoE counts only the experts routed per token.",
+            "weights_basis": "params_b * 4 bits / 8, GiB: the whole checkpoint at 4-bit, which is what has to be resident. MoE expert offload moves most of it to system RAM but does not remove it.",
+            "traffic_basis": "active_params_b * 4 bits / 8, GiB: weights touched per token. This is what decode bandwidth scales with, not what must fit.",
             "capability_basis": "mean of score/scale across the model's `benchmarks` entries. Null until a record cites benchmarks. Vendor-published scores are flagged, not excluded.",
         },
         "rows": rows,
