@@ -107,30 +107,45 @@ def candidate_cols(grids, keys):
         named = [c for c in named if c[0] == top]
     return named + fb
 
+def num(s):
+    if s is None:
+        return None
+    if isinstance(s, (int, float)):
+        return float(s)
+    m = re.search(r'-?\d+(?:\.\d+)?', str(s).replace(',', ''))
+    return float(m.group(0)) if m else None
+
+def find_row(grid, name, ci):
+    raw = norm(str(name).replace('+', 'plus'))
+    for row in grid:
+        if len(row) > ci and norm(str(row[0]).replace('+', 'plus')) == raw:
+            return row            # exact label, parentheses included
+    if '(' in str(name):
+        # the parenthetical carried meaning ("RuBQ (ru audio QA)" vs the card's
+        # text RuBQ row); never fall back to a paren-stripped key here
+        return None
+    bn = rowkey(name)
+    for row in grid:
+        if len(row) > ci and rowkey(row[0]) == bn:
+            return row            # harness suffix dropped (Terminus-2 etc.)
+    return None
+
 def score_col(grid, ci, benchmarks):
     """Return (value_matches, resolved_rows): the column that *reproduces* the
     recorded numbers wins, so a card with two tables cannot mislead the pick."""
     ok = resolved = 0
     for b in benchmarks:
-        bn = rowkey(b.get('name'))
         want = num(b.get('score'))
-        for row in grid:
-            if len(row) <= ci:
-                continue
-            if rowkey(row[0]) and rowkey(row[0]) == bn:
-                got = num(row[ci])
-                if got is not None:
-                    resolved += 1
-                    if want is not None and abs(got - want) <= 0.051:
-                        ok += 1
-                break
+        row = find_row(grid, b.get('name'), ci)
+        if row is None:
+            continue
+        got = num(row[ci])
+        if got is None:
+            continue
+        resolved += 1
+        if want is not None and abs(got - want) <= 0.051:
+            ok += 1
     return ok, resolved
-
-def num(s):
-    if isinstance(s, (int, float)):
-        return float(s)
-    m = re.search(r'-?\d+(?:\.\d+)?', (str(s) if s is not None else '').replace(',', ''))
-    return float(m.group(0)) if m else None
 
 def check(mid):
     p = R / 'data/models' / (mid + '.json')
@@ -191,13 +206,7 @@ def check(mid):
     for b in (rec.get('benchmarks') or []):
         want = num(b.get('score'))
         bn = rowkey(b.get('name'))
-        hit = None
-        for row in grids[gi]:
-            if len(row) <= ci:
-                continue
-            if rowkey(row[0]) and rowkey(row[0]) == bn:
-                hit = row
-                break
+        hit = find_row(grids[gi], b.get('name'), ci)
         if hit is None:
             results.append((b.get('name'), want, None, 'no-row'))
             continue
@@ -226,14 +235,11 @@ def check(mid):
                 eff2 = ci2 - off2
                 if off2 < 0 or eff2 < 0 or eff2 >= md:
                     continue
-                for row in g2:
-                    if len(row) <= eff2:
-                        continue
-                    if rowkey(row[0]) == bn:
-                        v2 = num(row[eff2])
-                        if v2 is not None and abs(v2 - want) <= 0.051:
-                            explained = True
-                        break
+                row2 = find_row(g2, b.get('name'), eff2)
+                if row2 is not None:
+                    v2 = num(row2[eff2])
+                    if v2 is not None and abs(v2 - want) <= 0.051:
+                        explained = True
                 if explained:
                     break
             results.append((b.get('name'), want, got, 'ok-elsewhere' if explained else 'MISMATCH'))
