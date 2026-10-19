@@ -308,6 +308,13 @@ def build_worth_running() -> dict:
     for stem, r in models.items():
         if r.get("open_weights") is False:
             continue
+        # Embeddings, rerankers and speech models are not chat models and cannot be
+        # ranked on GPQA/SWE-bench. They used to sit in this table with no score,
+        # next to the models someone would actually run.
+        if (r.get("task") or "text-generation") in ("embedding", "reranking",
+                                                    "speech-to-text", "text-to-speech",
+                                                    "image-generation"):
+            continue
         active = r.get("active_params_b")
         total = r.get("params_b")
         if not isinstance(active, (int, float)) or active <= 0:
@@ -406,6 +413,7 @@ def build_worth_running() -> dict:
             "multi_users": _MULTI_USERS,
             "weights_basis": "params_b * 4 bits / 8, GiB: the whole checkpoint at 4-bit, which is what has to be resident. MoE expert offload moves most of it to system RAM but does not remove it.",
             "traffic_basis": "active_params_b * 4 bits / 8, GiB: weights touched per token. This is what decode bandwidth scales with, not what must fit.",
+            "scope": "Generative text models only. Models whose record carries task embedding, reranking, speech-to-text, text-to-speech or image-generation are excluded, because chat benchmarks cannot rank an embedder.",
             "capability_basis": "mean over the model's benchmarks of score / best-known score for THAT benchmark in this catalog, x100. Relative, so models tested on different benchmarks stay comparable; 100 = best recorded on that test. `bench_count` reports coverage and `thin` marks 1-2 test rankings. Vendor-published scores are flagged, not excluded.",
         },
         "rows": rows,

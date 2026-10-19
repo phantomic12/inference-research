@@ -448,6 +448,12 @@ completely different hardware.
     release_year        int|null
     architecture        dense | moe | hybrid-mamba | hybrid-attention-ssm |
                        ssm | recurrent | diffusion | other
+    task                text-generation | embedding | reranking | speech-to-text |
+                       text-to-speech | vision-language | image-generation |
+                       other | null.  Absent means text-generation. The
+                       worth-running ranking covers generative text models only,
+                       so embeddings, rerankers and speech models are excluded
+                       there instead of being ranked on chat benchmarks
     params_b            number|null   total parameters, billions
     active_params_b     number|null   activated per token; equals params_b for dense
     num_experts         int|null
