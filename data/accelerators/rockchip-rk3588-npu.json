@@ -11,9 +11,9 @@
     "integrated"
   ],
   "vram_gb": null,
-  "memory_type": "LPDDR4x/LPDDR5 (shared system memory)",
+  "memory_type": "Shared LPDDR4/LPDDR4X/LPDDR5/LPDDR5X (no dedicated NPU memory)",
   "memory_bus_bit": null,
-  "memory_bandwidth_gbps": null,
+  "memory_bandwidth_gbps": 68.3,
   "memory_bandwidth_basis": "Unified system-memory SBC; the 6 TOPS NPU shares DRAM with the CPU. No discrete VRAM or GPU-class bandwidth figure applies. The binding constraint is the NPU compute ceiling, not bandwidth.",
   "flops": [
     {
@@ -32,10 +32,11 @@
   "unified_memory": true,
   "consumer": true,
   "status": "verified",
-  "confidence": 0.8,
+  "confidence": 0.7,
   "updated": "2026-10-14",
   "sources": [
-    "airockchip-rknn-llm-benchmark-table"
+    "airockchip-rknn-llm-benchmark-table",
+    "vendor-spec-rockchip-rk3588-npu"
   ],
-  "notes": "TRAP for 7B+; edge toy for small models. The $80-200 RK3588 SBC runs Rockchip's RKLLM (airockchip/rknn-llm, v1.3.1), which is real and actively maintained, but the measured benchmark table (RK3588, w8a8, 128-in/64-out) makes the wall obvious: Qwen2.5-1.5B 16.7 tok/s, Phi3-3.8B 7.45, ChatGLM3-6B 4.98 - the largest they benchmark is already ~5 tok/s. A real 7B lands ~3-4 tok/s decode and wants ~5-6 GB for weights+KV at w8a8. Fine for a sub-4B on-device assistant or VLM demo; a trap if the goal is 7B+."
+  "notes": "TRAP for 7B+; edge toy for small models. The $80-200 RK3588 SBC runs Rockchip's RKLLM (airockchip/rknn-llm, v1.3.1), which is real and actively maintained, but the measured benchmark table (RK3588, w8a8, 128-in/64-out) makes the wall obvious: Qwen2.5-1.5B 16.7 tok/s, Phi3-3.8B 7.45, ChatGLM3-6B 4.98 - the largest they benchmark is already ~5 tok/s. A real 7B lands ~3-4 tok/s decode and wants ~5-6 GB for weights+KV at w8a8. Fine for a sub-4B on-device assistant or VLM demo; a trap if the goal is 7B+. || Filled 2026-10-19: Datasheet: 4 channels x 16-bit (64-bit total) LPDDR4/4X/5/5X, up to 32 GB address space; it does not state GB/s. 68.3 GB/s is the theoretical peak derived from LPDDR5X-8533 x 64-bit (LPDDR5-5500 = 44 GB/s, LPDDR4X-4266 = 34.1 GB/s). NPU (6 TOPS) shares this system memory."
 }
