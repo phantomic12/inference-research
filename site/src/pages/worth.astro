@@ -14,13 +14,16 @@ const description = 'Which models are worth running: capability against system r
     <div class="page-head">
       <h1>Worth Running</h1>
       <p class="sub">
-        Models ranked by capability against what they actually need. Weights are
-        estimated at <strong>4-bit</strong> and count only the parameters active per
-        token, so a mixture-of-experts model is priced by the experts it routes, not
-        its total size. Memory is shown for <strong>one user</strong> and for
-        <strong>16 concurrent users</strong> at an 8k context — the KV cache is the
-        part that grows with users. <em>Offload</em> marks models that stay fast when
-        the routed experts sit in system RAM.
+        Models ranked by capability against what they actually need. Two numbers
+        that are usually conflated, kept apart here. <strong>Resident</strong> is the
+        whole checkpoint at <strong>4-bit</strong> — what has to fit somewhere in
+        VRAM plus system RAM. <strong>Read / token</strong> is only the weights the
+        decode step touches, which is what speed scales with and is far smaller for a
+        mixture-of-experts model: a 600B MoE reads 13.5 GB per token and still needs
+        a 279 GB file. <strong>Need</strong> adds the KV cache for
+        <strong>one user</strong> or for <strong>16 concurrent users</strong> at an
+        8k context, the part that grows with users. <em>Offload</em> marks models
+        that stay fast when the routed experts sit in system RAM.
       </p>
     </div>
 
@@ -67,7 +70,8 @@ const description = 'Which models are worth running: capability against system r
             <th>Model</th>
             <th class="num">Capability</th>
             <th class="num">Active</th>
-            <th class="num">Weights</th>
+            <th class="num">Resident</th>
+            <th class="num">Read / token</th>
             <th class="num">KV / user</th>
             <th class="num">Need</th>
             <th>Offload</th>
@@ -116,7 +120,7 @@ const description = 'Which models are worth running: capability against system r
   interface Bench { name: string; pct: number; vendor_claim: boolean; }
   interface Row {
     id: string; name: string; active_params_b: number; total_params_b: number | null;
-    weights_q4_gib: number; kv_8k_gib: number | null; single_user_gib: number;
+    weights_q4_gib: number; traffic_q4_gib: number; kv_8k_gib: number | null; single_user_gib: number;
     multi_user_gib: number | null; offload_friendly: boolean;
     capability: number | null; benchmarks: Bench[]; vendor_only: boolean;
   }
@@ -153,6 +157,7 @@ const description = 'Which models are worth running: capability against system r
         <td class="num cost-cell">${r.capability === null ? '—' : r.capability.toFixed(1)}${flag}</td>
         <td class="num">${r.active_params_b}B</td>
         <td class="num">${r.weights_q4_gib} GB</td>
+        <td class="num">${r.traffic_q4_gib} GB</td>
         <td class="num">${r.kv_8k_gib === null ? '—' : r.kv_8k_gib + ' GB'}</td>
         <td class="num cost-cell">${n === null ? '—' : n + ' GB'}</td>
         <td>${r.offload_friendly ? 'yes' : '—'}</td>
