@@ -300,6 +300,31 @@ def build_roofline() -> dict:
 # main
 # ===========================================================================
 
+# Capability axes. Averaging individual benchmark entries lets a model that publishes
+# AIME 2024 AND AIME 2025 weight "math reasoning" twice, and lets a saturated test
+# (where the catalog best is ~100) hand out a cheap 92 that carries the same weight as
+# a hard-earned 60 on SWE-bench. Group benchmarks into axes, average within an axis,
+# then average across axes: one capability counts once, however many rows it has.
+_AXES = (
+    ("math", ("AIME", "MATH-500", "MATH", "HMMT", "IMO")),
+    ("coding", ("SWE-bench", "SWE Bench", "LiveCodeBench", "HumanEval", "SciCode",
+                "ProgramBench", "SWE-Marathon", "DeepSWE")),
+    ("agentic", ("Terminal-Bench", "Terminal Bench", "Tau-Bench", "TAU-Bench",
+                 "Toolathlon", "MCPMark", "BrowseComp", "DeepSearchQA")),
+    ("knowledge", ("MMLU", "GPQA", "HLE", "SuperGPQA", "CMMLU", "CritPt")),
+    ("instruction", ("IFEval", "IFBench", "Arena-Hard", "AlignBench")),
+)
+
+
+def _axis_for(name):
+    low = name.lower()
+    for axis, keys in _AXES:
+        for k in keys:
+            if k.lower() in low:
+                return axis
+    return "other"
+
+
 def build_worth_running() -> dict:
     _CONTEXT_TOKENS = 8192
     _MULTI_USERS = 16
@@ -390,20 +415,32 @@ def build_worth_running() -> dict:
         for b in r["benchmarks"]:
             if b["name"] and b["pct"] > best.get(b["name"], 0):
                 best[b["name"]] = b["pct"]
+    # A benchmark whose catalog best is at or near the ceiling cannot discriminate:
+    # everyone who runs it scores ~the same. Flagged so a ranking carried by such
+    # tests is visible rather than flattering.
+    SATURATED = 95.0
     for r in rows:
         if not r["benchmarks"]:
             continue
-        rel = []
+        by_axis = {}
         for b in r["benchmarks"]:
             top = best.get(b["name"])
-            if top:
-                rel.append(min(b["pct"] / top * 100, 100.0))
-                b["relative"] = round(b["pct"] / top * 100, 1)
-        if rel:
-            r["capability"] = round(sum(rel) / len(rel), 1)
+            if not top:
+                continue
+            rel = min(b["pct"] / top * 100, 100.0)
+            b["relative"] = round(rel, 1)
+            b["saturated"] = top >= SATURATED
+            by_axis.setdefault(_axis_for(b["name"]), []).append(rel)
+        if by_axis:
+            per_axis = {k: round(sum(v) / len(v), 1) for k, v in by_axis.items()}
+            r["axes"] = per_axis
+            r["capability"] = round(sum(per_axis.values()) / len(per_axis), 1)
             r["bench_count"] = len(r["benchmarks"])
-            r["capability_basis"] = "mean of score/best-known-score across the model's benchmarks, x100"
-            r["thin"] = len(rel) <= 2
+            r["axis_count"] = len(per_axis)
+            r["capability_basis"] = ("mean across capability axes; each axis is the mean of "
+                                     "score/best-known-score for the benchmarks in it, x100. "
+                                     "One capability counts once however many rows it has.")
+            r["thin"] = len(per_axis) <= 2
 
     rows.sort(key=lambda x: (-(x["capability"] or -1), x["single_user_gib"]))
     return {
@@ -414,7 +451,13 @@ def build_worth_running() -> dict:
             "weights_basis": "params_b * 4 bits / 8, GiB: the whole checkpoint at 4-bit, which is what has to be resident. MoE expert offload moves most of it to system RAM but does not remove it.",
             "traffic_basis": "active_params_b * 4 bits / 8, GiB: weights touched per token. This is what decode bandwidth scales with, not what must fit.",
             "scope": "Generative text models only. Models whose record carries task embedding, reranking, speech-to-text, text-to-speech or image-generation are excluded, because chat benchmarks cannot rank an embedder.",
-            "capability_basis": "mean over the model's benchmarks of score / best-known score for THAT benchmark in this catalog, x100. Relative, so models tested on different benchmarks stay comparable; 100 = best recorded on that test. `bench_count` reports coverage and `thin` marks 1-2 test rankings. Vendor-published scores are flagged, not excluded.",
+            "capability_basis": "mean across capability axes (knowledge, math, coding, "
+                                "agentic, instruction). Within an axis each benchmark is scored "
+                                "relative to the best result recorded for THAT benchmark here, so "
+                                "100 = best known on that test and models tested differently stay "
+                                "comparable. Benchmarks are grouped so one capability counts once, "
+                                "however many rows it publishes, and a benchmark whose catalog best "
+                                "is >=95 is flagged saturated because it cannot separate models.",
         },
         "rows": rows,
     }
