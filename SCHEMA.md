@@ -460,9 +460,15 @@ completely different hardware.
     experts_per_token   int|null
     benchmarks          array         published scores used to rank capability.
                        Each item: {name, score, scale, higher_is_better, source,
-                       vendor_claim}. score/scale is comparable across models
-                       (scale is the maximum, 100 for a percentage). vendor_claim
-                       marks a number the lab published itself
+                       vendor_claim, config}. score/scale is comparable across
+                       models (scale is the maximum, 100 for a percentage).
+                       vendor_claim marks a number the lab published itself.
+                       config states the evaluation setting (reasoning level,
+                       tools, scaffold) where the source documents one. Record
+                       the model's DEFAULT serving configuration, not a ceiling:
+                       gpt-oss defaults to reasoning=medium and its high-effort
+                       column is a test-time-compute ceiling, so ranking on the
+                       ceiling overstated it by ~9 points
     shared_expert       bool|null     always-on shared expert adds to per-token active
     hidden_size         int|null
     num_layers          int|null
