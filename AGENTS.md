@@ -37,6 +37,19 @@ A blog post that cites no primary source is still a source, but mark it
 Do not cite: SEO listicles, aggregator spec-comparison sites that copy Wikipedia,
 AI-generated summaries, and second-hand paraphrase without attribution.
 
+## Verifying a score
+
+`tools/verify_scores.py <model-id>...` re-reads the vendor's own table and
+compares every recorded score. CI runs it on the models a PR touched
+(`.github/workflows/verify-scores.yml`) and fails on a mismatch.
+
+It binds a column per card and refuses to guess: if it cannot align a card's own
+column it reports `not cross-checked`, never a false mismatch. Read the alignment
+count, not just the verdict — `10/15` means five rows went unverified and still
+need a human read of the source.
+
+## Handling disagreement
+
 ## Handling disagreement
 
 Never resolve a numeric conflict by picking the number you like.
