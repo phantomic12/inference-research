@@ -79,7 +79,16 @@ def base_map():
 
 
 def main():
-    rows = scored()
+    if REV.exists():
+        rows = scored()
+    else:
+        p = R / "data/quant_retention.jsonl"
+        if not p.exists():
+            print("no review dir and no committed retention data; nothing to do")
+            return
+        rows = [{"id": d["id"], "median": d["median_delta_pct"], "n": d.get("n", 0),
+                 "size": d.get("size_gib"), "curve": d.get("curve", False)}
+                for d in (json.loads(l) for l in p.read_text().splitlines() if l.strip())]
     single = [r for r in rows if not r["curve"]]
     groups = {}
     for r in single:
