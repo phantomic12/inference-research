@@ -1,35 +1,141 @@
 {
- "id": "mercury",
- "type": "model",
- "name": "Mercury",
- "status": "draft",
- "confidence": 0.4,
- "updated": "2026-10-05",
- "sources": [
-  "mdl2-sglang-diffusion-language-models"
- ],
- "family": "mercury",
- "vendor": "Mercury (Essential AI)",
- "release_year": 2025,
- "architecture": "diffusion",
- "params_b": null,
- "active_params_b": null,
- "num_experts": null,
- "experts_per_token": null,
- "shared_expert": null,
- "hidden_size": null,
- "num_layers": null,
- "num_kv_heads": null,
- "head_dim": null,
- "gqa_ratio": null,
- "max_position_embeddings": null,
- "context_scaling": null,
- "activation": null,
- "attention_variant": "diffusion (non-autoregressive)",
- "kv_cache_bytes_per_token": 0,
- "flops_per_token_active": null,
- "open_weights": null,
- "license": null,
- "notes": "Mercury is a diffusion language model listed in SGLang's supported diffusion language models. Specific architecture details (parameter count, layer count, denoising steps) could not be verified from the available sources. The SGLang docs page confirms it is served as a diffusion LM with --dllm-algorithm flags. More research needed to fill in the geometry.\n\nCONTEXT_SCALING_METHOD (native): diffusion (non-autoregressive) architecture record; no autoregressive position ladder. KV CACHE FIELD CLARIFIED (2026-10-05): kv_cache_bytes_per_token = 0 is correct here and means 'this architecture has no growing per-token KV cache', but it rests on the architecture CLASS rather than on a config read, because no config.json for Mercury is published - the record's own notes say the parameter and layer counts could not be verified. The reasoning: a diffusion language model denoises a fixed-length sequence through a fixed number of iterative steps rather than extending a cache one token at a time, so there is no cache whose size grows with generated length. It does still hold per-step activations for the current sequence, which is a memory cost, but that cost is bounded by sequence length and step count rather than accumulating across tokens as a KV cache does. So the 0 is honest, and a reader should not read it as 'unknown' - but it also should not read it as 'verified from config', since no config exists. This is the same distinction the three voyage records needed: a claim about cache behaviour, not a measurement of it.",
- "context_scaling_method": "native"
+  "id": "mercury",
+  "type": "model",
+  "name": "Mercury",
+  "status": "draft",
+  "confidence": 0.4,
+  "updated": "2026-10-20",
+  "sources": [
+    "mdl2-sglang-diffusion-language-models"
+  ],
+  "family": "mercury",
+  "vendor": "Mercury (Essential AI)",
+  "release_year": 2025,
+  "architecture": "diffusion",
+  "params_b": null,
+  "active_params_b": null,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": null,
+  "num_layers": null,
+  "num_kv_heads": null,
+  "head_dim": null,
+  "gqa_ratio": null,
+  "max_position_embeddings": null,
+  "context_scaling": null,
+  "activation": null,
+  "attention_variant": "diffusion (non-autoregressive)",
+  "kv_cache_bytes_per_token": 0,
+  "flops_per_token_active": null,
+  "open_weights": null,
+  "license": null,
+  "notes": "Mercury is a diffusion language model listed in SGLang's supported diffusion language models. Specific architecture details (parameter count, layer count, denoising steps) could not be verified from the available sources. The SGLang docs page confirms it is served as a diffusion LM with --dllm-algorithm flags. More research needed to fill in the geometry.\n\nCONTEXT_SCALING_METHOD (native): diffusion (non-autoregressive) architecture record; no autoregressive position ladder. KV CACHE FIELD CLARIFIED (2026-10-05): kv_cache_bytes_per_token = 0 is correct here and means 'this architecture has no growing per-token KV cache', but it rests on the architecture CLASS rather than on a config read, because no config.json for Mercury is published - the record's own notes say the parameter and layer counts could not be verified. The reasoning: a diffusion language model denoises a fixed-length sequence through a fixed number of iterative steps rather than extending a cache one token at a time, so there is no cache whose size grows with generated length. It does still hold per-step activations for the current sequence, which is a memory cost, but that cost is bounded by sequence length and step count rather than accumulating across tokens as a KV cache does. So the 0 is honest, and a reader should not read it as 'unknown' - but it also should not read it as 'verified from config', since no config exists. This is the same distinction the three voyage records needed: a claim about cache behaviour, not a measurement of it.",
+  "context_scaling_method": "native",
+  "benchmarks": [
+    {
+      "name": "GDPval (Elo)",
+      "score": 1237.2,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3 (medium)"
+    },
+    {
+      "name": "tau3-bench Banking",
+      "score": 30.24,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3 (medium)"
+    },
+    {
+      "name": "MultiChallenge",
+      "score": 60.35,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3 (medium)"
+    },
+    {
+      "name": "AA-Omniscience-Public (Accuracy)",
+      "score": 46.44,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3 (medium)"
+    },
+    {
+      "name": "IFBench",
+      "score": 76.84,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3 (medium)"
+    },
+    {
+      "name": "GPQA Diamond",
+      "score": 89.23,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3 (medium)"
+    },
+    {
+      "name": "AA-LCR v1.1",
+      "score": 77.67,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3 (medium)"
+    },
+    {
+      "name": "MRCR v2",
+      "score": 75.5,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3 (medium)"
+    },
+    {
+      "name": "SWE-Bench Atlas",
+      "score": 51.08,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3 (medium)"
+    },
+    {
+      "name": "DeepSWE v1",
+      "score": 46.31,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3 (medium)"
+    },
+    {
+      "name": "BrowseComp+",
+      "score": 55.18,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3 (medium)"
+    },
+    {
+      "name": "DeepSearchQA",
+      "score": 71.33,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3 (medium)"
+    },
+    {
+      "name": "Output speed (tokens/s)",
+      "score": 1068,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "mdl2-sglang-diffusion-language-models",
+      "config": "Mercury 3, NVIDIA GPUs"
+    }
+  ]
 }
