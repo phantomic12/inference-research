@@ -303,28 +303,26 @@ def presence(mid):
 
     if not texts:
         return mid, 'no-fetchable-source', []
-    card_t = nt(card) if card and len(card) >= 800 else None
-    normed = {k: nt(v) for k, v in texts.items() if len(v) >= 400}
+    def compact(x):
+        x = re.sub(r'v(?=\d)', '', x.lower())
+        return re.sub(r'[^a-z0-9]+', '', x)
+
+    def ckeys(nm):
+        base = compact(nm)
+        out = {base, compact(re.sub(r'\(.*?\)', '', nm))}
+        out.add(re.sub(r'(bench|diamond)', '', base))
+        out.add(re.sub(r'(bench|diamond|v\d+)', '', base))
+        return {c for c in out if len(c) >= 3}
+
+    ccard = compact(card) if card and len(card) >= 800 else None
+    ctexts = {k: compact(v) for k, v in texts.items() if len(v) >= 400}
     miss = []
     for b in rec.get('benchmarks') or []:
         nm = b.get('name') or ''
-        t = normed.get(str(b.get('source'))) or card_t
-        if not t:
+        ct = ctexts.get(str(b.get('source'))) or ccard
+        if not ct:
             continue
-        k1 = re.sub(r'[^a-z0-9]+', ' ', nm.lower()).strip()
-        k2 = re.sub(r'[^a-z0-9]+', ' ', re.sub(r'\(.*?\)', '', nm).lower()).strip()
-        ok = bool(k1) and k1 in t
-        if not ok and len(k2) >= 4 and k2 in t:
-            ok = True
-        if not ok:
-            k4 = re.sub(r'\b(bench|diamond)\b', ' ', k1)
-            k4 = re.sub(r'\s+', ' ', k4).strip()
-            if len(k4) >= 4 and k4 in t:
-                ok = True
-        if not ok and k1:
-            k3 = re.sub(r' v\d+$', '', k1)
-            ok = bool(k3) and k3 in t
-        if not ok:
+        if not any(c and c in ct for c in ckeys(nm)):
             miss.append(nm)
     return mid, ('ok' if not miss else 'unsupported'), miss
 
