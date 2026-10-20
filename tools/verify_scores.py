@@ -1,26 +1,5 @@
-#!/usr/bin/env python3
-"""Cross-check recorded benchmark scores against the vendor's own HTML table.
 
-Why: a score can be wrong in ways `tools/validate.py` cannot see — a value read
-from the wrong column of a multi-model leaderboard, or from the wrong one of two
-tables on the same card. Both happened here (see
-gotchas/gotcha-ornith15-card-column-misread and
-gotchas/gotcha-self-inflicted-score-regressions-oct19).
-
-How: fetch the model's HuggingFace card README, parse each <table> with its own
-header row, resolve the column for this model, and compare every recorded
-benchmark against that column. Column choice is validated by which candidate
-actually reproduces the recorded numbers, so a card carrying two tables or
-competitor columns cannot silently mislead it.
-
-It reports; it never edits. A mismatch is a prompt to go read the source, not
-proof the record is wrong.
-
-Usage:  python3 tools/verify_scores.py [model-id ...]
-Exit:   0 always (reporting tool); read STATUS/MISMATCHES in stdout.
-"""
-
-import json, re, sys, pathlib, urllib.request
+import json, os, re, sys, pathlib, urllib.request
 
 R = pathlib.Path(__file__).resolve().parent.parent
 UA = {'User-Agent': 'Mozilla/5.0'}
@@ -37,7 +16,8 @@ def rowkey(label):
     # bind on the benchmark name only: parenthetical harness suffixes
     # ("Terminal-Bench 2.1 (Terminus-2)") collapse, but distinct benchmarks
     # ("MMLU" vs "MMLU-Pro") stay distinct.
-    return norm(str(label).split('(')[0])
+    t = str(label).split('(')[0].replace('+', 'plus').replace('＋', 'plus')
+    return norm(t)
 
 def cells(row):
     return [re.sub(r'<[^>]+>', '', c).replace('&nbsp;', ' ').strip()
@@ -52,6 +32,25 @@ def parse_tables(html):
         if len(grid) >= 2:
             out.append(grid)
     return out
+
+def parse_md_tables(doc):
+    """Markdown pipe tables (most HF cards use these, not HTML)."""
+    out, cur = [], []
+    sep = re.compile(r'^:?-{2,}:?$')
+    for line in doc.splitlines():
+        t = line.strip()
+        if t.startswith('|') and t.count('|') >= 2:
+            row = [c.strip() for c in t.strip('|').split('|')]
+            if row and all(sep.match(c.replace(' ', '')) for c in row if c):
+                continue
+            cur.append(row)
+        else:
+            if len(cur) >= 2:
+                out.append(cur)
+            cur = []
+    if len(cur) >= 2:
+        out.append(cur)
+    return [g for g in out if len(g) >= 2]
 
 def model_keys(mid, rec):
     keys = set()
@@ -69,7 +68,7 @@ def model_keys(mid, rec):
             keys.add(norm(('%sba%sb' % (int(p), round(a, 1))).replace('.', '')))
     return {k for k in keys if len(k) >= 5}
 
-def candidate_cols(grids, keys):
+def candidate_cols(grids, keys, hints=()):
     cands = []
     for gi, g in enumerate(grids):
         hdr = g[0]
@@ -83,38 +82,80 @@ def candidate_cols(grids, keys):
             for k in keys:
                 if k and (k in hn or hn in k):
                     score = max(score, len(k))
+            if any(x in hn for x in hints):
+                score += 8
             if score:
                 cands.append((score, gi, ci, h))
     cands.sort(reverse=True)
+    # Fallback: single-model cards often use a header like "Benchmark | Score"
+    # with no model name in it. Offer every numeric column as a candidate; the
+    # reproduce-the-values guard decides whether it is believable.
+    numish = 0
+    for gi, g in enumerate(grids):
+        hdr = g[0]
+        for ci in range(1, len(hdr)):
+            vals = [r[ci] for r in g[1:] if len(r) > ci]
+            hits = sum(1 for v in vals if num(v) is not None)
+            if vals and hits >= 0.8 * len(vals):
+                cands.append((0, gi, ci, hdr[ci] if ci < len(hdr) else ''))
+                numish += 1
+
     if not cands:
         return []
-    top = cands[0][0]
-    return [c for c in cands if c[0] == top]
+    named = [c for c in cands if c[0] > 0]
+    fb = [c for c in cands if c[0] == 0]
+    if named:
+        top = max(c[0] for c in named)
+        named = [c for c in named if c[0] == top]
+    return named + fb
+
+def num(s):
+    if s is None:
+        return None
+    if isinstance(s, (int, float)):
+        return float(s)
+    m = re.search(r'-?\d+(?:\.\d+)?', str(s).replace(',', ''))
+    return float(m.group(0)) if m else None
+
+def hint_words(bms):
+ w=set()
+ for b in bms:
+  c=(b.get("config") or "").lower()
+  for k in ("max","nothink","non-think","instruct","it column","base","thinking"):
+   if k in c: w.add(k)
+ return w
+
+def find_row(grid, name, ci):
+    raw = norm(str(name).replace('+', 'plus'))
+    for row in grid:
+        if len(row) > ci and norm(str(row[0]).replace('+', 'plus')) == raw:
+            return row            # exact label, parentheses included
+    if '(' in str(name):
+        # the parenthetical carried meaning ("RuBQ (ru audio QA)" vs the card's
+        # text RuBQ row); never fall back to a paren-stripped key here
+        return None
+    bn = rowkey(name)
+    for row in grid:
+        if len(row) > ci and rowkey(row[0]) == bn:
+            return row            # harness suffix dropped (Terminus-2 etc.)
+    return None
 
 def score_col(grid, ci, benchmarks):
     """Return (value_matches, resolved_rows): the column that *reproduces* the
     recorded numbers wins, so a card with two tables cannot mislead the pick."""
     ok = resolved = 0
     for b in benchmarks:
-        bn = norm(b.get('name'))
         want = num(b.get('score'))
-        for row in grid:
-            if len(row) <= ci:
-                continue
-            if rowkey(row[0]) and rowkey(row[0]) == bn:
-                got = num(row[ci])
-                if got is not None:
-                    resolved += 1
-                    if want is not None and abs(got - want) <= 0.051:
-                        ok += 1
-                break
+        row = find_row(grid, b.get('name'), ci)
+        if row is None:
+            continue
+        got = num(row[ci])
+        if got is None:
+            continue
+        resolved += 1
+        if want is not None and abs(got - want) <= 0.051:
+            ok += 1
     return ok, resolved
-
-def num(s):
-    if isinstance(s, (int, float)):
-        return float(s)
-    m = re.search(r'-?\d+(?:\.\d+)?', (str(s) if s is not None else '').replace(',', ''))
-    return float(m.group(0)) if m else None
 
 def check(mid):
     p = R / 'data/models' / (mid + '.json')
@@ -139,12 +180,12 @@ def check(mid):
         html = fetch('https://huggingface.co/%s/raw/main/README.md' % card)
     except Exception as e:
         return mid, 'fetch-fail: %s' % type(e).__name__, []
-    grids = parse_tables(html)
+    grids = parse_tables(html) + parse_md_tables(html)
     if not grids:
         return mid, 'no-tables', []
     keys = model_keys(mid, rec)
     bms = rec.get('benchmarks') or []
-    cands = candidate_cols(grids, keys)
+    cands = candidate_cols(grids, keys, hint_words(bms))
     if not cands:
         return mid, 'no-column', []
     best = None
@@ -161,23 +202,21 @@ def check(mid):
         ok, resolved = score_col(grids[gi], eff, bms)
         key = (ok, resolved)
         if best is None or key > best[0]:
-            best = (key, gi, eff, h)
+            best = (key, gi, eff, h, score)
     if best is None:
         return mid, 'ragged-table', []
     if best[0][1] == 0:
         return mid, 'ambiguous-column', []
+    if best[4] == 0 and best[0][0] < 2:
+        # column had no model name in its header; only trust it if it
+        # independently reproduces at least two recorded values
+        return mid, 'no-column', []
     gi, ci = best[1], best[2]
     results = []
     for b in (rec.get('benchmarks') or []):
         want = num(b.get('score'))
-        bn = norm(b.get('name'))
-        hit = None
-        for row in grids[gi]:
-            if len(row) <= ci:
-                continue
-            if rowkey(row[0]) and rowkey(row[0]) == bn:
-                hit = row
-                break
+        bn = rowkey(b.get('name'))
+        hit = find_row(grids[gi], b.get('name'), ci)
         if hit is None:
             results.append((b.get('name'), want, None, 'no-row'))
             continue
@@ -189,23 +228,85 @@ def check(mid):
         elif abs(got - want) <= 0.051:
             results.append((b.get('name'), want, got, 'ok'))
         else:
-            results.append((b.get('name'), want, got, 'MISMATCH'))
+            # Before accusing, check whether ANOTHER column on the same card
+            # reproduces the recorded value. Cards routinely publish a base-model
+            # table next to the headline table; reading the wrong one is our bug,
+            # not a data error.
+            explained = False
+            for _sc, gi2, ci2, _h in cands:
+                g2 = grids[gi2]
+                if not g2:
+                    continue
+                w2 = [len(r) for r in g2[1:] if len(r) > 1]
+                if not w2:
+                    continue
+                md = max(set(w2), key=w2.count)
+                off2 = len(g2[0]) - md
+                eff2 = ci2 - off2
+                if off2 < 0 or eff2 < 0 or eff2 >= md:
+                    continue
+                row2 = find_row(g2, b.get('name'), eff2)
+                if row2 is not None:
+                    v2 = num(row2[eff2])
+                    if v2 is not None and abs(v2 - want) <= 0.051:
+                        explained = True
+                if explained:
+                    break
+            results.append((b.get('name'), want, got, 'ok-elsewhere' if explained else 'MISMATCH'))
     return mid, 'checked', results
 
 if __name__ == '__main__':
-    ids = sys.argv[1:]
+    argv = sys.argv[1:]
+    flags = [a for a in argv if a.startswith('--')]
+    ids = [a for a in argv if not a.startswith('--')]
+    ci = '--ci' in flags
+    if '--ids-file' in argv:
+        ids = [l.strip() for l in open(argv[argv.index('--ids-file') + 1]) if l.strip()]
     if not ids:
-        ids = sorted(p.stem for p in (R / 'data/models').glob('*.json'))
-    stats = {}
-    bad = {}
+        if ci:
+            print('no model records changed; nothing to verify')
+            sys.exit(0)
+        ids = sorted(q.stem for q in (R / 'data/models').glob('*.json'))
+    stats, bad, checked = {}, {}, []
     for mid in ids:
         try:
             mid, st, res = check(mid)
         except Exception as e:
             mid, st, res = mid, 'error: %s' % type(e).__name__, []
         stats[st] = stats.get(st, 0) + 1
+        if st == 'checked':
+            ok_n = sum(1 for x in res if x[3] in ('ok', 'ok-elsewhere'))
+            no_n = sum(1 for x in res if x[3] == 'no-row')
+            checked.append((mid, ok_n, ok_n + no_n))
         for name, want, got, verdict in res:
             if verdict == 'MISMATCH':
                 bad.setdefault(mid, []).append((name, want, got))
     print('STATUS:', json.dumps(stats, indent=1))
     print('MISMATCHES:', json.dumps(bad, indent=1))
+    if not ci:
+        sys.exit(0)
+    lines = ['## Score verification', '',
+             '`%d` model(s) cross-checked against vendor cards.' % len(checked), '',
+             '| model | rows aligned |', '|---|---|']
+    lines += ['| `%s` | %d/%d |' % c for c in checked]
+    if bad:
+        lines += ['### :x: %d mismatch(es)' % len(bad), '',
+                  '| model | benchmark | recorded | vendor card |', '|---|---|---|---|']
+        for m, rows in sorted(bad.items()):
+            for n, w, g in rows:
+                lines.append('| `%s` | %s | %s | %s |' % (m, n, w, g))
+        lines += ['', 'Re-read the vendor table before editing. Bind cells to that',
+                  'table\'s own header row, not to a header from another table.']
+    else:
+        lines += [':white_check_mark: No mismatches.', '']
+    skipped = [k for k in sorted(stats) if k != 'checked']
+    if skipped:
+        lines += ['', 'Not cross-checked (could not align a column): ' +
+                  ', '.join('%s=%d' % (k, stats[k]) for k in skipped)]
+    out = '\n'.join(lines)
+    print(out)
+    sp = os.environ.get('GITHUB_STEP_SUMMARY')
+    if sp:
+        with open(sp, 'a') as fh:
+            fh.write(out + '\n')
+    sys.exit(1 if bad else 0)

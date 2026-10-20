@@ -1,0 +1,40 @@
+name: verify-scores
+
+# Cross-checks recorded benchmark scores against the vendor's own table.
+# Only runs on models changed in the PR: the tool aligns a column per card and
+# cannot bind ~half the catalogue (multi-model comparison tables), so a
+# whole-catalogue sweep mostly exercises the "could not align" path. On the
+# records that actually changed it is fast and precise.
+on:
+  pull_request:
+    paths:
+      - "data/models/*.json"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.15"
+      - name: Collect changed model ids
+        id: changed
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          base="$(git rev-parse FETCH_HEAD)"
+          git diff --name-only "$base"...HEAD -- 'data/models/*.json' \
+            | sed -e 's#data/models/##' -e 's#\.json$##' | sort -u > /tmp/ids.txt
+          echo "count=$(wc -l < /tmp/ids.txt)" >> "$GITHUB_OUTPUT"
+          echo "models changed:"; cat /tmp/ids.txt
+      - name: Verify changed models
+        # Fails only on a real MISMATCH. Cards that cannot be fetched or whose
+        # column cannot be bound are reported as not-cross-checked, not as errors.
+        if: steps.changed.outputs.count != '0'
+        run: python tools/verify_scores.py --ci --ids-file /tmp/ids.txt
+      - name: Nothing to verify
+        if: steps.changed.outputs.count == '0'
+        run: echo "No model records changed in this PR."
