@@ -113,7 +113,7 @@
   "notes": "Released 2026-10-16 on Hugging Face (API createdAt 2026-10-16T18:25:29Z; card Release Date October 16, 2026). Affordable-inference class by footprint, not by a published tok/s: 3.975B dense (safetensors BF16 count 3,975,229,440), single ~8 GB checkpoint, consumer-runnable, and the card's own table claims it matches or beats much larger affordable models once the recurrent block is looped. ARCHITECTURE: looped (latent-recurrent) normalized-GPT. config.json model_type dory, architectures DoryForCausalLM. num_hidden_layers 72 is attention+mlp pairs, not 72 transformer blocks: layer_types is 36 attention + 36 mlp (27 sliding_attention, 9 full_attention). Card caption matches the attention count: Input 8, Recurrent 20, Output 8. config stores those as pairs — n_input_layers 16, n_recurrent_layers 40, n_output_layers 16. Default n_recurrent_loops is 2. The recurrent block is weight-tied and the input is reinjected every loop, so inference FLOPs scale with the loop count while the resident parameter count does not. ACTIVE PARAMS: recorded equal to total because there is no MoE and every unique weight is in the graph; a 2-loop or 4-loop decode applies the shared 20-layer recurrent block extra times, which the flops field below does NOT multiply. flops_per_token_active = 2 * 3.975229440e9 = 7.950e9 is the schema one-pass approximation at one application of each unique weight. Multiply by roughly (8 + loops*20 + 8) / 36 to estimate looped compute from the attention-layer split: about 1.56x at 2 loops and 2.67x at 4 loops. That factor is a layer-count estimate, not a profiled FLOP count. GEOMETRY: hidden 2560, heads 16 / kv heads 4 so gqa_ratio 4, head_dim 256 explicit in config (2560/16 = 160 would be wrong — head_dim is not hidden/heads). intermediate 7168, silu, vocab 131072, tie_word_embeddings false, sliding_window 1024. RoPE is per layer type and native: sliding theta 10000, full theta 1e7, both rope_type default, no yarn/ntk scaling, max_position_embeddings 262144, so context_scaling_method is native. num_layers is 72 to match config num_hidden_layers and the stored layer_types array (attention and mlp slots interleaved), so its length equals num_layers as the schema asks. That is not 72 transformer blocks: 36 of the slots are mlp. The card's 8+20+8 count is the attention-only split. attention_layer_indices lists the 9 full_attention positions in that 72-long array (0-based), which is where the unbounded KV lives. KV (bf16, per loop, if every attention layer caches): 36 attn layers x 4 kv heads x 256 head_dim x 2 (K+V) x 2 bytes = 147,456 B/token = 144 KiB/token. That figure assumes per-loop caching of both sliding and full layers. Two corrections the card states and this single number cannot express: (1) sliding layers only need a 1024-token window, so their bytes saturate; (2) last-loop KV caching (recurrent_kv_cache_mode=last_loop) keeps one cache per recurrent attention layer instead of one per loop, so added loops do not grow KV. Per-loop mode (the vLLM example default) does grow KV with n_recurrent_loops. Full-attention-only unbounded term is 9 x 4096 = 36,864 B/token per cached loop. BENCHMARKS ARE VENDOR CLAIMS (card, NeMo Gym / NeMo Evaluator, not independently measured here). At 1 / 2 / 4 loops versus Qwen3.5-4B, Qwen3.5-9B, Gemma 4 26B A4B, Qwen3.6-35B-A3B: SWE-bench Verified 50.3 / 59.5 / 61.8 (Qwen3.5-4B 54.7, Gemma 4 26B A4B 57.40, Qwen3.6-35B-A3B 73.4 reported); GPQA Diamond 69.19 / 72.41 / 72.16 (Qwen3.5-4B 77.71); IFBench 74.29 / 77.94 / 79 (Qwen3.5-4B 53.83, Gemma 4 26B A4B 77.89); AA-LCR 63 / 71 / 73. AA v4.3.2 figures on the card are labeled internal estimates. THROUGHPUT: no absolute tok/s. DGX Spark table is a vendor speedup only — MXFP8 1.69x and NVFP4 2.17x vs BF16 at ISL 2560 / OSL 300 / batch 1; MXFP8 1.84x and NVFP4 2.44x at ISL 128 / OSL 1024 / batch 1. Serving support is not upstream yet: vLLM PR 60149, llama.cpp PR 30306. License OpenMDW-1.1 (card license field is other / openmdw-1.1). MXFP8, NVFP4, and Q5_K_M GGUF repos are quantizations of this checkpoint.",
   "status": "verified",
   "confidence": 0.84,
-  "updated": "2026-10-17",
+  "updated": "2026-10-20",
   "sources": [
     "hf-nemotron-labs-dory1-4b"
   ],
@@ -124,7 +124,8 @@
       "scale": 100,
       "higher_is_better": true,
       "source": "hf-nemotron-labs-dory1-4b",
-      "vendor_claim": true
+      "vendor_claim": true,
+      "config": "Card Benchmarks table, '4 loops' column (1 / 2 / 4 loops = 50.3 / 59.5 / 61.8); NVIDIA NeMo Gym / NeMo Evaluator SDK harness."
     },
     {
       "name": "GPQA Diamond",
@@ -132,7 +133,8 @@
       "scale": 100,
       "higher_is_better": true,
       "source": "hf-nemotron-labs-dory1-4b",
-      "vendor_claim": true
+      "vendor_claim": true,
+      "config": "Card row 'GPQA Diamond (no tools)', '4 loops' column (1 / 2 / 4 loops = 69.19 / 72.41 / 72.16); NeMo Gym / NeMo Evaluator SDK harness."
     }
   ]
 }
