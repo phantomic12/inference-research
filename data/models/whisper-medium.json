@@ -1,36 +1,94 @@
 {
- "id": "whisper-medium",
- "type": "model",
- "name": "Whisper medium",
- "family": "whisper",
- "vendor": "OpenAI",
- "release_year": 2022,
- "architecture": "dense",
- "task": "speech-to-text",
- "params_b": 0.769,
- "active_params_b": 0.769,
- "num_experts": null,
- "experts_per_token": null,
- "shared_expert": null,
- "hidden_size": 1024,
- "num_layers": 24,
- "num_kv_heads": 16,
- "head_dim": 64,
- "gqa_ratio": 1.0,
- "max_position_embeddings": 1500,
- "context_scaling": null,
- "activation": "gelu",
- "attention_variant": "MHA, encoder-decoder (cross-attention)",
- "kv_cache_bytes_per_token": 98304,
- "flops_per_token_active": 1538000000.0,
- "open_weights": true,
- "license": "apache-2.0",
- "notes": "ENCODER-DECODER. ENCODER: 24 layers, d_model 1024, 16 heads, encoder_ffn_dim 4096, gelu, num_mel_bins 80, max_source_positions 1500. DECODER: 24 layers, 16 heads, decoder_ffn_dim 4096, max_target_positions 448. KV CACHE: decoder self-attention 24 * 16 * 64 * 2 * 2 = 98,304 B/token = 96.0 KiB/token. Cross-attention over 1500 encoder frames: 24 * 16 * 64 * 1500 * 2 * 2 = 117,964,800 B = 112.5 MiB per in-flight request. STREAMING: not natively supported (offline/batch model).\nKV CACHE CORRECTED (2026-10-05): kv_cache_bytes_per_token was 131,072 B/token and overstated the decoder self-attention cache by 1.33x. Correct value 98,304 B/token = 96.0 KiB/token, from 2 (K and V) x 24 decoder_layers x 16 decoder_attention_heads x 64 head_dim x 2 bytes (fp16). head_dim 64 is CORRECT here and was not changed: d_model 1024 / decoder_attention_heads 16 = 64 for every Whisper variant, so 64 holds across the whole family and is not the source of the error. What was wrong was the multiplication itself - this record's own derivation line read '24 * 16 * 64 * 2 * 2 = 131,072', and that expression evaluates to 98,304, not 131,072. The formula was right and the result beside it was not, which is why the error survived: nothing in validate.py evaluates a notes expression against the field it claims to derive. Cross-attention over the fixed 1500-frame encoder span was already correct and is unchanged. See gotcha mdl-gotcha-derived-figures-field-disagrees-with-its-own-note.",
- "status": "verified",
- "confidence": 0.9,
- "updated": "2026-10-05",
- "sources": [
-  "aud-src-whisper-medium-config"
- ],
- "context_scaling_method": "native"
+  "id": "whisper-medium",
+  "type": "model",
+  "name": "Whisper medium",
+  "family": "whisper",
+  "vendor": "OpenAI",
+  "release_year": 2022,
+  "architecture": "dense",
+  "task": "speech-to-text",
+  "params_b": 0.769,
+  "active_params_b": 0.769,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 1024,
+  "num_layers": 24,
+  "num_kv_heads": 16,
+  "head_dim": 64,
+  "gqa_ratio": 1.0,
+  "max_position_embeddings": 1500,
+  "context_scaling": null,
+  "activation": "gelu",
+  "attention_variant": "MHA, encoder-decoder (cross-attention)",
+  "kv_cache_bytes_per_token": 98304,
+  "flops_per_token_active": 1538000000.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "notes": "ENCODER-DECODER. ENCODER: 24 layers, d_model 1024, 16 heads, encoder_ffn_dim 4096, gelu, num_mel_bins 80, max_source_positions 1500. DECODER: 24 layers, 16 heads, decoder_ffn_dim 4096, max_target_positions 448. KV CACHE: decoder self-attention 24 * 16 * 64 * 2 * 2 = 98,304 B/token = 96.0 KiB/token. Cross-attention over 1500 encoder frames: 24 * 16 * 64 * 1500 * 2 * 2 = 117,964,800 B = 112.5 MiB per in-flight request. STREAMING: not natively supported (offline/batch model).\nKV CACHE CORRECTED (2026-10-05): kv_cache_bytes_per_token was 131,072 B/token and overstated the decoder self-attention cache by 1.33x. Correct value 98,304 B/token = 96.0 KiB/token, from 2 (K and V) x 24 decoder_layers x 16 decoder_attention_heads x 64 head_dim x 2 bytes (fp16). head_dim 64 is CORRECT here and was not changed: d_model 1024 / decoder_attention_heads 16 = 64 for every Whisper variant, so 64 holds across the whole family and is not the source of the error. What was wrong was the multiplication itself - this record's own derivation line read '24 * 16 * 64 * 2 * 2 = 131,072', and that expression evaluates to 98,304, not 131,072. The formula was right and the result beside it was not, which is why the error survived: nothing in validate.py evaluates a notes expression against the field it claims to derive. Cross-attention over the fixed 1500-frame encoder span was already correct and is unchanged. See gotcha mdl-gotcha-derived-figures-field-disagrees-with-its-own-note.",
+  "status": "verified",
+  "confidence": 0.9,
+  "updated": "2026-10-20",
+  "sources": [
+    "aud-src-whisper-medium-config"
+  ],
+  "context_scaling_method": "native",
+  "benchmarks": [
+    {
+      "name": "LibriSpeech test-clean",
+      "score": 2.9,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "aud-src-whisper-medium-config",
+      "config": "WER %, greedy decode, Whisper paper Table 7 (multilingual medium); lower is better"
+    },
+    {
+      "name": "LibriSpeech test-other",
+      "score": 5.9,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "aud-src-whisper-medium-config",
+      "config": "WER %, greedy decode, Table 7; lower is better"
+    },
+    {
+      "name": "TED-LIUM3",
+      "score": 3.8,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "aud-src-whisper-medium-config",
+      "config": "WER %, Table 7; lower is better"
+    },
+    {
+      "name": "WSJ",
+      "score": 2.9,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "aud-src-whisper-medium-config",
+      "config": "WER %, Table 7; lower is better"
+    },
+    {
+      "name": "CommonVoice 5.1",
+      "score": 10.3,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "aud-src-whisper-medium-config",
+      "config": "WER %, Table 7; lower is better"
+    },
+    {
+      "name": "Switchboard",
+      "score": 14.0,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "aud-src-whisper-medium-config",
+      "config": "WER %, Table 7; lower is better"
+    },
+    {
+      "name": "CallHome",
+      "score": 16.4,
+      "scale": 100,
+      "vendor_claim": true,
+      "source": "aud-src-whisper-medium-config",
+      "config": "WER %, Table 7; lower is better"
+    }
+  ]
 }
