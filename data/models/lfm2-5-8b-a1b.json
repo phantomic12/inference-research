@@ -4,7 +4,7 @@
   "name": "LiquidAI/LFM2.5-8B-A1B",
   "status": "draft",
   "confidence": 0.6,
-  "updated": "2026-10-19",
+  "updated": "2026-10-20",
   "sources": [
     "hf-crawl-lfm2-5-8b-a1b"
   ],
@@ -100,5 +100,7 @@
       "config": "vendor-published row as printed on the card; eval harness not restated"
     }
   ],
-  "notes": "Created from the 2026-10-19 HuggingFace discovery crawl. Benchmarks are the card's own published rows (vendor claims). architecture and task are inferred from the slug and param ratio; KV geometry, context length and quant sizes are not yet filled, hence status draft."
+  "notes": "Created from the 2026-10-19 HuggingFace discovery crawl. Benchmarks are the card's own published rows (vendor claims). architecture and task are inferred from the slug and param ratio; KV geometry, context length and quant sizes are not yet filled, hence status draft. KV basis: Hybrid conv/attention MoE: only 6 of 24 layers are full_attention, the other 18 are short-convolution layers that hold no KV cache at all. config.json (lfm2_moe): num_hidden_layers 24, layer_types = 18 conv + 6 full_attention, num_attention_heads 32, num_key_value_heads 8, no head_dim key so head_dim = hidden_size 2048 / 32 = 64, num_experts 32 with num_experts_per_tok 4, max_position_embeddings 128,000. 2 (K+V) x 6 attention layers x 8 KV heads x 64 head_dim x 2 bytes (bf16) = 12,288 B/token. MoE width does not affect KV cost -- only the 6 attention layers do.",
+  "kv_cache_bytes_per_token": 12288,
+  "max_position_embeddings": 128000
 }
