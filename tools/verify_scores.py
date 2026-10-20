@@ -256,6 +256,15 @@ def check(mid):
     return mid, 'checked', results
 
 def presence(mid):
+    """Does each recorded benchmark NAME appear in the model's HF card text?
+
+    LIMITATION: checks the HF card only. Many records take their numbers from a
+    tech report or blog (Qwen3-8B's card has zero occurrences of "MMLU"), so a
+    flag here usually means "different document", not "fabricated". Treat output
+    as a lead list for investigation, not as CI truth. A real fabrication only
+    looks like this: the row is absent from the card AND from the source the
+    entry itself cites.
+    """
     p = R / 'data/models' / (mid + '.json')
     if not p.exists():
         return mid, 'missing-record', []
@@ -274,8 +283,8 @@ def presence(mid):
             break
         except Exception:
             continue
-    if not doc:
-        return mid, 'no-hf-card', []
+    if not doc or len(doc) < 800:
+        return mid, 'thin-or-missing-card', []
     t = ' ' + re.sub(r'[^a-z0-9]+', ' ', doc.lower()).strip() + ' '
     miss = []
     for b in rec.get('benchmarks') or []:
