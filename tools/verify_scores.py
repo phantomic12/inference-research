@@ -256,39 +256,61 @@ def check(mid):
     return mid, 'checked', results
 
 def presence(mid):
-    """Does each recorded benchmark NAME appear in the model's HF card text?
+    """Does the source each entry cites actually contain that benchmark name?
 
-    LIMITATION: checks the HF card only. Many records take their numbers from a
-    tech report or blog (Qwen3-8B's card has zero occurrences of "MMLU"), so a
-    flag here usually means "different document", not "fabricated". Treat output
-    as a lead list for investigation, not as CI truth. A real fabrication only
-    looks like this: the row is absent from the card AND from the source the
-    entry itself cites.
+    For every benchmark it resolves the entry's OWN source id (falling back to
+    the model's first HF card) and looks for the name in that document. A flag
+    therefore means: the document we cite does not contain the number. That is a
+    provenance gap, not automatically a fabricated value -- Qwen3-8B's card never
+    says "MMLU", so those rows need the tech report added as a source.
+
+    Names are matched on a normalised alphanumeric form, with aliases for
+    "SWE Verified"/"SWE-bench Verified" and "GPQA"/"GPQA Diamond".
+
+    KNOWN BLIND SPOTS: arXiv/whitepaper PDFs and JS-rendered pages are skipped,
+    because raw bytes carry no readable table. Those sources yield no verdict
+    rather than a flag. Do not treat this as a CI gate -- it is a worklist of
+    records whose provenance needs a better citation.
     """
     p = R / 'data/models' / (mid + '.json')
     if not p.exists():
         return mid, 'missing-record', []
     rec = json.loads(p.read_text())
-    doc = None
+    texts, card = {}, None
     for ref in (rec.get('sources') or []):
         sp = R / 'data/sources' / (str(ref) + '.json')
         if not sp.exists():
             continue
         u = json.loads(sp.read_text()).get('url') or ''
         m = re.search(r'huggingface\.co/([^/]+/[^/?#]+)', u)
-        if not m:
-            continue
         try:
-            doc = fetch('https://huggingface.co/%s/raw/main/README.md' % m.group(1))
-            break
+            if m:
+                d = fetch('https://huggingface.co/%s/raw/main/README.md' % m.group(1))
+            elif u.startswith('http'):
+                d = fetch(u)
+            else:
+                continue
         except Exception:
             continue
-    if not doc or len(doc) < 800:
-        return mid, 'thin-or-missing-card', []
-    t = ' ' + re.sub(r'[^a-z0-9]+', ' ', doc.lower()).strip() + ' '
+        if d.startswith('%PDF') or '\x00' in d[:400]:
+            continue
+        if card is None:
+            card = d
+        texts[str(ref)] = d
+
+    def nt(d):
+        return ' ' + re.sub(r'[^a-z0-9]+', ' ', d.lower()).strip() + ' '
+
+    if not texts:
+        return mid, 'no-fetchable-source', []
+    card_t = nt(card) if card and len(card) >= 800 else None
+    normed = {k: nt(v) for k, v in texts.items() if len(v) >= 400}
     miss = []
     for b in rec.get('benchmarks') or []:
         nm = b.get('name') or ''
+        t = normed.get(str(b.get('source'))) or card_t
+        if not t:
+            continue
         k1 = re.sub(r'[^a-z0-9]+', ' ', nm.lower()).strip()
         k2 = re.sub(r'[^a-z0-9]+', ' ', re.sub(r'\(.*?\)', '', nm).lower()).strip()
         ok = bool(k1) and k1 in t
