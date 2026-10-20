@@ -4,7 +4,7 @@
   "name": "Gemma 4 E2B IT",
   "status": "draft",
   "confidence": 0.6,
-  "updated": "2026-10-19",
+  "updated": "2026-10-20",
   "sources": [
     "hf-crawl-gemma-4-e2b-it"
   ],
@@ -82,5 +82,7 @@
       "config": "vendor-published row as printed on the card; eval harness not restated"
     }
   ],
-  "notes": "Created from the 2026-10-19 HuggingFace discovery crawl. Benchmarks are the card's own published rows (vendor claims). architecture and task are inferred from the slug and param ratio; KV geometry, context length and quant sizes are not yet filled, hence status draft."
+  "notes": "Created from the 2026-10-19 HuggingFace discovery crawl. Benchmarks are the card's own published rows (vendor claims). architecture and task are inferred from the slug and param ratio; KV geometry, context length and quant sizes are not yet filled, hence status draft. KV basis: Hybrid sliding/global stack with KV-cache sharing, so only global (full-attention) layers grow with context. config.json text_config: 35 layers, layer_types 28 sliding_attention + 7 full_attention (full at 4,9,14,19,24,29,34), num_kv_shared_layers 20 -> the last 20 layers reuse KV computed by earlier layers, leaving 15 KV-producing layers (0-14, of which 3 are full attention), num_key_value_heads 1, head_dim 256 for sliding layers, global_head_dim 512 for full layers, sliding_window 512, max_position_embeddings 131,072. Per-token growth = 2 (K+V) x 3 full layers x 1 KV head x 512 global_head_dim x 2 bytes (bf16) = 6,144 B/token. The 12 unique sliding layers add 2 x 1 x 256 x 2 = 1,024 B/token each but only across the trailing 512-token window (12,288 B/token x 512 = 6.29 MB fixed), so they do not scale with context. Ignoring the KV-sharing deduction the same config would give 7 full layers = 14,336 B/token; 6,144 is the config-faithful figure.",
+  "kv_cache_bytes_per_token": 6144,
+  "max_position_embeddings": 131072
 }
