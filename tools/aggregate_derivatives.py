@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Aggregate per-repo derivative verdicts into one report."""
-import collections, json, pathlib
+import collections, json, pathlib, re
 
 R = pathlib.Path(__file__).resolve().parent.parent
 ANA = pathlib.Path("/opt/data/analysis")
@@ -9,6 +9,7 @@ OUT = R / "docs/33-derivative-analysis.md"
 
 
 def load():
+    bm = base_map()
     db = {}
     for line in DB.read_text().splitlines():
         if line.strip():
@@ -20,9 +21,26 @@ def load():
             if line.strip():
                 r = json.loads(line)
                 r["dl"] = db.get(r["id"], {}).get("downloads", 0)
-                r["base"] = db.get(r["id"], {}).get("base", "")
+                b = db.get(r["id"], {}).get("base", "")
+                r["base"] = ("[[models/%s]]" % bm[b]) if b in bm else b
                 rows.append(r)
     return rows, db
+
+
+def base_map():
+    """HF repo id -> our model record id, so docs can cite [[models/x]]."""
+    m = {}
+    for f in (R / "data/models").glob("*.json"):
+        rec = json.loads(f.read_text())
+        for sid in rec.get("sources") or []:
+            sp = R / "data/sources" / (str(sid) + ".json")
+            if not sp.exists():
+                continue
+            u = json.loads(sp.read_text()).get("url") or ""
+            hit = re.search(r"huggingface\.co/([^/?#]+/[^/?#]+)", u)
+            if hit:
+                m.setdefault(hit.group(1), rec["id"])
+    return m
 
 
 def main():
@@ -45,10 +63,10 @@ if __name__ == "__main__":
     lb = [r for r in rows if r["publishes_delta"] and r["verdict"] == "quant-lowbit"]
     L += ["", "## Low-bit builds that publish measured degradation", "",
           "The only low-bit quants that give a number to argue with.", "",
-          "| repo | downloads | evidence |", "|---|---|---|"]
+          "| repo | base model | downloads | evidence |", "|---|---|---|---|"]
     for r in sorted(lb, key=lambda x: -x["dl"])[:25]:
         ev = (r["delta_evidence"] or r["note"]).replace("|", "/")[:110]
-        L.append("| `%s` | %s | %s |" % (r["id"], "{:,}".format(r["dl"]), ev))
+        L.append("| `%s` | %s | %s | %s |" % (r["id"], r["base"], "{:,}".format(r["dl"]), ev))
     ab = [r for r in rows if r["verdict"] == "abliterated"]
     abd = sum(1 for r in ab if r["publishes_delta"])
     L += ["", "## Abliteration", "",
