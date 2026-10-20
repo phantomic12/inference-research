@@ -11,6 +11,7 @@ KINDS = [
     ("gguf", r"(?i)gguf|lmstudio|ggml"),
     ("awq", r"(?i)awq"),
     ("gptq", r"(?i)gptq"),
+    ("quant4", r"(?i)bnb|4bit|8bit|int4|int8|w4a16"),
     ("fp8", r"(?i)fp8"),
     ("nvfp4", r"(?i)nvfp4|fp4"),
     ("lowbit", r"(?i)(iq1|iq2|q2_|q3_|2bit|ternary|1\.58)"),
