@@ -255,6 +255,58 @@ def check(mid):
             results.append((b.get('name'), want, got, 'ok-elsewhere' if explained else 'MISMATCH'))
     return mid, 'checked', results
 
+def presence(mid):
+    """Does each recorded benchmark NAME appear in the model's HF card text?
+
+    LIMITATION: checks the HF card only. Many records take their numbers from a
+    tech report or blog (Qwen3-8B's card has zero occurrences of "MMLU"), so a
+    flag here usually means "different document", not "fabricated". Treat output
+    as a lead list for investigation, not as CI truth. A real fabrication only
+    looks like this: the row is absent from the card AND from the source the
+    entry itself cites.
+    """
+    p = R / 'data/models' / (mid + '.json')
+    if not p.exists():
+        return mid, 'missing-record', []
+    rec = json.loads(p.read_text())
+    doc = None
+    for ref in (rec.get('sources') or []):
+        sp = R / 'data/sources' / (str(ref) + '.json')
+        if not sp.exists():
+            continue
+        u = json.loads(sp.read_text()).get('url') or ''
+        m = re.search(r'huggingface\.co/([^/]+/[^/?#]+)', u)
+        if not m:
+            continue
+        try:
+            doc = fetch('https://huggingface.co/%s/raw/main/README.md' % m.group(1))
+            break
+        except Exception:
+            continue
+    if not doc or len(doc) < 800:
+        return mid, 'thin-or-missing-card', []
+    t = ' ' + re.sub(r'[^a-z0-9]+', ' ', doc.lower()).strip() + ' '
+    miss = []
+    for b in rec.get('benchmarks') or []:
+        nm = b.get('name') or ''
+        k1 = re.sub(r'[^a-z0-9]+', ' ', nm.lower()).strip()
+        k2 = re.sub(r'[^a-z0-9]+', ' ', re.sub(r'\(.*?\)', '', nm).lower()).strip()
+        ok = bool(k1) and k1 in t
+        if not ok and len(k2) >= 4 and k2 in t:
+            ok = True
+        if not ok:
+            k4 = re.sub(r'\b(bench|diamond)\b', ' ', k1)
+            k4 = re.sub(r'\s+', ' ', k4).strip()
+            if len(k4) >= 4 and k4 in t:
+                ok = True
+        if not ok and k1:
+            k3 = re.sub(r' v\d+$', '', k1)
+            ok = bool(k3) and k3 in t
+        if not ok:
+            miss.append(nm)
+    return mid, ('ok' if not miss else 'unsupported'), miss
+
+
 if __name__ == '__main__':
     argv = sys.argv[1:]
     flags = [a for a in argv if a.startswith('--')]
@@ -267,6 +319,17 @@ if __name__ == '__main__':
             print('no model records changed; nothing to verify')
             sys.exit(0)
         ids = sorted(q.stem for q in (R / 'data/models').glob('*.json'))
+    if '--present' in flags:
+        bad2 = {}
+        for mid in ids:
+            try:
+                mid, st, miss = presence(mid)
+            except Exception:
+                continue
+            if miss:
+                bad2[mid] = miss
+        print('UNSUPPORTED:', json.dumps(bad2, indent=1))
+        sys.exit(1 if bad2 else 0)
     stats, bad, checked = {}, {}, []
     for mid in ids:
         try:
