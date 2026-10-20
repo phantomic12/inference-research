@@ -1,5 +1,5 @@
 
-import json, re, sys, pathlib, urllib.request
+import json, os, re, sys, pathlib, urllib.request
 
 R = pathlib.Path(__file__).resolve().parent.parent
 UA = {'User-Agent': 'Mozilla/5.0'}
@@ -256,19 +256,57 @@ def check(mid):
     return mid, 'checked', results
 
 if __name__ == '__main__':
-    ids = sys.argv[1:]
+    argv = sys.argv[1:]
+    flags = [a for a in argv if a.startswith('--')]
+    ids = [a for a in argv if not a.startswith('--')]
+    ci = '--ci' in flags
+    if '--ids-file' in argv:
+        ids = [l.strip() for l in open(argv[argv.index('--ids-file') + 1]) if l.strip()]
     if not ids:
-        ids = sorted(p.stem for p in (R / 'data/models').glob('*.json'))
-    stats = {}
-    bad = {}
+        if ci:
+            print('no model records changed; nothing to verify')
+            sys.exit(0)
+        ids = sorted(q.stem for q in (R / 'data/models').glob('*.json'))
+    stats, bad, checked = {}, {}, []
     for mid in ids:
         try:
             mid, st, res = check(mid)
         except Exception as e:
             mid, st, res = mid, 'error: %s' % type(e).__name__, []
         stats[st] = stats.get(st, 0) + 1
+        if st == 'checked':
+            ok_n = sum(1 for x in res if x[3] in ('ok', 'ok-elsewhere'))
+            no_n = sum(1 for x in res if x[3] == 'no-row')
+            checked.append((mid, ok_n, ok_n + no_n))
         for name, want, got, verdict in res:
             if verdict == 'MISMATCH':
                 bad.setdefault(mid, []).append((name, want, got))
     print('STATUS:', json.dumps(stats, indent=1))
     print('MISMATCHES:', json.dumps(bad, indent=1))
+    if not ci:
+        sys.exit(0)
+    lines = ['## Score verification', '',
+             '`%d` model(s) cross-checked against vendor cards.' % len(checked), '',
+             '| model | rows aligned |', '|---|---|']
+    lines += ['| `%s` | %d/%d |' % c for c in checked]
+    if bad:
+        lines += ['### :x: %d mismatch(es)' % len(bad), '',
+                  '| model | benchmark | recorded | vendor card |', '|---|---|---|---|']
+        for m, rows in sorted(bad.items()):
+            for n, w, g in rows:
+                lines.append('| `%s` | %s | %s | %s |' % (m, n, w, g))
+        lines += ['', 'Re-read the vendor table before editing. Bind cells to that',
+                  'table\'s own header row, not to a header from another table.']
+    else:
+        lines += [':white_check_mark: No mismatches.', '']
+    skipped = [k for k in sorted(stats) if k != 'checked']
+    if skipped:
+        lines += ['', 'Not cross-checked (could not align a column): ' +
+                  ', '.join('%s=%d' % (k, stats[k]) for k in skipped)]
+    out = '\n'.join(lines)
+    print(out)
+    sp = os.environ.get('GITHUB_STEP_SUMMARY')
+    if sp:
+        with open(sp, 'a') as fh:
+            fh.write(out + '\n')
+    sys.exit(1 if bad else 0)
