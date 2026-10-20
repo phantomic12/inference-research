@@ -325,6 +325,37 @@ def _axis_for(name):
     return "other"
 
 
+def load_quant_retention() -> dict:
+    """base model record id -> list of retention rows (derivative-sourced).
+
+    Joins on the record's declared base_model when present, else on the HF repo id
+    that the derivative names as its base, resolved through each record's sources.
+    """
+    p = ROOT / "data/quant_retention.jsonl"
+    if not p.exists():
+        return {}
+    import re as _re
+    hf_to_rec = {}
+    for f in (ROOT / "data/models").glob("*.json"):
+        d = json.loads(f.read_text())
+        for s in d.get("sources") or []:
+            sp = ROOT / "data/sources" / (s + ".json")
+            if not sp.exists():
+                continue
+            txt = sp.read_text()
+            for m in _re.finditer(r"huggingface\.co/([A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+)", txt):
+                hf_to_rec.setdefault(m.group(1).lower(), d["id"])
+    out = {}
+    for line in p.read_text().splitlines():
+        if not line.strip():
+            continue
+        d = json.loads(line)
+        key = d.get("base_model") or hf_to_rec.get((d.get("base_repo") or "").lower())
+        if key:
+            out.setdefault(key, []).append(d)
+    return out
+
+
 def build_worth_running() -> dict:
     _CONTEXT_TOKENS = 8192
     _MULTI_USERS = 16
@@ -461,6 +492,20 @@ def build_worth_running() -> dict:
                                      "score/best-known-score for the benchmarks in it, x100. "
                                      "One capability counts once however many rows it has.")
             r["thin"] = len(per_axis) <= 2
+
+    # Attach the best-evidenced low-bit retention for each model. Derivative-sourced,
+    # not record-sourced: see gotcha ab-gotcha-derivative-retention-is-hf-card-sourced.
+    qr = load_quant_retention()
+    for r in rows:
+        cands = qr.get(r["id"]) or []
+        keep = [c for c in cands if c["bucket"] != "suspect"]
+        if keep:
+            best = max(keep, key=lambda c: (c.get("n") or 0, -abs(c["median_delta_pct"])))
+            r["quant_retention"] = best
+            r["quant_retention_basis"] = (
+                "delta vs base across n benchmarks, read from the derivative repo's own "
+                "comparison table and recomputed with metric direction applied. Not a "
+                "record claim; see the derivative-retention gotcha.")
 
     rows.sort(key=lambda x: (-(x["capability"] or -1), x["single_user_gib"]))
     return {
