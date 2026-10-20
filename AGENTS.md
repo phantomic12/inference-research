@@ -50,8 +50,6 @@ need a human read of the source.
 
 ## Handling disagreement
 
-## Handling disagreement
-
 Never resolve a numeric conflict by picking the number you like.
 
 - Two sources, same quantity, different values: keep both. Set
