@@ -1,0 +1,30 @@
+{
+ "id": "ab-gotcha-derivative-retention-is-hf-card-sourced-not-record-sourced",
+ "type": "gotcha",
+ "name": "Quant retention figures come from Hugging Face model cards, not from records, and most derivative bases are not tracked models",
+ "class": "measurement",
+ "affects": [
+  "qwen3-8-27b",
+  "qwen3-6-35b-a3b",
+  "deepseek-v4-1-flash-1017",
+  "kimi-k3"
+ ],
+ "concepts": [
+  "quantization",
+  "retention",
+  "base-model",
+  "provenance",
+  "hugging-face"
+ ],
+ "symptom": "data/quant_retention.jsonl holds 144 base-vs-quant comparisons taken from derivative repo cards. Only 7 of the 144 resolve to a model record in this repo; the other 137 name bases such as IFM/K2-Horizon-MoVA-36B-A4B that have no record. No docs/ page may cite these deltas as record-backed facts.",
+ "root_cause": "The derivative layer was built by querying the Hugging Face Hub API with a base_model filter (data/derivatives.jsonl, 13624 repos), then reading each card's own comparison table. The cards are the source; this repo's model records are a separate, much smaller set that was never extended to cover the long tail of base models those derivatives point at.",
+ "workaround": "Treat data/quant_retention.jsonl as a derivative-sourced index, not a record. Quote a retention figure only with the derivative repo id and the card's own reference column; cite [[models/x]] only where base_model is non-null. Promote a base to a model record before any figure about it appears in docs/.",
+ "severity": "major",
+ "status": "contested",
+ "confidence": 0.9,
+ "updated": "2026-10-20",
+ "sources": [
+  "hugging-face-hub-api-model-listing-base-model-filter"
+ ],
+ "notes": "Roughly 37% of the 461 low-bit repos that claim a delta name a base reference at all (172 of 461); the other 63% compare quants to each other or publish nothing. Retention is recomputed from raw base/quant cells with metric direction applied because agent-read cards flipped PPL signs and swapped columns inconsistently; 18 rows still show an impossible gain and are bucketed 'suspect' rather than ranked."
+}

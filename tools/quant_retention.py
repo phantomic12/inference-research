@@ -52,7 +52,7 @@ def scored():
 def bucket(s):
     m = s["median"]
     if m > 1:
-        return "suspect"
+        return "exceeds_base"
     if abs(m) <= 1:
         return "lossless"
     if m >= -5:
@@ -102,10 +102,12 @@ def main():
     L = ["# Quant retention: what each low-bit build actually costs", "",
          "Recomputed from raw base/quant cells in reviewed model cards. Deltas are signed so that",
          "negative always means worse than base, with PPL/KLD/WER flipped. Rows showing a gain",
-         "above +1% are bucketed `suspect`: quantization does not improve a model, so those are",
-         "mislabelled reference columns and are excluded from the ranking.", "",
+         "above +1% are bucketed `exceeds_base` and excluded from the ranking. Most are",
+         "mislabelled reference columns, but not all: DWQ/distilled quants and FP8 derivatives of",
+         "a fine-tune can genuinely beat the released base, so a positive delta is a prompt to",
+         "check the mechanism, not proof of an error.", "",
          "| bucket | builds |", "|---|---|"]
-    for k in ("lossless", "minor", "major", "catastrophic", "suspect"):
+    for k in ("lossless", "minor", "major", "catastrophic", "exceeds_base"):
         L.append("| %s | %d |" % (k, len(groups.get(k, []))))
     L.append("| curves (multi-level tables, not ranked) | %d |" % len([r for r in rows if r["curve"]]))
     L.append("")
