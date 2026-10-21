@@ -10,7 +10,26 @@ def fetch(url):
         return r.read().decode('utf-8', 'replace')
 
 def norm(s):
-    return re.sub(r'[^a-z0-9]', '', (s or '').lower())
+    # Strip tags first: cards write headers as "BigBang<br>V1", and removing only
+    # the angle brackets leaves "bigbangbrv1", which then matches no model key.
+    return re.sub(r'[^a-z0-9]', '', re.sub(r'<[^>]+>', '', (s or '')).lower())
+
+
+def close(got, want, tol=0.051):
+    """Does a card cell reproduce a recorded value?
+
+    Allows the card to print a fraction where the record stores a percentage
+    (0.360 vs 36.0) and vice versa -- a unit difference, not a wrong number.
+    """
+    if got is None or want is None:
+        return False
+    if abs(got - want) <= tol:
+        return True
+    if want > 1.0 and got <= 1.0:
+        return abs(got * 100.0 - want) <= tol * 10
+    if got > 1.0 and want <= 1.0:
+        return abs(want * 100.0 - got) <= tol * 10
+    return False
 
 def rowkey(label):
     # bind on the benchmark name only: parenthetical harness suffixes
@@ -153,7 +172,7 @@ def score_col(grid, ci, benchmarks):
         if got is None:
             continue
         resolved += 1
-        if want is not None and abs(got - want) <= 0.051:
+        if close(got, want):
             ok += 1
     return ok, resolved
 
@@ -225,7 +244,7 @@ def check(mid):
             results.append((b.get('name'), want, None, 'no-num'))
         elif want is None:
             results.append((b.get('name'), want, got, 'record-empty'))
-        elif abs(got - want) <= 0.051:
+        elif close(got, want):
             results.append((b.get('name'), want, got, 'ok'))
         else:
             # Before accusing, check whether ANOTHER column on the same card
@@ -248,7 +267,7 @@ def check(mid):
                 row2 = find_row(g2, b.get('name'), eff2)
                 if row2 is not None:
                     v2 = num(row2[eff2])
-                    if v2 is not None and abs(v2 - want) <= 0.051:
+                    if close(v2, want):
                         explained = True
                 if explained:
                     break
