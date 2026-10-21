@@ -446,6 +446,17 @@ completely different hardware.
     family              string|null   release family: llama, qwen, deepseek, ...
     vendor              string|null
     release_year        int|null
+    base_model          string|null  HF repo id this record was post-trained or
+                       merged from, e.g. Qwen/Qwen3.6-35B-A3B. Set when the record
+                       is a derivative, so a fine-tune can be a first-class entry
+                       without losing its provenance. Quants and format ports are
+                       NOT records - those belong in data/derivatives.jsonl, and
+                       tools/mk_finetune_record.py refuses to build one
+    derivative_kind     finetune | merge | abliteration | distillation | rl |
+                       other | null.  How base_model was derived. A fine-tune that
+                       beats its own base on the same published test is a
+                       contender, not a repack; an abliteration whose only table
+                       is refusal rates is not a capability claim
     architecture        dense | moe | hybrid-mamba | hybrid-attention-ssm |
                        ssm | recurrent | diffusion | other
     task                text-generation | embedding | reranking | speech-to-text |
