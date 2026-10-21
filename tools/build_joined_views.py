@@ -582,8 +582,42 @@ def build_worth_running() -> dict:
                                      "top score there measures the era, not the model.")
             continue
         r["capability"] = round((raw * W + PRIOR * K) / (W + K), 1)
+        # Hardware realism. A model that needs a GPU farm is not worth the same as one
+        # that fits a single card, even at equal capability: the score is what you can
+        # actually deploy. Tiers are 4-bit weight footprint (params_b * 0.5 GiB), which
+        # is the way these models are served in practice.
+        def _hw_factor(gib, active):
+            # gib = resident GiB to serve one user at 4-bit (weights + KV), the same
+            # figure the Need column shows. Weights alone understates a long-context
+            # giant, which is exactly the case this is meant to price.
+            if not gib:
+                return None
+            if gib <= 24:
+                f = 1.00          # single consumer card
+            elif gib <= 48:
+                f = 0.95          # single 48 GB card
+            elif gib <= 80:
+                f = 0.92          # single workstation card
+            elif gib <= 160:
+                f = 0.82          # two cards, or the user's own 128 GiB box
+            elif gib <= 400:
+                f = 0.68          # small cluster
+            else:
+                f = 0.55          # GPU farm
+            # A sparse model with a small active set runs at its ACTIVE size once the
+            # memory exists, so its real penalty is memory, not latency - and experts
+            # can sit in system RAM. Floor it rather than scoring it like a dense giant.
+            if active and active <= 10 and gib > 24:
+                f = max(f, 0.85)
+            return f
+
         r["recency_factor"] = _model_recency(r.get("release_year"))
-        r["worth"] = round(r["capability"] * r["recency_factor"], 1)
+        _gib = r.get("single_user_gib") or r.get("weights_q4_gib")
+        r["footprint_gib"] = round(_gib, 1) if _gib else None
+        r["hw_factor"] = _hw_factor(_gib, r.get("active_params_b") or r.get("total_params_b"))
+        _fit = r["hw_factor"] if r["hw_factor"] is not None else 1.0
+        r["worth"] = round(r["capability"] * r["recency_factor"] * _fit, 1)
+        r["worth_pre_fit"] = round(r["capability"] * r["recency_factor"], 1)
         r["capability_prior"] = PRIOR
         r["capability_basis"] = ("evidence-weighted relative score, shrunk toward the catalog median (%.1f) "
                                  "by %.0f axes of prior weight. Weighted: each axis averages "

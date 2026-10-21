@@ -42,9 +42,20 @@ const description = 'Which models are worth running: capability against system r
         to how little evidence stands behind it — a model carried by one axis cannot
         top the list on a technicality. <strong>cap</strong> under each score is that
         pre-recency capability with its evidence weight, and the tooltip carries the
-        unshrunk number. <strong>thin</strong> marks a ranking resting on one or two
+        unshrunk number and the hardware fit. <strong>thin</strong> marks a ranking resting on one or two
         axes, <strong>vendor</strong> marks scores the lab published about itself, and
         <strong>Year</strong> is the release year the recency factor is computed from.
+      </p>
+      <p class="sub">
+        <strong>Can you actually run it?</strong> The score is multiplied by a hardware
+        fit factor tiered on the resident memory one user needs at 4-bit - weights plus
+        KV, the same figure as the <em>Need</em> column: 24 GiB or under keeps 100%, 48
+        GiB 95%, 80 GiB 92%, 160 GiB 82%, 400 GiB 68%, beyond that 55%. A sparse model
+        with ten billion or fewer active parameters is floored at 85% once the memory
+        exists, because it runs at its active size and its experts can live in system
+        RAM - the one case where a huge total is not a huge penalty. The effect is blunt
+        and deliberate: a 514 GiB model scoring 88.4 on evidence lands near 49, and all
+        twenty top models now fit inside 80 GiB, most inside 24.
       </p>
       <p class="sub">
         Scores are the model at its <strong>default serving configuration</strong>,
@@ -109,7 +120,7 @@ const description = 'Which models are worth running: capability against system r
           <tr>
             <th>Model</th>
             <th class="num">Year</th>
-            <th class="num">Worth now<br><span class="th-note">recency-weighted</span></th>
+            <th class="num">Worth now<br><span class="th-note">recency + fit</span></th>
             <th class="num">Active</th>
             <th class="num">Resident</th>
             <th class="num">Read / token</th>
@@ -167,7 +178,7 @@ const description = 'Which models are worth running: capability against system r
     capability: number | null; benchmarks: Bench[]; vendor_only: boolean;
     bench_count?: number; thin?: boolean; release_year?: number | null;
     evidence_weight?: number; raw_capability?: number | null; ranked_axes?: number;
-    worth?: number; recency_factor?: number;
+    worth?: number; recency_factor?: number; hw_factor?: number; worth_pre_fit?: number;
     quant_retention?: {
       id: string; format: string | null; bucket: string;
       median_delta_pct: number; rows: number;
@@ -222,7 +233,7 @@ const description = 'Which models are worth running: capability against system r
       return `<tr class="model-row">
         <td><a href="${base}r/models/${r.id}/">${r.name}</a>${benches ? `<div class="bench-line">${cov}${benches}</div>` : ''}</td>
         <td class="num">${r.release_year ?? '—'}</td>
-        <td class="num cost-cell">${(r.worth ?? null) === null ? '—' : r.worth.toFixed(1)}${r.evidence_weight ? `<div class="bench-line" title="capability ${r.capability} x recency ${r.recency_factor} (${r.release_year ?? 'undated'}); evidence weight ${r.evidence_weight} across ${r.ranked_axes} axes; unshrunk ${r.raw_capability ?? '—'}">cap ${r.capability}</div>` : ''}${r.thin ? ' <span class="thin-flag" title="only one or two axes carry discriminating evidence">thin</span>' : ''}${flag}</td>
+        <td class="num cost-cell">${(r.worth ?? null) === null ? '—' : r.worth.toFixed(1)}${r.evidence_weight ? `<div class="bench-line" title="capability ${r.capability} x recency ${r.recency_factor} (${r.release_year ?? 'undated'}) x fit ${r.hw_factor ?? '—'} = ${r.worth} (${r.worth_pre_fit} before hardware); resident ${r.footprint_gib ?? '—'} GiB for one user at 4-bit; evidence weight ${r.evidence_weight} across ${r.ranked_axes} axes; unshrunk ${r.raw_capability ?? '—'}">cap ${r.capability} · fit ${r.hw_factor ?? '—'}</div>` : ''}${r.thin ? ' <span class="thin-flag" title="only one or two axes carry discriminating evidence">thin</span>' : ''}${flag}</td>
         <td class="num">${r.active_params_b}B</td>
         <td class="num">${r.weights_q4_gib} GB</td>
         <td class="num">${r.traffic_q4_gib} GB</td>
