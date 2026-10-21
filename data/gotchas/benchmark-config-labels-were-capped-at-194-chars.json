@@ -1,0 +1,24 @@
+{
+  "id": "benchmark-config-labels-were-capped-at-194-chars",
+  "type": "gotcha",
+  "name": "Benchmark config labels were stored capped at 194 characters",
+  "class": "measurement",
+  "affects": [
+    "records"
+  ],
+  "concepts": [
+    "config",
+    "serving configuration",
+    "benchmark methodology",
+    "truncation"
+  ],
+  "symptom": "165 benchmark entries across 40 model records carried a `config` field that ended mid-clause with a trailing ellipsis, e.g. `DEFAULT serving config: Thinking is on by default: chat_template.jinja renders the thinking branch when enable_thinking is undefined or true, which is also what the card's OpenAI example sends,…`. The serving configuration is the field that makes a benchmark number reproducible, so a cut one is a methodology that cannot be followed.",
+  "root_cause": "The ingestion pass that wrote these entries sliced the `config` string at 194 characters before writing the record. The dropped tail is not recoverable from the record, and it is usually not quotable from the model card either: most of these labels are an analysis of the checkpoint's chat template and generation config (what `chat_template.jinja` does when `enable_thinking` is absent), written by the ingesting agent, so no upstream document contains the missing words.",
+  "workaround": "Each truncated label was rewritten to end at its last complete clause, so the serving fact survives and the string no longer implies a continuation that is not stored. Nothing was inferred to fill the gap: no tail was reconstructed, and the corroborating detail that was dropped ('which is also what the card's OpenAI example sends') is not recorded anywhere. When a serving setting matters for a comparison, re-derive it from the checkpoint's own `chat_template.jinja` and `generation_config.json` rather than trusting the label's completeness.",
+  "status": "verified",
+  "severity": "minor",
+  "confidence": 1.0,
+  "updated": "2026-10-21",
+  "sources": [],
+  "notes": "165 entries in data/models/*.json ended with an ellipsis at exactly 194 characters; all 165 rewritten to a clause boundary, 0 remaining."
+}

@@ -45,6 +45,16 @@ const description = 'Which models are worth running: capability against system r
         does not actually beat. Where a source documents the setting it is recorded
         on the entry; where it publishes only a ceiling, the record says so.
       </p>
+      <p class="sub">
+        <strong>Quant kept</strong> is the one column that is <em>not</em> a lab claim. It is
+        the median gap between some third party's quantized build of the model and that
+        build's own base, read off the derivative repo's comparison table and recomputed with
+        the metric's direction applied. Only <strong data-quant-cov>some</strong> models have such a
+        build published; the rest show a dash rather than a guess. Within
+        <strong>±1%</strong> is noise, <strong>−1 to −5%</strong> is a real haircut, worse
+        than <strong>−5%</strong> is a different and dumber model. Hover a value for the repo
+        it came from — card-sourced, not a catalog record.
+      </p>
     </div>
 
     <div class="join-controls" data-worth-controls>
@@ -94,6 +104,7 @@ const description = 'Which models are worth running: capability against system r
             <th class="num">Read / token</th>
             <th class="num">KV / user</th>
             <th class="num">Need</th>
+            <th class="num">Quant kept<br><span class="th-note">measured</span></th>
             <th>Offload</th>
           </tr>
         </thead>
@@ -144,6 +155,11 @@ const description = 'Which models are worth running: capability against system r
     multi_user_gib: number | null; offload_friendly: boolean;
     capability: number | null; benchmarks: Bench[]; vendor_only: boolean;
     bench_count?: number; thin?: boolean;
+    quant_retention?: {
+      id: string; format: string | null; bucket: string;
+      median_delta_pct: number; rows: number;
+    } | null;
+    quant_retention_basis?: string;
   }
 
   const base = import.meta.env.BASE_URL;
@@ -152,6 +168,22 @@ const description = 'Which models are worth running: capability against system r
 
   function need(r: Row, users: string): number | null {
     return users === 'multi' ? r.multi_user_gib : r.single_user_gib;
+  }
+
+  function esc(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Measured retention, read from a derivative repo's own base-vs-quant table.
+  // Negative always means the quant scored below its base (PPL/KLD sign already applied upstream).
+  function quantCell(r: Row): string {
+    const q = r.quant_retention;
+    if (!q) return '<td class="num">—</td>';
+    const d = q.median_delta_pct;
+    const cls = d <= -5 ? 'quant-bad' : d <= -1 ? 'quant-mid' : 'quant-good';
+    const label = `${d > 0 ? '+' : ''}${d.toFixed(1)}%`;
+    const tip = `${q.id} — ${q.format ?? 'quant'} vs its base, median of ${q.rows} benchmark${q.rows === 1 ? '' : 's'} (${q.bucket}). Card-sourced, not a record claim.`;
+    return `<td class="num ${cls}" title="${esc(tip)}">${label}<div class="bench-line">${esc(q.format ?? '')}</div></td>`;
   }
 
   function render() {
@@ -182,12 +214,19 @@ const description = 'Which models are worth running: capability against system r
         <td class="num">${r.traffic_q4_gib} GB</td>
         <td class="num">${r.kv_8k_gib === null ? '—' : r.kv_8k_gib + ' GB'}</td>
         <td class="num cost-cell">${n === null ? '—' : n + ' GB'}</td>
+        ${quantCell(r)}
         <td>${r.offload_friendly ? 'yes' : '—'}</td>
       </tr>`;
     }).join('');
 
     const counter = document.querySelector('[data-count]');
     if (counter) counter.textContent = `${shown.length} models`;
+
+    const cov = document.querySelector('[data-quant-cov]');
+    if (cov) {
+      const withQ = shown.filter((r) => r.quant_retention).length;
+      cov.textContent = `${withQ} of ${shown.length}`;
+    }
   }
 
   document.querySelector('[data-worth-controls]')?.addEventListener('change', render);

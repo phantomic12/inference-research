@@ -345,14 +345,31 @@ def load_quant_retention() -> dict:
             txt = sp.read_text()
             for m in _re.finditer(r"huggingface\.co/([A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+)", txt):
                 hf_to_rec.setdefault(m.group(1).lower(), d["id"])
+    # Rows from the widen pass carry no base_repo (the digest strips the header), so
+    # recover the derivative's base from the mined derivatives database instead.
+    deriv_base = {}
+    dp = ROOT / "data/derivatives.jsonl"
+    if dp.exists():
+        for line in dp.read_text().splitlines():
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            if r.get("base"):
+                deriv_base[r["id"].lower()] = r["base"].lower()
     out = {}
-    for line in p.read_text().splitlines():
-        if not line.strip():
+    for path in (p, ROOT / "data/quant_retention_widen.jsonl"):
+        if not path.exists():
             continue
-        d = json.loads(line)
-        key = d.get("base_model") or hf_to_rec.get((d.get("base_repo") or "").lower())
-        if key:
-            out.setdefault(key, []).append(d)
+        for line in path.read_text().splitlines():
+            if not line.strip():
+                continue
+            d = json.loads(line)
+            key = d.get("base_model") or hf_to_rec.get((d.get("base_repo") or "").lower())
+            if not key:
+                b = deriv_base.get((d.get("id") or "").lower())
+                key = hf_to_rec.get(b) if b else None
+            if key:
+                out.setdefault(key, []).append(d)
     return out
 
 
