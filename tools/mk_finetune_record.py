@@ -60,13 +60,18 @@ def arch_of(base_repo):
     full_idx = [i for i, x in enumerate(layer_types) if "full" in x]
     n_full = len(full_idx) if full_idx else cfg.get("num_hidden_layers", 0) // (
         cfg.get("full_attention_interval") or 1)
-    kvb = n_full * 2 * cfg["num_key_value_heads"] * cfg["head_dim"] * 2  # fp16 KV
+    # Not every config carries head_dim (LFM2 and some hybrid stacks derive it from
+    # hidden_size / heads), so fall back rather than crashing on the base.
+    heads = cfg.get("num_attention_heads") or 1
+    kvh = cfg.get("num_key_value_heads") or heads
+    hd = cfg.get("head_dim") or (cfg.get("hidden_size") // heads if heads else None)
+    kvb = (n_full * 2 * kvh * hd * 2) if hd else None  # fp16 KV
     return {
         "num_layers": cfg.get("num_hidden_layers"),
         "hidden_size": cfg.get("hidden_size"),
-        "num_kv_heads": cfg.get("num_key_value_heads"),
-        "head_dim": cfg.get("head_dim"),
-        "gqa_ratio": (cfg.get("num_attention_heads") or 0) // (cfg.get("num_key_value_heads") or 1),
+        "num_kv_heads": kvh,
+        "head_dim": hd,
+        "gqa_ratio": heads // kvh if kvh else None,
         "num_experts": cfg.get("num_experts"),
         "experts_per_token": cfg.get("num_experts_per_tok"),
         "max_position_embeddings": cfg.get("max_position_embeddings"),
@@ -115,6 +120,11 @@ def main():
     ap.add_argument("--base", help="base HF repo id; defaults to the card's base_model tag")
     ap.add_argument("--bench", help="JSON file: [{name, score, config}, ...] read off the card")
     ap.add_argument("--kind", choices=["finetune", "merge", "abliteration", "distillation", "rl", "other"])
+    ap.add_argument("--task", default="text-generation",
+                    choices=["text-generation", "vision-language", "decision", "embedding",
+                             "reranking", "speech-to-text", "text-to-speech", "image-generation", "other"],
+                    help="decision = per-option probabilities in one forward pass; excluded from "
+                         "the worth-running ranking and measured on the Decision Index")
     ap.add_argument("--allow-empty", action="store_true", help="write a record with no benchmarks")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
@@ -165,7 +175,7 @@ def main():
     record = {
         "id": rid, "type": "model", "name": a.hf_id.split("/")[-1],
         "family": base_rec.get("family"), "vendor": a.hf_id.split("/")[0],
-        "release_year": year, "architecture": arch["architecture"], "task": "text-generation",
+        "release_year": year, "architecture": arch["architecture"], "task": a.task,
         "params_b": params, "active_params_b": base_rec.get("active_params_b"),
         "num_experts": arch["num_experts"], "experts_per_token": arch["experts_per_token"],
         "shared_expert": base_rec.get("shared_expert"),
