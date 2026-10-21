@@ -52,7 +52,7 @@ def scored():
 def bucket(s):
     m = s["median"]
     if m > 1:
-        return "suspect"
+        return "exceeds_base"
     if abs(m) <= 1:
         return "lossless"
     if m >= -5:
@@ -79,7 +79,14 @@ def base_map():
 
 
 def main():
-    if REV.exists():
+    if (R / "data/quant_retention.jsonl").exists():
+        rows = []
+        for line in (R / "data/quant_retention.jsonl").read_text().splitlines():
+            d = json.loads(line)
+            rows.append({"id": d["id"], "median": d["median_delta_pct"], "n": d.get("n") or 0,
+                         "size": d.get("size_gib"), "curve": d.get("curve", False),
+                         "bucket": d.get("bucket")})
+    elif REV.exists():
         rows = scored()
     else:
         p = R / "data/quant_retention.jsonl"
@@ -92,7 +99,7 @@ def main():
     single = [r for r in rows if not r["curve"]]
     groups = {}
     for r in single:
-        groups.setdefault(bucket(r), []).append(r)
+        groups.setdefault(r.get("bucket") or bucket(r), []).append(r)
     bm = base_map()
     deriv = {}
     for line in (R / "data/derivatives.jsonl").read_text().splitlines():
@@ -102,10 +109,13 @@ def main():
     L = ["# Quant retention: what each low-bit build actually costs", "",
          "Recomputed from raw base/quant cells in reviewed model cards. Deltas are signed so that",
          "negative always means worse than base, with PPL/KLD/WER flipped. Rows showing a gain",
-         "above +1% are bucketed `suspect`: quantization does not improve a model, so those are",
-         "mislabelled reference columns and are excluded from the ranking.", "",
+         "above +1% are bucketed `exceeds_base` and excluded from the ranking. Adjudicating all 18",
+         "found only ONE genuine column-order swap: the rest were pooling artifacts (a median over",
+         "rows mixing throughput, context-ceiling and NLL figures with quality scores), cards whose",
+         "own recovery column reads above 100%, or gains inside the card's stated +/-5pp gate.",
+         "A positive delta is a prompt to read the mechanism, never proof of an error.", "",
          "| bucket | builds |", "|---|---|"]
-    for k in ("lossless", "minor", "major", "catastrophic", "suspect"):
+    for k in ("lossless", "minor", "major", "catastrophic", "exceeds_base", "not_comparable"):
         L.append("| %s | %d |" % (k, len(groups.get(k, []))))
     L.append("| curves (multi-level tables, not ranked) | %d |" % len([r for r in rows if r["curve"]]))
     L.append("")
