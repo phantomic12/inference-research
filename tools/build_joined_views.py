@@ -482,12 +482,18 @@ def build_worth_running() -> dict:
     # release years of its top quartile, then discount by that age. This is what
     # keeps a 2023 model off the top of a "worth running" list when its best
     # evidence is MMLU-CoT and HellaSwag, both still in the catalog.
+    # Steep on purpose. Capability has been moving fast enough that a benchmark
+    # whose LEADERS are a year old has been superseded by whatever replaced it, and
+    # one whose leaders are two years old is archaeology rather than evidence. A
+    # gentle slope let a 2024 8B collect near-100s on tests that were competitive
+    # when it shipped; at these weights a 2025-led test keeps 30% and a 2024-led
+    # test 6%, so ordering is driven by tests current models actually contest.
     def _recency(years):
         ys = [y for y in years if y]
         if not ys:
-            return 1.0
+            return 0.5          # undated leaders: half weight, never full
         med = sorted(ys)[len(ys) // 2]
-        return 1.0 if med >= 2026 else 0.8 if med == 2025 else 0.55 if med == 2024 else 0.3
+        return 1.0 if med >= 2026 else 0.30 if med == 2025 else 0.06 if med == 2024 else 0.0
 
     best, disc, bench_year = {}, {}, {}
     for nm, vals in _reporters.items():
@@ -552,6 +558,15 @@ def build_worth_running() -> dict:
     # the standard shrinkage estimator, with K axes of prior weight. Both numbers are
     # published (capability = shrunk, raw_capability = unshrunk) so the adjustment is
     # visible rather than baked in.
+    # And the model itself ages, separately from its evidence. A 2024 checkpoint
+    # that still looks competitive on a current test is worth running; it is not
+    # worth ranking level with a 2026 one, because the 2026 one is what the 2024 one
+    # was superseded by. Applied to the published score, not hidden inside a sort.
+    def _model_recency(y):
+        if not y:
+            return 0.85
+        return 1.0 if y >= 2026 else 0.90 if y == 2025 else 0.70 if y == 2024 else 0.50 if y == 2023 else 0.35
+
     _raw = sorted(r["raw_capability"] for r in rows if r.get("raw_capability") is not None)
     PRIOR = round(_raw[len(_raw) // 2], 1) if _raw else 0.0
     K = 2.0
@@ -564,6 +579,8 @@ def build_worth_running() -> dict:
                                      "top score there measures the era, not the model.")
             continue
         r["capability"] = round((raw * W + PRIOR * K) / (W + K), 1)
+        r["recency_factor"] = _model_recency(r.get("release_year"))
+        r["worth"] = round(r["capability"] * r["recency_factor"], 1)
         r["capability_prior"] = PRIOR
         r["capability_basis"] = ("evidence-weighted relative score, shrunk toward the catalog median (%.1f) "
                                  "by %.0f axes of prior weight. Weighted: each axis averages "
@@ -586,7 +603,7 @@ def build_worth_running() -> dict:
                 "comparison table and recomputed with metric direction applied. Not a "
                 "record claim; see the derivative-retention gotcha.")
 
-    rows.sort(key=lambda x: (-(x["capability"] or -1), x["single_user_gib"]))
+    rows.sort(key=lambda x: (-(x.get("worth") if x.get("worth") is not None else -1), x["single_user_gib"]))
     return {
         "assumptions": {
             "quant_bits": 4,
