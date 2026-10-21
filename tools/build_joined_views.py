@@ -386,7 +386,10 @@ def build_worth_running() -> dict:
         # next to the models someone would actually run.
         if (r.get("task") or "text-generation") in ("embedding", "reranking",
                                                     "speech-to-text", "text-to-speech",
-                                                    "image-generation"):
+                                                    "image-generation", "decision"):
+            # A decision model returns per-option probabilities in one forward pass
+            # and generates no text at all, so every benchmark here is meaningless
+            # for it. Ranked separately, on the Decision Index: tools/decision_ranking.py.
             continue
         active = r.get("active_params_b")
         total = r.get("params_b")
@@ -611,7 +614,7 @@ def build_worth_running() -> dict:
             "multi_users": _MULTI_USERS,
             "weights_basis": "params_b * 4 bits / 8, GiB: the whole checkpoint at 4-bit, which is what has to be resident. MoE expert offload moves most of it to system RAM but does not remove it.",
             "traffic_basis": "active_params_b * 4 bits / 8, GiB: weights touched per token. This is what decode bandwidth scales with, not what must fit.",
-            "scope": "Generative text models only. Models whose record carries task embedding, reranking, speech-to-text, text-to-speech or image-generation are excluded, because chat benchmarks cannot rank an embedder.",
+            "scope": "Generative text models only. Records whose task is embedding, reranking, speech-to-text, text-to-speech, image-generation or decision are excluded, because chat benchmarks cannot rank an embedder and a decision model emits no text to score. Decision models are ranked on the Decision Index in docs/33-decision-models.md.",
             "capability_basis": "evidence-weighted mean across capability axes (knowledge, math, coding, "
                                 "agentic, instruction). Within an axis each benchmark is scored "
                                 "relative to the best result recorded for THAT benchmark here, so "
