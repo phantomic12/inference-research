@@ -9,6 +9,11 @@ name: Deploy site
 on:
   push:
     branches: [main]
+  # Safety net: an auto-merge pushes with GITHUB_TOKEN, which does not trigger the
+  # `push` event above. auto-merge dispatches this workflow explicitly; this
+  # schedule guarantees the site cannot lag main by more than a day if that fails.
+  schedule:
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 permissions:
