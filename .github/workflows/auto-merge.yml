@@ -13,6 +13,7 @@ permissions:
   contents: write
   pull-requests: write
   checks: read
+  actions: write
 
 jobs:
   merge:
@@ -54,3 +55,14 @@ jobs:
               core.info(`deleted branch ${head.ref}`);
             }
             core.info(`merged #${pr}`);
+            // A push made with GITHUB_TOKEN does not trigger other workflows, so the
+            // `on: push` deploy never fires after an auto-merge and the live site
+            // silently lags main. Dispatch the deploy explicitly.
+            try {
+              await github.rest.actions.createWorkflowDispatch({
+                owner, repo, workflow_id: 'deploy-site.yml', ref: 'main',
+              });
+              core.info('dispatched deploy-site');
+            } catch (e) {
+              core.warning(`deploy dispatch failed: ${e.message}`);
+            }
