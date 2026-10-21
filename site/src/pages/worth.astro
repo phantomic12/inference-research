@@ -49,7 +49,7 @@ const description = 'Which models are worth running: capability against system r
         <strong>Quant kept</strong> is the one column that is <em>not</em> a lab claim. It is
         the median gap between some third party's quantized build of the model and that
         build's own base, read off the derivative repo's comparison table and recomputed with
-        the metric's direction applied. Only <strong>60 of 183</strong> models have such a
+        the metric's direction applied. Only <strong data-quant-cov>some</strong> models have such a
         build published; the rest show a dash rather than a guess. Within
         <strong>±1%</strong> is noise, <strong>−1 to −5%</strong> is a real haircut, worse
         than <strong>−5%</strong> is a different and dumber model. Hover a value for the repo
@@ -221,6 +221,12 @@ const description = 'Which models are worth running: capability against system r
 
     const counter = document.querySelector('[data-count]');
     if (counter) counter.textContent = `${shown.length} models`;
+
+    const cov = document.querySelector('[data-quant-cov]');
+    if (cov) {
+      const withQ = shown.filter((r) => r.quant_retention).length;
+      cov.textContent = `${withQ} of ${shown.length}`;
+    }
   }
 
   document.querySelector('[data-worth-controls]')?.addEventListener('change', render);
