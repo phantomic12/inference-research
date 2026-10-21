@@ -436,6 +436,7 @@ def build_worth_running() -> dict:
             "id": stem,
             "name": r.get("name"),
             "family": r.get("family"),
+            "release_year": r.get("release_year"),
             "active_params_b": active,
             "total_params_b": total,
             "moe": moe,
@@ -465,17 +466,44 @@ def build_worth_running() -> dict:
     for r in rows:
         for b in r["benchmarks"]:
             if b["name"]:
-                _reporters.setdefault(b["name"], set()).add(r.get("id"))
-    best = {}
-    for r in rows:
-        for b in r["benchmarks"]:
-            nm = b["name"]
-            if nm and len(_reporters.get(nm, ())) >= 2 and b["pct"] > best.get(nm, 0):
-                best[nm] = b["pct"]
-    # A benchmark whose catalog best is at or near the ceiling cannot discriminate:
-    # everyone who runs it scores ~the same. Flagged so a ranking carried by such
-    # tests is visible rather than flattering.
-    SATURATED = 95.0
+                _reporters.setdefault(b["name"], []).append((b["pct"], r.get("release_year")))
+
+    # A benchmark can only rank a model to the extent it still SEPARATES models.
+    # Measured on the catalog's own distribution: the share of reporters that sit
+    # within 5 points of the best-known figure. MMLU-CoT, HellaSwag and 8-shot GSM8K
+    # are saturated -- dozens of models land inside that band, so being at the top
+    # says which era the test was in use, not which model is worth running. A 2024
+    # 8B within 2 points of the catalog-best MMLU figure used to average 93.8 and
+    # outrank a 397B. Disagreement is the signal: HLE, SWE-bench Pro and
+    # Terminal-Bench spread models out, so they carry most of the weight.
+    # Benchmarks also decay. A test whose LEADERS are all years old has been
+    # superseded: nobody competitive still reports it, so a top score on it is a
+    # statement about the era, not the current model. Date each benchmark by the
+    # release years of its top quartile, then discount by that age. This is what
+    # keeps a 2023 model off the top of a "worth running" list when its best
+    # evidence is MMLU-CoT and HellaSwag, both still in the catalog.
+    def _recency(years):
+        ys = [y for y in years if y]
+        if not ys:
+            return 1.0
+        med = sorted(ys)[len(ys) // 2]
+        return 1.0 if med >= 2026 else 0.8 if med == 2025 else 0.55 if med == 2024 else 0.3
+
+    best, disc, bench_year = {}, {}, {}
+    for nm, vals in _reporters.items():
+        if len(vals) < 2:
+            continue            # a single reporter would BE the best-known figure
+        top = max(p for p, _ in vals)
+        best[nm] = top
+        share_near = sum(1 for p, _ in vals if top - p <= 5.0) / len(vals)
+        w = max(0.0, 1.0 - share_near)
+        if len(vals) == 2:
+            w *= 0.5            # two reporters do not establish a distribution
+        leaders = sorted(vals, key=lambda t: -t[0])[:max(1, len(vals) // 4)]
+        rf = _recency([y for _, y in leaders])
+        bench_year[nm] = round(rf, 2)
+        disc[nm] = round(w * rf, 3)
+
     for r in rows:
         if not r["benchmarks"]:
             continue
@@ -485,30 +513,64 @@ def build_worth_running() -> dict:
             if not top:
                 continue
             rel = min(b["pct"] / top * 100, 100.0)
+            w = disc.get(b["name"], 0.0)
             b["relative"] = round(rel, 1)
-            b["saturated"] = top >= SATURATED
+            b["discrimination"] = w
+            b["saturated"] = w < 0.15
             ax = _axis_for(b["name"])
             if ax == "other":
-                # An incomparable grab-bag (OpenCompass, OCRBench, MMBench...). Each
-                # would otherwise be its own axis at 100. Shown on the row, never
-                # averaged into capability.
-                b["relative"] = round(rel, 1)
+                # An incomparable grab-bag (OpenCompass, OCRBench, MMBench...). Shown
+                # on the row, never averaged into capability.
                 continue
-            by_axis.setdefault(ax, []).append(rel)
-        if by_axis:
-            per_axis = {k: round(sum(v) / len(v), 1) for k, v in by_axis.items()}
-            r["axes"] = per_axis
-            # A single axis is not a capability score. A model whose only comparable
-            # test is the one it leads would otherwise read 100 and top the table on
-            # one row. Report the axis profile, but do not rank on it.
-            r["capability"] = (round(sum(per_axis.values()) / len(per_axis), 1)
-                               if len(per_axis) >= 2 else None)
-            r["axis_count"] = len(per_axis)
-            r["bench_count"] = len(r["benchmarks"])
-            r["capability_basis"] = ("mean across capability axes; each axis is the mean of "
-                                     "score/best-known-score for the benchmarks in it, x100. "
-                                     "One capability counts once however many rows it has.")
-            r["thin"] = len(per_axis) <= 2
+            by_axis.setdefault(ax, []).append((rel, w))
+        if not by_axis:
+            continue
+        per_axis, axis_w = {}, {}
+        for k, items in by_axis.items():
+            tw = sum(w for _, w in items)
+            axis_w[k] = round(tw, 2)
+            per_axis[k] = (round(sum(rel * w for rel, w in items) / tw, 1) if tw > 0
+                           else round(sum(rel for rel, _ in items) / len(items), 1))
+        r["axes"] = per_axis
+        r["axis_weights"] = axis_w
+        r["bench_count"] = len(r["benchmarks"])
+        usable = [k for k, w in axis_w.items() if w > 0]
+        W = round(sum(axis_w[k] for k in usable), 2)
+        r["evidence_weight"] = W
+        r["ranked_axes"] = len(usable)
+        if len(usable) >= 2 and W >= 1.0:
+            r["raw_capability"] = round(sum(per_axis[k] * axis_w[k] for k in usable) / W, 1)
+        else:
+            r["raw_capability"] = None
+        r["thin"] = len(usable) <= 2
+
+    # Thin evidence cannot claim the top of a "worth running" list. A model whose
+    # score rests on one axis, or on tests everyone saturates, would otherwise tie
+    # the frontier on a technicality: being best-known on a benchmark nobody else
+    # still reports is a statement about 2023, not about now. Pull each score toward
+    # the catalog median in proportion to how little evidence stands behind it --
+    # the standard shrinkage estimator, with K axes of prior weight. Both numbers are
+    # published (capability = shrunk, raw_capability = unshrunk) so the adjustment is
+    # visible rather than baked in.
+    _raw = sorted(r["raw_capability"] for r in rows if r.get("raw_capability") is not None)
+    PRIOR = round(_raw[len(_raw) // 2], 1) if _raw else 0.0
+    K = 2.0
+    for r in rows:
+        raw, W = r.get("raw_capability"), r.get("evidence_weight") or 0.0
+        if raw is None:
+            r["capability"] = None
+            r["capability_basis"] = ("not ranked: no discriminating evidence. Every benchmark it reports "
+                                     "is either reported by it alone or saturated across the catalog, so a "
+                                     "top score there measures the era, not the model.")
+            continue
+        r["capability"] = round((raw * W + PRIOR * K) / (W + K), 1)
+        r["capability_prior"] = PRIOR
+        r["capability_basis"] = ("evidence-weighted relative score, shrunk toward the catalog median (%.1f) "
+                                 "by %.0f axes of prior weight. Weighted: each axis averages "
+                                 "score/best-known over its benchmarks, discounted by how far that benchmark "
+                                 "still spreads models (1 - share of reporters within 5 points of the catalog "
+                                 "best), so saturated tests barely count. Shrunk: %s axes of evidence behind "
+                                 "raw %.1f." % (PRIOR, K, W, raw))
 
     # Attach the best-evidenced low-bit retention for each model. Derivative-sourced,
     # not record-sourced: see gotcha ab-gotcha-derivative-retention-is-hf-card-sourced.
@@ -533,10 +595,12 @@ def build_worth_running() -> dict:
             "weights_basis": "params_b * 4 bits / 8, GiB: the whole checkpoint at 4-bit, which is what has to be resident. MoE expert offload moves most of it to system RAM but does not remove it.",
             "traffic_basis": "active_params_b * 4 bits / 8, GiB: weights touched per token. This is what decode bandwidth scales with, not what must fit.",
             "scope": "Generative text models only. Models whose record carries task embedding, reranking, speech-to-text, text-to-speech or image-generation are excluded, because chat benchmarks cannot rank an embedder.",
-            "capability_basis": "mean across capability axes (knowledge, math, coding, "
+            "capability_basis": "evidence-weighted mean across capability axes (knowledge, math, coding, "
                                 "agentic, instruction). Within an axis each benchmark is scored "
                                 "relative to the best result recorded for THAT benchmark here, so "
-                                "100 = best known on that test and models tested differently stay "
+                                "100 = best known on that test, discounted for saturation and for the age of its "
+                                "leaders and then shrunk toward the catalog median when the evidence is thin. "
+                                "Models tested differently stay "
                                 "comparable. Benchmarks are grouped so one capability counts once, "
                                 "however many rows it publishes, and a benchmark whose catalog best "
                                 "is >=95 is flagged saturated because it cannot separate models.",
