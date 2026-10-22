@@ -446,6 +446,12 @@ completely different hardware.
     family              string|null   release family: llama, qwen, deepseek, ...
     vendor              string|null
     release_year        int|null
+    release_date        string|null  publication date (YYYY-MM-DD) the
+                       release_year is derived from: the HF repo creation date for
+                       open weights, the announcement date for a closed model. The
+                       year must agree with it, because the worth ranking ages a
+                       model by this value and a wrong year silently disables the
+                       decay (34 records shipped 2026 against 2025 repos).
     base_model          string|null  HF repo id this record was post-trained or
                        merged from, e.g. Qwen/Qwen3.6-35B-A3B. Set when the record
                        is a derivative, so a fine-tune can be a first-class entry
