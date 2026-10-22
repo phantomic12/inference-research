@@ -566,9 +566,12 @@ def build_worth_running() -> dict:
     # worth ranking level with a 2026 one, because the 2026 one is what the 2024 one
     # was superseded by. Applied to the published score, not hidden inside a sort.
     def _model_recency(y):
+        # Steep on purpose: a checkpoint from a previous generation is still runnable,
+        # but it is not a contender next to this year's models. 0.85 used to be the
+        # undated default, which quietly promoted records with no date at all.
         if not y:
-            return 0.85
-        return 1.0 if y >= 2026 else 0.90 if y == 2025 else 0.70 if y == 2024 else 0.50 if y == 2023 else 0.35
+            return 0.50
+        return 1.0 if y >= 2026 else 0.60 if y == 2025 else 0.25 if y == 2024 else 0.10 if y == 2023 else 0.05
 
     _raw = sorted(r["raw_capability"] for r in rows if r.get("raw_capability") is not None)
     PRIOR = round(_raw[len(_raw) // 2], 1) if _raw else 0.0
