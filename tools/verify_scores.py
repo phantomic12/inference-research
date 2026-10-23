@@ -4,8 +4,33 @@ import json, os, re, sys, pathlib, urllib.request
 R = pathlib.Path(__file__).resolve().parent.parent
 UA = {'User-Agent': 'Mozilla/5.0'}
 
+def _hf_token():
+    """HF_TOKEN from the environment or the standard CLI token file, if either exists.
+
+    Without it, gated cards 401 and a handful of requests per run start hitting the
+    anonymous rate limit; with it, both problems disappear."""
+    tok = os.environ.get('HF_TOKEN') or os.environ.get('HUGGINGFACE_TOKEN')
+    if tok:
+        return tok.strip()
+    for p in (pathlib.Path.home() / '.cache/huggingface/token',
+              pathlib.Path('/opt/data/home/.cache/huggingface/token')):
+        try:
+            if p.exists():
+                t = p.read_text().strip()
+                if t:
+                    return t
+        except Exception:
+            pass
+    return None
+
+
 def fetch(url):
-    req = urllib.request.Request(url, headers=UA)
+    headers = dict(UA)
+    if 'huggingface.co' in url:
+        tok = _hf_token()
+        if tok:
+            headers['Authorization'] = 'Bearer ' + tok
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=30) as r:
         return r.read().decode('utf-8', 'replace')
 
