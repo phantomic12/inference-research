@@ -4,7 +4,7 @@
   "name": "Mellum2.1 Thinking 12B A2.5B",
   "status": "verified",
   "confidence": 0.86,
-  "updated": "2026-10-17",
+  "updated": "2026-10-23",
   "sources": [
     "hf-mellum2-1-12b-a2-5b-thinking-card",
     "hf-mellum2-1-12b-a2-5b-thinking-config"
@@ -71,7 +71,7 @@
   "flops_per_token_active": 5000000000,
   "open_weights": true,
   "license": "Apache-2.0",
-  "notes": "ADDED 2026-10-17. Fine-tune of JetBrains/Mellum2-12B-A2.5B-Base (the card names that base_model). The architecture is unchanged from Mellum2; the card says almost all of the work went into post-training, mostly reinforcement learning on math, competitive programming, science, tool use and software engineering inside real repositories. RUNNABLE: 12.15B total, 2.5B active, one BF16 checkpoint of about 24 GB, so it sits on a 24 GB GPU and comfortably on a 64-128 GB unified-memory box. GGUF builds are announced but not in this repo yet; vLLM serving is documented on the card. PARAMS: HF API safetensors total is 12,149,923,072 BF16, so params_b is 12.15. active_params_b is the card's 2.5B figure, not a count derived here. The config has no n_shared_experts key and every mlp_layer_types entry is sparse, so shared_expert is false. flops_per_token_active = 2 x 2.5e9 = 5.0e9 is the schema one-pass approximation. GEOMETRY from config.json fetched 2026-10-17: hidden 2304, 28 layers, 32 query heads, 4 kv heads, head_dim 128 explicit (2304/32 = 72 would be wrong), so gqa_ratio 8. All 28 MLP slots are sparse MoE: 64 experts, 8 per token, moe_intermediate_size 896, with a separate dense intermediate_size of 7168 that the card lists on its own. silu, vocab 98304, tie_word_embeddings false, sliding_window 1024. RoPE is per layer type: full-attention layers use rope_type yarn with factor 16 from an 8192 base, sliding layers use rope_type default, so context_scaling_method is yarn. KV (bf16): the cache that grows is the 7 full-attention layers, 7 x 4 kv heads x 128 x 2 (K+V) x 2 bytes = 14,336 B/token. The 21 sliding layers hold a fixed 1024-token window and stop growing, so kv_cache_bytes_per_token records the unbounded term only, 7,168 B/token. If all 28 layers cached the full context it would be 57,344 B/token, 8x the recorded figure. BENCHMARKS ARE VENDOR CLAIMS. The card says every number was measured by JetBrains with one pipeline, greedy decoding for non-agentic tasks, and the same open-source agent harness (Pi v0.73.1, shell and file tools, 114K context, up to 16K tokens per turn) for agentic tasks; the model-index marks every metric verified: false. BEATS llada2-2-mini, the only catalogued model in the sub-8B-active class with a published LiveCodeBench v6 number: LiveCodeBench v6 82.0 vs 28.14. In the same JetBrains pipeline it also beats the card's own Gemma 4 E4B and Qwen3.5-9B rows on LiveCodeBench v6 (82.0 vs 69.4 and 75.4), and on SWE-bench Verified it more than doubles Gemma 4 E4B (47.0 vs 23.0). It does not beat Qwen3.5-9B on SWE-bench Verified (47.0 vs 50.0) or on Terminal-Bench 2.1 (17.4 vs 21.7), and its GPQA Diamond 64.6 is below both the Qwen3.5-9B row (77.8) and the 4-loop vendor figure on nemotron-labs-dory1-4b (72.16). AIME 25/26, the mean of the two 30-question sets, is 83.3. None of the comparison rows except llada2-2-mini exist as records, so the qualifying comparison is against llada2-2-mini on LiveCodeBench v6.",
+  "notes": "ADDED 2026-10-17. Fine-tune of JetBrains/Mellum2-12B-A2.5B-Base (the card names that base_model). The architecture is unchanged from Mellum2; the card says almost all of the work went into post-training, mostly reinforcement learning on math, competitive programming, science, tool use and software engineering inside real repositories. RUNNABLE: 12.15B total, 2.5B active, one BF16 checkpoint of about 24 GB, so it sits on a 24 GB GPU and comfortably on a 64-128 GB unified-memory box. GGUF builds are announced but not in this repo yet; vLLM serving is documented on the card. PARAMS: HF API safetensors total is 12,149,923,072 BF16, so params_b is 12.15. active_params_b is the card's 2.5B figure, not a count derived here. The config has no n_shared_experts key and every mlp_layer_types entry is sparse, so shared_expert is false. flops_per_token_active = 2 x 2.5e9 = 5.0e9 is the schema one-pass approximation. GEOMETRY from config.json fetched 2026-10-17: hidden 2304, 28 layers, 32 query heads, 4 kv heads, head_dim 128 explicit (2304/32 = 72 would be wrong), so gqa_ratio 8. All 28 MLP slots are sparse MoE: 64 experts, 8 per token, moe_intermediate_size 896, with a separate dense intermediate_size of 7168 that the card lists on its own. silu, vocab 98304, tie_word_embeddings false, sliding_window 1024. RoPE is per layer type: full-attention layers use rope_type yarn with factor 16 from an 8192 base, sliding layers use rope_type default, so context_scaling_method is yarn. KV (bf16): the cache that grows is the 7 full-attention layers, 7 x 4 kv heads x 128 x 2 (K+V) x 2 bytes = 14,336 B/token. The 21 sliding layers hold a fixed 1024-token window and stop growing, so kv_cache_bytes_per_token records the unbounded term only, 7,168 B/token. If all 28 layers cached the full context it would be 57,344 B/token, 8x the recorded figure. BENCHMARKS ARE VENDOR CLAIMS. The card says every number was measured by JetBrains with one pipeline, greedy decoding for non-agentic tasks, and the same open-source agent harness (Pi v0.73.1, shell and file tools, 114K context, up to 16K tokens per turn) for agentic tasks; the model-index marks every metric verified: false. BEATS llada2-2-mini, the only catalogued model in the sub-8B-active class with a published LiveCodeBench v6 number: LiveCodeBench v6 82.0 vs 28.14. In the same JetBrains pipeline it also beats the card's own Gemma 4 E4B and Qwen3.5-9B rows on LiveCodeBench v6 (82.0 vs 69.4 and 75.4), and on SWE-bench Verified it more than doubles Gemma 4 E4B (47.0 vs 23.0). It does not beat Qwen3.5-9B on SWE-bench Verified (47.0 vs 50.0) or on Terminal-Bench 2.1 (17.4 vs 21.7), and its GPQA Diamond 64.6 is below both the Qwen3.5-9B row (77.8) and the 4-loop vendor figure on nemotron-labs-dory1-4b (72.16). AIME 25/26, the mean of the two 30-question sets, is 83.3. None of the comparison rows except llada2-2-mini exist as records, so the qualifying comparison is against llada2-2-mini on LiveCodeBench v6. BENCHMARK GAP FILLED 2026-10-23: 10 rows added from the card that the record was missing (was 2 rows). Vendor-published; the numbers were checked to appear in the card text.",
   "benchmarks": [
     {
       "name": "LiveCodeBench v6",
@@ -90,6 +90,96 @@
       "source": "hf-mellum2-1-12b-a2-5b-thinking-card",
       "vendor_claim": true,
       "config": "DEFAULT serving config: Thinking model: reasoning is on by default (chat_template.jinja only suppresses the block when enable_thinking is false) and no effort tiers are published."
+    },
+    {
+      "name": "HumanEval+",
+      "score": 91.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-mellum2-1-12b-a2-5b-thinking-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "MBPP+",
+      "score": 79.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-mellum2-1-12b-a2-5b-thinking-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "AIME 25/26",
+      "score": 83.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-mellum2-1-12b-a2-5b-thinking-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "GSM-Plus",
+      "score": 88.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-mellum2-1-12b-a2-5b-thinking-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "Terminal-Bench 2.1",
+      "score": 17.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-mellum2-1-12b-a2-5b-thinking-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "SWE-bench Pro",
+      "score": 28.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-mellum2-1-12b-a2-5b-thinking-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "BFCL v4",
+      "score": 62.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-mellum2-1-12b-a2-5b-thinking-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "IFEval",
+      "score": 90.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-mellum2-1-12b-a2-5b-thinking-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "GPQA Diamond",
+      "score": 64.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-mellum2-1-12b-a2-5b-thinking-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "MMLU-Redux",
+      "score": 87.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-mellum2-1-12b-a2-5b-thinking-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
     }
   ],
   "release_date": "2026-09-20"

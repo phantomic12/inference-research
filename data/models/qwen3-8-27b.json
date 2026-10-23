@@ -109,10 +109,10 @@
     59,
     63
   ],
-  "notes": "ADDED 2026-10-17. Dense hybrid in the runnable class (27.8B total, every parameter active). HF API createdAt 2026-08-05T08:22:59Z and card lastModified 2026-08-14, so this is not a two-week release; it is recorded because the catalog had Qwen3.8-Flash-Next and no 27B sibling, and the card's own table beats the previous dense 27B of the line on the benchmarks this job tracks. BEATS Qwen3.6-27B (vendor card, not independently re-run here): Terminal Bench 2.1 73.0 vs 63.4, SWE-bench Pro 61.7 vs 53.5, GPQA Diamond 89.2 vs 87.8. There is no models/qwen3-6-27b record to point at; the comparison is the card's own previous-generation row. SWE-bench Pro and Terminal Bench 2.1 are the card's variants of SWE-bench and Terminal-Bench. AIME is not in the card's table. PARAMS: safetensors total 27,781,427,952 BF16, so params_b and active_params_b are both 27.781. Dense, no MoE keys in config, so active equals total. The card rounds this to 27B. GEOMETRY from config.json text_config, fetched 2026-10-17: hidden 5120, 64 layers, layer_types is 48 linear_attention + 16 full_attention at full_attention_interval 4 (indices 3,7,...,63), num_attention_heads 24, num_key_value_heads 4, head_dim 256 so gqa_ratio 6, intermediate 17408, silu, vocab 248320, tie_word_embeddings false, max_position_embeddings 262144. Linear block: linear_num_key_heads 16, linear_num_value_heads 48, key and value head dim 128, conv kernel 4. RoPE is native mrope: rope_type default, mrope_interleaved true, mrope_section [11, 11, 10], partial_rotary_factor 0.25, rope_theta 10000000, no yarn/ntk factor. context_scaling_method is mrope. KV (bf16, full-attention layers only): 16 x 4 kv heads x 256 x 2 (K and V) x 2 bytes = 65,536 B/token (64 KiB). The 48 linear-attention layers hold a fixed recurrent state, not a growing cache. If all 64 layers cached as GQA this would be 64 x 4 x 256 x 2 x 2 = 262,144 B/token, 4x the recorded figure. flops_per_token_active = 2 x 27.781427952e9 = 5.556e10, the schema one-pass approximation; the linear layers are not 2 FLOPs per parameter, so treat it as the schema convention, not a profile. Vision tower is separate: vision_config depth 27, hidden 1152, patch 16, out_hidden_size 5120. One MTP layer (mtp_num_hidden_layers 1). DEPLOYMENT (card, 2026-10-17): weights are compatible with Hugging Face Transformers, vLLM, SGLang, and TokenSpeed. The card links a vLLM recipe and an SGLang recipe and does not publish a llama.cpp or ollama recipe. No quantization is named on the base card. This repo already has measured decode rows for the checkpoint: ollama's MLX backend on an M3 Max 128GB runs a 4-bit quant at 42.5 tok/s (benchmarks/ollama-m3-max-qwen3-8-27b-mlx-decode-tok-s) and ollama's llama.cpp backend runs Q4_K_M at 12.0 tok/s (benchmarks/ollama-m3-max-qwen3-8-27b-llamacpp-decode-tok-s). So llama.cpp and ollama both run it, at Q4_K_M and at 4-bit MLX respectively. The card itself publishes no tok/s.",
+  "notes": "ADDED 2026-10-17. Dense hybrid in the runnable class (27.8B total, every parameter active). HF API createdAt 2026-08-05T08:22:59Z and card lastModified 2026-08-14, so this is not a two-week release; it is recorded because the catalog had Qwen3.8-Flash-Next and no 27B sibling, and the card's own table beats the previous dense 27B of the line on the benchmarks this job tracks. BEATS Qwen3.6-27B (vendor card, not independently re-run here): Terminal Bench 2.1 73.0 vs 63.4, SWE-bench Pro 61.7 vs 53.5, GPQA Diamond 89.2 vs 87.8. There is no models/qwen3-6-27b record to point at; the comparison is the card's own previous-generation row. SWE-bench Pro and Terminal Bench 2.1 are the card's variants of SWE-bench and Terminal-Bench. AIME is not in the card's table. PARAMS: safetensors total 27,781,427,952 BF16, so params_b and active_params_b are both 27.781. Dense, no MoE keys in config, so active equals total. The card rounds this to 27B. GEOMETRY from config.json text_config, fetched 2026-10-17: hidden 5120, 64 layers, layer_types is 48 linear_attention + 16 full_attention at full_attention_interval 4 (indices 3,7,...,63), num_attention_heads 24, num_key_value_heads 4, head_dim 256 so gqa_ratio 6, intermediate 17408, silu, vocab 248320, tie_word_embeddings false, max_position_embeddings 262144. Linear block: linear_num_key_heads 16, linear_num_value_heads 48, key and value head dim 128, conv kernel 4. RoPE is native mrope: rope_type default, mrope_interleaved true, mrope_section [11, 11, 10], partial_rotary_factor 0.25, rope_theta 10000000, no yarn/ntk factor. context_scaling_method is mrope. KV (bf16, full-attention layers only): 16 x 4 kv heads x 256 x 2 (K and V) x 2 bytes = 65,536 B/token (64 KiB). The 48 linear-attention layers hold a fixed recurrent state, not a growing cache. If all 64 layers cached as GQA this would be 64 x 4 x 256 x 2 x 2 = 262,144 B/token, 4x the recorded figure. flops_per_token_active = 2 x 27.781427952e9 = 5.556e10, the schema one-pass approximation; the linear layers are not 2 FLOPs per parameter, so treat it as the schema convention, not a profile. Vision tower is separate: vision_config depth 27, hidden 1152, patch 16, out_hidden_size 5120. One MTP layer (mtp_num_hidden_layers 1). DEPLOYMENT (card, 2026-10-17): weights are compatible with Hugging Face Transformers, vLLM, SGLang, and TokenSpeed. The card links a vLLM recipe and an SGLang recipe and does not publish a llama.cpp or ollama recipe. No quantization is named on the base card. This repo already has measured decode rows for the checkpoint: ollama's MLX backend on an M3 Max 128GB runs a 4-bit quant at 42.5 tok/s (benchmarks/ollama-m3-max-qwen3-8-27b-mlx-decode-tok-s) and ollama's llama.cpp backend runs Q4_K_M at 12.0 tok/s (benchmarks/ollama-m3-max-qwen3-8-27b-llamacpp-decode-tok-s). So llama.cpp and ollama both run it, at Q4_K_M and at 4-bit MLX respectively. The card itself publishes no tok/s. BENCHMARK GAP FILLED 2026-10-23: 10 rows added from the card that the record was missing (was 1 rows). Vendor-published; the numbers were checked to appear in the card text.",
   "status": "verified",
   "confidence": 0.86,
-  "updated": "2026-10-17",
+  "updated": "2026-10-23",
   "sources": [
     "hf-qwen3-8-27b-card",
     "hf-qwen3-8-27b-config"
@@ -126,6 +126,96 @@
       "source": "model-cn-qwen35-hybrid-card",
       "vendor_claim": true,
       "config": "DEFAULT serving config: Thinking is on by default (enable_thinking defaults to true, disable per request) with reasoning_effort=xhigh as the template default (xhigh/medium/low supported) and pre."
+    },
+    {
+      "name": "Terminal Bench 2.1 (Terminus)",
+      "score": 73.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-8-27b-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "SWE-bench Pro",
+      "score": 61.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-8-27b-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "GPQA Diamond",
+      "score": 89.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-8-27b-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "HLE",
+      "score": 30.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-8-27b-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "LiveCodeBench v6",
+      "score": 90.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-8-27b-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "IFBench",
+      "score": 79.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-8-27b-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "OSWorld-Verified",
+      "score": 84.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-8-27b-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "WebArena-Verified",
+      "score": 64.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-8-27b-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "SWE-MM",
+      "score": 38.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-8-27b-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "Vision2Web",
+      "score": 62.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-qwen3-8-27b-card",
+      "vendor_claim": true,
+      "config": "table [INGESTED 2026-10-23 from the card table]"
     }
   ],
   "release_date": "2026-08-05"

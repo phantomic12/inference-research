@@ -4,7 +4,7 @@
   "name": "AliceAI-Foundation-80B-A3B-Base",
   "status": "verified",
   "confidence": 0.8,
-  "updated": "2026-10-18",
+  "updated": "2026-10-23",
   "sources": [
     "hf-yandex-aliceai-foundation-80b-a3b-base-card",
     "hf-yandex-aliceai-foundation-80b-a3b-base-config"
@@ -31,7 +31,7 @@
   "flops_per_token_active": 6000000000.0,
   "open_weights": true,
   "license": "Apache-2.0",
-  "notes": "ADDED 2026-10-18. Pretrained base model, trained from scratch by Yandex (not a fine-tune), released 2026-09-12 (HF API createdAt; Yandex's own news page dates the announcement 2026-09-21). RUNNABLE WITH EXPERT OFFLOAD: the card's nameplate is 80B total with 3B activated per token, and the routing is 10 of 512 experts plus one shared expert, so the per-token expert traffic is a small slice of the ~162 GB BF16 checkpoint. Same offload shape as models/qwen3-next-80b-a3b-instruct (also 80B total, 3B active, 10 of 512). PARAMS: HF API safetensors total is 81,286,433,408 BF16, so params_b is 81.286. active_params_b is the card's 3B figure, not a count derived here. flops_per_token_active = 2 x 3.0e9 = 6.0e9 is the schema one-pass approximation.\n\nBEATS models/deepseek-v4-flash on LiveCodeBench. The Alice card's own hard-reasoning table, run in Yandex's internal vLLM harness, reports LiveCodeBench v5-6 pass@1 (0-shot) at 60.4 against the DeepSeek-V4-Flash-Base row at 38.1, and the same table puts AIME 2026 pass@32 at 96.7 against that row's 90.0. Both are vendor claims from one vendor's harness and were not re-run here. The comparison is the right shape for the offload class: Alice activates 3B per token where DeepSeek-V4-Flash activates 13B, so it wins at less than a quarter of the active footprint. It does NOT beat the catalog's smaller models on these benchmarks: models/qwen3-6-35b-a3b reports LiveCodeBench v6 75.4 and AIME 2026 92.7, and models/ornith-1-5-35b-a3b reports AIME 2026 96.7, so the class win is against the 13B-active DeepSeek-V4-Flash only. The card's other comparison rows (Qwen3.5-35B-A3B-Base, GLM-4.5-Air-Base, Nemotron-3-Super-120B-A12B-Base) are not catalog records. The card also reports MMLU-Pro CoT 5-shot at 66.8, which is below the post-trained models in the catalog and is not the qualifying comparison. This is a base checkpoint with no post-training, so the numbers are few-shot base-model evals, not instruct-model scores.\n\nGEOMETRY from config.json fetched 2026-10-18: model_type alice_ai, hidden 2048, 48 layers, 16 query heads, 2 kv heads, head_dim 256, so gqa_ratio 8. MoE: 512 experts, 10 per token, moe_intermediate_size 512, shared_expert_intermediate_size 512 so shared_expert is true. silu, vocab 129024, tie_word_embeddings false, router_score_function sigmoid, router_bias_correction true, mtp_num_hidden_layers 1. Attention is hybrid: layer_types is 36 linear_attention + 12 full_attention, full attention every 4th layer (indices 3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47), which matches the card's 12 x (3 x (KDA, MoE) then 1 x (gated attention, MoE)). Linear block: linear_num_key_heads 32, linear_num_value_heads 32, key and value head dim 128, conv kernel 4, kda_allow_negative_eigenvalues false. KV (bf16, full-attention layers only): 12 x 2 kv heads x 256 x 2 (K and V) x 2 bytes = 24,576 B/token (24 KiB). The 36 KDA layers hold a fixed recurrent state, not a growing cache, so they are not in kv_cache_bytes_per_token. RoPE: rope_theta 1000000, partial_rotary_factor 0.25, no rope_scaling key, so context_scaling_method is none-verified. License Apache-2.0. Engines: the card documents transformers 5.16.1 with trust_remote_code and flash-linear-attention 0.5.0 for the KDA layers, plus vLLM nightly from main (FLASH_ATTN version 2, tensor parallel) and a vendor Docker image that adds MTP speculative decoding. Stock transformers and stock vLLM do not load model_type alice_ai without the repo code.",
+  "notes": "ADDED 2026-10-18. Pretrained base model, trained from scratch by Yandex (not a fine-tune), released 2026-09-12 (HF API createdAt; Yandex's own news page dates the announcement 2026-09-21). RUNNABLE WITH EXPERT OFFLOAD: the card's nameplate is 80B total with 3B activated per token, and the routing is 10 of 512 experts plus one shared expert, so the per-token expert traffic is a small slice of the ~162 GB BF16 checkpoint. Same offload shape as models/qwen3-next-80b-a3b-instruct (also 80B total, 3B active, 10 of 512). PARAMS: HF API safetensors total is 81,286,433,408 BF16, so params_b is 81.286. active_params_b is the card's 3B figure, not a count derived here. flops_per_token_active = 2 x 3.0e9 = 6.0e9 is the schema one-pass approximation.\n\nBEATS models/deepseek-v4-flash on LiveCodeBench. The Alice card's own hard-reasoning table, run in Yandex's internal vLLM harness, reports LiveCodeBench v5-6 pass@1 (0-shot) at 60.4 against the DeepSeek-V4-Flash-Base row at 38.1, and the same table puts AIME 2026 pass@32 at 96.7 against that row's 90.0. Both are vendor claims from one vendor's harness and were not re-run here. The comparison is the right shape for the offload class: Alice activates 3B per token where DeepSeek-V4-Flash activates 13B, so it wins at less than a quarter of the active footprint. It does NOT beat the catalog's smaller models on these benchmarks: models/qwen3-6-35b-a3b reports LiveCodeBench v6 75.4 and AIME 2026 92.7, and models/ornith-1-5-35b-a3b reports AIME 2026 96.7, so the class win is against the 13B-active DeepSeek-V4-Flash only. The card's other comparison rows (Qwen3.5-35B-A3B-Base, GLM-4.5-Air-Base, Nemotron-3-Super-120B-A12B-Base) are not catalog records. The card also reports MMLU-Pro CoT 5-shot at 66.8, which is below the post-trained models in the catalog and is not the qualifying comparison. This is a base checkpoint with no post-training, so the numbers are few-shot base-model evals, not instruct-model scores.\n\nGEOMETRY from config.json fetched 2026-10-18: model_type alice_ai, hidden 2048, 48 layers, 16 query heads, 2 kv heads, head_dim 256, so gqa_ratio 8. MoE: 512 experts, 10 per token, moe_intermediate_size 512, shared_expert_intermediate_size 512 so shared_expert is true. silu, vocab 129024, tie_word_embeddings false, router_score_function sigmoid, router_bias_correction true, mtp_num_hidden_layers 1. Attention is hybrid: layer_types is 36 linear_attention + 12 full_attention, full attention every 4th layer (indices 3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47), which matches the card's 12 x (3 x (KDA, MoE) then 1 x (gated attention, MoE)). Linear block: linear_num_key_heads 32, linear_num_value_heads 32, key and value head dim 128, conv kernel 4, kda_allow_negative_eigenvalues false. KV (bf16, full-attention layers only): 12 x 2 kv heads x 256 x 2 (K and V) x 2 bytes = 24,576 B/token (24 KiB). The 36 KDA layers hold a fixed recurrent state, not a growing cache, so they are not in kv_cache_bytes_per_token. RoPE: rope_theta 1000000, partial_rotary_factor 0.25, no rope_scaling key, so context_scaling_method is none-verified. License Apache-2.0. Engines: the card documents transformers 5.16.1 with trust_remote_code and flash-linear-attention 0.5.0 for the KDA layers, plus vLLM nightly from main (FLASH_ATTN version 2, tensor parallel) and a vendor Docker image that adds MTP speculative decoding. Stock transformers and stock vLLM do not load model_type alice_ai without the repo code. BENCHMARK GAP FILLED 2026-10-23: 8 rows added from the card that the record was missing (was 2 rows). Vendor-published; the numbers were checked to appear in the card text.",
   "context_scaling_method": "none-verified",
   "benchmarks": [
     {
@@ -51,6 +51,78 @@
       "source": "hf-yandex-aliceai-foundation-80b-a3b-base-card",
       "vendor_claim": true,
       "config": "CEILING (published column is not the served default): AliceAI-Foundation-80B-A3B-Base is a base (pretrained) checkpoint."
+    },
+    {
+      "name": "HMMT 2026 Feb pass@32",
+      "score": 96.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-yandex-aliceai-foundation-80b-a3b-base-card",
+      "vendor_claim": true,
+      "config": "0-shot [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "IMO Answerbench pass@8",
+      "score": 88.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-yandex-aliceai-foundation-80b-a3b-base-card",
+      "vendor_claim": true,
+      "config": "0-shot [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "LiveCodeBench v5-6 pass@8",
+      "score": 82.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-yandex-aliceai-foundation-80b-a3b-base-card",
+      "vendor_claim": true,
+      "config": "0-shot [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "WikiWebFacts",
+      "score": 86.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-yandex-aliceai-foundation-80b-a3b-base-card",
+      "vendor_claim": true,
+      "config": "5-shot [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "HardMultiQA",
+      "score": 67.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-yandex-aliceai-foundation-80b-a3b-base-card",
+      "vendor_claim": true,
+      "config": "5-shot [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "CultCat",
+      "score": 86.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-yandex-aliceai-foundation-80b-a3b-base-card",
+      "vendor_claim": true,
+      "config": "4-shot [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "EduBench Russian",
+      "score": 74.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-yandex-aliceai-foundation-80b-a3b-base-card",
+      "vendor_claim": true,
+      "config": "5-shot [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "MATH-500",
+      "score": 91.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-yandex-aliceai-foundation-80b-a3b-base-card",
+      "vendor_claim": true,
+      "config": "5-shot [INGESTED 2026-10-23 from the card table]"
     }
   ],
   "release_date": "2026-09-12"
