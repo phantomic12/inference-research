@@ -195,10 +195,20 @@ def check(mid):
             break
     if not card:
         return mid, 'no-hf-card', []
-    try:
-        html = fetch('https://huggingface.co/%s/raw/main/README.md' % card)
-    except Exception as e:
-        return mid, 'fetch-fail: %s' % type(e).__name__, []
+    html = None
+    last = None
+    # /raw/ returns 401 for gated repos even with a UA and a real token in some cases,
+    # while /resolve/ serves the same file. Try both before declaring the card unreadable,
+    # otherwise a gated model's numbers sail through CI as "not cross-checked".
+    for url in ('https://huggingface.co/%s/resolve/main/README.md' % card,
+                'https://huggingface.co/%s/raw/main/README.md' % card):
+        try:
+            html = fetch(url)
+            break
+        except Exception as e:
+            last = e
+    if html is None:
+        return mid, 'fetch-fail: %s' % type(last).__name__, []
     grids = parse_tables(html) + parse_md_tables(html)
     if not grids:
         return mid, 'no-tables', []
@@ -304,7 +314,10 @@ def presence(mid):
         m = re.search(r'huggingface\.co/([^/]+/[^/?#]+)', u)
         try:
             if m:
-                d = fetch('https://huggingface.co/%s/raw/main/README.md' % m.group(1))
+                try:
+                    d = fetch('https://huggingface.co/%s/resolve/main/README.md' % m.group(1))
+                except Exception:
+                    d = fetch('https://huggingface.co/%s/raw/main/README.md' % m.group(1))
             elif u.startswith('http'):
                 d = fetch(u)
             else:
@@ -384,6 +397,12 @@ if __name__ == '__main__':
             if verdict == 'MISMATCH':
                 bad.setdefault(mid, []).append((name, want, got))
     print('STATUS:', json.dumps(stats, indent=1))
+    unfetched = {k: v for k, v in stats.items() if k.startswith('fetch-fail') or k == 'error'}
+    if unfetched:
+        n = sum(unfetched.values())
+        print('NOT CHECKED: %d record(s) could not be cross-checked (%s). '
+              'A fetch failure is not a pass - these numbers are simply unverified.'
+              % (n, ', '.join(sorted(unfetched))))
     print('MISMATCHES:', json.dumps(bad, indent=1))
     if not ci:
         sys.exit(0)
