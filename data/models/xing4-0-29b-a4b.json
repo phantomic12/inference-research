@@ -29,10 +29,10 @@
   "flops_per_token_active": 8000000000.0,
   "open_weights": true,
   "license": "Apache-2.0",
-  "notes": "ADDED 2026-10-17. Open-weight MoE in the ~4B-active class. Weights repo created 2026-09-16 (HF API createdAt 2026-09-16T06:44:40Z, card lastModified 2026-10-13); the official GGUF repo was lastModified 2026-10-16, which is what put it on this tick. Card nameplate is 29B total / 4B activated. Safetensors total is 31,215,031,088 parameters (BF16 31,215,028,592 plus F32 2,496), so params_b is 31.215 and the card's 29B is the rounded nameplate. active_params_b is the vendor's 4B figure, not a count derived from the config: the shared expert, the two dense layers, the MLA projections, and the mHC residual matrices are not given as a parameter sum. flops_per_token_active = 2 x 4e9 = 8.0e9 is the schema one-pass approximation off that vendor figure.\n\nBEATS models/gemma-4-26b-a4b on Terminal-Bench 2.1. The Xing card's own table reports Xing4.0-29B-A4B at 57.50 versus Gemma4-26B-A4B at 30.00 (terminus-2 harness, temperature 0.8, top_p 0.95, repetition_penalty 1.05, max_tokens 64K, 24-hour timeout, average of 3 runs). Same class: both are ~26-31B total MoE with ~4B active, and gemma-4-26b-a4b is the catalog record (25.81B total, 4.0B active). The same table puts Xing ahead of that Gemma row on SWE-bench Verified (75.00 vs 53.00; SWE-agent harness, temperature 1.0, top_p 0.95, 210K context) and behind Qwen3.6-35B-A3B on SWE-bench Verified (76.00) and on AIME2026 (Xing 90.00, Qwen3.6-35B-A3B 92.70, Gemma4-26B-A4B 88.30). It does beat Qwen3.6-35B-A3B on Terminal-Bench 2.1 (57.50 vs 51.50), but there is no models/qwen3-6-35b-a3b record, so the catalog comparison is Gemma. Also ahead of the catalog's nemotron-3-5-bolt-74b-a9b Terminal-Bench 2.1 vendor_claim of 53.93, which is a larger 9B-active model on a different harness, so it is noted and not the class comparison. All of these are vendor_claim from the Xing card, not an independent re-run, and the comparison rows are the card's own numbers for the other models.\n\nARCHITECTURE from config.json fetched 2026-10-17: model_type xing4_0, architectures Xing4_0ForCausalLM, custom code via auto_map (configuration_xing4_0.py, modeling_xing4_0.py), so it does not load in stock transformers without the repo code. hidden 3584, 40 layers, first_k_dense_replace 2 so layers 0-1 are dense (intermediate_size 9216) and the remaining 38 are MoE. 64 routed experts, 4 per token, 1 shared expert, moe_intermediate_size 1024, scoring_func sigmoid, topk_method noaux_tc, routed_scaling_factor 2.0, norm_topk_prob true, n_group 1, topk_group 1. silu. vocab 131072, tie_word_embeddings false, bos 1, eos 2. num_nextn_predict_layers 1 (MTP). mHC (Manifold-constrained Hyper-Connections): hc_mult 4, hc_sinkhorn_iters 20, hc_eps 1e-6, mhc residual clamp [-30, 30].\n\nMLA, not GQA. config sets num_attention_heads 32 and num_key_value_heads 32, which is the expanded head count, not the cached KV. kv_lora_rank 512, q_lora_rank 768, qk_nope_head_dim 128, qk_rope_head_dim 64, v_head_dim 128. kv_cache_bytes_per_token = 40 layers x (kv_lora_rank 512 + qk_rope_head_dim 64) x 2 bytes bf16 = 40 x 576 x 2 = 46,080 B/token (45 KiB). Do not apply the standard GQA formula: 40 x 32 kv heads x 128 x 2 x 2 would be 655,360 B/token and overstates the cache by about 14x, the same trap recorded on deepseek-v3. num_kv_heads and head_dim are stored as the config's expanded values (32 and 128 = qk_nope_head_dim) so a reader can see what the file says; gqa_ratio is 1.0 on those expanded counts and is not a memory ratio. The shared expert is recorded true because n_shared_experts is 1, a positive statement in the config, not an inference from a missing key.\n\nCONTEXT: max_position_embeddings 262144. rope_scaling type yarn, factor 64, original_max_position_embeddings 4096, beta_fast 32, beta_slow 1, mscale 1.0, mscale_all_dim 1.0, rope_theta 10000. So the 256K window is YaRN, not native. The card's \"extensible to 512K\" is a further extension claim and is not what config declares, so max_position_embeddings stays 262144. context_scaling records the YaRN block; context_scaling_method is yarn.\n\nRESIDENT MEMORY AND ENGINES. BF16 safetensors usedStorage is 124,864,375,926 bytes = 116.3 GiB, so the unquantized checkpoint does not fit a 24 GB GPU or a 64 GB unified-memory machine. It fits a 128 GB unified-memory machine as weights alone, with essentially no room left for the 45 KiB/token KV or the runtime. The official GGUF repo publishes xing4_0-29b-iq3_xxs.gguf, iq3_m.gguf, iq4_xs.gguf, iq4_nl.gguf, IQ4_NL.gguf, q5_0.gguf, q6_k.gguf, and q8_0.gguf, tagged architecture xing4_0 with context_length 262144 and an imatrix. That repo's README says the quants run on llama.cpp and gives measured resident set: IQ3_M is 13.4 GB and fits a 16 GB card with a small KV; IQ4_NL is 16.9 GB and is the quant they recommend for a 24 GB GPU; Q5_0 is 19.6 GB; Q6_K is 23.1 GB and fills a 24 GB card once KV is added; Q8_0 is 31.4 GB and needs a 64 GB unified-memory machine. Those GB figures are the README's measured RSS, not a derivation from the file sizes. Engines the BF16 card names for serving: vLLM, SGLang, and KTransformers. llama.cpp is evidenced by the official GGUF (architecture xing4_0) and by third-party llama.cpp GGUF repos, not by a sentence on the BF16 card. This is custom code (model_type xing4_0), so stock vLLM and SGLang need the architecture registered; the card claims that support and this record does not re-test it.\n\nLicense Apache-2.0. Vendor is China Telecom Artificial Intelligence Technology Co., Ltd. (XingChen-AGI); the series was formerly TeleChat. English and Chinese.",
+  "notes": "ADDED 2026-10-17. Open-weight MoE in the ~4B-active class. Weights repo created 2026-09-16 (HF API createdAt 2026-09-16T06:44:40Z, card lastModified 2026-10-13); the official GGUF repo was lastModified 2026-10-16, which is what put it on this tick. Card nameplate is 29B total / 4B activated. Safetensors total is 31,215,031,088 parameters (BF16 31,215,028,592 plus F32 2,496), so params_b is 31.215 and the card's 29B is the rounded nameplate. active_params_b is the vendor's 4B figure, not a count derived from the config: the shared expert, the two dense layers, the MLA projections, and the mHC residual matrices are not given as a parameter sum. flops_per_token_active = 2 x 4e9 = 8.0e9 is the schema one-pass approximation off that vendor figure.\n\nBEATS models/gemma-4-26b-a4b on Terminal-Bench 2.1. The Xing card's own table reports Xing4.0-29B-A4B at 57.50 versus Gemma4-26B-A4B at 30.00 (terminus-2 harness, temperature 0.8, top_p 0.95, repetition_penalty 1.05, max_tokens 64K, 24-hour timeout, average of 3 runs). Same class: both are ~26-31B total MoE with ~4B active, and gemma-4-26b-a4b is the catalog record (25.81B total, 4.0B active). The same table puts Xing ahead of that Gemma row on SWE-bench Verified (75.00 vs 53.00; SWE-agent harness, temperature 1.0, top_p 0.95, 210K context) and behind Qwen3.6-35B-A3B on SWE-bench Verified (76.00) and on AIME2026 (Xing 90.00, Qwen3.6-35B-A3B 92.70, Gemma4-26B-A4B 88.30). It does beat Qwen3.6-35B-A3B on Terminal-Bench 2.1 (57.50 vs 51.50), but there is no models/qwen3-6-35b-a3b record, so the catalog comparison is Gemma. Also ahead of the catalog's nemotron-3-5-bolt-74b-a9b Terminal-Bench 2.1 vendor_claim of 53.93, which is a larger 9B-active model on a different harness, so it is noted and not the class comparison. All of these are vendor_claim from the Xing card, not an independent re-run, and the comparison rows are the card's own numbers for the other models.\n\nARCHITECTURE from config.json fetched 2026-10-17: model_type xing4_0, architectures Xing4_0ForCausalLM, custom code via auto_map (configuration_xing4_0.py, modeling_xing4_0.py), so it does not load in stock transformers without the repo code. hidden 3584, 40 layers, first_k_dense_replace 2 so layers 0-1 are dense (intermediate_size 9216) and the remaining 38 are MoE. 64 routed experts, 4 per token, 1 shared expert, moe_intermediate_size 1024, scoring_func sigmoid, topk_method noaux_tc, routed_scaling_factor 2.0, norm_topk_prob true, n_group 1, topk_group 1. silu. vocab 131072, tie_word_embeddings false, bos 1, eos 2. num_nextn_predict_layers 1 (MTP). mHC (Manifold-constrained Hyper-Connections): hc_mult 4, hc_sinkhorn_iters 20, hc_eps 1e-6, mhc residual clamp [-30, 30].\n\nMLA, not GQA. config sets num_attention_heads 32 and num_key_value_heads 32, which is the expanded head count, not the cached KV. kv_lora_rank 512, q_lora_rank 768, qk_nope_head_dim 128, qk_rope_head_dim 64, v_head_dim 128. kv_cache_bytes_per_token = 40 layers x (kv_lora_rank 512 + qk_rope_head_dim 64) x 2 bytes bf16 = 40 x 576 x 2 = 46,080 B/token (45 KiB). Do not apply the standard GQA formula: 40 x 32 kv heads x 128 x 2 x 2 would be 655,360 B/token and overstates the cache by about 14x, the same trap recorded on deepseek-v3. num_kv_heads and head_dim are stored as the config's expanded values (32 and 128 = qk_nope_head_dim) so a reader can see what the file says; gqa_ratio is 1.0 on those expanded counts and is not a memory ratio. The shared expert is recorded true because n_shared_experts is 1, a positive statement in the config, not an inference from a missing key.\n\nCONTEXT: max_position_embeddings 262144. rope_scaling type yarn, factor 64, original_max_position_embeddings 4096, beta_fast 32, beta_slow 1, mscale 1.0, mscale_all_dim 1.0, rope_theta 10000. So the 256K window is YaRN, not native. The card's \"extensible to 512K\" is a further extension claim and is not what config declares, so max_position_embeddings stays 262144. context_scaling records the YaRN block; context_scaling_method is yarn.\n\nRESIDENT MEMORY AND ENGINES. BF16 safetensors usedStorage is 124,864,375,926 bytes = 116.3 GiB, so the unquantized checkpoint does not fit a 24 GB GPU or a 64 GB unified-memory machine. It fits a 128 GB unified-memory machine as weights alone, with essentially no room left for the 45 KiB/token KV or the runtime. The official GGUF repo publishes xing4_0-29b-iq3_xxs.gguf, iq3_m.gguf, iq4_xs.gguf, iq4_nl.gguf, IQ4_NL.gguf, q5_0.gguf, q6_k.gguf, and q8_0.gguf, tagged architecture xing4_0 with context_length 262144 and an imatrix. That repo's README says the quants run on llama.cpp and gives measured resident set: IQ3_M is 13.4 GB and fits a 16 GB card with a small KV; IQ4_NL is 16.9 GB and is the quant they recommend for a 24 GB GPU; Q5_0 is 19.6 GB; Q6_K is 23.1 GB and fills a 24 GB card once KV is added; Q8_0 is 31.4 GB and needs a 64 GB unified-memory machine. Those GB figures are the README's measured RSS, not a derivation from the file sizes. Engines the BF16 card names for serving: vLLM, SGLang, and KTransformers. llama.cpp is evidenced by the official GGUF (architecture xing4_0) and by third-party llama.cpp GGUF repos, not by a sentence on the BF16 card. This is custom code (model_type xing4_0), so stock vLLM and SGLang need the architecture registered; the card claims that support and this record does not re-test it.\n\nLicense Apache-2.0. Vendor is China Telecom Artificial Intelligence Technology Co., Ltd. (XingChen-AGI); the series was formerly TeleChat. English and Chinese. BENCHMARK GAP FILLED 2026-10-23: 7 rows added from the card that the record was missing (was 2 rows). Vendor-published; the numbers were checked to appear in the card text.",
   "status": "verified",
   "confidence": 0.82,
-  "updated": "2026-10-17",
+  "updated": "2026-10-23",
   "sources": [
     "hf-xing4-0-29b-a4b-card",
     "hf-xing4-0-29b-a4b-config",
@@ -56,6 +56,69 @@
       "source": "hf-xing4-0-29b-a4b-card",
       "vendor_claim": true,
       "config": "DEFAULT serving config: Thinking is on by default: chat_template.jinja renders the thinking branch when enable_thinking is undefined or true."
+    },
+    {
+      "name": "IFBench",
+      "score": 69.67,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xing4-0-29b-a4b-card",
+      "vendor_claim": true,
+      "config": "card prints no setting [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "AIME2026",
+      "score": 90.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xing4-0-29b-a4b-card",
+      "vendor_claim": true,
+      "config": "card prints no setting [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "AA.LCR",
+      "score": 61.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xing4-0-29b-a4b-card",
+      "vendor_claim": true,
+      "config": "card prints no setting [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "Tau3-Bench",
+      "score": 64.63,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xing4-0-29b-a4b-card",
+      "vendor_claim": true,
+      "config": "card prints no setting [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "Claw-Eval",
+      "score": 76.55,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xing4-0-29b-a4b-card",
+      "vendor_claim": true,
+      "config": "card prints no setting [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "SWE-bench Multilingual",
+      "score": 66.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xing4-0-29b-a4b-card",
+      "vendor_claim": true,
+      "config": "card prints no setting [INGESTED 2026-10-23 from the card table]"
+    },
+    {
+      "name": "DeepresearchBII",
+      "score": 60.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xing4-0-29b-a4b-card",
+      "vendor_claim": true,
+      "config": "card prints no setting [INGESTED 2026-10-23 from the card table]"
     }
   ],
   "release_date": "2026-09-16"
