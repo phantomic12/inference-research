@@ -62,19 +62,23 @@ def arch_of(base_repo):
         cfg.get("full_attention_interval") or 1)
     # Not every config carries head_dim (LFM2 and some hybrid stacks derive it from
     # hidden_size / heads), so fall back rather than crashing on the base.
-    heads = cfg.get("num_attention_heads") or 1
+    # Whisper-style configs use d_model / encoder_attention_heads instead of the
+    # decoder-LM names, so read both before giving up on the derived head_dim.
+    hidden = cfg.get("hidden_size") or cfg.get("d_model")
+    heads = cfg.get("num_attention_heads") or cfg.get("encoder_attention_heads") or 1
     kvh = cfg.get("num_key_value_heads") or heads
-    hd = cfg.get("head_dim") or (cfg.get("hidden_size") // heads if heads else None)
+    hd = cfg.get("head_dim") or (hidden // heads if hidden else None)
     kvb = (n_full * 2 * kvh * hd * 2) if hd else None  # fp16 KV
     return {
         "num_layers": cfg.get("num_hidden_layers"),
-        "hidden_size": cfg.get("hidden_size"),
+        "hidden_size": hidden,
         "num_kv_heads": kvh,
         "head_dim": hd,
         "gqa_ratio": heads // kvh if kvh else None,
-        "num_experts": cfg.get("num_experts"),
-        "experts_per_token": cfg.get("num_experts_per_tok"),
-        "max_position_embeddings": cfg.get("max_position_embeddings"),
+        "num_experts": cfg.get("num_experts") or cfg.get("n_routed_experts") or cfg.get("num_local_experts"),
+        "experts_per_token": (cfg.get("num_experts_per_tok") or cfg.get("num_experts_per_token")
+                              or cfg.get("moe_top_k") or cfg.get("n_group_experts")),
+        "max_position_embeddings": cfg.get("max_position_embeddings") or cfg.get("max_target_positions") or cfg.get("max_source_positions"),
         "kv_bytes": kvb,
         "n_full": n_full,
         "full_idx": full_idx,
@@ -171,6 +175,36 @@ def main():
     if out.exists():
         sys.exit("%s already exists" % out)
 
+    # The base record is authoritative for architecture: it already resolved keys that
+    # config.json spells differently (n_routed_experts, MLA-derived head_dim) and a
+    # derivative inherits the base config unchanged.
+    for k_src, k_out, k_cfg in (
+            ("architecture", "architecture", "architecture"),
+            ("num_experts", "num_experts", "num_experts"),
+            ("experts_per_token", "experts_per_token", "experts_per_token"),
+            ("hidden_size", "hidden_size", "hidden_size"),
+            ("num_layers", "num_layers", "num_layers"),
+            ("num_kv_heads", "num_kv_heads", "num_kv_heads"),
+            ("head_dim", "head_dim", "head_dim"),
+            ("gqa_ratio", "gqa_ratio", "gqa_ratio"),
+            ("max_position_embeddings", "max_position_embeddings", "max_position_embeddings"),
+            ("kv_cache_bytes_per_token", "kv_bytes", "kv_bytes"),
+            ("activation", "act", "act")):
+        val = base_rec.get(k_src)
+        if val is not None:
+            arch[k_out] = val
+    if base_rec.get("attention_variant"):
+        attn_variant = base_rec["attention_variant"]
+    else:
+        attn_variant = ("Inherited unchanged from %s: %d full GQA layers (kv heads %s, head_dim %s) "
+                        "and %d other layers, per the base config.json."
+                        % (base, arch["n_full"], arch["num_kv_heads"], arch["head_dim"],
+                           (arch["num_layers"] or 0) - arch["n_full"]))
+    if base_rec.get("attention_layer_indices"):
+        arch["full_idx"] = base_rec["attention_layer_indices"]
+    if base_rec.get("layer_types"):
+        arch["layer_types"] = base_rec["layer_types"]
+
     src_id = "hf-" + re.sub(r"[^a-z0-9]+", "-", a.hf_id.lower())
     record = {
         "id": rid, "type": "model", "name": a.hf_id.split("/")[-1],
@@ -187,10 +221,7 @@ def main():
                            % (base, arch["max_position_embeddings"]),
         "context_scaling_method": "native",
         "activation": arch["act"],
-        "attention_variant": "Inherited unchanged from %s: %d full GQA layers (kv heads %d, head_dim %d) "
-                             "and %d other layers, per the base config.json."
-                             % (base, arch["n_full"], arch["num_kv_heads"], arch["head_dim"],
-                                (arch["num_layers"] or 0) - arch["n_full"]),
+        "attention_variant": attn_variant,
         "layer_types": arch["layer_types"], "attention_layer_indices": arch["full_idx"],
         "kv_cache_bytes_per_token": arch["kv_bytes"],
         "flops_per_token_active": (6.0e9 * (base_rec.get("active_params_b") or 0)) or None,
