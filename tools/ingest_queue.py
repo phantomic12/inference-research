@@ -25,9 +25,20 @@ STATE.mkdir(parents=True, exist_ok=True)
 SEEN = STATE / 'seen.json'
 IMG = pathlib.Path('/opt/data/img_evals')
 
-QUANT = re.compile(r'(?i)(-gguf|-awq|-gptq|-fp8|-nvfp4|-bnb|-mlx|-exl2|-apex|-\d+bpw'
+QUANT = re.compile(r'(?i)(-gguf|-awq|-gptq|-fp8|-nvfp4|-bnb|-mlx|-exl[23]|-apex|-\d+bpw'
                    r'|-int[48]-|-w4a16|-w8a8|-onnx|-litert|-prismaquant|-q[2-8]_k_m'
                    r'|-dflash|-static|-dynamic-quant)')
+
+# The same normalization mk_finetune_record.slug_of() uses for filenames. Record
+# slugs have dots folded to hyphens ("Qwen3.8-4B" -> "qwen3-8-4b"), so comparing
+# data/models/*.json stems against the raw repo name misses them and the queue
+# re-serves repos that are already catalogued. See REPACK there too.
+SLUGREPACK = re.compile(r'(-GGUF|-AWQ|-GPTQ|-FP8|-NVFP4|-bnb|-MLX|-EXL[23]|-\d+bpw|I?Q\d_|APEX)', re.I)
+
+
+def record_slug(repo_id):
+    name = SLUGREPACK.sub('', repo_id.split('/')[-1])
+    return re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
 
 
 def load_seen():
@@ -55,7 +66,7 @@ def deriv_candidates():
             continue
         if QUANT.search(rid):
             continue
-        if rid.split('/')[-1].lower() in have or rid.lower() in seen:
+        if record_slug(rid) in have or rid.lower() in seen:
             continue
         if not (r.get('base') or ''):
             continue
