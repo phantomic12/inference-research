@@ -58,7 +58,10 @@ def model_ids():
 def deriv_candidates():
     rows = [json.loads(l) for l in (REPO / 'data/derivatives.jsonl').read_text().splitlines() if l.strip()]
     have = model_ids()
-    seen = set(load_seen()['deriv'])
+    # Ids keep their original case in the ledger, so compare case-insensitively;
+    # matching rid.lower() against the raw list only ever caught the few entries
+    # that happened to be lowercase already, and re-served everything else.
+    seen = {x.lower() for x in load_seen()['deriv']}
     out = []
     for r in rows:
         rid = r.get('id') or ''
