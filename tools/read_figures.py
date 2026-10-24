@@ -21,7 +21,18 @@ KEY = os.environ.get('AI_GATEWAY_KEY', '')
 UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36'
 DEFAULT_CHAIN = ('nous-portal-main/ornith/ornith-1.5-122b:free,'
                  'cap/vision,'
-                 'nous-portal-main/meituan/longcat-2.5-preview:free')
+                 'opencode-go/mimo-v2.6-flash,'
+                 'nous-portal-main/meituan/longcat-2.5-preview:free,'
+                 'opencode-go/longcat-2.5-preview-free')
+
+# A model that cannot see the picture still says something, and "not_in_chart" is the most
+# damaging thing it can say: it is a verdict, so the chain stops and a model with a real column
+# gets skipped. opencode-go's routes did exactly that on a figure they had just described
+# correctly, and opencode-go/longcat 429s on roughly two image calls in three. So absence is
+# only believed from a route that has earned it, or from two routes agreeing.
+TRUSTED_ABSENCE = {'nous-portal-main/ornith/ornith-1.5-122b:free',
+                   'cap/vision',
+                   'nous-portal-main/meituan/longcat-2.5-preview:free'}
 
 
 def prompt_for(name):
@@ -173,19 +184,28 @@ def main():
         print(json.dumps({'image': str(p), 'error': 'svg'})); return 2
     b64 = base64.b64encode(p.read_bytes()).decode()
     chain = [a.gw_model] if a.gw_model else [m.strip() for m in a.chain.split(',') if m.strip()]
-    tried = []
+    tried, absent_votes = [], 0
     for model in chain:
         for attempt in range(1, a.attempts + 1):
             r = ask(model, p, (mime, b64), a.model_name, a.timeout)
             tried.append({'model': model, 'attempt': attempt, 'kind': r['kind'],
                           'seconds': r['seconds'], 'error': r['error']})
-            # a 400/401/402 means this route will never work; don't retry it
-            if r['error'] and ('HTTP 4' in r['error'] or 'HTTP 402' in r['error']):
+            # 400/401/402 means this route will never work; 429 means it is throttled, so the
+            # next attempt (or the next route) is the right move rather than a hard stop
+            if r['error'] and 'HTTP 4' in r['error'] and 'HTTP 429' not in r['error']:
                 break
+            if r['kind'] == 'not_in_chart':
+                absent_votes += 1
+                if model not in TRUSTED_ABSENCE and absent_votes < 2:
+                    continue          # believe it only once a second route agrees
             if r['kind'] in ('rows', 'not_in_chart', 'not_a_table'):
                 rows, notes = normalize(r['rows']) if a.normalize and r['kind'] == 'rows' else (r['rows'], [])
+                kind = r['kind']
+                if kind == 'not_in_chart' and absent_votes < 2 and model not in TRUSTED_ABSENCE:
+                    kind = 'not_in_chart_unconfirmed'
+                    notes.append('absence claimed by an untrusted route only — verify by eye')
                 print(json.dumps({'image': str(p), 'model': a.model_name, 'gw_model': model,
-                                  'served_by': r.get('served_by'), 'kind': r['kind'],
+                                  'served_by': r.get('served_by'), 'kind': kind,
                                   'seconds': r['seconds'], 'rows': rows, 'notes': notes,
                                   'attempts': tried}))
                 return 0
