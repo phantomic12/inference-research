@@ -1,0 +1,108 @@
+{
+  "id": "flint",
+  "type": "model",
+  "name": "Recursive Flint",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-24",
+  "sources": [
+    "recursive-flint-model-card-hf-readme",
+    "recursive-flint-config-json",
+    "recursive-flint-benchmark-figure-bf16-vs-nvfp4"
+  ],
+  "family": "flint",
+  "vendor": "Recursive",
+  "release_year": 2026,
+  "release_date": "2026-10-21",
+  "architecture": "moe",
+  "task": "text-generation",
+  "params_b": 39.785,
+  "active_params_b": 2.5,
+  "num_experts": 256,
+  "experts_per_token": 6,
+  "shared_expert": true,
+  "hidden_size": 2048,
+  "num_layers": 49,
+  "num_kv_heads": 4,
+  "head_dim": 128,
+  "gqa_ratio": 8.0,
+  "max_position_embeddings": 262144,
+  "context_scaling": "262144 documented on the card as prompt plus output. Config: rope_theta 10000, no rope_scaling key, sliding_window 513 on the 35 sliding_attention layers, and NO positional encoding on the 14 full-attention layers (card: 'RoPE on sliding-window layers; no positional encoding on full-attention layers').",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "Hybrid sliding-window/full attention: 49 layers, of which 35 are sliding_attention with window 513 and 14 are full_attention, laid out in a repeating 1-full-then-3-sliding pattern (full at indices 0,1,5,9,13,...). 32 query heads / 4 KV heads, head_dim 128, with per-head QK RMSNorm and learned per-head attention sinks.",
+  "layer_types": [
+    "full_attention", "full_attention", "sliding_attention", "sliding_attention", "sliding_attention",
+    "full_attention", "sliding_attention", "sliding_attention", "sliding_attention", "full_attention",
+    "sliding_attention", "sliding_attention", "sliding_attention", "full_attention", "sliding_attention",
+    "sliding_attention", "sliding_attention", "full_attention", "sliding_attention", "sliding_attention",
+    "sliding_attention", "full_attention", "sliding_attention", "sliding_attention", "sliding_attention",
+    "full_attention", "sliding_attention", "sliding_attention", "sliding_attention", "full_attention",
+    "sliding_attention", "sliding_attention", "sliding_attention", "full_attention", "sliding_attention",
+    "sliding_attention", "sliding_attention", "full_attention", "sliding_attention", "sliding_attention",
+    "sliding_attention", "full_attention", "sliding_attention", "sliding_attention", "sliding_attention",
+    "full_attention", "sliding_attention", "sliding_attention", "full_attention"
+  ],
+  "attention_layer_indices": [0, 1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 48],
+  "kv_cache_bytes_per_token": 28672,
+  "flops_per_token_active": 5000000000.0,
+  "open_weights": true,
+  "license": "Apache-2.0",
+  "benchmarks": [
+    {
+      "name": "Terminal-Bench 2.1",
+      "score": 54.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "recursive-flint-benchmark-figure-bf16-vs-nvfp4",
+      "vendor_claim": true,
+      "config": "BF16 checkpoint column, read off the card's benchmark PNG (assets/flint_benchmarks_nvfp4.png) by tools/read_figures.py and cross-checked against the card prose, which states 54.9 for the same test. Terminus 2 harness, temperature 1.0 / top-p 0.95 / top-k 20, average pass@1 over at least five attempts. Card caveat: Flint's score counts solutions obtained through web retrieval as failures; the developer-reported comparison numbers in the same figure may not apply that adjustment."
+    },
+    {
+      "name": "SWE-bench Pro v2",
+      "score": 89.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "recursive-flint-benchmark-figure-bf16-vs-nvfp4",
+      "vendor_claim": true,
+      "config": "BF16 column from the same figure; mini-swe-agent harness, average pass@1 over at least five attempts, sampling temperature 1.0 / top-p 0.95 / top-k 20. Same number is restated in the card prose."
+    },
+    {
+      "name": "SWE-bench Verified",
+      "score": 74.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "recursive-flint-benchmark-figure-bf16-vs-nvfp4",
+      "vendor_claim": true,
+      "config": "BF16 column from the same figure; mini-swe-agent harness, average pass@1 over at least five attempts. Same number is restated in the card prose."
+    },
+    {
+      "name": "LiveCodeBench v6",
+      "score": 80.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "recursive-flint-benchmark-figure-bf16-vs-nvfp4",
+      "vendor_claim": true,
+      "config": "BF16 column, figure only - the card prose does not restate it. Harness not printed for the code benchmarks; sampling settings are the card's published defaults (temperature 1.0, top-p 0.95, top-k 20)."
+    },
+    {
+      "name": "IFBench",
+      "score": 89.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "recursive-flint-benchmark-figure-bf16-vs-nvfp4",
+      "vendor_claim": true,
+      "config": "BF16 column, figure only. Harness not printed."
+    },
+    {
+      "name": "IFEval",
+      "score": 95.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "recursive-flint-benchmark-figure-bf16-vs-nvfp4",
+      "vendor_claim": true,
+      "config": "BF16 column, figure only. Prompt-level strict accuracy is the convention used elsewhere in this catalog; the card does not say which IFEval aggregate it reports."
+    }
+  ],
+  "notes": "ADDED 2026-10-24 from the trending feed (HF trendingScore 690, the top non-covered model of the sweep). A FROM-SCRATCH pretrain, not a derivative: the card states pretraining, mid-training, SFT and RL on a new architecture (FlintForCausalLM, model_type 'flint'), so there is no base_model. PARAMS: safetensors total 39,785,287,456 at BF16, so params_b is 39.785 on the HF API count. active_params_b is the card's own 'approximately 2.5B including the output head' - the card adds that the active BODY alone is about 2.2B and that '40B-A2.5B' is the rounded designation. The 2.5B is NOT derived here. flops_per_token_active = 2 x 2.5e9 = 5.0e9, the schema one-pass approximation. LAYOUT: 49 layers, of which the card says 2 are dense and 47 are MoE; config num_experts 256, num_experts_per_tok 6, moe_intermediate_size 512, shared_expert_intermediate_size 1024 so shared_expert is true. HARDWARE GATE: passes - active 2.5B is far under the 40B active ceiling, and 39.785 x 0.5 GiB = ~20 GiB at 4-bit, under the 128 GiB budget. This is also the offload shape this catalog prefers: 6 of 256 experts routed per token, so an expert-offload runtime touches a thin slice of the 80 GB BF16 checkpoint per token. KV: only the 14 full-attention layers hold an unbounded per-token cache; 14 x 2 (K+V) x 4 kv heads x 128 head_dim x 2 bytes = 28,672 B/token at BF16. The 35 sliding-window layers are bounded at 513 tokens, so they contribute a constant 35 x 2 x 4 x 128 x 513 x 2 = 18.4 MB per sequence regardless of context length, and they are excluded from the per-token figure on the same basis as a linear-attention state. If all 49 layers cached the full context it would be 100,352 B/token, 3.5x the recorded number. SERVING: the card ships an SGLang kit and says one B300 or H200 GPU per replica; it explicitly notes Transformers modeling code is NOT included yet. UPSET CHECK AND WHAT IT LOSES: the card prints no comparison columns at all - the figure legend says the other bars are 'local models that run on similar hardware' without naming them, so no upset against a catalog record can be claimed from a same-table comparison. Against catalog numbers it is mixed. It WINS on IFBench 89.2 vs models/sage-a1-5's 81.6, the best IFBench in the catalog's ~3B-active band, and on IFEval 95.1 vs models/lfm2-5-24b-a2b's 96.75 it LOSES by 1.65 points, so IFEval is not a win. It LOSES LiveCodeBench v6 80.3 to models/qwen3-8-27b (90.3), models/raon-1-mini-preview (81.6) and models/mellum2-1-12b-a2-5b-thinking (82.0). It LOSES Terminal-Bench 2.1 to models/veriloop-e2 (88.8), models/qwen3-8-27b (73.0), models/ornith-1-5-35b-a3b (67.8) and models/xing4-0-29b-a4b (57.5). It LOSES SWE-bench Verified to models/ornith-1-5-35b-a3b (79.0), models/qwen3-8-27b (77.2) and models/xing4-0-29b-a4b (75.0). Its SWE-bench Pro v2 89.7 is on a v2 variant no other catalog record scores, so it is not comparable to the SWE-bench Pro numbers held for beam-1-0-501b-a23b (66.1) or sage-a1-5 (61.2) and is NOT treated as a win here. The honest read: Flint is a new 40B-A2.5B architecture with a credible agentic story, but every comparable row it prints is beaten by smaller-active catalog models from the Qwen3.8-27B family. It earns the record on being the top-ranked uncovered model of the sweep with a full published benchmark set, not on an upset."
+}
