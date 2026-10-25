@@ -1,0 +1,68 @@
+{
+ "type": "model",
+ "family": "parakeet",
+ "architecture": "dense",
+ "task": "speech-to-text",
+ "params_b": 0.6,
+ "active_params_b": 0.6,
+ "num_experts": null,
+ "experts_per_token": null,
+ "shared_expert": null,
+ "hidden_size": null,
+ "num_layers": null,
+ "num_kv_heads": null,
+ "head_dim": null,
+ "gqa_ratio": null,
+ "max_position_embeddings": null,
+ "context_scaling": null,
+ "activation": null,
+ "attention_variant": null,
+ "kv_cache_bytes_per_token": null,
+ "flops_per_token_active": 1200000000.0,
+ "open_weights": true,
+ "context_scaling_method": "native",
+ "id": "parakeet-tdt-0-6b-v2-english-hebrew-codeswitching",
+ "name": "Parakeet-TDT-0.6B-v2-English-Hebrew-Codeswitching",
+ "vendor": "danielrosehill",
+ "release_year": 2026,
+ "release_date": "2026-10-19",
+ "license": "cc-by-4.0",
+ "base_model": "nvidia/parakeet-tdt-0.6b-v2",
+ "derivative_kind": "finetune",
+ "status": "verified",
+ "confidence": 0.6,
+ "updated": "2026-10-25",
+ "sources": [
+  "hf-danielrosehill-parakeet-tdt-0-6b-v2-codeswitching"
+ ],
+ "notes": "ADDED 2026-10-25. A full finetune of nvidia/parakeet-tdt-0.6b-v2 (run r6-en30), not a new base model: same FastConformer-TDT geometry, 600M parameters per the base card. Ship set is a single .nemo archive plus F16/Q4_K_M GGUF conversions; the .nemo is the model, the GGUFs are ports of it. Recorded as a contender because it publishes benchmark evidence against its own base in a single table.\n\nEVIDENCE CAVEAT, read before using this record. The repo is GATED: README.md returns 401 to an anonymous curl (https://huggingface.co/danielrosehill/.../raw/main/README.md -> 401; r.jina.ai mirror also 401). The numbers below were read from the rendered public model page HTML, which is served without auth and carries the full card. Base-column discipline holds there: the benchmark table has a column 'Parakeet TDT 0.6B v2 (stock)' beside 'v1.0 - Jachnun (this model)', on the same 84-clip clean subset, scored 2026-10-19, leaderboard round 3.\n\nSCOPE CAVEAT, the one that matters. All training AND test audio is a SINGLE SPEAKER. The card says so outright: 'One speaker's voice: all training and test audio is the same speaker, so these numbers rank models on that speaker only. Gains on other voices are untested.' A 9.5% -> 3.3% WER drop on one speaker is speaker adaptation as much as it is language ability. Two held-out terms were also flagged by the author as possibly leaked into training. Confidence 0.6 rather than the usual 0.85 for that reason.\n\nSECONDARY: the author's own held-out split (387 clips, Read-Aloud-Voice-Sentences rev 550bfcaa) is recorded as a row too, but it is the author's dataset, not a public benchmark, and the card itself calls the held-out gain 'within noise' while calling the seen-term gain real. That reading is correct and the rows are labelled accordingly. ENGLISH DID NOT REGRESS on the card's own numbers: own-English WER 1.7% vs stock 3.1%, LibriSpeech test-clean 1.2% vs 1.23% (card calls that within noise).\n\nARCHITECTURE FIELDS: inherited null from the base record and null for the same reason - a NeMo .nemo archive, no HF config.json, no safetensors metadata. Not zero, undefined-or-unverifiable. Params 0.6 is NVIDIA's card figure carried over, not a tensor count.",
+ "benchmarks": [
+  {
+   "name": "English-Hebrew code-switching WER (84-clip public benchmark)",
+   "score": 3.3,
+   "scale": 100,
+   "higher_is_better": false,
+   "source": "hf-danielrosehill-parakeet-tdt-0-6b-v2-codeswitching",
+   "vendor_claim": true,
+   "config": "Hebrish/English-Hebrew-Codeswitching-ASR-Benchmark test v1 clean subset, 84 clips, leaderboard round 3 (2026-10-19). Card table: this model 3.3% vs 'Parakeet TDT 0.6B v2 (stock)' 9.5%. Lower is better. All training and test audio is one speaker; other voices untested."
+  },
+  {
+   "name": "English-Hebrew term recall",
+   "score": 73.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-danielrosehill-parakeet-tdt-0-6b-v2-codeswitching",
+   "vendor_claim": true,
+   "config": "Same public benchmark table, 84 clips / 172 term occurrences / 139 distinct terms. Card: 73.3% vs stock v2 32.6%."
+  },
+  {
+   "name": "Held-out dataset code-switching WER (387 clips)",
+   "score": 5.1,
+   "scale": 100,
+   "higher_is_better": false,
+   "source": "hf-danielrosehill-parakeet-tdt-0-6b-v2-codeswitching",
+   "vendor_claim": true,
+   "config": "Author's own held-out split of Read-Aloud-Voice-Sentences rev 550bfcaa, 387 code-switched clips. Card: this model 5.1% vs stock v2 11.3%. Held-out terms correct 47.8% vs 25.9%. Lower is better."
+  }
+ ]
+}
