@@ -86,15 +86,23 @@ def card_scan():
 
 
 def fetch(url, dest):
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        data = urllib.request.urlopen(req, timeout=30).read()
-        if len(data) < 2000:
-            return 0
+    """Download one card image. HF serves LFS-backed images under /raw/main/ as a
+    131-byte git-LFS pointer stub rather than the image, so /resolve/main/ is the path
+    that actually returns pixels; retry through it when the first fetch looks like a stub."""
+    candidates = [url]
+    if 'huggingface.co/' in url and '/raw/main/' in url:
+        candidates.append(url.replace('/raw/main/', '/resolve/main/'))
+    for u in candidates:
+        try:
+            req = urllib.request.Request(u, headers={'User-Agent': 'Mozilla/5.0'})
+            data = urllib.request.urlopen(req, timeout=30).read()
+        except Exception:
+            continue
+        if len(data) < 2000 or data[:40].startswith(b'version https://git-lfs'):
+            continue
         dest.write_bytes(data)
         return len(data)
-    except Exception:
-        return 0
+    return 0
 
 
 def img_batch(n):
