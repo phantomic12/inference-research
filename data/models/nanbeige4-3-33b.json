@@ -1,0 +1,214 @@
+{
+  "id": "nanbeige4-3-33b",
+  "type": "model",
+  "name": "Nanbeige4.3-33B",
+  "family": "nanbeige4.3",
+  "vendor": "Nanbeige (Kanzhun)",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "text-generation",
+  "params_b": 33.119,
+  "active_params_b": 33.119,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 7168,
+  "num_layers": 52,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 7,
+  "max_position_embeddings": 524288,
+  "context_scaling": "Native 524,288 tokens declared in config.json (max_position_embeddings 524288, rope_theta 1.2e8, rope_scaling null - no YaRN or other extension recipe). The card repeats 'up to 524,288 tokens (512K)' with no long-context eval published.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "Standard full GQA on all 52 layers - no linear-attention or sparse layer in the stack, and config.json has no layer_types key. 56 query heads over 8 KV heads (GQA ratio 7) at head_dim 128.",
+  "layer_types": ["full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention", "full_attention"],
+  "attention_layer_indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51],
+  "kv_cache_bytes_per_token": 212992,
+  "flops_per_token_active": 198714000000.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "Nanbeige/Nanbeige4.3-33B-Base",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-10-26 from the trending sweep (trendingScore rank 3, 474 likes on 0 downloads - released 2026-10-24, two days before this sweep). DENSE, NOT MoE: config.json is model_type llama with no expert/top_k/moe key under any spelling, so active_params_b equals params_b and the whole 33.1B must be resident. params_b 33.119 = safetensors total 33,118,977,024 / 1e9. kv_cache_bytes_per_token = 52 layers x 8 kv_heads x 128 head_dim x 2 (K and V) x 2 bytes (fp16) = 212,992 B/token = 208 KiB/token; at the declared 512K context that is 109 GB of KV alone, so the declared context is not runnable on this user's box and the practical ceiling is far lower (a 32K working context costs 6.8 GB). HARDWARE GATE: passes as written (active 33.1B <= 40, params_b x 0.5 GiB = 16.6 <= 128) but read that generously - bf16 weights are 66 GB and a 4-bit quant is ~17 GB plus KV, so expect a partial offload rather than a clean fit.\n\nWHY IT IS WORTH A RECORD: it is the class leader on 6 of the 19 rows its card prints against ~30B peers, and the card names its comparison set explicitly (Qwen3.8-27B, Muse-Glimmer-30B, Gemma4-31B) with a harness footnote per row, so the beats are same-test beats. Size-class audit run on 2026-10-26 against every catalog record in the 20-45B band:\nBEATS class best - NL2Repo 53.0 vs Ornith-1.5-35B-A3B 46.2; Toolathlon-Verified 70.4 vs Ornith-1.5-35B-A3B 48.7; SWE-Atlas-QnA 50.8 vs Ornith-1.5-35B-A3B 39.8; DeepSWE 65.5 vs VeriLoop E2 64.6; JobBench 44.8 vs Fx-Work 25.19; AA-LCR 84.0 vs Sage-A1.5 81.0.\nLOSES where the class already had a stronger entry: SWE-Bench Pro 60.3 vs Recursive Flint 89.7; Scicode 52.6 vs BigBang-v1 68.6; Automation Bench 54.2 vs occamy-1.0 69.1; GDPval 84.8 vs Fx-Work 86.66; Claw-Eval 78.3 vs occamy-1.0 82.2; Tau3-Bench 48.8 vs Xing4.0-29B-A4B 64.63; GPQA Diamond 89.5 vs VeriLoop E2 93.9; AIME 2026 95.2 vs VeriLoop E2 98.3; Terminal-Bench 4.0 23.8 vs VeriLoop E2 37.9.\nSETS the class best with no prior row to beat: Terminal-Bench 2.1 80.9 (the two existing 20-45B rows are VeriLoop E2 88.8, a CEILING descriptor row, and Qwen3.8-27B 73.0, so 80.9 sits between non-comparable numbers and gets no verdict), SkillsBench 61.1, DeepPlanning 63.3, EnterpriseOps-Gym 41.0.\nTwo caveats blunt the wins. VeriLoop E2's 93.9 GPQA / 98.3 AIME / 88.8 Terminal-Bench are self-declared .eval_results rows the catalog already flags as vendor claims with no harness, and Recursive Flint's 89.7 SWE-bench Pro comes from a figure read by eye. The DeepSWE win is 0.9 over a figure read with +/-0.5 error and the two cards do not agree on version (this one prints no version, VeriLoop's row is v1.1). Against clean rows (Qwen3.8-27B, Ornith-1.5-35B-A3B, occamy-1.0) the pattern holds: far ahead on agentic cowork and long-context reasoning, behind on pure SWE-style repair.\nYC-bench is printed as a dollar return ($1,025,437 vs $641,290 for Qwen3.8-27B) and is NOT transcribed as a benchmark row because its scale is not 100.\nNANBEIGE'S OWN FRAMING: the card says this 33B is the teacher for a distillation pipeline into a smaller Nanbeige4.3-3B (not yet released), so a size-class upset here likely repeats at 3B in a later sweep.",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-26",
+  "sources": [
+    "nanbeige4-3-33b-model-card",
+    "nanbeige4-3-33b-config-json"
+  ],
+  "benchmarks": [
+    {
+      "name": "Terminal-Bench 2.1",
+      "score": 80.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table, column 'Nanbeige4.3-33B'. Card says all models run at highest thinking effort with the same harness; footnote 2: Terminus 2. Same row: Qwen3.8-27B 73.0, Muse-Glimmer-30B 61.8, Gemma4-31B 47.2. No class upset claimed - the only 20-45B comparator at that effort is VeriLoop E2 88.8, a CEILING descriptor row."
+    },
+    {
+      "name": "Terminal-Bench 4.0",
+      "score": 23.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, footnote 3: mini-swe-agent v2.4.6. Same row: Qwen3.8-27B 6.3. LOSES to class best VeriLoop E2 37.9 (also 4.0, read by eye from a figure)."
+    },
+    {
+      "name": "DeepSWE",
+      "score": 65.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, mini-swe-agent v2.4.6 (footnote 3). Same row: Qwen3.8-27B 42.5. BEATS class best VeriLoop E2 64.6 by 0.9 - inside that row's +/-0.5 figure-read error, so treat as a tie. Card prints no DeepSWE version; the VeriLoop row is v1.1."
+    },
+    {
+      "name": "SWE-Bench Pro",
+      "score": 60.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, mini-swe-agent v2.4.6. LOSES the row to Qwen3.8-27B 61.7 in the same table and to class best Recursive Flint 89.7 (figure, read by eye)."
+    },
+    {
+      "name": "SWE-Atlas-QnA",
+      "score": 50.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, mini-swe-agent v2.4.6, scored against 1,304 task-specific rubrics with GPT-6 Sol as judge at medium reasoning effort (footnote 4). Same row: Qwen3.8-27B 41.9. BEATS class best Ornith-1.5-35B-A3B 39.8 ('SWE Atlas - QnA', figure). Judge-model difference is a real caveat."
+    },
+    {
+      "name": "NL2Repo",
+      "score": 53.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, footnote 5: evaluated using Claude Code. Same row: Qwen3.8-27B 48.3. BEATS class best Ornith-1.5-35B-A3B 46.2, which publishes its harness only inside a figure."
+    },
+    {
+      "name": "Scicode",
+      "score": 52.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, no harness footnoted for this row. Same row: Qwen3.8-27B 46.7. LOSES to class best BigBang-v1 68.6."
+    },
+    {
+      "name": "SkillsBench",
+      "score": 61.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, no harness footnoted. Same row: Qwen3.8-27B 56.4. First SkillsBench row in the 20-45B class, so it SETS the class best with no prior to beat."
+    },
+    {
+      "name": "Automation Bench",
+      "score": 54.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, footnote 6: Automation Bench v1.0.6, 600 publicly released tasks. Same row: Qwen3.8-27B 38.3. LOSES to class best occamy-1.0 69.1, but that row is occamy's partial-credit variant - a different scoring rule from this number, so the loss is not like-for-like. Beats Ling-3.1-flash 52.5 on AutomationBench Public, a 560B model."
+    },
+    {
+      "name": "JobBench",
+      "score": 44.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, footnote 7: Claude Code harness equipped with a search tool. Same row: Qwen3.8-27B 34.5. BEATS class best Fx-Work 25.19 (base 14.99 vs tuned 25.19 in its own table)."
+    },
+    {
+      "name": "GDPval",
+      "score": 84.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, footnote 8: scored using revised rubrics. LOSES the row to Qwen3.8-27B 86.4 and to class best Fx-Work 86.66."
+    },
+    {
+      "name": "Claw-Eval",
+      "score": 78.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, pass^3, footnote 9: Claw-Eval General subset only, 157 single-turn user-interaction tasks. Same row: Qwen3.8-27B 75.2. LOSES to class best occamy-1.0 82.2, which is a different Claw-Eval aggregate (answer quality), so the two are not on one scale."
+    },
+    {
+      "name": "Toolathlon-Verified",
+      "score": 70.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, footnote 10: no max_tokens limit for individual model requests. Same row: Qwen3.8-27B 68.5. BEATS class best Ornith-1.5-35B-A3B 48.7."
+    },
+    {
+      "name": "DeepPlanning",
+      "score": 63.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, footnote 12: official repository. Same row: Qwen3.8-27B 49.2. First DeepPlanning row in the 20-45B class, so it SETS the class best."
+    },
+    {
+      "name": "EnterpriseOps-Gym",
+      "score": 41.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, official repository per footnote 12. Same row: Qwen3.8-27B 40.2. First row in the 20-45B class, no prior to beat; the 0.8 margin over Qwen3.8-27B is inside run-to-run noise."
+    },
+    {
+      "name": "Tau3-Bench",
+      "score": 48.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, official repository per footnote 12. LOSES to class best Xing4.0-29B-A4B 64.63 and only edges Qwen3.8-27B 48.5 in its own row."
+    },
+    {
+      "name": "GPQA Diamond",
+      "score": 89.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table, highest thinking effort. Edges Qwen3.8-27B 89.2 in the same row but LOSES there to Gemma4-31B 91.3 and to class best VeriLoop E2 93.9."
+    },
+    {
+      "name": "AIME 2026",
+      "score": 95.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table. Beats Qwen3.8-27B 94.5 and Muse-Glimmer-30B 94.7 but LOSES to class best VeriLoop E2 98.3."
+    },
+    {
+      "name": "AA-LCR",
+      "score": 84.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "nanbeige4-3-33b-model-card",
+      "vendor_claim": true,
+      "config": "Card table. Same row: Qwen3.8-27B 82.0. BEATS class best Sage-A1.5 81.0 by 3.0 and sits under Kimi-K3 88.7 at 2.78T, the strongest long-context claim on the card relative to its own size."
+    }
+  ]
+}
