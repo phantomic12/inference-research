@@ -27,13 +27,502 @@
   "notes": "TWO-PART MODEL, and the interesting part is that the vision tower is byte-identical to InternVL3-8B's while the LLM differs. (1) Vision: InternViT 24 layers, hidden 1024, 16 heads, patch 14, image_size 448 -- the same config as InternVL3-8B, minus the MoE scaffolding fields. downsample_ratio 0.5 + ps_version v2 = same 2x2 pixel-shuffle MLP projector, 256 tokens per 448 tile. (2) LLM: InternLM2-7B (architectures InternLM2ForCausalLM), 32 layers, hidden 4096, 32 heads / 8 KV, head_dim 128, intermediate 14336, vocab 92,553. ARCHITECTURE = dense. DYNAMIC TILING: identical to InternVL3 -- dynamic_image_size true, max_dynamic_patch 12, use_thumbnail true, so 2-13 ViT passes and 512-3,328 vision tokens per image. DOMINANCE: VISION DOMINATES, same as InternVL3. KV CACHE: 32 * 8 * 128 * 2 * 2 = 131,072 B/token (128 KiB) -- 2.3x InternVL3-8B for the same vision tower and the same 8B param class, purely because InternLM2 has 8 KV heads over 32 layers instead of 4 over 28. This is the number that decides whether a model fits, and it is invisible in the param count. params_b 8.075 = HF API safetensors total (8,075,365,376). Interesting provenance note: gqa_ratio here is 32/8 = 4, i.e. this generation MOVED TOWARD more KV heads than Qwen2's 7:1, so the 'same size, more memory' pattern runs opposite to the usual trend.\n\nSERVICEABILITY JOIN (added 2026-10-03; the architecture x engine matrix this record was missing, with a citation per cell in docs/13-model-compatibility.md): FAMILY=multimodal. REQUIRED KERNEL CLASS: an encoder tower (ViT / SigLIP / ConvNet / audio encoder) running on a SEPARATE schedule from the decoder, plus a projector into the decoder's embedding space, plus - for the mrope and DeepStack families - a multi-axis rotary scheme in the decoder rather than plain 1-D RoPE. Three engine-side consequences, all cited. (1) The encoder tower is a separate compute path, so its throughput is a different problem from decode throughput and engines that disclaim encoder throughput are disclaiming this. vLLM says so in its own words: 'We currently support pooling models primarily for convenience. This is not guaranteed to provide any performance improvements over using Hugging Face Transformers or Sentence Transformers directly' [[vllm-pooling-models]] - that is the general statement this class inherits. TRT-LLM's answer is a documented mechanism: a Multimodal Encoder Side Stream that prefetches encoder work on a separate CUDA stream plus a per-model Multimodal Embeddings Cache, currently available only for seven architectures (Gemma4, Gemma4Unified, Mistral3, Qwen3VL, Qwen3VLMoe, Qwen3_5, Qwen3_5Moe) [[mdl2-trtllm-supported-models]]. (2) Several towers carry hard external dependencies: Gemma3nForConditionalGeneration 'depends on timm>=1.0.17 to make use of its MobileNet-v5 vision backbone' and 'is only supported on V1 due to shared KV caching' [[mdl2-vllm-supported-models-2026-10]]; MiniCPM-V 4.6 requires transformers>=5.7.0 because it was upstreamed as a native model type [[mdl2-trtllm-supported-models]]. (3) Hybrid-only multimodal models expose a memory knob unique to this class: vLLM's --language-model-only flag sets all supported multimodal modalities to 0 so the multimodal modules are not loaded, 'to free up more GPU memory for KV cache' for Llama-4, Step3, Mistral-3 and Qwen-3.5 [[mdl2-vllm-supported-models-2026-10]].SUPPORTED BY (cited): vLLM native rows include InternVLChatModel and InternVLForConditionalGeneration, LlavaOnevisionForConditionalGeneration, LlavaNextForConditionalGeneration, MolmoForCausalLM and Molmo2ForConditionalGeneration, PaliGemmaForConditionalGeneration, SmolVLMForConditionalGeneration, Glm4vForConditionalGeneration, Qwen2VL/Qwen3VL, MiniCPMV, Mllama, Phi4MM, Gemma4, NemotronH_Nano_VL_V2, VoxtralForConditionalGeneration (which requires mistral-common[audio]) and Qwen3OmniMoeThinkerForConditionalGeneration [[mdl2-vllm-supported-models-2026-10]]. SGLang's multimodal table covers InternLM2-VL, LLaVA-OneVision, LLaVA-NeXT(-Video), Ling-3.0-flash-VL, LFM2.5-VL, MiniCPM-V-2, GLM-4.5V, GLM-OCR, Qwen3-VL 235B-A22B and 30B-A3B, Qwen3-Omni-30B-A3B, Kimi-VL-A3B, MiMo-VL-7B-RL, Step3-VL-10B, dots.ocr, PaddleOCR-VL, Cosmos3, deepseek-vl2, Janus-Pro-7B, NVILA-8B and gemma-3-4b-it, plus openai/whisper-large-v3 and Qwen3-ASR-1.7B on the audio route [[mdl2-sglang-multimodal-language-models]]. TRT-LLM's multimodal matrix covers a narrower set with an explicit per-row modality string and per-row Untested cells [[mdl2-trtllm-supported-models]]. Older GGUF-side engines reach the class through llama.cpp's projector graph, which llama.cpp-embedding-server states it cannot serve on the embedding route [[llama-cpp-embedding-server]]. PER-MODALITY CAVEATS CITED: TRT-LLM marks Gemma4Unified and MiniCPM-V 4.6 Untested for CUDA Graph / chunked prefill, MiniMax-M3 Untested for attention DP and KV cache reuse, Qwen4Exp Untested across the board, and notes audio requires a checkpoint with a sound_config and is supported only on the full non-disaggregated path [[mdl2-trtllm-supported-models]]. Step-3.7's vision tower runs in BF16 even when the text decoder is quantized [[mdl2-trtllm-supported-models]] - a precision asymmetry that silently costs memory. vLLM's fallback path accepts image inputs only, with video 'to be added in a future release' [[mdl2-vllm-supported-models-2026-10]].\n\nCONTEXT_SCALING_METHOD (native): config nests the LM under a language_model sub-config; no rope_scaling declared there.",
   "status": "verified",
   "confidence": 0.9,
-  "updated": "2026-10-20",
+  "updated": "2026-10-26",
   "sources": [
     "hf-mm-hf-api-safetensors-params",
     "hf-mm-internvl2-5-8b-config",
     "mdl2-sglang-multimodal-language-models",
     "mdl2-trtllm-supported-models",
-    "mdl2-vllm-supported-models-2026-10"
+    "mdl2-vllm-supported-models-2026-10",
+    "hf-internvl2-5-8b-card"
   ],
-  "context_scaling_method": "native"
+  "context_scaling_method": "native",
+  "benchmarks": [
+    {
+      "name": "AI2D (w/ M)",
+      "score": 84.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's OCR/chart/document benchmark table screenshot by eye (vision), not from text; row located by 1-based index and the adjacent InternVL2-8B and Qwen2-VL-7B rows re-read to confirm column alignment. +-0.5. Second independent read matched."
+    },
+    {
+      "name": "AI2D (w/o M)",
+      "score": 92.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's OCR/chart/document benchmark table screenshot by eye (vision), not from text; row located by 1-based index and the adjacent InternVL2-8B and Qwen2-VL-7B rows re-read to confirm column alignment. +-0.5. Second independent read matched."
+    },
+    {
+      "name": "ChartQA (test avg)",
+      "score": 84.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's OCR/chart/document benchmark table screenshot by eye (vision), not from text; row located by 1-based index and the adjacent InternVL2-8B and Qwen2-VL-7B rows re-read to confirm column alignment. +-0.5. Second independent read matched."
+    },
+    {
+      "name": "TextVQA (val)",
+      "score": 79.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's OCR/chart/document benchmark table screenshot by eye (vision), not from text; row located by 1-based index and the adjacent InternVL2-8B and Qwen2-VL-7B rows re-read to confirm column alignment. +-0.5. Second independent read matched."
+    },
+    {
+      "name": "DocVQA (test)",
+      "score": 93.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's OCR/chart/document benchmark table screenshot by eye (vision), not from text; row located by 1-based index and the adjacent InternVL2-8B and Qwen2-VL-7B rows re-read to confirm column alignment. +-0.5. Second independent read matched."
+    },
+    {
+      "name": "InfoVQA (test)",
+      "score": 77.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's OCR/chart/document benchmark table screenshot by eye (vision), not from text; row located by 1-based index and the adjacent InternVL2-8B and Qwen2-VL-7B rows re-read to confirm column alignment. +-0.5. Second independent read matched."
+    },
+    {
+      "name": "OCRBench",
+      "score": 822,
+      "scale": 1000,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's OCR/chart/document benchmark table screenshot by eye (vision), not from text; row located by 1-based index and the adjacent InternVL2-8B and Qwen2-VL-7B rows re-read to confirm column alignment. +-0.5. Second independent read matched."
+    },
+    {
+      "name": "SEED-2 Plus",
+      "score": 69.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's OCR/chart/document benchmark table screenshot by eye (vision), not from text; row located by 1-based index and the adjacent InternVL2-8B and Qwen2-VL-7B rows re-read to confirm column alignment. +-0.5. Second independent read matched."
+    },
+    {
+      "name": "CharXiv (RQ)",
+      "score": 32.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's OCR/chart/document benchmark table screenshot by eye (vision), not from text; row located by 1-based index and the adjacent InternVL2-8B and Qwen2-VL-7B rows re-read to confirm column alignment. +-0.5. Second independent read matched."
+    },
+    {
+      "name": "CharXiv (DQ)",
+      "score": 68.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's OCR/chart/document benchmark table screenshot by eye (vision), not from text; row located by 1-based index and the adjacent InternVL2-8B and Qwen2-VL-7B rows re-read to confirm column alignment. +-0.5. Second independent read matched."
+    },
+    {
+      "name": "VCR-EN-Easy (EM)",
+      "score": 92.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's OCR/chart/document benchmark table screenshot by eye (vision), not from text; row located by 1-based index and the adjacent InternVL2-8B and Qwen2-VL-7B rows re-read to confirm column alignment. +-0.5. Second independent read matched."
+    },
+    {
+      "name": "VCR-EN-Easy (Jaccard)",
+      "score": 97.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's OCR/chart/document benchmark table screenshot by eye (vision), not from text; row located by 1-based index and the adjacent InternVL2-8B and Qwen2-VL-7B rows re-read to confirm column alignment. +-0.5. Second independent read matched."
+    },
+    {
+      "name": "BLINK (val)",
+      "score": 54.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multi-image / real-world comprehension table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "Mantis Eval",
+      "score": 67.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multi-image / real-world comprehension table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMIU",
+      "score": 46.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multi-image / real-world comprehension table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "Muir Bench",
+      "score": 51.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multi-image / real-world comprehension table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMT (val)",
+      "score": 62.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multi-image / real-world comprehension table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MIRB (avg)",
+      "score": 52.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multi-image / real-world comprehension table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "RealWorld QA",
+      "score": 70.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multi-image / real-world comprehension table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MME-RW (EN)",
+      "score": 59.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multi-image / real-world comprehension table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "WildVision (win rate)",
+      "score": 62.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multi-image / real-world comprehension table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "R-Bench (dis)",
+      "score": 70.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multi-image / real-world comprehension table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MME (sum)",
+      "score": 2344.1,
+      "scale": 3000,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multimodal+hallucination table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMB (EN)",
+      "score": 84.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multimodal+hallucination table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMB (CN)",
+      "score": 82.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multimodal+hallucination table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMBv1.1 (EN)",
+      "score": 83.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multimodal+hallucination table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMVet (turbo)",
+      "score": 62.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multimodal+hallucination table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMVetv2 (0613)",
+      "score": 58.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multimodal+hallucination table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMStar",
+      "score": 62.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multimodal+hallucination table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "HallBench (avg)",
+      "score": 50.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multimodal+hallucination table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMHal (score)",
+      "score": 3.65,
+      "scale": 10,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multimodal+hallucination table screenshot by eye (vision). +-0.5. Second independent read matched. The header gives no denominator; scale 10 is inherited from the sibling InternVL3 record's MMHal (score) row, while MMHal-Bench's own maximum is 6.0 - read 3.65 as the raw score, not 36.5%."
+    },
+    {
+      "name": "CRPE (relation)",
+      "score": 78.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multimodal+hallucination table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "POPE (avg)",
+      "score": 90.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multimodal+hallucination table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "RefCOCO (val)",
+      "score": 90.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's visual-grounding (RefCOCO family) table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "RefCOCO (test-A)",
+      "score": 94.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's visual-grounding (RefCOCO family) table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "RefCOCO (test-B)",
+      "score": 85.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's visual-grounding (RefCOCO family) table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "RefCOCO+ (val)",
+      "score": 85.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's visual-grounding (RefCOCO family) table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "RefCOCO+ (test-A)",
+      "score": 91.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's visual-grounding (RefCOCO family) table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "RefCOCO+ (test-B)",
+      "score": 78.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's visual-grounding (RefCOCO family) table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "RefCOCOg (val)",
+      "score": 86.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's visual-grounding (RefCOCO family) table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "RefCOCOg (test)",
+      "score": 87.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's visual-grounding (RefCOCO family) table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMMB (en)",
+      "score": 84.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMMB (zh)",
+      "score": 83.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMMB (pt)",
+      "score": 78.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMMB (ar)",
+      "score": 69.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMMB (tr)",
+      "score": 71.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MMMB (ru)",
+      "score": 79.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "Multilingual MMBench (en)",
+      "score": 83.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "Multilingual MMBench (zh)",
+      "score": 83.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "Multilingual MMBench (pt)",
+      "score": 79.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "Multilingual MMBench (ar)",
+      "score": 64.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "Multilingual MMBench (tr)",
+      "score": 67.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "Multilingual MMBench (ru)",
+      "score": 77.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    },
+    {
+      "name": "MTVQA (avg)",
+      "score": 27.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-internvl2-5-8b-card",
+      "vendor_claim": true,
+      "config": "Read off the card's multilingual table screenshot by eye (vision). +-0.5. Second independent read matched."
+    }
+  ]
 }
