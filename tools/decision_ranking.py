@@ -32,7 +32,21 @@ def fmt(v, nd=1, dash="—"):
 
 
 def main():
-    rows = sorted(load(), key=lambda r: r["rank"])
+    all_rows = load()
+    # Rank is only meaningful INSIDE one board edition: 0.2.1 and 0.4.1 rescore the
+    # panel, rebuild GSM8K, retire ForecastBench and add private-test halves, so a
+    # 0.2.1 index of 61.2 and a 0.4.1 index of 70.2 are not the same quantity. Group
+    # by edition and never merge two columns of numbers under one rank header.
+    editions = []
+    for r in all_rows:
+        ed = r.get("edition") or (r.get("source") or "").replace("decision-index-", "").replace("-", ".")
+        if ed not in editions:
+            editions.append(ed)
+    editions.sort(reverse=True)
+    rows = sorted([r for r in all_rows if (r.get("edition") or
+                   (r.get("source") or "").replace("decision-index-", "").replace("-", ".")) == editions[0]],
+                  key=lambda r: r["rank"])
+    older = sorted([r for r in all_rows if r not in rows], key=lambda r: r.get("index") or 0, reverse=True)
     n_self = sum(1 for r in rows if r.get("self_reported"))
     out = []
     out.append("# Decision models\n")
@@ -47,8 +61,8 @@ def main():
         "Chat benchmarks cannot rank these models. MMLU, SWE-bench and Terminal-Bench "
         "all score generated text; a decision model produces none. Nor does a refusal "
         "table mean anything, because the model answers with probabilities rather than "
-        "prose. The shared suite is the **Decision Index 0.2.1** (Jev Decision Index, "
-        "maintained by multimodalart and contributors), which is **chance-corrected**: "
+        "prose. The shared suite is the **Decision Index** (Jev Decision Index, maintained by "
+        "multimodalart and contributors), currently **edition 0.4.1**. It is **chance-corrected**: "
         "0 is random guessing and 100 is perfect, so an index of 51.2 is not \"half "
         "right\" but \"well above chance on a five-way, unevenly-weighted task mix\".\n")
     out.append(
@@ -57,7 +71,7 @@ def main():
         "**ECE** is expected calibration error - the gap between the confidence the "
         "model prints and the accuracy it achieves - so lower is better, and a model "
         "with a strong index and a bad ECE is confidently wrong.\n")
-    out.append("\n## Ranking\n")
+    out.append("\n## Ranking - Decision Index %s (current board)\n" % editions[0])
     hdr = ("| # | Model | Index | Know. | Lang. | Retr. | Tools | Arts | "
            "Median ms | p95 ms | ECE | Params | Base |")
     out.append(hdr)
@@ -82,6 +96,29 @@ def main():
     out.append("\n`*` = self-reported. %d of %d rows are the author's own run and the "
                "upstream board has not reproduced them; every other row is "
                "board-validated on one NVIDIA RTX PRO 6000.\n" % (n_self, len(rows)))
+    if older:
+        out.append("\n## Previous board edition (not comparable)\n")
+        out.append("These rows were scored on Decision Index %s. The %s board rescored "
+                   "the panel (GSM8K rebuilt, ForecastBench retired, private-test halves "
+                   "added), so these indices are **not on the same scale** as the table "
+                   "above and must not be ranked against it or subtracted from it. They "
+                   "are kept because each is the only published number for that model.\n"
+                   % (editions[1] if len(editions) > 1 else "an earlier edition", editions[0]))
+        out.append("| Model | Index (%s) | Know. | Lang. | Retr. | Tools | Arts | Median ms | p95 ms | ECE | Base |"
+                   % (editions[1] if len(editions) > 1 else "older"))
+        out.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|")
+        for r in older:
+            nm = r["name"]
+            if r.get("hf"):
+                nm = "[%s](https://huggingface.co/%s)" % (nm, r["hf"])
+            if r.get("self_reported"):
+                nm += " *"
+            a = r.get("axes") or {}
+            out.append("| %s | **%s** | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
+                nm, fmt(r.get("index"), 2), *[fmt(a.get(k)) for k, _ in AXES],
+                fmt(r.get("median_ms"), 0), fmt(r.get("p95_ms"), 0), fmt(r.get("ece"), 3),
+                ("`%s`" % r["base"]) if r.get("base") else "—"))
+        out.append("")
     out.append("\n## How to read this against the worth-running table\n")
     out.append(
         "- **Do not compare an index to a capability score.** They are different "
@@ -100,8 +137,9 @@ def main():
     out.append("\n## Ingestion contract\n")
     out.append(
         "Decision models are records with `task: decision` and a `base_model`. They "
-        "carry their Decision Index row as benchmarks named `Decision Index 0.2.1` "
-        "and the five axis sub-scores, and they are **excluded from the worth-running "
+        "carry their Decision Index row as benchmarks named for the edition "
+        "(e.g. `Decision Index 0.4.1 full score (balanced_skill)`), the five axis sub-scores, "
+        "and an `edition` field so two board versions never share one rank column, and they are **excluded from the worth-running "
         "ranking by construction** - not down-weighted, excluded - because that view "
         "averages text benchmarks. Adding one means: record the index, its five "
         "sub-scores, median and p95 latency, and ECE, and mark `vendor_claim: true` "

@@ -566,6 +566,34 @@ derivation in `notes` must show which layers.
 names a model that has a record here, note the pairing rather than rewriting
 the benchmark.
 
+## decision_index
+
+`data/decision_index.jsonl` — one row per decision model, mirroring the upstream
+Decision Index board. Not a record type under `schemas/`; validated as JSONL.
+
+    id            string   record-style slug, e.g. dec-vllm-sr-d3-ultra
+    name          string   board display name
+    rank          int      rank *within one edition* - never across editions
+    hf            string   HF repo id, null when the model ships as code
+    base          string   base model repo id
+    project       string   GitHub URL for code-only entrants
+    index         number   the edition's headline index (chance-corrected 0-100)
+    axes          object   knowledge, language, retrieval, tools, artifacts
+    median_ms     number   per-request latency, board-measured
+    p95_ms        number
+    ece           number   expected calibration error, lower is better
+    params_b      number   served parameters
+    self_reported bool     true when the author ran it and the board did not
+    edition       string   the board edition the index was scored on, e.g. "0.4.1"
+
+**`edition` is load-bearing.** The board rescored its panel between editions
+(0.2.1 → 0.4.1 rebuilt GSM8K, retired ForecastBench, added private-test halves),
+so an index from one edition is not on the same scale as another and the two must
+never share a rank column or be subtracted. `tools/decision_ranking.py` groups by
+edition for exactly this reason: the current edition gets the ranked table and
+older rows are listed separately as not comparable. Add a row only after actually
+reading the board; never invent a latency or ECE figure.
+
 ## supply
 
 Where a given accelerator can actually be obtained. One record per vendor or
