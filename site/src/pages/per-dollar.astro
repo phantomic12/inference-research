@@ -1,0 +1,222 @@
+---
+import Base from '../layouts/Base.astro';
+import { typeUrl } from '../lib/data';
+
+const title = 'FLOPS per Dollar';
+const description = 'Theoretical dense throughput per dollar of hardware — bought new, bought used, or rented by the GPU-hour. With the unit, precision and sparsity traps that make these tables lie.';
+---
+
+<Base title={title} description={description} nav="perdollar">
+  <main class="wrap" data-pagefind-body>
+    <nav class="breadcrumb">
+      <a href={import.meta.env.BASE_URL}>index</a> / <span>flops per dollar</span>
+    </nav>
+
+    <div class="page-head">
+      <h1>FLOPS per Dollar</h1>
+      <p class="sub">
+        Cheap compute per dollar is the easiest number in this repo to get wrong. Four things
+        break it, and this page handles each one instead of averaging them away.
+        <strong>Quantities</strong>: the supply pool prices one card, eight cards in a tray, and a
+        whole rack in the same field — a $130 SXM2-to-PCIe <em>carrier</em> is not a
+        $130 GPU. Prices that name a count are divided down and the divisor is shown; anything
+        still outside 3× an accelerator's median is treated as a different product and moved to
+        the excluded list rather than ranked. <strong>Sparsity</strong>: 2:4 sparsity doubles the
+        headline figure, so only dense numbers are ranked. <strong>Precision</strong>: bf16 where
+        the part publishes it, fp16 otherwise — fp32 and fp64 say nothing about inference.
+        <strong>Market</strong>: new, used and per-hour rental are separate tables, because a
+        server-pull board and a warrantied box are not the same purchase.
+      </p>
+      <p class="sub">
+        What is left is still not a promise. Theoretical FLOPS is peak silicon, not delivered
+        throughput: a card with no bf16 kernels, no flash attention, or a dead software stack
+        will not come close. Read the caveat column before buying on the strength of this page —
+        and note that every figure is an <em>asking</em> price, not a completed sale.
+      </p>
+    </div>
+
+    <div class="join-controls">
+      <div class="control">
+        <label for="pd-class">Buying</label>
+        <select id="pd-class" data-pd-class>
+          <option value="used">used market</option>
+          <option value="new">new</option>
+          <option value="rental">rented by the hour</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="pd-metric">Metric</label>
+        <select id="pd-metric" data-pd-metric>
+          <option value="flops">dense bf16/fp16</option>
+          <option value="tops">fp8 / int8</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="pd-vendor">Vendor</label>
+        <select id="pd-vendor" data-pd-vendor>
+          <option value="">all</option>
+        </select>
+      </div>
+    </div>
+
+    <p class="pd-count" data-pd-count></p>
+
+    <div class="table-wrap">
+      <table class="pd-table">
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th>accelerator</th>
+            <th class="num">precision</th>
+            <th class="num" data-pd-throughput>TFLOPS</th>
+            <th class="num" data-pd-price>price</th>
+            <th class="num" data-pd-ratio>$ / TFLOP</th>
+            <th class="num">TFLOPS / $</th>
+            <th class="num">W</th>
+            <th class="num">TFLOPS / W</th>
+            <th>caveats</th>
+          </tr>
+        </thead>
+        <tbody data-pd-body>
+          <tr><td colspan="10" class="empty">loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <details class="pd-excluded">
+      <summary><span data-pd-excluded-count>Excluded prices</span> — what was thrown out and why</summary>
+      <div class="table-wrap">
+        <table class="pd-table">
+          <thead>
+            <tr><th>accelerator</th><th>supply record</th><th class="num">price</th><th>reason</th></tr>
+          </thead>
+          <tbody data-pd-excluded-body></tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="pd-excluded">
+      <summary>Method, in full</summary>
+      <div class="pd-method" data-pd-method></div>
+    </details>
+  </main>
+
+  <script>
+    const base = import.meta.env.BASE_URL;
+    let data = null;
+
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const num = (n, d = 0) => (n == null ? '—' : Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }));
+    const money = (n) => (n == null ? '—' : n >= 100 ? '$' + Math.round(n).toLocaleString() : '$' + Number(n).toFixed(n < 10 ? 3 : 2));
+
+    function rows() {
+      if (!data) return [];
+      const metric = document.querySelector('[data-pd-metric]').value;
+      const cls = document.querySelector('[data-pd-class]').value;
+      const vendor = document.querySelector('[data-pd-vendor]').value;
+      const src = metric === 'tops' ? data.quant_rows : data.rows;
+      const ratioKey = metric === 'tops' ? 'dollars_per_top' : 'dollars_per_tflop';
+      let out = src.filter((r) => r.price_class === cls && r.ranked);
+      if (vendor) out = out.filter((r) => r.vendor === vendor);
+      out.sort((a, b) => a[ratioKey] - b[ratioKey]);
+      return out;
+    }
+
+    function render() {
+      if (!data) return;
+      const metric = document.querySelector('[data-pd-metric]').value;
+      const cls = document.querySelector('[data-pd-class]').value;
+      const rental = cls === 'rental';
+      const rowsOut = rows();
+
+      document.querySelector('[data-pd-throughput]').textContent = metric === 'tops' ? 'TOPS' : 'TFLOPS';
+      document.querySelector('[data-pd-price]').textContent = rental ? '$ / GPU-hour' : 'price';
+      document.querySelector('[data-pd-ratio]').textContent = metric === 'tops' ? '$ / TOP' : '$ / TFLOP';
+
+      const body = document.querySelector('[data-pd-body]');
+      if (!rowsOut.length) {
+        body.innerHTML = '<tr><td colspan="10" class="empty">no priced rows in this class</td></tr>';
+      } else {
+        body.innerHTML = rowsOut.map((r, i) => {
+          const tput = metric === 'tops' ? r.tops : r.tflops;
+          const perDollar = metric === 'tops' ? r.tops_per_dollar : r.tflops_per_dollar;
+          const ratio = metric === 'tops' ? r.dollars_per_top : r.dollars_per_tflop;
+          const perWatt = metric === 'tops' ? null : r.tflops_per_watt;
+          return `<tr>
+            <td class="num">${i + 1}</td>
+            <td><a href="${base}r/accelerators/${esc(r.accel)}/">${esc(r.name)}</a>
+              <span class="pd-meta">${esc(r.vendor ?? '')}${r.year ? ' · ' + r.year : ''}${r.vram_gb ? ' · ' + r.vram_gb + 'GB' : ''}</span></td>
+            <td class="num"><code>${esc(r.precision)}</code></td>
+            <td class="num">${num(tput, 1)}</td>
+            <td class="num">${money(r.price_usd)}${rental ? '/hr' : ''}</td>
+            <td class="num"><strong>${num(ratio, metric === 'tops' ? 3 : 2)}</strong></td>
+            <td class="num">${num(perDollar, 3)}</td>
+            <td class="num">${r.tdp_w ?? '—'}</td>
+            <td class="num">${perWatt == null ? '—' : num(perWatt, 2)}</td>
+            <td class="pd-caveats">${(r.caveats || []).map((c) => `<span>${esc(c)}</span>`).join('')}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      const unpricedNote = data.counts.unpriced
+        ? ` · ${data.counts.unpriced} accelerators have FLOPS but no usable price`
+        : '';
+      document.querySelector('[data-pd-count]').textContent =
+        `${rowsOut.length} ranked · ${data.counts.excluded} prices excluded${unpricedNote}`;
+    }
+
+    function renderExcluded() {
+      const body = document.querySelector('[data-pd-excluded-body]');
+      const list = data.excluded || [];
+      document.querySelector('[data-pd-excluded-count]').textContent =
+        `${list.length} excluded price${list.length === 1 ? '' : 's'}`;
+      body.innerHTML = list.map((e) => `<tr>
+        <td>${esc(e.accel_name || e.accel)}</td>
+        <td><code>${esc(e.supply)}</code></td>
+        <td class="num">${money(e.price_usd)}</td>
+        <td>${esc(e.reason)}</td>
+      </tr>`).join('') || '<tr><td colspan="4" class="empty">none</td></tr>';
+    }
+
+    function renderMethod() {
+      const m = data.method || {};
+      document.querySelector('[data-pd-method]').innerHTML =
+        Object.entries(m).map(([k, v]) => `<p><strong>${esc(k.replace(/_/g, ' '))}</strong> — ${esc(v)}</p>`).join('');
+    }
+
+    async function init() {
+      const resp = await fetch(`${base}joined/flops_per_dollar.json`);
+      if (!resp.ok) {
+        document.querySelector('[data-pd-body]').innerHTML =
+          '<tr><td colspan="10" class="empty">view not built — run tools/build_joined_views.py</td></tr>';
+        return;
+      }
+      data = await resp.json();
+      const vendors = [...new Set([...data.rows, ...data.quant_rows].map((r) => r.vendor).filter(Boolean))].sort();
+      const sel = document.querySelector('[data-pd-vendor]');
+      vendors.forEach((v) => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        sel.appendChild(o);
+      });
+      document.querySelectorAll('[data-pd-class],[data-pd-metric],[data-pd-vendor]')
+        .forEach((el) => el.addEventListener('change', render));
+      render(); renderExcluded(); renderMethod();
+    }
+
+    init();
+  </script>
+
+  <style is:global>
+    .pd-table { width: 100%; font-size: var(--text-sm); }
+    .pd-table th { text-align: left; font-weight: 600; white-space: nowrap; }
+    .pd-table th.num, .pd-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .pd-meta { display: block; color: var(--fg-faint); font-size: var(--text-xs); }
+    .pd-caveats span { display: block; color: var(--fg-faint); font-size: var(--text-xs); line-height: 1.35; max-width: 34ch; }
+    .pd-count { color: var(--fg-faint); font-size: var(--text-xs); margin: 0.5rem 0 0; }
+    .pd-excluded { margin-top: 1.5rem; }
+    .pd-excluded summary { cursor: pointer; color: var(--fg-muted); font-size: var(--text-sm); }
+    .pd-method p { font-size: var(--text-sm); color: var(--fg-muted); max-width: 80ch; }
+    .pd-table td.empty { color: var(--fg-faint); text-align: center; padding: 1rem; }
+  </style>
+</Base>
