@@ -28,6 +28,12 @@ const description = 'Theoretical dense throughput per dollar of hardware — bou
         server-pull board and a warrantied box are not the same purchase.
       </p>
       <p class="sub">
+        Every row also carries the <strong>listing</strong> it came from — seller, stated condition,
+        the date it was observed, and a link — and expands to show every listing behind that price,
+        cheapest first. That matters more than it sounds: the spread within one accelerator is often
+        wider than the gap between two accelerators, so a 2% ranking difference can be noise.
+      </p>
+      <p class="sub">
         What is left is still not a promise. Theoretical FLOPS is peak silicon, not delivered
         throughput: a card with no bf16 kernels, no flash attention, or a dead software stack
         will not come close. Read the caveat column before buying on the strength of this page —
@@ -70,6 +76,7 @@ const description = 'Theoretical dense throughput per dollar of hardware — bou
             <th class="num">precision</th>
             <th class="num" data-pd-throughput>TFLOPS</th>
             <th class="num" data-pd-price>price</th>
+            <th class="num">as of</th>
             <th class="num" data-pd-ratio>$ / TFLOP</th>
             <th class="num">TFLOPS / $</th>
             <th class="num">W</th>
@@ -78,7 +85,7 @@ const description = 'Theoretical dense throughput per dollar of hardware — bou
           </tr>
         </thead>
         <tbody data-pd-body>
-          <tr><td colspan="10" class="empty">loading…</td></tr>
+          <tr><td colspan="11" class="empty">loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -88,7 +95,7 @@ const description = 'Theoretical dense throughput per dollar of hardware — bou
       <div class="table-wrap">
         <table class="pd-table">
           <thead>
-            <tr><th>accelerator</th><th>supply record</th><th class="num">price</th><th>reason</th></tr>
+            <tr><th>accelerator</th><th>listing</th><th class="num">price</th><th class="num">as of</th><th>reason</th></tr>
           </thead>
           <tbody data-pd-excluded-body></tbody>
         </table>
@@ -135,25 +142,50 @@ const description = 'Theoretical dense throughput per dollar of hardware — bou
 
       const body = document.querySelector('[data-pd-body]');
       if (!rowsOut.length) {
-        body.innerHTML = '<tr><td colspan="10" class="empty">no priced rows in this class</td></tr>';
+        body.innerHTML = '<tr><td colspan="11" class="empty">no priced rows in this class</td></tr>';
       } else {
         body.innerHTML = rowsOut.map((r, i) => {
           const tput = metric === 'tops' ? r.tops : r.tflops;
           const perDollar = metric === 'tops' ? r.tops_per_dollar : r.tflops_per_dollar;
           const ratio = metric === 'tops' ? r.dollars_per_top : r.dollars_per_tflop;
           const perWatt = metric === 'tops' ? null : r.tflops_per_watt;
+          const list = r.listing || {};
+          const url = (list.urls && list.urls[0] && list.urls[0].url) || null;
+          const nList = r.listing_count || 0;
+          const spread = nList > 1 && r.price_high !== r.price_low
+            ? ` · ${money(r.price_low)}–${money(r.price_high)}` : '';
+          const listingTable = (r.listings || []).map((x) => {
+            const u = (x.urls && x.urls[0] && x.urls[0].url) || null;
+            return `<tr>
+              <td class="num">${money(x.price_usd)}${rental ? '/hr' : ''}${x.divisor > 1 ? ` <span class="pd-meta">(${money(x.raw_price_usd)} ÷ ${x.divisor})</span>` : ''}</td>
+              <td>${esc(x.condition || '—')}</td>
+              <td>${esc(x.seller || '—')}</td>
+              <td class="num">${esc(x.observed || '—')}</td>
+              <td>${u ? `<a href="${esc(u)}" target="_blank" rel="noopener">listing</a>` : '<span class="pd-meta">no url</span>'}
+                  ${x.status !== 'verified' ? '<span class="pd-meta">draft</span>' : ''}</td>
+              <td><code class="pd-sid">${esc(x.supply)}</code></td>
+            </tr>`;
+          }).join('');
           return `<tr>
             <td class="num">${i + 1}</td>
             <td><a href="${base}r/accelerators/${esc(r.accel)}/">${esc(r.name)}</a>
               <span class="pd-meta">${esc(r.vendor ?? '')}${r.year ? ' · ' + r.year : ''}${r.vram_gb ? ' · ' + r.vram_gb + 'GB' : ''}</span></td>
             <td class="num"><code>${esc(r.precision)}</code></td>
             <td class="num">${num(tput, 1)}</td>
-            <td class="num">${money(r.price_usd)}${rental ? '/hr' : ''}</td>
+            <td class="num">${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${money(r.price_usd)}</a>` : money(r.price_usd)}${rental ? '/hr' : ''}
+              <details class="pd-list">
+                <summary>${nList} listing${nList === 1 ? '' : 's'}${spread}</summary>
+                <table class="pd-list-table">
+                  <thead><tr><th class="num">price</th><th>condition</th><th>seller</th><th class="num">as of</th><th></th><th>record</th></tr></thead>
+                  <tbody>${listingTable || '<tr><td colspan="6" class="empty">no listing captured</td></tr>'}</tbody>
+                </table>
+              </details></td>
             <td class="num"><strong>${num(ratio, metric === 'tops' ? 3 : 2)}</strong></td>
             <td class="num">${num(perDollar, 3)}</td>
             <td class="num">${r.tdp_w ?? '—'}</td>
             <td class="num">${perWatt == null ? '—' : num(perWatt, 2)}</td>
             <td class="pd-caveats">${(r.caveats || []).map((c) => `<span>${esc(c)}</span>`).join('')}</td>
+            <td class="num pd-asof">${esc(list.observed || '—')}</td>
           </tr>`;
         }).join('');
       }
@@ -172,10 +204,13 @@ const description = 'Theoretical dense throughput per dollar of hardware — bou
         `${list.length} excluded price${list.length === 1 ? '' : 's'}`;
       body.innerHTML = list.map((e) => `<tr>
         <td>${esc(e.accel_name || e.accel)}</td>
-        <td><code>${esc(e.supply)}</code></td>
+        <td>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.supply_name || e.supply)}</a>`
+                    : esc(e.supply_name || e.supply)}
+            <span class="pd-meta">${esc(e.seller || '')} <code class="pd-sid">${esc(e.supply)}</code></span></td>
         <td class="num">${money(e.price_usd)}</td>
+        <td class="num pd-asof">${esc(e.observed || '—')}</td>
         <td>${esc(e.reason)}</td>
-      </tr>`).join('') || '<tr><td colspan="4" class="empty">none</td></tr>';
+      </tr>`).join('') || '<tr><td colspan="5" class="empty">none</td></tr>';
     }
 
     function renderMethod() {
@@ -188,7 +223,7 @@ const description = 'Theoretical dense throughput per dollar of hardware — bou
       const resp = await fetch(`${base}joined/flops_per_dollar.json`);
       if (!resp.ok) {
         document.querySelector('[data-pd-body]').innerHTML =
-          '<tr><td colspan="10" class="empty">view not built — run tools/build_joined_views.py</td></tr>';
+          '<tr><td colspan="11" class="empty">view not built — run tools/build_joined_views.py</td></tr>';
         return;
       }
       data = await resp.json();
@@ -218,5 +253,12 @@ const description = 'Theoretical dense throughput per dollar of hardware — bou
     .pd-excluded summary { cursor: pointer; color: var(--fg-muted); font-size: var(--text-sm); }
     .pd-method p { font-size: var(--text-sm); color: var(--fg-muted); max-width: 80ch; }
     .pd-table td.empty { color: var(--fg-faint); text-align: center; padding: 1rem; }
+    .pd-list { margin-top: 0.25rem; }
+    .pd-list summary { cursor: pointer; color: var(--fg-faint); font-size: var(--text-xs); }
+    .pd-list-table { width: 100%; margin: 0.35rem 0 0.5rem; font-size: var(--text-xs); }
+    .pd-list-table th, .pd-list-table td { padding: 0.15rem 0.35rem; border-bottom: 1px solid var(--border); }
+    .pd-list-table .pd-meta { display: inline; margin-left: 0.25rem; }
+    .pd-sid { font-size: 0.68rem; color: var(--fg-faint); }
+    .pd-asof { white-space: nowrap; color: var(--fg-muted); font-size: var(--text-xs); }
   </style>
 </Base>

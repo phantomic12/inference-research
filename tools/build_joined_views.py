@@ -711,6 +711,14 @@ _ACCESSORY = re.compile(r"\b(adapter|carrier|chassis|enclosure|cable|riser|dock|
 # A listing that says "bare module, needs carrier + heatsink" is a GPU; one whose product IS
 # the carrier is not. The difference is whether a part name appears in it, so the accessory
 # words only disqualify a record that names no accelerator at all.
+# An accessory names the part it fits ("adapter / carrier board for A100 SXM4 modules"), which
+# is how a $900 carrier gets a GPU's accelerator_id and a GPU's headline. Two precise tells:
+# the accessory word leads the name, or the name is a thing "for <a part>". A bare module that
+# merely mentions needing a carrier later in its name is still a module.
+_ACCESSORY_LEAD = re.compile(r"^[^,:(]{0,32}\b(adapter|carrier|chassis|enclosure|cable|riser|"
+                             r"dock|converter|bridge)\b", re.I)
+_ACCESSORY_FOR = re.compile(r"\bfor\s+(the\s+)?(nvidia|amd|intel|tesla|geforce|rtx|a100|h100|"
+                            r"h200|v100|p100|mi[0-9]+|instinct|radeon)\b", re.I)
 _GPU_TOKEN = re.compile(r"\b(v100|a100|a800|h100|h200|h800|b100|b200|b300|a10|a16|a30|a40|"
                         r"l4|l40|l40s|p4|p40|p100|k80|m40|t4|rtx|geforce|quadro|tesla|instinct|"
                         r"radeon|mi[0-9]+|mlu[0-9]+|br[0-9]+|ascend|gaudi|grayskull|wormhole|"
@@ -763,7 +771,8 @@ def _best_flops(rec: dict, prefs: tuple[str, ...]):
     return None, None, None
 
 
-def _buy_candidates(supply: dict[str, dict], accel_id: str) -> tuple[list[dict], list[dict]]:
+def _buy_candidates(supply: dict[str, dict], accel_id: str,
+                    sources: dict[str, dict]) -> tuple[list[dict], list[dict]]:
     """Per-unit purchase candidates, plus everything rejected and why."""
     keep, drop = [], []
     for sid, s in supply.items():
@@ -778,7 +787,8 @@ def _buy_candidates(supply: dict[str, dict], accel_id: str) -> tuple[list[dict],
             continue
         basis = str(s.get("price_basis") or "")
         name = str(s.get("name") or "")
-        if (_ACCESSORY.search(name) and not _GPU_TOKEN.search(name)
+        if ((_ACCESSORY.search(name) and not _GPU_TOKEN.search(name)
+             or _ACCESSORY_LEAD.search(name) or _ACCESSORY_FOR.search(name))
                 and len(s.get("accelerator_ids") or []) == 1):
             drop.append({"supply": sid, "price_usd": price,
                          "reason": "the product is the carrier/chassis, not a GPU"})
@@ -790,7 +800,8 @@ def _buy_candidates(supply: dict[str, dict], accel_id: str) -> tuple[list[dict],
             continue
         div, phrase = _bulk_divisor(name, basis)
         keep.append({"supply": sid, "class": cls, "price_usd": price / div, "raw_price_usd": price,
-                     "divisor": div, "divisor_basis": phrase, "status": s.get("status")})
+                     "divisor": div, "divisor_basis": phrase, "status": s.get("status"),
+                     "listing": _listing(sid, s, sources, price / div, price, div)})
     return keep, drop
 
 
@@ -812,6 +823,65 @@ def _drop_outliers(cands: list[dict]) -> tuple[list[dict], list[dict]]:
         else:
             keep.append(c)
     return keep, drop
+
+
+_OBSERVED = re.compile(r"OBSERVED[:\s]*([0-9]{4}-[0-9]{2}-[0-9]{2})")
+_LISTED_TITLE = re.compile(r"listing ['\"\u2018\u201c]([^'\"\u2019\u201d]{6,120})['\"\u2019\u201d]")
+
+
+def _condition(kind: str, name: str, basis: str) -> str:
+    """What the listing says about the part's condition, in the listing's own terms."""
+    blob = f"{name} {basis[:400]}".lower()
+    if "refurb" in blob or "renewed" in blob:
+        return "refurbished"
+    if "open box" in blob or "open-box" in blob:
+        return "open box"
+    if "new old stock" in blob or "nos" in blob or "old stock" in blob:
+        return "new old stock"
+    if "server pull" in blob or "pull" in blob or "ex-datacenter" in blob or "ex-datacenter" in blob:
+        return "used (datacenter pull)"
+    if kind == "used-market" or kind == "auction" or kind == "broker":
+        return "used"
+    if kind in NEW_KINDS:
+        return "new"
+    return "unspecified"
+
+
+def _listing(sid: str, s: dict, sources: dict[str, dict], price_per_unit: float,
+             raw_price: float, divisor: int) -> dict:
+    """Everything a reader needs to go and look at the actual listing.
+
+    A price with no listing behind it is a number from nowhere, so this carries the record id,
+    the seller, the condition, the date it was observed, and the source URL(s) — resolved from
+    the supply record's `sources` into the source records, which is where the URLs live.
+    """
+    basis = str(s.get("price_basis") or "")
+    urls = []
+    for ref in (s.get("sources") or []):
+        src = sources.get(ref) or {}
+        url = src.get("url")
+        if isinstance(url, str) and url.startswith("http"):
+            urls.append({"url": url, "publisher": src.get("publisher"),
+                         "accessed": src.get("accessed"), "source": ref})
+    obs = _OBSERVED.search(basis)
+    title = _LISTED_TITLE.search(basis)
+    return {
+        "supply": sid,
+        "title": s.get("name"),
+        "listed_title": title.group(1).strip() if title else None,
+        "seller": s.get("vendor"),
+        "condition": _condition(str(s.get("kind") or ""), str(s.get("name") or ""), basis),
+        "observed": obs.group(1) if obs else (s.get("updated") if isinstance(s.get("updated"), str) else None),
+        "region": s.get("region"),
+        "availability": s.get("availability"),
+        "channels": s.get("channels") or [],
+        "price_usd": round(price_per_unit, 2),
+        "raw_price_usd": round(raw_price, 2) if isinstance(raw_price, (int, float)) else None,
+        "divisor": divisor,
+        "status": s.get("status"),
+        "confidence": s.get("confidence"),
+        "urls": urls[:3],
+    }
 
 
 def _pick(cands: list[dict], cls: str) -> dict | None:
@@ -857,6 +927,7 @@ def _caveats(rec: dict, entry: dict, prec: str, density: str, cls: str, cand: di
 def build_flops_per_dollar() -> dict:
     accelerators = load(DIRS["accelerator"])
     supply = load(DIRS["supply"])
+    sources = load(DIRS["source"])
     rows: list[dict] = []
     quant_rows: list[dict] = []
     excluded: list[dict] = []
@@ -868,20 +939,29 @@ def build_flops_per_dollar() -> dict:
         if entry is None and qentry is None:
             continue
 
-        cands, drops = _buy_candidates(supply, aid)
+        cands, drops = _buy_candidates(supply, aid, sources)
         cands, outliers = _drop_outliers(cands)
         for d in drops + outliers:
-            excluded.append(dict(d, accel=aid, accel_name=rec.get("name")))
+            srec = supply.get(d["supply"]) or {}
+            ex_listing = _listing(d["supply"], srec, sources, d["price_usd"], d["price_usd"], 1)
+            excluded.append(dict(d, accel=aid, accel_name=rec.get("name"),
+                                 supply_name=srec.get("name"),
+                                 seller=srec.get("vendor"),
+                                 observed=ex_listing.get("observed"),
+                                 url=(ex_listing["urls"][0]["url"] if ex_listing.get("urls") else None)))
 
         # rental: curated per-GPU-hour quotes, already divided for multi-GPU listings
         for sid, quotes in PRICE_QUOTES.items():
             for q in quotes:
                 if q.get("accel") != aid or not q.get("usd"):
                     continue
+                srec = supply.get(sid) or {}
                 cands.append({"supply": sid, "class": "rental", "price_usd": float(q["usd"]),
                               "raw_price_usd": float(q["usd"]), "divisor": 1,
                               "divisor_basis": "curated quote", "status": "verified",
-                              "tier": q.get("tier"), "quote_basis": q.get("basis")})
+                              "tier": q.get("tier"), "quote_basis": q.get("basis"),
+                              "listing": _listing(sid, srec, sources, float(q["usd"]),
+                                                  float(q["usd"]), 1)})
 
         if not cands:
             if entry is not None:
@@ -892,8 +972,17 @@ def build_flops_per_dollar() -> dict:
             cand = _pick(cands, cls)
             if not cand:
                 continue
+            # every listing behind this class, cheapest first, so the page can show the spread
+            # and link out instead of asserting a single number
+            same = sorted([c for c in cands if c["class"] == cls], key=lambda c: c["price_usd"])
+            listings = [dict(c.get("listing") or {}) for c in same][:12]
             base = {
                 "accel": aid, "name": rec.get("name"), "vendor": rec.get("vendor"),
+                "listing": (cand.get("listing") or None),
+                "listings": listings,
+                "listing_count": len(same),
+                "price_low": round(same[0]["price_usd"], 2) if same else None,
+                "price_high": round(same[-1]["price_usd"], 2) if same else None,
                 "year": rec.get("release_year"), "vram_gb": rec.get("vram_gb"),
                 "memory_bandwidth_gbps": rec.get("memory_bandwidth_gbps"), "tdp_w": rec.get("tdp_w"),
                 "price_class": cls, "price_usd": round(cand["price_usd"], 2),
@@ -957,6 +1046,12 @@ def build_flops_per_dollar() -> dict:
             "excluded_units": "Cloud records priced per 1M tokens (Groq, Cerebras, Together serverless, "
                               "the frontier APIs) are services, not hardware rental, and cannot share an "
                               "axis with a GPU-hour.",
+            "listings": "Every row carries the listing it came from: the supply record id, the seller, "
+                        "the condition the listing states, the date it was observed, and the source URL "
+                        "resolved from that record's sources. Expand a row to see all listings for that "
+                        "accelerator in that market, cheapest first — the spread is often wider than the "
+                        "ranking gap, so a 2% difference between two accelerators may be noise while a "
+                        "single accelerator quotes 2x from one seller to the next.",
             "caveat": "Theoretical FLOPS is not delivered FLOPS: a card with no bf16 kernels, no flash "
                       "attention, or a dead software stack will not reach its number. Read the caveats "
                       "column before buying anything on this page.",
