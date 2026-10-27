@@ -7,10 +7,12 @@ NOT modify data/, schemas/, or tools/build_site_data.py.
 
     python tools/build_joined_views.py            # writes site/public/joined/
 
-Three joins are built:
+Five joins are built:
   1. cost-per-token: supply prices x benchmark throughput -> USD per million tokens
   2. compatibility: model architecture families x engine support matrix
   3. roofline: accelerator specs x flop classes -> ridge points and crossovers
+  4. worth-running: model capability x recency x hardware fit
+  5. flops-per-dollar: dense throughput per dollar, new / used / rented
 """
 from __future__ import annotations
 
@@ -667,6 +669,304 @@ def build_worth_running() -> dict:
 
 
 
+
+# ===========================================================================
+# 5. FLOPS PER DOLLAR — compute per dollar, bought new, bought used, or rented
+# ===========================================================================
+
+# This join is easy to make and easy to make useless, because the raw supply pool
+# prices four different things in the same `price_usd` field: one card, eight cards
+# in a tray, a whole rack of servers, and an adapter that carries a card. Sorting on
+# price alone puts a $130 SXM2-to-PCIe carrier at the top of a GPU table, which is
+# not a wrong ranking so much as a wrong quantity. So:
+#
+#   * quantities. A price whose basis names a count ("8x", "32x", "4 nodes x 8 GPUs")
+#     is divided down to one accelerator, and the divisor is kept in the row. Anything
+#     still outside 3x that accelerator's median is treated as a different product
+#     (chassis, accessory, complete server) and moved to `excluded` with the reason.
+#     Nothing is silently discarded.
+#   * accessories. A carrier, chassis or fan bundle links to a card's accelerator_id in
+#     the supply pool, so the id alone does not mean "one GPU". Only the record NAME is
+#     matched for those words: price_basis routinely describes the sibling products
+#     ("8x tray asks $11,995") next to the part's own price, and matching on prose drops
+#     legitimate single-card listings.
+#   * sparse figures. 2:4 sparsity doubles the headline, so only dense figures rank.
+#   * precisions. bf16 where the part publishes it, fp16 otherwise — never fp64 or fp32,
+#     which say nothing about inference.
+#   * what "a dollar" buys. Purchase and rental are different markets. Rental rates come
+#     from cost_per_token.PRICE_QUOTES, which already normalises per GPU-hour and records
+#     the literal evidence substring; the token-priced cloud records ("$0.6 per 1M
+#     TOKENS") are services, not hardware, and cannot share this axis.
+#
+# Asking price is not a sold price; theoretical FLOPS is not delivered FLOPS. Both are in
+# the payload's method block and in every row's caveats.
+
+NEW_KINDS = {"oem-direct", "regional-reseller", "enterprise-distributor", "integrator", "self-build"}
+USED_KINDS = {"used-market", "auction", "broker"}
+HEADLINE_PRECISION = ("bf16", "fp16")
+QUANT_PRECISION = ("fp8", "int8", "fp4", "int4")
+
+_ACCESSORY = re.compile(r"\b(adapter|carrier|chassis|enclosure|cable|riser|dock|"
+                        r"power supply|heatsink|fan kit|without gpus|no gpus)\b", re.I)
+# A listing that says "bare module, needs carrier + heatsink" is a GPU; one whose product IS
+# the carrier is not. The difference is whether a part name appears in it, so the accessory
+# words only disqualify a record that names no accelerator at all.
+_GPU_TOKEN = re.compile(r"\b(v100|a100|a800|h100|h200|h800|b100|b200|b300|a10|a16|a30|a40|"
+                        r"l4|l40|l40s|p4|p40|p100|k80|m40|t4|rtx|geforce|quadro|tesla|instinct|"
+                        r"radeon|mi[0-9]+|mlu[0-9]+|br[0-9]+|ascend|gaudi|grayskull|wormhole|"
+                        r"blackhole|tpu|trainium|inferentia|epyc|xeon|strix|m[0-9]\s*(ultra|max))\b",
+                        re.I)
+_COUNT_PATTERNS = (
+    re.compile(r"=\s*(\d+)\s*x\b", re.I),                                     # "= 32x NVIDIA A100"
+    re.compile(r"\b(\d+)\s*x\s+(?:NVIDIA|AMD|Intel|Huawei|Gaudi|Ascend|Tesla|GeForce|RTX|"
+               r"Instinct|Radeon|Xeon|nvidia|amd)", re.I),                    # "8x Gaudi2 tray"
+    re.compile(r"(\d+)\s*nodes?\s*x\s*(\d+)\s*gpu", re.I),                     # "4 nodes x 8 GPUs"
+    re.compile(r"\b(\d+)-gpu\s+(?:server|tray|system)", re.I),                 # "8-GPU server"
+)
+
+
+def _bulk_divisor(name: str, basis: str) -> tuple[int, str]:
+    """How many accelerators the quoted price covers, and the phrase that said so.
+
+    The count must describe THIS listing, not a sibling product. Prose like "8x Gaudi2 tray
+    asks $11,995" sits in the price_basis of a single-module record, and dividing the module's
+    own $2,100 by that 8 turns a $2,100 part into a fictional $262 one — the exact arithmetic
+    that would put a Gaudi 2 at the top of the table. So the record NAME is authoritative,
+    with two explicit basis forms ("N nodes x M GPUs", "= Nx") as fallbacks.
+    """
+    # the lookbehind matters: "MI250X" and "MI50X" end in a digit-then-x and must not be read
+    # as "250 cards" and "50 cards", which priced an Instinct MI250X at $20
+    m = re.search(r"(?<![\w.])(\d+)\s*x\b", name or "", re.I)
+    if m and int(m.group(1)) > 1:
+        return int(m.group(1)), m.group(0)
+    m = _COUNT_PATTERNS[2].search(basis)
+    if m:
+        return int(m.group(1)) * int(m.group(2)), m.group(0)
+    m = _COUNT_PATTERNS[0].search(basis)
+    if m and int(m.group(1)) > 1:
+        return int(m.group(1)), m.group(0)
+    return 1, ""
+
+
+def _best_flops(rec: dict, prefs: tuple[str, ...]):
+    """Highest dense figure in the most modern precision the part publishes."""
+    for prec in prefs:
+        cands = [e for e in (rec.get("flops") or [])
+                 if str(e.get("precision")) == prec
+                 and isinstance(e.get("tflops"), (int, float)) and e["tflops"] > 0]
+        if not cands:
+            continue
+        dense = [e for e in cands if e.get("dense")]
+        if dense:
+            return max(dense, key=lambda e: e["tflops"]), prec, "dense"
+        return max(cands, key=lambda e: e["tflops"]), prec, "sparse-only"
+    return None, None, None
+
+
+def _buy_candidates(supply: dict[str, dict], accel_id: str) -> tuple[list[dict], list[dict]]:
+    """Per-unit purchase candidates, plus everything rejected and why."""
+    keep, drop = [], []
+    for sid, s in supply.items():
+        price = s.get("price_usd")
+        if not isinstance(price, (int, float)) or price <= 0:
+            continue
+        if accel_id not in (s.get("accelerator_ids") or []):
+            continue
+        kind = s.get("kind")
+        cls = "new" if kind in NEW_KINDS else "used" if kind in USED_KINDS else None
+        if cls is None:
+            continue
+        basis = str(s.get("price_basis") or "")
+        name = str(s.get("name") or "")
+        if (_ACCESSORY.search(name) and not _GPU_TOKEN.search(name)
+                and len(s.get("accelerator_ids") or []) == 1):
+            drop.append({"supply": sid, "price_usd": price,
+                         "reason": "the product is the carrier/chassis, not a GPU"})
+            continue
+        # name only: price_basis often quotes a sibling chassis price ("bare chassis, no GPUs")
+        if re.search(r"\b(no|without)\s+gpus?\b|bare chassis", name, re.I):
+            drop.append({"supply": sid, "price_usd": price,
+                         "reason": "listed without the GPUs installed"})
+            continue
+        div, phrase = _bulk_divisor(name, basis)
+        keep.append({"supply": sid, "class": cls, "price_usd": price / div, "raw_price_usd": price,
+                     "divisor": div, "divisor_basis": phrase, "status": s.get("status")})
+    return keep, drop
+
+
+def _drop_outliers(cands: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Remove prices that are clearly a different product from the rest for that accelerator."""
+    if len(cands) < 2:
+        return cands, []
+    prices = sorted(c["price_usd"] for c in cands)
+    n = len(prices)
+    mid = prices[n // 2] if n % 2 else (prices[n // 2 - 1] + prices[n // 2]) / 2
+    if mid <= 0:
+        return cands, []
+    keep, drop = [], []
+    for c in cands:
+        if c["price_usd"] > 3 * mid or c["price_usd"] < mid / 3:
+            drop.append({"supply": c["supply"], "price_usd": round(c["raw_price_usd"], 2),
+                         "reason": f"outside 3x this accelerator's median (${mid:,.0f}) — looks like "
+                                   f"a different product (chassis, accessory or complete server)"})
+        else:
+            keep.append(c)
+    return keep, drop
+
+
+def _pick(cands: list[dict], cls: str) -> dict | None:
+    pool = [c for c in cands if c["class"] == cls]
+    if not pool:
+        return None
+    verified = [c for c in pool if c.get("status") == "verified"]
+    return min(verified or pool, key=lambda c: c["price_usd"])
+
+
+def _caveats(rec: dict, entry: dict, prec: str, density: str, cls: str, cand: dict) -> list[str]:
+    out = []
+    if density == "sparse-only":
+        out.append("only a sparse figure is published; the dense number is lower, so this is listed "
+                   "but not ranked")
+    year = rec.get("release_year")
+    if prec == "fp16":
+        # only call it pre-Ampere when the date supports it: an RDNA3 card headlines fp16 and
+        # does have bf16 support, so a blanket claim would be wrong about the part
+        if isinstance(year, int) and year <= 2019:
+            out.append("fp16 headline and no bf16 figure: a pre-Ampere part, so modern bf16 kernels "
+                       "are not what it runs")
+        else:
+            out.append("scored on fp16 because no bf16 figure is recorded; the silicon may still run "
+                       "bf16, so treat this as a floor")
+    if entry.get("vendor_claim"):
+        out.append("vendor-published figure")
+    if isinstance(year, int) and year <= 2019:
+        out.append("pre-Ampere design: no flash-attention kernels in most stacks and a narrow "
+                   "software story")
+    if cand.get("divisor", 1) > 1:
+        out.append(f"price divided by {cand['divisor']} from a multi-unit listing "
+                   f"('{cand['divisor_basis']}'), so this is a per-accelerator figure")
+    if cand.get("status") != "verified":
+        out.append("price is draft, not verified")
+    if cls == "rental":
+        out.append("per GPU-hour asking rate; excludes host, storage, egress and idle time")
+    else:
+        out.append("asking price, not a completed sale")
+    return out
+
+
+def build_flops_per_dollar() -> dict:
+    accelerators = load(DIRS["accelerator"])
+    supply = load(DIRS["supply"])
+    rows: list[dict] = []
+    quant_rows: list[dict] = []
+    excluded: list[dict] = []
+    unpriced: list[dict] = []
+
+    for aid, rec in sorted(accelerators.items()):
+        entry, prec, density = _best_flops(rec, HEADLINE_PRECISION)
+        qentry, qprec, qdensity = _best_flops(rec, QUANT_PRECISION)
+        if entry is None and qentry is None:
+            continue
+
+        cands, drops = _buy_candidates(supply, aid)
+        cands, outliers = _drop_outliers(cands)
+        for d in drops + outliers:
+            excluded.append(dict(d, accel=aid, accel_name=rec.get("name")))
+
+        # rental: curated per-GPU-hour quotes, already divided for multi-GPU listings
+        for sid, quotes in PRICE_QUOTES.items():
+            for q in quotes:
+                if q.get("accel") != aid or not q.get("usd"):
+                    continue
+                cands.append({"supply": sid, "class": "rental", "price_usd": float(q["usd"]),
+                              "raw_price_usd": float(q["usd"]), "divisor": 1,
+                              "divisor_basis": "curated quote", "status": "verified",
+                              "tier": q.get("tier"), "quote_basis": q.get("basis")})
+
+        if not cands:
+            if entry is not None:
+                unpriced.append({"id": aid, "name": rec.get("name"), "reason": "no usable price"})
+            continue
+
+        for cls in ("new", "used", "rental"):
+            cand = _pick(cands, cls)
+            if not cand:
+                continue
+            base = {
+                "accel": aid, "name": rec.get("name"), "vendor": rec.get("vendor"),
+                "year": rec.get("release_year"), "vram_gb": rec.get("vram_gb"),
+                "memory_bandwidth_gbps": rec.get("memory_bandwidth_gbps"), "tdp_w": rec.get("tdp_w"),
+                "price_class": cls, "price_usd": round(cand["price_usd"], 2),
+                "price_unit": "per-gpu-hour" if cls == "rental" else "per-accelerator",
+                "price_sources": len([c for c in cands if c["class"] == cls]),
+                "price_status": cand.get("status"), "supply": cand["supply"],
+                "divisor": cand.get("divisor", 1),
+                "tier": cand.get("tier") if cls == "rental" else None,
+            }
+            if entry is not None:
+                tflops = float(entry["tflops"])
+                row = dict(base)
+                # a 384-accelerator supernode divided down is a real $/TFLOP but not a purchase
+                # anyone on this page can make, so it is listed and not ranked
+                system_scale = cand.get("divisor", 1) >= 64
+                row.update({
+                    "system_scale": system_scale,
+                    "metric": "flops", "precision": prec, "tflops": tflops, "density": density,
+                    "dollars_per_tflop": round(cand["price_usd"] / tflops, 3),
+                    "tflops_per_dollar": round(tflops / cand["price_usd"], 4),
+                    "tflops_per_watt": (round(tflops / rec["tdp_w"], 3)
+                                        if isinstance(rec.get("tdp_w"), (int, float)) and rec["tdp_w"] else None),
+                    "ranked": density == "dense" and not system_scale,
+                    "caveats": _caveats(rec, entry, prec, density, cls, cand)
+                               + (["price is per accelerator inside a large multi-accelerator "
+                                   "system, not a single-unit purchase"] if system_scale else []),
+                })
+                rows.append(row)
+            if qentry is not None:
+                qt = float(qentry["tflops"])
+                qrow = dict(base)
+                qrow.update({
+                    "metric": "tops", "precision": qprec, "tops": qt, "density": qdensity,
+                    "dollars_per_top": round(cand["price_usd"] / qt, 4),
+                    "tops_per_dollar": round(qt / cand["price_usd"], 3),
+                    "ranked": qdensity == "dense",
+                    "caveats": _caveats(rec, qentry, qprec, qdensity, cls, cand),
+                })
+                quant_rows.append(qrow)
+
+    def order(rs, key):
+        rs = [r for r in rs if r["ranked"]]
+        rs.sort(key=lambda r: ({"used": 0, "new": 1, "rental": 2}[r["price_class"]], r[key]))
+        return rs
+
+    ranked, quant_ranked = order(rows, "dollars_per_tflop"), order(quant_rows, "dollars_per_top")
+    return {
+        "generated": "2026-10-24",
+        "method": {
+            "what": "Theoretical dense throughput per dollar of hardware, split by how it is bought: "
+                    "new, used, or rented by the GPU-hour. Lower $/TFLOP is better.",
+            "flops": "The highest dense figure in the most modern precision the part publishes — bf16 "
+                     "where it exists, fp16 otherwise. Sparse-only figures are listed but not ranked, "
+                     "because 2:4 sparsity doubles the headline while the dense number is what a "
+                     "serving stack sees.",
+            "price": "Purchase prices are the cheapest verified asking price per accelerator; a "
+                     "multi-unit listing is divided down and the divisor is named in the row. Prices "
+                     "outside 3x an accelerator's median are treated as a different product and moved "
+                     "to the excluded list with the reason. Rental rates are curated per-GPU-hour "
+                     "quotes whose evidence substring is checked by cost_per_token.py.",
+            "excluded_units": "Cloud records priced per 1M tokens (Groq, Cerebras, Together serverless, "
+                              "the frontier APIs) are services, not hardware rental, and cannot share an "
+                              "axis with a GPU-hour.",
+            "caveat": "Theoretical FLOPS is not delivered FLOPS: a card with no bf16 kernels, no flash "
+                      "attention, or a dead software stack will not reach its number. Read the caveats "
+                      "column before buying anything on this page.",
+        },
+        "counts": {"ranked": len(ranked), "listed": len(rows), "quant": len(quant_ranked),
+                   "excluded": len(excluded), "unpriced": len(unpriced)},
+        "rows": rows, "quant_rows": quant_rows, "excluded": excluded, "unpriced": unpriced,
+    }
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -687,6 +987,13 @@ def main() -> None:
     (OUT / "roofline.json").write_text(
         json.dumps(roof, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"  {len(roof['accelerators'])} accelerators, {len(roof['flop_classes'])} flop classes")
+
+    print("Building FLOPS-per-dollar view...")
+    fpd = build_flops_per_dollar()
+    (OUT / "flops_per_dollar.json").write_text(
+        json.dumps(fpd, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"  {fpd['counts']['ranked']} ranked rows, {fpd['counts']['quant']} quant rows, "
+          f"{fpd['counts']['excluded']} prices excluded")
 
     print("Building worth-running ranking...")
     worth = build_worth_running()
