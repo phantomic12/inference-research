@@ -1,0 +1,334 @@
+{
+  "id": "lfm3-1-7b",
+  "type": "model",
+  "name": "LFM3-1.7B",
+  "status": "verified",
+  "confidence": 0.84,
+  "updated": "2026-10-28",
+  "sources": [
+    "hf-lfm3-1-7b-card"
+  ],
+  "family": "lfm",
+  "vendor": "Liquid AI",
+  "release_year": 2026,
+  "architecture": "hybrid-attention-ssm",
+  "params_b": 1.729,
+  "active_params_b": 1.729,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 2048,
+  "num_layers": 24,
+  "num_kv_heads": 4,
+  "head_dim": 128,
+  "gqa_ratio": 4,
+  "max_position_embeddings": 262144,
+  "context_scaling": "native to 262144: rope_parameters gives two policies, full_attention with rope_type default and rope_theta 1000000 plus partial_rotary_factor 0.5, sliding_attention with rope_theta 10000; no rope_scaling key",
+  "activation": "silu",
+  "attention_variant": "tri-hybrid: 13 gated short-convolution layers, 5 sliding-window attention layers (sliding_window 256), 6 full-attention layers, per config.json layer_types",
+  "kv_cache_bytes_per_token": 0,
+  "flops_per_token_active": 3457603072.0,
+  "open_weights": true,
+  "license": "LFM Open License v1.0 (license: other)",
+  "notes": "ADDED 2026-10-28 from the HF trending feed (rank 14, 6,311 downloads, 253 likes at crawl). Third LFM generation and the first to mix three layer types: 13 conv, 5 sliding, 6 full out of 24, per config.json layer_types - not the 10-conv/6-full split of LFM2/LFM2.5. PARAMS: card states 1.73B; safetensors total is 1,728,801,536 so params_b is 1.7288 and active_params_b equals it (dense). flops_per_token_active = 2 x 1.728801536e9 = 3.4576e9. KV: recorded 0 on the repo's convention for hybrid/SSM stacks (no growing per-token cache), but the nonzero part is: 6 full-attention layers x 2 (K+V) x 4 kv heads x 128 head_dim x 2 bytes = 12,288 B/token, PLUS 5 sliding-window layers x 2,048 B/token x a 256-token window = 2,621,440 B fixed per sequence. At 262,144 tokens the attention slice is 262,144 x 12,288 = 3.22 GB resident and then flat, versus 24 dense layers at the same geometry = 12,582,912 B/token and 3.3 TB at full context. Dense-check: a 24-layer GQA 16/4 model at head_dim 128 would be 12,582,912 B/token. Card's own comparison is against LFM2.5-2.6B, MiniCPM5-2B, Gemma 4 E4B, Qwen3.5-4B and Qwen3.5-9B, i.e. it claims 9B-class agentic behaviour at 1.73B and 1 GB at 4-bit. HARNESS CAVEAT: every row is vendor-run with the harness named per row (OpenClaw for BrowseComp-Plus and WebArena-Verified, OpenCode for the SWE/terminal rows, greedy for BFCL and Claw-Eval), so cross-card comparison with models_run-on a different scaffold is indicative only. Default serving is BF16 at 262,144 tokens. It is NOT recommended by its own card for agentic coding or complex multi-step reasoning.",
+  "release_date": "2026-10-23",
+  "task": "text-generation",
+  "context_scaling_method": "native",
+  "layer_types": [
+    "conv",
+    "conv",
+    "full_attention",
+    "conv",
+    "sliding_attention",
+    "conv",
+    "full_attention",
+    "conv",
+    "sliding_attention",
+    "conv",
+    "full_attention",
+    "conv",
+    "sliding_attention",
+    "conv",
+    "full_attention",
+    "conv",
+    "sliding_attention",
+    "conv",
+    "full_attention",
+    "conv",
+    "sliding_attention",
+    "conv",
+    "full_attention",
+    "conv"
+  ],
+  "attention_layer_indices": [
+    2,
+    6,
+    10,
+    14,
+    18,
+    22
+  ],
+  "benchmarks": [
+    {
+      "name": "Agentic: LiveClaw",
+      "score": 45.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. Claw harness, 3 trials per task. WINS vs MiniCPM5-2B 30.37, Gemma 4 E4B 20.36, Qwen3.5-4B 19.94 and Qwen3.5-9B 35.77 - the widest ratio on the card (2.3x the 9B)."
+    },
+    {
+      "name": "Agentic: Claw-Eval General (EN), average",
+      "score": 68.64,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. WINS vs MiniCPM5-2B 60.74, Qwen3.5-4B 61.96 and Qwen3.5-9B 66.53. Catalog has occamy-1-0 at 82.2 on 'Claw-Eval (average)', but that is a different Claw-Eval variant and not comparable row-for-row."
+    },
+    {
+      "name": "Agentic: Claw-Eval General (EN), pass^3",
+      "score": 51.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. pass^3 over 3 trials. WINS vs MiniCPM5-2B 34.58 and Qwen3.5-4B 42.99; a hair under Qwen3.5-9B 51.87."
+    },
+    {
+      "name": "Agentic: BrowseComp-Plus (OpenClaw subset)",
+      "score": 37.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. OpenClaw agent, greedy, 8,192 tokens per turn. LOSSES to Qwen3.5-9B 38.00; beats Qwen3.5-4B 24.67."
+    },
+    {
+      "name": "Agentic: WebArena-Verified",
+      "score": 38.42,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. Up to 40 steps. Widest margin on the card: vs MiniCPM5-2B 9.11 and Qwen3.5-4B 21.92, and above Qwen3.5-9B 28.94."
+    },
+    {
+      "name": "Agentic: EnterpriseOps-Gym",
+      "score": 28.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. WINS vs MiniCPM5-2B 13.41; LOSSES to Qwen3.5-9B 28.97."
+    },
+    {
+      "name": "Agentic: AutomationBench (public)",
+      "score": 41.29,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. WINS vs MiniCPM5-2B 4.71 and Qwen3.5-4B 8.67 by roughly 4-9x."
+    },
+    {
+      "name": "Tool use: BFCL V4",
+      "score": 71.39,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. Greedy decoding, up to 32,768 output tokens. WINS vs MiniCPM5-2B 62.65, Qwen3.5-4B 55.12 and Qwen3.5-9B 62.83."
+    },
+    {
+      "name": "Tool use: ToolSandbox",
+      "score": 80.36,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. WINS vs MiniCPM5-2B 68.16, Qwen3.5-9B 76.41 and LFM2.5-2.6B 78.04."
+    },
+    {
+      "name": "Tool use: MCP-Atlas",
+      "score": 32.57,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. Up to 256 turns. WINS vs MiniCPM5-2B 26.38; LOSSES to Qwen3.5-4B 41.37 and Qwen3.5-9B 42.67 on the same card."
+    },
+    {
+      "name": "Tool use: tau^3-bench (4 domains), average",
+      "score": 68.01,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. LOSS: MiniCPM5-2B 69.44 is above it on the same card; it beats Qwen3.5-4B 65.98 and Qwen3.5-9B 67.11."
+    },
+    {
+      "name": "Agentic coding: SWE-bench Verified (OpenCode)",
+      "score": 43.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. OpenCode scaffold. WINS vs MiniCPM5-2B 34.80 and Qwen3.5-4B 41.20; LOSSES to Qwen3.5-9B 51.20. The catalog's 2B class best is minicpm5-2b 46.4, but that is a different (non-OpenCode) harness, so the two are not directly comparable."
+    },
+    {
+      "name": "Agentic coding: SWE-bench Multilingual (OpenCode)",
+      "score": 23.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. Beats MiniCPM5-2B 15.67; loses to Qwen3.5-9B 35.00."
+    },
+    {
+      "name": "Agentic coding: Terminal-Bench 2.1 (OpenCode)",
+      "score": 12.92,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. WINS vs MiniCPM5-2B 5.62 and Gemma 4 E4B 0.00; LOSSES to Qwen3.5-4B 13.48 and Qwen3.5-9B 17.98."
+    },
+    {
+      "name": "Coding: LiveCodeBench v6",
+      "score": 73.46,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. WINS vs MiniCPM5-2B 70.52, Qwen3.5-4B 61.99 and Qwen3.5-9B 69.86."
+    },
+    {
+      "name": "Coding: LiveCodeBench Pro 25Q2",
+      "score": 31.74,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. WINS vs MiniCPM5-2B 29.34 and Qwen3.5-4B 24.25; LOSSES to Qwen3.5-9B 34.43."
+    },
+    {
+      "name": "Coding: SciCode",
+      "score": 28.47,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. WINS vs MiniCPM5-2B 27.78; LOSSES to Qwen3.5-9B 31.60."
+    },
+    {
+      "name": "Instruction following: IFEval",
+      "score": 96.66,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. Beats MiniCPM5-2B 87.83 and Qwen3.5-9B 92.08; catalog class best was minicpm5-2b 86.7."
+    },
+    {
+      "name": "Instruction following: IFBench",
+      "score": 73.03,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. Beats MiniCPM5-2B 62.08 and Qwen3.5-9B 48.84; catalog class best was minicpm5-2b 66.3."
+    },
+    {
+      "name": "Instruction following: IFStruct",
+      "score": 93.72,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. Beats MiniCPM5-2B 72.65 and Qwen3.5-9B 89.20."
+    },
+    {
+      "name": "Instruction following: Multi-IF",
+      "score": 89.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. Beats MiniCPM5-2B 73.19 and Qwen3.5-9B 84.44; catalog class best was minicpm5-2b 71.8."
+    },
+    {
+      "name": "Knowledge: GPQA Diamond",
+      "score": 63.37,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. LOSS: MiniCPM5-2B 65.15 and Qwen3.5-4B 75.76 are above it on the same card; catalog class best minicpm5-2b 70.2."
+    },
+    {
+      "name": "Knowledge: Humanity's Last Exam (no tools)",
+      "score": 7.17,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. LOSS: MiniCPM5-2B 8.20 on the same card."
+    },
+    {
+      "name": "Knowledge: Humanity's Last Exam (with tools)",
+      "score": 13.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. WINS vs MiniCPM5-2B 11.50 and Qwen3.5-4B 11.60; LOSSES to Qwen3.5-9B 17.50."
+    },
+    {
+      "name": "Knowledge: AA-Omniscience (public)",
+      "score": 0.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. Hallucination-penalised index; MiniCPM5-2B -5.00 and Qwen3.5-4B -57.17 on the same card."
+    },
+    {
+      "name": "Knowledge: AA-Omniscience non-hallucination (public)",
+      "score": 92.93,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. Highest on the card; Qwen3.5-4B 13.64, Qwen3.5-9B 52.59."
+    },
+    {
+      "name": "Long context: AA-LCR",
+      "score": 52.83,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. WINS vs MiniCPM5-2B 49.34; LOSSES to Qwen3.5-9B 62.00."
+    },
+    {
+      "name": "Long context: RULER 128K",
+      "score": 65.56,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. LOSS: Qwen3.5-4B 84.63 and Qwen3.5-9B 87.11 are far above it - the one axis where the small hybrid does not hold up."
+    },
+    {
+      "name": "Average (31 rows, unweighted mean)",
+      "score": 49.37,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lfm3-1-7b-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmarks', column 'LFM3 1.7B'. All models served with vLLM in BF16 at full context (262,144 for LFM3-1.7B), temp 0.6 / top_p 0.95 unless a row's detail block overrides it. Card's own Average row; beats Qwen3.5-9B 47.24 despite being 5.3x smaller, and Qwen3.5-4B 39.27."
+    }
+  ]
+}
