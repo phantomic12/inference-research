@@ -1,0 +1,87 @@
+{
+  "id": "deepseek-v4-fable",
+  "type": "model",
+  "name": "DeepSeek-v4-Fable",
+  "family": "deepseek-v4",
+  "vendor": "Chunjiang-Intelligence",
+  "release_year": 2026,
+  "architecture": "moe",
+  "task": "text-generation",
+  "params_b": 149.211,
+  "active_params_b": 13.0,
+  "num_experts": 256,
+  "experts_per_token": 6,
+  "shared_expert": true,
+  "hidden_size": 4096,
+  "num_layers": 43,
+  "num_kv_heads": 1,
+  "head_dim": 512,
+  "gqa_ratio": 64.0,
+  "max_position_embeddings": 1048576,
+  "context_scaling": "Inherited unchanged from deepseek-ai/DeepSeek-V4-Flash: YaRN factor 16 over an original 65536 -> max_position_embeddings 1048576. The card publishes no context-extension recipe of its own.",
+  "context_scaling_method": "yarn",
+  "activation": "silu",
+  "attention_variant": "MLA variant with compressed/hashed KV (sliding_window 128, per-layer compress_ratios 0/4/128, sparse indexer index_topk 512); kv_lora_rank absent from config, so no single KV bytes/token figure is derivable. Unchanged from the base - this derivative only re-quantizes the experts and adds a LoRA-then-merged delta.",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": null,
+  "flops_per_token_active": null,
+  "open_weights": true,
+  "license": "openrail",
+  "base_model": "deepseek-ai/DeepSeek-V4-Flash",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-10-29. A finetune (SFT then GRPO) of deepseek-ai/DeepSeek-V4-Flash, not a new base model: config.json differs from the base in exactly one key (expert_dtype: base fp4, this repo unset), the 69,187-tensor set matches key-for-key with no shape mismatches, and both resolve to 149.21B parameters once the base's F8_E8M0 per-block scales are excluded. The base's Hugging Face safetensors metadata reports 290.9B because it counts those scales plus I8 storage; the card and the technical report both call this a 284B sparse MoE. Weights here ship pre-quantized FP8 e4m3 128x128 block, like the base, but in full bf16 tensor form (298.4 GB of shards vs the base's 159.6 GB), which is why params_b is the de-quantized count. kv_cache_bytes_per_token stays NULL for the same reason as the base record: V4's compressed/HCA KV is not derivable from config arithmetic, and the naive GQA reading (43 x 1 x 512 x 2 x 2 = 88,064 B/token) is known to overstate it. Recorded as a contender because it publishes benchmark evidence against its own base; rows below are card-sourced and marked vendor_claim. Licence openrail, repo created 2026-06-22.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-10-29",
+  "sources": [
+    "hf-chunjiang-intelligence-deepseek-v4-fable"
+  ],
+  "benchmarks": [
+    {
+      "name": "CTF solve rate, Overall (300 held-out challenges)",
+      "score": 58.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-chunjiang-intelligence-deepseek-v4-fable",
+      "vendor_claim": true,
+      "config": "Card '## Evaluation' table '| Model | Web | Pwn | Rev | Crypto | Overall |': row '+ GRPO (full)' 58.7 vs row 'V4-Flash base (0-shot)' 13.5, same table. Metric = verifier-accepted flag within 40 turns; programmatic sandbox verifiers, not an LLM judge. Held-out set decontaminated by source-challenge identity against SecDojo-80K. Card itself warns results 'measure capability within a reconstructed sandbox environment'."
+    },
+    {
+      "name": "CTF solve rate, Web",
+      "score": 63.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-chunjiang-intelligence-deepseek-v4-fable",
+      "vendor_claim": true,
+      "config": "Same table, Web column: 63.8 vs base 19.4."
+    },
+    {
+      "name": "CTF solve rate, Pwn",
+      "score": 44.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-chunjiang-intelligence-deepseek-v4-fable",
+      "vendor_claim": true,
+      "config": "Same table, Pwn column: 44.5 vs base 4.1."
+    },
+    {
+      "name": "CTF solve rate, Rev",
+      "score": 51.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-chunjiang-intelligence-deepseek-v4-fable",
+      "vendor_claim": true,
+      "config": "Same table, Rev column: 51.2 vs base 7.8."
+    },
+    {
+      "name": "CTF solve rate, Crypto",
+      "score": 68.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-chunjiang-intelligence-deepseek-v4-fable",
+      "vendor_claim": true,
+      "config": "Same table, Crypto column: 68.9 vs base 22.6."
+    }
+  ]
+}

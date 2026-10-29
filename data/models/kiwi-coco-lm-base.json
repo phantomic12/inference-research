@@ -1,0 +1,60 @@
+{
+  "id": "kiwi-coco-lm-base",
+  "type": "model",
+  "name": "kiwi-coco-lm-base",
+  "family": "modernbert",
+  "vendor": "kiwi-farm",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "embedding",
+  "params_b": 0.161,
+  "active_params_b": 0.15,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 768,
+  "num_layers": 22,
+  "num_kv_heads": 12,
+  "head_dim": 64,
+  "gqa_ratio": 1,
+  "max_position_embeddings": 8192,
+  "context_scaling": "Inherited unchanged from answerdotai/ModernBERT-base (config.json max_position_embeddings 8192). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "gelu",
+  "attention_variant": "bidirectional encoder, alternating local (128) and global attention (every 3rd layer)",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 0.0,
+  "flops_per_token_active": 900000000.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "answerdotai/ModernBERT-base",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-10-29. Continued pretraining of answerdotai/ModernBERT-base with COCO-LM objectives (RTD + corrective language modelling + sequence contrastive), not a new architecture: 22 layers, 768 hidden, same 1152 intermediate. params_b is 0.161 vs the base's 0.150 for one reason - the tokenizer was rebuilt at vocab 64,000 (byte-level BPE, Korean+English) against the base's 50,368, so the tied embedding matrix is larger. Recorded as a contender because the card prints KLUE and GLUE averages with a ModernBERT row in the same tables; rows are card-sourced and marked vendor_claim. Card caveat: despite the 8k context, the evaluation is short sentence/paragraph classification only. Licence apache-2.0, repo created 2026-09-24.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-10-29",
+  "sources": [
+    "hf-kiwi-farm-kiwi-coco-lm-base"
+  ],
+  "benchmarks": [
+    {
+      "name": "KLUE Avg (base-size models)",
+      "score": 82.34,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-kiwi-farm-kiwi-coco-lm-base",
+      "vendor_claim": true,
+      "config": "Card '## Evaluation' first table 'KLUE 태스크 중 일부(모델 크기 Base 기준)', Avg column: row 'Kiwi COCO-LM' 82.34 vs row 'ModernBERT' 62.36, same table. Per-task fine-tunes averaged by the author; self-reported, no harness or seed count printed. 6 of 8 KLUE tasks."
+    },
+    {
+      "name": "GLUE Avg",
+      "score": 83.02,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-kiwi-farm-kiwi-coco-lm-base",
+      "vendor_claim": true,
+      "config": "Same section, GLUE table, Avg column: this 83.02 vs ModernBERT 80.30. Base still wins SST2 95.30/93.01, CoLA 61.92/61.16, MNLI 88.73/87.64 and QNLI 93.34/93.26; the average is carried by MRPC, QQP, STS-B and RTE."
+    }
+  ]
+}
