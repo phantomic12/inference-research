@@ -105,40 +105,61 @@ def fetch(url, dest):
     return 0
 
 
+def img_pools():
+    """Two triage classes, because `n_bench_ctx` is a keyword heuristic and not a verdict.
+
+    `strong` = images the scanner matched benchmark wording near. `other` = images it could not
+    classify: captioned only 'Performance', or with the numbers baked into the PNG and no
+    benchmark word in the surrounding markdown. The strong class drains long before the figures
+    do -- it sat at remaining: 0 while 78 cards still carried an unread image, and the real
+    charts in that residue (Nanbeige4.1-3B, Nemotron IQ2) were invisible to `img` forever. So
+    serve `other` as a second, explicitly weaker class once strong is empty.
+    """
+    s = load_seen()
+    strong, other = [], []
+    for r in card_scan():
+        if r.get('n_bench_ctx') and r['id'] not in set(s['img']):
+            strong.append(r)
+        elif r.get('n_other') and not r.get('n_bench_ctx') and r['id'] not in set(s.get('img_other') or []):
+            other.append(r)
+    strong.sort(key=lambda x: (x.get('benchmarks', 0), -x.get('n_bench_ctx', 0)))
+    other.sort(key=lambda x: (x.get('benchmarks', 0), -x.get('n_other', 0)))
+    return strong, other
+
+
 def img_batch(n):
-    have = set(load_seen()['img'])
-    scan = card_scan()
-    picks = []
-    for r in sorted(scan, key=lambda x: (x.get('benchmarks', 0), -x.get('n_bench_ctx', 0))):
-        if not r.get('n_bench_ctx') or r['id'] in have:
-            continue
-        picks.append(r)
-        if len(picks) >= n:
-            break
+    strong, other = img_pools()
+    # Triaged-out cards are legitimate zeros (logos, architecture diagrams), so the weak class is
+    # served to exhaustion too -- but only after the strong class, and marked separately so a
+    # card can never be re-served as if it were still unread.
+    cls, picks = ('img', strong[:n]) if strong else ('img_other', other[:n])
     out = []
     for r in picks:
         d = IMG / r['id']
         d.mkdir(parents=True, exist_ok=True)
         files = sorted(str(p) for p in d.glob('*.*') if p.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp'))
         if not files:
-            for i, im in enumerate(r['images'][:8]):
+            imgs = r.get('images') if r.get('n_bench_ctx') else r.get('other')
+            for i, im in enumerate((imgs or [])[:8]):
                 ext = os.path.splitext(im['url'].split('?')[0])[1].lower() or '.png'
                 if ext not in ('.png', '.jpg', '.jpeg', '.webp'):
                     ext = '.png'
                 dest = d / ('%02d%s' % (i, ext))
                 fetch(im['url'], dest)
             files = sorted(str(p) for p in d.glob('*.*') if p.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp'))
-        out.append({'model': r['id'], 'repo': r['repo'], 'existing_rows': r.get('benchmarks', 0),
-                    'files': files[:8]})
+        out.append({'model': r['id'], 'repo': r['repo'], 'class': cls,
+                    'existing_rows': r.get('benchmarks', 0), 'files': files[:8]})
     return out
 
 
 def cmd_stats(_):
     s = load_seen()
     d = deriv_candidates()
-    i = [r for r in card_scan() if r.get('n_bench_ctx') and r['id'] not in set(s['img'])]
+    strong, other = img_pools()
     print(json.dumps({'deriv_pending': len(d), 'deriv_seen': len(s['deriv']),
-                      'img_pending': len(i), 'img_seen': len(s['img']),
+                      'img_pending': len(strong) + len(other),
+                      'img_pending_strong': len(strong), 'img_pending_other': len(other),
+                      'img_seen': len(s['img']), 'img_other_seen': len(s.get('img_other') or []),
                       'models_in_catalog': len(model_ids())}, indent=1))
 
 
@@ -155,8 +176,14 @@ def cmd_deriv(a):
 
 
 def cmd_img(a):
+    before_strong, before_other = (len(x) for x in img_pools())
     b = img_batch(a.n)
-    print(json.dumps({'models': b, 'remaining': max(0, len([r for r in card_scan() if r.get('n_bench_ctx')]) - len(load_seen()['img']) - len(b))}, indent=1))
+    if b and b[0]['class'] == 'img':
+        rem_s, rem_o = before_strong - len(b), before_other
+    else:
+        rem_s, rem_o = before_strong, max(0, before_other - len(b))
+    print(json.dumps({'models': b, 'remaining': rem_s + rem_o,
+                      'remaining_strong': rem_s, 'remaining_other': rem_o}, indent=1))
 
 
 def cmd_mark(a):
@@ -177,7 +204,7 @@ def main():
     sub.add_parser('stats').set_defaults(fn=cmd_stats)
     d = sub.add_parser('deriv'); d.add_argument('--n', type=int, default=120); d.add_argument('--chunks', type=int, default=6); d.set_defaults(fn=cmd_deriv)
     i = sub.add_parser('img'); i.add_argument('--n', type=int, default=8); i.set_defaults(fn=cmd_img)
-    m = sub.add_parser('mark'); m.add_argument('--type', required=True, choices=['deriv', 'img'])
+    m = sub.add_parser('mark'); m.add_argument('--type', required=True, choices=['deriv', 'img', 'img_other'])
     m.add_argument('--chunk'); m.add_argument('--ids'); m.set_defaults(fn=cmd_mark)
     a = ap.parse_args()
     a.fn(a)
