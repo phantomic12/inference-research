@@ -1,883 +1,884 @@
 {
-  "id": "internvl3-8b",
-  "type": "model",
-  "name": "InternVL3-8B",
-  "family": "internvl3",
-  "vendor": "Shanghai AI Laboratory (OpenGVLab)",
-  "release_year": 2025,
-  "architecture": "dense",
-  "params_b": 7.944,
-  "active_params_b": 7.944,
-  "num_experts": null,
-  "experts_per_token": null,
-  "shared_expert": null,
-  "hidden_size": 3584,
-  "num_layers": 28,
-  "num_kv_heads": 4,
-  "head_dim": 128,
-  "gqa_ratio": 7.0,
-  "max_position_embeddings": 32768,
-  "context_scaling": null,
-  "activation": "silu",
-  "attention_variant": "GQA",
-  "kv_cache_bytes_per_token": 57344,
-  "flops_per_token_active": 15888000000.0,
-  "open_weights": true,
-  "license": "apache-2.0",
-  "notes": "TWO-PART MODEL. (1) Vision: InternViT (vision_config._name_or_path InternViT-6B-448px-V1-5), 24 layers, hidden 1024, 16 heads, patch 14, image_size 448. The vision_config still carries the training-time MoE scaffolding (num_experts 8, num_routed_experts 4, num_shared_experts 4, use_moe FALSE) -- the released encoder is dense, the MoE fields are inert. (2) LLM: Qwen2-7B, 28 layers, hidden 3584, 28 heads / 4 KV, head_dim 128 (k_proj [512,3584] confirmed). ARCHITECTURE = dense (both parts dense). PROJECTOR: MLP + PIXEL-SHUFFLE. downsample_ratio 0.5 means a 2x2 spatial downsample before the MLP; ps_version 'v2'. Each 448x448 tile = (448/14)^2 = 1,024 ViT patches, and pixel-shuffle 0.5 quarters that to 256 LLM tokens per tile. This is the key efficiency move: 4x token reduction for a small projector cost, unlike InternVL2's naive per-patch MLP. DYNAMIC TILING (decides prefill cost): dynamic_image_size true, force_image_size 448, min_dynamic_patch 1, max_dynamic_patch 12, use_thumbnail true. So one image becomes between 2 and 13 ViT forward passes: up to 12 tiles of 448x448 plus a 448x448 thumbnail. VISION TOKENS: 256 per tile, so 512 tokens for a single-tile image, up to 13*256 = 3,328 tokens at the 12-tile maximum. DOMINANCE: VISION DOMINATES decisively. At the default high-res setting (12 tiles) 3,328 vision tokens swamp a ~100-token text prompt by 30:1, and the ViT runs 13 separate attention passes. Vision encoder FLOPs, not LLM prefill, are the first thing to profile on InternVL3. KV CACHE: 28 * 4 * 128 * 2 * 2 = 57,344 B/token. params_b 7.944 = HF API safetensors total (7,944,373,760).\n\nSERVICEABILITY JOIN (added 2026-10-03; the architecture x engine matrix this record was missing, with a citation per cell in docs/13-model-compatibility.md): FAMILY=multimodal. REQUIRED KERNEL CLASS: an encoder tower (ViT / SigLIP / ConvNet / audio encoder) running on a SEPARATE schedule from the decoder, plus a projector into the decoder's embedding space, plus - for the mrope and DeepStack families - a multi-axis rotary scheme in the decoder rather than plain 1-D RoPE. Three engine-side consequences, all cited. (1) The encoder tower is a separate compute path, so its throughput is a different problem from decode throughput and engines that disclaim encoder throughput are disclaiming this. vLLM says so in its own words: 'We currently support pooling models primarily for convenience. This is not guaranteed to provide any performance improvements over using Hugging Face Transformers or Sentence Transformers directly' [[vllm-pooling-models]] - that is the general statement this class inherits. TRT-LLM's answer is a documented mechanism: a Multimodal Encoder Side Stream that prefetches encoder work on a separate CUDA stream plus a per-model Multimodal Embeddings Cache, currently available only for seven architectures (Gemma4, Gemma4Unified, Mistral3, Qwen3VL, Qwen3VLMoe, Qwen3_5, Qwen3_5Moe) [[mdl2-trtllm-supported-models]]. (2) Several towers carry hard external dependencies: Gemma3nForConditionalGeneration 'depends on timm>=1.0.17 to make use of its MobileNet-v5 vision backbone' and 'is only supported on V1 due to shared KV caching' [[mdl2-vllm-supported-models-2026-10]]; MiniCPM-V 4.6 requires transformers>=5.7.0 because it was upstreamed as a native model type [[mdl2-trtllm-supported-models]]. (3) Hybrid-only multimodal models expose a memory knob unique to this class: vLLM's --language-model-only flag sets all supported multimodal modalities to 0 so the multimodal modules are not loaded, 'to free up more GPU memory for KV cache' for Llama-4, Step3, Mistral-3 and Qwen-3.5 [[mdl2-vllm-supported-models-2026-10]].SUPPORTED BY (cited): vLLM native rows include InternVLChatModel and InternVLForConditionalGeneration, LlavaOnevisionForConditionalGeneration, LlavaNextForConditionalGeneration, MolmoForCausalLM and Molmo2ForConditionalGeneration, PaliGemmaForConditionalGeneration, SmolVLMForConditionalGeneration, Glm4vForConditionalGeneration, Qwen2VL/Qwen3VL, MiniCPMV, Mllama, Phi4MM, Gemma4, NemotronH_Nano_VL_V2, VoxtralForConditionalGeneration (which requires mistral-common[audio]) and Qwen3OmniMoeThinkerForConditionalGeneration [[mdl2-vllm-supported-models-2026-10]]. SGLang's multimodal table covers InternLM2-VL, LLaVA-OneVision, LLaVA-NeXT(-Video), Ling-3.0-flash-VL, LFM2.5-VL, MiniCPM-V-2, GLM-4.5V, GLM-OCR, Qwen3-VL 235B-A22B and 30B-A3B, Qwen3-Omni-30B-A3B, Kimi-VL-A3B, MiMo-VL-7B-RL, Step3-VL-10B, dots.ocr, PaddleOCR-VL, Cosmos3, deepseek-vl2, Janus-Pro-7B, NVILA-8B and gemma-3-4b-it, plus openai/whisper-large-v3 and Qwen3-ASR-1.7B on the audio route [[mdl2-sglang-multimodal-language-models]]. TRT-LLM's multimodal matrix covers a narrower set with an explicit per-row modality string and per-row Untested cells [[mdl2-trtllm-supported-models]]. Older GGUF-side engines reach the class through llama.cpp's projector graph, which llama.cpp-embedding-server states it cannot serve on the embedding route [[llama-cpp-embedding-server]]. PER-MODALITY CAVEATS CITED: TRT-LLM marks Gemma4Unified and MiniCPM-V 4.6 Untested for CUDA Graph / chunked prefill, MiniMax-M3 Untested for attention DP and KV cache reuse, Qwen4Exp Untested across the board, and notes audio requires a checkpoint with a sound_config and is supported only on the full non-disaggregated path [[mdl2-trtllm-supported-models]]. Step-3.7's vision tower runs in BF16 even when the text decoder is quantized [[mdl2-trtllm-supported-models]] - a precision asymmetry that silently costs memory. vLLM's fallback path accepts image inputs only, with video 'to be added in a future release' [[mdl2-vllm-supported-models-2026-10]].\n\nCONTEXT_SCALING_METHOD (native): config nests the LM under a language_model sub-config; no rope_scaling declared there.",
-  "status": "verified",
-  "confidence": 0.9,
-  "updated": "2026-10-27",
-  "sources": [
-    "hf-mm-hf-api-safetensors-params",
-    "hf-mm-internvl3-8b-config",
-    "mdl2-sglang-multimodal-language-models",
-    "mdl2-trtllm-supported-models",
-    "mdl2-vllm-supported-models-2026-10",
-    "hf-internvl3-8b-card"
-  ],
-  "context_scaling_method": "native",
-  "benchmarks": [
-    {
-      "name": "MMMU",
-      "score": 62.7,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "val, InternVL3 tech report multimodal-reasoning table (no VisualPRM best-of-8)"
-    },
-    {
-      "name": "MathVista",
-      "score": 71.6,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "testmini, same table"
-    },
-    {
-      "name": "MathVerse",
-      "score": 39.8,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "testmini, same table"
-    },
-    {
-      "name": "OpenCompass",
-      "score": 73.3,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "Academic, InternVL3 paper Table 1 (local test by the authors)"
-    },
-    {
-      "name": "AI2D",
-      "score": 85.2,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "with masks, paper multimodal-understanding table"
-    },
-    {
-      "name": "ChartQA",
-      "score": 86.6,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "test avg"
-    },
-    {
-      "name": "DocVQA",
-      "score": 92.7,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "test"
-    },
-    {
-      "name": "TextVQA",
-      "score": 80.2,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "val"
-    },
-    {
-      "name": "InfoVQA",
-      "score": 76.8,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "test"
-    },
-    {
-      "name": "OCRBench",
-      "score": 880,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "0-1000 scale"
-    },
-    {
-      "name": "MMBench EN",
-      "score": 83.4,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "test, EN"
-    },
-    {
-      "name": "MMStar",
-      "score": 68.2,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "val"
-    },
-    {
-      "name": "MMVet",
-      "score": 81.3,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "turbo"
-    },
-    {
-      "name": "BLINK",
-      "score": 55.5,
-      "scale": 100,
-      "vendor_claim": true,
-      "source": "hf-mm-hf-api-safetensors-params",
-      "config": "val"
-    },
-    {
-      "name": "MathVision",
-      "score": 29.3,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 02.png (card section 'Multimodal Reasoning and Mathematics', math.png) with vision. Columns are MMMU / MathVista / MathVision / MathVerse / DynaMath / WeMath / LogicVista / Overall; the Overall column is an aggregate and was deliberately not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row identified as InternVL3-8B, then re-checked against the adjacent InternVL2.5-8B and InternVL3-14B rows to prove the row band was not off by one. Second read matched."
-    },
-    {
-      "name": "DynaMath",
-      "score": 25.5,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 02.png (card section 'Multimodal Reasoning and Mathematics', math.png) with vision. Columns are MMMU / MathVista / MathVision / MathVerse / DynaMath / WeMath / LogicVista / Overall; the Overall column is an aggregate and was deliberately not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row identified as InternVL3-8B, then re-checked against the adjacent InternVL2.5-8B and InternVL3-14B rows to prove the row band was not off by one. Second read matched."
-    },
-    {
-      "name": "WeMath",
-      "score": 37.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 02.png (card section 'Multimodal Reasoning and Mathematics', math.png) with vision. Columns are MMMU / MathVista / MathVision / MathVerse / DynaMath / WeMath / LogicVista / Overall; the Overall column is an aggregate and was deliberately not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row identified as InternVL3-8B, then re-checked against the adjacent InternVL2.5-8B and InternVL3-14B rows to prove the row band was not off by one. Second read matched."
-    },
-    {
-      "name": "LogicVista",
-      "score": 44.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 02.png (card section 'Multimodal Reasoning and Mathematics', math.png) with vision. Columns are MMMU / MathVista / MathVision / MathVerse / DynaMath / WeMath / LogicVista / Overall; the Overall column is an aggregate and was deliberately not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row identified as InternVL3-8B, then re-checked against the adjacent InternVL2.5-8B and InternVL3-14B rows to prove the row band was not off by one. Second read matched."
-    },
-    {
-      "name": "Mantis Eval",
-      "score": 70.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
-    },
-    {
-      "name": "MMIU",
-      "score": 46.8,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
-    },
-    {
-      "name": "Muir Bench",
-      "score": 55.0,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
-    },
-    {
-      "name": "MMT (val)",
-      "score": 65.0,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
-    },
-    {
-      "name": "MIRB (avg)",
-      "score": 56.8,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
-    },
-    {
-      "name": "RealWorld QA",
-      "score": 70.8,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
-    },
-    {
-      "name": "MME-RW (EN)",
-      "score": 62.0,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
-    },
-    {
-      "name": "WildVision (win rate)",
-      "score": 69.8,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
-    },
-    {
-      "name": "R-Bench (dis)",
-      "score": 74.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
-    },
-    {
-      "name": "MME (sum)",
-      "score": 2415.4,
-      "scale": 3000,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
-    },
-    {
-      "name": "MMBench CN",
-      "score": 82.2,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
-    },
-    {
-      "name": "MMBv1.1 (EN)",
-      "score": 81.7,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
-    },
-    {
-      "name": "MMVetv2 (0613)",
-      "score": 66.3,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
-    },
-    {
-      "name": "HallBench (avg)",
-      "score": 49.9,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
-    },
-    {
-      "name": "MMHal (score)",
-      "score": 3.61,
-      "scale": 10,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
-    },
-    {
-      "name": "CRPE (relation)",
-      "score": 76.3,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
-    },
-    {
-      "name": "POPE (avg)",
-      "score": 91.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
-    },
-    {
-      "name": "VSI-Bench (Obj.count)",
-      "score": 68.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
-    },
-    {
-      "name": "VSI-Bench (Abs.Dist.)",
-      "score": 39.0,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
-    },
-    {
-      "name": "VSI-Bench (Obj.size)",
-      "score": 48.4,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
-    },
-    {
-      "name": "VSI-Bench (Room Size)",
-      "score": 33.6,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
-    },
-    {
-      "name": "VSI-Bench (Rel.Dist.)",
-      "score": 48.3,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
-    },
-    {
-      "name": "VSI-Bench (Rel.Dir.)",
-      "score": 36.4,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
-    },
-    {
-      "name": "VSI-Bench (Route Plan)",
-      "score": 27.3,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
-    },
-    {
-      "name": "VSI-Bench (Appr.Order)",
-      "score": 35.4,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
-    },
-    {
-      "name": "LongVideoBench",
-      "score": 58.8,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read off the OpenGVLab/InternVL3-8B card figure 00.png (card section 'InternVL3 Family', overall-table.png: the release summary table) with vision. InternVL3 8B is its own column, highlighted on the card.  Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  This summary table agrees with the per-capability tables on HallusionBench 49.9 and MathVista 75.2, which is what pins the column alignment, but it prints MMMU 65.6 for InternVL3 8B against the 62.7 in the paper's reasoning table. MMMU is already on this record from the paper, so the summary's 65.6 was NOT recorded, and that disagreement is why only the row with no existing counterpart (LongVideoBench) is taken from this table."
-    },
-    {
-      "name": "AI2D (w/o M)",
-      "score": 92.6,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure ocr.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "SEED-2 Plus",
-      "score": 69.7,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure ocr.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "CharXiv (RQ)",
-      "score": 37.6,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure ocr.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "CharXiv (DQ)",
-      "score": 73.6,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure ocr.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "VCR-EN-Easy (EM)",
-      "score": 94.5,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure ocr.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "VCR-EN-Easy (Jaccard)",
-      "score": 98.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure ocr.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "RefCOCO (val)",
-      "score": 92.5,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "RefCOCO (test-A)",
-      "score": 94.6,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "RefCOCO (test-B)",
-      "score": 88.0,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "RefCOCO+ (val)",
-      "score": 88.2,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "RefCOCO+ (test-A)",
-      "score": 92.5,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "RefCOCO+ (test-B)",
-      "score": 81.8,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "RefCOCOg (val)",
-      "score": 89.6,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "RefCOCOg (test)",
-      "score": 90.0,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "MMMB (en)",
-      "score": 85.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "MMMB (zh)",
-      "score": 83.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "MMMB (pt)",
-      "score": 82.5,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "MMMB (ar)",
-      "score": 81.6,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "MMMB (tr)",
-      "score": 76.2,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "MMMB (ru)",
-      "score": 83.4,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "Multilingual MMBench (en)",
-      "score": 85.5,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "Multilingual MMBench (zh)",
-      "score": 85.6,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "Multilingual MMBench (pt)",
-      "score": 83.2,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "Multilingual MMBench (ar)",
-      "score": 79.2,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "Multilingual MMBench (tr)",
-      "score": 75.9,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "Multilingual MMBench (ru)",
-      "score": 82.6,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "MTVQA (avg)",
-      "score": 30.2,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "Video-MME (w/o subs)",
-      "score": 66.3,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "Video-MME (w/ subs)",
-      "score": 68.9,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "MVBench",
-      "score": 75.4,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "MMBench-Video (val)",
-      "score": 1.69,
-      "scale": 5,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "MLVU (M-Avg)",
-      "score": 71.4,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "CG-Bench (long)",
-      "score": 38.6,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "CG-Bench (clue acc.)",
-      "score": 55.2,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-mm-internvl3-8b-config",
-      "vendor_claim": true,
-      "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
-    },
-    {
-      "name": "MMLU",
-      "score": 77.3,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "CMMLU",
-      "score": 84.4,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "C-Eval",
-      "score": 84.5,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "GAOKAO",
-      "score": 89.5,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "TriviaQA",
-      "score": 51.5,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "NaturalQuestions",
-      "score": 28.2,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "C3",
-      "score": 95.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "RACE-High",
-      "score": 90.8,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "WinoGrande",
-      "score": 78.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "HellaSwag",
-      "score": 90.2,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "BBH",
-      "score": 77.4,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "GSM8K",
-      "score": 83.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "MATH",
-      "score": 72.2,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "TheoremQA",
-      "score": 25.5,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "HumanEval",
-      "score": 78.1,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "MBPP",
-      "score": 69.3,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    },
-    {
-      "name": "MBPP-CN",
-      "score": 64.4,
-      "scale": 100,
-      "higher_is_better": true,
-      "source": "hf-internvl3-8b-card",
-      "vendor_claim": true,
-      "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
-    }
-  ]
+ "id": "internvl3-8b",
+ "type": "model",
+ "name": "InternVL3-8B",
+ "family": "internvl3",
+ "vendor": "Shanghai AI Laboratory (OpenGVLab)",
+ "release_year": 2025,
+ "architecture": "dense",
+ "params_b": 7.944,
+ "active_params_b": 7.944,
+ "num_experts": null,
+ "experts_per_token": null,
+ "shared_expert": null,
+ "hidden_size": 3584,
+ "num_layers": 28,
+ "num_kv_heads": 4,
+ "head_dim": 128,
+ "gqa_ratio": 7.0,
+ "max_position_embeddings": 32768,
+ "context_scaling": null,
+ "activation": "silu",
+ "attention_variant": "GQA",
+ "kv_cache_bytes_per_token": 57344,
+ "flops_per_token_active": 15888000000.0,
+ "open_weights": true,
+ "license": "apache-2.0",
+ "notes": "TWO-PART MODEL. (1) Vision: InternViT (vision_config._name_or_path InternViT-6B-448px-V1-5), 24 layers, hidden 1024, 16 heads, patch 14, image_size 448. The vision_config still carries the training-time MoE scaffolding (num_experts 8, num_routed_experts 4, num_shared_experts 4, use_moe FALSE) -- the released encoder is dense, the MoE fields are inert. (2) LLM: Qwen2-7B, 28 layers, hidden 3584, 28 heads / 4 KV, head_dim 128 (k_proj [512,3584] confirmed). ARCHITECTURE = dense (both parts dense). PROJECTOR: MLP + PIXEL-SHUFFLE. downsample_ratio 0.5 means a 2x2 spatial downsample before the MLP; ps_version 'v2'. Each 448x448 tile = (448/14)^2 = 1,024 ViT patches, and pixel-shuffle 0.5 quarters that to 256 LLM tokens per tile. This is the key efficiency move: 4x token reduction for a small projector cost, unlike InternVL2's naive per-patch MLP. DYNAMIC TILING (decides prefill cost): dynamic_image_size true, force_image_size 448, min_dynamic_patch 1, max_dynamic_patch 12, use_thumbnail true. So one image becomes between 2 and 13 ViT forward passes: up to 12 tiles of 448x448 plus a 448x448 thumbnail. VISION TOKENS: 256 per tile, so 512 tokens for a single-tile image, up to 13*256 = 3,328 tokens at the 12-tile maximum. DOMINANCE: VISION DOMINATES decisively. At the default high-res setting (12 tiles) 3,328 vision tokens swamp a ~100-token text prompt by 30:1, and the ViT runs 13 separate attention passes. Vision encoder FLOPs, not LLM prefill, are the first thing to profile on InternVL3. KV CACHE: 28 * 4 * 128 * 2 * 2 = 57,344 B/token. params_b 7.944 = HF API safetensors total (7,944,373,760).\n\nSERVICEABILITY JOIN (added 2026-10-03; the architecture x engine matrix this record was missing, with a citation per cell in docs/13-model-compatibility.md): FAMILY=multimodal. REQUIRED KERNEL CLASS: an encoder tower (ViT / SigLIP / ConvNet / audio encoder) running on a SEPARATE schedule from the decoder, plus a projector into the decoder's embedding space, plus - for the mrope and DeepStack families - a multi-axis rotary scheme in the decoder rather than plain 1-D RoPE. Three engine-side consequences, all cited. (1) The encoder tower is a separate compute path, so its throughput is a different problem from decode throughput and engines that disclaim encoder throughput are disclaiming this. vLLM says so in its own words: 'We currently support pooling models primarily for convenience. This is not guaranteed to provide any performance improvements over using Hugging Face Transformers or Sentence Transformers directly' [[vllm-pooling-models]] - that is the general statement this class inherits. TRT-LLM's answer is a documented mechanism: a Multimodal Encoder Side Stream that prefetches encoder work on a separate CUDA stream plus a per-model Multimodal Embeddings Cache, currently available only for seven architectures (Gemma4, Gemma4Unified, Mistral3, Qwen3VL, Qwen3VLMoe, Qwen3_5, Qwen3_5Moe) [[mdl2-trtllm-supported-models]]. (2) Several towers carry hard external dependencies: Gemma3nForConditionalGeneration 'depends on timm>=1.0.17 to make use of its MobileNet-v5 vision backbone' and 'is only supported on V1 due to shared KV caching' [[mdl2-vllm-supported-models-2026-10]]; MiniCPM-V 4.6 requires transformers>=5.7.0 because it was upstreamed as a native model type [[mdl2-trtllm-supported-models]]. (3) Hybrid-only multimodal models expose a memory knob unique to this class: vLLM's --language-model-only flag sets all supported multimodal modalities to 0 so the multimodal modules are not loaded, 'to free up more GPU memory for KV cache' for Llama-4, Step3, Mistral-3 and Qwen-3.5 [[mdl2-vllm-supported-models-2026-10]].SUPPORTED BY (cited): vLLM native rows include InternVLChatModel and InternVLForConditionalGeneration, LlavaOnevisionForConditionalGeneration, LlavaNextForConditionalGeneration, MolmoForCausalLM and Molmo2ForConditionalGeneration, PaliGemmaForConditionalGeneration, SmolVLMForConditionalGeneration, Glm4vForConditionalGeneration, Qwen2VL/Qwen3VL, MiniCPMV, Mllama, Phi4MM, Gemma4, NemotronH_Nano_VL_V2, VoxtralForConditionalGeneration (which requires mistral-common[audio]) and Qwen3OmniMoeThinkerForConditionalGeneration [[mdl2-vllm-supported-models-2026-10]]. SGLang's multimodal table covers InternLM2-VL, LLaVA-OneVision, LLaVA-NeXT(-Video), Ling-3.0-flash-VL, LFM2.5-VL, MiniCPM-V-2, GLM-4.5V, GLM-OCR, Qwen3-VL 235B-A22B and 30B-A3B, Qwen3-Omni-30B-A3B, Kimi-VL-A3B, MiMo-VL-7B-RL, Step3-VL-10B, dots.ocr, PaddleOCR-VL, Cosmos3, deepseek-vl2, Janus-Pro-7B, NVILA-8B and gemma-3-4b-it, plus openai/whisper-large-v3 and Qwen3-ASR-1.7B on the audio route [[mdl2-sglang-multimodal-language-models]]. TRT-LLM's multimodal matrix covers a narrower set with an explicit per-row modality string and per-row Untested cells [[mdl2-trtllm-supported-models]]. Older GGUF-side engines reach the class through llama.cpp's projector graph, which llama.cpp-embedding-server states it cannot serve on the embedding route [[llama-cpp-embedding-server]]. PER-MODALITY CAVEATS CITED: TRT-LLM marks Gemma4Unified and MiniCPM-V 4.6 Untested for CUDA Graph / chunked prefill, MiniMax-M3 Untested for attention DP and KV cache reuse, Qwen4Exp Untested across the board, and notes audio requires a checkpoint with a sound_config and is supported only on the full non-disaggregated path [[mdl2-trtllm-supported-models]]. Step-3.7's vision tower runs in BF16 even when the text decoder is quantized [[mdl2-trtllm-supported-models]] - a precision asymmetry that silently costs memory. vLLM's fallback path accepts image inputs only, with video 'to be added in a future release' [[mdl2-vllm-supported-models-2026-10]].\n\nCONTEXT_SCALING_METHOD (native): config nests the LM under a language_model sub-config; no rope_scaling declared there.",
+ "status": "verified",
+ "confidence": 0.9,
+ "updated": "2026-10-30",
+ "sources": [
+  "hf-mm-hf-api-safetensors-params",
+  "hf-mm-internvl3-8b-config",
+  "mdl2-sglang-multimodal-language-models",
+  "mdl2-trtllm-supported-models",
+  "mdl2-vllm-supported-models-2026-10",
+  "hf-internvl3-8b-card",
+  "internvl3-paper"
+ ],
+ "context_scaling_method": "native",
+ "benchmarks": [
+  {
+   "name": "MMMU",
+   "score": 62.7,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "val, InternVL3 tech report multimodal-reasoning table (no VisualPRM best-of-8)"
+  },
+  {
+   "name": "MathVista",
+   "score": 71.6,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "testmini, same table"
+  },
+  {
+   "name": "MathVerse",
+   "score": 39.8,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "testmini, same table"
+  },
+  {
+   "name": "OpenCompass",
+   "score": 73.3,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "Academic, InternVL3 paper Table 1 (local test by the authors)"
+  },
+  {
+   "name": "AI2D",
+   "score": 85.2,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "with masks, paper multimodal-understanding table"
+  },
+  {
+   "name": "ChartQA",
+   "score": 86.6,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "test avg"
+  },
+  {
+   "name": "DocVQA",
+   "score": 92.7,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "test"
+  },
+  {
+   "name": "TextVQA",
+   "score": 80.2,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "val"
+  },
+  {
+   "name": "InfoVQA",
+   "score": 76.8,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "test"
+  },
+  {
+   "name": "OCRBench",
+   "score": 880,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "0-1000 scale"
+  },
+  {
+   "name": "MMBench EN",
+   "score": 83.4,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "test, EN"
+  },
+  {
+   "name": "MMStar",
+   "score": 68.2,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "val"
+  },
+  {
+   "name": "MMVet",
+   "score": 81.3,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "turbo"
+  },
+  {
+   "name": "BLINK",
+   "score": 55.5,
+   "scale": 100,
+   "vendor_claim": true,
+   "source": "internvl3-paper",
+   "config": "val"
+  },
+  {
+   "name": "MathVision",
+   "score": 29.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 02.png (card section 'Multimodal Reasoning and Mathematics', math.png) with vision. Columns are MMMU / MathVista / MathVision / MathVerse / DynaMath / WeMath / LogicVista / Overall; the Overall column is an aggregate and was deliberately not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row identified as InternVL3-8B, then re-checked against the adjacent InternVL2.5-8B and InternVL3-14B rows to prove the row band was not off by one. Second read matched."
+  },
+  {
+   "name": "DynaMath",
+   "score": 25.5,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 02.png (card section 'Multimodal Reasoning and Mathematics', math.png) with vision. Columns are MMMU / MathVista / MathVision / MathVerse / DynaMath / WeMath / LogicVista / Overall; the Overall column is an aggregate and was deliberately not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row identified as InternVL3-8B, then re-checked against the adjacent InternVL2.5-8B and InternVL3-14B rows to prove the row band was not off by one. Second read matched."
+  },
+  {
+   "name": "WeMath",
+   "score": 37.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 02.png (card section 'Multimodal Reasoning and Mathematics', math.png) with vision. Columns are MMMU / MathVista / MathVision / MathVerse / DynaMath / WeMath / LogicVista / Overall; the Overall column is an aggregate and was deliberately not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row identified as InternVL3-8B, then re-checked against the adjacent InternVL2.5-8B and InternVL3-14B rows to prove the row band was not off by one. Second read matched."
+  },
+  {
+   "name": "LogicVista",
+   "score": 44.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 02.png (card section 'Multimodal Reasoning and Mathematics', math.png) with vision. Columns are MMMU / MathVista / MathVision / MathVerse / DynaMath / WeMath / LogicVista / Overall; the Overall column is an aggregate and was deliberately not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row identified as InternVL3-8B, then re-checked against the adjacent InternVL2.5-8B and InternVL3-14B rows to prove the row band was not off by one. Second read matched."
+  },
+  {
+   "name": "Mantis Eval",
+   "score": 70.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
+  },
+  {
+   "name": "MMIU",
+   "score": 46.8,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
+  },
+  {
+   "name": "Muir Bench",
+   "score": 55.0,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
+  },
+  {
+   "name": "MMT (val)",
+   "score": 65.0,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
+  },
+  {
+   "name": "MIRB (avg)",
+   "score": 56.8,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
+  },
+  {
+   "name": "RealWorld QA",
+   "score": 70.8,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
+  },
+  {
+   "name": "MME-RW (EN)",
+   "score": 62.0,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
+  },
+  {
+   "name": "WildVision (win rate)",
+   "score": 69.8,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
+  },
+  {
+   "name": "R-Bench (dis)",
+   "score": 74.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 03.png (card section 'Multi-Image & Real-World Comprehension', multi-images.png) with vision. Two grouped header bands: BLINK / Mantis Eval / MMIU / Muir Bench / MMT / MIRB followed by an Overall, then RealWorld QA / MME-RW / WildVision / R-Bench followed by a second Overall. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the BLINK 55.5 value already on this record from card text."
+  },
+  {
+   "name": "MME (sum)",
+   "score": 2415.4,
+   "scale": 3000,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
+  },
+  {
+   "name": "MMBench CN",
+   "score": 82.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
+  },
+  {
+   "name": "MMBv1.1 (EN)",
+   "score": 81.7,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
+  },
+  {
+   "name": "MMVetv2 (0613)",
+   "score": 66.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
+  },
+  {
+   "name": "HallBench (avg)",
+   "score": 49.9,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
+  },
+  {
+   "name": "MMHal (score)",
+   "score": 3.61,
+   "scale": 10,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
+  },
+  {
+   "name": "CRPE (relation)",
+   "score": 76.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
+  },
+  {
+   "name": "POPE (avg)",
+   "score": 91.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 04.png (card section 'Comprehensive Multimodal & Hallucination', comprehensive.png) with vision. Columns MME (sum) / MMB (EN, CN) / MMBv1.1 / MMVet (turbo) / MMVetv2 / MMStar / Overall / HallBench / MMHal / CRPE / POPE / Overall. MME (sum) is out of 3000, not 100. MMHal is a raw score with no denominator printed, so it carries scale 10 rather than being read as a percentage. Both Overall columns are aggregates and were not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  Row alignment confirmed by the MMVet (turbo) 81.3 and MMStar 68.2 cells already on this record from the InternVL3 paper."
+  },
+  {
+   "name": "VSI-Bench (Obj.count)",
+   "score": 68.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
+  },
+  {
+   "name": "VSI-Bench (Abs.Dist.)",
+   "score": 39.0,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
+  },
+  {
+   "name": "VSI-Bench (Obj.size)",
+   "score": 48.4,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
+  },
+  {
+   "name": "VSI-Bench (Room Size)",
+   "score": 33.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
+  },
+  {
+   "name": "VSI-Bench (Rel.Dist.)",
+   "score": 48.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
+  },
+  {
+   "name": "VSI-Bench (Rel.Dir.)",
+   "score": 36.4,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
+  },
+  {
+   "name": "VSI-Bench (Route Plan)",
+   "score": 27.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
+  },
+  {
+   "name": "VSI-Bench (Appr.Order)",
+   "score": 35.4,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 05.png (card section 'Spatial Reasoning', vsi.png) with vision. Columns are Obj.count / Abs.Dist. / Obj.size / Room Size / Rel.Dist. / Rel.Dir. / Route Plan / Appr.Order / Overall; the Overall column is an aggregate and was not recorded. Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  The column set matches VSI-Bench's axis list, so the rows are named VSI-Bench (axis). The card prints no row title repeating the benchmark name, so the identification of this panel as VSI-Bench is inferred from those column names. Row identified as InternVL3-8B and confirmed against the neighbouring InternVL3-38B row."
+  },
+  {
+   "name": "LongVideoBench",
+   "score": 58.8,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read off the OpenGVLab/InternVL3-8B card figure 00.png (card section 'InternVL3 Family', overall-table.png: the release summary table) with vision. InternVL3 8B is its own column, highlighted on the card.  Every benchmark number on this card is an image and the README carries no numeric text, so this is a by-eye read with the +/-0.5 caveat.  This summary table agrees with the per-capability tables on HallusionBench 49.9 and MathVista 75.2, which is what pins the column alignment, but it prints MMMU 65.6 for InternVL3 8B against the 62.7 in the paper's reasoning table. MMMU is already on this record from the paper, so the summary's 65.6 was NOT recorded, and that disagreement is why only the row with no existing counterpart (LongVideoBench) is taken from this table."
+  },
+  {
+   "name": "AI2D (w/o M)",
+   "score": 92.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure ocr.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "SEED-2 Plus",
+   "score": 69.7,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure ocr.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "CharXiv (RQ)",
+   "score": 37.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure ocr.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "CharXiv (DQ)",
+   "score": 73.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure ocr.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "VCR-EN-Easy (EM)",
+   "score": 94.5,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure ocr.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "VCR-EN-Easy (Jaccard)",
+   "score": 98.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure ocr.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "RefCOCO (val)",
+   "score": 92.5,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "RefCOCO (test-A)",
+   "score": 94.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "RefCOCO (test-B)",
+   "score": 88.0,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "RefCOCO+ (val)",
+   "score": 88.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "RefCOCO+ (test-A)",
+   "score": 92.5,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "RefCOCO+ (test-B)",
+   "score": 81.8,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "RefCOCOg (val)",
+   "score": 89.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "RefCOCOg (test)",
+   "score": 90.0,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure grounding.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "MMMB (en)",
+   "score": 85.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "MMMB (zh)",
+   "score": 83.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "MMMB (pt)",
+   "score": 82.5,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "MMMB (ar)",
+   "score": 81.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "MMMB (tr)",
+   "score": 76.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "MMMB (ru)",
+   "score": 83.4,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "Multilingual MMBench (en)",
+   "score": 85.5,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "Multilingual MMBench (zh)",
+   "score": 85.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "Multilingual MMBench (pt)",
+   "score": 83.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "Multilingual MMBench (ar)",
+   "score": 79.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "Multilingual MMBench (tr)",
+   "score": 75.9,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "Multilingual MMBench (ru)",
+   "score": 82.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "MTVQA (avg)",
+   "score": 30.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure multilingual.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "Video-MME (w/o subs)",
+   "score": 66.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "Video-MME (w/ subs)",
+   "score": 68.9,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "MVBench",
+   "score": 75.4,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "MMBench-Video (val)",
+   "score": 1.69,
+   "scale": 5,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "MLVU (M-Avg)",
+   "score": 71.4,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "CG-Bench (long)",
+   "score": 38.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "CG-Bench (clue acc.)",
+   "score": 55.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mm-internvl3-8b-config",
+   "vendor_claim": true,
+   "config": "read by eye off the card figure video.png (vendor chart/table screenshot, not text); row located in the table and the column header re-read to confirm the column is this model's own and not a sibling size's; +-0.5; second independent read matched"
+  },
+  {
+   "name": "MMLU",
+   "score": 77.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "CMMLU",
+   "score": 84.4,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "C-Eval",
+   "score": 84.5,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "GAOKAO",
+   "score": 89.5,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "TriviaQA",
+   "score": 51.5,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "NaturalQuestions",
+   "score": 28.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "C3",
+   "score": 95.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "RACE-High",
+   "score": 90.8,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "WinoGrande",
+   "score": 78.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "HellaSwag",
+   "score": 90.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "BBH",
+   "score": 77.4,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "GSM8K",
+   "score": 83.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "MATH",
+   "score": 72.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "TheoremQA",
+   "score": 25.5,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "HumanEval",
+   "score": 78.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "MBPP",
+   "score": 69.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  },
+  {
+   "name": "MBPP-CN",
+   "score": 64.4,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-internvl3-8b-card",
+   "vendor_claim": true,
+   "config": "Read by eye off the card figure 'language_table.png' (InternVL3 series language-capability table, models-as-columns spanning Qwen2.5/InternVL3 0.5B-78B). Column located explicitly as InternVL3-8B; read three times with vision and all three reads agreed on every cell. Text-only evaluation via OpenCompass with the dataset version pinned in the table's Version column. No shot count, thinking setting or sampling parameters are printed in the figure, so the harness is the card's, not an independent reproduction. Read-by-eye caveat: +/-0.5 on the last digit."
+  }
+ ]
 }
