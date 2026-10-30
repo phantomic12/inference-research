@@ -1,0 +1,87 @@
+{
+  "id": "euston-8b",
+  "type": "model",
+  "name": "Euston-8B",
+  "family": "deepseek",
+  "vendor": "flock-io",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "text-generation",
+  "params_b": 8.0,
+  "active_params_b": 8.0,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 4096,
+  "num_layers": 36,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 4,
+  "max_position_embeddings": 131072,
+  "context_scaling": "Inherited unchanged from deepseek-ai/DeepSeek-R1-0528-Qwen3-8B (config.json max_position_embeddings 131072). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "Inherited unchanged from deepseek-ai/DeepSeek-R1-0528-Qwen3-8B: 36 full GQA layers (kv heads 8, head_dim 128) and 0 other layers, per the base config.json.",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 147456,
+  "flops_per_token_active": 48000000000.0,
+  "open_weights": true,
+  "license": "mit",
+  "base_model": "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+  "derivative_kind": "rl",
+  "notes": "ADDED 2026-10-30. An RL fine-tune (GRPO against a rule-based boxed-answer reward, no judge model) of deepseek-ai/DeepSeek-R1-0528-Qwen3-8B, not a new base model: same config.json, same 8.0B parameters (identical tensor set). Recorded as a contender because it publishes same-table evidence against its own base. Two caveats the card states itself and which the rows carry: a large part of the 34.25 pp balanced-accuracy gap is the base failing to emit a parseable verdict at all (38.0% of items truncated) rather than worse judgement - the card attributes ~18 pp to learning to terminate and 16.3 pp to judgement - and the model regresses on AIME 2026 (69.17 -> 65.00 official semantics, card calls it not significant). It is a discrimination score on mathematical claim verification, not general capability. Licence mit, repo created 2026-09-19.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-10-30",
+  "sources": [
+    "hf-flock-io-euston-8b"
+  ],
+  "benchmarks": [
+    {
+      "name": "Balanced accuracy, balanced held-out split",
+      "score": 63.75,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-flock-io-euston-8b",
+      "vendor_claim": true,
+      "config": "Card table '| Metric | DeepSeek-R1-0528-Qwen3-8B | Euston |'; base 29.50%. 200 true + 200 false statements, one pair per source paper, temporally disjoint from training. Base's 29.50 is below chance because 38.0% of its answers were unparseable within the token budget and scored wrong."
+    },
+    {
+      "name": "Pairwise adjudication score, all 200 pairs",
+      "score": 64.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-flock-io-euston-8b",
+      "vendor_claim": true,
+      "config": "Same card's 'Pairwise adjudication' table; base 48.0%. Ties credited 0.5. Coverage 41% vs 21%; accuracy within coverage 84.1% vs 40.5% (conditional figure)."
+    },
+    {
+      "name": "Discrimination gap P(false|false)-P(false|true) (pp)",
+      "score": 27.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-flock-io-euston-8b",
+      "vendor_claim": true,
+      "config": "Same table; base -0.5 pp (z = -0.1), Euston +27.5 pp (z = +6.0). Printed as a percentage-point gap. Stored on a 100 scale as percentage points; the metric ranges -100..100, not 0..100."
+    },
+    {
+      "name": "AIME 2026, official semantics",
+      "score": 65.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-flock-io-euston-8b",
+      "vendor_claim": true,
+      "config": "Card 'Capability retention, AIME 2026' table; base 69.17% - LOSS of 4.17 pp, 95% CI [-10.83, +2.50], card calls it not significant. 30 problems, 4 samples. Recorded as printed."
+    },
+    {
+      "name": "AIME 2026, landed runs only",
+      "score": 71.26,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-flock-io-euston-8b",
+      "vendor_claim": true,
+      "config": "Same table; base 89.51% - LOSS of 12.96 pp, significant. Recorded as printed."
+    }
+  ]
+}
