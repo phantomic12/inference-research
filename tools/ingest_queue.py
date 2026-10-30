@@ -140,7 +140,10 @@ def img_batch(n):
         files = sorted(str(p) for p in d.glob('*.*') if p.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp'))
         if not files:
             imgs = r.get('images') if r.get('n_bench_ctx') else r.get('other')
-            for i, im in enumerate((imgs or [])[:8]):
+            # No [:8] cap: the stored list is the ONLY route to a figure, so capping it here
+            # made every image past the 8th permanently unreachable and let `img` report
+            # remaining: 0 with unread tables still on the card.
+            for i, im in enumerate(imgs or []):
                 ext = os.path.splitext(im['url'].split('?')[0])[1].lower() or '.png'
                 if ext not in ('.png', '.jpg', '.jpeg', '.webp'):
                     ext = '.png'
@@ -148,7 +151,7 @@ def img_batch(n):
                 fetch(im['url'], dest)
             files = sorted(str(p) for p in d.glob('*.*') if p.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp'))
         out.append({'model': r['id'], 'repo': r['repo'], 'class': cls,
-                    'existing_rows': r.get('benchmarks', 0), 'files': files[:8]})
+                    'existing_rows': r.get('benchmarks', 0), 'files': files})
     return out
 
 
