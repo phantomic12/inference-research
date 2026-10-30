@@ -1,0 +1,69 @@
+{
+ "id": "minimax-m2-reap-172b-a10b",
+ "type": "model",
+ "name": "MiniMax-M2-REAP-172B-A10B",
+ "family": "minimax-m2",
+ "vendor": "cerebras",
+ "release_year": 2025,
+ "architecture": "moe",
+ "task": "text-generation",
+ "params_b": 172.518,
+ "active_params_b": 10,
+ "num_experts": 192,
+ "experts_per_token": 8,
+ "shared_expert": false,
+ "hidden_size": 3072,
+ "num_layers": 62,
+ "num_kv_heads": 8,
+ "head_dim": 128,
+ "gqa_ratio": 6.0,
+ "max_position_embeddings": 204800,
+ "context_scaling": "Inherited unchanged from MiniMaxAI/MiniMax-M2 (config.json max_position_embeddings 204800). This derivative does not publish a context-extension recipe of its own.",
+ "context_scaling_method": "native",
+ "activation": "silu",
+ "attention_variant": "GQA, all-full attention (attn_type_list all 1; M2 line abandoned M1's hybrid lightning attention)",
+ "layer_types": [],
+ "attention_layer_indices": [],
+ "kv_cache_bytes_per_token": 253952,
+ "flops_per_token_active": 60000000000.0,
+ "open_weights": true,
+ "license": "other",
+ "base_model": "MiniMaxAI/MiniMax-M2",
+ "derivative_kind": "other",
+ "notes": "ADDED 2026-10-30. A one-shot expert-pruned compression of MiniMaxAI/MiniMax-M2, not a new base model and not a quant: uniform REAP pruning removed 25% of experts, 256 -> 192 per layer, taking the model from 229B to 172.5B total (10B active, 8 of 192 routed). Config differs from the base's only in num_local_experts. Recorded because the card prints a base column and a this-model column in one table, and it wins 3 of 8 rows - AIME25 +6.6, MBPP+ +1.9, MBPP +0.5 - while losing HumanEval+ (-2.4), MATH-500 (-2.2) and the agentic rows. A memory/quality trade-off with a genuine reasoning gain, not an across-the-board improvement. Sibling of the 139B/162B REAP variants already in the catalog. Licence 'other' (modified MIT), repo created 2025-11-15.",
+ "status": "verified",
+ "confidence": 0.5,
+ "updated": "2026-10-30",
+ "sources": [
+  "hf-cerebras-minimax-m2-reap-172b-a10b"
+ ],
+ "benchmarks": [
+  {
+   "name": "AIME25",
+   "score": 83.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-cerebras-minimax-m2-reap-172b-a10b",
+   "vendor_claim": true,
+   "config": "Card HTML table '<th>MiniMax-M2</th><th>MiniMax-M2-REAP-172B-A10B</th><th>...162B...</th><th>...139B...</th>' row AIME25: base 76.7 vs this 83.3. 25% uniform REAP expert pruning, 256 -> 192 experts per layer."
+  },
+  {
+   "name": "MBPP+",
+   "score": 74.9,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-cerebras-minimax-m2-reap-172b-a10b",
+   "vendor_claim": true,
+   "config": "Same table, base 73.0 vs 74.9."
+  },
+  {
+   "name": "MBPP",
+   "score": 88.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-cerebras-minimax-m2-reap-172b-a10b",
+   "vendor_claim": true,
+   "config": "Same table, base 87.6 vs 88.1. Three of eight rows win; HumanEval+ 89.0->86.6, MATH-500 91.6->89.4 and the tau2/BFCL agentic rows lose."
+  }
+ ]
+}
