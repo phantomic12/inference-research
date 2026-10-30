@@ -52,10 +52,34 @@ def config_of(repo):
     return c.get("text_config") or c
 
 
-def arch_of(base_repo):
-    """Everything the derivative inherits unchanged because it keeps the base's config."""
-    cfg = config_of(base_repo)
-    raw_cfg = jget("https://huggingface.co/%s/raw/main/config.json" % base_repo)
+def arch_of(base_repo, base_rec=None):
+    """Everything the derivative inherits unchanged because it keeps the base's config.
+
+    Gated bases (google/gemma-3-12b-it and friends) answer 401 on config.json. The base's
+    catalog record already carries every architecture field this function would derive, and
+    main() overwrites arch from that record afterwards anyway, so fall back to the record
+    instead of dying on a base we are not authenticated for.
+    """
+    try:
+        cfg = config_of(base_repo)
+        raw_cfg = jget("https://huggingface.co/%s/raw/main/config.json" % base_repo)
+    except Exception:
+        if base_rec is None:
+            raise
+        nl = base_rec.get("num_layers")
+        return {
+            "num_layers": nl, "hidden_size": base_rec.get("hidden_size"),
+            "num_kv_heads": base_rec.get("num_kv_heads") or 1,
+            "head_dim": base_rec.get("head_dim"),
+            "gqa_ratio": base_rec.get("gqa_ratio"), "num_experts": base_rec.get("num_experts"),
+            "experts_per_token": base_rec.get("experts_per_token"),
+            "max_position_embeddings": base_rec.get("max_position_embeddings"),
+            "kv_bytes": base_rec.get("kv_cache_bytes_per_token"),
+            "n_full": nl or 0, "full_idx": base_rec.get("attention_layer_indices") or [],
+            "layer_types": base_rec.get("layer_types") or [],
+            "act": base_rec.get("activation"), "has_vision": False,
+            "architecture": base_rec.get("architecture") or "dense",
+        }
     layer_types = cfg.get("layer_types") or []
     full_idx = [i for i, x in enumerate(layer_types) if "full" in x]
     n_full = len(full_idx) if full_idx else cfg.get("num_hidden_layers", 0) // (
@@ -156,7 +180,7 @@ def main():
     if base_rec is None:
         sys.exit("base %s is not a catalog record - add the base first, or this derivative "
                  "belongs in data/derivatives.jsonl" % base)
-    arch = arch_of(base)
+    arch = arch_of(base, base_rec)
     params = round(((info.get("safetensors") or {}).get("total") or 0) / 1e9, 3) or base_rec.get("params_b")
     created = (info.get("createdAt") or "")[:10]
     year = int(created[:4]) if created[:4].isdigit() else None
