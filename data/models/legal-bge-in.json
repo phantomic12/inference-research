@@ -1,0 +1,60 @@
+{
+ "id": "legal-bge-in",
+ "type": "model",
+ "name": "legal-bge-in",
+ "family": "bge",
+ "vendor": "Mannas",
+ "release_year": 2026,
+ "architecture": "dense",
+ "task": "embedding",
+ "params_b": 0.109,
+ "active_params_b": 0.109,
+ "num_experts": null,
+ "experts_per_token": null,
+ "shared_expert": null,
+ "hidden_size": 768,
+ "num_layers": 12,
+ "num_kv_heads": 12,
+ "head_dim": 64,
+ "gqa_ratio": 1,
+ "max_position_embeddings": 512,
+ "context_scaling": "Inherited unchanged from BAAI/bge-base-en-v1.5 (config.json max_position_embeddings 512 = the BERT 512-token encoder limit). bge's documented max query length is 512 tokens.",
+ "context_scaling_method": "native",
+ "activation": "gelu",
+ "attention_variant": "bidirectional encoder (BERT), full attention, no causal mask",
+ "layer_types": [],
+ "attention_layer_indices": [],
+ "kv_cache_bytes_per_token": 0.0,
+ "flops_per_token_active": 654000000.0,
+ "open_weights": true,
+ "license": "mit",
+ "base_model": "BAAI/bge-base-en-v1.5",
+ "derivative_kind": "finetune",
+ "notes": "ADDED 2026-10-31. MultipleNegativesRankingLoss fine-tune of BAAI/bge-base-en-v1.5 (768-dim, 109M) for retrieval over Indian case law (Supreme Court of India + Delhi High Court). Identical tensor set to the base - this is a weight fine-tune, not an architecture change. Trained on ~9,585 (question, passage) pairs built without human labelling (AI-generated ISSUES: headnotes plus synthetic queries), 2 epochs, batch 32, lr 2e-5, max_seq_length 384, one RTX 5060 Ti. Eval discipline is unusually good for this queue: 447 held-out questions against a fixed candidate pool, set frozen before training, leakage checked, every number an A/B on the identical pool. Read the ceiling: the card itself says absolute scores are on a reduced pool and the DELTA is the trustworthy signal, so treat +7.2 pts Recall@10 as the claim, not 0.7897 as a general retrieval score. Queries are AI-generated legal-issue questions - a proxy for lawyer queries, not user logs. MIT, repo created 2026-07-12. Confidence 0.55.",
+ "status": "verified",
+ "confidence": 0.55,
+ "updated": "2026-10-31",
+ "sources": [
+  "hf-mannas-legal-bge-in"
+ ],
+ "benchmarks": [
+  {
+   "name": "Indian legal retrieval Recall@10",
+   "score": 78.97,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mannas-legal-bge-in",
+   "vendor_claim": true,
+   "config": "Card '| Metric | Vanilla bge-base | This model | Improvement |': Recall@10 0.7181 base vs 0.7897 this (x100), +7.2 pts. Held-out 447 legal questions, fixed candidate pool, leakage-checked, eval set frozen before training. Card cautions the pool is reduced and the delta - not the absolute - is the trustworthy signal."
+  },
+  {
+   "name": "Indian legal retrieval MRR@10",
+   "score": 60.09,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-mannas-legal-bge-in",
+   "vendor_claim": true,
+   "config": "Same table: MRR@10 0.5137 base vs 0.6009 this (x100), +8.7 pts. Same held-out 447-question set, identical pool, same run."
+  }
+ ]
+}

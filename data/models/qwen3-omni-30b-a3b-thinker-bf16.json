@@ -1,0 +1,51 @@
+{
+ "id": "qwen3-omni-30b-a3b-thinker-bf16",
+ "type": "model",
+ "name": "Qwen3-Omni-30B-A3B-Thinker-bf16",
+ "family": "qwen3",
+ "vendor": "VikramPal",
+ "release_year": 2026,
+ "architecture": "moe",
+ "task": "vision-language",
+ "params_b": 31.719,
+ "active_params_b": 3.0,
+ "num_experts": null,
+ "experts_per_token": null,
+ "shared_expert": null,
+ "hidden_size": null,
+ "num_layers": null,
+ "num_kv_heads": 1,
+ "head_dim": null,
+ "gqa_ratio": 1,
+ "max_position_embeddings": 65536,
+ "context_scaling": "The Thinker sub-config of Qwen/Qwen3-Omni-30B-A3B-Instruct, max_position_embeddings 65536. This repo ships the Thinker ONLY: the Talker and code2wav stacks (3,540,613,057 params) were nulled before training and are absent from the checkpoint, whose config.json carries exactly audio_config, text_config and vision_config. Input audio, image, video or text; output text only - there is no speech synthesis here.",
+ "context_scaling_method": "native",
+ "activation": null,
+ "attention_variant": "Inherited unchanged from Qwen/Qwen3-Omni-30B-A3B-Instruct: 0 full GQA layers (kv heads 1, head_dim None) and 0 other layers, per the base config.json.",
+ "layer_types": [],
+ "attention_layer_indices": [],
+ "kv_cache_bytes_per_token": 98304,
+ "flops_per_token_active": 18000000000.0,
+ "open_weights": true,
+ "license": "other",
+ "base_model": "Qwen/Qwen3-Omni-30B-A3B-Instruct",
+ "derivative_kind": "finetune",
+ "notes": "ADDED 2026-10-31. The Thinker of Qwen/Qwen3-Omni-30B-A3B-Instruct with a QLoRA adapter merged back to bfloat16, fine-tuned on SLURP spoken-intent classification. Not a like-for-like 30B clone: the Talker and code2wav stacks (3.54B params) were removed, so this checkpoint is 31.72B of the whole 35.26B parent and is text-output-only - no speech synthesis, and the card is emphatic about it. This is the strongest evidence in the batch and the reason it is recorded at 0.6: 500 held-out SLURP test items, per-item hits stored so the comparison is an exact McNemar test on paired outcomes (47/10 discordant, p=7.51e-07, 95% CI [+4.51,+10.29]), the scoring harness ships with the numbers, and a 3-bit arm is published as a measured collapse rather than hidden. Two caveats the card states itself: the fine-tune comparison confounds two variables (base arm ran the whole Omni checkpoint, post-merge arms run the Thinker alone), and the task is narrow - a 60-way intent menu from audio, with chance at 1.667%. The 86.80% does not transfer to general capability. Licence metadata says 'other' with license_name apache-2.0; treat as Apache-2.0 inherited from Qwen3-Omni. Repo created 2026-10-11.",
+ "status": "verified",
+ "confidence": 0.6,
+ "updated": "2026-10-31",
+ "sources": [
+  "hf-vikrampal-qwen3-omni-30b-a3b-thinker-bf16"
+ ],
+ "benchmarks": [
+  {
+   "name": "SLURP intent accuracy (500 held-out)",
+   "score": 86.8,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-vikrampal-qwen3-omni-30b-a3b-thinker-bf16",
+   "vendor_claim": true,
+   "config": "Card arm table '| arm | what it is | accuracy | vs comparator | discordant | p |': row 'omni-base' whole Omni checkpoint bf16 no fine-tune 79.40% (397/500), row 'omni-sft' this repository Thinker-only adapter merged bf16 86.80% (434/500), +7.40, discordant 47/10, McNemar p=7.51e-07 separated, 95% CI on the paired difference [+4.51,+10.29]. 4-shot prompt listing a fixed 60-intent menu, answered as an index; chance 1.667%. Two-variable confound stated on the card."
+  }
+ ]
+}
