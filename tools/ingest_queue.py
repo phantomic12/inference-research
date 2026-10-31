@@ -109,6 +109,24 @@ def _get(url):
         return None
 
 
+IMAGE_MAGIC = (b'\x89PNG', b'\xff\xd8', b'GIF8')
+
+
+def _is_raster(data):
+    """True if these bytes are a real raster image, not HTML or an error page.
+
+    Guards the write path: a 403 page, a 401 body ('Access to model X is restricted'),
+    a Cloudflare challenge or a redirect target that serves HTML all arrive as a normal
+    200-OK byte string. `fetch()` used to save any payload over 2 KB under a .png name,
+    so those cards got a text file where a figure belonged and every vision route then
+    rejected it ('does not start like a png'). 29 such files sat on disk, three of them
+    the only copy of a gated repo's charts, and the models had already been marked seen.
+    """
+    if any(data.startswith(m) for m in IMAGE_MAGIC):
+        return True
+    return data[:4] == b'RIFF' and data[8:12] == b'WEBP'
+
+
 def fetch(url, dest):
     """Download one card image. HF serves LFS-backed images under /raw/main/ as a
     131-byte git-LFS pointer stub rather than the image, so /resolve/main/ is the path
@@ -122,6 +140,10 @@ def fetch(url, dest):
             continue
         if len(data) < 2000 or data[:40].startswith(b'version https://git-lfs'):
             continue
+        # An HTML/JSON error body is not a figure. Saving it under a .png name makes the
+        # card look read and the figure unrecoverable, so reject the payload instead.
+        if not _is_raster(data) and b'<svg' not in data[:400]:
+            continue
         # Cards reference plenty of .svg figures, and the scanner's IMG regex accepts them.
         # img_batch() names the destination from the URL extension and coerces anything
         # outside png/jpg/webp to '.png', so an SVG used to land on disk as a .png full of
@@ -134,6 +156,8 @@ def fetch(url, dest):
                 import cairosvg
                 data = cairosvg.svg2png(bytestring=data, output_width=1800)
             except Exception:
+                continue
+            if not _is_raster(data):
                 continue
         dest.write_bytes(data)
         return len(data)
