@@ -1,0 +1,163 @@
+{
+  "id": "lfm3-omni-2b",
+  "type": "model",
+  "name": "LiquidAI/LFM3-Omni-2B",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-10-31",
+  "sources": [
+    "liquid-ai-lfm3-omni-2b-model-card"
+  ],
+  "family": "lfm3",
+  "vendor": "Liquid AI",
+  "release_year": 2026,
+  "architecture": "hybrid-attention-ssm",
+  "params_b": 2.1669,
+  "active_params_b": 2.1669,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 2048,
+  "num_layers": 24,
+  "num_kv_heads": 4,
+  "head_dim": 128,
+  "gqa_ratio": 4,
+  "max_position_embeddings": 32768,
+  "context_scaling": "Card states 32K tokens input+output. The inheritance from LFM3-1.7B is visible in config.json text_config.max_position_embeddings = 128000, so the released omni checkpoint is served at 32K while the text stack was extended to 128K; take the card number as the usable window.",
+  "activation": "silu",
+  "attention_variant": "LFM3 text backbone plus LFM3 vision encoder and causal audio encoder: 13 gated short-convolution layers (conv), 5 sliding_attention layers (sliding_window 256) and 6 full_attention layers at indices 2,6,10,14,18,22; GQA 16 query / 4 KV heads, head_dim 128. Speech out via a depthformer and LiquidCodec (12 codebooks, 24 kHz).",
+  "kv_cache_bytes_per_token": 0,
+  "flops_per_token_active": null,
+  "open_weights": true,
+  "license": "other",
+  "notes": "ADDED 2026-10-31 from the trending sweep. params_b 2.1669 = safetensors.total 2,166,928,384 (total incl. text, vision and audio encoders and the depthformer), not the 2.17B the card rounds to. kv_cache_bytes_per_token is 0 on the same basis used for LFM3-1.7B and LFM3-VL-2B: the six full-attention layers would cost 6 x 2 x 4 KV heads x 128 head_dim x 2 B = 12,288 B/token if they held an unbounded per-token cache, but every attention layer sits behind a 256-token sliding window or a constant-state conv layer in this tri-hybrid stack, so the per-token cache is bounded and the field records 0 rather than the naive all-layers figure (24 layers would be 49,152 B/token). Non-reasoning model: enable_thinking is not supported. Licence is LFM Open License v1.0 (license: other), so it is open-weight but not OSI-open. Card publishes omni benchmarks; the rows recorded here are the ones where this 2.17B model beats larger neighbours, plus the rows it loses.",
+  "release_date": "2026-10-21",
+  "task": "vision-language",
+  "context_scaling_method": "native",
+  "layer_types": [
+    "conv",
+    "conv",
+    "full_attention",
+    "conv",
+    "sliding_attention",
+    "conv",
+    "full_attention",
+    "conv",
+    "sliding_attention",
+    "conv",
+    "full_attention",
+    "conv",
+    "sliding_attention",
+    "conv",
+    "full_attention",
+    "conv",
+    "sliding_attention",
+    "conv",
+    "full_attention",
+    "conv",
+    "sliding_attention",
+    "conv",
+    "full_attention",
+    "conv"
+  ],
+  "attention_layer_indices": [
+    2,
+    6,
+    10,
+    14,
+    18,
+    22
+  ],
+  "benchmarks": [
+    {
+      "name": "Daily-Omni",
+      "score": 70.09,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "liquid-ai-lfm3-omni-2b-model-card",
+      "vendor_claim": true,
+      "config": "Card table 'Video + audio understanding', column 'LFM3-Omni2B'. Nearest published comparison in the catalog is MiniCPM-o 4.5 at 80.2 (8.7B) - this row LOSES to it. Vendors compared here: Qwen2.5-Omni3B 58.81, Qwen2.5-Omni7B 61.32, Gemma 4 E2B 50.63, Gemma 4 E4B 54.14, Phi-4-multimodal 48.87. Vendor run, harness not restated on the card."
+    },
+    {
+      "name": "WorldSense",
+      "score": 47.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "liquid-ai-lfm3-omni-2b-model-card",
+      "vendor_claim": true,
+      "config": "Card row, column 'LFM3-Omni2B'. Catalog: MiniCPM-o 4.5 55.7, Nemotron 3 Nano Omni 30B-A3B 55.2, Qwen3-Omni-30B-A3B 54.0 - this row LOSES to all three larger omni models. Qwen2.5-Omni3B 44.99, Qwen2.5-Omni7B 45.37, Gemma 4 E2B 38.11, E4B 43.51, Phi-4-multimodal 42.37. Vendor run."
+    },
+    {
+      "name": "AV-SpeakerBench",
+      "score": 46.79,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "liquid-ai-lfm3-omni-2b-model-card",
+      "vendor_claim": true,
+      "config": "Card row, column 'LFM3-Omni2B'; no catalog model publishes this benchmark yet, so the comparison is the card's own columns only (Qwen2.5-Omni3B 40.44, Qwen2.5-Omni7B 43.24, Gemma 4 E2B 32.32, E4B 36.36, Phi-4 37.95). Vendor run, harness not restated."
+    },
+    {
+      "name": "OmniBench (overall)",
+      "score": 46.32,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "liquid-ai-lfm3-omni-2b-model-card",
+      "vendor_claim": true,
+      "config": "Card row 'OmniBench (overall)', column 'LFM3-Omni2B'. LOSES to Qwen2.5-Omni3B 47.11 and Qwen2.5-Omni7B 49.65; beats Phi-4-multimodal 38.97, Gemma 4 E2B 16.81 and E4B 20.67. Vendor run, harness not restated on the card."
+    },
+    {
+      "name": "RealWorldQA",
+      "score": 66.54,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "liquid-ai-lfm3-omni-2b-model-card",
+      "vendor_claim": true,
+      "config": "Card table 'Spoken visual QA', column 'LFM3-Omni2B'. Catalog RealWorldQA rows are for vision-only models at different harnesses, so cross-family comparison is weak; the row is recorded as the card prints it. Qwen2.5-Omni3B 63.14, Gemma 4 E2B 48.63, E4B 53.07, Phi-4 64.84, Cosmos3Edge 72.81. Vendor run."
+    },
+    {
+      "name": "MMStar",
+      "score": 55.67,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "liquid-ai-lfm3-omni-2b-model-card",
+      "vendor_claim": true,
+      "config": "Card table (second image table), column 'LFM3-Omni2B'. LOSES to Phi-4-multimodal 59.33 and Cosmos3Edge 56.07; beats Qwen2.5-Omni3B 55.67 (tie), Gemma 4 E2B 46.47, E4B 52.00. Vendor run."
+    },
+    {
+      "name": "MathVista (mini)",
+      "score": 62.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "liquid-ai-lfm3-omni-2b-model-card",
+      "vendor_claim": true,
+      "config": "Card row, column 'LFM3-Omni2B'. Catalog LFM3-VL-2B (vision-only, same family) prints 84.2 on MathVista (mini); this omni model is 21.7 points lower on the same test name, so the omni multi-task training costs real vision-math accuracy. Phi-4-multimodal 65.40 beats it. Vendor run."
+    },
+    {
+      "name": "DocVQA",
+      "score": 92.47,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "liquid-ai-lfm3-omni-2b-model-card",
+      "vendor_claim": true,
+      "config": "Card table 'Documents and OCR', column 'LFM3-Omni2B'. LOSES to Qwen2.5-Omni3B 92.71 and Phi-4-multimodal 92.60 by a hair; Gemma 4 E2B 73.49 and E4B 77.91 are far behind. Vendor run."
+    },
+    {
+      "name": "Tool calling (internal eval)",
+      "score": 52.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "liquid-ai-lfm3-omni-2b-model-card",
+      "vendor_claim": true,
+      "config": "Card table 'Audio understanding / speech', row 'Tool calling internal eval'. LOSES to Gemma 4 E2B 55.60 and E4B 72.40; beats Qwen2.5-Omni3B 44.30. The benchmark is the vendor's own internal one, so it is not comparable to BFCL or tau2 rows elsewhere in the catalog."
+    },
+    {
+      "name": "English ASR WER",
+      "score": 6.36,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "liquid-ai-lfm3-omni-2b-model-card",
+      "vendor_claim": true,
+      "config": "Card row 'English ASR WER \u2193' (LOWER is better). Phi-4-multimodal 5.14 is better; Qwen2.5-Omni3B 6.30 is slightly better; Gemma 4 E2B 8.26 and E4B 7.82 are worse. Vendor run, harness not restated. Recorded with higher_is_better false."
+    }
+  ]
+}
