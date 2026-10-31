@@ -1,0 +1,51 @@
+{
+  "id": "0sint-event-embedder",
+  "type": "model",
+  "name": "0sint-event-embedder",
+  "family": "sentence-transformers",
+  "vendor": "allenborochin",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "embedding",
+  "params_b": 0.023,
+  "active_params_b": 0.0227,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 384,
+  "num_layers": 6,
+  "num_kv_heads": 12,
+  "head_dim": 32,
+  "gqa_ratio": 1,
+  "max_position_embeddings": 512,
+  "context_scaling": "Inherited unchanged from sentence-transformers/all-MiniLM-L6-v2 (config.json max_position_embeddings 512). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "gelu",
+  "attention_variant": "bidirectional encoder (BERT), full attention, no causal mask",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 0.0,
+  "flops_per_token_active": 136200000.0,
+  "open_weights": true,
+  "license": "mit",
+  "base_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-10-31. Not a general similarity model: a contrastive MultipleNegativesRankingLoss fine-tune of all-MiniLM-L6-v2 (22,713,216 params, identical tensor set) for event identity in a noisy OSINT feed, with hard negatives mined from measured confusable pairs. The card is the most transparent in this batch about what each number means, and the numbers need that transparency: the 0.883 vs 0.574 ARI win is clustering an 8-hour demo window (466 messages) with the PRODUCTION model refit on all 1,102 events, at threshold 0.50 versus the baseline's 0.55 - a system number, not a held-out one. The held-out generalisation evidence is separate and weaker in magnitude but cleaner: 5 pre-registered confusable pairs, event-level split, proof model, centroid similarity 0.788->0.583 on the Beersheba pair with all 5 improved, plus within-event similarity on 155 ordinary events rising 0.866->0.896. Threshold mismatch and the demo-window caveat are recorded in the row configs. Licence MIT, repo created 2026-07-07. Confidence 0.5.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-10-31",
+  "sources": [
+    "hf-allenborochin-0sint-event-embedder"
+  ],
+  "benchmarks": [
+    {
+      "name": "8h OSINT feed window clustering ARI (466 msgs)",
+      "score": 88.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-allenborochin-0sint-event-embedder",
+      "vendor_claim": true,
+      "config": "Card 'Results' end-to-end table '| embeddings | config | merges | fragmented | ARI |': row 'raw all-MiniLM-L6-v2' average @ 0.55 = ARI 0.574 vs row 'production model (this repo)' average @ 0.50 = ARI 0.883. Agglomerative, cosine, average linkage, against ground-truth event_id. THRESHOLDS DIFFER (0.55 base, 0.50 this); the card's sweep says 0.52 ties at 0.880, and 0.883 is the demo window from a model refit on all 1,102 events - a system number, not held out. Same table: base 5 merged events / 16 fragmented, this model 1 / 12. Held-out generalisation evidence (not a score row, kept out of the benchmark list): 5 pre-registered confusable event pairs, event-level split, proof model - centroid cosine 0.788->0.583 (E0044/E0525), 0.803->0.700, 0.789->0.642, 0.771->0.676, 0.777->0.619, with within-event similarity on 155 held-out ordinary events rising 0.866->0.896."
+    }
+  ]
+}
