@@ -85,6 +85,30 @@ def card_scan():
     return json.loads(p.read_text()) if p.exists() else []
 
 
+def _get(url):
+    """Bytes for one URL, or None.
+
+    urllib alone is not enough. Some card figures live on hosts whose TLS handshake urllib
+    cannot complete from here -- inclusionAI's charts on intranetproxy.alipay.com resolve and
+    answer curl in ~5 s through two redirects, while urlopen times out on both AF_INET and
+    AF_INET6. Ling-3.0-flash's whole 26-cell evaluation table was hidden that way and the card
+    looked like a 2-row model. Fall back to curl (which handles the redirects and the SNI those
+    hosts want) before calling a figure unreachable.
+    """
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        return urllib.request.urlopen(req, timeout=30).read()
+    except Exception:
+        pass
+    try:
+        import subprocess
+        r = subprocess.run(['curl', '-sL', '--max-time', '90', '-A', 'Mozilla/5.0', url],
+                           capture_output=True, timeout=120)
+        return r.stdout if r.returncode == 0 and r.stdout else None
+    except Exception:
+        return None
+
+
 def fetch(url, dest):
     """Download one card image. HF serves LFS-backed images under /raw/main/ as a
     131-byte git-LFS pointer stub rather than the image, so /resolve/main/ is the path
@@ -93,10 +117,8 @@ def fetch(url, dest):
     if 'huggingface.co/' in url and '/raw/main/' in url:
         candidates.append(url.replace('/raw/main/', '/resolve/main/'))
     for u in candidates:
-        try:
-            req = urllib.request.Request(u, headers={'User-Agent': 'Mozilla/5.0'})
-            data = urllib.request.urlopen(req, timeout=30).read()
-        except Exception:
+        data = _get(u)
+        if data is None:
             continue
         if len(data) < 2000 or data[:40].startswith(b'version https://git-lfs'):
             continue
