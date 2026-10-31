@@ -100,6 +100,19 @@ def fetch(url, dest):
             continue
         if len(data) < 2000 or data[:40].startswith(b'version https://git-lfs'):
             continue
+        # Cards reference plenty of .svg figures, and the scanner's IMG regex accepts them.
+        # img_batch() names the destination from the URL extension and coerces anything
+        # outside png/jpg/webp to '.png', so an SVG used to land on disk as a .png full of
+        # XML. Every vision route then rejected it ('does not start like a png' / 'invalid
+        # image format'), the figure was scored 'failed', and the card was marked seen with
+        # the table still unread -- 25 figures on 12 cards were lost that way. Rasterize
+        # instead: an SVG is a figure we can still read, just not in its native format.
+        if b'<svg' in data[:400]:
+            try:
+                import cairosvg
+                data = cairosvg.svg2png(bytestring=data, output_width=1800)
+            except Exception:
+                continue
         dest.write_bytes(data)
         return len(data)
     return 0
@@ -189,6 +202,32 @@ def cmd_img(a):
                       'remaining_strong': rem_s, 'remaining_other': rem_o}, indent=1))
 
 
+def seen_without_figures(ids):
+    """Ids whose card-classified figures never reached disk.
+
+    Marking a model seen is a permanent claim that its charts were read. A download that
+    silently returned 0 (gated 401, SVG saved as .png, transient HF error) leaves the
+    directory empty while the card still carries unread tables, and marking then buries the
+    figure forever -- 17 cards were found marked seen with zero images ever fetched, and
+    another 20 with only some. Refuse those and say so, so the operator can re-serve them
+    instead of trusting a tick that read nothing.
+    """
+    scan = {r['id']: r for r in card_scan()}
+    bad = []
+    for i in ids:
+        r = scan.get(i)
+        if not r:
+            continue
+        want = (r.get('images') if r.get('n_bench_ctx') else r.get('other')) or []
+        if not want:
+            continue
+        d = IMG / i
+        have = [p for p in d.glob('*.*') if p.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp')] if d.exists() else []
+        if not have:
+            bad.append(i)
+    return bad
+
+
 def cmd_mark(a):
     s = load_seen()
     ids = []
@@ -196,6 +235,11 @@ def cmd_mark(a):
         ids = [json.loads(l)['id'] for l in pathlib.Path(a.chunk).read_text().splitlines() if l.strip()]
     if a.ids:
         ids += [x.strip() for x in a.ids.split(',') if x.strip()]
+    bad = seen_without_figures(ids)
+    if bad and not getattr(a, 'force', False):
+        ids = [i for i in ids if i not in bad]
+        print('REFUSED %d id(s) with classified figures but none on disk: %s'
+              % (len(bad), ', '.join(bad)))
     s.setdefault(a.type, []).extend(ids)
     save_seen(s)
     print('marked %d %s ids seen (total %d)' % (len(ids), a.type, len(set(s[a.type]))))
@@ -208,7 +252,8 @@ def main():
     d = sub.add_parser('deriv'); d.add_argument('--n', type=int, default=120); d.add_argument('--chunks', type=int, default=6); d.set_defaults(fn=cmd_deriv)
     i = sub.add_parser('img'); i.add_argument('--n', type=int, default=8); i.set_defaults(fn=cmd_img)
     m = sub.add_parser('mark'); m.add_argument('--type', required=True, choices=['deriv', 'img', 'img_other'])
-    m.add_argument('--chunk'); m.add_argument('--ids'); m.set_defaults(fn=cmd_mark)
+    m.add_argument('--chunk'); m.add_argument('--ids'); m.add_argument('--force', action='store_true')
+    m.set_defaults(fn=cmd_mark)
     a = ap.parse_args()
     a.fn(a)
 
