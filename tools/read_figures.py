@@ -30,6 +30,8 @@ DEFAULT_CHAIN = ('nous-portal-main/ornith/ornith-1.5-122b:free,'
 # gets skipped. opencode-go's routes did exactly that on a figure they had just described
 # correctly, and opencode-go/longcat 429s on roughly two image calls in three. So absence is
 # only believed from a route that has earned it, or from two routes agreeing.
+RASTER_MAGIC = (b'\x89PNG', b'\xff\xd8', b'GIF8', b'RIFF')
+
 TRUSTED_ABSENCE = {'nous-portal-main/ornith/ornith-1.5-122b:free',
                    'cap/vision',
                    'nous-portal-main/meituan/longcat-2.5-preview:free'}
@@ -180,9 +182,26 @@ def main():
     a = ap.parse_args()
     p = pathlib.Path(a.image)
     mime = mimetypes.guess_type(p.name)[0] or 'image/png'
-    if mime == 'image/svg+xml':
-        print(json.dumps({'image': str(p), 'error': 'svg'})); return 2
-    b64 = base64.b64encode(p.read_bytes()).decode()
+    raw = p.read_bytes()
+    # The filename lies often enough to matter. img_batch() names each download from the URL
+    # extension and coerces anything outside png/jpg/webp to '.png', so an SVG figure lands on
+    # disk as a .png full of XML. mimetypes then reports image/png, the XML goes out labelled as
+    # a PNG, and every route rejects it ("does not start like a png"). 25 figures across 12 cards
+    # were sitting unreadable that way while the ingest queue counted them as done. So sniff the
+    # bytes rather than the name: an SVG is still a figure, just not a format these models accept.
+    if raw[:4] not in RASTER_MAGIC:
+        if b'<svg' in raw[:800]:
+            try:
+                import cairosvg
+                raw = cairosvg.svg2png(bytestring=raw, output_width=1800)
+                mime = 'image/png'
+            except Exception as e:
+                print(json.dumps({'image': str(p), 'error': 'svg not rasterizable: %s' % e}))
+                return 2
+        else:
+            print(json.dumps({'image': str(p), 'error': 'not a raster image or svg'}))
+            return 2
+    b64 = base64.b64encode(raw).decode()
     chain = [a.gw_model] if a.gw_model else [m.strip() for m in a.chain.split(',') if m.strip()]
     tried, absent_votes = [], 0
     for model in chain:
