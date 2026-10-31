@@ -1,0 +1,69 @@
+{
+  "id": "phi-4-mini-adr-detector",
+  "type": "model",
+  "name": "phi-4-mini-adr-detector",
+  "family": "phi-4",
+  "vendor": "sumitguha13",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "text-generation",
+  "params_b": 3.836,
+  "active_params_b": 3.836,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 3072,
+  "num_layers": 32,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 3.0,
+  "max_position_embeddings": 131072,
+  "context_scaling": "Inherited unchanged from microsoft/Phi-4-mini-instruct (config.json max_position_embeddings 131072). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "GQA + partial RoPE (0.75) + sliding-window (262144)",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 131072.0,
+  "flops_per_token_active": 23016000000.0,
+  "open_weights": true,
+  "license": "mit",
+  "base_model": "microsoft/Phi-4-mini-instruct",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-10-31. A LoRA (r=32, qkv/o/gate_up/down) SFT of microsoft/Phi-4-mini-instruct, fully merged here - identical tensor set and config, 3.836B. Recorded because the card prints base and this model in ONE ADR-Bench table: balanced accuracy 72.7 vs 55.0 and F1 0.481 vs 0.263 on the triage-prompt base row. Honest caveat: RAW accuracy is a LOSS (82.2 vs 86.5 on the neutral-prompt base row) and the card itself flags 59.5% malicious recall and 0.403 precision. Uber ADR-Bench 303 traces, held out from training. Licence MIT, repo created 2026-09-01.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-10-31",
+  "sources": [
+    "hf-sumitguha13-phi-4-mini-adr-detector"
+  ],
+  "benchmarks": [
+    {
+      "name": "ADR-Bench balanced accuracy",
+      "score": 72.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-sumitguha13-phi-4-mini-adr-detector",
+      "vendor_claim": true,
+      "config": "Card table '| Model | Benign | Malicious | Accuracy | Balanced acc | F1 |': 'This model' 72.7 vs 'Phi-4-mini base (ADR triage prompt)' 55.0. Uber ADR-Bench, 303 traces (261 benign / 42 malicious), held out from training, zero truncation at 131K context."
+    },
+    {
+      "name": "ADR-Bench F1",
+      "score": 48.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-sumitguha13-phi-4-mini-adr-detector",
+      "vendor_claim": true,
+      "config": "Same table, F1 0.481 vs the same base row 0.263. The base has a second row ('neutral prompt') at 0.163 and 54.2 balanced acc; the triage-prompt row is the apples-to-apples setting."
+    },
+    {
+      "name": "ADR-Bench raw accuracy",
+      "score": 82.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-sumitguha13-phi-4-mini-adr-detector",
+      "vendor_claim": true,
+      "config": "Same table: 82.2 vs base(neutral) 86.5 - a LOSS on raw accuracy. Base(triage) 27.7. Card argues raw accuracy is a trap: labelling every trace benign scores 86.1 on this class imbalance."
+    }
+  ]
+}
