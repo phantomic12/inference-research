@@ -1997,5 +1997,62 @@ class TestModelRanking(unittest.TestCase):
         self.assertIn("| Rank |", text)
 
 
+def _has_cairosvg() -> bool:
+    """cairosvg is optional. Without it read_figures degrades to a named error instead of
+    rasterizing; CI does not install it, so the rasterization test skips there."""
+    try:
+        import cairosvg  # noqa: F401
+    except Exception:
+        return False
+    return True
+
+
+class TestReadFiguresImageSniff(unittest.TestCase):
+    """read_figures.py must trust the bytes, not the filename.
+
+    img_batch() names each download from the URL extension and coerces anything outside
+    png/jpg/webp to '.png', so SVG figures land on disk as .png files full of XML. The old
+    code asked mimetypes what the file was, was told image/png, shipped the XML as PNG, and
+    every vision route rejected it -- 25 figures across 12 cards sat unreadable while the
+    queue counted those cards as done. These tests pin the sniffing behaviour.
+    """
+
+    def _run(self, path, *extra):
+        return subprocess.run([sys.executable, str(TOOLS / "read_figures.py"), str(path), *extra],
+                              capture_output=True, text=True)
+
+    @unittest.skipUnless(_has_cairosvg(), "cairosvg is an optional dependency")
+    def test_svg_named_png_is_rasterized_not_rejected(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "figure.png"          # the lie: XML in a .png name
+            p.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40">'
+                         '<rect width="80" height="40" fill="#fff"/></svg>')
+            r = self._run(p, "--model-name", "Test", "--attempts", "0",
+                          "--gw-model", "nonexistent/nope")
+            out = json.loads(r.stdout.strip().splitlines()[-1])
+            # It got past the image check and failed on the route instead. Before the fix the
+            # error was the bare 'svg' verdict and no request was ever built.
+            self.assertNotEqual(out.get("error"), "svg")
+            self.assertIn("attempts", out)
+
+    def test_non_image_payload_is_refused(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "notreally.png"
+            p.write_text("<html><body>403 Forbidden</body></html>")
+            r = self._run(p, "--model-name", "Test")
+            out = json.loads(r.stdout.strip().splitlines()[-1])
+            self.assertIn("not a raster image", out.get("error", ""))
+
+    def test_real_png_passes_the_check(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "ok.png"
+            p.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 64)
+            r = self._run(p, "--model-name", "Test", "--attempts", "0",
+                          "--gw-model", "nonexistent/nope")
+            out = json.loads(r.stdout.strip().splitlines()[-1])
+            self.assertNotIn("not a raster image", str(out))
+            self.assertNotEqual(out.get("error"), "svg")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
