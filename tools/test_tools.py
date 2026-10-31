@@ -1997,6 +1997,16 @@ class TestModelRanking(unittest.TestCase):
         self.assertIn("| Rank |", text)
 
 
+def _has_cairosvg() -> bool:
+    """cairosvg is optional. Without it read_figures degrades to a named error instead of
+    rasterizing; CI does not install it, so the rasterization test skips there."""
+    try:
+        import cairosvg  # noqa: F401
+    except Exception:
+        return False
+    return True
+
+
 class TestReadFiguresImageSniff(unittest.TestCase):
     """read_figures.py must trust the bytes, not the filename.
 
@@ -2011,6 +2021,7 @@ class TestReadFiguresImageSniff(unittest.TestCase):
         return subprocess.run([sys.executable, str(TOOLS / "read_figures.py"), str(path), *extra],
                               capture_output=True, text=True)
 
+    @unittest.skipUnless(_has_cairosvg(), "cairosvg is an optional dependency")
     def test_svg_named_png_is_rasterized_not_rejected(self):
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "figure.png"          # the lie: XML in a .png name
