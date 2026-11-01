@@ -1,0 +1,97 @@
+{
+  "id": "bge-small-rrf-v3",
+  "type": "model",
+  "name": "bge-small-rrf-v3",
+  "family": "bge",
+  "vendor": "Stffens",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "embedding",
+  "params_b": 0.033,
+  "active_params_b": 0.0334,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 384,
+  "num_layers": 12,
+  "num_kv_heads": 12,
+  "head_dim": 32,
+  "gqa_ratio": 1,
+  "max_position_embeddings": 512,
+  "context_scaling": "Inherited unchanged from BAAI/bge-small-en-v1.5 (config.json max_position_embeddings 512). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "gelu",
+  "attention_variant": "bidirectional encoder (BERT), full attention, no causal mask",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 0.0,
+  "flops_per_token_active": 200400000.0,
+  "open_weights": true,
+  "license": "mit",
+  "base_model": "BAAI/bge-small-en-v1.5",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-01. Self-supervised retrieval finetune of BAAI/bge-small-en-v1.5 (MNRL, 39,852 emitted triples over a 60,000 target, 2 epochs, lr 3e-6, batch 32, ~15 min on an A100) trained on hard negatives mined from RRF disagreement between a vector index and full-text search. Same 384 dims and 33M params as the base. Strong same-table evidence: the card prints Base, v2 and v3 columns side by side on a full 5-dataset BEIR cut, all re-evaluated under one production RRF hybrid pipeline, with macro nDCG@10 0.6118 -> 0.6405. Read it with the card's own caveats: ArguAna is a loss (0.7686 base vs 0.7540 v3), and NFCorpus beats the base but regresses against predecessor v2 (0.4325 -> 0.3927). SciDocs is +0.006 and the card calls that within noise. Licence MIT, repo created 2026-04-19.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-01",
+  "sources": [
+    "hf-stffens-bge-small-rrf-v3"
+  ],
+  "benchmarks": [
+    {
+      "name": "BEIR SciFact nDCG@10",
+      "score": 93.61,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-stffens-bge-small-rrf-v3",
+      "vendor_claim": true,
+      "config": "Card table 'Absolute NDCG@10 vs BM25, ColBERTv2, and previous releases', column Base 0.9082 vs v3 0.9361. Full 5-dataset BEIR cut through vstash's production pipeline (RRF hybrid + adaptive weights + doc-level dedup, top-100 candidate pool); base and both releases re-evaluated under the same pipeline."
+    },
+    {
+      "name": "BEIR FiQA nDCG@10",
+      "score": 75.06,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-stffens-bge-small-rrf-v3",
+      "vendor_claim": true,
+      "config": "Same table: base 0.6509 vs v3 0.7506 (+0.097, the largest win). Same RRF hybrid pipeline."
+    },
+    {
+      "name": "BEIR SciDocs nDCG@10",
+      "score": 36.93,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-stffens-bge-small-rrf-v3",
+      "vendor_claim": true,
+      "config": "Same table: base 0.3637 vs v3 0.3693. The card itself calls the v3-vs-v2 gap 'within noise' on this dataset; the base gap is +0.006."
+    },
+    {
+      "name": "BEIR NFCorpus nDCG@10",
+      "score": 39.27,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-stffens-bge-small-rrf-v3",
+      "vendor_claim": true,
+      "config": "Same table: base 0.3674 vs v3 0.3927. Worth reading with the card's own caveat: predecessor v2 scored 0.4325 here, so v3 regresses vs v2 while still beating the base."
+    },
+    {
+      "name": "BEIR ArguAna nDCG@10",
+      "score": 75.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-stffens-bge-small-rrf-v3",
+      "vendor_claim": true,
+      "config": "Same table, a LOSS recorded as measured: base 0.7686 vs v3 0.7540 (-0.015). v2 of this model also lost here (0.7579)."
+    },
+    {
+      "name": "BEIR macro nDCG@10 (5 datasets)",
+      "score": 64.05,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-stffens-bge-small-rrf-v3",
+      "vendor_claim": true,
+      "config": "Same table 'macro' row: base 0.6118 vs v3 0.6405. The promotion criterion the card's own pipeline uses ('promote the candidate only if macro NDCG@10 exceeds the base')."
+    }
+  ],
+  "embedding_dims": 384
+}

@@ -1,0 +1,70 @@
+{
+  "id": "plottwist-embedder-ft",
+  "type": "model",
+  "name": "plottwist-embedder-ft",
+  "family": "sentence-transformers",
+  "vendor": "razsarusi",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "embedding",
+  "params_b": 0.109,
+  "active_params_b": 0.109,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 768,
+  "num_layers": 12,
+  "num_kv_heads": 12,
+  "head_dim": 64,
+  "gqa_ratio": 1,
+  "max_position_embeddings": 514,
+  "context_scaling": "Inherited unchanged from sentence-transformers/all-mpnet-base-v2 (config.json max_position_embeddings 514). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "gelu",
+  "attention_variant": "bidirectional encoder (MPNet), full attention, no causal mask, relative position bias",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 0.0,
+  "flops_per_token_active": 654000000.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "sentence-transformers/all-mpnet-base-v2",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-01. Contrastive finetune of sentence-transformers/all-mpnet-base-v2 (MultipleNegativesRankingLoss, scale 20, 2,400 pitch->logline pairs, 2 epochs, batch 32, lr 5e-5) for movie pitch-to-logline retrieval over a 10k synthetic catalog. Genuine same-table base comparison: base 0.753 / fine-tuned 0.845 at recall@1 on a held-out 600-pitch test set, and the card ships eval_recall_base_vs_ft.json with those numbers plus the FAISS index. The evaluation is explicitly non-circular - the authors replaced v1's genre-consistency metric, which was computed on data generated conditioned on genre. It is a private synthetic catalog, not BEIR or MTEB, so these numbers are not comparable to BEIR nDCG@10 elsewhere in this catalog. 768 output dims, 109M params. Licence apache-2.0, repo created 2026-08-08.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-01",
+  "sources": [
+    "hf-razsarusi-plottwist-embedder-ft"
+  ],
+  "benchmarks": [
+    {
+      "name": "Pitch-to-logline recall@1",
+      "score": 84.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-razsarusi-plottwist-embedder-ft",
+      "vendor_claim": true,
+      "config": "Card table '| metric | base | fine-tuned |': all-mpnet-base-v2 0.753 vs fine-tuned 0.845. Held-out test = 600 pitches, catalog = 10k loglines, train/test 2400/600, FAISS IndexFlatIP on L2-normalised embeddings. Non-circular: pitches are LLM-written for held-out loglines, replacing v1's circular genre-consistency metric."
+    },
+    {
+      "name": "Pitch-to-logline recall@5",
+      "score": 93.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-razsarusi-plottwist-embedder-ft",
+      "vendor_claim": true,
+      "config": "Same table: base 0.890 vs fine-tuned 0.933 (+0.043). Same 600-pitch / 10k-catalog held-out setup."
+    },
+    {
+      "name": "Pitch-to-logline recall@10",
+      "score": 95.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-razsarusi-plottwist-embedder-ft",
+      "vendor_claim": true,
+      "config": "Same table: base 0.918 vs fine-tuned 0.953 (+0.035). Same setup. The card also ships eval_recall_base_vs_ft.json with these numbers."
+    }
+  ],
+  "embedding_dims": 768
+}

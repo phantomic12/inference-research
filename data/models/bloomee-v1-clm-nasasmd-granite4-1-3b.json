@@ -1,0 +1,78 @@
+{
+  "id": "bloomee-v1-clm-nasasmd-granite4-1-3b",
+  "type": "model",
+  "name": "bloomee-v1-clm-nasasmd-granite4.1-3b",
+  "family": "granite",
+  "vendor": "bloomee-app",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "text-generation",
+  "params_b": 3.403,
+  "active_params_b": 3.4,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 2560,
+  "num_layers": 40,
+  "num_kv_heads": 8,
+  "head_dim": 64,
+  "gqa_ratio": 5,
+  "max_position_embeddings": 131072,
+  "context_scaling": "Inherited unchanged from ibm-granite/granite-4.1-3b (config.json max_position_embeddings 131072). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "Inherited unchanged from ibm-granite/granite-4.1-3b: 40 full GQA layers (kv heads 8, head_dim 64) and 0 other layers, per the base config.json.",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 81920,
+  "flops_per_token_active": 20400000000.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "ibm-granite/granite-4.1-3b",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-01. QLoRA finetune of ibm-granite/granite-4.1-3b (r=16, alpha=32, 4-bit NF4 with double quantisation, then merged to fp16; 1,787 train / 101 eval rows) that teaches the model to answer flowering-phenology questions by calling four NDVI retrieval tools. Recorded as a contender on the strength of the card's own Base-vs-Tuned table, but read it with two caveats the card states itself. First, only the golden-conversation row was measured on the merged fp16 weights this repo ships; the tool-selection and eval-loss rows were measured during training on base+adapter in bf16, so they are not a measurement of the released artifact. Second, golden conversations went DOWN, 13/15 to 11/15: tool selection improved sharply (26/41 to 40/41) while tool economy got worse, because the model learned to make defensible extra catalogue calls. This is a narrow single-task tool-calling specialist, not a general upgrade. Licence apache-2.0, repo created 2026-08-23.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-01",
+  "sources": [
+    "hf-bloomee-app-bloomee-v1-clm-nasasmd-granite4-1-3b"
+  ],
+  "benchmarks": [
+    {
+      "name": "First tool correct (41 tool rows)",
+      "score": 40.0,
+      "scale": 41,
+      "higher_is_better": true,
+      "source": "hf-bloomee-app-bloomee-v1-clm-nasasmd-granite4-1-3b",
+      "vendor_claim": true,
+      "config": "Card table '| Metric | Base | Tuned |': base granite-4.1-3b 26/41 vs this model 40/41, kept as the raw count out of 41 because the card prints both the fraction and a 98% / 63% conversion and only the counts are card-verbatim. Greedy decode, temperature 0, vLLM with --enable-auto-tool-choice --tool-call-parser hermes. Caveat the card prints itself: these rows were measured on base+adapter in bf16, not on the merged fp16 weights shipped in this repo."
+    },
+    {
+      "name": "Correctly silent (7 no-tool rows)",
+      "score": 6.0,
+      "scale": 7,
+      "higher_is_better": true,
+      "source": "hf-bloomee-app-bloomee-v1-clm-nasasmd-granite4-1-3b",
+      "vendor_claim": true,
+      "config": "Same table: base 0/7 vs tuned 6/7. Recorded as the raw count out of 7 rather than a percentage, because the card prints only the fraction. Same base+adapter bf16 caveat as the tool row."
+    },
+    {
+      "name": "Golden conversations (15 held-out)",
+      "score": 11.0,
+      "scale": 15,
+      "higher_is_better": true,
+      "source": "hf-bloomee-app-bloomee-v1-clm-nasasmd-granite4-1-3b",
+      "vendor_claim": true,
+      "config": "Same table, a LOSS recorded as measured: base 13/15 vs tuned 11/15, kept as the raw count out of 15 since the card prints no percentage. This is the ONLY row run against the merged fp16 weights actually shipped. Card explains the failures are extra (defensible) catalogue calls: tool economy got worse while tool selection improved."
+    },
+    {
+      "name": "Eval loss (101 held-out rows, lower is better)",
+      "score": 0.1884,
+      "scale": 1,
+      "higher_is_better": false,
+      "source": "hf-bloomee-app-bloomee-v1-clm-nasasmd-granite4-1-3b",
+      "vendor_claim": true,
+      "config": "Same table: base 0.5521 vs tuned 0.1884, -66%. Measured during training on base+adapter, not on the shipped merge."
+    }
+  ]
+}
