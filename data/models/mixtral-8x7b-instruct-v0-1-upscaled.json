@@ -1,0 +1,60 @@
+{
+  "id": "mixtral-8x7b-instruct-v0-1-upscaled",
+  "type": "model",
+  "name": "Mixtral-8x7B-Instruct-v0.1-upscaled",
+  "family": "mixtral",
+  "vendor": "Aratako",
+  "release_year": 2024,
+  "architecture": "moe",
+  "task": "text-generation",
+  "params_b": 81.533,
+  "active_params_b": 22.21,
+  "num_experts": 8,
+  "experts_per_token": 2,
+  "shared_expert": false,
+  "hidden_size": 4096,
+  "num_layers": 56,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 4.0,
+  "max_position_embeddings": 32768,
+  "context_scaling": "Inherited unchanged from mistralai/Mixtral-8x7B-Instruct-v0.1 (config.json max_position_embeddings 32768, rope_theta 1e6). This derivative does not publish a context-extension recipe of its own. NOTE the merge did change the shape: the card's mergekit passthrough slices are [0,8),[4,12),[8,16),[12,20),[16,24),[20,28),[24,32), seven slices of eight layers with a 4-layer overlap on each seam, so the released config.json declares num_hidden_layers 56 against the base's 32 and the checkpoint is 81.5 GB, not 46.7 B parameters of work.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "Inherited block shape from mistralai/Mixtral-8x7B-Instruct-v0.1 - 32 query heads, 8 KV heads (GQA ratio 4), head_dim 128, SwiGLU MoE with 8 experts and 2 active - but stacked 56 layers deep instead of 32 by a mergekit passthrough frankenmerge. KV cache therefore costs 56/32 = 1.75x the base per token (229,376 B/token at bf16 vs 131,072), which is the real price of the +0.30 mt-bench 1-turn average.",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 229376,
+  "flops_per_token_active": 133260000000.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+  "derivative_kind": "merge",
+  "notes": "ADDED 2026-11-01. A mergekit passthrough frankenmerge of mistralai/Mixtral-8x7B-Instruct-v0.1 with itself: seven 8-layer slices with 4-layer overlaps, giving 56 layers against the base's 32. NOT the same model at the same cost - 81.5B total parameters and ~22.2B active per token against the base's 46.7B/12.9B, so it buys +0.30 on mt-bench 1-turn average (8.00625 -> 8.30625, with Coding 5.3->6.3 and Reasoning 6.0->7.7) at roughly 1.75x the KV cache and 1.7x the active FLOPs per token. It also REGRESSES on 2-turn mt-bench, 7.5375 -> 7.1125, and on 1-turn Math (6.8 -> 5.4) and Extraction (8.5 -> 8.4). Both rows are recorded because the card prints both tables. Licence apache-2.0, repo created 2024-03-25. The only benchmark is mt-bench, an LLM-judged score out of 10.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-01",
+  "sources": [
+    "hf-aratako-mixtral-8x7b-instruct-v0-1-upscaled"
+  ],
+  "benchmarks": [
+    {
+      "name": "MT-Bench (1-turn, avg_score)",
+      "score": 8.30625,
+      "scale": 10,
+      "higher_is_better": true,
+      "source": "hf-aratako-mixtral-8x7b-instruct-v0-1-upscaled",
+      "vendor_claim": true,
+      "config": "Card table '1-turn': mistralai/Mixtral-8x7B-Instruct-v0.1 row 8.00625 vs 'This model' 8.30625. Sub-scores: Coding 5.3->6.3, Reasoning 6.0->7.7, Roleplay 9.1->9.2, STEM 9.55->9.75, Writing 8.9->9.8; losses Extraction 8.5->8.4, Math 6.8->5.4; Humanities ties at 9.9."
+    },
+    {
+      "name": "MT-Bench (2-turn, avg_score)",
+      "score": 7.1125,
+      "scale": 10,
+      "higher_is_better": true,
+      "source": "hf-aratako-mixtral-8x7b-instruct-v0-1-upscaled",
+      "vendor_claim": true,
+      "config": "Card table '2-turn', a LOSS recorded as measured: base 7.5375 vs this model 7.1125. Multi-turn degrades even though single-turn improves."
+    }
+  ]
+}
