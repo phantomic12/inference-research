@@ -164,6 +164,29 @@ def fetch(url, dest):
     return 0
 
 
+def _usable_figure(path):
+    """True if this file on disk can actually be shown to a vision model.
+
+    The download path refuses non-images, but files saved by earlier versions (and by any
+    run whose URL redirected to an HTML error page) are still sitting in img_evals/ under
+    .png names: `cosmos-reason2-8b/00.png` is a 132-byte 'Access to model X is restricted'
+    body and `deepseek-r1-distill-qwen-7b-japanese/00.png` is a 13 KB Japanese 404 page.
+    `img_batch` treated "directory is non-empty" as "already downloaded", so those two cards
+    were served with zero readable figures -- and every vision route then failed on them.
+    Count only real rasters and SVG figures; anything else is re-downloaded or dropped.
+    """
+    try:
+        with open(path, 'rb') as fh:
+            head = fh.read(512)
+    except OSError:
+        return False
+    if _is_raster(head):
+        return True
+    if head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+        return True
+    return b'<svg' in head
+
+
 def img_pools():
     """Two triage classes, because `n_bench_ctx` is a keyword heuristic and not a verdict.
 
@@ -175,11 +198,20 @@ def img_pools():
     serve `other` as a second, explicitly weaker class once strong is empty.
     """
     s = load_seen()
+    # Seen means "this card's figures were read", not "read under this particular label".
+    # The two classes are a serving order, not two separate readings, and the scanner can
+    # disagree with itself between runs: sensenova-si-1-4-internvl3-8b was served as `img`
+    # (n_bench_ctx > 0 in the run that served it), marked seen, and then re-served under
+    # `img_other` on every subsequent run because the union of seen was never consulted --
+    # the queue could never drain. A card seen under EITHER label is done.
+    done = set(s['img']) | set(s.get('img_other') or [])
     strong, other = [], []
     for r in card_scan():
-        if r.get('n_bench_ctx') and r['id'] not in set(s['img']):
+        if r['id'] in done:
+            continue
+        if r.get('n_bench_ctx'):
             strong.append(r)
-        elif r.get('n_other') and not r.get('n_bench_ctx') and r['id'] not in set(s.get('img_other') or []):
+        elif r.get('n_other'):
             other.append(r)
     strong.sort(key=lambda x: (x.get('benchmarks', 0), -x.get('n_bench_ctx', 0)))
     other.sort(key=lambda x: (x.get('benchmarks', 0), -x.get('n_other', 0)))
@@ -196,9 +228,17 @@ def img_batch(n):
     for r in picks:
         d = IMG / r['id']
         d.mkdir(parents=True, exist_ok=True)
-        files = sorted(str(p) for p in d.glob('*.*') if p.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp'))
+        files = sorted(str(p) for p in d.glob('*.*')
+                       if p.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp') and _usable_figure(p))
         if not files:
-            imgs = r.get('images') if r.get('n_bench_ctx') else r.get('other')
+            # BOTH lists, not one. The scanner files each image into exactly one of them
+            # (benchmark word nearby -> 'images', otherwise -> 'other'), so a card with a
+            # chart the heuristic missed AND a chart it caught had its 'other' list dropped
+            # entirely once the record was served under the strong class -- 184 images on 74
+            # already-seen cards were never fetched, among them speech_recog_by_lang.png,
+            # accuracy_plot.png, overall_performance_*.png and deepseek-v3's niah.png. The
+            # class only decides serving ORDER; it never decides what gets downloaded.
+            imgs = (r.get('images') or []) + (r.get('other') or [])
             # No [:8] cap: the stored list is the ONLY route to a figure, so capping it here
             # made every image past the 8th permanently unreachable and let `img` report
             # remaining: 0 with unread tables still on the card.
@@ -208,7 +248,8 @@ def img_batch(n):
                     ext = '.png'
                 dest = d / ('%02d%s' % (i, ext))
                 fetch(im['url'], dest)
-            files = sorted(str(p) for p in d.glob('*.*') if p.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp'))
+            files = sorted(str(p) for p in d.glob('*.*')
+                           if p.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp') and _usable_figure(p))
         out.append({'model': r['id'], 'repo': r['repo'], 'class': cls,
                     'existing_rows': r.get('benchmarks', 0), 'files': files})
     return out
