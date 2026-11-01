@@ -1,0 +1,96 @@
+{
+  "id": "phi-4-multimodal-finetune-ko-speech",
+  "type": "model",
+  "name": "Phi-4-multimodal-finetune-ko-speech",
+  "family": "phi-4",
+  "vendor": "daekeun-ml",
+  "release_year": 2025,
+  "architecture": "dense",
+  "task": "speech-to-text",
+  "params_b": 5.574,
+  "active_params_b": 5.574,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 3072,
+  "num_layers": 32,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 3.0,
+  "max_position_embeddings": 131072,
+  "context_scaling": "Inherited unchanged from microsoft/Phi-4-multimodal-instruct (config.json max_position_embeddings 131072). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "GQA + partial RoPE (0.75)",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 131072,
+  "flops_per_token_active": 33444000000.0,
+  "open_weights": true,
+  "license": "mit",
+  "base_model": "microsoft/Phi-4-multimodal-instruct",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-01. Full fine-tune of microsoft/Phi-4-multimodal-instruct (5.57B) with the AUDIO ENCODER UNFROZEN, trained on 35K Korean speech/transcript pairs (zeroth_korean + Korean CommonVoice-17 + Korean MINDs14 + custom augmented data), 4 epochs, batch 16, single A100 80GB. Same tensor set as the base; this is not a merged adapter - the card's own ablation separates it from the LoRA route (LoRA: 2.72 CER / 7.19 WER). CAVEAT that matters for reading the rows: the base column is labelled 'original' and scores 99.16 CER / 99.63 WER on Korean, i.e. Phi-4-mm does not do Korean ASR at all, so most of the headline gap is new-language coverage rather than a capability delta between two working systems. The AST columns are a fairer comparison and there the margins are much smaller (+2.0 ko2en BLEU). Evaluations are small: 457 zeroth clips and 270 fleurs pairs. The card also flags regression against the older seastar105/Phi-4-mm-inst-zeroth-kor on ko2en-cot (9.19 vs 8.38), and calls itself a PoC, not production. Licence mit, repo created 2025-03-06.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-01",
+  "sources": [
+    "hf-daekeun-ml-phi-4-multimodal-finetune-ko-speech"
+  ],
+  "benchmarks": [
+    {
+      "name": "zeroth_korean test CER",
+      "score": 1.61,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-daekeun-ml-phi-4-multimodal-finetune-ko-speech",
+      "vendor_claim": true,
+      "config": "Card table '| Model | zeroth (CER) | zeroth (WER) | fleurs-ko2en | fleurs-ko2en-cot | fleurs-en2ko | fleurs-en2ko-cot |': row 'original' (base microsoft/Phi-4-multimodal-instruct) 99.16 vs 'Ours - speech full finetune (4 epochs)' 1.61. 457-sample zeroth test set, decoder = base with audio encoder unfrozen. Card notes the base row is ~chance for Korean (Phi-4-mm has no Korean ASR), so most of the gap is new-language coverage, not a like-for-like capability delta."
+    },
+    {
+      "name": "zeroth_korean test WER",
+      "score": 3.54,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-daekeun-ml-phi-4-multimodal-finetune-ko-speech",
+      "vendor_claim": true,
+      "config": "Same card table, same rows: base 'original' 99.63 vs this model 3.54, 457 samples. Card's own LoRA-adapter ablation prints 7.19 WER / 2.72 CER for the adapter route, so the full-finetune win over LoRA is a real, card-measured internal comparison."
+    },
+    {
+      "name": "fleurs ko->en BLEU",
+      "score": 7.67,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-daekeun-ml-phi-4-multimodal-finetune-ko-speech",
+      "vendor_claim": true,
+      "config": "Same card table, column 'fleurs-ko2en': base 5.63 vs this 7.67. 270-sample fleurs ko<->en speech-translation test intersection, ko-mecab tokenisation for en2ko columns. Evaluator gist linked on the card."
+    },
+    {
+      "name": "fleurs ko->en BLEU, chain-of-thought prompt",
+      "score": 8.38,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-daekeun-ml-phi-4-multimodal-finetune-ko-speech",
+      "vendor_claim": true,
+      "config": "Same card table, column 'fleurs-ko2en-cot': base 2.42 vs this 8.38, 270 samples. Caveat printed on the card: AST quality 'deteriorates' relative to the older seastar105/Phi-4-mm-inst-zeroth-kor checkpoint (9.19) - and that cot column is the one this model loses there."
+    },
+    {
+      "name": "fleurs en->ko BLEU",
+      "score": 12.31,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-daekeun-ml-phi-4-multimodal-finetune-ko-speech",
+      "vendor_claim": true,
+      "config": "Same card table, column 'fleurs-en2ko': base 6.86 vs this 12.31, 270 samples, ko-mecab tokenisation."
+    },
+    {
+      "name": "fleurs en->ko BLEU, chain-of-thought prompt",
+      "score": 9.69,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-daekeun-ml-phi-4-multimodal-finetune-ko-speech",
+      "vendor_claim": true,
+      "config": "Same card table, column 'fleurs-en2ko-cot': base 4.17 vs this 9.69, 270 samples, ko-mecab tokenisation."
+    }
+  ]
+}

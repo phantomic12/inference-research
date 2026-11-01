@@ -1,0 +1,78 @@
+{
+  "id": "finance-retriever-bge-small",
+  "type": "model",
+  "name": "finance-retriever-bge-small",
+  "family": "bge",
+  "vendor": "vivekkopthsd",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "embedding",
+  "params_b": 0.033,
+  "active_params_b": 0.0334,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 384,
+  "num_layers": 12,
+  "num_kv_heads": 12,
+  "head_dim": 32,
+  "gqa_ratio": 1,
+  "max_position_embeddings": 512,
+  "context_scaling": "Inherited unchanged from BAAI/bge-small-en-v1.5 (config.json max_position_embeddings 512). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "gelu",
+  "attention_variant": "bidirectional encoder (BERT), full attention, no causal mask",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 0.0,
+  "flops_per_token_active": 200400000.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "BAAI/bge-small-en-v1.5",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-01. Full fine-tune (all 33M params, MultipleNegativesRankingLoss, 6,000 question/context pairs for 2 epochs) of BAAI/bge-small-en-v1.5 on virattt/financial-qa-10K, trained CPU-only on a Ryzen 9 7950X. Same tensor set and config as the base. The card prints a four-metric base-vs-finetuned table on a held-out SEC 10-K retrieval set (300 queries, ~4,000 passages) and states the limitation itself: 'not a BeIR-wide benchmark'. Treat these as in-domain gains: +15pp Recall@1 on financial filings says nothing about general retrieval, and a 33M model fine-tuned on 6k pairs is a classic place to see domain overfit. Licence apache-2.0, repo created 2026-08-04.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-01",
+  "sources": [
+    "hf-vivekkopthsd-finance-retriever-bge-small"
+  ],
+  "benchmarks": [
+    {
+      "name": "Recall@1 (SEC 10-K held-out)",
+      "score": 82.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-vivekkopthsd-finance-retriever-bge-small",
+      "vendor_claim": true,
+      "config": "Card table '| Metric | Base bge-small | Fine-tuned |': Recall@1 base 0.670 vs fine-tuned 0.820. Held-out SEC 10-K QA retrieval: 300 queries over a ~4,000-passage corpus, full fine-tune (all 33M params), MultipleNegativesRankingLoss, 6,000 pairs for 2 epochs. Card itself states 'not a BeIR-wide benchmark' - single in-domain dataset. Percentages recorded x100."
+    },
+    {
+      "name": "Recall@5 (SEC 10-K held-out)",
+      "score": 93.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-vivekkopthsd-finance-retriever-bge-small",
+      "vendor_claim": true,
+      "config": "Same table: Recall@5 base 0.850 vs fine-tuned 0.930, same 300-query/4,000-passage held-out set. x100."
+    },
+    {
+      "name": "nDCG@10 (SEC 10-K held-out)",
+      "score": 89.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-vivekkopthsd-finance-retriever-bge-small",
+      "vendor_claim": true,
+      "config": "Same table: nDCG@10 base 0.780 vs fine-tuned 0.891, same held-out set. x100."
+    },
+    {
+      "name": "MRR@10 (SEC 10-K held-out)",
+      "score": 87.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-vivekkopthsd-finance-retriever-bge-small",
+      "vendor_claim": true,
+      "config": "Same table: MRR@10 base 0.745 vs fine-tuned 0.870, same held-out set. x100. Trained CPU-only on one consumer chip, which is the only unusual part of the setup."
+    }
+  ]
+}
