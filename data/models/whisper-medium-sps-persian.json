@@ -1,0 +1,60 @@
+{
+  "id": "whisper-medium-sps-persian",
+  "type": "model",
+  "name": "whisper-medium-sps-persian",
+  "family": "whisper",
+  "vendor": "Behnooshn",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "speech-to-text",
+  "params_b": 0.764,
+  "active_params_b": 0.769,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 1024,
+  "num_layers": 24,
+  "num_kv_heads": 16,
+  "head_dim": 64,
+  "gqa_ratio": 1.0,
+  "max_position_embeddings": 1500,
+  "context_scaling": "Inherited unchanged from openai/whisper-medium (config.json max_position_embeddings 1500). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "gelu",
+  "attention_variant": "MHA, encoder-decoder (cross-attention)",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 98304,
+  "flops_per_token_active": 4614000000.0,
+  "open_weights": true,
+  "license": "not declared on card (base openai/whisper-medium is Apache-2.0)",
+  "base_model": "openai/whisper-medium",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-01. Full fine-tune of openai/whisper-medium (24 layers, 1024 hidden, 0.764B) for spontaneous/conversational Persian ASR, 2 epochs, lr 5e-6, 16,409 training segments / 1,985 validation from the SPS corpus. Same tensor set as the base. Recorded because the card prints both rows in one table over the same 500 scored test segments: WER 2.368 -> 0.768 and CER 1.857 -> 0.506, mean segment-level. The size of that gap is the caveat, not just the win: a WER of 2.368 means the stock Whisper-medium is producing roughly 2.4x the reference length of substitutions+deletions+insertions on this material, which is a model failing out of domain rather than a normal baseline, so most of the drop is 'adaptation restored a broken transcript' rather than 'a better ASR'. The corpus is also not distributed with the model, and the numbers are mean segment-level rather than corpus-aggregated, which flatters short segments. Direction is unambiguous; magnitude should not be read as a threefold accuracy gain.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-01",
+  "sources": [
+    "hf-behnooshn-whisper-medium-sps-persian"
+  ],
+  "benchmarks": [
+    {
+      "name": "WER, Spontaneous Persian Speech (SPS) held-out test, 500 segments",
+      "score": 76.8,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-behnooshn-whisper-medium-sps-persian",
+      "vendor_claim": true,
+      "config": "Card table '| Model | WER | CER |', mean segment-level error rates over 500 scored test segments: openai/whisper-medium baseline WER 2.368 vs fine-tuned 0.768. Scored as 76.8 (lower is better) rather than 0.768 so it stays on the same 0-100 scale as other WER rows. CER 1.857 -> 0.506 alongside. CAVEAT: mean segment-level, not corpus-aggregated, and the 2.368 baseline suggests heavy degradation of an off-the-shelf model on spontaneous conversational Persian rather than a normal ASR baseline."
+    },
+    {
+      "name": "CER, SPS held-out test, 500 segments",
+      "score": 50.6,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-behnooshn-whisper-medium-sps-persian",
+      "vendor_claim": true,
+      "config": "Same table: baseline CER 1.857 vs fine-tuned 0.506. Full fine-tune, 2 epochs, lr 5e-6, 16,409 training segments / 1,985 validation."
+    }
+  ]
+}

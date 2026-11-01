@@ -1,0 +1,102 @@
+{
+  "id": "emberon-1-2b",
+  "type": "model",
+  "name": "Emberon-1.2B",
+  "family": "lfm2",
+  "vendor": "PromethicLabs",
+  "release_year": 2026,
+  "architecture": "hybrid-attention-ssm",
+  "task": "text-generation",
+  "params_b": 1.17,
+  "active_params_b": 1.17,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 2048,
+  "num_layers": 16,
+  "num_kv_heads": 8,
+  "head_dim": 64,
+  "gqa_ratio": 4.0,
+  "max_position_embeddings": 128000,
+  "context_scaling": "Inherited unchanged from LiquidAI/LFM2.5-1.2B-Instruct (config.json max_position_embeddings 128000). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "swiglu",
+  "attention_variant": "hybrid: layer_types = 10x conv + 6x full_attention of 16",
+  "layer_types": [
+    "conv",
+    "conv",
+    "full_attention",
+    "conv",
+    "conv",
+    "full_attention",
+    "conv",
+    "conv",
+    "full_attention",
+    "conv",
+    "full_attention",
+    "conv",
+    "full_attention",
+    "conv",
+    "full_attention",
+    "conv"
+  ],
+  "attention_layer_indices": [
+    2,
+    5,
+    8,
+    10,
+    12,
+    14
+  ],
+  "kv_cache_bytes_per_token": 0.0,
+  "flops_per_token_active": 7020000000.0,
+  "open_weights": true,
+  "license": "LFM Open License 1.0 (license: other)",
+  "base_model": "LiquidAI/LFM2.5-1.2B-Instruct",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-01. LoRA fine-tune of LiquidAI/LFM2.5-1.2B-Instruct, merged into the base weights, specialised for DICTATION CLEANUP: it reformats dictated speech and is trained to never answer or act on the content. 1.170B, same tensor set as the base. Hosted as GGUF only (F16 + Q4_K_M), which is why it reads like a repack - it is not: the merged weights are a different model, and the card's own bf16-vs-Q4_K_M check shows quantization preserved the behaviour (0.963 vs 0.953 word-preservation). Recorded because the Headline table puts stock LFM2.5 and this model side by side with an identical zero-shot prompt: answer-suppression 71.0% -> 100.0% (493/493), word-preservation 0.780 -> 0.953, identifier-preservation 0.833 -> 0.968, hallucination rate 13.3% -> 0.00% (0/1,152). The metric is the author's own and is task-specific - it says nothing about general capability, and no MMLU/GSM8K/IFEval is published - so compare it only against other dictation-cleanup models. Base rows for word- and identifier-preservation are scored on n=300 and unstated n respectively against Emberon's n=1,152, so those two gaps are not clean paired comparisons; answer-suppression and hallucination are.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-01",
+  "sources": [
+    "hf-promethiclabs-emberon-1-2b"
+  ],
+  "benchmarks": [
+    {
+      "name": "Answer-suppression (held-out answer-temptation, n=493)",
+      "score": 100.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-promethiclabs-emberon-1-2b",
+      "vendor_claim": true,
+      "config": "Card 'Headline' table '| Metric | Emberon-1.2B (Q4_K_M) | Stock LFM2.5-1.2B-Instruct | bf16 reference |': stock LiquidAI/LFM2.5-1.2B-Instruct 71.0% vs Emberon 100.0% (493/493), given the identical zero-shot system prompt. Measured through llama.cpp on the shipped Q4_K_M GGUF. Author-defined metric for the model's only task (dictation cleanup): % of answer-tempting inputs cleaned rather than answered."
+    },
+    {
+      "name": "Word-preservation",
+      "score": 95.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-promethiclabs-emberon-1-2b",
+      "vendor_claim": true,
+      "config": "Same table: stock 0.780 vs Emberon 0.953. CAVEAT: the base row is scored on n=300 while Emberon's 0.953 is on n=1,152 - not the same item count, so the gap is not a clean paired comparison."
+    },
+    {
+      "name": "Identifier-preservation",
+      "score": 96.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-promethiclabs-emberon-1-2b",
+      "vendor_claim": true,
+      "config": "Same table: stock 0.833 vs Emberon 0.968 (1390/1436). Base n not stated for this row."
+    },
+    {
+      "name": "Hallucination / content-addition rate",
+      "score": 0.0,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-promethiclabs-emberon-1-2b",
+      "vendor_claim": true,
+      "config": "Same table: stock 13.3% vs Emberon 0.00% (0/1,152). Lower is better; recorded as the rate itself, not inverted. Base n not stated."
+    }
+  ]
+}

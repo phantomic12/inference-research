@@ -1,0 +1,69 @@
+{
+  "id": "sand-mathscience-deepseek-qwen32b",
+  "type": "model",
+  "name": "SAND-MathScience-DeepSeek-Qwen32B",
+  "family": "deepseek-r1-distill",
+  "vendor": "amd",
+  "release_year": 2025,
+  "architecture": "dense",
+  "task": "text-generation",
+  "params_b": 32.763,
+  "active_params_b": 32.8,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": false,
+  "hidden_size": 5120,
+  "num_layers": 64,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 5.0,
+  "max_position_embeddings": 131072,
+  "context_scaling": "Inherited unchanged from deepseek-ai/DeepSeek-R1-Distill-Qwen-32B (config.json max_position_embeddings 131072). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "GQA (standard; sliding_window set to full 131072 = inactive)",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 262144,
+  "flops_per_token_active": 196799999999.99997,
+  "open_weights": true,
+  "license": "other",
+  "base_model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-01. SFT-only fine-tune of deepseek-ai/DeepSeek-R1-Distill-Qwen-32B on 27k synthetic samples (15k math + 12k science) from AMD's SAND pipeline, generated/validated by GPT-OSS-120b and screened against known test sets for contamination. Same tensor set as the base. Recorded because Table 1 prints base and ours in one table: AIME24 72.6 -> 83.85, AIME25 54.9 -> 78.33, GPQA 62.1 -> 68.72, while MATH500 goes the other way 94.3 -> 93.85 (a loss, omitted from the benchmark rows). Two caveats: the GPQA variant (main vs diamond) is never stated, and the card asks the reader to average multiple Pass@K passes for stability but does not say what it did for these numbers, so the sampling config behind them is unstated. The AIME deltas (+11.3, +23.4) are far too large to attribute to SFT alone on a distill that was already RL'd on math - reproduces most plausibly as a change of eval prompt/decode (card recommends a specific boxed-answer system prompt at inference) rather than new capability, and should be read as 'matches Qwen3-32B on this vendor harness'.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-01",
+  "sources": [
+    "hf-amd-sand-mathscience-deepseek-qwen32b"
+  ],
+  "benchmarks": [
+    {
+      "name": "AIME24",
+      "score": 83.85,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-amd-sand-mathscience-deepseek-qwen32b",
+      "vendor_claim": true,
+      "config": "Card Table 1 '| Model | AIME24 | AIME25 | MATH500 | GPQA |': row 'DeepSeek-Distilled-Qwen32B (Base)' 72.6 vs 'SAND-MathScience-DeepSeek-Qwen32B (Ours)' 83.85 (+11.25). Fine-tuned from deepseek-ai/DeepSeek-R1-Distill-Qwen-32B on 27k synthetic samples (15k math + 12k science), SFT only, avg of multiple passes recommended by the card."
+    },
+    {
+      "name": "AIME25",
+      "score": 78.33,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-amd-sand-mathscience-deepseek-qwen32b",
+      "vendor_claim": true,
+      "config": "Same table: base 54.9 vs ours 78.33 (+23.43). Above the 72.9 the card prints for Qwen3-32B in thinking mode."
+    },
+    {
+      "name": "GPQA",
+      "score": 68.72,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-amd-sand-mathscience-deepseek-qwen32b",
+      "vendor_claim": true,
+      "config": "Same table: base 62.1 vs ours 68.72 (+6.62). GPQA variant (main/diamond) is not stated on the card."
+    }
+  ]
+}
