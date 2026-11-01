@@ -2054,5 +2054,106 @@ class TestReadFiguresImageSniff(unittest.TestCase):
             self.assertNotEqual(out.get("error"), "svg")
 
 
+class TestIngestQueueImgPools(unittest.TestCase):
+    """img_pools() must treat "seen" as a property of the card, not of the class.
+
+    The two pending classes (`img` = benchmark word near the image, `img_other` = leftover)
+    are a serving order. The scanner's triage is a keyword heuristic and can move a card
+    between classes when the card is edited, so a card marked seen under one label used to
+    come straight back under the other and `img` could never reach remaining: 0 --
+    sensenova-si-1-4-internvl3-8b was re-served on every run that way.
+    """
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="ir-queue-"))
+        self.state = self.tmp / "state"
+        self.imgdir = self.tmp / "img"
+        self.state.mkdir()
+        self.imgdir.mkdir()
+        self._saved = {}
+
+    def _scan(self, rows):
+        (self.imgdir / "card_scan.json").write_text(json.dumps(rows), encoding="utf-8")
+
+    def _pools(self, seen):
+        """Call the real img_pools() with STATE/IMG/SEEN pointed at the temp dir."""
+        sys.path.insert(0, str(TOOLS))
+        import ingest_queue as q  # noqa: PLC0415
+        saved = (q.STATE, q.IMG, q.SEEN)
+        q.STATE, q.IMG, q.SEEN = self.state, self.imgdir, self.state / "seen.json"
+        try:
+            q.save_seen(seen)
+            return q.img_pools()
+        finally:
+            q.STATE, q.IMG, q.SEEN = saved
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_card_seen_under_img_is_not_reserved_under_img_other(self):
+        self._scan([{"id": "m", "repo": "o/m", "n_bench_ctx": 0, "n_other": 5, "benchmarks": 3}])
+        strong, other = self._pools({"deriv": [], "img": ["m"], "img_other": []})
+        self.assertEqual([r["id"] for r in other], [], "seen as img, must not return as img_other")
+        self.assertEqual([r["id"] for r in strong], [])
+
+    def test_card_seen_under_img_other_is_not_reserved_under_img(self):
+        self._scan([{"id": "m", "repo": "o/m", "n_bench_ctx": 4, "n_other": 2, "benchmarks": 3}])
+        strong, other = self._pools({"deriv": [], "img": [], "img_other": ["m"]})
+        self.assertEqual([r["id"] for r in strong], [])
+        self.assertEqual([r["id"] for r in other], [])
+
+    def test_unseen_card_still_served_in_the_right_class(self):
+        self._scan([{"id": "s", "repo": "o/s", "n_bench_ctx": 2, "n_other": 0, "benchmarks": 1},
+                    {"id": "o", "repo": "o/o", "n_bench_ctx": 0, "n_other": 2, "benchmarks": 1}])
+        strong, other = self._pools({"deriv": [], "img": [], "img_other": []})
+        self.assertEqual([r["id"] for r in strong], ["s"])
+        self.assertEqual([r["id"] for r in other], ["o"])
+
+
+class TestUsableFigure(unittest.TestCase):
+    """A file in img_evals/ is not evidence that a figure was downloaded.
+
+    Two cards were served with directories that were non-empty but held no image at all:
+    cosmos-reason2-8b had two 132-byte 'Access to model X is restricted' bodies and
+    deepseek-r1-distill-qwen-7b-japanese had a 13 KB Japanese 404 page, all saved under
+    .png names by an older fetch path. img_batch() skipped the download because files
+    existed, then handed the model three unreadable paths.
+    """
+
+    @staticmethod
+    def _usable():
+        sys.path.insert(0, str(TOOLS))
+        import ingest_queue as q  # noqa: PLC0415
+        return q._usable_figure
+
+    def test_html_error_page_is_not_usable(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "00.png"
+            p.write_bytes(b"<!DOCTYPE html><html><title>\xe3\x83\x9a\xe3\x83\xbc\xe3\x82\xb8</title></html>")
+            self.assertFalse(self._usable()(p))
+
+    def test_restricted_model_body_is_not_usable(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "00.png"
+            p.write_bytes(b"Access to model nvidia/Cosmos-Reason2-8B is restricted. You ")
+            self.assertFalse(self._usable()(p))
+
+    def test_svg_bytes_are_usable(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "00.png"
+            p.write_bytes(b'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>')
+            self.assertTrue(self._usable()(p))
+
+    def test_png_and_webp_and_jpeg_are_usable(self):
+        cases = {b"\x89PNG\r\n\x1a\n" + b"\x00" * 32: "png",
+                 b"\xff\xd8\xff\xe0" + b"\x00" * 32: "jpeg",
+                 b"RIFF\x20\x00\x00\x00WEBPVP8 " + b"\x00" * 32: "webp"}
+        with tempfile.TemporaryDirectory() as td:
+            for i, blob in enumerate(cases):
+                p = Path(td) / f"{i}.png"
+                p.write_bytes(blob)
+                self.assertTrue(self._usable()(p), cases[blob])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -82,7 +82,7 @@
   "notes": "Open-weight multimodal MoE, first MoE in the MiniCPM-V series. HF createdAt 2026-10-07, inside the watcher 7-day window as of 2026-10-17. text_config model_type qwen3_5_moe_text: LLM geometry matches Qwen3.5-35B-A3B (hidden 2048, 40 layers, 16 Q / 2 KV heads, head_dim 256, 256 experts, 8 per token, shared expert intermediate 512, moe intermediate 512). layer_types is 30 linear_attention + 10 full_attention, full_attention_interval 4, full attention at indices 3, 7, 11, 15, 19, 23, 27, 31, 35, 39. partial_rotary_factor 0.25, rope_theta 1e7, mrope interleaved (mrope_section [11, 11, 10]). rope_scaling is absent, so context_scaling is null and context_scaling_method is mrope. vocab 248144, mtp_num_hidden_layers 1, linear_conv_kernel_dim 4, linear_num_key_heads 16, linear_num_value_heads 32, linear key/value head dim 128. KV CACHE: 10 full-attention layers x 2 kv heads x head_dim 256 x 2 x 2 bytes = 20,480 B/token. The 30 linear-attention layers hold a fixed recurrent state, so this is the growing cache only. FLOPS: flops_per_token_active = 2 x 3e9 = 6e9 uses the vendor 3B activated figure; the 3B is the 35B-A3B nameplate, not a count derived here. safetensors total is 35.213B BF16, close to the 35B nameplate. Vision: SigLIP-style encoder, 27 layers, hidden 1152, 16 heads, patch 14, image_size 980, intermediate 4304, gelu_pytorch_tanh, insert_layer_id 6 (vision features injected at LLM layer 6), downsample_mode 16x. The card claims mixed 4x/16x visual token compression via LLaVA-UHD v4 intra-ViT early compression. ON-DEVICE (vendor_claim): the card states 13+ tokens/s decode with 3 GB of memory on iPhone 17 Pro Max, via Lookahead Expert Scheduling (prefetch only; token-level routing unchanged), fine-grained layer-wise quantization, and DSpark speculative sampling. The card also claims a higher overall Instruct-mode score in less inference time than Qwen3.6-35B-A3B; those numbers are in images, not in the card text, so they are not copied here. Apache-2.0. The card says it serves in SGLang, vLLM, llama.cpp, and Ollama.",
   "status": "verified",
   "confidence": 0.85,
-  "updated": "2026-10-19",
+  "updated": "2026-11-01",
   "sources": [
     "hf-minicpm-v-4-7-35b-a3b",
     "minicpm-v-4-7-35b-a3b-hf",
@@ -394,6 +394,240 @@
       "source": "minicpm-v-4-7-35b-a3b-hf",
       "vendor_claim": true,
       "config": "Video-Understanding panel row MotionBench. Read off the card figure assets/minicpmv4.7/overall_performance_35ba3b_instruct.png by eye (vision): four-panel table with the MiniCPM-V4.7 35B-A3B column highlighted and split into 4x / 16x visual-token-compression sub-columns; this is the 4x sub-column. Second read on a zoomed crop matched digit for digit. Card footnote: 'Results are from public reports and our local evaluation using official checkpoints', models evaluated in instruct mode. The card says either 4x or 16x is selectable and names no default, so the ratio is carried in the benchmark name."
+    },
+    {
+      "name": "MMBench (16x)",
+      "score": 90.87,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "MMStar (16x)",
+      "score": 80.13,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "MMT-Bench (16x)",
+      "score": 75.12,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "SimpleVQA (16x)",
+      "score": 51.41,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "MMMU (16x)",
+      "score": 80.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "MathVista (16x)",
+      "score": 87.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "MMMU-Pro (16x)",
+      "score": 67.66,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "MathVerse_MINI (16x)",
+      "score": 84.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "MathVision (16x)",
+      "score": 72.93,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "OCRBench (16x)",
+      "score": 90.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "OCRBench_v2 (16x)",
+      "score": 65.67,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "OmniDocBench_v1.6 (16x)",
+      "score": 93.25,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "CharXiv_Reasoning (16x)",
+      "score": 69.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "CCOCR (16x)",
+      "score": 78.29,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "TextVQA_VAL (16x)",
+      "score": 81.72,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "BLINK (16x)",
+      "score": 68.12,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "MMSI-Bench (16x)",
+      "score": 15.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "Hallusion-Bench (16x)",
+      "score": 64.42,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "MMHal-Score (16x)",
+      "score": 4.67,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "MMHal-Hallrate (16x)",
+      "score": 22.92,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "RefCOCO (16x)",
+      "score": 89.61,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "ScreenSpot (16x)",
+      "score": 85.01,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "MM-IFEval (16x)",
+      "score": 64.62,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "Video-MME (w/o subs) (16x)",
+      "score": 74.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "LongVideoBench (16x)",
+      "score": 67.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "MotionBench (16x)",
+      "score": 68.02,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "minicpm-v-4-7-github",
+      "vendor_claim": true,
+      "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
     }
   ],
   "release_date": "2026-10-07"
