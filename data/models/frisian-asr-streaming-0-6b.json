@@ -1,0 +1,60 @@
+{
+  "id": "frisian-asr-streaming-0-6b",
+  "type": "model",
+  "name": "frisian-asr-streaming-0.6b",
+  "family": "nemotron",
+  "vendor": "LokaalHub",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "speech-to-text",
+  "params_b": 0.6,
+  "active_params_b": 0.6,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": null,
+  "num_layers": null,
+  "num_kv_heads": 1,
+  "head_dim": null,
+  "gqa_ratio": 1,
+  "max_position_embeddings": 5000,
+  "context_scaling": "Inherited unchanged from nvidia/nemotron-3.5-asr-streaming-0.6b (config.json max_position_embeddings 5000). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "relu",
+  "attention_variant": "Inherited unchanged from nvidia/nemotron-3.5-asr-streaming-0.6b: 0 full GQA layers (kv heads 1, head_dim None) and 0 other layers, per the base config.json.",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": null,
+  "flops_per_token_active": 3600000000.0,
+  "open_weights": true,
+  "license": "other",
+  "base_model": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-01. Full fine-tune of nvidia/nemotron-3.5-asr-streaming-0.6b (0.6B, NeMo cache-aware FastConformer-RNNT) on ~40h of Frisian (West Frisian, fy-NL) from LokaalHub/frisian-asr-cv22, conditioned on the nl-NL prompt slot because Frisian is not one of the base's 40 locales. Base-model WER on the same held-out set was measured with the same evaluator - 82.87% at 80ms and 81.69% at 1120ms versus 20.36% and 18.01% here - so the comparison IS same-harness, which is rarer than it should be; but the base cannot transcribe Frisian under any prompt, so the delta mostly measures 'adaptation to a language the base never had'. The card is explicit about the cost: fine-tuning on Frisian-only with no multilingual replay catastrophically forgets the other 39 locales, so this is a dedicated monolingual model and NOT a drop-in replacement for the base. Raw WER (casing/punctuation count), 3,173 speaker- and sentence-disjoint clips. Architecture fields are null because the base catalog record does not carry them, not because the model keeps a different config. Licence openmdw-1.1 (card field 'other'), repo created 2026-06-09.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-01",
+  "sources": [
+    "hf-lokaalhub-frisian-asr-streaming-0-6b"
+  ],
+  "benchmarks": [
+    {
+      "name": "Raw WER, Frisian (fy) test, 80 ms streaming",
+      "score": 20.36,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-lokaalhub-frisian-asr-streaming-0-6b",
+      "vendor_claim": true,
+      "config": "Card table '| Language | Base Model WER | Fine-tuned WER | Relative Improvement |': 'Frisian (nl-NL) | 82.87% | 20.36% | 75.4%'. Cache-aware streaming at att_context_size=[56,0] (80 ms), 3,173 held-out clips, speaker- and sentence-disjoint, same evaluation for both models. Raw WER - casing and punctuation count as errors. CAVEAT printed on the card: Frisian is not one of the base's 40 locales, so the base cannot transcribe it at all; the gap is mostly new-language coverage rather than a delta between two working systems."
+    },
+    {
+      "name": "Raw WER, Frisian (fy) test, 1120 ms streaming",
+      "score": 18.01,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-lokaalhub-frisian-asr-streaming-0-6b",
+      "vendor_claim": true,
+      "config": "Same card table at att_context_size=[56,13] (1120 ms): base 81.69% vs fine-tuned 18.01%, same 3,173-clip disjoint test set. Raw WER. The card notes the base's own published Dutch nl-NL WER is 11.46% at 1120 ms and that this model fully fine-tuned on Frisian-only data, forgetting the other 39 locales - a dedicated monolingual model, not a drop-in replacement."
+    }
+  ]
+}
