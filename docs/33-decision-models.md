@@ -11,10 +11,14 @@ Within the Decision Index the weight is fixed by the suite, not by us: knowledge
 
 | # | Model | Index | Know. | Lang. | Retr. | Tools | Arts | Median ms | p95 ms | ECE | Params | Base |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| 2 | [vLLM-SR d3-ultra (Decision 3.0, 27B)](https://huggingface.co/vllm-sr/d3-ultra) | **70.18** | 62.3 | 72.3 | 71.8 | 87.8 | 63.5 | 200 | 674 | 0.067 | 26.1B | `Qwen/Qwen3.8-27B` |
-| 5 | [Perplexity Decider v1.2 (27B)](https://huggingface.co/perplexity-ai/pplx-decider-v1.2) | **67.98** | 55.3 | 71.9 | 68.1 | 85.4 | 56.2 | 144 | 1552 | 0.055 | 26.1B | `Qwen/Qwen3.8-27B` |
+| 1 | [KnowLine 31B Gen1](https://huggingface.co/PelaAI/KnowLine-31B-Gen1) | **71.86** | 59.4 | 72.0 | 73.0 | 84.7 | 60.5 | 204 | 1822 | 0.032 | 31.3B | `google/gemma-4-31B-it` |
+| 2 | [Fastino GLiDE 1.2](https://huggingface.co/fastino/GLiDE) | **71.52** | 60.6 | 75.5 | 72.2 | 88.0 | 62.6 | 93 | 1121 | 0.020 | 27.8B | `Qwen/Qwen3.8-27B` |
+| 3 | [Sieve 31B v3](https://huggingface.co/sthanika-ai/Sieve-31B-v3) | **71.10** | 61.2 | 71.6 | 76.1 | 86.9 | 62.2 | 232 | 1520 | 0.054 | 31.3B | `google/gemma-4-31B-it` |
+| 4 | [Turion Jev 31B](https://huggingface.co/turion-ai/turion-jev-31b) | **70.47** | 55.4 | 69.9 | 71.2 | 78.7 | 51.3 | 144 | 815 | 0.019 | 31.3B | `google/gemma-4-31B-it` |
+| 5 | [vLLM-SR d3-ultra (Decision 3.0, 27B)](https://huggingface.co/vllm-sr/d3-ultra) | **70.18** | 62.3 | 72.3 | 71.8 | 87.8 | 63.5 | 200 | 674 | 0.067 | 26.1B | `Qwen/Qwen3.8-27B` |
+| 12 | [Perplexity Decider v1.2 (27B)](https://huggingface.co/perplexity-ai/pplx-decider-v1.2) | **67.98** | 55.3 | 71.9 | 68.1 | 85.4 | 56.2 | 144 | 1552 | 0.055 | 26.1B | `Qwen/Qwen3.8-27B` |
 
-`*` = self-reported. 0 of 2 rows are the author's own run and the upstream board has not reproduced them; every other row is board-validated on one NVIDIA RTX PRO 6000.
+`*` = self-reported. 0 of 6 rows are the author's own run and the upstream board has not reproduced them; every other row is board-validated on one NVIDIA RTX PRO 6000.
 
 
 ## Previous board edition (not comparable)
