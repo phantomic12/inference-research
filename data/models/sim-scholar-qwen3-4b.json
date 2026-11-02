@@ -1,0 +1,51 @@
+{
+  "id": "sim-scholar-qwen3-4b",
+  "type": "model",
+  "name": "sim-scholar-qwen3-4b",
+  "family": "qwen3",
+  "vendor": "trillionlabs",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "text-generation",
+  "params_b": 4.411,
+  "active_params_b": 4.0,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 2560,
+  "num_layers": 36,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 4,
+  "max_position_embeddings": 262144,
+  "context_scaling": "Inherited unchanged from Qwen/Qwen3-4B-Thinking-2507 (config.json max_position_embeddings 262144). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "Inherited unchanged from Qwen/Qwen3-4B-Thinking-2507: 36 full GQA layers (kv heads 8, head_dim 128) and 0 other layers, per the base config.json.",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 147456,
+  "flops_per_token_active": 8000000000.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "Qwen/Qwen3-4B-Thinking-2507",
+  "derivative_kind": "rl",
+  "notes": "ADDED 2026-11-02. A rl of Qwen/Qwen3-4B-Thinking-2507, not a new base model: same config.json, same 4.411 parameters. Recorded as a contender because it publishes benchmark evidence against its own base; the evidence rows below are card-sourced and marked vendor_claim. Licence apache-2.0, repo created 2026-07-10. CAVEAT: step 120 was chosen AFTER inspecting the test-set curve, and the card itself says the result is 'diagnostic rather than an unbiased final benchmark'. n=75 on the full-text-available LitQA2 subset, single run, no CI. Transfer to the AstaBench paper-finder task stayed flat, so the gain is specific to QA-style literature questions and does not indicate general agentic ability. Safetensors index totals 4,411,424,256 parameters against the base's 4,022,468,096. The delta is exactly 388,956,160 = vocab_size 151936 x hidden_size 2560, i.e. the tied embedding matrix stored a second time as an untied lm_head - the config is otherwise identical. So params_b records what is on disk (4.411B) while active_params_b stays at the base's 4.0B, which is the compute-relevant figure. No extra capability is implied by the larger count. FLOPs per active token set to 8e+09 (= 2 * active_params_b * 1e9, SCHEMA.md:543) rather than the generator's 6e9 coefficient, which is a 3x overstatement still live in tools/mk_finetune_record.py:251; value overwritten from base record arithmetic.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-02",
+  "sources": [
+    "hf-trillionlabs-sim-scholar-qwen3-4b"
+  ],
+  "benchmarks": [
+    {
+      "name": "LitQA2 full-text subset accuracy",
+      "score": 45.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-trillionlabs-sim-scholar-qwen3-4b",
+      "vendor_claim": true,
+      "config": "Card Evaluation table, AstaBench tool surface, n=75, no few-shot setting printed; base Qwen3-4B-Thinking-2507 0.173 in the same table. Checkpoint is global step 120, selected post hoc off this test curve, so the card calls it diagnostic."
+    }
+  ]
+}
