@@ -81,6 +81,11 @@ Each of these came from a wrong number produced by an earlier version of this pi
 `site/public/joined/quant_popularity.json` carries, per model:
 
 - `quant_downloads`, `quant_repo_count`, `formats`, `top_repo` — the popularity side
+- `official_downloads` / `official_repos` / `community_downloads` — a lab publishing the FP8 of its
+  own model (`Qwen/Qwen3.6-27B-FP8`, `deepseek-ai/DeepSeek-V3.2`) is the **reference deployment**,
+  not a third-party quant of it. `deepseek-ai/DeepSeek-V3.2-Exp-Base` reads as 6.77M quant
+  downloads and 6.76M of them are the lab's own FP8 releases — 20K is actually people choosing a
+  quant. Report both; a "100% retention" official FP8 is the reference, not a builder's win.
 - `levels[]` — one entry per measured bpw: `{bits, retention, format, repo, verdict}`
 - `best_at_4bit` — the highest-retention build at ≤4.5 bpw (the practical local band)
 - `evidence[]` — every reviewed verdict, including the ones excluded from the ladder, each

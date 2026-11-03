@@ -306,7 +306,11 @@ def build() -> dict:
         m["pipeline_tag"] = m["pipeline_tag"] or rec.get("pipeline_tag")
         m["repos"].append({"id": rid, "downloads": int(rec.get("downloads") or 0),
                            "likes": int(rec.get("likes") or 0), "format": format_of(rec),
-                           "hops": hops})
+                           "hops": hops,
+                           # a lab publishing the FP8 of its own model is the reference
+                           # deployment, not a third-party quant of it; the distinction changes
+                           # how "100% retention" should be read
+                           "official": rid.split("/")[0].lower() == root.split("/")[0].lower()})
 
     rows = []
     dropped_domain = 0
@@ -334,6 +338,7 @@ def build() -> dict:
                 ret = retention(v)
                 intervention = bool(_INTERVENTION.search(repo["id"]) or _INTERVENTION.search(str(v.get("verdict") or "")))
                 entry = {"repo": repo["id"], "format": v.get("format"), "bits": v.get("bits"),
+                         "official": repo.get("official"),
                          "retention": ret, "quality_rows": len(qrows), "rows": len(v["rows"]),
                          "base": v.get("base"), "verdict": v.get("verdict"),
                          "intervention": intervention,
@@ -358,6 +363,10 @@ def build() -> dict:
             "quant_downloads": m["downloads"],
             "quant_likes": m["likes"],
             "quant_repo_count": len(m["repos"]),
+            "official_downloads": sum(x["downloads"] for x in m["repos"] if x.get("official")),
+            "official_repos": sum(1 for x in m["repos"] if x.get("official")),
+            # the choice signal: what people picked instead of the lab's own build
+            "community_downloads": sum(x["downloads"] for x in m["repos"] if not x.get("official")),
             "formats": sorted(m["formats"]),
             "top_repo": m["repos"][0] if m["repos"] else None,
             "repos": m["repos"][:12],
