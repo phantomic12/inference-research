@@ -320,8 +320,12 @@ def build() -> dict:
             continue
         reviewed, best = [], None
         levels: dict[float, dict] = {}
+        cards_read = 0
         for repo in m["repos"]:
             for v in evidence.get(repo["id"].lower(), []):
+                # a verdict with no base column still means the card was READ. Re-queuing it
+                # spends a second review to learn the same "no numbers published".
+                cards_read += 1
                 if v.get("ref") != "base":
                     continue
                 qrows = quality_rows(v)
@@ -358,7 +362,8 @@ def build() -> dict:
             "top_repo": m["repos"][0] if m["repos"] else None,
             "repos": m["repos"][:12],
             "derivation_hops": m["max_hops"],
-            "reviewed": len(reviewed),
+            "reviewed": cards_read,
+            "with_base_evidence": len({e["repo"] for e in reviewed}),
             "best_evidence": best,
             "evidence": reviewed[:8],
             # the answer to "what is the most performant quant at a given size" for this model
@@ -389,7 +394,8 @@ def build() -> dict:
         },
         "counts": {"models": len(rows), "repos": len(all_repos), "unattributed": unattributed,
                    "dropped_non_llm": dropped_domain,
-                   "with_evidence": sum(1 for r in rows if r["reviewed"]),
+                   "with_evidence": sum(1 for r in rows if r["with_base_evidence"]),
+                   "cards_read": sum(1 for r in rows if r["reviewed"]),
                    "in_catalog": sum(1 for r in rows if r["in_catalog"])},
         "rows": rows,
     }

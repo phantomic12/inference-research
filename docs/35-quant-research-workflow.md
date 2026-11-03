@@ -85,7 +85,10 @@ Each of these came from a wrong number produced by an earlier version of this pi
 - `best_at_4bit` — the highest-retention build at ≤4.5 bpw (the practical local band)
 - `evidence[]` — every reviewed verdict, including the ones excluded from the ladder, each
   flagged `intervention` / `exceeds_base` so a reader can see what was set aside and why
-- `reviewed` — 0 means **unproven**, not "good". 2,981 of 3,027 models are currently 0.
+- `reviewed` — cards actually read (any verdict, including `ref: none`)
+- `with_base_evidence` — cards that yielded a usable base column. **These are different numbers**:
+  a read card that publishes no comparison is *reviewed and unproven*, and re-queueing it spends a
+  second pass to learn the same "no numbers published". The queue keys on `reviewed == 0`.
 
 `/opt/data/quant_pop/review_queue.json` is the work queue: the most-run models with no evidence,
 with the 6 repos to review first for each.
