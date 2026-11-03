@@ -8,7 +8,7 @@
   "architecture": "dense",
   "task": "text-generation",
   "params_b": 1.777,
-  "active_params_b": 1.5,
+  "active_params_b": 1.777,
   "num_experts": null,
   "experts_per_token": null,
   "shared_expert": null,
@@ -17,20 +17,20 @@
   "num_kv_heads": 2,
   "head_dim": 128,
   "gqa_ratio": 6,
-  "max_position_embeddings": 131072,
-  "context_scaling": "Inherited unchanged from agentica-org/DeepScaleR-1.5B-Preview (config.json max_position_embeddings 131072). This derivative does not publish a context-extension recipe of its own.",
+  "max_position_embeddings": 24576,
+  "context_scaling": "24576 from the model's own config.json (max_position_embeddings 24576, tokenizer_config model_max_length 24576, rope_parameters rope_type default/theta 10000, no rope_scaling). NOT inherited: the base agentica-org/DeepScaleR-1.5B-Preview ships 131072, so this derivative cut the context window by 5.3x. Separately the card states training was at Max Sequence Length 2,048 tokens and lists degraded quality near that limit.",
   "context_scaling_method": "native",
   "activation": "silu",
   "attention_variant": "Inherited unchanged from agentica-org/DeepScaleR-1.5B-Preview: 28 full GQA layers (kv heads 2, head_dim 128) and 0 other layers, per the base config.json.",
   "layer_types": [],
   "attention_layer_indices": [],
   "kv_cache_bytes_per_token": 28672,
-  "flops_per_token_active": 3000000000.0,
+  "flops_per_token_active": 3554058240.0,
   "open_weights": true,
   "license": "apache-2.0",
   "base_model": "agentica-org/DeepScaleR-1.5B-Preview",
   "derivative_kind": "finetune",
-  "notes": "ADDED 2026-11-03. A finetune of agentica-org/DeepScaleR-1.5B-Preview, not a new base model: same config.json, same 1.777 parameters . Recorded as a contender because it publishes benchmark evidence against its own base; the evidence rows below are card-sourced and marked vendor_claim. Licence apache-2.0, repo created 2026-04-06. CAVEAT: the base-column scores are quoted from DeepScaleR-1.5B's own card, not re-run by the author, so this is a single-run comparison against a published number. Two of the five gains are noise-level (MATH 500 87.9 vs 87.8, AIME 2024 43.5 vs 43.1); the defensible gains are OlympiadBench +2.9 and Minerva Math +2.1. The card's 'Avg 60.3' is not the mean of its own five rows (58.2); the five rows, not the Avg, are what this record carries. No harness, shot count or pass@k is printed anywhere on the card. The fine-tune is a three-phase SFT curriculum on one RTX 4080 with no RL stage.",
+  "notes": "ADDED 2026-11-03. A finetune of agentica-org/DeepScaleR-1.5B-Preview, not a new base model: 1.777B parameters by config (hidden 1536, 28 layers, untied embeddings at vocab 151936; model.safetensors is 3.554 GB BF16 = 1.777B x 2 bytes). CORRECTED 2026-11-03: this is NOT the base's config.json -- the base ships max_position_embeddings 131072, this repo ships 24576, so the context window is 5.3x smaller than the base it claims only a finetune of. Also corrected: active_params_b and flops were carrying the base's 1.5B figure; a dense model activates all 1.777B, giving 2 x 1.777e9 = 3.554e9 FLOPs/token rather than 3.0e9. Recorded as a contender because it publishes benchmark evidence against its own base; the evidence rows below are card-sourced and marked vendor_claim. Licence apache-2.0, repo created 2026-04-06. CAVEAT: the base-column scores are quoted from DeepScaleR-1.5B's own card, not re-run by the author, so this is a single-run comparison against a published number. Two of the five gains are noise-level (MATH 500 87.9 vs 87.8, AIME 2024 43.5 vs 43.1); the defensible gains are OlympiadBench +2.9 and Minerva Math +2.1. The card's 'Avg 60.3' is not the mean of its own five rows (58.18 computed; the base row's printed 57.0 is likewise above its own 56.94), so the Avg column is not a plain mean of the columns and is not carried; the five rows, not the Avg, are what this record carries. CORRECTED 2026-11-03: an earlier version of this note said no harness is printed anywhere on the card -- that was wrong. The card states 'Evaluation | lm-evaluation-harness' in its Model Summary table and carries an lm-eval-harness badge. What is genuinely absent is the shot count, sample count, and pass@k/cons@ setting, so the five scores remain non-reproducible in detail. The fine-tune is a three-phase SFT curriculum on one RTX 4080 with no RL stage. CHART 2026-11-03: the benchmark figure yumo_benchmark.png was read twice by vision (grouped bar chart, 4 series x 5 benchmarks) and both reads plus the card's markdown table agree with all five rows already recorded, so the figure added no rows. Note the figure's y-axis is printed only to 80 while the MATH 500 bars reach 87.9 -- the bars overrun the top gridline, so the plot is not a reliable proxy for any value not also printed as a label. All values here come from the printed labels and the table, not from bar heights.",
   "status": "verified",
   "confidence": 0.5,
   "updated": "2026-11-03",
@@ -45,7 +45,7 @@
       "higher_is_better": true,
       "source": "hf-yu-mo-yumo-nano",
       "vendor_claim": true,
-      "config": "Card benchmark table, column 'Yumo Nano 1.5B' 43.5 vs row 'DeepScaleR-1.5B' 43.1 (the base). +0.4 is inside run-to-run noise; not counted as the win."
+      "config": "Card benchmark table, column 'Yumo Nano 1.5B' 43.5 vs row 'DeepScaleR-1.5B' 43.1 (the base). +0.4 is inside run-to-run noise; not counted as the win. Harness: lm-evaluation-harness per card; shot count/pass@k not printed."
     },
     {
       "name": "MATH 500",
@@ -54,7 +54,7 @@
       "higher_is_better": true,
       "source": "hf-yu-mo-yumo-nano",
       "vendor_claim": true,
-      "config": "Same table; 87.9 vs base 87.8. Effectively a tie. No harness or pass@k printed on the card."
+      "config": "Same table; 87.9 vs base 87.8. Effectively a tie. Harness: card states lm-evaluation-harness; shot count and pass@k are not printed, so the score is not exactly reproducible."
     },
     {
       "name": "AMC 2023",
@@ -63,7 +63,7 @@
       "higher_is_better": true,
       "source": "hf-yu-mo-yumo-nano",
       "vendor_claim": true,
-      "config": "Same table; 74.3 vs base 73.6. No harness printed."
+      "config": "Same table; 74.3 vs base 73.6. Harness: lm-evaluation-harness per card; shot count not printed."
     },
     {
       "name": "Minerva Math",
@@ -72,7 +72,7 @@
       "higher_is_better": true,
       "source": "hf-yu-mo-yumo-nano",
       "vendor_claim": true,
-      "config": "Same table; 32.3 vs base 30.2 (+2.1). No harness printed."
+      "config": "Same table; 32.3 vs base 30.2 (+2.1). Harness: lm-evaluation-harness per card; shot count not printed."
     },
     {
       "name": "OlympiadBench",
@@ -81,7 +81,7 @@
       "higher_is_better": true,
       "source": "hf-yu-mo-yumo-nano",
       "vendor_claim": true,
-      "config": "Same table; 52.9 vs base 50.0 (+2.9, the card's headline gain). No harness printed."
+      "config": "Same table; 52.9 vs base 50.0 (+2.9, the card's headline gain). Harness: lm-evaluation-harness per card; shot count not printed."
     }
   ]
 }
