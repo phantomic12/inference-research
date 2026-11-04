@@ -1,0 +1,105 @@
+{
+  "id": "granite4-3b-ec-magento",
+  "type": "model",
+  "name": "granite4-3b-ec-magento",
+  "family": "granite",
+  "vendor": "gabrielgts",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "text-generation",
+  "params_b": 3.4,
+  "active_params_b": 3.4,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 2560,
+  "num_layers": 40,
+  "num_kv_heads": 8,
+  "head_dim": 64,
+  "gqa_ratio": 5,
+  "max_position_embeddings": 131072,
+  "context_scaling": "Inherited unchanged from ibm-granite/granite-4.1-3b (config.json max_position_embeddings 131072). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "Inherited unchanged from ibm-granite/granite-4.1-3b: 40 full GQA layers (kv heads 8, head_dim 64) and 0 other layers, per the base config.json.",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 81920,
+  "flops_per_token_active": 6800000000,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "ibm-granite/granite-4.1-3b",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-04. A QLoRA finetune of ibm-granite/granite-4.1-3b (r=8, alpha=16, 4-bit NF4 via Unsloth, 15.6M trainable of 3,403M) targeting Magento-2 e-commerce structured tasks. ACCEPTED WITH A SHIPPING CAVEAT: the repo root is a 67MB PEFT adapter and the only merged artifact is a Q4_K_M GGUF (2.1GB, q8_0 embeddings); no bf16 merged weights are published. It is therefore not adapter-only in the disqualifying sense - merged weights do exist - and the catalog already carries a 4-bit-only derivative of this same base (granite41-3b-german-tutor-v4-4bit), but no base-vs-4bit ablation is published and the card does not say which artifact the eval ran on. Read the numbers accordingly. Every recorded row is the author's own harness on a SYNTHETIC Magento eval built from the same templates as the training data (475 products disjoint), which the card itself says overstates production quality. Two more limits the card states: only one of the five recorded deltas is a loss (answer generation token-F1 13.2 vs 15.3), and the recipe was transplanted from a different base, so the scores rank bases under a fixed recipe rather than establish an intrinsic ordering. Base rows are zero-shot under the same harness, which is why the base's structured scores look catastrophic - they are dominated by format non-adherence. Licence apache-2.0, repo created 2026-09-04.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-04",
+  "sources": [
+    "hf-gabrielgts-granite4-3b-ec-magento"
+  ],
+  "benchmarks": [
+    {
+      "name": "Magento attribute extraction (micro-F1)",
+      "score": 95.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-gabrielgts-granite4-3b-ec-magento",
+      "vendor_claim": true,
+      "config": "Card table 'Magento held-out set', columns 'Task · metric | Base | this model', row 'Attribute extraction · F1': base 0.106 vs this model 0.953. Greedy decoding, identical prompts, base evaluated zero-shot with the same harness. Recorded x100 from the 0-1 value. Synthetic-on-synthetic: eval tasks use the same templates as training data (475 products disjoint)."
+    },
+    {
+      "name": "Magento product QA (token-F1)",
+      "score": 95.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-gabrielgts-granite4-3b-ec-magento",
+      "vendor_claim": true,
+      "config": "Same table, row 'Product QA · token-F1': base 0.040 vs this model 0.954. Recorded x100."
+    },
+    {
+      "name": "Magento relevance classification (accuracy)",
+      "score": 96.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-gabrielgts-granite4-3b-ec-magento",
+      "vendor_claim": true,
+      "config": "Same table, row 'Relevance classification · accuracy': base 0.599 vs this model 0.962. Recorded x100."
+    },
+    {
+      "name": "Long-list ranking (top-1, 500 ESCI queries)",
+      "score": 51.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-gabrielgts-granite4-3b-ec-magento",
+      "vendor_claim": true,
+      "config": "Card table 'Long-list ranking': 'Base (zero-shot) 0.070' vs 'this model 0.516', chance top-1 0.167. Recorded x100. Separate two-row table, not the one above."
+    },
+    {
+      "name": "ECInstruct answerability (accuracy)",
+      "score": 83.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-gabrielgts-granite4-3b-ec-magento",
+      "vendor_claim": true,
+      "config": "Card table 'ECInstruct held-out set' (2,000 samples), row 'Answerability · accuracy': base 0.448 vs this model 0.838. Recorded x100."
+    },
+    {
+      "name": "ECInstruct attribute extraction (micro-F1)",
+      "score": 65.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-gabrielgts-granite4-3b-ec-magento",
+      "vendor_claim": true,
+      "config": "Same ECInstruct table, row 'Attribute extraction · F1': base 0.000 vs this model 0.659. Recorded x100."
+    },
+    {
+      "name": "ECInstruct answer generation (token-F1, a loss)",
+      "score": 13.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-gabrielgts-granite4-3b-ec-magento",
+      "vendor_claim": true,
+      "config": "Same ECInstruct table, row 'Answer generation · token-F1': base 0.153 vs this model 0.132. Recorded as measured - this row goes DOWN. Card says the metric is low by construction; use comparatively."
+    }
+  ]
+}
