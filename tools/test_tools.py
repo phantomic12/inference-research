@@ -2155,5 +2155,67 @@ class TestUsableFigure(unittest.TestCase):
                 self.assertTrue(self._usable()(p), cases[blob])
 
 
+
+class TestCapabilityAxisClassifier(unittest.TestCase):
+    """build_joined_views._axis_for() decides which capability axis a row lands in.
+
+    It matched axis keys as raw substrings, so any benchmark name containing the
+    letters "imo" was filed under math: "multimodal" (mul-t-IMO-dal) and MiMo's own
+    "MiMo Cyber Bench" / "MiMo VisualCoding" all scored as math reasoning. It also
+    only recognised "Arena-Hard" with the hyphen, so cards that wrote "Arena Hard"
+    contributed nothing to the instruction axis.
+    """
+
+    @staticmethod
+    def _mod():
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "bjv_under_test", str(TOOLS / "build_joined_views.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_imo_does_not_swallow_unrelated_names(self):
+        f = self._mod()._axis_for
+        for name in ("Average (8 multimodal benchmarks)", "Medical multimodal Avg.",
+                     "MiMo Cyber Bench", "MiMo VisualCoding"):
+            self.assertEqual(f(name), "other", name)
+
+    def test_real_imo_benchmarks_stay_in_math(self):
+        f = self._mod()._axis_for
+        for name in ("IMO-AnswerBench", "IMO Answerbench pass@8", "IMO-Proof",
+                     "IMOAnswerBench"):
+            self.assertEqual(f(name), "math", name)
+
+    def test_arena_hard_without_hyphen_reaches_instruction(self):
+        f = self._mod()._axis_for
+        for name in ("Arena Hard", "Arena Hard v2 (%)", "Ru Arena Hard",
+                     "Arena-Hard", "Arena-Hard v2"):
+            self.assertEqual(f(name), "instruction", name)
+
+    def test_fused_family_names_survive_the_boundary_rule(self):
+        f = self._mod()._axis_for
+        cases = {"MMMLU": "knowledge", "ruMMLU": "knowledge", "CMMLU": "knowledge",
+                 "enIFeval": "instruction", "ruIFeval": "instruction",
+                 "HumanEvalJS": "coding", "HumanEvalPlus": "coding"}
+        for name, axis in cases.items():
+            self.assertEqual(f(name), axis, name)
+
+    def test_cross_benchmark_rollups_are_not_scored_in_an_axis(self):
+        f = self._mod()._axis_for
+        for name in ("Average (8 multimodal benchmarks)",
+                     "Math average pass@1 (AIME24/25, AMC, MATH, Minerva, Olympiad)"):
+            self.assertEqual(f(name), "other", name)
+
+    def test_single_benchmark_average_estimators_stay(self):
+        f = self._mod()._axis_for
+        cases = {"AIME 2024 (avg@32)": "math", "MATH-500 (avg@4)": "math",
+                 "GPQA-Diamond (avg of 4 samples)": "knowledge",
+                 "HMMT 2025 (avg. Feb and Nov)": "math",
+                 "IFEval Avg": "instruction"}
+        for name, axis in cases.items():
+            self.assertEqual(f(name), axis, name)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

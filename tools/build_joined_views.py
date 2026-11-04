@@ -318,11 +318,57 @@ _AXES = (
 )
 
 
+# A cross-benchmark rollup already contains the rows beside it, so scoring the rollup
+# inside an axis counts those benchmarks twice. "(8 multimodal benchmarks)" and "Math
+# average pass@1 (AIME24/25, AMC, MATH, Minerva, Olympiad)" are the clear cases.
+#
+# This is deliberately narrow. A name that merely says "avg" is usually ONE benchmark
+# at a different estimator and must stay in its axis: "IFEval Avg" is the only IFEval
+# row some cards publish, "AIME 2024 (avg@32)" is pass@1 over 32 samples, and
+# "HMMT 2025 (avg. Feb and Nov)" is the same test over two sittings. Suppressing
+# those deletes evidence instead of deduplicating it.
+_ROLLUP = re.compile(
+    r"(?i)(\b\d+\s*-?\s*benchmarks?\b|\b\d+\s+domains\b"
+    r"|\b(average|avg|mean)\b[^()]*\((?=[^)]*,)[^)]*\))"
+)
+_SAMPLING = re.compile(r"(?i)(avg@|@avg|avg of \d|average of \d|mean of \d|avg\.\s+[a-z])")
+
+
+def _is_rollup(name: str) -> bool:
+    return bool(_ROLLUP.search(name)) and not _SAMPLING.search(name)
+
+
+def _key_hit(key: str, low: str) -> bool:
+    """Does this benchmark key appear in the name?
+
+    Short acronyms must start a word. Plain substring matching filed "multimodal"
+    (mul-t-IMO-dal) and "MiMo Cyber Bench" under math because both contain "imo".
+    Keys of four characters or more are specific enough to keep fusing legitimately:
+    MMMLU, enIFeval, HumanEvalJS and SuperGPQA are distinct tests that a blanket
+    word-boundary rule would drop.
+    """
+    kl = key.lower()
+    if len(kl) < 4:
+        return bool(re.search(r"(?<![a-z0-9])" + re.escape(kl), low))
+    return kl in low
+
+
 def _axis_for(name):
     low = name.lower()
+    if _is_rollup(low):
+        return "other"
     for axis, keys in _AXES:
         for k in keys:
-            if k.lower() in low:
+            if _key_hit(k, low):
+                return axis
+    # "Arena Hard" is the same benchmark as "Arena-Hard"; it only reached the
+    # instruction axis when a card happened to spell it with the hyphen, so every
+    # model that spaced it went unscored. Compare with hyphens and underscores
+    # flattened on both sides.
+    flat = re.sub(r"[-_]", " ", low)
+    for axis, keys in _AXES:
+        for k in keys:
+            if "-" in k and _key_hit(re.sub(r"[-_]", " ", k), flat):
                 return axis
     return "other"
 
