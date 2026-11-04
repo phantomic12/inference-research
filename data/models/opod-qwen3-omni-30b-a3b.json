@@ -1,0 +1,123 @@
+{
+  "id": "opod-qwen3-omni-30b-a3b",
+  "type": "model",
+  "name": "OPOD-Qwen3-Omni-30B-A3B",
+  "family": "qwen3",
+  "vendor": "Tung111",
+  "release_year": 2026,
+  "architecture": "moe",
+  "task": "vision-language",
+  "params_b": 35.26,
+  "active_params_b": 3.0,
+  "num_experts": 128,
+  "experts_per_token": 8,
+  "shared_expert": null,
+  "hidden_size": 2048,
+  "num_layers": 48,
+  "num_kv_heads": 4,
+  "head_dim": 128,
+  "gqa_ratio": 8,
+  "max_position_embeddings": 65536,
+  "context_scaling": "Inherited unchanged from Qwen/Qwen3-Omni-30B-A3B-Instruct: thinker_config.text_config max_position_embeddings 65536. This derivative does not publish a context-extension recipe of its own. The Talker and code2wav sub-configs are present and unchanged - the card says they were neither optimised nor evaluated.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "Inherited unchanged from Qwen/Qwen3-Omni-30B-A3B-Instruct: the Thinker's 48 MoE layers with GQA at 32 query / 4 KV heads x head_dim 128, per this repo's own config.json (thinker_config.text_config). KV arithmetic: 48 layers * 2 (K and V) * 4 kv_heads * 128 head_dim * 2 bytes (bf16) = 98,304 bytes per token, unchanged from the base record.",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 98304,
+  "flops_per_token_active": 6000000000,
+  "open_weights": true,
+  "license": "other",
+  "base_model": "Qwen/Qwen3-Omni-30B-A3B-Instruct",
+  "derivative_kind": "distillation",
+  "notes": "ADDED 2026-11-04. An on-policy distillation of Qwen/Qwen3-Omni-30B-A3B-Instruct, not a new base model: same Qwen3-Omni MoE architecture, same 35.26B safetensors total as the base repo (identical byte count, 35,259,818,545), same config.json, 3B active per token. Recorded as a contender because the card prints a single 12-benchmark table whose base row and this model's row sit in the same block under one stated protocol. Caveats the card or the numbers force. First, evaluation is sampled at temperature 0.7 / top-p 0.7 rather than greedy - that is the card's stated protocol for every row including the base, so the comparison is internally consistent, but it is not the default serving point and a single seed is reported with no variance. Second, post-training targets the Thinker pathway only; the Talker and code2wav stacks are inherited unchanged and were not evaluated, so the speech-generation half of the model is untested. Third, the teachers are three GRPO arms derived from the same base, so 'beats its teachers' (70.3 oracle) is not a statement about beating a stronger model. Fourth, HQA 41.1 is a jump from a base of 26.8 that the card does not explain beyond the training data being 'verifiable prompts' - treat the biggest deltas as the least transferable. Licence 'other' with license_name apache-2.0, inherited from the base; treat as Apache-2.0. Repo created 2026-08-04.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-04",
+  "sources": [
+    "hf-tung111-opod-qwen3-omni-30b-a3b"
+  ],
+  "benchmarks": [
+    {
+      "name": "Average (12 text/vision/audio/omni benchmarks)",
+      "score": 70.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-tung111-opod-qwen3-omni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Card table 'Results', row 'Base (Qwen3-Omni-30B-A3B-Instruct) ... 67.0' vs row 'OPOD (this model) ... 70.8'; same 12-benchmark block, identical eval protocol for all methods (temperature 0.7, top-p 0.7, 8192 max prompt/response)."
+    },
+    {
+      "name": "AIME25",
+      "score": 55.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-tung111-opod-qwen3-omni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Same table, column AIME25: base 49.2 vs OPOD 55.0. Accuracy, temp 0.7 / top-p 0.7, 8k."
+    },
+    {
+      "name": "AIME26",
+      "score": 63.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-tung111-opod-qwen3-omni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Same table, column AIME26: base 52.9 vs OPOD 63.3."
+    },
+    {
+      "name": "HQA",
+      "score": 41.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-tung111-opod-qwen3-omni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Same table, column HQA: base 26.8 vs OPOD 41.1; ties the native-OPD row at 41.1 and the text teacher's 41.5 is not reached."
+    },
+    {
+      "name": "GPQA",
+      "score": 68.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-tung111-opod-qwen3-omni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Same table, column GPQA: base 65.3 vs OPOD 68.7."
+    },
+    {
+      "name": "MMLU-Pro",
+      "score": 78.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-tung111-opod-qwen3-omni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Same table, column MMLU-Pro: base 77.0 vs OPOD 78.2."
+    },
+    {
+      "name": "MMMU",
+      "score": 68.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-tung111-opod-qwen3-omni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Same table, column MMMU: base 67.9 vs OPOD 68.7."
+    },
+    {
+      "name": "A-OKVQA",
+      "score": 89.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-tung111-opod-qwen3-omni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Same table, column A-OKVQA: base 87.6 vs OPOD 89.1."
+    },
+    {
+      "name": "MMAU",
+      "score": 76.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-tung111-opod-qwen3-omni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Same table, column MMAU: base 75.6 vs OPOD 76.6; the audio teacher reaches 79.1."
+    }
+  ]
+}
