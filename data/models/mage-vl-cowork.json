@@ -1,0 +1,86 @@
+{
+  "id": "mage-vl-cowork",
+  "type": "model",
+  "name": "Mage-VL-Cowork",
+  "status": "verified",
+  "confidence": 0.78,
+  "updated": "2026-11-05",
+  "sources": [
+    "hf-microsoft-mage-vl-cowork"
+  ],
+  "family": "mage",
+  "vendor": "Microsoft",
+  "release_year": 2026,
+  "release_date": "2026-10-30",
+  "architecture": "dense",
+  "task": "vision-language",
+  "params_b": 4.742,
+  "active_params_b": 4.742,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 2560,
+  "num_layers": 36,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 4,
+  "max_position_embeddings": 262144,
+  "context_scaling": "config.json text_config max_position_embeddings 262,144 with rope_theta 5,000,000 and no rope_scaling block, so the architecture length is native to 262,144. The card is explicit that only 32,768 tokens is the ACTIVE training and inference window and that 262,144 is the architecture's ceiling, so serving this at 256k is untested territory rather than a documented capability.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "Dense GQA throughout: all 36 text layers are full_attention per config.json text_config layer_types, 32 attention heads over 8 KV heads at head_dim 128 (GQA ratio 4). Not hybrid, no sliding window in the language stack - the model gets its long-context behaviour from the asymmetric working-memory window described below, not from the attention pattern. Vision side is a from-scratch Mage-ViT codec-style encoder (16x16 patches, spatial_merge_size 2, 3D RoPE) feeding a Qwen3-4B-Instruct-2507 language backbone.",
+  "kv_cache_bytes_per_token": 147456,
+  "flops_per_token_active": 9483587584,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "microsoft/Mage-VL",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-05 from the HF trending feed (rank 25, 1,973 downloads, 183 likes at crawl). A five-stage post-train of microsoft/Mage-VL (base_model tag is base_model:finetune), which is itself a 4B codec-native multimodal model on a Qwen3-4B-Instruct-2507 backbone; Mage-VL is not yet a catalog record, so this record is the entry point and its provenance is carried in base_model rather than resolved to a parent record. PARAMS: safetensors total 4,741,793,792 = 4.742B, dense, so active_params_b equals it; the card's own phrasing is '4B (9.48 GB in bfloat16 across 2 safetensors shards)', which is a file size not a param count and agrees at 9.48 GB / 2 bytes = 4.74e9. flops_per_token_active = 2 x 4.741793792e9 = 9.4836e9, matching the repo convention of 2 x active params. The card's real per-step cost is higher because each turn carries 3 screenshots through the ViT separately; that image cost is not in this field. KV: 36 full-attention layers x 2 (K and V) x 8 kv heads x 128 head_dim x 2 bytes = 147,456 B/token (144.0 KiB/token, fp16). At the card's 32,768-token active window that is 4.83 GB resident; at the architecture ceiling of 262,144 it would be 38.7 GB, which is why the card keeps the deployed window at 32k. WORKING MEMORY: the card describes an asymmetric sliding window - 3 most recent screenshots + 4 full responses + folded Action: history - so image tokens, not text tokens, are what actually dominate the sequence in use. HARNESS: every OSWorld row is the authors' own MAGEHybridAgent harness at history_n=3, images_to_keep=3, 1920x1080, 50-step budget, on 361 held-out tasks excluding Google Drive; the headline 66.0 is a two-run average (65.33 and 66.75). Cross-card comparison with models_run-on a different scaffold is indicative only. This is a computer-use agent, not a general chat model: it has no MMLU/GPQA/AIME rows at all, so it is not rankable on the text axis.",
+  "benchmarks": [
+    {
+      "name": "OSWorld-Verified",
+      "score": 66.04,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-microsoft-mage-vl-cowork",
+      "vendor_claim": true,
+      "config": "MAGEHybridAgent harness, 50-step budget, 361 held-out tasks (Google Drive excluded), 1920x1080, history_n=3. Two-run average (65.33 run 1, 66.75 run 2). Same table: ScaleCUA-Qwen3.5-9B 68.7 (LOSS 2.7, 9B), Muse Glimmer-30B 65.9 (WIN 0.1), Qwen3.6-27B 63.9 (WIN 2.1), EvoCUA-32B 56.7 (WIN 9.3), Qwen3.5-27B 56.2 (WIN 9.8), ComputerRL-9B 48.0, OpenCUA-72B 44.9, DART-GUI-7B 42.1, Qwen3.5-9B 41.8, OpenCUA-32B 35.1, Fara1.5-4B 13.9. Against closed models: GPT-5.4-mini 69.6 at 50 steps (LOSS 3.5), Claude Sonnet 4.5 62.9 (WIN 3.1), Seed-1.8 61.9, Agent S2.5 w/ o3 54.2, UI-TARS-2 53.1. Human reference 72.4. All non-Mage rows are copied from those models' own publications and were not re-run here, so scaffold differences are uncontrolled."
+    },
+    {
+      "name": "OSWorld-Verified (OS domain)",
+      "score": 87.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-microsoft-mage-vl-cowork",
+      "vendor_claim": true,
+      "config": "Sub-score of the same table, 'OS' column, same harness and 50-step budget. 87.5 is the single highest OS-domain value in the whole table, above Claude Sonnet 4.5 (70.8), ScaleCUA-Qwen3.5-9B (79.2) and GPT-5.4-mini (79.2), and above the human-reference overall of 72.4 on this axis. It is bought with losses elsewhere: Office 64.9 vs ScaleCUA 70.6, Daily 65.0 vs 74.3, Professional 66.3 vs 89.5."
+    },
+    {
+      "name": "OSWorld-Verified (Multi-Application Workflow)",
+      "score": 62.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-microsoft-mage-vl-cowork",
+      "vendor_claim": true,
+      "config": "'Workflow' column of the same table, same harness. 62.7 is the highest workflow value in the open-weight rows and above GPT-5.4-mini (63.3 is a 0.6 LOSS - close) and Claude Sonnet 4.5 (49.5, WIN 13.2). ScaleCUA-Qwen3.5-9B is 48.1 here, so the 4B beats the 9B by 14.6 on this axis while losing the overall by 2.7."
+    },
+    {
+      "name": "ScreenSpot-v2",
+      "score": 87.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-microsoft-mage-vl-cowork",
+      "vendor_claim": true,
+      "config": "Prose figure in the stage-progression section ('78.8% -> 87.2% on ScreenSpot-v2'), no table row and no harness printed for this specific number. Compare: catalog's OpenCUA-7B 92.3 and DeskForge-Qwen3.5-4B 92.14 both beat it on this test, so it is a LOSS against the current 4B-class best. Recorded to keep the picture honest rather than to claim the grounding SOTA."
+    },
+    {
+      "name": "OSWorld-G",
+      "score": 56.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-microsoft-mage-vl-cowork",
+      "vendor_claim": true,
+      "config": "Prose figure ('30.6% -> 56.9% on OSWorld-G') for the same stage progression, no table row. LOSS against the catalog's 4B-class best on this test: DeskForge-Qwen3.5-4B 63.83 and Holo1.5-7B 66.27. Reported because the card presents it as a gain over its own prior checkpoint, not as a SOTA."
+    }
+  ]
+}
