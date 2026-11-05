@@ -1,0 +1,69 @@
+{
+  "id": "xll-spo-nemotron-4b",
+  "type": "model",
+  "name": "xll-spo-nemotron-4b",
+  "family": "nemotron",
+  "vendor": "thurstonpowers",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "text-generation",
+  "params_b": 3.974,
+  "active_params_b": 3.974,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 3136,
+  "num_layers": 42,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 5,
+  "max_position_embeddings": 262144,
+  "context_scaling": "Inherited unchanged from nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16 (config.json max_position_embeddings 262144). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": null,
+  "attention_variant": "Inherited unchanged from nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16: 42 full GQA layers (kv heads 8, head_dim 128) and 0 other layers, per the base config.json.",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 16384,
+  "flops_per_token_active": 7948000000,
+  "open_weights": true,
+  "license": "other",
+  "base_model": "nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16",
+  "derivative_kind": "distillation",
+  "notes": "ADDED 2026-11-05. Single-pass student distillation of the Muse 1.3 teacher into nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16: full fine-tune, retained checkpoint-2400, trained on thurstonpowers/xll-spo-dataset v1.1. Extracts subject-predicate-object assertion triples with verbatim evidence spans from clinical-trial CFR text. Same config as the base (42 layers, hidden 3136, 8 KV heads x 128). CAVEATS that matter for reading the rows: (1) the base row scored 0/300 on strict JSON arrays and hit the 16,384-token generation cap on all 300 sections, so the 0.424-vs-0.010 gap mostly measures schema-adherence and stopping behaviour learned from the teacher, not a capability delta between two working systems - the card says exactly this. (2) The 0.941 teacher row is the upstream teacher being scored against references it largely constructed, so it is not an independent competitor. (3) The eval is a 300-section dev holdout, greedy, single run. Licence 'other' (NVIDIA open model licence, inherited), repo created 2026-10-09.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-05",
+  "sources": [
+    "hf-thurstonpowers-xll-spo-nemotron-4b"
+  ],
+  "benchmarks": [
+    {
+      "name": "SPO F1 (300-section CFR holdout)",
+      "score": 42.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-thurstonpowers-xll-spo-nemotron-4b",
+      "vendor_claim": true,
+      "config": "Card table '| Model | Sections | Strict JSON array | Hit 16k token cap | Exact evidence spans | SPO F1 (P / R) | Full F1 w/ qualifiers & participants |': row 'Retained full fine-tune (this repo)' 0.424 vs row 'Baseline vanilla (nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16)' 0.010, recorded x100. Greedy decoding, max_new_tokens=16384, frozen 300-section reviewed CFR-part-group dev holdout. CAVEAT: the base row emitted 0/300 strict JSON arrays and hit the 16k cap on all 300 sections, so most of the gap is schema/stopping behaviour learned from the teacher, not a like-for-like capability delta; 0.010 is the permissive-regex-recovery figure and is 0.000 under strict JSON parsing."
+    },
+    {
+      "name": "Full F1 w/ qualifiers & participants",
+      "score": 30.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-thurstonpowers-xll-spo-nemotron-4b",
+      "vendor_claim": true,
+      "config": "Same table: 0.303 vs base 0.003, x100."
+    },
+    {
+      "name": "Strict JSON array validity %",
+      "score": 99.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-thurstonpowers-xll-spo-nemotron-4b",
+      "vendor_claim": true,
+      "config": "Same table: 298/300 (99.3%) vs base 0/300 (0.0%). A formatting/termination rate, not a knowledge score."
+    }
+  ]
+}
