@@ -2054,6 +2054,52 @@ class TestReadFiguresImageSniff(unittest.TestCase):
             self.assertNotEqual(out.get("error"), "svg")
 
 
+class TestReadFiguresAxisReads(unittest.TestCase):
+    """A value reconstructed from an axis is a guess and must never become a row.
+
+    On DeepSeek-V2's card the reader was handed two scatter plots. Their points are labelled
+    with model names and nothing else, but it returned MT-Bench 8.95 / AlpacaEval 38.7 and
+    HumanEval 81 / LiveCodeBench 32.5 -- each one consistent with the crosshair, none of them
+    printed anywhere in the image. Those numbers are indistinguishable from real ones once
+    they are in a record, so the reader must say which kind it produced and this must drop
+    the other kind even when --normalize is not passed.
+    """
+
+    @staticmethod
+    def _mod():
+        sys.path.insert(0, str(TOOLS))
+        import read_figures as rf  # noqa: PLC0415
+        return rf
+
+    def test_axis_read_rows_are_dropped_without_normalize(self):
+        rf = self._mod()
+        rows = [{"name": "MTBench", "score": 8.95, "scale": 10, "printed": False},
+                {"name": "MMLU", "score": 78.5, "scale": 100, "printed": True}]
+        kept, notes = rf._drop_axis_reads(rows)
+        self.assertEqual([r["name"] for r in kept], ["MMLU"])
+        self.assertTrue(any("axis-read" in n for n in notes))
+
+    def test_axis_read_rows_are_dropped_under_normalize(self):
+        rf = self._mod()
+        rows = [{"name": "AlpacaEval 2.0 (LC Win-Rate)", "score": 38.7, "printed": False},
+                {"name": "BBH", "score": 78.9, "printed": True}]
+        kept, notes = rf.normalize(rows)
+        self.assertEqual([r["name"] for r in kept], ["BBH"])
+        self.assertTrue(any("axis-read" in n for n in notes))
+
+    def test_row_without_the_flag_is_kept(self):
+        """Older replies predate the flag; absence of `printed` is not evidence of a guess."""
+        rf = self._mod()
+        kept, _ = rf._drop_axis_reads([{"name": "MMLU", "score": 78.5}])
+        self.assertEqual(len(kept), 1)
+
+    def test_prompt_requires_the_printed_flag(self):
+        rf = self._mod()
+        text = rf.prompt_for("SomeModel")
+        self.assertIn('"printed"', text)
+        self.assertIn("scatter plot", text)
+
+
 class TestIngestQueueImgPools(unittest.TestCase):
     """img_pools() must treat "seen" as a property of the card, not of the class.
 

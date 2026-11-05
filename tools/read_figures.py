@@ -51,6 +51,10 @@ def prompt_for(name):
             "\"scale\":<100 unless the table header states another maximum, e.g. a summed MME out of 3000,>"
             ",\"higher_is_better\":<true|false>}]\n"
             "- Copy the number exactly as printed. Never estimate, interpolate, average or reformat.\n"
+            "- Every row must say whether the number is literally printed as text in the image: "
+            "\"printed\": true. If you arrived at it by reading a bar height or a point position "
+            "against an axis, set \"printed\": false -- do not convert it to a number and do not "
+            "round it. A scatter plot with labelled dots and no value labels has NO printed values.\n"
             "- If this model is NOT in the figure, output exactly: not_in_chart\n"
             "- If the figure contains no benchmark numbers at all, output exactly: not_a_table\n"
             "- If a cell is blank or illegible, omit that row rather than guessing.\n"
@@ -89,6 +93,22 @@ def _split_combined(name, score):
 AGG = re.compile(r'^\s*(overall|average|mean|total|avg)\s*(\(.*\))?\s*$', re.I)
 
 
+def _drop_axis_reads(rows):
+    """Unconditional half of normalize(): never keep a value read off an axis.
+
+    --normalize is opt-in, but "did the model read this number or measure it" is not a
+    formatting preference -- a reconstructed value is a guess, and every record it lands in
+    is wrong in a way no later check can see.
+    """
+    kept, notes = [], []
+    for r in rows:
+        if isinstance(r, dict) and r.get('printed') is False:
+            notes.append('dropped axis-read value: %s ~ %s' % (r.get('name'), r.get('score')))
+            continue
+        kept.append(r)
+    return kept, notes
+
+
 def normalize(rows):
     """Clean up what vision models reliably get wrong: aggregates, stacked cells, absurd scales.
 
@@ -104,6 +124,14 @@ def normalize(rows):
             continue
         if AGG.search(name):
             notes.append('dropped aggregate: %s' % name)
+            continue
+        # A value the reader reconstructed from an axis is a guess, and a guess is worse than a
+        # null: it is indistinguishable from a printed number once it is in the record. On
+        # DeepSeek-V2's MT-Bench/AlpacaEval scatter plot the reader returned 8.95 / 38.7 --
+        # plausible, unreproducible, and absent from the image -- and on its HumanEval /
+        # LiveCodeBench plot it returned 81 / 32.5 off the crosshair. Both stop here.
+        if r.get('printed') is False:
+            notes.append('dropped axis-read value: %s ~ %s' % (name, r.get('score')))
             continue
         split = _split_combined(name, r.get('score'))
         if split:
@@ -224,7 +252,10 @@ def main():
                 if model not in TRUSTED_ABSENCE and absent_votes < 2:
                     continue          # believe it only once a second route agrees
             if r['kind'] in ('rows', 'not_in_chart', 'not_a_table'):
-                rows, notes = normalize(r['rows']) if a.normalize and r['kind'] == 'rows' else (r['rows'], [])
+                if r['kind'] == 'rows':
+                    rows, notes = normalize(r['rows']) if a.normalize else _drop_axis_reads(r['rows'])
+                else:
+                    rows, notes = r['rows'], []
                 kind = r['kind']
                 if kind == 'not_in_chart' and absent_votes < 2 and model not in TRUSTED_ABSENCE:
                     kind = 'not_in_chart_unconfirmed'
