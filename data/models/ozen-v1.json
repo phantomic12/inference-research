@@ -1,0 +1,69 @@
+{
+  "id": "ozen-v1",
+  "type": "model",
+  "name": "Ozen-v1",
+  "family": "whisper",
+  "vendor": "itayinbar",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "speech-to-text",
+  "params_b": 0.061,
+  "active_params_b": 0.061,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 512,
+  "num_layers": 12,
+  "num_kv_heads": 8,
+  "head_dim": 64,
+  "gqa_ratio": 1.0,
+  "max_position_embeddings": 1500,
+  "context_scaling": "Inherited unchanged from openai/whisper-base (config.json max_position_embeddings 1500). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "gelu",
+  "attention_variant": "MHA, encoder-decoder (cross-attention): 12 encoder layers and 4 decoder layers, width 512, 8 heads x 64. NOT the base config - the card states the base was given a Hebrew tokenizer, doubled in depth to 12 encoder layers, then cut to 4 decoder layers, chosen by measurement (2/3/4 layers scored 24.95/21.31/20.13% held-out WER).",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 8192,
+  "flops_per_token_active": 122000000,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "openai/whisper-base",
+  "derivative_kind": "distillation",
+  "notes": "ADDED 2026-11-05. Hebrew ASR model distilled from ivrit.ai's Whisper large-v3-turbo Hebrew fine-tune, descending from openai/whisper-base. ARCHITECTURE IS NOT INHERITED: unlike most records in this catalog, config.json here differs from the base - 12 encoder layers (base 6), 4 decoder layers, width 512, and an 8,192-token Hebrew byte-level BPE replacing Whisper's 51,865-token multilingual vocabulary. The card states the base was given the Hebrew tokenizer, doubled in depth to 12 encoder layers, then cut to 4 decoder layers, the depth chosen by measurement (2/3/4 layers = 24.95/21.31/20.13% held-out WER). num_layers is the encoder depth per this catalog's Whisper convention; kv_cache_bytes_per_token = 4 decoder layers x 8 heads x 64 x 2 (K/V) x 2 bytes = 8,192. 60.74M params, i.e. SMALLER than the 73M model it descends from. Trained on 3,519 hours of ivrit-ai/audio-v2 teacher transcripts plus 356 hours of human transcription; weights from step 220,000 of 303,562. The eval harness reproduces the ivrit.ai Hebrew leaderboard and was validated on 40 of 40 published model-dataset pairs, which is unusually strong provenance for a card. CAVEAT: the comparison is against STOCK multilingual Whisper of the same size, which the card itself says 'does not work for Hebrew'; the meaningful ceiling is the teacher (ivrit.ai turbo: 5.5 / 6.1 / 8.10), which still beats this model on all three sets. Licence apache-2.0, repo created 2026-10-07. Also ships ONNX and transformers.js builds; recorded from the bf16 weights.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-05",
+  "sources": [
+    "hf-itayinbar-ozen-v1"
+  ],
+  "benchmarks": [
+    {
+      "name": "WER % (ivrit-ai/eval-d1)",
+      "score": 8.59,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-itayinbar-ozen-v1",
+      "vendor_claim": true,
+      "config": "Card table '| Benchmark | Ozen-v1, 61M | whisper-small, 242M | whisper-base, 73M | ivrit.ai turbo, 809M |': row 'ivrit-ai/eval-d1' 8.59% vs row 'whisper-base, 73M' 48.32%. LOWER IS BETTER. Harness reproduces the ivrit.ai Hebrew leaderboard, validated on 40/40 published model-dataset pairs. The model it was distilled from (ivrit.ai turbo) scores 5.5."
+    },
+    {
+      "name": "WER % (ivrit-ai/eval-whatsapp)",
+      "score": 15.94,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-itayinbar-ozen-v1",
+      "vendor_claim": true,
+      "config": "Same table: 15.94% vs base 56.60%; teacher 6.1."
+    },
+    {
+      "name": "WER % (imvladikon/hebrew_speech_kan)",
+      "score": 13.4,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-itayinbar-ozen-v1",
+      "vendor_claim": true,
+      "config": "Same table: 13.40% vs base 68.12%; teacher 8.10."
+    }
+  ]
+}
