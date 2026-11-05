@@ -8,21 +8,27 @@ N attempts, and the first one that returns a usable answer wins. The reply recor
 model answered, because "no rows" from a model that timed out means something very different
 from "no rows" from a model that looked and found the model absent.
 
-Chain note (measured 2026-10-23, all on the same InternVL3-14B figure):
-  nous-portal-main/ornith/ornith-1.5-122b:free        34 s, 12/12 values, intermittent 504
-  nous-portal-main/meituan/longcat-2.5-preview:free   72 s, values correct, intermittent 504
-  cap/vision (alias -> gemini-3.8-flash -> mimo)      6-50 s, 12/12, steadiest
-  nous-portal-main/stepfun/step-3.7-flash:free        400 "missing tags" — Kilo resale, unusable
+Chain note. The free tiers that carried this tool through October were withdrawn, so the
+order was re-measured on 2026-11-05 against a Step-3.5-Flash bar chart (9 printed values) and
+a 3x4 Sage-A1.5 grid (12 printed values):
+  meituan/longcat-2.5                   66 s, 12/12 values both figures, reliable — now first
+  opencode-go/mimo-v2.6-flash           7-22 s, values correct, but untrusted for absence
+  nous-portal-main/ornith/...:free      404 'free period has ended'
+  cap/vision                            404 'gemini-3.8-flash is not routed'
+  nous-portal-main/meituan/longcat...   404 'no longer free'
+  opencode-go/longcat-2.5-preview-free  400 'Model is unavailable'
+The three dead routes are kept at the tail rather than deleted: they are one routing fix away
+from working again, and a retired route costs one 404 (sub-second) before the chain moves on.
 """
 import argparse, base64, json, mimetypes, os, pathlib, re, sys, time, urllib.request, urllib.error
 
 GW = os.environ.get('AI_GATEWAY_URL', 'http://host.docker.internal:8090/v1')
 KEY = os.environ.get('AI_GATEWAY_KEY', '')
 UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36'
-DEFAULT_CHAIN = ('nous-portal-main/ornith/ornith-1.5-122b:free,'
-                 'cap/vision,'
+DEFAULT_CHAIN = ('meituan/longcat-2.5,'
                  'opencode-go/mimo-v2.6-flash,'
-                 'nous-portal-main/meituan/longcat-2.5-preview:free,'
+                 'nous-portal-main/ornith/ornith-1.5-122b:free,'
+                 'cap/vision,'
                  'opencode-go/longcat-2.5-preview-free')
 
 # A model that cannot see the picture still says something, and "not_in_chart" is the most
@@ -32,9 +38,9 @@ DEFAULT_CHAIN = ('nous-portal-main/ornith/ornith-1.5-122b:free,'
 # only believed from a route that has earned it, or from two routes agreeing.
 RASTER_MAGIC = (b'\x89PNG', b'\xff\xd8', b'GIF8', b'RIFF')
 
-TRUSTED_ABSENCE = {'nous-portal-main/ornith/ornith-1.5-122b:free',
-                   'cap/vision',
-                   'nous-portal-main/meituan/longcat-2.5-preview:free'}
+TRUSTED_ABSENCE = {'meituan/longcat-2.5',
+                   'nous-portal-main/ornith/ornith-1.5-122b:free',
+                   'cap/vision'}
 
 
 def prompt_for(name):

@@ -2217,5 +2217,51 @@ class TestCapabilityAxisClassifier(unittest.TestCase):
             self.assertEqual(f(name), axis, name)
 
 
+class TestReadFiguresChain(unittest.TestCase):
+    """The vision chain must start on a route that actually answers.
+
+    The October chain opened on three free tiers that were all withdrawn by 2026-11-05:
+    ornith's ":free" alias returns 404 'free period has ended', cap/vision returns 404
+    'gemini-3.8-flash is not routed', and the nous longcat free alias returns 404 'no longer
+    free'. Every figure therefore burned three failures before reaching a working route, and
+    read_figures still reported gw_model as though the chain were healthy. These tests pin the
+    head of the chain to the paid longcat route that was measured working (12/12 values on two
+    figures), and keep TRUSTED_ABSENCE from drifting away from the routes in the chain.
+    """
+
+    @staticmethod
+    def _mod():
+        sys.path.insert(0, str(TOOLS))
+        import read_figures as rf  # noqa: PLC0415
+        return rf
+
+    def test_chain_starts_on_a_live_route(self):
+        rf = self._mod()
+        chain = [m.strip() for m in rf.DEFAULT_CHAIN.split(",") if m.strip()]
+        self.assertEqual(chain[0], "meituan/longcat-2.5")
+
+    def test_retired_free_aliases_are_not_ahead_of_a_live_route(self):
+        rf = self._mod()
+        chain = [m.strip() for m in rf.DEFAULT_CHAIN.split(",") if m.strip()]
+        dead = {"nous-portal-main/ornith/ornith-1.5-122b:free",
+                "cap/vision",
+                "nous-portal-main/meituan/longcat-2.5-preview:free"}
+        live_at = min(chain.index(m) for m in chain if m not in dead)
+        for m in dead & set(chain):
+            self.assertGreater(chain.index(m), live_at,
+                               "%s is retired; it must not precede a working route" % m)
+
+    def test_no_duplicate_routes(self):
+        rf = self._mod()
+        chain = [m.strip() for m in rf.DEFAULT_CHAIN.split(",") if m.strip()]
+        self.assertEqual(len(chain), len(set(chain)))
+
+    def test_trusted_absence_is_drawn_from_the_chain(self):
+        rf = self._mod()
+        chain = set(m.strip() for m in rf.DEFAULT_CHAIN.split(",") if m.strip())
+        for m in rf.TRUSTED_ABSENCE:
+            self.assertIn(m, chain, "%s is trusted for absence but not in the chain" % m)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
