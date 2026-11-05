@@ -24,6 +24,9 @@ def _hf_token():
     return None
 
 
+PLACEHOLDER = {'', '??', '?', '-', '--', '\u2014', 'n/a', 'na', 'tbd', 'none', 'nil'}
+
+
 def fetch(url):
     headers = dict(UA)
     if 'huggingface.co' in url:
@@ -100,6 +103,14 @@ def model_keys(mid, rec):
     keys = set()
     n = norm(mid)
     keys.add(n)
+    # Cards frequently label the column with the model's own name (RAMEN-MISO)
+    # rather than the repo slug (qwen3-235b-a22b-sft-004-origin-1).
+    if rec.get('name'):
+        nn = norm(rec['name'])
+        keys.add(nn)
+        for tok in nn.split():
+            if len(tok) > 3:
+                keys.add(tok)
     for tok in n.split():
         if len(tok) > 4:
             keys.add(tok)
@@ -138,9 +149,17 @@ def candidate_cols(grids, keys, hints=()):
     for gi, g in enumerate(grids):
         hdr = g[0]
         for ci in range(1, len(hdr)):
+            # A column whose header is not a model name is still a candidate if it
+            # is numeric. Count coverage over the cells that carry a value: cards
+            # print '??', '-', 'n/a' for a model that did not report a benchmark,
+            # and one unmeasured row must not disqualify the whole column. It was
+            # doing exactly that on team-suzuki/RAMEN-MISO, whose MISO column is
+            # 2 real numbers plus a '??' for full-set HLE, so the column was never
+            # offered and the base column got bound instead - a false mismatch.
             vals = [r[ci] for r in g[1:] if len(r) > ci]
-            hits = sum(1 for v in vals if num(v) is not None)
-            if vals and hits >= 0.8 * len(vals):
+            real = [v for v in vals if str(v).strip().lower() not in PLACEHOLDER]
+            hits = sum(1 for v in real if num(v) is not None)
+            if real and hits >= 0.8 * len(real):
                 cands.append((0, gi, ci, hdr[ci] if ci < len(hdr) else ''))
                 numish += 1
 
