@@ -914,6 +914,76 @@ class TestCostPerToken(Harness):
         self.assertEqual(cost_per_token.check_evidence(), [])
 
 
+class TestVerifyScoresColumnBinding(Harness):
+    """Column binding for verify_scores.py, on synthetic grids (no network).
+
+    These cover the two ways the binder produced a FALSE mismatch, which
+    AGENTS.md says must never happen: a placeholder cell ('??') disqualifying
+    the correct column, and the record's display name not being offered as a
+    header key.
+    """
+
+    @staticmethod
+    def _mod():
+        sys.path.insert(0, str(TOOLS))
+        import verify_scores  # noqa: PLC0415
+        return verify_scores
+
+    def setUp(self):
+        super().setUp()
+        self.vs = self._mod()
+        # team-suzuki/RAMEN-MISO's real table shape: benchmarks in rows, models in
+        # columns, and a '??' where the model did not report the benchmark.
+        self.grid = [
+            ["Benchmark", "DeepSeek R1 0528 Qwen3 8B", "Qwen3 235B A22B", "MISO"],
+            ["Humanity's Last Exam (text-only)", "6.46 \u00b11.96", "11.75 \u00b11.36", "??"],
+            ["Humanity's Last Exam Extract120 (text-only)", "4.85 \u00b14.15", "11.54 \u00b16.14", "19.33 \u00b17.10"],
+            ["Do-Not-Answer", "97.2", "97.9", "92.0"],
+        ]
+        self.rec = {
+            "id": "qwen3-235b-a22b-sft-004-origin-1",
+            "name": "RAMEN-MISO",
+            "params_b": 235.094,
+            "active_params_b": 22,
+            "benchmarks": [
+                {"name": "Humanity's Last Exam Extract120 (text-only)", "score": 19.33},
+                {"name": "Do-Not-Answer", "score": 92.0},
+            ],
+        }
+
+    def test_placeholder_cell_does_not_disqualify_its_column(self):
+        cands = self.vs.candidate_cols([self.grid], self.vs.model_keys(self.rec["id"], self.rec))
+        offered = {c[2] for c in cands}
+        self.assertIn(3, offered, "the MISO column holds one '??' and was not offered at all")
+
+    def test_correct_column_outranks_the_base_column(self):
+        keys = self.vs.model_keys(self.rec["id"], self.rec)
+        cands = self.vs.candidate_cols([self.grid], keys)
+        best = None
+        for score, gi, ci, h in cands:
+            key = self.vs.score_col([self.grid][gi], ci, self.rec["benchmarks"])
+            if best is None or key > best[0]:
+                best = (key, ci)
+        self.assertEqual(best[1], 3)
+        self.assertEqual(best[0], (2, 2), "both recorded rows should reproduce in the MISO column")
+
+    def test_display_name_is_a_header_key(self):
+        keys = self.vs.model_keys(self.rec["id"], self.rec)
+        self.assertIn(self.vs.norm("RAMEN-MISO"), keys)
+
+    def test_no_false_mismatch_when_base_column_is_the_named_one(self):
+        """The base column's header literally contains the model id, so it scores
+        highest on name match. Reproducing the values must still beat it."""
+        res = self.vs.score_col(self.grid, 2, self.rec["benchmarks"])
+        self.assertEqual(res, (0, 2))   # base column: right rows, wrong numbers
+        res = self.vs.score_col(self.grid, 3, self.rec["benchmarks"])
+        self.assertEqual(res, (2, 2))
+
+    def test_placeholder_set_covers_the_common_spellings(self):
+        for p in ("??", "-", "n/a", "TBD", "\u2014"):
+            self.assertIn(p.lower(), self.vs.PLACEHOLDER)
+
+
 class TestRegistry(Harness):
     def test_dirs_exist_for_every_type(self):
         r = run_tool("validate.py", cwd=self.tmp)
