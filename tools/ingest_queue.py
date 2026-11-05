@@ -127,6 +127,36 @@ def _is_raster(data):
     return data[:4] == b'RIFF' and data[8:12] == b'WEBP'
 
 
+# A figure smaller than this is not a real chart. The threshold has to be low: legitimate
+# SVG icons on card headers are 250-900 bytes ('stepfun.svg' 674, 'figures/24px.svg' 252),
+# and those are still figures the vision chain could rasterize. The job of the floor is to
+# reject error bodies and LFS pointer stubs, not to judge artwork size.
+MIN_FIGURE_BYTES = 64
+_svg_warned = False
+
+
+def _reroot(url):
+    """Candidate URLs that move a stale figure path to where the file actually lives.
+
+    `figures/thinking_budget.png` 404s on ByteDance-Seed/Seed-OSS-36B-Instruct while
+    `thinking_budget.png` at the repo root answers 200 -- the card was edited, the image was
+    not. Same for the Worthify/Decision-1 pinned-revision URLs. A card keeps rendering the
+    broken tag, so the miss is silent; the fix is one HEAD on the basename.
+    """
+    import urllib.parse
+    out = []
+    m = re.match(r'https://huggingface\.co/([^/]+/[^/]+)/(?:resolve|raw)/([^/]+)/(.+)$', url)
+    if not m:
+        return out
+    repo, rev, path = m.group(1), m.group(2), urllib.parse.unquote(m.group(3).split('?')[0])
+    base = path.rsplit('/', 1)[-1]
+    if base == path:
+        return out
+    out.append('https://huggingface.co/%s/resolve/%s/%s'
+               % (repo, 'main' if rev == 'main' else rev, urllib.parse.quote(base)))
+    return out
+
+
 def fetch(url, dest):
     """Download one card image. HF serves LFS-backed images under /raw/main/ as a
     131-byte git-LFS pointer stub rather than the image, so /resolve/main/ is the path
@@ -134,11 +164,12 @@ def fetch(url, dest):
     candidates = [url]
     if 'huggingface.co/' in url and '/raw/main/' in url:
         candidates.append(url.replace('/raw/main/', '/resolve/main/'))
+    candidates += _reroot(url)
     for u in candidates:
         data = _get(u)
         if data is None:
             continue
-        if len(data) < 2000 or data[:40].startswith(b'version https://git-lfs'):
+        if len(data) < MIN_FIGURE_BYTES or data[:40].startswith(b'version https://git-lfs'):
             continue
         # An HTML/JSON error body is not a figure. Saving it under a .png name makes the
         # card look read and the figure unrecoverable, so reject the payload instead.
@@ -154,6 +185,21 @@ def fetch(url, dest):
         if b'<svg' in data[:400]:
             try:
                 import cairosvg
+            except ImportError:
+                # Silent here is what makes this expensive: fetch() returns 0, img_batch
+                # finds an empty directory, and the card is served with no figures at all
+                # -- indistinguishable from a 404. Say so once, loudly, because the fix is
+                # an install and not a code change. (Observed 2026-11-05: the Hermes venv
+                # python3 has no cairosvg while /usr/local/bin/python3 does, so every SVG
+                # figure on every card was being dropped under the documented `python3`.)
+                global _svg_warned
+                if not _svg_warned:
+                    _svg_warned = True
+                    print('WARNING: cairosvg is not installed for %s; SVG card figures '
+                          'cannot be rasterized and are being skipped' % sys.executable,
+                          file=sys.stderr)
+                continue
+            try:
                 data = cairosvg.svg2png(bytestring=data, output_width=1800)
             except Exception:
                 continue
@@ -259,10 +305,17 @@ def cmd_stats(_):
     s = load_seen()
     d = deriv_candidates()
     strong, other = img_pools()
+    # 'img_pending: 0' is a claim that every card with figures has been read. It is false
+    # when a card was marked seen while its download directory stayed empty, and nothing
+    # else reports that: those cards are excluded from both pools by `seen`, so they never
+    # come back. Surface the contradiction here rather than letting a green stats line
+    # stand in for coverage.
+    buried = seen_without_figures(sorted(set(s['img']) | set(s.get('img_other') or [])))
     print(json.dumps({'deriv_pending': len(d), 'deriv_seen': len(s['deriv']),
                       'img_pending': len(strong) + len(other),
                       'img_pending_strong': len(strong), 'img_pending_other': len(other),
                       'img_seen': len(s['img']), 'img_other_seen': len(s.get('img_other') or []),
+                      'img_seen_unreadable': len(buried), 'img_unreadable_ids': buried,
                       'models_in_catalog': len(model_ids())}, indent=1))
 
 
