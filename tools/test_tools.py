@@ -2260,6 +2260,83 @@ class TestUsableFigure(unittest.TestCase):
             p.write_bytes(b'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>')
             self.assertTrue(self._usable()(p))
 
+    def test_small_but_real_svg_icon_is_downloaded(self):
+        """A header icon is a figure: 674 and 252 bytes are real files, not error bodies.
+
+        The floor used to be 2000 bytes, which refused every small SVG without saying so --
+        fetch() returned 0, img_batch saw an empty directory, and the card was served with
+        no figures while looking identical to a 404. Three cards were marked seen that way:
+        modernjev-decide-preview (923 B), step-3-5-flash (674 B), sage-a1-5 (252 B).
+        """
+        sys.path.insert(0, str(TOOLS))
+        import ingest_queue as q  # noqa: PLC0415
+        self.assertLess(q.MIN_FIGURE_BYTES, 2000,
+                        "the size floor must admit small SVGs")
+        with tempfile.TemporaryDirectory() as td:
+            dest = Path(td) / "00.png"
+            svg = b'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>'
+            self.assertGreaterEqual(len(svg), q.MIN_FIGURE_BYTES)
+
+    def test_reroot_moves_a_stale_figure_path_to_its_basename(self):
+        """figures/thinking_budget.png 404s; thinking_budget.png at the repo root answers 200.
+
+        The card was edited and the image was not moved, so the tag keeps 404ing forever and
+        Seed-OSS-36B looked like a card with one unreadable figure. One retry on the
+        basename fixes it without touching the scanner.
+        """
+        sys.path.insert(0, str(TOOLS))
+        import ingest_queue as q  # noqa: PLC0415
+        got = q._reroot('https://huggingface.co/ByteDance-Seed/Seed-OSS-36B-Instruct'
+                        '/resolve/main/figures/thinking_budget.png')
+        self.assertEqual(got, ['https://huggingface.co/ByteDance-Seed/Seed-OSS-36B-Instruct'
+                               '/resolve/main/thinking_budget.png'])
+
+    def test_reroot_keeps_a_pinned_revision(self):
+        sys.path.insert(0, str(TOOLS))
+        import ingest_queue as q  # noqa: PLC0415
+        got = q._reroot('https://huggingface.co/Worthify/Decision-1/resolve/48acdb76'
+                        '/media/seed42-heldout-families.png')
+        self.assertEqual(len(got), 1)
+        self.assertIn('/resolve/48acdb76/seed42-heldout-families.png', got[0])
+
+    def test_reroot_is_a_noop_for_a_root_level_figure(self):
+        """Don't re-request the URL that just failed."""
+        sys.path.insert(0, str(TOOLS))
+        import ingest_queue as q  # noqa: PLC0415
+        self.assertEqual(q._reroot('https://huggingface.co/a/b/resolve/main/x.png'), [])
+        self.assertEqual(q._reroot('https://example.com/chart.png'), [])
+
+    def test_stats_reports_cards_seen_with_no_readable_figure(self):
+        """'img_pending: 0' must not hide a card whose figures never landed.
+
+        seen_without_figures() was only consulted by `mark`, so a card marked before the
+        guard existed (or marked --force) stayed buried: excluded from both pools by `seen`,
+        yet never read. Five such cards were live on 2026-11-05.
+        """
+        sys.path.insert(0, str(TOOLS))
+        import ingest_queue as q  # noqa: PLC0415
+        tmp = Path(tempfile.mkdtemp(prefix="ir-stats-"))
+        state, img = tmp / "state", tmp / "img"
+        state.mkdir(); img.mkdir()
+        (img / "card_scan.json").write_text(json.dumps([
+            {"id": "hollow", "repo": "o/hollow", "n_bench_ctx": 2, "n_other": 0, "benchmarks": 1,
+             "images": [{"url": "https://huggingface.co/o/hollow/resolve/main/a.png"}]},
+            {"id": "read", "repo": "o/read", "n_bench_ctx": 1, "n_other": 0, "benchmarks": 1,
+             "images": [{"url": "https://huggingface.co/o/read/resolve/main/a.png"}]},
+        ]), encoding="utf-8")
+        (img / "read").mkdir()
+        (img / "read" / "00.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 32)
+        (img / "hollow").mkdir()          # served, nothing downloaded
+        saved = (q.STATE, q.IMG, q.SEEN)
+        q.STATE, q.IMG, q.SEEN = state, img, state / "seen.json"
+        try:
+            q.save_seen({"deriv": [], "img": ["hollow", "read"], "img_other": []})
+            buried = q.seen_without_figures(["hollow", "read"])
+        finally:
+            q.STATE, q.IMG, q.SEEN = saved
+            shutil.rmtree(tmp, ignore_errors=True)
+        self.assertEqual(buried, ["hollow"])
+
     def test_png_and_webp_and_jpeg_are_usable(self):
         cases = {b"\x89PNG\r\n\x1a\n" + b"\x00" * 32: "png",
                  b"\xff\xd8\xff\xe0" + b"\x00" * 32: "jpeg",
