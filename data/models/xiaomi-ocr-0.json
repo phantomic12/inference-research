@@ -1,0 +1,140 @@
+{
+  "id": "xiaomi-ocr-0",
+  "type": "model",
+  "name": "Xiaomi-OCR-0",
+  "status": "verified",
+  "confidence": 0.76,
+  "updated": "2026-11-05",
+  "sources": [
+    "hf-xiaomi-research-xiaomi-ocr-0"
+  ],
+  "family": "qwen3",
+  "vendor": "Xiaomi",
+  "release_year": 2026,
+  "release_date": "2026-09-29",
+  "architecture": "hybrid-attention-ssm",
+  "task": "vision-language",
+  "params_b": 0.873,
+  "active_params_b": 0.873,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 1024,
+  "num_layers": 24,
+  "num_kv_heads": 2,
+  "head_dim": 256,
+  "gqa_ratio": 4,
+  "max_position_embeddings": 262144,
+  "context_scaling": "text_config max_position_embeddings 262,144, native, with rope_parameters carrying mrope_interleaved true and mrope_section [11,11,10] (the Qwen3.5 multimodal 3-axis position encoding) at rope_theta 10,000,000 and partial_rotary_factor 0.25. The card claims training context up to 262,144. No rope_scaling / YaRN block, so 262,144 is the trained length.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "Qwen3.5 hybrid text stack: 18 of 24 layers are linear_attention with a fixed-size recurrent state and 6 are full_attention (indices 3, 7, 11, 15, 19, 23), per config.json text_config layer_types. GQA 8 attention heads over 2 KV heads at head_dim 256. head_dim 256 includes the 64 dims that carry RoPE (partial_rotary_factor 0.25), so the cache holds all 256 and the partial rotary buys no KV saving. The vision tower is a separate pass on the input image.",
+  "kv_cache_bytes_per_token": 12288,
+  "flops_per_token_active": 1746877568,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "Qwen/Qwen3.5-0.8B-Base",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-05 from the HF trending feed (rank 21, 22,488 downloads, 287 likes at crawl). An OCR-specialised finetune of Qwen3.5-0.8B-Base (base_model tag base_model:finetune): ~170M-sample OCR corpus, Q-Mask text anchoring, OCR-centric continued pretraining, then mixed-task RL. Qwen3.5-0.8B-Base is not yet a catalog record, so provenance sits in base_model rather than resolving to a parent record. PARAMS: safetensors total 873,438,784 = 0.873B, dense, active equals it. flops_per_token_active = 2 x 873,438,784 = 1.7469e9. KV: 6 full-attention layers x 2 (K and V) x 2 kv heads x 256 head_dim x 2 bytes = 12,288 B/token (12.0 KiB/token, fp16) - tiny, because 18 of 24 layers keep a fixed recurrent state instead, and at 262,144 tokens that is only 3.2 GB. Second KV note the field cannot express: the vision tower is a single pass per page, but an OCR model's real memory driver is the IMAGE token count, which this card does not print (no patch size, no per-page token budget stated), so per-page memory is not derivable from the card. WHAT IT IS NOT: this is a document-parsing and OCR-VQA model, not a chat model. It has no MMLU/GPQA/AIME/IFEval rows, so it is not rankable on the text axis and its 'vision-language' task tag is the OCR sub-case. EVIDENCE CAVEATS, both printed by the card itself: (1) its bold marks the model, NOT the best value in a column - TeleOCR 1.2B scores 96.87 on OmniDocBench v1.6 against this model's 96.83, and TeleOCR also wins Wild 88.53 vs 87.94, so the card's own table contradicts its '#2 on both' framing; (2) the card uses 'OmniDocBench v1.6' in its comparison table but the catalog's existing Qwen rows are 'OmniDocBench v1.5' (Qwen3.5-4B 86.2, MiniCPM-V-4.6 84.6) - those are DIFFERENT TESTS and must not be subtracted; the honest same-test comparison here is within this card's own v1.6 table only. (3) No eval harness, prompt format or decoding setting is printed for either table. GGUF exists from third parties (prithivMLmods, xzl01) and Ollama BF16 is linked, so it is runnable low-VRAM at 0.87B.",
+  "benchmarks": [
+    {
+      "name": "OmniDocBench v1.6",
+      "score": 96.83,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xiaomi-research-xiaomi-ocr-0",
+      "vendor_claim": true,
+      "config": "Card markdown table 'Document parsing: selected comparisons', Overall column. Same table: TeleOCR 1.2B 96.87 (LOSS 0.04, inside resolution), OvisOCR2 0.8B 96.58 (WIN 0.25), PaddleOCR-VL-1.6 0.9B 96.33 (WIN 0.5), MinerU2.5-Pro 1.2B 95.75 (WIN 1.08), GLM-OCR 0.9B 95.22 (WIN 1.61). All baseline rows are the other vendors' published values, not re-run here. v1.6 is a different benchmark version from the v1.5 rows elsewhere in the catalog, so this is not comparable to Qwen3.5-4B's 86.2."
+    },
+    {
+      "name": "Real5-OmniDocBench",
+      "score": 95.24,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xiaomi-research-xiaomi-ocr-0",
+      "vendor_claim": true,
+      "config": "Same card table, 'Real5' (recaptured/scanned document) column, and the one column this model actually leads: OvisOCR2 92.29 (WIN 2.95), PaddleOCR-VL-1.6 93.19 (WIN 2.05), MinerU2.5-Pro 88.94 (WIN 6.3), GLM-OCR 90.32 (WIN 4.92), TeleOCR not reported ('-'). Real5 is the photographed/warped/skewed-condition benchmark, so the win is concentrated in non-pristine scans."
+    },
+    {
+      "name": "Wild-OmniDocBench",
+      "score": 87.94,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xiaomi-research-xiaomi-ocr-0",
+      "vendor_claim": true,
+      "config": "Same card table, 'Wild' column: TeleOCR 88.53 (LOSS 0.59), OvisOCR2 87.91 (WIN 0.03, noise), PaddleOCR-VL-1.6 87.36, MinerU2.5-Pro 87.33, GLM-OCR 85.08. The card's '#2' claim holds here but the margin over OvisOCR2 is inside any plausible noise floor."
+    },
+    {
+      "name": "OCR-VQA five-benchmark mean",
+      "score": 83.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xiaomi-research-xiaomi-ocr-0",
+      "vendor_claim": true,
+      "config": "Card's own arithmetic mean over DocVQA / InfoVQA / ChartQA / OCRBench / TextVQA, printed in the Mean column and restated in prose. Same table: Qwen3.5-0.8B 72.9 (WIN 10.3, its own base), Qwen3.5-2B 80.9 (WIN 2.3 at a quarter of the size), Qwen3.5-4B 84.9 (LOSS 1.7 at 5x the size), MiniCPM-V-4.5 8B 82.6 (WIN 0.6 at 10x the size). The 0.8B-vs-4B loss of 1.7 on the mean is the honest counterweight to the size-class claim."
+    },
+    {
+      "name": "DocVQA",
+      "score": 93.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xiaomi-research-xiaomi-ocr-0",
+      "vendor_claim": true,
+      "config": "Same VQA table, single column. Qwen3.5-4B 94.4 (LOSS 1.3), Qwen3.5-2B 92.4 (WIN 0.7), Qwen3.5-0.8B 88.5 (WIN 4.6), MiniCPM-V-4.5 84.9 (WIN 8.2). Note the catalog also holds high DocVQA numbers from MiniCPM-V-4.5 (94.7) and LFM3-Omni-2B (92.47) measured on those models' own cards - different harnesses, so not a head-to-head."
+    },
+    {
+      "name": "InfoVQA",
+      "score": 75.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xiaomi-research-xiaomi-ocr-0",
+      "vendor_claim": true,
+      "config": "Same VQA table. Qwen3.5-4B 80.4 (LOSS 5.3), Qwen3.5-2B 72.4 (WIN 2.7), Qwen3.5-0.8B 60.3 (WIN 14.8). The largest single gain over its own base in the table."
+    },
+    {
+      "name": "ChartQA",
+      "score": 84.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xiaomi-research-xiaomi-ocr-0",
+      "vendor_claim": true,
+      "config": "Same VQA table. Qwen3.5-4B 82.4 (WIN 2.2), Qwen3.5-2B 77.0 (WIN 7.6), MiniCPM-V-4.5 87.4 (LOSS 2.8 at 10x the size). One of only two columns in this table where the 0.8B beats Qwen3.5-4B."
+    },
+    {
+      "name": "OCRBench",
+      "score": 84.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xiaomi-research-xiaomi-ocr-0",
+      "vendor_claim": true,
+      "config": "Same VQA table, 0-100 percentage scale as printed by this card. Qwen3.5-4B 86.6 (LOSS 2.0), Qwen3.5-2B 85.9 (LOSS 1.3), MiniCPM-V-4.5 89.0 (LOSS 4.4). SCALE WARNING: the catalog's other OCRBench rows are on a 0-1000 raw-point scale (MiniCPM-o 4.5 876, MiniCPM-V-4.6 838, MiniCPM-V 4.7 91.2 in percent), so do not compare this to them without converting."
+    },
+    {
+      "name": "TextVQA",
+      "score": 78.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xiaomi-research-xiaomi-ocr-0",
+      "vendor_claim": true,
+      "config": "Same VQA table. Qwen3.5-4B 80.8 (LOSS 2.2), Qwen3.5-2B 76.9 (WIN 1.7), MiniCPM-V-4.5 82.2 (LOSS 3.6)."
+    },
+    {
+      "name": "UniMER-Test",
+      "score": 97.84,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xiaomi-research-xiaomi-ocr-0",
+      "vendor_claim": true,
+      "config": "Prose only ('97.84 on UniMER-Test (formula recognition)'), no table row and no baseline printed, so it is not a same-test win over anything - recorded for completeness, not as evidence."
+    },
+    {
+      "name": "PubTabNet",
+      "score": 92.27,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-xiaomi-research-xiaomi-ocr-0",
+      "vendor_claim": true,
+      "config": "Prose only ('92.27 on PubTabNet (table recognition)'), no table row and no baseline printed. Not a same-test win; recorded for completeness only."
+    }
+  ]
+}
