@@ -2007,6 +2007,76 @@ def _has_cairosvg() -> bool:
     return True
 
 
+class TestCardImageExtraction(unittest.TestCase):
+    """The scanner that decides a card is "image-free" must not miss a spelling.
+
+    A missed figure is silent: the card looks like it has no charts, gets marked seen, and no
+    tick ever serves it again. Three spellings have already cost real rows -- a query string
+    after the extension (all of DeepSeek-V2's benchmark charts), an unquoted src=, and an
+    <img> whose quoting wraps across a newline. These tests pin all three plus the code-sample
+    trap, since a usage snippet naming screenshot.png is not an embed.
+    """
+
+    def setUp(self):
+        sys.path.insert(0, str(TOOLS))
+        import card_images  # noqa: PLC0415
+        self.ci = card_images
+
+    def urls(self, card, repo="org/repo"):
+        return [f["url"] for f in self.ci.extract(card, repo)]
+
+    def test_query_string_after_extension_is_kept(self):
+        # GitHub's standard card spelling; dropping it hid DeepSeek-V2's whole bench section.
+        self.assertEqual(self.urls('![](figures/niah.png?raw=true)'),
+                         ["https://huggingface.co/org/repo/resolve/main/figures/niah.png?raw=true"])
+
+    def test_unquoted_src_is_kept(self):
+        got = self.urls('<img src=figures/plot.png width=50>')
+        self.assertEqual(got, ["https://huggingface.co/org/repo/resolve/main/figures/plot.png"])
+
+    def test_img_tag_wrapped_across_lines_is_kept(self):
+        card = '<figure>\n  <img src="\n   https://x.example/plot.png" alt="p">\n</figure>'
+        self.assertEqual(self.urls(card), ["https://x.example/plot.png"])
+
+    def test_markdown_image_wrapped_across_lines_is_kept(self):
+        card = '![alt](\n  https://x.example/figure.png)'
+        self.assertEqual(self.urls(card), ["https://x.example/figure.png"])
+
+    def test_code_sample_filenames_are_not_embeds(self):
+        for card in ('img = Image.open("screenshot.png")',
+                     'IMG=$(base64 < paragon.jpg | tr -d "\\n")',
+                     'record = {"images": [Image.open("receipt.jpg")]}'):
+            self.assertEqual(self.urls(card), [], card)
+
+    def test_gif_is_not_a_figure(self):
+        self.assertEqual(self.urls('![demo](assets/tetris.gif)'), [])
+
+    def test_duplicate_reference_downloads_once(self):
+        card = '![](f.png)\n\n![](f.png)'
+        self.assertEqual(len(self.urls(card)), 1)
+
+    def test_badge_is_never_strong(self):
+        # shields/colab SVGs sit in lines full of 'eval'/'docs' and used to eat the batch cap.
+        card = 'Eval results\n<img src="https://img.shields.io/badge/eval-ok">'
+        figs = self.ci.extract(card, "org/repo")
+        strong, other = self.ci.classify(figs)
+        self.assertEqual(strong, [])
+        self.assertTrue(all(x.get("badge") for x in figs))
+
+    def test_bench_context_marks_figures_for_the_strong_pass(self):
+        card = '## Benchmark results\n![m](https://x.example/mmlu.png)'
+        strong, other = self.ci.classify(self.ci.extract(card, "org/repo"))
+        self.assertEqual([x["url"] for x in strong], ["https://x.example/mmlu.png"])
+        self.assertEqual(other, [])
+
+    def test_unlabelled_figure_falls_to_the_other_pass(self):
+        # Not proven irrelevant: numbers may be baked into the PNG with neutral wording.
+        card = 'Look at this\n![m](https://x.example/pic.png)'
+        strong, other = self.ci.classify(self.ci.extract(card, "org/repo"))
+        self.assertEqual(strong, [])
+        self.assertEqual([x["url"] for x in other], ["https://x.example/pic.png"])
+
+
 class TestReadFiguresImageSniff(unittest.TestCase):
     """read_figures.py must trust the bytes, not the filename.
 
