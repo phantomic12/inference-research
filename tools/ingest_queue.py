@@ -311,11 +311,16 @@ def cmd_stats(_):
     # come back. Surface the contradiction here rather than letting a green stats line
     # stand in for coverage.
     buried = seen_without_figures(sorted(set(s['img']) | set(s.get('img_other') or [])))
+    # Split the alarm: cards proven dead are acknowledged, anything else is still a fault.
+    dead = load_exhausted()
+    unexplained = [i for i in buried if i not in dead]
     print(json.dumps({'deriv_pending': len(d), 'deriv_seen': len(s['deriv']),
                       'img_pending': len(strong) + len(other),
                       'img_pending_strong': len(strong), 'img_pending_other': len(other),
                       'img_seen': len(s['img']), 'img_other_seen': len(s.get('img_other') or []),
-                      'img_seen_unreadable': len(buried), 'img_unreadable_ids': buried,
+                      'img_seen_unreadable': len(unexplained), 'img_unreadable_ids': unexplained,
+                      'img_exhausted': len([i for i in buried if i in dead]),
+                      'img_exhausted_ids': [i for i in buried if i in dead],
                       'models_in_catalog': len(model_ids())}, indent=1))
 
 
@@ -342,6 +347,29 @@ def cmd_img(a):
                       'remaining_strong': rem_s, 'remaining_other': rem_o}, indent=1))
 
 
+EXHAUSTED = STATE / 'img_exhausted.json'
+
+
+def load_exhausted():
+    """Cards whose figures are proven unreachable, with the reason each was proven.
+
+    `img_seen_unreadable` is an alarm, and an alarm that can never go to zero stops being
+    read. Three cards sat in it permanently: a gated 401 whose numbers were already in the
+    record from the card's HTML table, and two pointing at deleted GitHub assets. Recording
+    WHY each is dead keeps the count honest -- anything not in this file is still a real
+    fault to chase -- instead of either hiding them or training the operator to ignore a
+    nonzero.
+    """
+    try:
+        return json.loads(EXHAUSTED.read_text())
+    except Exception:
+        return {}
+
+
+def _dirls(d):
+    return [p for p in d.glob('*.*')] if d.exists() else []
+
+
 def seen_without_figures(ids):
     """Ids whose card-classified figures never reached disk.
 
@@ -351,6 +379,11 @@ def seen_without_figures(ids):
     figure forever -- 17 cards were found marked seen with zero images ever fetched, and
     another 20 with only some. Refuse those and say so, so the operator can re-serve them
     instead of trusting a tick that read nothing.
+
+    "Non-empty directory" is not the test -- `_usable_figure` is. A 200-OK HTML error page
+    saved as `.png` (deepseek-r1-distill-qwen-7b-japanese/00.png is a 13 KB Japanese 404)
+    passed the old raw-glob check, so that card looked covered while holding no figure at
+    all: the same class of bug as the 2 KB floor, one layer up.
     """
     scan = {r['id']: r for r in card_scan()}
     bad = []
@@ -361,9 +394,7 @@ def seen_without_figures(ids):
         want = (r.get('images') if r.get('n_bench_ctx') else r.get('other')) or []
         if not want:
             continue
-        d = IMG / i
-        have = [p for p in d.glob('*.*') if p.suffix.lower() in ('.png', '.jpg', '.jpeg', '.webp')] if d.exists() else []
-        if not have:
+        if not [p for p in _dirls(IMG / i) if _usable_figure(p)]:
             bad.append(i)
     return bad
 
@@ -375,7 +406,8 @@ def cmd_mark(a):
         ids = [json.loads(l)['id'] for l in pathlib.Path(a.chunk).read_text().splitlines() if l.strip()]
     if a.ids:
         ids += [x.strip() for x in a.ids.split(',') if x.strip()]
-    bad = seen_without_figures(ids)
+    dead = load_exhausted()
+    bad = [i for i in seen_without_figures(ids) if i not in dead]
     if bad and not getattr(a, 'force', False):
         ids = [i for i in ids if i not in bad]
         print('REFUSED %d id(s) with classified figures but none on disk: %s'
@@ -383,6 +415,20 @@ def cmd_mark(a):
     s.setdefault(a.type, []).extend(ids)
     save_seen(s)
     print('marked %d %s ids seen (total %d)' % (len(ids), a.type, len(set(s[a.type]))))
+
+
+def cmd_exhaust(a):
+    """Record that these cards' remaining figures are unreachable, and why.
+
+    Only call this after checking the figure itself (401 / 404 / deleted asset), never
+    because a read failed.
+    """
+    dead = load_exhausted()
+    ids = [x.strip() for x in a.ids.split(',') if x.strip()]
+    for i in ids:
+        dead[i] = a.reason
+    EXHAUSTED.write_text(json.dumps(dict(sorted(dead.items())), indent=1))
+    print('recorded %d exhausted card(s): %s' % (len(ids), ', '.join(ids)))
 
 
 def main():
@@ -394,6 +440,9 @@ def main():
     m = sub.add_parser('mark'); m.add_argument('--type', required=True, choices=['deriv', 'img', 'img_other'])
     m.add_argument('--chunk'); m.add_argument('--ids'); m.add_argument('--force', action='store_true')
     m.set_defaults(fn=cmd_mark)
+    e = sub.add_parser('exhaust'); e.add_argument('--ids', required=True)
+    e.add_argument('--reason', required=True)
+    e.set_defaults(fn=cmd_exhaust)
     a = ap.parse_args()
     a.fn(a)
 

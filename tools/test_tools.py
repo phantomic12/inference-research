@@ -2407,6 +2407,98 @@ class TestUsableFigure(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
         self.assertEqual(buried, ["hollow"])
 
+    def test_html_error_page_saved_as_png_is_not_a_figure(self):
+        """A non-empty directory is not evidence a figure was downloaded.
+
+        `seen_without_figures()` globbed every *.png on disk, so
+        deepseek-r1-distill-qwen-7b-japanese/00.png -- a 13 KB Japanese 404 page saved
+        under a .png name -- made that card look covered while it held no figure at all,
+        and the card stayed buried outside `img_seen_unreadable`. The same bug as the
+        2 KB download floor, one layer up: the check must use the raster test.
+        """
+        sys.path.insert(0, str(TOOLS))
+        import ingest_queue as q  # noqa: PLC0415
+        tmp = Path(tempfile.mkdtemp(prefix="ir-junk-"))
+        state, img = tmp / "state", tmp / "img"
+        state.mkdir(); img.mkdir()
+        (img / "card_scan.json").write_text(json.dumps([
+            {"id": "junk", "repo": "o/junk", "n_bench_ctx": 1, "n_other": 0, "benchmarks": 1,
+             "images": [{"url": "https://huggingface.co/o/junk/resolve/main/a.png"}]},
+            {"id": "real", "repo": "o/real", "n_bench_ctx": 1, "n_other": 0, "benchmarks": 1,
+             "images": [{"url": "https://huggingface.co/o/real/resolve/main/a.png"}]},
+        ]), encoding="utf-8")
+        (img / "junk").mkdir()
+        (img / "junk" / "00.png").write_bytes(b"<!DOCTYPE html><html><title>404</title>")
+        (img / "real").mkdir()
+        (img / "real" / "00.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 32)
+        saved = (q.STATE, q.IMG, q.SEEN)
+        q.STATE, q.IMG, q.SEEN = state, img, state / "seen.json"
+        try:
+            buried = q.seen_without_figures(["junk", "real"])
+        finally:
+            q.STATE, q.IMG, q.SEEN = saved
+            shutil.rmtree(tmp, ignore_errors=True)
+        self.assertEqual(buried, ["junk"], "an HTML 404 under .png is not a figure")
+
+    def test_exhausted_cards_leave_the_alarm_but_are_still_named(self):
+        """The alarm must reach zero, and only for cards proven dead.
+
+        `img_seen_unreadable` was permanently non-zero on cards that can never resolve
+        (gated 401, deleted GitHub assets), which trains the operator to ignore a nonzero
+        counter. `exhaust` records the reason and removes the card from the alarm while
+        keeping it listed, so an unexplained one is still a fault.
+        """
+        sys.path.insert(0, str(TOOLS))
+        import ingest_queue as q  # noqa: PLC0415
+        tmp = Path(tempfile.mkdtemp(prefix="ir-exh-"))
+        state, img = tmp / "state", tmp / "img"
+        state.mkdir(); img.mkdir()
+        (img / "card_scan.json").write_text(json.dumps([
+            {"id": "dead", "repo": "o/dead", "n_bench_ctx": 1, "n_other": 0, "benchmarks": 1,
+             "images": [{"url": "https://huggingface.co/o/dead/resolve/main/a.png"}]},
+            {"id": "fault", "repo": "o/fault", "n_bench_ctx": 1, "n_other": 0, "benchmarks": 1,
+             "images": [{"url": "https://huggingface.co/o/fault/resolve/main/a.png"}]},
+        ]), encoding="utf-8")
+        (state / "img_exhausted.json").write_text(
+            json.dumps({"dead": "gated 401"}), encoding="utf-8")
+        saved = (q.STATE, q.IMG, q.SEEN, q.EXHAUSTED)
+        q.STATE, q.IMG, q.SEEN, q.EXHAUSTED = (
+            state, img, state / "seen.json", state / "img_exhausted.json")
+        try:
+            dead = q.load_exhausted()
+            buried = q.seen_without_figures(["dead", "fault"])
+        finally:
+            q.STATE, q.IMG, q.SEEN, q.EXHAUSTED = saved
+            shutil.rmtree(tmp, ignore_errors=True)
+        self.assertEqual(buried, ["dead", "fault"])
+        self.assertEqual([i for i in buried if i not in dead], ["fault"],
+                         "only the unexplained card keeps the alarm ringing")
+
+    def test_mark_does_not_refuse_a_proven_dead_card(self):
+        """A card in the exhaustion ledger must be markable; otherwise it is a permanent
+        refusal and the id can never leave the pending list."""
+        sys.path.insert(0, str(TOOLS))
+        import ingest_queue as q  # noqa: PLC0415
+        tmp = Path(tempfile.mkdtemp(prefix="ir-mark-"))
+        state, img = tmp / "state", tmp / "img"
+        state.mkdir(); img.mkdir()
+        (img / "card_scan.json").write_text(json.dumps([
+            {"id": "dead", "repo": "o/dead", "n_bench_ctx": 1, "n_other": 0, "benchmarks": 1,
+             "images": [{"url": "https://huggingface.co/o/dead/resolve/main/a.png"}]},
+        ]), encoding="utf-8")
+        (state / "img_exhausted.json").write_text(json.dumps({"dead": "gated 401"}),
+                                                  encoding="utf-8")
+        saved = (q.STATE, q.IMG, q.SEEN, q.EXHAUSTED)
+        q.STATE, q.IMG, q.SEEN, q.EXHAUSTED = (
+            state, img, state / "seen.json", state / "img_exhausted.json")
+        try:
+            dead = q.load_exhausted()
+            refused = [i for i in q.seen_without_figures(["dead"]) if i not in dead]
+        finally:
+            q.STATE, q.IMG, q.SEEN, q.EXHAUSTED = saved
+            shutil.rmtree(tmp, ignore_errors=True)
+        self.assertEqual(refused, [], "a proven-dead card is not a mark refusal")
+
     def test_png_and_webp_and_jpeg_are_usable(self):
         cases = {b"\x89PNG\r\n\x1a\n" + b"\x00" * 32: "png",
                  b"\xff\xd8\xff\xe0" + b"\x00" * 32: "jpeg",
