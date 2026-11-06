@@ -1,0 +1,69 @@
+{
+  "id": "phi-4-mm-inst-asr-singlish",
+  "type": "model",
+  "name": "Phi-4-mm-inst-asr-singlish",
+  "family": "phi-4",
+  "vendor": "mjwong",
+  "release_year": 2025,
+  "architecture": "dense",
+  "task": "speech-to-text",
+  "params_b": 5.574,
+  "active_params_b": 5.574,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 3072,
+  "num_layers": 32,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 3.0,
+  "max_position_embeddings": 131072,
+  "context_scaling": "Inherited unchanged from microsoft/Phi-4-multimodal-instruct (config.json max_position_embeddings 131072). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "GQA + partial RoPE (0.75)",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 131072,
+  "flops_per_token_active": 11148000000.0,
+  "open_weights": true,
+  "license": "mit",
+  "base_model": "microsoft/Phi-4-multimodal-instruct",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-06. An SFT of microsoft/Phi-4-multimodal-instruct for Singlish ASR, not a new base model: 5.574B identical tensor set. Only the audio_embed module (encoder + audio projection) was unfrozen; 66.9k audio-transcript pairs from IMDA National Speech Corpus Part 3 close-talk recordings, 1 epoch, lr 1e-4, single A100-80GB. The tune also teaches an end-of-transcription marker, which is why the base's WER is so bad on the same prompt - the card's own explanation is that the untuned base never learns to stop and fabricates tokens to max_new_tokens. Read the SASRBench and GigaSpeech wins in that light: part of the gap is a decoding-termination fix, not pure acoustic gain. Recorded because base and tune appear as separate rows of one card table on three shared test sets, and the AMI regression is kept as a row rather than dropped. Licence MIT, repo created 2025-08-05.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-06",
+  "sources": [
+    "hf-mjwong-phi-4-mm-inst-asr-singlish"
+  ],
+  "benchmarks": [
+    {
+      "name": "SASRBench-v1",
+      "score": 13.16,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-mjwong-phi-4-mm-inst-asr-singlish",
+      "vendor_claim": true,
+      "config": "Card table '| Dataset | Model | Rel. RTFx | WER |', same table, base row printed: microsoft/Phi-4-multimodal-instruct 33.00% vs this model 13.16%. Lower is better. Base and tune evaluated with the same prompt and max_new_tokens; card notes the tune adds an end-of-transcription marker so it stops instead of running on. Singlish (code-switched English)."
+    },
+    {
+      "name": "GigaSpeech",
+      "score": 10.34,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-mjwong-phi-4-mm-inst-asr-singlish",
+      "vendor_claim": true,
+      "config": "Card table, GigaSpeech block: base microsoft/Phi-4-multimodal-instruct 24.65% vs this model 10.34%. Lower is better. Same table, same test split."
+    },
+    {
+      "name": "AMI",
+      "score": 20.23,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-mjwong-phi-4-mm-inst-asr-singlish",
+      "vendor_claim": true,
+      "config": "Card table, AMI block: base 14.74% vs this model 20.23%. Recorded because it is the one shared test where the tune LOSES (+5.49 points WER). Lower is better, so this is the card's own negative row."
+    }
+  ]
+}
