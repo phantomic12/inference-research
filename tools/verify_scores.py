@@ -189,8 +189,13 @@ def hint_words(bms):
  return w
 
 def find_row(grid, name, ci):
+    # grid[0] is the header row. A one-row table whose header IS the benchmark
+    # name (perplexity's "Vision Decision Index 0.3 ... | model | model") would
+    # otherwise match the header, and num() would then read the model's version
+    # string as the score: 'pplx-decider-flash-v1.2' yields 1.2. That is a false
+    # mismatch, never acceptable; no row is the honest answer.
     raw = norm(str(name).replace('+', 'plus'))
-    for row in grid:
+    for row in grid[1:]:
         if len(row) > ci and norm(str(row[0]).replace('+', 'plus')) == raw:
             return row            # exact label, parentheses included
     if '(' in str(name):
@@ -198,7 +203,7 @@ def find_row(grid, name, ci):
         # text RuBQ row); never fall back to a paren-stripped key here
         return None
     bn = rowkey(name)
-    for row in grid:
+    for row in grid[1:]:
         if len(row) > ci and rowkey(row[0]) == bn:
             return row            # harness suffix dropped (Terminus-2 etc.)
     return None
