@@ -38,6 +38,19 @@ REPACK = re.compile(r"(-GGUF|-AWQ|-GPTQ|-FP8|-NVFP4|-bnb|-MLX|-EXL[23]|-\d+bpw|I
 TODAY = dt.date.today().isoformat()
 
 
+def active_flops(active_params_b):
+    """FLOPs per generated token for the active weight count.
+
+    SCHEMA.md defines flops_per_token_active as ~2 * active_params_b * 1e9: one
+    multiply and one add per weight. This used to multiply by 6e9, which inflated
+    every record generated from it by exactly 3x (325 committed records), and each
+    batch had to be hand-corrected after generation.
+    """
+    if not active_params_b:
+        return None
+    return 2.0e9 * active_params_b
+
+
 def get(url):
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     return urllib.request.urlopen(req, timeout=45).read().decode("utf-8", "replace")
@@ -248,7 +261,7 @@ def main():
         "attention_variant": attn_variant,
         "layer_types": arch["layer_types"], "attention_layer_indices": arch["full_idx"],
         "kv_cache_bytes_per_token": arch["kv_bytes"],
-        "flops_per_token_active": (6.0e9 * (base_rec.get("active_params_b") or 0)) or None,
+        "flops_per_token_active": active_flops(base_rec.get("active_params_b")),
         "open_weights": True, "license": lic,
         "base_model": base, "derivative_kind": kind,
         "notes": ("ADDED %s. A %s of %s, not a new base model: same config.json, same %s parameters "
