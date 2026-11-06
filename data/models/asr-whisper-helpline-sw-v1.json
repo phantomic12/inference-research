@@ -1,0 +1,60 @@
+{
+  "id": "asr-whisper-helpline-sw-v1",
+  "type": "model",
+  "name": "asr-whisper-helpline-sw-v1",
+  "family": "whisper",
+  "vendor": "openchs",
+  "release_year": 2025,
+  "architecture": "dense",
+  "task": "speech-to-text",
+  "params_b": 1.543,
+  "active_params_b": 1.543,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 1280,
+  "num_layers": 32,
+  "num_kv_heads": 20,
+  "head_dim": 64,
+  "gqa_ratio": 1.0,
+  "max_position_embeddings": 1500,
+  "context_scaling": "Inherited unchanged from openai/whisper-large-v2 (config.json max_position_embeddings 1500). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "gelu",
+  "attention_variant": "MHA, encoder-decoder (cross-attention)",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 163840,
+  "flops_per_token_active": 3100000000.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "openai/whisper-large-v2",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-06. A two-stage Swahili ASR fine-tune of openai/whisper-large-v2 for Tanzania Child Helpline telephony, not a new base model: 1.543B tensor set (config inherited: 32 layers, 1280 hidden, 20 KV heads). Stage 1 streamed Common Voice 17.0 sw for 10k steps at lr 1e-5; stage 2 continued on CV 23.0 for 7.5k steps at lr 5e-6, best validation WER 23.56% at step 7,500 and the weights restored to that checkpoint. Recorded because the card's comparison table prints the base's zero-shot 89.05% next to this model's 23.62% on the same CV 17.0 validation split. TWO CAVEATS, both kept in the benchmark configs: the released weights are the stage-2 checkpoint while the 23.62% cell belongs to stage 1, and neither model has been measured on the telephony audio the model is actually for. Licence apache-2.0, repo created 2025-09-10.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-06",
+  "sources": [
+    "hf-openchs-asr-whisper-helpline-sw-v1"
+  ],
+  "benchmarks": [
+    {
+      "name": "Common Voice 17.0 Swahili validation WER (stage 1)",
+      "score": 23.62,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-openchs-asr-whisper-helpline-sw-v1",
+      "vendor_claim": true,
+      "config": "Card 'Performance Comparison' table: '| Whisper Large v2 (baseline) | CV 17.0 | Validation | 89.05% |' vs '| This model (Stage 1) | CV 17.0 | Validation | 23.62% |'. Same split, same metric; base is zero-shot. Lower is better. CAVEAT: the card attributes 23.62% to the stage-1 checkpoint, while the weights in this repo are the stage-2 best checkpoint (early-stopped at step 7,500 of stage 2). The stage-1 and stage-2 numbers are close (23.62 vs 23.56) but they are not the same weights, and the card never evaluates the released checkpoint on CV 17.0."
+    },
+    {
+      "name": "Common Voice 23.0 Swahili validation WER (stage-2 best checkpoint)",
+      "score": 23.56,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-openchs-asr-whisper-helpline-sw-v1",
+      "vendor_claim": true,
+      "config": "Card stage-2 results: best checkpoint at step 7,500, validation WER 23.5627%. No base column exists on this split - the 89.05% baseline is on CV 17.0 - so this row is the model's own absolute score, not a same-table comparison."
+    }
+  ]
+}
