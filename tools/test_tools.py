@@ -967,6 +967,20 @@ class TestVerifyScoresColumnBinding(Harness):
         self.assertEqual(best[1], 3)
         self.assertEqual(best[0], (2, 2), "both recorded rows should reproduce in the MISO column")
 
+    def test_header_row_is_not_a_data_row(self):
+        """A one-row table whose header IS the benchmark name must not be read as
+        a data row. perplexity-ai/pplx-decider-flash-v1.2 prints
+        `| Vision Decision Index 0.3 ... | pplx-decider-flash-v1.2 | pplx-decider-v1.2 |`
+        and num() read the version suffix as 1.2, reporting a false mismatch
+        against the real 72.53 in the `**Overall**` row beneath it.
+        """
+        grid = [["Vision Decision Index 0.3 (public, images up to 1.6 MP)",
+                 "pplx-decider-flash-v1.2", "pplx-decider-v1.2"],
+                ["**Overall**", "72.53", "77.43"]]
+        name = "Vision Decision Index 0.3 (public, images up to 1.6 MP)"
+        self.assertIsNone(self.vs.find_row(grid, name, 1))
+        self.assertEqual(self.vs.num(grid[0][1]), 1.2)   # why the guard is needed
+
     def test_display_name_is_a_header_key(self):
         keys = self.vs.model_keys(self.rec["id"], self.rec)
         self.assertIn(self.vs.norm("RAMEN-MISO"), keys)
