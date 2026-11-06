@@ -2618,5 +2618,42 @@ class TestReadFiguresChain(unittest.TestCase):
             self.assertIn(m, chain, "%s is trusted for absence but not in the chain" % m)
 
 
+class TestActiveFlopsConstant(Harness):
+    """flops_per_token_active must be the 2x figure SCHEMA.md defines.
+
+    mk_finetune_record.py multiplied by 6e9 for many batches, emitting a 3x
+    inflated serving number into every derivative record it generated (325 of
+    them), which then had to be hand-corrected after each ingest. This pins the
+    generator to the schema, and pins the schema text so the two cannot drift
+    apart silently.
+    """
+
+    @staticmethod
+    def _mod():
+        sys.path.insert(0, str(TOOLS))
+        import mk_finetune_record  # noqa: PLC0415
+        return mk_finetune_record
+
+    def test_two_flops_per_active_weight(self):
+        m = self._mod()
+        self.assertEqual(m.active_flops(8), 1.6e10)
+        self.assertEqual(m.active_flops(3.7), 7.4e9)
+
+    def test_not_the_old_three_x_constant(self):
+        m = self._mod()
+        for p in (1, 8, 32, 235):
+            self.assertNotAlmostEqual(m.active_flops(p) / (p * 1e9), 6.0, places=6)
+
+    def test_missing_or_zero_active_params_yield_none(self):
+        m = self._mod()
+        self.assertIsNone(m.active_flops(None))
+        self.assertIsNone(m.active_flops(0))
+
+    def test_schema_states_the_same_basis(self):
+        schema = (ROOT / "SCHEMA.md").read_text()
+        self.assertIn("flops_per_token_active", schema)
+        self.assertIn("2 * active_params_b * 1e9", schema)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
