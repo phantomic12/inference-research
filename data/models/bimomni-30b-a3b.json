@@ -1,0 +1,78 @@
+{
+  "id": "bimomni-30b-a3b",
+  "type": "model",
+  "name": "BimOmni-30B-A3B",
+  "family": "qwen3",
+  "vendor": "hammertoe",
+  "release_year": 2026,
+  "architecture": "moe",
+  "task": "vision-language",
+  "params_b": 31.719,
+  "active_params_b": 3.0,
+  "num_experts": 128,
+  "experts_per_token": 8,
+  "shared_expert": null,
+  "hidden_size": 2048,
+  "num_layers": 48,
+  "num_kv_heads": 4,
+  "head_dim": 128,
+  "gqa_ratio": 8,
+  "max_position_embeddings": 65536,
+  "context_scaling": "Inherited unchanged from Qwen/Qwen3-Omni-30B-A3B-Instruct (config.json max_position_embeddings 65536). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": null,
+  "attention_variant": "Inherited unchanged from Qwen/Qwen3-Omni-30B-A3B-Instruct thinker text_config (qwen3_omni_moe_text): 48 full attention layers, 32 query heads / 4 KV heads (GQA 8:1), head_dim 128. No hybrid or linear layers. Talker and code2wav branches removed from this checkpoint.",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 98304,
+  "flops_per_token_active": 6000000000.0,
+  "open_weights": true,
+  "license": "other",
+  "base_model": "Qwen/Qwen3-Omni-30B-A3B-Instruct",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-07. A finetune (LoRA domain-adaptive pretraining, merged and unloaded) of Qwen/Qwen3-Omni-30B-A3B-Instruct, not a new base model. It keeps the base's thinker text_config unchanged (48 layers, 2048 hidden, 32 query / 4 KV heads, head_dim 128, 128 experts top-8) and the audio and vision towers frozen; the card states the Talker and speech output were removed and enable_audio_output is false, which is why this checkpoint holds 31.719B parameters against the base's 35.260B - a dropped output branch, not a quantisation. Recorded as a contender because it publishes benchmark evidence against its own base; the evidence rows below are card-sourced and marked vendor_claim. Licence other (card says apache-2.0 for the repo, HF tags report other), repo created 2026-08-12. Caveat: the knowledge probe is 60 four-choice items and the card calls it 'a small, project-specific knowledge probe'; the base was served at 4-bit MLX, so the 13.3-point overall gain is measured against a 4-bit base, not against bf16. Architecture fields were filled by hand during review: mk_finetune_record's arch_of() reads the top-level config.json, and Qwen3-Omni's is a wrapper whose text settings live under thinker_config.text_config, so the tool emitted num_layers null, kv heads 1, head_dim null and the sentence '0 full GQA layers'. The catalog's qwen3-omni-30b-a3b-instruct base record has the same null fields - a pre-existing gap.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-07",
+  "sources": [
+    "hf-hammertoe-bimomni-30b-a3b"
+  ],
+  "benchmarks": [
+    {
+      "name": "Barbados knowledge probe, overall accuracy (60 four-choice probes, n=60)",
+      "score": 75.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-hammertoe-bimomni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Card 'Evaluation / Barbados knowledge evaluation' table, column 'Overall accuracy': 'BimOmni (V4)' 75.0% vs row 'Qwen3-Omni base, 4-bit / No adaptation' 61.7%. Same 60 four-choice completion probes (20 local, 20 rare-local, 20 general-controls), scored by mean token log-probability, same MLX evaluation stack; card says reruns reproduced original results to zero percentage points. Base measured at 4-bit because that is how the card served it."
+    },
+    {
+      "name": "Barbados knowledge probe, local track",
+      "score": 70.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-hammertoe-bimomni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Card '| Track | Qwen3 base | V3 | BimOmni |' table, Local row: BimOmni 70.0% vs Qwen3 base 55.0% (V3 65.0%). 20 local Barbados probes of the same 60-probe set."
+    },
+    {
+      "name": "Barbados knowledge probe, rare-local track",
+      "score": 60.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-hammertoe-bimomni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Same track table, Rare local row: BimOmni 60.0% vs Qwen3 base 40.0% (V3 55.0%). 20 rare-local probes."
+    },
+    {
+      "name": "Barbados knowledge probe, general-controls track",
+      "score": 95.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-hammertoe-bimomni-30b-a3b",
+      "vendor_claim": true,
+      "config": "Same track table, General controls row: BimOmni 95.0% vs Qwen3 base 90.0% (V3 90.0%). 20 general-knowledge controls, i.e. no regression on out-of-domain probes."
+    }
+  ]
+}
