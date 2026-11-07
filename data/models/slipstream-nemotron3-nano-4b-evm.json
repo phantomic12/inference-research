@@ -1,0 +1,69 @@
+{
+  "id": "slipstream-nemotron3-nano-4b-evm",
+  "type": "model",
+  "name": "slipstream-nemotron3-nano-4b-evm",
+  "family": "nemotron",
+  "vendor": "build-small-hackathon",
+  "release_year": 2026,
+  "architecture": "hybrid-attention-ssm",
+  "task": "text-generation",
+  "params_b": 3.974,
+  "active_params_b": 3.97,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 3136,
+  "num_layers": 42,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 5,
+  "max_position_embeddings": 262144,
+  "context_scaling": "Inherited unchanged from nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16 (config.json max_position_embeddings 262144). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": null,
+  "attention_variant": "hybrid Mamba-2 + attention (Nemotron-H, model_type nemotron_h), inherited unchanged from nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16. Base config hybrid_override_pattern 'M-M-M-MM-M-M*-M-M*-M-M-M*-M-MM*-MMM-M-M-': 16 groups = 10 Mamba-2, 0 full-attention (*), 6 dense-MLP (MM/MMM). CAVEAT: num_hidden_layers is 42 while the pattern yields 16 groups, so the pattern does not tokenise 1:1 onto layers; per-layer type is unresolved and layer_types is left empty.",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": null,
+  "flops_per_token_active": 7940000000.0,
+  "open_weights": true,
+  "license": "other (NVIDIA Nemotron Open Model License)",
+  "base_model": "nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16",
+  "derivative_kind": "distillation",
+  "notes": "ADDED 2026-11-07. A distillation of nvidia/NVIDIA-Nemotron-3-Nano-4B-BF16, not a new base model: same config.json, same 3.974B parameters (identical tensor set). Recorded as a contender because it publishes benchmark evidence against its own base; the evidence rows below are card-sourced and marked vendor_claim. Licence other, repo created 2026-06-15. Architecture corrected 2026-11-07 during review: the base is Nemotron-H (hybrid Mamba-2/attention, model_type nemotron_h), not a dense 42-layer attention stack; kv_cache_bytes_per_token nulled because the hybrid pattern does not resolve onto the 42 declared layers.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-07",
+  "sources": [
+    "hf-build-small-hackathon-slipstream-nemotron3-nano-4b-evm"
+  ],
+  "benchmarks": [
+    {
+      "name": "EVM forecast valid rate (held-out real projects, n=107)",
+      "score": 1.0,
+      "scale": 1,
+      "higher_is_better": true,
+      "source": "hf-build-small-hackathon-slipstream-nemotron3-nano-4b-evm",
+      "vendor_claim": true,
+      "config": "Card 'Results (held-out real projects, 40% complete, n=107)' table, row 'Nemotron-4B (this model, distilled)' valid 1 vs row 'Nemotron-4B (base, before distillation)' 0.972. Same four-method table, same 107 completed DSLIB projects, all scored on the same 40%-complete snapshot."
+    },
+    {
+      "name": "EVM EAC median absolute error % (n=107)",
+      "score": 2.37,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-build-small-hackathon-slipstream-nemotron3-nano-4b-evm",
+      "vendor_claim": true,
+      "config": "Same table, column 'EAC error' (median absolute % error on final cost): this model 2.37% vs base 2.69%. Lower is better. Earned Schedule baseline 2.37%, DeepSeek V4 teacher 2.4%. Scale 100 = percent."
+    },
+    {
+      "name": "EVM finish-period median absolute error (n=107)",
+      "score": 0.61,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-build-small-hackathon-slipstream-nemotron3-nano-4b-evm",
+      "vendor_claim": true,
+      "config": "Same table, column 'finish error' (median absolute error in periods): this model 0.61 vs base 1 period. Lower is better. Not converted to a percentage; score is periods."
+    }
+  ]
+}
