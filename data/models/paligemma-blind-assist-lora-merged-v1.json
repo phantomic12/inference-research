@@ -1,0 +1,87 @@
+{
+  "id": "paligemma-blind-assist-lora-merged-v1",
+  "type": "model",
+  "name": "paligemma-blind-assist-lora-merged-v1",
+  "family": "paligemma",
+  "vendor": "lamao-ab",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "vision-language",
+  "params_b": 2.923,
+  "active_params_b": 2.923,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 2048,
+  "num_layers": 18,
+  "num_kv_heads": 1,
+  "head_dim": 256,
+  "gqa_ratio": 8.0,
+  "max_position_embeddings": 8192,
+  "context_scaling": "Inherited unchanged from google/paligemma-3b-mix-224 (config.json max_position_embeddings 8192). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "gelu_pytorch_tanh",
+  "attention_variant": "MQA: 8 query heads, 1 KV head, head_dim 256 (Gemma-2B text tower)",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 18432,
+  "flops_per_token_active": 5846000000.0,
+  "open_weights": true,
+  "license": "gemma",
+  "base_model": "google/paligemma-3b-mix-224",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-07. LoRA (r8, alpha 16, 11.3M trainable = 0.385%) on google/paligemma-3b-mix-224 for VizWiz blind-assistance VQA and captioning, merged into standalone bf16 weights (seed 123), so the tensor set and 2.923B parameter count are identical to the base. Recorded as a contender because the card prints Base and LoRA columns on the same benchmark tables. Its sibling lamao-ab/paligemma-blind-assist-qlora-merged-v1 is the 4-bit QLoRA recipe and is NOT the same model: the author reports the two recipes differing by 0.09 points on VizWiz-VQA and 1.35 CIDEr-D on VizWiz-Captions test. Honest caveats recorded with the wins: gains are large on VizWiz-Captions CIDEr-D (60.17 -> 105.37) but the model LOSES general-domain accuracy (VQAv2 81.65 -> 81.15, COCO-Caps CIDEr-D 131.21 -> 124.54), and both of those losing rows are stored. 4-bit variant exists for on-device; this bf16 one OOMs on an 8 GB Jetson Orin Nano. Predictions and scorers are released, so the numbers are recomputable. Licence gemma, repo created 2026-06-27.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-07",
+  "sources": [
+    "hf-lamao-ab-paligemma-blind-assist-lora-merged-v1"
+  ],
+  "benchmarks": [
+    {
+      "name": "VizWiz-Captions test CIDEr-D",
+      "score": 105.37,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lamao-ab-paligemma-blind-assist-lora-merged-v1",
+      "vendor_claim": true,
+      "config": "Card 'VizWiz-Captions (test)' table, base 'Base (generic prompt)' 60.17 vs LoRA 104.37 +/-1.36 (3-seed mean); 'This checkpoint' table gives 105.37 for the seed-123 merged bf16 weights. 7,974 of 8,000 test images evaluated (official eval captions cover 7,983 sets, 9 match no image). Greedy decoding, 64 new tokens."
+    },
+    {
+      "name": "VizWiz-VQA test overall",
+      "score": 75.75,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lamao-ab-paligemma-blind-assist-lora-merged-v1",
+      "vendor_claim": true,
+      "config": "Card 'VizWiz-VQA (test)' table: base 73.95 (generic prompt) / 74.83 (accessibility prompt) vs LoRA 75.80 +/-0.21; 'This checkpoint' row 75.75. Official consensus metric (mean of 10 leave-one-out min(1,matches/3)). Adapted models scored with the accessibility prompt."
+    },
+    {
+      "name": "VizWiz-Captions validation CIDEr-D",
+      "score": 99.16,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lamao-ab-paligemma-blind-assist-lora-merged-v1",
+      "vendor_claim": true,
+      "config": "Card 'This checkpoint' table 99.16; validation base 55.31. Validation split was used for checkpoint/rank selection, so this is not a held-out number - stored for completeness only."
+    },
+    {
+      "name": "VQAv2 test-standard overall",
+      "score": 81.15,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lamao-ab-paligemma-blind-assist-lora-merged-v1",
+      "vendor_claim": true,
+      "config": "General-domain control, card table: base 81.65 vs LoRA 81.15 +/-0.04 (3-seed mean, this checkpoint's own VQAv2 not printed). Regression of 0.50 points; stored so the retained cost is visible."
+    },
+    {
+      "name": "COCO-Caps val2014 CIDEr-D",
+      "score": 124.54,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-lamao-ab-paligemma-blind-assist-lora-merged-v1",
+      "vendor_claim": true,
+      "config": "General-domain retention table: base 131.21 vs LoRA 124.54 +/-1.36 (3-seed mean). Card states COCO val2014 is a retention measure, not held-out (75.3% of images are restval, in the base's training data). Regression stored so the cost is visible."
+    }
+  ]
+}
