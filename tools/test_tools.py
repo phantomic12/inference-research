@@ -2647,6 +2647,93 @@ class TestCrosscheckFigures(unittest.TestCase):
         self.assertEqual(len(res["mismatched"]), 1)
         self.assertEqual(res["matched"], 0)
 
+    def test_pipe_tables_are_a_second_carrier_too(self):
+        """A markdown pipe table is as good a carrier as an HTML <table>.
+
+        Records whose card publishes results as a pipe table looked figure-only
+        while this parser only understood <table>, so the cross-check skipped
+        them entirely rather than reporting agreement.
+        """
+        c = self._mod()
+        md = (
+            "| Model | SR-Text | SR-Box |\n"
+            "| --- | ---: | ---: |\n"
+            "| **d3-ultra** | **87.2** | **58.2%** |\n"
+            "| GLiDE V1.2 | 85.1 | not supported |\n"
+        )
+        grid = c.parse_pipe_tables(md)[0]
+        self.assertEqual(grid[0], ["Model", "SR-Text", "SR-Box"])
+        self.assertEqual(grid[1], ["d3-ultra", "87.2", "58.2"])
+        self.assertEqual(grid[2][0], "GLiDE V1.2")
+
+    def test_pipe_table_needs_a_delimiter_or_two_rows(self):
+        c = self._mod()
+        self.assertEqual(c.parse_pipe_tables("just | prose here\n"), [])
+        self.assertEqual(c.parse_pipe_tables("| a | b |\n"), [])
+
+    def test_pipe_table_links_and_percent_do_not_hide_values(self):
+        c = self._mod()
+        md = (
+            "| Model | Score |\n"
+            "| --- | --- |\n"
+            "| [d3-ultra](https://hf.co/x) | `87.2` |\n"
+        )
+        self.assertEqual(c.parse_pipe_tables(md)[0][1], ["d3-ultra", "87.2"])
+
+    def test_pipe_table_mismatch_is_reported(self):
+        c = self._mod()
+        record = {"id": "d3-ultra", "name": "d3-ultra", "benchmarks": [
+            {"name": "SR-Text", "score": 87.4, "config": "read off the card figure"}]}
+        grid = c.parse_pipe_tables(
+            "| Model | SR-Text |\n| --- | --- |\n| d3-ultra | 87.2 |\n")[0]
+        res = c.audit(record, [grid])
+        self.assertEqual(len(res["mismatched"]), 1)
+
+    def test_second_column_for_same_model_counts_as_agreement(self):
+        """A card may publish two columns for one model; either may be cited.
+
+        twil-lm3's table carries 'TwIL-LM3' (0.5869) and 'TwIL-LM3*' (0.6456).
+        The record cites the asterisked strict pass. Matching only the first
+        column reported four false mismatches.
+        """
+        c = self._mod()
+        record = {"id": "twil-lm3", "name": "TwIL-LM3", "benchmarks": [
+            {"name": "Lean formalize (token F1)", "score": 64.6, "config": "read off the figure"}]}
+        grid = [["lane / metric", "TwIL-LM3", "TwIL-LM3*"],
+                ["lean_formalize token_f1", "0.5869", "0.6456"]]
+        res = c.audit(record, [grid])
+        self.assertEqual(res["mismatched"], [])
+        self.assertEqual(res["matched"], 1)
+
+    def test_value_in_no_column_for_this_model_is_still_a_mismatch(self):
+        c = self._mod()
+        record = {"id": "twil-lm3", "name": "TwIL-LM3", "benchmarks": [
+            {"name": "MCQ answer (accuracy)", "score": 52.0, "config": "read off the figure"}]}
+        grid = [["lane / metric", "TwIL-LM3", "TwIL-LM3*"],
+                ["mcq_answer accuracy", "0.1100", "0.0700"]]
+        res = c.audit(record, [grid])
+        self.assertEqual(len(res["mismatched"]), 1)
+
+    def test_transposed_pipe_table_is_oriented(self):
+        """Markdown results tables usually list models down the rows."""
+        c = self._mod()
+        record = {"id": "d3-ultra", "name": "d3-ultra", "benchmarks": [
+            {"name": "SR-Text", "score": 87.2, "config": "read off the card figure"}]}
+        grid = c.parse_pipe_tables(
+            "| Model | SR-Text | SR-Box |\n| --- | --- | --- |\n"
+            "| d3-ultra | 87.2 | 58.2 |\n| GLiDE V1.2 | 85.1 | 62.0 |\n")[0]
+        res = c.audit(record, [grid])
+        self.assertEqual(res["matched"], 1)
+        self.assertEqual(res["mismatched"], [])
+
+    def test_scale_and_precision_are_not_disagreements(self):
+        c = self._mod()
+        self.assertTrue(c.same_value(69.3, 0.693))
+        self.assertTrue(c.same_value(52.2, 52.21))
+        self.assertTrue(c.same_value(64.7, "64.7"))
+        self.assertFalse(c.same_value(64.7, 64.8))
+        self.assertFalse(c.same_value(61.5, 52.1))
+
     def test_agreeing_row_is_matched_not_flagged(self):
         c = self._mod()
         record = {"id": "qwen3-5-35b-a3b", "name": "Qwen3.5-35B-A3B", "benchmarks": [

@@ -23,9 +23,19 @@ Usage::
 
 Design notes
 ------------
+* Two carriers count as text tables: HTML `<table>` and markdown pipe tables.
+  Only HTML was understood at first, so the ~60 records whose card prints its
+  results as a pipe table looked figure-only and were skipped in silence.
 * HTML tables are parsed into a real grid with rowspan/colspan expanded. Naive
   `<td>` scraping shifts every column after a spanning cell, which is how an
   earlier hand-rolled pass produced ~100 false mismatches on `qwen3-5-*`.
+* A pipe table is usually transposed (models down the rows), so the grid is
+  flipped when the model name sits in the first column.
+* A card may publish more than one column for the same model (`twil-lm3` has
+  `TwIL-LM3` and `TwIL-LM3*`, two scoring passes). A row agrees if it matches
+  ANY of that model's columns; only a value in none of them is a mixup.
+* Scale (0.693 vs 69.3) and precision (52.21 vs a record's 52.2) are not
+  disagreements -- the record's decimal places set the tolerance.
 * A cell is only compared when the row's benchmark name matches after
   normalisation AND the value is a bare number. `HumanEval` vs `HumanEval+`
   must not normalise together, so a trailing `+`/`-` is preserved.
@@ -92,6 +102,62 @@ def hf_repo(record: dict, sources: dict[str, dict]) -> str | None:
     return cands[0] if cands else None
 
 
+def _md_cell(cell: str) -> str:
+    """Strip the markdown that carries no meaning for a numeric compare."""
+    s = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", cell)   # [text](url) -> text
+    s = s.replace("**", "").replace("`", "")
+    s = re.sub(r"(?<![\w.])_|_(?![\w.])", "", s)            # _emphasis_ only
+    s = re.sub(r"\s+", " ", s).strip()
+    s = re.sub(r"^(.*?)%$", r"\1", s)                        # 58.2% -> 58.2
+    return s.strip("*").strip()
+
+
+def parse_pipe_tables(text: str) -> list[list[list[str]]]:
+    """Markdown pipe tables -> grids, same shape as parse_tables().
+
+    Plenty of cards publish their results table as a markdown pipe table rather
+    than an HTML <table>. Without this, those records look like they have no
+    second carrier at all and the cross-check silently skips them -- which is
+    how 62 records were left looking figure-only when the text was right there.
+
+    A pipe table is a run of consecutive lines that both start and end with '|'.
+    The `|---|---|` delimiter row is dropped, and a row without a trailing pipe is
+    still accepted (the closing pipe is optional in most renderers) as long as it
+    carries at least two cells.
+    """
+    out = []
+    block: list[str] = []
+
+    def flush() -> None:
+        if len(block) < 2:
+            block.clear()
+            return
+        grid = []
+        for line in block:
+            s = line.strip()
+            if s.startswith("|"):
+                s = s[1:]
+            if s.endswith("|"):
+                s = s[:-1]
+            cells = [_md_cell(c) for c in s.split("|")]
+            if all(re.fullmatch(r":?-{2,}:?", c.replace(" ", "")) for c in cells if c):
+                continue  # delimiter row
+            grid.append(cells)
+        if len(grid) >= 2:
+            width = max(len(r) for r in grid)
+            out.append([r + [""] * (width - len(r)) for r in grid])
+        block.clear()
+
+    for line in text.splitlines():
+        s = line.strip()
+        if s.startswith("|") and s.count("|") >= 2:
+            block.append(line)
+        else:
+            flush()
+    flush()
+    return out
+
+
 def parse_tables(text: str) -> list[list[list[str]]]:
     """HTML tables -> grids with rowspan/colspan expanded."""
     out = []
@@ -137,9 +203,63 @@ def bare_number(v: str) -> float | None:
     return float(m.group(1)) if m else None
 
 
+def same_value(record_score, card_value: float) -> bool:
+    """Do these two numbers agree, allowing for how the card writes them?
+
+    Three things are not disagreements and must not be reported as one:
+
+    * **Scale.** Cards print either 69.3 or 0.693 for the same result. A card
+      value <= 1.0 beside a record value > 1.0 is compared as a percentage.
+    * **Precision.** The figure prints 52.21 where the record keeps one decimal.
+      The record's own decimal places set the tolerance, because that is the
+      precision it claims.
+    * **Exactness.** Otherwise the two must be identical.
+
+    A genuine wrong-column read still fails all three: 64.7 vs 64.8 differs at
+    the record's precision, and a neighbouring model's 52.1 vs 61.5 is nowhere
+    near.
+    """
+    try:
+        score = float(record_score)
+        card_value = float(card_value)
+    except (TypeError, ValueError):
+        return False
+    text = str(record_score)
+    decimals = len(text.split(".")[1]) if "." in text and "e" not in text.lower() else 0
+    tol = 0.5 * 10 ** (-decimals) + 1e-9 if decimals else 0.5 + 1e-9
+    if abs(score - card_value) <= tol:
+        return True
+    if 0 < card_value <= 1.0 < score and abs(score - card_value * 100) <= tol:
+        return True
+    return False
+
+
 def bench_key(name: str) -> str:
     """Last '·'-separated segment, so 'Coding · HumanEval' matches table 'HumanEval'."""
     return norm(re.split(r"[·]", name)[-1])
+
+
+def _matches_model(cell: str, key: str, name: str) -> bool:
+    hc = norm(cell)
+    if not hc or len(hc) < 5:
+        return False
+    return bool(hc == key or hc == name
+                or (abs(len(hc) - len(key)) <= 2 and (hc in key or key in hc)))
+
+
+def orient(grid: list[list[str]], key: str, name: str) -> list[list[str]]:
+    """Return the grid with models as columns.
+
+    audit() looks for the model name in a header row and reads the benchmark
+    rows beneath it. That is the HTML-table layout. A markdown pipe table is
+    usually transposed: benchmarks across the top, one row per model. Reading
+    such a grid untransposed finds no header match and the record looks like it
+    has no second carrier, so transpose when the model sits in the first column.
+    """
+    for r in grid[1:]:
+        if r and _matches_model(r[0], key, name):
+            return [list(col) for col in zip(*grid)]
+    return grid
 
 
 def audit(record: dict, grids: list[list[list[str]]]) -> dict:
@@ -155,45 +275,50 @@ def audit(record: dict, grids: list[list[list[str]]]) -> dict:
                 v = bare_number(c)
                 if v is not None:
                     table_values.add(v)
+
+    # Gather EVERY cell the table offers for this model and each benchmark name
+    # before judging. A card can carry several columns for one model (twil-lm3
+    # publishes 'TwIL-LM3' and 'TwIL-LM3*', different scoring passes), so taking
+    # the first matching column flags a mismatch on a value the record is
+    # entitled to use. The failure this hunts -- a figure read off the WRONG
+    # model's column -- has no agreeing column at all.
+    seen: dict[str, list[tuple[float, str]]] = {}
     for grid in grids:
+        grid = orient(grid, key, name)
         for hi, hrow in enumerate(grid[:15]):
             for ci, h in enumerate(hrow):
-                hc = norm(h)
-                if not hc or len(hc) < 5:
-                    continue
-                if not (hc == key or hc == name or (abs(len(hc) - len(key)) <= 2 and (hc in key or key in hc))):
+                if not _matches_model(h, key, name):
                     continue
                 for r in grid[hi + 1:]:
                     if len(r) <= ci:
                         continue
                     val = bare_number(r[ci])
-                    bname = r[0]
-                    if val is None or not bname or AGGREGATE.match(bname.strip()):
+                    bname = (r[0] or "").strip()
+                    if val is None or not bname or AGGREGATE.match(bname):
                         continue
-                    bk = bench_key(bname)
-                    for b in rows:
-                        if norm(b["name"]) != bk:
-                            continue
-                        try:
-                            score = float(b["score"])
-                        except (TypeError, ValueError):
-                            continue
-                        if abs(score - val) <= 1e-9:
-                            matched += 1
-                            b["_seen"] = True
-                        else:
-                            mismatched.append({"benchmark": b["name"], "record": score,
-                                               "card": val, "card_row": bname})
-                        break
+                    seen.setdefault(bench_key(bname), []).append((val, bname))
+
     for b in rows:
-        if b.pop("_seen", False):
+        cands = seen.get(norm(b["name"]))
+        if not cands:
+            try:
+                score = float(b["score"])
+            except (TypeError, ValueError):
+                continue
+            absent.append({"benchmark": b["name"], "score": score,
+                           "in_card_anywhere": score in table_values})
+            continue
+        if any(same_value(b["score"], val) for val, _ in cands):
+            matched += 1
             continue
         try:
             score = float(b["score"])
         except (TypeError, ValueError):
             continue
-        absent.append({"benchmark": b["name"], "score": score,
-                       "in_card_anywhere": score in table_values})
+        val, bname = cands[0]
+        mismatched.append({"benchmark": b["name"], "record": score,
+                           "card": val, "card_row": bname,
+                           "also_in_row": [v for v, _ in cands[1:]]})
     return {"fig_rows": len(rows), "matched": matched, "absent": absent, "mismatched": mismatched}
 
 
@@ -232,9 +357,9 @@ def main() -> int:
                 text = urllib.request.urlopen(req, timeout=45).read().decode("utf-8", "replace")
             except Exception:
                 text = None
-        if not text or "<table" not in text:
+        if not text or ("<table" not in text and "|" not in text):
             continue
-        grids = parse_tables(text)
+        grids = parse_tables(text) + parse_pipe_tables(text)
         if not grids:
             continue
         res = audit(record, grids)
@@ -244,7 +369,7 @@ def main() -> int:
         if res["mismatched"] or any(not a["in_card_anywhere"] for a in res["absent"]):
             findings.append((p.stem, repo, res))
 
-    print(f"audited {checked} records with both figure rows and an HTML table")
+    print(f"audited {checked} records with both figure rows and a text table")
     if not findings:
         print("no figure row contradicted the card's text table")
         return 0
