@@ -24,7 +24,7 @@
   "flops_per_token_active": 17350000000.0,
   "open_weights": true,
   "license": "apache-2.0",
-  "notes": "THREE-PART MODEL plus a speech SYNTHESISIZER -- the broadest I/O surface of any record here. (1) Vision: SigLIP vision tower, 27 layers, hidden 1152, 16 heads, patch 14, image_size 980 (top-level image_size 448), with the same LLaVA-STYLE DESIGN AS MiniCPM-V: slice_mode, query_num 64 perceiver resampler, batch_vision_input true, drop_vision_last_layer false. VISION TOKENS: 64 per slice + 1 global, i.e. ~128 for a small image. DOMINANCE: TEXT DOMINATES at default tiling; vision stays bounded by the resampler exactly as in MiniCPM-V. That LLaVA-lineage design is worth stating plainly: MiniCPM did not invent the SigLIP + resampler + tiled-slice scheme, it took it from LLaVA and made it cheap enough for a small model. (2) AUDIO: a Whisper encoder -- audio_config._name_or_path is literally 'openai/whisper-medium', architectures MiniCPMWhisperEncoder, d_model 1024, encoder_layers 24, encoder_attention_heads 16, encoder_ffn_dim 4096 (a Whisper-medium-sized encoder, not large). audio_pool_step 2 halves the audio token rate; audio_chunk_length 1.0. AUDIO TOKENS: a Whisper encoder emits 1,500 frames per 30s chunk; with audio_pool_step 2 that is ~750 audio tokens per 30 seconds. ASYMMETRY WORTH RECORDING: the Whisper DECODER fields are present in the config (decoder_layers 24, forced_decoder_ids, a 70-entry suppress_tokens list, decoder_start_token_id) but MiniCPM-o uses that decoder to produce SPEECH, not text. Audio-to-text goes through the main LLM; audio-to-speech goes through the bundled Whisper decoder. (3) SPEECH OUTPUT: tts_config model_type 'conditional_chattts' with llm_dim 3584, i.e. a ChatTTS conditional generator keyed to the same LLM width. This makes MiniCPM-o bidirectional in audio, which no other record in this slice is. (4) LLM: Qwen2-7B dense decoder, 28 layers, hidden 3584, 28 heads / 4 KV, head_dim 128, intermediate 18944, vocab 151,700, max_position 32,768, rope_theta 1e6, use_sliding_window false (sliding_window 131072 is declared but disabled). ARCHITECTURE = dense. KV CACHE: 28 * 4 * 128 * 2 * 2 = 57,344 B/token. The bundled Whisper-medium decoder is small enough not to move this number. params_b 8.675 = HF API safetensors total (8,674,997,028).\n\nSERVICEABILITY JOIN (added 2026-10-03; the architecture x engine matrix this record was missing, with a citation per cell in docs/13-model-compatibility.md): FAMILY=multimodal. REQUIRED KERNEL CLASS: an encoder tower (ViT / SigLIP / ConvNet / audio encoder) running on a SEPARATE schedule from the decoder, plus a projector into the decoder's embedding space, plus - for the mrope and DeepStack families - a multi-axis rotary scheme in the decoder rather than plain 1-D RoPE. Three engine-side consequences, all cited. (1) The encoder tower is a separate compute path, so its throughput is a different problem from decode throughput and engines that disclaim encoder throughput are disclaiming this. vLLM says so in its own words: 'We currently support pooling models primarily for convenience. This is not guaranteed to provide any performance improvements over using Hugging Face Transformers or Sentence Transformers directly' [[vllm-pooling-models]] - that is the general statement this class inherits. TRT-LLM's answer is a documented mechanism: a Multimodal Encoder Side Stream that prefetches encoder work on a separate CUDA stream plus a per-model Multimodal Embeddings Cache, currently available only for seven architectures (Gemma4, Gemma4Unified, Mistral3, Qwen3VL, Qwen3VLMoe, Qwen3_5, Qwen3_5Moe) [[mdl2-trtllm-supported-models]]. (2) Several towers carry hard external dependencies: Gemma3nForConditionalGeneration 'depends on timm>=1.0.17 to make use of its MobileNet-v5 vision backbone' and 'is only supported on V1 due to shared KV caching' [[mdl2-vllm-supported-models-2026-10]]; MiniCPM-V 4.6 requires transformers>=5.7.0 because it was upstreamed as a native model type [[mdl2-trtllm-supported-models]]. (3) Hybrid-only multimodal models expose a memory knob unique to this class: vLLM's --language-model-only flag sets all supported multimodal modalities to 0 so the multimodal modules are not loaded, 'to free up more GPU memory for KV cache' for Llama-4, Step3, Mistral-3 and Qwen-3.5 [[mdl2-vllm-supported-models-2026-10]].SUPPORTED BY (cited): vLLM native rows include InternVLChatModel and InternVLForConditionalGeneration, LlavaOnevisionForConditionalGeneration, LlavaNextForConditionalGeneration, MolmoForCausalLM and Molmo2ForConditionalGeneration, PaliGemmaForConditionalGeneration, SmolVLMForConditionalGeneration, Glm4vForConditionalGeneration, Qwen2VL/Qwen3VL, MiniCPMV, Mllama, Phi4MM, Gemma4, NemotronH_Nano_VL_V2, VoxtralForConditionalGeneration (which requires mistral-common[audio]) and Qwen3OmniMoeThinkerForConditionalGeneration [[mdl2-vllm-supported-models-2026-10]]. SGLang's multimodal table covers InternLM2-VL, LLaVA-OneVision, LLaVA-NeXT(-Video), Ling-3.0-flash-VL, LFM2.5-VL, MiniCPM-V-2, GLM-4.5V, GLM-OCR, Qwen3-VL 235B-A22B and 30B-A3B, Qwen3-Omni-30B-A3B, Kimi-VL-A3B, MiMo-VL-7B-RL, Step3-VL-10B, dots.ocr, PaddleOCR-VL, Cosmos3, deepseek-vl2, Janus-Pro-7B, NVILA-8B and gemma-3-4b-it, plus openai/whisper-large-v3 and Qwen3-ASR-1.7B on the audio route [[mdl2-sglang-multimodal-language-models]]. TRT-LLM's multimodal matrix covers a narrower set with an explicit per-row modality string and per-row Untested cells [[mdl2-trtllm-supported-models]]. Older GGUF-side engines reach the class through llama.cpp's projector graph, which llama.cpp-embedding-server states it cannot serve on the embedding route [[llama-cpp-embedding-server]]. PER-MODALITY CAVEATS CITED: TRT-LLM marks Gemma4Unified and MiniCPM-V 4.6 Untested for CUDA Graph / chunked prefill, MiniMax-M3 Untested for attention DP and KV cache reuse, Qwen4Exp Untested across the board, and notes audio requires a checkpoint with a sound_config and is supported only on the full non-disaggregated path [[mdl2-trtllm-supported-models]]. Step-3.7's vision tower runs in BF16 even when the text decoder is quantized [[mdl2-trtllm-supported-models]] - a precision asymmetry that silently costs memory. vLLM's fallback path accepts image inputs only, with video 'to be added in a future release' [[mdl2-vllm-supported-models-2026-10]]. 2026-10-29: added MathVerse mini 41.4, MathVision 23.1 and MMHal 3.8 from the card's HTML evaluation table (text parse, not vision). The standing question of whether OCRBench is 838 or 856 in this record is CLOSED: the card's own <td> prints 897*, which is what the record already held, so no change was needed and neither 838 nor 856 has a source.",
+  "notes": "THREE-PART MODEL plus a speech SYNTHESISIZER -- the broadest I/O surface of any record here. (1) Vision: SigLIP vision tower, 27 layers, hidden 1152, 16 heads, patch 14, image_size 980 (top-level image_size 448), with the same LLaVA-STYLE DESIGN AS MiniCPM-V: slice_mode, query_num 64 perceiver resampler, batch_vision_input true, drop_vision_last_layer false. VISION TOKENS: 64 per slice + 1 global, i.e. ~128 for a small image. DOMINANCE: TEXT DOMINATES at default tiling; vision stays bounded by the resampler exactly as in MiniCPM-V. That LLaVA-lineage design is worth stating plainly: MiniCPM did not invent the SigLIP + resampler + tiled-slice scheme, it took it from LLaVA and made it cheap enough for a small model. (2) AUDIO: a Whisper encoder -- audio_config._name_or_path is literally 'openai/whisper-medium', architectures MiniCPMWhisperEncoder, d_model 1024, encoder_layers 24, encoder_attention_heads 16, encoder_ffn_dim 4096 (a Whisper-medium-sized encoder, not large). audio_pool_step 2 halves the audio token rate; audio_chunk_length 1.0. AUDIO TOKENS: a Whisper encoder emits 1,500 frames per 30s chunk; with audio_pool_step 2 that is ~750 audio tokens per 30 seconds. ASYMMETRY WORTH RECORDING: the Whisper DECODER fields are present in the config (decoder_layers 24, forced_decoder_ids, a 70-entry suppress_tokens list, decoder_start_token_id) but MiniCPM-o uses that decoder to produce SPEECH, not text. Audio-to-text goes through the main LLM; audio-to-speech goes through the bundled Whisper decoder. (3) SPEECH OUTPUT: tts_config model_type 'conditional_chattts' with llm_dim 3584, i.e. a ChatTTS conditional generator keyed to the same LLM width. This makes MiniCPM-o bidirectional in audio, which no other record in this slice is. (4) LLM: Qwen2-7B dense decoder, 28 layers, hidden 3584, 28 heads / 4 KV, head_dim 128, intermediate 18944, vocab 151,700, max_position 32,768, rope_theta 1e6, use_sliding_window false (sliding_window 131072 is declared but disabled). ARCHITECTURE = dense. KV CACHE: 28 * 4 * 128 * 2 * 2 = 57,344 B/token. The bundled Whisper-medium decoder is small enough not to move this number. params_b 8.675 = HF API safetensors total (8,674,997,028).\n\nSERVICEABILITY JOIN (added 2026-10-03; the architecture x engine matrix this record was missing, with a citation per cell in docs/13-model-compatibility.md): FAMILY=multimodal. REQUIRED KERNEL CLASS: an encoder tower (ViT / SigLIP / ConvNet / audio encoder) running on a SEPARATE schedule from the decoder, plus a projector into the decoder's embedding space, plus - for the mrope and DeepStack families - a multi-axis rotary scheme in the decoder rather than plain 1-D RoPE. Three engine-side consequences, all cited. (1) The encoder tower is a separate compute path, so its throughput is a different problem from decode throughput and engines that disclaim encoder throughput are disclaiming this. vLLM says so in its own words: 'We currently support pooling models primarily for convenience. This is not guaranteed to provide any performance improvements over using Hugging Face Transformers or Sentence Transformers directly' [[vllm-pooling-models]] - that is the general statement this class inherits. TRT-LLM's answer is a documented mechanism: a Multimodal Encoder Side Stream that prefetches encoder work on a separate CUDA stream plus a per-model Multimodal Embeddings Cache, currently available only for seven architectures (Gemma4, Gemma4Unified, Mistral3, Qwen3VL, Qwen3VLMoe, Qwen3_5, Qwen3_5Moe) [[mdl2-trtllm-supported-models]]. (2) Several towers carry hard external dependencies: Gemma3nForConditionalGeneration 'depends on timm>=1.0.17 to make use of its MobileNet-v5 vision backbone' and 'is only supported on V1 due to shared KV caching' [[mdl2-vllm-supported-models-2026-10]]; MiniCPM-V 4.6 requires transformers>=5.7.0 because it was upstreamed as a native model type [[mdl2-trtllm-supported-models]]. (3) Hybrid-only multimodal models expose a memory knob unique to this class: vLLM's --language-model-only flag sets all supported multimodal modalities to 0 so the multimodal modules are not loaded, 'to free up more GPU memory for KV cache' for Llama-4, Step3, Mistral-3 and Qwen-3.5 [[mdl2-vllm-supported-models-2026-10]].SUPPORTED BY (cited): vLLM native rows include InternVLChatModel and InternVLForConditionalGeneration, LlavaOnevisionForConditionalGeneration, LlavaNextForConditionalGeneration, MolmoForCausalLM and Molmo2ForConditionalGeneration, PaliGemmaForConditionalGeneration, SmolVLMForConditionalGeneration, Glm4vForConditionalGeneration, Qwen2VL/Qwen3VL, MiniCPMV, Mllama, Phi4MM, Gemma4, NemotronH_Nano_VL_V2, VoxtralForConditionalGeneration (which requires mistral-common[audio]) and Qwen3OmniMoeThinkerForConditionalGeneration [[mdl2-vllm-supported-models-2026-10]]. SGLang's multimodal table covers InternLM2-VL, LLaVA-OneVision, LLaVA-NeXT(-Video), Ling-3.0-flash-VL, LFM2.5-VL, MiniCPM-V-2, GLM-4.5V, GLM-OCR, Qwen3-VL 235B-A22B and 30B-A3B, Qwen3-Omni-30B-A3B, Kimi-VL-A3B, MiMo-VL-7B-RL, Step3-VL-10B, dots.ocr, PaddleOCR-VL, Cosmos3, deepseek-vl2, Janus-Pro-7B, NVILA-8B and gemma-3-4b-it, plus openai/whisper-large-v3 and Qwen3-ASR-1.7B on the audio route [[mdl2-sglang-multimodal-language-models]]. TRT-LLM's multimodal matrix covers a narrower set with an explicit per-row modality string and per-row Untested cells [[mdl2-trtllm-supported-models]]. Older GGUF-side engines reach the class through llama.cpp's projector graph, which llama.cpp-embedding-server states it cannot serve on the embedding route [[llama-cpp-embedding-server]]. PER-MODALITY CAVEATS CITED: TRT-LLM marks Gemma4Unified and MiniCPM-V 4.6 Untested for CUDA Graph / chunked prefill, MiniMax-M3 Untested for attention DP and KV cache reuse, Qwen4Exp Untested across the board, and notes audio requires a checkpoint with a sound_config and is supported only on the full non-disaggregated path [[mdl2-trtllm-supported-models]]. Step-3.7's vision tower runs in BF16 even when the text decoder is quantized [[mdl2-trtllm-supported-models]] - a precision asymmetry that silently costs memory. vLLM's fallback path accepts image inputs only, with video 'to be added in a future release' [[mdl2-vllm-supported-models-2026-10]]. 2026-10-29: added MathVerse mini 41.4, MathVision 23.1 and MMHal 3.8 from the card's HTML evaluation table (text parse, not vision). The standing question of whether OCRBench is 838 or 856 in this record is CLOSED: the card's own <td> prints 897*, which is what the record already held, so no change was needed and neither 838 nor 856 has a source. AUDITED 2026-11-08: this record's six radar-derived rows were checked against the card's own HTML text tables and five of them were wrong. Three were other models' numbers: Speech Llama Questions 71.7 was GPT-4o-Realtime's cell (this model is 61.0), AudioArena 1200 was GPT-4o-Realtime's Overall ELO (this model is 1131), StreamingBench 70.3 was Gemini 1.5 Pro's Overall (this model is 66.0). The radar prints a value label for every series, not just the purple one, so the earlier note that 'only the MiniCPM-o 2.6 polygon carries printed numbers' was false and is what let those three through. Two more (AISHELL-1 98.4, LibriSpeech 98.3) were printed CER/WER cells flipped to 100-x and given the wrong polarity; they are now the card's 1.6 CER and 1.7 WER, lower-better, matching how the catalog stores other ASR rows. CoVoST2 en-zh 48.2 was correct and kept. All 20 remaining values in the card's four evaluation tables that this record never carried (BLINK, Mantis Eval, MIRB, Video-MME x2, Fleurs zh, WenetSpeech, GigaSpeech, TED-LIUM, CoVoST zh2en, MELD, Speech Web Q./TriviaQA/AlpacaEval, AudioArena Semantic+Acoustic, UTMOS, SpeechQA ASR-WER, Seed-TTS SIM-o x2) were added from the text tables, so they are exact cells rather than eye-reads. 42 rows total.",
   "status": "verified",
   "confidence": 0.9,
   "updated": "2026-10-29",
@@ -165,49 +165,49 @@
       "config": "Read off the card's OpenCompass radar figure (radar.jpg) with vision. Only the MiniCPM-o 2.6 polygon carries printed numbers; every other model on the chart is an unlabelled line, so this is a read of the one labelled series. Radar axis-to-label mapping is the error-prone part: only axes where two independent reads agreed on BOTH the axis label and the number were kept, and several axes on this figure were dropped for that reason. +/-0.5. BLEU on the speech-translation axis. [FILENAME CORRECTED 2026-11-06: this row cited 'radar.jpg', which does not exist in the card's image set. The figure actually read is 'radar.jpg' (the OpenCompass radar with printed values on the MiniCPM-o 2.6 polygon); the 6 speech/streaming values were re-read off that figure and matched. Corrected so the citation resolves.]"
     },
     {
-      "name": "AISHELL-1",
-      "score": 98.4,
+      "name": "AISHELL-1 CER (lower better)",
+      "score": 1.6,
       "scale": 100,
-      "higher_is_better": true,
+      "higher_is_better": false,
       "source": "hf-minicpm-o-2-6-card",
       "vendor_claim": true,
-      "config": "Read off the card's OpenCompass radar figure (radar.jpg) with vision. Only the MiniCPM-o 2.6 polygon carries printed numbers; every other model on the chart is an unlabelled line, so this is a read of the one labelled series. Radar axis-to-label mapping is the error-prone part: only axes where two independent reads agreed on BOTH the axis label and the number were kept, and several axes on this figure were dropped for that reason. +/-0.5. Speech Conversation axis; figure printed as an accuracy-style percentage on the radar. [FILENAME CORRECTED 2026-11-06: this row cited 'radar.jpg', which does not exist in the card's image set. The figure actually read is 'radar.jpg' (the OpenCompass radar with printed values on the MiniCPM-o 2.6 polygon); the 6 speech/streaming values were re-read off that figure and matched. Corrected so the citation resolves.]"
+      "config": "CORRECTED 2026-11-08. The row was 'AISHELL-1 = 98.4, higher better', read off the radar as an 'accuracy-style percentage'. The card prints no such number: its 'Audio Understanding' HTML table gives ASR-ZH CER for AISHELL-1 as 1.6, and 98.4 was that cell flipped to 100-1.6 and given the opposite polarity. Recording the printed figure instead - a 1.6% character error rate on scale 100, lower better, which is also how the catalog stores every other ASR row. Text-table cell, exact. For context on the same row: Qwen3-Audio 2.6, GLM-4-Voice 2.5, GPT-4o-Realtime 7.3 (cited)."
     },
     {
-      "name": "LibriSpeech",
-      "score": 98.3,
+      "name": "LibriSpeech test-clean WER (lower better)",
+      "score": 1.7,
       "scale": 100,
-      "higher_is_better": true,
+      "higher_is_better": false,
       "source": "hf-minicpm-o-2-6-card",
       "vendor_claim": true,
-      "config": "Read off the card's OpenCompass radar figure (radar.jpg) with vision. Only the MiniCPM-o 2.6 polygon carries printed numbers; every other model on the chart is an unlabelled line, so this is a read of the one labelled series. Radar axis-to-label mapping is the error-prone part: only axes where two independent reads agreed on BOTH the axis label and the number were kept, and several axes on this figure were dropped for that reason. +/-0.5. Speech Conversation axis; figure printed as an accuracy-style percentage on the radar. [FILENAME CORRECTED 2026-11-06: this row cited 'radar.jpg', which does not exist in the card's image set. The figure actually read is 'radar.jpg' (the OpenCompass radar with printed values on the MiniCPM-o 2.6 polygon); the 6 speech/streaming values were re-read off that figure and matched. Corrected so the citation resolves.]"
+      "config": "CORRECTED 2026-11-08. Same defect as the AISHELL-1 row: the record held 98.3 read off the radar as an 'accuracy-style percentage', which is the card's LibriSpeech test-clean WER cell 1.7 flipped to 100-1.7. The card prints 1.7, so that is what is recorded: 1.7% WER on scale 100, lower better. Note this row is test-clean only - the card does not publish a test-other figure for this model, so none is recorded. Text-table cell, exact."
     },
     {
       "name": "Speech Llama Questions",
-      "score": 71.7,
+      "score": 61.0,
       "scale": 100,
       "higher_is_better": true,
       "source": "hf-minicpm-o-2-6-card",
       "vendor_claim": true,
-      "config": "Read off the card's OpenCompass radar figure (radar.jpg) with vision. Only the MiniCPM-o 2.6 polygon carries printed numbers; every other model on the chart is an unlabelled line, so this is a read of the one labelled series. Radar axis-to-label mapping is the error-prone part: only axes where two independent reads agreed on BOTH the axis label and the number were kept, and several axes on this figure were dropped for that reason. +/-0.5. [FILENAME CORRECTED 2026-11-06: this row cited 'radar.jpg', which does not exist in the card's image set. The figure actually read is 'radar.jpg' (the OpenCompass radar with printed values on the MiniCPM-o 2.6 polygon); the 6 speech/streaming values were re-read off that figure and matched. Corrected so the citation resolves.]"
+      "config": "CORRECTED 2026-11-08. Was 71.7, which is NOT this model's number: 71.7 is GPT-4o-Realtime's Speech Llama Questions ACC cell in the card's own 'SpeechQA' HTML table. MiniCPM-o 2.6's cell in that same row is 61.0. The old value came from a vision read of the radar figure, which prints value labels for EVERY model series at once and not only the purple one - the note that 'only the MiniCPM-o 2.6 polygon carries printed numbers' was wrong. Source is now the card's text table, so this is an exact cell, not an eye-read."
     },
     {
       "name": "AudioArena",
-      "score": 1200.0,
+      "score": 1131.0,
       "scale": 1200,
       "higher_is_better": true,
       "source": "hf-minicpm-o-2-6-card",
       "vendor_claim": true,
-      "config": "Read off the card's OpenCompass radar figure (radar.jpg) with vision. Only the MiniCPM-o 2.6 polygon carries printed numbers; every other model on the chart is an unlabelled line, so this is a read of the one labelled series. Radar axis-to-label mapping is the error-prone part: only axes where two independent reads agreed on BOTH the axis label and the number were kept, and several axes on this figure were dropped for that reason. +/-0.5. Printed as a raw AudioArena score, not a percentage; scale is set to 1200 so the value is not read as 1200%. [FILENAME CORRECTED 2026-11-06: this row cited 'radar.jpg', which does not exist in the card's image set. The figure actually read is 'radar.jpg' (the OpenCompass radar with printed values on the MiniCPM-o 2.6 polygon); the 6 speech/streaming values were re-read off that figure and matched. Corrected so the citation resolves.]"
+      "config": "CORRECTED 2026-11-08. Was 1200.0 on a 1200 scale, which is GPT-4o-Realtime's Overall ELO cell, not this model's. MiniCPM-o 2.6's Overall ELO in the card's 'SpeechQA' HTML table is 1131 (its Semantic ELO 1088, Acoustic 1163). Old value was a radar vision read that picked up another series' printed label. Recorded as the card's raw ELO score on scale 1200; ELO is not a percentage. Text-table cell, exact."
     },
     {
       "name": "StreamingBench",
-      "score": 70.3,
+      "score": 66.0,
       "scale": 100,
       "higher_is_better": true,
       "source": "hf-minicpm-o-2-6-card",
       "vendor_claim": true,
-      "config": "Read off the card's OpenCompass radar figure (radar.jpg) with vision. Only the MiniCPM-o 2.6 polygon carries printed numbers; every other model on the chart is an unlabelled line, so this is a read of the one labelled series. Radar axis-to-label mapping is the error-prone part: only axes where two independent reads agreed on BOTH the axis label and the number were kept, and several axes on this figure were dropped for that reason. +/-0.5. Live Streaming axis. [FILENAME CORRECTED 2026-11-06: this row cited 'radar.jpg', which does not exist in the card's image set. The figure actually read is 'radar.jpg' (the OpenCompass radar with printed values on the MiniCPM-o 2.6 polygon); the 6 speech/streaming values were re-read off that figure and matched. Corrected so the citation resolves.]"
+      "config": "CORRECTED 2026-11-08. Was 70.3, which is Gemini 1.5 Pro's StreamingBench Overall cell, not this model's - the radar's streaming arc also prints every model's value. The card's 'StreamingBench' HTML table gives MiniCPM-o 2.6 Overall 66.0, with the three sub-axes Real-Time Video Understanding 79.9, Omni-Source Understanding 53.4, Contextual Understanding 38.5. Overall aggregates those three, so the sub-axes are not recorded separately here. Text-table cell, exact."
     },
     {
       "name": "MathVerse (mini)",
@@ -235,6 +235,186 @@
       "source": "hf-minicpm-o-2-6-card",
       "vendor_claim": true,
       "config": "MiniCPM-o 2.6 row (8B; Token Density 2822 px per visual token, the 640-token / 1.8M-pixel default slice config) of the card's 'Image Understanding' HTML table. TEXT-CONFIRMED, not a by-eye read: the README carries this table as HTML, so the value was parsed out of the <td> cell. Column alignment proven by re-parsing all 13 cells this record already carried - every one matched the recorded score exactly (OpenCompass 70.2, OCRBench 897, MathVista 71.9, ChartQA 86.9, MMVet 67.5, MMStar 64.0, MME 2372.0, MMB1.1 80.5, AI2D 85.8, MMMU 50.4, HallusionBench 51.9, TextVQA 82.0, DocVQA 93.5). no shot count published NOT a percentage: MMHal-Bench is an LLM-as-judge mean informativeness rating on a 0-6 integer scale, so scale is 6 rather than 100. This record's siblings are inconsistent here (internvl3-8b records its 3.61 as scale 10, minicpm-o-4-5 its 4.7 as scale 5), so the 0-6 maximum is taken from the benchmark's own eval script (Shengcao1006/MMHal-Bench eval_gpt_mmhal.py: ratings 0-6, hallucination = score < 3) instead of either sibling. Card prints only the score, not the hallucination rate, so no rate row is recorded."
+    },
+    {
+      "name": "BLINK val",
+      "score": 56.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Card 'Multi-image / video' HTML table, BLINK val column. Beats MiniCPM-V 2.6 53.0 on the same row."
+    },
+    {
+      "name": "Mantis Eval",
+      "score": 71.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, Mantis Eval column. Beats MiniCPM-V 2.6 69.1."
+    },
+    {
+      "name": "MIRB",
+      "score": 58.6,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, MIRB column. Beats MiniCPM-V 2.6 53.8 and Qwen2-VL-7B 67.6 is the row leader."
+    },
+    {
+      "name": "Video-MME (w/o subs)",
+      "score": 63.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, 'Video-MME (wo / w subs)' first figure. The card prints the pair 63.9/67.9 in one cell."
+    },
+    {
+      "name": "Video-MME (w/ subs)",
+      "score": 67.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, second figure of the 63.9/67.9 pair."
+    },
+    {
+      "name": "Fleurs zh CER (lower better)",
+      "score": 4.4,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Card 'Audio Understanding' table, ASR-ZH Fleurs zh column."
+    },
+    {
+      "name": "WenetSpeech test-net CER (lower better)",
+      "score": 6.9,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'Audio Understanding', MiniCPM-o 2.6 row, exact <td> cell (text parse, not vision). 6.9% CER. On the same row GPT-4o-Realtime is 5.4 and Gemini 1.5 Pro 5.9 (both cited), so this model is AHEAD of neither on WenetSpeech despite leading AISHELL-1 - its ZH accuracy is not uniform across domains."
+    },
+    {
+      "name": "GigaSpeech test WER (lower better)",
+      "score": 8.7,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, ASR-EN GigaSpeech."
+    },
+    {
+      "name": "TED-LIUM WER (lower better)",
+      "score": 3.0,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, ASR-EN TED-LIUM."
+    },
+    {
+      "name": "CoVoST 2 zh2en BLEU",
+      "score": 27.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, AST CoVoST zh2en. Pairs with the CoVoST2 en-zh row already in this file."
+    },
+    {
+      "name": "Meld accuracy",
+      "score": 52.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, Emotion MELD."
+    },
+    {
+      "name": "Speech Web Questions",
+      "score": 40.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Card 'SpeechQA' table, Speech Web Q. ACC column."
+    },
+    {
+      "name": "Speech TriviaQA",
+      "score": 40.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, Speech Trivia QA ACC column."
+    },
+    {
+      "name": "Speech AlpacaEval (G-Eval out of 10)",
+      "score": 5.1,
+      "scale": 10,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, Speech AlpacaEval G-Eval column, scored out of 10 - kept on scale 10, not 100."
+    },
+    {
+      "name": "AudioArena Semantic ELO",
+      "score": 1088.0,
+      "scale": 1200,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, AudioArena Semantic ELO column (raw ELO, not a percentage)."
+    },
+    {
+      "name": "AudioArena Acoustic ELO",
+      "score": 1163.0,
+      "scale": 1200,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, AudioArena Acoustic ELO column. The model is much stronger acoustically than semantically here."
+    },
+    {
+      "name": "UTMOS",
+      "score": 4.2,
+      "scale": 5,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, UTMOS column - a 1-5 mean opinion score, so scale 5."
+    },
+    {
+      "name": "SpeechQA ASR-WER (lower better)",
+      "score": 9.8,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, last column ASR-WER: word error rate of the model's own spoken answers."
+    },
+    {
+      "name": "Seed-TTS test-zh SIM-o",
+      "score": 57,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Card 'Voice cloning' table, Seed-TTS test-zh SIM-o. Below F5-TTS 76 and CosyVoice 75, so voice cloning is a weak point vs dedicated TTS."
+    },
+    {
+      "name": "Seed-TTS test-en SIM-o",
+      "score": 47,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-minicpm-o-2-6-card",
+      "vendor_claim": true,
+      "config": "Card README HTML text table, 'MiniCPM-o 2.6' row, exact <td> cell (text parse, not vision). Same table, Seed-TTS test-en SIM-o. Also below F5-TTS 67 and CosyVoice 64."
     }
   ]
 }
