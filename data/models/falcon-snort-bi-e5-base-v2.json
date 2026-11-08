@@ -1,0 +1,60 @@
+{
+  "id": "falcon-snort-bi-e5-base-v2",
+  "type": "model",
+  "name": "falcon-snort-bi-e5-base-v2",
+  "family": "e5",
+  "vendor": "shaswatamitra",
+  "release_year": 2026,
+  "architecture": "dense",
+  "task": "embedding",
+  "params_b": 0.109,
+  "active_params_b": 0.109,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 768,
+  "num_layers": 12,
+  "num_kv_heads": 12,
+  "head_dim": 64,
+  "gqa_ratio": 1,
+  "max_position_embeddings": 512,
+  "context_scaling": "Inherited unchanged from intfloat/e5-base-v2 (config.json max_position_embeddings 512). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "gelu",
+  "attention_variant": "bidirectional encoder (BERT), full attention, no causal mask",
+  "layer_types": [],
+  "attention_layer_indices": [],
+  "kv_cache_bytes_per_token": 0.0,
+  "flops_per_token_active": 218000000.0,
+  "open_weights": true,
+  "license": "cc-by-nc-nd-4.0",
+  "base_model": "intfloat/e5-base-v2",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-08. A full contrastive finetune of intfloat/e5-base-v2 (109M, BERT-base, hidden 768, 12 layers, 512 max positions, 768 output dims) trained to map cyber-threat-intelligence text and SNORT rules into one embedding space with symmetric InfoNCE / NT-Xent over in-batch negatives - the SNORT sibling of falcon-yara-bi-e5-base-v2 and falcon-snort-bi-all-mpnet-base-v2 from the same author. Config is the base's unchanged (BertModel, 12x768 with intermediate 3072, vocab 30522); safetensors total is 109,482,240 against the base record's 109,482,752, a 512-parameter difference that is not explained on the card, so the tensor set is same-shape rather than literally identical. Both benchmark rows are the repo's own SNORT/CTI retrieval test split: the card's 'pretrained' row is the untrained e5-base-v2 backbone measured on the same split with the same harness, so this is a genuine same-table base comparison, but it is a private domain benchmark and not BEIR or MTEB - do not compare it to the MTEB rows on the base record. The gain is large because the base has no notion of SNORT syntax at all. THE RELEASED CHECKPOINT IS run_3: the repo's final commit message reads 'FALCON best checkpoint - best run r3 (test_f1=0.9329)', after an earlier commit that had shipped r0 on validation loss, so r3's numbers are the ones recorded here. All five runs land within 0.004 recall@1 of each other (0.9526-0.9564) so the choice barely moves the headline. Licence cc-by-nc-nd-4.0 - non-commercial, no derivatives - repo created 2026-05-28. Single test split, single seed per configuration, no variance reported.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-08",
+  "sources": [
+    "hf-shaswatamitra-falcon-snort-bi-e5-base-v2"
+  ],
+  "benchmarks": [
+    {
+      "name": "SNORT/CTI retrieval recall@1",
+      "score": 95.64,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-shaswatamitra-falcon-snort-bi-e5-base-v2",
+      "vendor_claim": true,
+      "config": "Card 'Test-set metrics' table: row 'pretrained' (untrained intfloat/e5-base-v2 backbone, same harness, same split) 0.4738 vs shipped run_3 0.9564. Own SNORT/CTI test split, not a public benchmark such as BEIR or MTEB. The repo's final commit message ('FALCON best checkpoint - best run r3 (test_f1=0.9329)') identifies run_3 as the shipped checkpoint."
+    },
+    {
+      "name": "SNORT/CTI retrieval F1",
+      "score": 93.29,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-shaswatamitra-falcon-snort-bi-e5-base-v2",
+      "vendor_claim": true,
+      "config": "Same table: pretrained 0.2576 vs run_3 0.9329. The large gap is because the base e5-base-v2 backbone has no notion of SNORT rule syntax."
+    }
+  ]
+}
