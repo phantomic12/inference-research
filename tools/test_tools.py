@@ -2586,6 +2586,77 @@ class TestCapabilityAxisClassifier(unittest.TestCase):
             self.assertEqual(f(name), axis, name)
 
 
+class TestCrosscheckFigures(unittest.TestCase):
+    """The figure-vs-text-table cross-check must not fire on its own parser bugs.
+
+    A hand-rolled <td> scrape shifts every column after a rowspan/colspan cell and
+    normalising 'HumanEval+' to 'HumanEval' makes the plus variant look like a
+    mismatch. Both produced ~100 false positives on qwen3-5-* and minimax-m2-reap-*
+    before the parser expanded spanning cells and kept the trailing +.
+    """
+
+    @staticmethod
+    def _mod():
+        sys.path.insert(0, str(TOOLS))
+        import crosscheck_figures as c  # noqa: PLC0415
+        return c
+
+    def test_rowspan_header_keeps_columns_aligned(self):
+        c = self._mod()
+        table = (
+            '<table><tr><th rowspan="2">Model</th><th colspan="2">Group</th></tr>'
+            '<tr><td>HumanEval</td><td>HumanEval+</td></tr>'
+            '<tr><td>M</td><td>91.5</td><td>83.5</td></tr></table>'
+        )
+        grid = c.parse_tables(table)[0]
+        self.assertEqual(grid[2], ["M", "91.5", "83.5"])
+
+    def test_colspan_row_does_not_shift_names(self):
+        c = self._mod()
+        table = (
+            '<table><tr><td>Coding</td></tr>'
+            '<tr><td>HumanEval</td><td>91.5</td></tr></table>'
+        )
+        grid = c.parse_tables(table)[0]
+        self.assertEqual(grid[1], ["HumanEval", "91.5"])
+
+    def test_plus_variant_is_not_the_base_benchmark(self):
+        c = self._mod()
+        self.assertNotEqual(c.bench_key("HumanEval"), c.bench_key("HumanEval+"))
+        self.assertEqual(c.bench_key("Coding · HumanEval"), c.bench_key("HumanEval"))
+
+    def test_aggregate_rows_are_skipped(self):
+        c = self._mod()
+        for name in ("Average", "Overall", "Mean", "Avg", "Total"):
+            self.assertTrue(c.AGGREGATE.match(name), name)
+        self.assertFalse(c.AGGREGATE.match("AA-LCR"))
+
+    def test_only_bare_numbers_compare(self):
+        c = self._mod()
+        self.assertEqual(c.bare_number("64.8"), 64.8)
+        self.assertIsNone(c.bare_number("40.2 / 34.5"))
+        self.assertIsNone(c.bare_number("--"))
+        self.assertIsNone(c.bare_number("75.0*"))
+
+    def test_wrong_column_is_reported_as_mismatch(self):
+        c = self._mod()
+        record = {"id": "qwen3-5-35b-a3b", "name": "Qwen3.5-35B-A3B", "benchmarks": [
+            {"name": "ERQA", "score": 64.7, "config": "read off the card figure"}]}
+        grid = [["", "Qwen3.5-35B-A3B"], ["ERQA", "64.8"]]
+        res = c.audit(record, [grid])
+        self.assertEqual(len(res["mismatched"]), 1)
+        self.assertEqual(res["matched"], 0)
+
+    def test_agreeing_row_is_matched_not_flagged(self):
+        c = self._mod()
+        record = {"id": "qwen3-5-35b-a3b", "name": "Qwen3.5-35B-A3B", "benchmarks": [
+            {"name": "ERQA", "score": 64.8, "config": "read off the card figure"}]}
+        grid = [["", "Qwen3.5-35B-A3B"], ["ERQA", "64.8"]]
+        res = c.audit(record, [grid])
+        self.assertEqual(res["mismatched"], [])
+        self.assertEqual(res["matched"], 1)
+
+
 class TestReadFiguresChain(unittest.TestCase):
     """The vision chain must start on a route that actually answers.
 
