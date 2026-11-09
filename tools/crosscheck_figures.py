@@ -238,6 +238,47 @@ def same_value(record_score, card_value: float) -> bool:
     return False
 
 
+# A record names its rows with the metric it scored: 'APPS pass@1', 'GSM8K
+# (accuracy)', 'Rule induction (derivation score)'. A card's results table heads
+# the row with the benchmark alone ('apps', 'GSM8K', 'Rule induction'), because
+# the metric is stated once in the table's caption. norm() strips punctuation but
+# not words, so 'appspass1' never equalled 'apps': 28 figure rows on 2 records
+# were announced NOT IN TABLE against a table that carried their exact value,
+# and 4 rows (`twil-lm3`) reported a value under 'another row' that was in fact
+# their own row under a shorter name.
+#
+# Only a trailing parenthesised metric or a pass@N token is stripped, and only
+# to build a SECOND lookup key. 'HumanEval' vs 'HumanEval+' is untouched, and
+# 'Minerva pass@1' still matches the card's 'minerva'.
+# `pass@N` is a harness name the card may or may not repeat in its header, so it
+# is stripped whether or not it is bracketed ('APPS pass@1', 'APPS (pass@1)');
+# the softer words are only stripped inside brackets or after a separator, so a
+# benchmark whose own name ends in 'score' ('Derivation score') keeps it.
+METRIC = re.compile(
+    r"(?:\s*[\(\[]\s*(?:avg|average|accuracy|acc|score|rate)\s*[\)\]]"
+    r"|\s+(?:pass@\d+|accuracy|acc|score|rate)"
+    r"|\s*[\(\[]\s*pass@\d+\s*[\)\]])\s*$", re.I)
+
+
+def _strip_metric(name: str) -> str:
+    prev = None
+    s = name
+    while prev != s:
+        prev = s
+        s = METRIC.sub("", s).strip()
+    return s
+
+
+def bench_keys(name: str) -> list[str]:
+    """Every key this row name may be filed under, in matching precedence."""
+    seg = re.split(r"[·]", name)[-1]
+    out = [norm(seg)]
+    alt = norm(_strip_metric(seg))
+    if alt not in out:
+        out.append(alt)
+    return out
+
+
 def bench_key(name: str) -> str:
     """Last '·'-separated segment, so 'Coding · HumanEval' matches table 'HumanEval'."""
     return norm(re.split(r"[·]", name)[-1])
@@ -268,13 +309,45 @@ def _variant_of(cell: str, key: str, name: str) -> str | None:
     return rest if VARIANT.fullmatch(rest) else None
 
 
+# A size token the card truncated, or the tail of a long id the card did not
+# print, is not a different model. These are the only two kinds of remainder
+# accepted when the header is a prefix of the record id.
+_SIZE_TAIL = re.compile(r"\d+(?:\.\d+)?b")
+_BUILD_TAIL = re.compile(r"(?:instruct|thinking|nonthink|chat|preview|base|sft|dpo|rl|it|hf"
+                         r"|fp8|bf16|f16)")
+
+
 def _matches_model(cell: str, key: str, name: str) -> bool:
+    """Is this header cell a column OF THIS MODEL?
+
+    The old test accepted any header within two characters of the id, which is
+    not a spelling difference but a different model: `...-1.5B-v2` was read as
+    `...-1.5B` (so the v2 column's 46.39 APPS could stand in for v1's 42.0) and
+    `Darwin-180B-RSI-R3` as `Darwin-180B-RSI` -- R3 is a separate Hugging Face
+    repo, the next self-improvement round, not an alias. It also MISSED legit
+    columns it should have taken: 'Euston' for `euston-8b`, 'Mica v0.5' for
+    `mica-v0-5-4b`, 'Qwen2.5-VL-7B' for `qwen2-vl-7b-instruct`.
+
+    Accepted forms, each requiring the shared part to be the whole id:
+      * exact, or the record's display name;
+      * one build/pass suffix (`-Instruct`, `-Thinking`, ...);
+      * a superscript footnote the card glued on (`Nanbeige4.3-33B<sup>1</sup>`);
+      * a prefix of the id whose remainder is just a size or build token.
+    """
     hc = norm(cell)
     if not hc or len(hc) < 5:
         return False
-    return bool(hc == key or hc == name
-                or (abs(len(hc) - len(key)) <= 2 and (hc in key or key in hc))
-                or _variant_of(cell, key, name) is not None)
+    if hc == key or hc == name:
+        return True
+    if _variant_of(cell, key, name) is not None:
+        return True
+    if re.fullmatch(re.escape(key) + r"\d", hc):
+        return True
+    if key.startswith(hc):
+        rest = key[len(hc):]
+        if _SIZE_TAIL.fullmatch(rest) or _BUILD_TAIL.fullmatch(rest):
+            return True
+    return False
 
 
 def orient(grid: list[list[str]], key: str, name: str) -> list[list[str]]:
@@ -342,7 +415,15 @@ def audit(record: dict, grids: list[list[list[str]]]) -> dict:
                     by_variant.setdefault(label, {})[bench_key(bname)] = val
 
     for b in rows:
-        cands = seen.get(norm(b["name"]))
+        # A row may be filed under its full name or its benchmark-only name; the
+        # card picks one and the record the other. Try the exact key first so a
+        # card that really does carry two rows ('GSM8K' and 'GSM8K (accuracy)')
+        # is never collapsed onto whichever came first.
+        cands, used_key = None, None
+        for k in bench_keys(b["name"]):
+            if seen.get(k):
+                cands, used_key = seen[k], k
+                break
         if not cands:
             try:
                 score = float(b["score"])
@@ -353,7 +434,7 @@ def audit(record: dict, grids: list[list[list[str]]]) -> dict:
             continue
         if any(same_value(b["score"], val) for val, _ in cands):
             matched += 1
-            k = bench_key(b["name"])
+            k = used_key
             agreeing = [lab for lab, col in by_variant.items()
                         if k in col and same_value(b["score"], col[k])]
             if len(by_variant) > 1 and len(agreeing) < len(by_variant):

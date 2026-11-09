@@ -2785,6 +2785,73 @@ class TestCrosscheckFigures(unittest.TestCase):
         res = c.audit(record, [grid])
         self.assertEqual(len(res["mismatched"]), 1)
 
+    def test_two_char_length_difference_is_a_different_model(self):
+        """A near-identical header is a sibling release, not a spelling variant.
+
+        The old matcher accepted any header within two characters of the id. That
+        read `Nemotron-Research-Reasoning-Qwen-1.5B-v2` as the v1 column -- the v2
+        row's APPS 46.39 could stand in for v1's 42.0 and the crosscheck would call
+        it agreement -- and `Darwin-180B-RSI-R3` as `Darwin-180B-RSI`, although R3
+        is a separate repo and the next self-improvement round. It also missed real
+        columns it should have taken: 'Euston' for `euston-8b`, 'Qwen2.5-VL-7B' for
+        `qwen2-vl-7b-instruct`.
+        """
+        c = self._mod()
+        k = c.norm("nemotron-research-reasoning-qwen-1-5b")
+        self.assertFalse(c._matches_model("Nemotron-Research-Reasoning-Qwen-1.5B-v2", k, k))
+        self.assertTrue(c._matches_model("Nemotron-Research-Reasoning-Qwen-1.5B", k, k))
+        self.assertFalse(c._matches_model("Darwin-180B-RSI-R3",
+                                          c.norm("darwin-180b-rsi"), c.norm("Darwin-180B-RSI")))
+
+    def test_truncated_header_still_finds_the_column(self):
+        """A card that prints only part of the id is still that model's column."""
+        c = self._mod()
+        self.assertTrue(c._matches_model("Euston", c.norm("euston-8b"), c.norm("Euston-8B")))
+        self.assertTrue(c._matches_model("Mica v0.5", c.norm("mica-v0-5-4b"), c.norm("Mica-v0.5-4B")))
+        self.assertTrue(c._matches_model("Qwen2.5-VL-7B",
+                                         c.norm("qwen2-5-vl-7b-instruct"), c.norm("Qwen2.5-VL-7B-Instruct")))
+        # A superscript footnote glued onto the name is not part of the model name.
+        self.assertTrue(c._matches_model("Nanbeige4.3-33B 1",
+                                         c.norm("nanbeige4-3-33b"), c.norm("Nanbeige4.3-33B")))
+        # A prefix that leaves a real word behind is a different model.
+        self.assertFalse(c._matches_model("DeepSeek R1",
+                                          c.norm("deepseek-r1-distill-qwen-32b"),
+                                          c.norm("DeepSeek-R1-Distill-Qwen-32B")))
+
+    def test_metric_suffix_does_not_hide_the_row(self):
+        """A record's 'APPS pass@1' must find the card's 'apps' row.
+
+        The card states the metric in the table caption, so its own header is the
+        benchmark alone. norm() strips punctuation but not words, so 'appspass1'
+        never equalled 'apps' and 28 figure rows on 2 records were announced
+        NOT IN TABLE against a table carrying their exact value.
+        """
+        c = self._mod()
+        self.assertEqual(c.bench_keys("APPS pass@1")[-1], c.bench_key("APPS"))
+        self.assertEqual(c.bench_keys("GSM8K (accuracy)")[-1], c.bench_key("GSM8K"))
+        record = {"id": "nemotron-research-reasoning-qwen-1-5b",
+                  "name": "Nemotron-Research-Reasoning-Qwen-1.5B",
+                  "benchmarks": [{"name": "APPS pass@1", "score": 42.0,
+                                  "config": "read off the card figure"}]}
+        grid = [["Model", "apps"], ["Nemotron-Research-Reasoning-Qwen-1.5B", "41.99"]]
+        res = c.audit(record, [grid])
+        self.assertEqual(res["matched"], 1)
+        self.assertEqual(res["absent"], [])
+
+    def test_metric_suffix_does_not_excuse_a_real_mismatch(self):
+        """Widening the name lookup must not soften the value comparison."""
+        c = self._mod()
+        record = {"id": "nemotron-research-reasoning-qwen-1-5b",
+                  "name": "Nemotron-Research-Reasoning-Qwen-1.5B",
+                  "benchmarks": [{"name": "APPS pass@1", "score": 42.0,
+                                  "config": "read off the card figure"}]}
+        # The v2 column: the header must not be taken as this model's column.
+        grid = [["Model", "apps"],
+                ["Nemotron-Research-Reasoning-Qwen-1.5B-v2", "46.39"]]
+        res = c.audit(record, [grid])
+        self.assertEqual(res["mismatched"], [])
+        self.assertTrue(res["no_column"])
+
     def test_cross_variant_agreement_is_reported_not_hidden(self):
         """A value matching one sibling variant but not the other is surfaced.
 
