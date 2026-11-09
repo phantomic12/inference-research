@@ -414,6 +414,12 @@ def audit(record: dict, grids: list[list[list[str]]]) -> dict:
                     seen.setdefault(bench_key(bname), []).append((val, bname))
                     by_variant.setdefault(label, {})[bench_key(bname)] = val
 
+    # How many of these figure rows the table actually carries a row for, by
+    # name. This is the test of whether the table is a CARRIER for them at all,
+    # and it is stricter than `seen`: `seen` only asks whether the table offers
+    # this model any number in some row.
+    covered = sum(1 for b in rows if any(k in seen for k in bench_keys(b["name"])))
+
     for b in rows:
         # A row may be filed under its full name or its benchmark-only name; the
         # card picks one and the record the other. Try the exact key first so a
@@ -453,11 +459,19 @@ def audit(record: dict, grids: list[list[list[str]]]) -> dict:
     # A table that offers this model no numbers is not a carrier for these rows,
     # so none of them is 'absent' from it -- they are simply unverified. Reporting
     # them as absent is what made 589 figure rows look like a defect.
-    if not seen:
+    #
+    # `seen` alone was not enough. A SUMMARY table passes it while carrying none
+    # of the benchmarks: `minicpm-v-4-5` publishes one column, 'Avg Score', beside
+    # the sizes, and `d3-ultra` publishes its SR-Text mean where the record keeps
+    # the six parts. Those records counted as "audited ... with a results table"
+    # and all their rows were printed NOT IN TABLE -- 24 records and 95 rows
+    # accused against a table that never carried the benchmark. A table is a
+    # carrier for a row only if it has a row filed under that row's NAME.
+    if not seen or not covered:
         absent = []
     return {"fig_rows": len(rows), "matched": matched, "absent": absent,
             "mismatched": mismatched, "variant_mixed": variant_mixed,
-            "no_column": not seen}
+            "no_column": not seen, "covers_none": bool(seen) and not covered}
 
 
 def main() -> int:
@@ -475,7 +489,7 @@ def main() -> int:
             pass
 
     want = set(args.ids.split(",")) if args.ids else None
-    findings, checked, no_column = [], 0, []
+    findings, checked, no_column, covers_none = [], 0, [], []
     for p in sorted(MODELS.glob("*.json")):
         if want and p.stem not in want:
             continue
@@ -503,6 +517,10 @@ def main() -> int:
         res = audit(record, grids)
         if not res["fig_rows"]:
             continue
+        if res.get("covers_none"):
+            # Numbers for this model, but none under a name these figure rows use.
+            covers_none.append(p.stem)
+            continue
         if res["no_column"]:
             # The README has a table, but not a results table for THIS model:
             # `internvl3-14b` publishes only a family/architecture list, so its
@@ -521,6 +539,10 @@ def main() -> int:
     if no_column:
         print(f"skipped {len(no_column)} records whose text table has no column "
               f"of numbers for the model (family/architecture tables)")
+    if covers_none:
+        print(f"skipped {len(covers_none)} records whose table has numbers for the "
+              f"model but no row under any of these benchmarks' names "
+              f"(summary/other-suite tables): {', '.join(sorted(covers_none))}")
     if not findings:
         print("no figure row contradicted the card's text table")
         return 0

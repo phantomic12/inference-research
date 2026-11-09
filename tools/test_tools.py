@@ -2891,6 +2891,34 @@ class TestCrosscheckFigures(unittest.TestCase):
         self.assertFalse(c.same_value(64.7, 64.8))
         self.assertFalse(c.same_value(61.5, 52.1))
 
+    def test_summary_table_is_not_a_carrier(self):
+        """A table with numbers for the model but none of the benchmark rows.
+
+        `minicpm-v-4-5` publishes a single 'Avg Score' column beside the sizes,
+        and `d3-ultra` publishes its SR-Text MEAN where the record keeps the six
+        parts. Both counted as audited and every row was printed NOT IN TABLE.
+        """
+        c = self._mod()
+        record = {"id": "minicpm-v-4-5", "name": "MiniCPM-V 4.5", "benchmarks": [
+            {"name": "EMMA", "score": 34.8, "config": "read off the card figure"}]}
+        grid = [["", "MiniCPM-V 4.5"], ["Avg Score", "77.0"], ["Size", "8.7B"]]
+        res = c.audit(record, [grid])
+        self.assertEqual(res["absent"], [])
+        self.assertTrue(res["covers_none"])
+        self.assertFalse(res["no_column"])
+
+    def test_one_covering_row_makes_the_table_a_carrier(self):
+        """The gate is per record, not per row: a partial table still audits."""
+        c = self._mod()
+        record = {"id": "minicpm-v-4-5", "name": "MiniCPM-V 4.5", "benchmarks": [
+            {"name": "EMMA", "score": 34.8, "config": "read off the card figure"},
+            {"name": "MMBench", "score": 61.9, "config": "read off the card figure"}]}
+        grid = [["Model", "MMBench"], ["MiniCPM-V 4.5", "61.9"]]
+        res = c.audit(record, [grid])
+        self.assertFalse(res["covers_none"])
+        self.assertEqual(res["matched"], 1)
+        self.assertEqual(len(res["absent"]), 1)
+
     def test_agreeing_row_is_matched_not_flagged(self):
         c = self._mod()
         record = {"id": "qwen3-5-35b-a3b", "name": "Qwen3.5-35B-A3B", "benchmarks": [
