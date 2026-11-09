@@ -31,6 +31,10 @@ Design notes
   earlier hand-rolled pass produced ~100 false mismatches on `qwen3-5-*`.
 * A pipe table is usually transposed (models down the rows), so the grid is
   flipped when the model name sits in the first column.
+* A card names its model with a suffix the record id lacks ('MiniCPM-o 4.5-Instruct'
+  for `minicpm-o-4-5`); a single build/pass token is accepted so the column is
+  found, but sibling variants stay distinct measurements -- a value matching one
+  and not another is reported as VARIANT rather than silently accepted.
 * A card may publish more than one column for the same model (`twil-lm3` has
   `TwIL-LM3` and `TwIL-LM3*`, two scoring passes). A row agrees if it matches
   ANY of that model's columns; only a value in none of them is a mixup.
@@ -239,12 +243,38 @@ def bench_key(name: str) -> str:
     return norm(re.split(r"[·]", name)[-1])
 
 
+# A card names its own model with a build or deployment suffix the record id does
+# not carry: `minicpm-o-4-5` is published as 'MiniCPM-o 4.5-Instruct' and
+# 'MiniCPM-o 4.5-Thinking', `deepseek-v4-pro` as 'DeepSeek-V4-Pro-Base'. The
+# matcher used to allow only a two-character length difference, so those cards
+# never identified their own column: 13 records / 157 figure rows had a results
+# table in the README covering their own benchmarks and went uncompared, while
+# the summary still counted them as audited.
+#
+# Exactly one suffix token, and only a token naming a build or inference pass of
+# the SAME model. A hardware-backend column such as 'MiniCPM-o-4.5-hygon-FlagOS'
+# is a different measurement, not an alias.
+VARIANT = re.compile(
+    r"(instruct|thinking|nonthink|chat|base|preview|exp|sft|dpo|rl|it|hf|awq|gptq|fp8|"
+    r"gguf|mlx|bf16|f16|fp16)$")
+
+
+def _variant_of(cell: str, key: str, name: str) -> str | None:
+    """The suffix that turns this model id into the card's column label, or ''."""
+    hc = norm(cell)
+    if not hc.startswith(key) or hc == key:
+        return "" if hc == key else None
+    rest = hc[len(key):]
+    return rest if VARIANT.fullmatch(rest) else None
+
+
 def _matches_model(cell: str, key: str, name: str) -> bool:
     hc = norm(cell)
     if not hc or len(hc) < 5:
         return False
     return bool(hc == key or hc == name
-                or (abs(len(hc) - len(key)) <= 2 and (hc in key or key in hc)))
+                or (abs(len(hc) - len(key)) <= 2 and (hc in key or key in hc))
+                or _variant_of(cell, key, name) is not None)
 
 
 def orient(grid: list[list[str]], key: str, name: str) -> list[list[str]]:
@@ -266,8 +296,9 @@ def audit(record: dict, grids: list[list[list[str]]]) -> dict:
     key, name = norm(record["id"]), norm(record.get("name") or "")
     rows = [b for b in record.get("benchmarks") or [] if FIGURE.search(b.get("config") or "")]
     if not rows:
-        return {"fig_rows": 0, "matched": 0, "absent": [], "mismatched": []}
-    matched, absent, mismatched = 0, [], []
+        return {"fig_rows": 0, "matched": 0, "absent": [], "mismatched": [],
+                "variant_mixed": []}
+    matched, absent, mismatched, variant_mixed = 0, [], [], []
     table_values = set()
     for grid in grids:
         for r in grid:
@@ -283,12 +314,23 @@ def audit(record: dict, grids: list[list[list[str]]]) -> dict:
     # entitled to use. The failure this hunts -- a figure read off the WRONG
     # model's column -- has no agreeing column at all.
     seen: dict[str, list[tuple[float, str]]] = {}
+    # Value per published column label, kept separately from `seen`. A card can
+    # carry several columns for one model that are genuinely different
+    # measurements -- `minicpm-o-4-5` publishes 'MiniCPM-o 4.5-Instruct'
+    # (OpenCompass 77.6) beside 'MiniCPM-o 4.5-Thinking' (78.2). Treating those
+    # as interchangeable would silently accept a row read off the sibling
+    # variant, which is the same wrong-column failure this tool exists to catch.
+    by_variant: dict[str, dict[str, float]] = {}
     for grid in grids:
         grid = orient(grid, key, name)
         for hi, hrow in enumerate(grid[:15]):
             for ci, h in enumerate(hrow):
                 if not _matches_model(h, key, name):
                     continue
+                # Key on the normalised label, not the display string: a card
+                # writes the same model as 'Qwen3.6-35BA3B' and 'Qwen3.6-35B-A3B',
+                # and those two spellings are one column, not two variants.
+                label = norm(h)
                 for r in grid[hi + 1:]:
                     if len(r) <= ci:
                         continue
@@ -297,6 +339,7 @@ def audit(record: dict, grids: list[list[list[str]]]) -> dict:
                     if val is None or not bname or AGGREGATE.match(bname):
                         continue
                     seen.setdefault(bench_key(bname), []).append((val, bname))
+                    by_variant.setdefault(label, {})[bench_key(bname)] = val
 
     for b in rows:
         cands = seen.get(norm(b["name"]))
@@ -310,6 +353,13 @@ def audit(record: dict, grids: list[list[list[str]]]) -> dict:
             continue
         if any(same_value(b["score"], val) for val, _ in cands):
             matched += 1
+            k = bench_key(b["name"])
+            agreeing = [lab for lab, col in by_variant.items()
+                        if k in col and same_value(b["score"], col[k])]
+            if len(by_variant) > 1 and len(agreeing) < len(by_variant):
+                variant_mixed.append({"benchmark": b["name"], "score": b["score"],
+                                      "agrees_with": agreeing,
+                                      "differs_from": sorted(set(by_variant) - set(agreeing))})
             continue
         try:
             score = float(b["score"])
@@ -319,7 +369,8 @@ def audit(record: dict, grids: list[list[list[str]]]) -> dict:
         mismatched.append({"benchmark": b["name"], "record": score,
                            "card": val, "card_row": bname,
                            "also_in_row": [v for v, _ in cands[1:]]})
-    return {"fig_rows": len(rows), "matched": matched, "absent": absent, "mismatched": mismatched}
+    return {"fig_rows": len(rows), "matched": matched, "absent": absent,
+            "mismatched": mismatched, "variant_mixed": variant_mixed}
 
 
 def main() -> int:
@@ -366,7 +417,8 @@ def main() -> int:
         if not res["fig_rows"]:
             continue
         checked += 1
-        if res["mismatched"] or any(not a["in_card_anywhere"] for a in res["absent"]):
+        if res["mismatched"] or res["variant_mixed"] or any(
+                not a["in_card_anywhere"] for a in res["absent"]):
             findings.append((p.stem, repo, res))
 
     print(f"audited {checked} records with both figure rows and a text table")
@@ -377,6 +429,10 @@ def main() -> int:
         print(f"\n== {mid}  ({repo})  fig_rows={res['fig_rows']} matched={res['matched']}")
         for m in res["mismatched"]:
             print(f"   MISMATCH {m['benchmark']}: record {m['record']} vs card {m['card']} (row '{m['card_row']}')")
+        for v in res["variant_mixed"]:
+            print(f"   VARIANT  {v['benchmark']}: {v['score']} agrees with "
+                  f"{', '.join(v['agrees_with']) or 'no column'} but not "
+                  f"{', '.join(v['differs_from'])}")
         for a in res["absent"]:
             flag = "NOT IN TABLE" if not a["in_card_anywhere"] else "value present under another row"
             print(f"   ABSENT   {a['benchmark']}: {a['score']} -> {flag}")

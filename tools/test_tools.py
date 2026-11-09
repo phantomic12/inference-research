@@ -2714,6 +2714,69 @@ class TestCrosscheckFigures(unittest.TestCase):
         res = c.audit(record, [grid])
         self.assertEqual(len(res["mismatched"]), 1)
 
+    def test_suffixed_variant_column_is_found(self):
+        """A card names its own model with a build suffix the record id lacks.
+
+        `minicpm-o-4-5` is published as 'MiniCPM-o 4.5-Instruct' and
+        'DeepSeek-V4-Pro' as 'DeepSeek-V4-Pro-Base'. The old matcher allowed only a
+        two-character length difference, so these cards never identified their own
+        column -- 47 records / 335 figure rows carried a text table and were skipped
+        in silence while the summary still counted them as audited.
+        """
+        c = self._mod()
+        key, name = c.norm("minicpm-o-4-5"), c.norm("MiniCPM-o 4.5")
+        self.assertTrue(c._matches_model("MiniCPM-o 4.5-Instruct", key, name))
+        self.assertTrue(c._matches_model("MiniCPM-o 4.5-Thinking", key, name))
+        self.assertTrue(c._matches_model("MiniCPM-o 4.5", key, name))
+        self.assertTrue(c._matches_model("DeepSeek-V4-Pro-Base",
+                                         c.norm("deepseek-v4-pro"), c.norm("deepseek-v4-pro")))
+        # Unrelated models must not match just because they share a prefix.
+        self.assertFalse(c._matches_model("MiniCPM-o 4.5-hygon-FlagOS", key, name))
+        self.assertFalse(c._matches_model("Qwen3-Omni-30B-A3B-Instruct", key, name))
+
+    def test_variant_row_is_compared_not_skipped(self):
+        c = self._mod()
+        record = {"id": "minicpm-o-4-5", "name": "MiniCPM-o 4.5", "benchmarks": [
+            {"name": "OpenCompass", "score": 77.6, "config": "read off the card figure"}]}
+        grid = [["Model", "OpenCompass"],
+                ["MiniCPM-o 4.5-Instruct", "77.6"],
+                ["Qwen3-Omni-30B-A3B-Instruct", "75.7"]]
+        res = c.audit(record, [grid])
+        self.assertEqual(res["matched"], 1)
+        self.assertEqual(res["absent"], [])
+
+    def test_wrong_variant_is_still_caught(self):
+        """Two columns for one model are different measurements, not aliases.
+
+        Reading the Thinking column's 78.2 into a record that cites Instruct must
+        fail when Instruct is the only column the card publishes.
+        """
+        c = self._mod()
+        record = {"id": "minicpm-o-4-5", "name": "MiniCPM-o 4.5", "benchmarks": [
+            {"name": "OpenCompass", "score": 78.2, "config": "read off the card figure"}]}
+        grid = [["Model", "OpenCompass"], ["MiniCPM-o 4.5-Instruct", "77.6"]]
+        res = c.audit(record, [grid])
+        self.assertEqual(len(res["mismatched"]), 1)
+
+    def test_cross_variant_agreement_is_reported_not_hidden(self):
+        """A value matching one sibling variant but not the other is surfaced.
+
+        Unioning the variants would report plain success and hide a possible
+        wrong-variant read; it must be a variant_mixed note instead.
+        """
+        c = self._mod()
+        record = {"id": "minicpm-o-4-5", "name": "MiniCPM-o 4.5", "benchmarks": [
+            {"name": "OpenCompass", "score": 78.2, "config": "read off the card figure"}]}
+        grid = [["Model", "OpenCompass"],
+                ["MiniCPM-o 4.5-Instruct", "77.6"],
+                ["MiniCPM-o 4.5-Thinking", "78.2"]]
+        res = c.audit(record, [grid])
+        self.assertEqual(res["mismatched"], [])
+        self.assertEqual(len(res["variant_mixed"]), 1)
+        # Labels are the normalised columns, so the two spellings of one model
+        # ('Qwen3.6-35BA3B' / 'Qwen3.6-35B-A3B') collapse to a single variant.
+        self.assertEqual(res["variant_mixed"][0]["agrees_with"], ["minicpmo45thinking"])
+
     def test_transposed_pipe_table_is_oriented(self):
         """Markdown results tables usually list models down the rows."""
         c = self._mod()
