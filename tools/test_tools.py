@@ -2714,6 +2714,33 @@ class TestCrosscheckFigures(unittest.TestCase):
         res = c.audit(record, [grid])
         self.assertEqual(len(res["mismatched"]), 1)
 
+    def test_table_without_a_results_column_is_not_audited(self):
+        """A family/architecture table is not a second carrier for the numbers.
+
+        `internvl3-14b`'s README lists the InternVL3 series (1B..78B) in a pipe
+        table of vision/language parts. It has no results at all, yet its 84
+        figure rows were reported 'NOT IN TABLE' against that table and the
+        record counted as audited. 53 of 102 audited records were like this.
+        """
+        c = self._mod()
+        record = {"id": "internvl3-14b", "name": "InternVL3 14B", "benchmarks": [
+            {"name": "MMMU", "score": 67.1, "config": "read off the figure"}]}
+        grid = [["Model Name", "Vision Part", "Language Part"],
+                ["InternVL3-14B", "InternViT-300M-448px-V2_5", "Qwen2.5-14B"]]
+        res = c.audit(record, [grid])
+        self.assertEqual(res["absent"], [])
+        self.assertTrue(res["no_column"])
+
+    def test_column_with_numbers_is_audited(self):
+        """Guard against the skip swallowing a real results table."""
+        c = self._mod()
+        record = {"id": "internvl3-14b", "name": "InternVL3 14B", "benchmarks": [
+            {"name": "MMMU", "score": 67.1, "config": "read off the figure"}]}
+        grid = [["Model", "MMMU"], ["InternVL3-14B", "67.1"]]
+        res = c.audit(record, [grid])
+        self.assertFalse(res["no_column"])
+        self.assertEqual(res["matched"], 1)
+
     def test_suffixed_variant_column_is_found(self):
         """A card names its own model with a build suffix the record id lacks.
 

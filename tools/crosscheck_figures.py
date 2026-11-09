@@ -297,7 +297,7 @@ def audit(record: dict, grids: list[list[list[str]]]) -> dict:
     rows = [b for b in record.get("benchmarks") or [] if FIGURE.search(b.get("config") or "")]
     if not rows:
         return {"fig_rows": 0, "matched": 0, "absent": [], "mismatched": [],
-                "variant_mixed": []}
+                "variant_mixed": [], "no_column": False}
     matched, absent, mismatched, variant_mixed = 0, [], [], []
     table_values = set()
     for grid in grids:
@@ -369,8 +369,14 @@ def audit(record: dict, grids: list[list[list[str]]]) -> dict:
         mismatched.append({"benchmark": b["name"], "record": score,
                            "card": val, "card_row": bname,
                            "also_in_row": [v for v, _ in cands[1:]]})
+    # A table that offers this model no numbers is not a carrier for these rows,
+    # so none of them is 'absent' from it -- they are simply unverified. Reporting
+    # them as absent is what made 589 figure rows look like a defect.
+    if not seen:
+        absent = []
     return {"fig_rows": len(rows), "matched": matched, "absent": absent,
-            "mismatched": mismatched, "variant_mixed": variant_mixed}
+            "mismatched": mismatched, "variant_mixed": variant_mixed,
+            "no_column": not seen}
 
 
 def main() -> int:
@@ -388,7 +394,7 @@ def main() -> int:
             pass
 
     want = set(args.ids.split(",")) if args.ids else None
-    findings, checked = [], 0
+    findings, checked, no_column = [], 0, []
     for p in sorted(MODELS.glob("*.json")):
         if want and p.stem not in want:
             continue
@@ -416,12 +422,24 @@ def main() -> int:
         res = audit(record, grids)
         if not res["fig_rows"]:
             continue
+        if res["no_column"]:
+            # The README has a table, but not a results table for THIS model:
+            # `internvl3-14b` publishes only a family/architecture list, so its
+            # 84 figure rows were all reported 'NOT IN TABLE' against nothing
+            # and the record still counted as audited. 53 of 102 audited
+            # records were in this state, covering 589 figure rows.
+            no_column.append(p.stem)
+            continue
         checked += 1
         if res["mismatched"] or res["variant_mixed"] or any(
                 not a["in_card_anywhere"] for a in res["absent"]):
             findings.append((p.stem, repo, res))
 
-    print(f"audited {checked} records with both figure rows and a text table")
+    print(f"audited {checked} records with both figure rows and a results table "
+          f"for the model")
+    if no_column:
+        print(f"skipped {len(no_column)} records whose text table has no column "
+              f"of numbers for the model (family/architecture tables)")
     if not findings:
         print("no figure row contradicted the card's text table")
         return 0
