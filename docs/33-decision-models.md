@@ -103,6 +103,17 @@ These rows were scored on Decision Index 0.2.1. The 0.4.1 board rescored the pan
 | [LFM2.5-350M-RLCD full fine-tune](https://huggingface.co/notnotsamuel/LFM2.5-350M-RLCD) | **1.38** | 0.5 | 1.0 | 0.0 | 3.8 | 3.0 | 27 | 174 | 0.568 | — |
 
 
+## Self-reported runs on other editions (not comparable)
+
+Rows here were scored on a board edition other than 0.4.1 **by the model's own author**, not by the upstream board. They are kept as the only published number for that model and are never ranked against either table above.
+
+| Model | Edition | Index | Know. | Lang. | Retr. | Tools | Arts | Base |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| [AutoTrust-JEV-27B v1.1](https://huggingface.co/autotrust/AutoTrust-JEV-27B-v1.1) * | 0.3 | **67.31** | 55.16 | 73.38 | 66.97 | 85.19 | 51.08 | `Qwen/Qwen3.8-27B` |
+
+`*` = self-reported. `[[models/autotrust-jev-27b-v1-1]]` ran the official kit (commit `f5a6e4f`, vLLM 0.31.0, 1×B300, 16 concurrent clients, 140,178 complete requests) locally and states "pending maintainer verification". The card also prints a **raw** index of 75.62, which it warns is a different metric from the skill index; only 67.31 is recorded. No ECE and no board-standardised latency were published — its 64.8 ms median / 800.5 ms p95 are local concurrent timings and are not entered as board latency.
+
+
 ## How to read this against the worth-running table
 
 - **Do not compare an index to a capability score.** They are different scales answering different questions, and a 61.2 here is not "61.2%% of GPT" - it is a chance-corrected composite over 38 decision benchmarks.
