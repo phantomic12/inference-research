@@ -421,6 +421,14 @@ def load_quant_retention() -> dict:
     return out
 
 
+_LADDER_RE = re.compile(r"(?:IQ|Q)\d(?:_[A-Z0-9]+)*(?:\s*/\s*(?:IQ|Q)\d(?:_[A-Z0-9]+)*)+")
+
+
+def _is_ladder(row: dict) -> bool:
+    """True when one row's format names several quant levels (IQ2_M/IQ3_M/IQ4_XS/Q5_K_S)."""
+    return bool(_LADDER_RE.search(str(row.get("format") or "")))
+
+
 def build_worth_running() -> dict:
     _CONTEXT_TOKENS = 8192
     _MULTI_USERS = 16
@@ -682,10 +690,24 @@ def build_worth_running() -> dict:
     qr = load_quant_retention()
     for r in rows:
         cands = qr.get(r["id"]) or []
-        keep = [c for c in cands if c["bucket"] != "suspect"]
+        keep = [c for c in cands if c["bucket"] != "suspect" and not _is_ladder(c)]
+        ladders = [c for c in cands if _is_ladder(c)]
         if keep:
             best = max(keep, key=lambda c: (c.get("n") or 0, -abs(c["median_delta_pct"])))
             r["quant_retention"] = best
+        if ladders:
+            # A card that publishes IQ2_M/IQ3_M/IQ4_XS/Q5_K_S in one table has no single
+            # retention: the median spans four different bit-widths and the size_gib is the
+            # smallest file. Attaching that median to the smallest level read as "2.85 bpw
+            # costs 41%" when the 5.55 bpw build in the same card costs 19% PPL. Refuse.
+            lv = sorted({m.group(0) for c in ladders
+                         for m in re.finditer(r"(?:IQ|Q)\d(?:_[A-Z]+)*", str(c.get("format") or ""))})
+            r["quant_retention_ladder"] = {
+                "levels": lv,
+                "repos": [c.get("id") for c in ladders],
+                "why": "card publishes a multi-level ladder; a single median would be assigned to "
+                       "whichever level the size_gib came from, which is not what it measures",
+            }
             r["quant_retention_basis"] = (
                 "delta vs base across n benchmarks, read from the derivative repo's own "
                 "comparison table and recomputed with metric direction applied. Not a "

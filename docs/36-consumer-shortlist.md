@@ -40,14 +40,33 @@ a 67-download W4A16), so the official GGUF is the build to use.
 
 | model | params | 4-bit footprint | cap | headline | quant to run | quant cost |
 |---|---|---|---|---|---|---|
-| **Gemma 4 31B** | 31.3B dense | 22.5 GiB | **86.9** | MMLU-Pro 85.2, GPQA 84.3, LCB 80.0, IFEval 98.9 | `QuantTrio/…-AWQ` or `unsloth/…-GGUF` at Q4 | ⚠ only measured build is 2.85 bpw = **59%** |
+| **Gemma 4 31B** | 31.3B dense | 22.5 GiB | **86.9** | MMLU-Pro 85.2, GPQA 84.3, LCB 80.0, IFEval 98.9 | `pearsonkyle/…-imatrix-mtp` **Q5_K_S** (5.55 bpw, 19.85 GiB) or **IQ4_XS** (4.36 bpw) | see ladder below |
 | **Nanbeige4.3-33B** | 33.1B dense | 18.2 GiB | 84.6 | TB2.1 80.9, DeepSWE 65.5, SWE-Pro 60.3 (19 benchmarks) | `bartowski/…-GGUF` | unmeasured |
 | **Sage-A1.5** | 36.0B / 3.0B active | 18.1 GiB | 82.3 | 16 benchmarks | — | unmeasured |
 | **Qwen3.5-35B-A3B** | 35.0B / 3.0B active | 17.7 GiB | 80.6 | 15 benchmarks | `apolo13x/…-NVFP4` (4.00 bpw) | 99% |
 
-Gemma 4 31B is the smartest 24 GB model and the **one confirmed quant trap**: the only build with a
-published base comparison (`pearsonkyle/gemma4-31b-imatrix-mtp-GGUF`, 2.85 bpw) retains 59% — that
-is a broken quant, not a small one. Run it at ≥4 bpw or not at all.
+Gemma 4 31B is the smartest 24 GB model, and the only one in this class with a **published,
+base-referenced ladder** — `pearsonkyle/gemma4-31b-imatrix-mtp-GGUF`, four files against an FP16
+reference (PPL 215.5, KLD 0.000):
+
+| build | bpw | PPL | KLD (med) | SWE-rebench resolve |
+|---|---|---|---|---|
+| Q5_K_S | 5.55 | 256.5 (+19%) | 0.025 | 40% |
+| **IQ4_XS** | 4.36 | 319.4 (+48%) | 0.073 | **47%** |
+| IQ3_M | 3.76 | 734.1 (+241%) | 0.435 | — |
+| IQ2_M | 2.85 | 1040.0 (+383%) | 1.804 | — |
+
+Two things follow, and neither is "quantization ruins this model":
+
+- **4-bit is the practical floor.** IQ3_M triples the perplexity; there is no 3-bit build worth
+  running here, whatever the label says.
+- **PPL and agentic quality disagree.** IQ4_XS has the worse PPL (+48% vs +19%) and the better
+  tool-use resolve rate (47% vs 40%). For agent work take IQ4_XS; for prose take Q5_K_S. This is
+  exactly the split the quant-review playbook says to keep in separate columns.
+
+An earlier version of this page called this "2.85 bpw at 59% retention". That number was wrong: it
+was a median across all four levels, filed against the smallest file's size. `build_joined_views`
+now refuses to attach a scalar to a multi-level ladder and reports the levels instead.
 
 ## MoE offload class (≤64 GiB weights, streams from RAM)
 
