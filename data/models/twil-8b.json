@@ -1,0 +1,115 @@
+{
+ "id": "twil-8b",
+ "type": "model",
+ "name": "TwIL-8B",
+ "family": "granite",
+ "vendor": "webAI-Official",
+ "release_year": 2026,
+ "architecture": "dense",
+ "task": "text-generation",
+ "params_b": 8.792,
+ "active_params_b": 8.79,
+ "num_experts": null,
+ "experts_per_token": null,
+ "shared_expert": null,
+ "hidden_size": 4096,
+ "num_layers": 40,
+ "num_kv_heads": 8,
+ "head_dim": 128,
+ "gqa_ratio": 4,
+ "max_position_embeddings": 131072,
+ "context_scaling": "Inherited unchanged from ibm-granite/granite-4.2-8b (config.json max_position_embeddings 131072). This derivative does not publish a context-extension recipe of its own.",
+ "context_scaling_method": "native",
+ "activation": "SwiGLU",
+ "attention_variant": "full (RoPE), no sliding window",
+ "layer_types": [],
+ "attention_layer_indices": [],
+ "kv_cache_bytes_per_token": 327680,
+ "flops_per_token_active": 17580000000.0,
+ "open_weights": true,
+ "license": "other",
+ "base_model": "ibm-granite/granite-4.2-8b",
+ "derivative_kind": "finetune",
+ "notes": "ADDED 2026-11-11 from the trending feed (trendingScore 270, likes 279, downloads 43,175 as of the crawl). A full-parameter SFT + GRPO/DAPO RL fine-tune of ibm-granite/granite-4.2-8b (catalog record models/granite-4-2-8b), ships as full merged weights, not a LoRA. Architecture is inherited unchanged: same config.json as the base, so 40 layers, hidden 4096, 32 query / 8 KV heads, head_dim 128 (derived 4096/32; the config has no head_dim key), GQA 4, native 131072 context. params_b 8.792 read from safetensors.total. Hardware gate: dense, so active_params_b = params_b = 8.792, which is <= 40. Weight footprint 8.792 x 0.5 GiB = 4.40 GiB at ~4 bits, well under the 128 GiB ceiling, and the card ships a 4.98 GiB Q4_K_M GGUF that the author says runs on modest-VRAM GPUs. It is dense, not MoE, so it does NOT get the few-experts-routed-per-token preference; it passes on the size side because 8.8B at Q4 is a single-GPU load, not a spill-to-RAM load. KV basis: 40 layers (all full attention, no sliding window on the base) x 8 KV heads x 128 head_dim x 2 (K and V) x 2 B = 327,680 B/token, identical to the base record. WHY IT IS A CONTENDER: the card prints its own column beside a base-derived comparison and beats the base on LiveCodeBench v6 81.6 vs 73.24 (+8.4), GPQA Diamond 70.2 vs 64.14 (+6.1), MMLU-Pro 76.5 vs 74.04 (+2.5) and AIME 2025 88.3 vs 86.67 (+1.6). It also prints MATH-500 98.2, which the base card does not publish at all, and that number is above the catalog's previous 8-9B best (Qwen3-8B 97.4). READ THE CAVEATS BEFORE QUOTING THESE. (1) Four of the eight recorded rows carry a dagger on the card, meaning they were measured on the VERBOSE variant, not the default balanced one: LiveCodeBench, MMLU-Pro, HumanEval and IFBench. The two variants share weights but differ in trace length, so those rows are not the default checkpoint. (2) It LOSES to its own base on IFBench prompt: 74.4 vs the base's 79.33 (-4.9), even though the card's prose advertises +9.9 against Qwen3.5-9B. The base is the correct comparator and the loss is recorded. (3) It loses to Qwen3.5-9B on AIME 2026 (88.3 vs 92.5) and on knowledge benchmarks by double digits (GPQA Diamond -11.5 vs Qwen3.5-9B, -14.1 vs Gemma 4 31B); the card itself calls knowledge the largest gap and says 'It is not a knowledge model.' (4) TwIL-8B's LiveCodeBench v6 run records neither its version nor its date window, so the +16.0 gap the card advertises over Qwen3.5-9B (65.6) is not verified. (5) AIME/HMMT sets are 30-33 problems, so a 1.6-point gap is one problem and inside noise. (6) Every competitor number on the card is a republished vendor or third-party figure, not a re-run, and HumanEval comparators are community runs with mismatched caps. (7) Amath/STEM/IF training pools were 13-gram decontaminated against AIME, HMMT, MATH-500, GPQA, MMLU-Pro, HLE, IFEval, IFBench and LiveCodeBench, but HMMT Nov 2025 and the HumanEval/MBPP/CRUXEval suites were NOT in the decontamination set, so the HumanEval 93.2 row is the least trustworthy win. (8) No SWE-bench, tool-use or agentic evaluation was run, so this does not displace any agentic 8B in the catalog. LICENCE: webAI Non-Commercial License ver. 1.0, which is why license is 'other' and not the base's apache-2.0 - a non-commercial derivative of an Apache-2.0 base, permitted with attribution. Non-commercial use only.",
+ "status": "verified",
+ "confidence": 0.5,
+ "updated": "2026-11-11",
+ "sources": [
+  "hf-webai-official-twil-8b"
+ ],
+ "benchmarks": [
+  {
+   "name": "MATH-500",
+   "score": 98.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-webai-official-twil-8b",
+   "vendor_claim": true,
+   "config": "Card table 'Against open peers', column TwIL-8B (balanced variant, bf16). Base ibm-granite/granite-4.2-8b prints NO MATH-500 row on its own card, so there is no base column on this row; the catalog's 8B-class best was Qwen3-8B 97.4. Competitors in the table (Qwen3.5-9B 96.6, Gemma 4 31B 87.9) are published figures, not re-run. TwIL-8B measured with internal high-effort pass@1, thinking enabled; n not printed."
+  },
+  {
+   "name": "LiveCodeBench v6",
+   "score": 81.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-webai-official-twil-8b",
+   "vendor_claim": true,
+   "config": "Same table, TwIL-8B column 81.6 vs its own base ibm-granite/granite-4.2-8b 73.24 (base record models/granite-4-2-8b) = +8.4. FLAG: this row carries a dagger on the card, meaning it was measured on the VERBOSE variant, not balanced. Competitor columns are v6 too but the card admits TwIL-8B's own run version/date window is unrecorded."
+  },
+  {
+   "name": "GPQA Diamond",
+   "score": 70.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-webai-official-twil-8b",
+   "vendor_claim": true,
+   "config": "TwIL-8B column 70.2 vs base granite-4-2-8b 64.14 = +6.1. A win over its base but a clear LOSS to the 8-9B class leaders and to Qwen3.5-9B (81.7, -11.5) and Gemma 4 31B (84.3). The card itself calls knowledge the largest gap."
+  },
+  {
+   "name": "MMLU-Pro",
+   "score": 76.5,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-webai-official-twil-8b",
+   "vendor_claim": true,
+   "config": "Dagger row (verbose variant). Base granite-4-2-8b prints 74.04 = +2.5, but Qwen3.5-9B prints 82.5 (-6.0) and Gemma 4 31B 85.2."
+  },
+  {
+   "name": "HumanEval",
+   "score": 93.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-webai-official-twil-8b",
+   "vendor_claim": true,
+   "config": "Dagger row (verbose variant). Base card has no HumanEval row. Comparator figures are community runs; the card warns Gemma 4 31B's run used a 512-token cap with no room for thinking, so cross-model gaps here are not clean."
+  },
+  {
+   "name": "AIME 2025",
+   "score": 88.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-webai-official-twil-8b",
+   "vendor_claim": true,
+   "config": "TwIL-8B 88.3 vs base granite-4-2-8b 86.67 = +1.6. AIME sets are 30-33 problems, so one problem is worth ~3 points and this gap is inside noise; the card says so."
+  },
+  {
+   "name": "IFBench (prompt)",
+   "score": 74.4,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-webai-official-twil-8b",
+   "vendor_claim": true,
+   "config": "LOSES TO ITS OWN BASE: dagger row (verbose). Base ibm-granite/granite-4.2-8b prints IFBench (prompt) 79.33 on its card, so this is -4.9 versus the model it was trained from, even though the card's own prose advertises +9.9 vs Qwen3.5-9B (64.5). Recorded because the loss is real and the base is the correct comparison."
+  },
+  {
+   "name": "AIME 2026",
+   "score": 88.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "hf-webai-official-twil-8b",
+   "vendor_claim": true,
+   "config": "TwIL-8B 88.3 vs Qwen3.5-9B 92.5 (-4.2) and Gemma 4 31B 89.2 (-0.9). A loss on this row; competitor figures from MathArena. Also a loss against the catalog's 8B-class entries that publish AIME 2026."
+  }
+ ],
+ "release_date": "2026-10-14"
+}
