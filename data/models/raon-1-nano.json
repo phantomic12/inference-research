@@ -1,0 +1,208 @@
+{
+  "id": "raon-1-nano",
+  "type": "model",
+  "name": "KRAFTON Raon-1 nano",
+  "status": "verified",
+  "confidence": 0.82,
+  "updated": "2026-11-12",
+  "sources": [
+    "krafton-raon-1-nano-model-card",
+    "krafton-raon-1-nano-config-json"
+  ],
+  "family": "raon",
+  "vendor": "KRAFTON AI",
+  "release_year": 2026,
+  "architecture": "hybrid-attention-ssm",
+  "params_b": 3.53,
+  "active_params_b": 1.5,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 1536,
+  "num_layers": 24,
+  "num_kv_heads": 1,
+  "head_dim": 576,
+  "gqa_ratio": 32,
+  "max_position_embeddings": 262144,
+  "context_scaling": "Native 262,144 tokens. config.json sets mla_use_nope: true and rope_parameters: null, so the 6 gated-MLA layers carry no positional encoding at all - there is no rope_scaling block because there is no rope. The 18 Raon Delta Attention layers are recurrent with a fixed-size state, which is where length behaviour comes from instead. Card states 'Position Encoding: NoPE' and 262,144 native; no window beyond that is claimed.",
+  "activation": "silu",
+  "attention_variant": "Hybrid RDA 3:1 with gated MLA, from config.json: mla_layers [4,8,12,16,20,24] (1-indexed on the card, so 0-indexed 3,7,11,15,19,23) are the only 6 layers that hold a per-token KV cache, and rda_layers covers the other 18 with Raon Delta Attention (gated delta-rule linear attention, separate erase and write gates, fixed-size recurrent state). The MLA cache is latent, not per-head: kv_lora_rank 512 + qk_rope_head_dim 64 = 576 floats/token/layer, so num_kv_heads is recorded as 1 and head_dim as 576 to express that latent rather than a per-head geometry. Raon-mHC residual with 4 streams (raon_mhc_streams 4). Card: '16 attention heads for RDA; 32 for Gated MLA', 'Attention Head Dimension 128 for RDA; 192 QK / 128 V for Gated MLA'.",
+  "kv_cache_bytes_per_token": 6912,
+  "flops_per_token_active": 3000000000.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "notes": "ADDED 2026-11-12 from the HF trending feed (rank ~24, 58 downloads, 62 likes at crawl). A trained-from-scratch Korean/English model by KRAFTON AI, NOT a derivative: the mHC/RDA stack is its own. It IS derived by MoE-to-Dense pruning from the catalog's raon-1-mini-preview (30B-A4B) per the card's Training section (arXiv 2605.28207), then continued pre-training on 3T tokens - so it is a distinct record, not a fine-tune, and base_model is deliberately left unset because it is a new architecture, not a post-train of that checkpoint. PARAMS: HF safetensors total 3,529,911,376 (BF16 3,529,874,224 + F32 37,152) = 3.53B, which includes the 55M MTP module. The card's own figures are '3.1B main model + 55M MTP = 3.2B checkpoint' and '1.5B effective parameters (3.1B total, including a 1.5B per-layer embedding table)'. active_params_b is recorded as 1.5 because the per-layer embedding table is a lookup, not matmul, so generation compute tracks the 1.5B slice: flops_per_token_active = 2 x 1.5e9 = 3.0e9. Memory footprint is the full 3.53B. KV: the card claims 'about 7 KiB per token in BF16' and the arithmetic agrees - 6 cache-holding layers x (512 + 64) x 2 bytes = 6,912 B/token, and the other 18 layers are constant-state. That is the reason this record matters for a low-VRAM box: 262,144 tokens costs ~1.8 GiB of cache rather than the ~26 GiB a 24-layer GQA(16/4, head_dim 128) dense stack would need. EVIDENCE: the card's benchmark HTML table compares against Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. It wins IFBench 75.9 vs 73.7 (LFM3) and 63.8 (MiniCPM5), FACTS Grounding 44.4 vs 13.8 (Qwen3.5-2B), PersonaMem v2 38.8 vs 29.2, PrefEval 44.0 vs 26.1, and the Korean rows by wide margins (Chatbot Korean 91.0 vs 42.2). It LOSES MMLU-Redux to MiniCPM5-2B 84.0 (81.1 for nano), BFCL v4 to LFM3 67.2 (56.3), NL2SH to Gemma 4 E2B 62.6 (58.0) and BrowseComp Plus to MiniCPM5 37.2 (34.5). CAVEATS: every number is vendor-run. The card names per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 + presence 1.5 elsewhere) but prints no harness build and no compile (SGLang/vLLM/llama.cpp) for the table; three benchmarks are internal (Office Work Bench, Chatbot Korean) and one is a 32k-context setting (PersonaMem v2), so cross-card comparison is indicative only. Rows are recorded only where a peer column exists in the same table.",
+  "task": "text-generation",
+  "context_scaling_method": "other",
+  "layer_types": [
+    "linear_attention",
+    "linear_attention",
+    "linear_attention",
+    "full_attention",
+    "linear_attention",
+    "linear_attention",
+    "linear_attention",
+    "full_attention",
+    "linear_attention",
+    "linear_attention",
+    "linear_attention",
+    "full_attention",
+    "linear_attention",
+    "linear_attention",
+    "linear_attention",
+    "full_attention",
+    "linear_attention",
+    "linear_attention",
+    "linear_attention",
+    "full_attention",
+    "linear_attention",
+    "linear_attention",
+    "linear_attention",
+    "full_attention"
+  ],
+  "attention_layer_indices": [
+    3,
+    7,
+    11,
+    15,
+    19,
+    23
+  ],
+  "benchmarks": [
+    {
+      "name": "IFBench",
+      "score": 75.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. WINS: LFM3-1.7B 73.7, MiniCPM5-2B 63.8, Qwen3.5-2B 45.7, Gemma 4 E2B 39.4 - best on the card."
+    },
+    {
+      "name": "MultiChallenge",
+      "score": 40.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. WINS: LFM3-1.7B 39.0, Qwen3.5-2B 37.0, Gemma 4 E2B 32.3, MiniCPM5-2B 28.1 - best on the card."
+    },
+    {
+      "name": "FACTS Grounding (context following)",
+      "score": 44.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. WINS: Gemma 4 E2B 40.5, MiniCPM5-2B 28.4, Qwen3.5-2B 13.8, LFM3-1.7B 7.6."
+    },
+    {
+      "name": "PersonaMem v2 (32k context setting)",
+      "score": 38.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. WINS: Gemma 4 E2B 32.7, MiniCPM5-2B 29.3, Qwen3.5-2B 29.2, LFM3-1.7B 28.8. Card footnote 1: 32k context setting."
+    },
+    {
+      "name": "PrefEval (generation, avg of 10/70/150 turns)",
+      "score": 44.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. WINS: Qwen3.5-2B 26.1, MiniCPM5-2B 24.4, Gemma 4 E2B 23.3, LFM3-1.7B 19.6."
+    },
+    {
+      "name": "Chatbot Korean (internal)",
+      "score": 91.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. WINS: Gemma 4 E2B 87.6, LFM3-1.7B 58.3, Qwen3.5-2B 42.2, MiniCPM5-2B 41.6. Card footnote 5: internal benchmark, not publicly released - treat as vendor-only evidence."
+    },
+    {
+      "name": "CLIcK (ko)",
+      "score": 65.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. WINS: Gemma 4 E2B 62.2, Qwen3.5-2B 54.8, MiniCPM5-2B 54.6, LFM3-1.7B 54.1."
+    },
+    {
+      "name": "KMMLU-Redux (ko)",
+      "score": 50.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. WINS: Qwen3.5-2B 46.1, Gemma 4 E2B 44.9, LFM3-1.7B 45.2, MiniCPM5-2B 43.0."
+    },
+    {
+      "name": "HAE-RAE 1.1 (ko)",
+      "score": 44.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. LOSS: Gemma 4 E2B 45.2 above it; beats LFM3-1.7B 34.3, Qwen3.5-2B 36.2, MiniCPM5-2B 36.1."
+    },
+    {
+      "name": "BFCL v4 (general function calling)",
+      "score": 56.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. LOSS: LFM3-1.7B 67.2 and MiniCPM5-2B 61.0 are above it; beats Qwen3.5-2B 41.2 and Gemma 4 E2B 37.9."
+    },
+    {
+      "name": "NL2SH-ALFA (terminal)",
+      "score": 58.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. LOSS: Gemma 4 E2B 62.6 and MiniCPM5-2B 61.4 above; beats Qwen3.5-2B 43.9 and LFM3-1.7B 57.3."
+    },
+    {
+      "name": "AndroidControl (mobile, avg HL/LL)",
+      "score": 36.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. WINS: Gemma 4 E2B 35.0, MiniCPM5-2B 31.7, Qwen3.5-2B 26.9, LFM3-1.7B 17.5."
+    },
+    {
+      "name": "Search: BrowseComp Plus",
+      "score": 34.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. LOSS: MiniCPM5-2B 37.2 above it; beats LFM3-1.7B 33.6, Qwen3.5-2B 25.7, Gemma 4 E2B 17.2."
+    },
+    {
+      "name": "Office Work Bench (ko, internal)",
+      "score": 49.2,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. WINS: LFM3-1.7B 39.8, MiniCPM5-2B 33.9, Gemma 4 E2B 19.8, Qwen3.5-2B 15.7. Card footnote 3: internal benchmark, not publicly released."
+    },
+    {
+      "name": "LOSS: MMLU-Redux",
+      "score": 81.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "krafton-raon-1-nano-model-card",
+      "vendor_claim": true,
+      "config": "Card HTML table 'Benchmark Results', column 'Raon-1 nano (E1.5B)'; peer columns are Qwen3.5-2B, Gemma 4 E2B (5.1B total / E2.3B), MiniCPM5-2B and LFM3-1.7B. Vendor-run; the card prints per-benchmark sampling settings (temp 0.7 knowledge, 1.0 tool use, 0.1 with presence penalty 1.5 for the rest) and says baselines use each model's own recommended settings, but prints no harness build or serving compile for this table. LOSES to MiniCPM5-2B 84.0 and Qwen3.5-2B 81.5; ties LFM3-1.7B 81.1; beats Gemma 4 E2B 78.9."
+    }
+  ]
+}
