@@ -11,14 +11,16 @@ Within the Decision Index the weight is fixed by the suite, not by us: knowledge
 
 | # | Model | Index | Know. | Lang. | Retr. | Tools | Arts | Median ms | p95 ms | ECE | Params | Base |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| 1 | [KnowLine 31B Gen1](https://huggingface.co/PelaAI/KnowLine-31B-Gen1) | **71.86** | 59.4 | 72.0 | 73.0 | 84.7 | 60.5 | 204 | 1822 | 0.032 | 31.3B | `google/gemma-4-31B-it` |
-| 2 | [Fastino GLiDE 1.2](https://huggingface.co/fastino/GLiDE) | **71.52** | 60.6 | 75.5 | 72.2 | 88.0 | 62.6 | 93 | 1121 | 0.020 | 27.8B | `Qwen/Qwen3.8-27B` |
-| 3 | [Sieve 31B v3](https://huggingface.co/sthanika-ai/Sieve-31B-v3) | **71.10** | 61.2 | 71.6 | 76.1 | 86.9 | 62.2 | 232 | 1520 | 0.054 | 31.3B | `google/gemma-4-31B-it` |
-| 4 | [Turion Jev 31B](https://huggingface.co/turion-ai/turion-jev-31b) | **70.47** | 55.4 | 69.9 | 71.2 | 78.7 | 51.3 | 144 | 815 | 0.019 | 31.3B | `google/gemma-4-31B-it` |
-| 5 | [vLLM-SR d3-ultra (Decision 3.0, 27B)](https://huggingface.co/vllm-sr/d3-ultra) | **70.18** | 62.3 | 72.3 | 71.8 | 87.8 | 63.5 | 200 | 674 | 0.067 | 26.1B | `Qwen/Qwen3.8-27B` |
-| 12 | [Perplexity Decider v1.2 (27B)](https://huggingface.co/perplexity-ai/pplx-decider-v1.2) | **67.98** | 55.3 | 71.9 | 68.1 | 85.4 | 56.2 | 144 | 1552 | 0.055 | 26.1B | `Qwen/Qwen3.8-27B` |
+| 1 | [karpo-decision-31B](https://huggingface.co/MachinePulseAI/karpo-decision-31B) | **73.86** | 65.5 | 76.8 | 76.4 | 88.4 | 68.2 | 94 | 586 | 0.048 | 31.3B | `google/gemma-4-31B-it` |
+| 2 | [Fastino GLiDE 1.2](https://huggingface.co/fastino/GLiDE) | **73.37** | 62.3 | 75.8 | 72.8 | 87.3 | 62.6 | 122 | 1545 | 0.021 | 27.8B | `Qwen/Qwen3.8-27B` |
+| 6 | [KnowLine 31B Gen1.5](https://huggingface.co/PelaAI/KnowLine-31B-Gen1.5) | **71.91** | 59.4 | 72.8 | 73.2 | 85.4 | 60.5 | 202 | 2633 | 0.033 | 31.3B | `google/gemma-4-31B-it` |
+| 9 | [Sieve 31B v3](https://huggingface.co/sthanika-ai/Sieve-31B-v3) | **71.10** | 61.2 | 71.6 | 76.1 | 86.9 | 62.2 | 232 | 1520 | 0.054 | 31.3B | `google/gemma-4-31B-it` |
+| 11 | [Turion Jev 31B](https://huggingface.co/turion-ai/turion-jev-31b) | **70.47** | 55.4 | 69.9 | 71.2 | 78.7 | 51.3 | 144 | 815 | 0.019 | 31.3B | `google/gemma-4-31B-it` |
+| 14 | [vLLM-SR d3-ultra (Decision 3.0, 27B)](https://huggingface.co/vllm-sr/d3-ultra) | **70.18** | 62.3 | 72.3 | 71.8 | 87.8 | 63.5 | 200 | 674 | 0.067 | 26.1B | `Qwen/Qwen3.8-27B` |
+| 26 | [Perplexity Decider v1.2 (27B)](https://huggingface.co/perplexity-ai/pplx-decider-v1.2) | **67.98** | 55.3 | 71.9 | 68.1 | 85.4 | 56.2 | 144 | 1552 | 0.055 | 26.1B | `Qwen/Qwen3.8-27B` |
+| 27 | [AutoTrust-JEV-27B v1.1](https://huggingface.co/autotrust/AutoTrust-JEV-27B-v1.1) | **67.95** | 55.2 | 73.4 | 67.0 | 85.2 | 51.0 | 80 | 861 | 0.067 | 27.4B | `Qwen/Qwen3.8-27B` |
 
-`*` = self-reported. 0 of 6 rows are the author's own run and the upstream board has not reproduced them; every other row is board-validated on one NVIDIA RTX PRO 6000.
+`*` = self-reported. 0 of 8 rows are the author's own run and the upstream board has not reproduced them; every other row is board-validated on one NVIDIA RTX PRO 6000.
 
 
 ## Previous board edition (not comparable)
@@ -101,17 +103,6 @@ These rows were scored on Decision Index 0.2.1. The 0.4.1 board rescored the pan
 | [Verdict](https://huggingface.co/heman10x/rlcd-modernbert-151m) | **1.87** | 0.4 | 1.5 | 0.0 | 6.6 | 2.0 | 11 | 60 | 0.154 | `knowledgator/gliclass-modern-base-v2.0` |
 | [Lumma-Fev-0.1B](https://huggingface.co/FrontiersMind/Lumma-fev-0.1b) | **1.78** | 1.5 | 0.6 | 2.5 | 2.6 | 2.6 | 21 | 113 | 0.157 | `FrontiersMind/Nandi-Mini-150M` |
 | [LFM2.5-350M-RLCD full fine-tune](https://huggingface.co/notnotsamuel/LFM2.5-350M-RLCD) | **1.38** | 0.5 | 1.0 | 0.0 | 3.8 | 3.0 | 27 | 174 | 0.568 | — |
-
-
-## Self-reported runs on other editions (not comparable)
-
-Rows here were scored on a board edition other than 0.4.1 **by the model's own author**, not by the upstream board. They are kept as the only published number for that model and are never ranked against either table above.
-
-| Model | Edition | Index | Know. | Lang. | Retr. | Tools | Arts | Base |
-|---|---|---:|---:|---:|---:|---:|---:|---|
-| [AutoTrust-JEV-27B v1.1](https://huggingface.co/autotrust/AutoTrust-JEV-27B-v1.1) * | 0.3 | **67.31** | 55.16 | 73.38 | 66.97 | 85.19 | 51.08 | `Qwen/Qwen3.8-27B` |
-
-`*` = self-reported. `[[models/autotrust-jev-27b-v1-1]]` ran the official kit (commit `f5a6e4f`, vLLM 0.31.0, 1×B300, 16 concurrent clients, 140,178 complete requests) locally and states "pending maintainer verification". The card also prints a **raw** index of 75.62, which it warns is a different metric from the skill index; only 67.31 is recorded. No ECE and no board-standardised latency were published — its 64.8 ms median / 800.5 ms p95 are local concurrent timings and are not entered as board latency.
 
 
 ## How to read this against the worth-running table
