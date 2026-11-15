@@ -112,10 +112,10 @@
   "license": "apache-2.0",
   "base_model": "Qwen/Qwen3.8-27B",
   "derivative_kind": "finetune",
-  "notes": "ADDED 2026-11-10 from the HF trending feed (trendingScore 118.5, created 2026-10-17, 1,400 likes). A decision model (task=decision): it returns per-option probabilities for a schema of typed questions in ONE forward pass with no generated text, so chat and refusal benchmarks say nothing about it - it is excluded from the worth-running ranking by construction and belongs in docs/33-decision-models.md. Derived from Qwen/Qwen3.8-27B: the sibling autotrust/JEV-27B tags base_model Qwen/Qwen3.8-27B, and this v1.1 has the same 27,356,728,560-parameter tensor set (identical safetensors total). It does NOT carry a base_model tag of its own, which is why base_model was passed explicitly; every architecture field above is inherited unchanged from the base record models/qwen3-8-27b (64 layers, hybrid Gated DeltaNet with full attention every 4th layer = 16 of 64, hidden 5120, 16 query / 4 KV heads, head_dim 256, 262144 native context). PARAMS: 27.357B from safetensors (all BF16); active equals that on the schema's dense basis, and flops_per_token_active = 2 x 27.781e9 = 5.5562e10 using the base record's active count, matching the convention already used by models/clef and models/jev-27b-vl. Note params_b (27.357) is below active_params_b (27.781) for the same reason as arete-27b: the MTP head is not in the released checkpoint. KV inherits 65,536 B/token = 16 full-attention layers x 2 x 4 KV heads x 256 head_dim x 2 B; the 48 linear-attention layers hold a constant DeltaNet state and are excluded. HARDWARE GATE: passes - 27.357B active (<= 40) and 27.357 x 0.5 = 13.7 GiB at the 4-bit planning figure. Card says serve with MAX_LEN=32768 on an 80 GB card. WHAT THE CARD CLAIMS: public index 67.31 on Decision Index 0.3 (37 benchmarks, 140,178 completed scoreable requests, official kit commit f5a6e4f, vLLM 0.31.0, 1x B300, 16 concurrent clients), with area skill scores Tools 85.19 / Language 73.38 / Retrieval 66.97 / Knowledge 55.16 / Arts 51.08. The card also prints a RAW index of 75.62 and warns explicitly that raw and skill index are different metrics - only 67.31 is recorded here. SELF-REPORTED: the card states 'complete local evaluation using the official evaluation kit, self-reported pending maintainer verification', so every row has vendor_claim true, and the card reports no private/Full score. LATENCY is local and concurrent (median 64.8 ms, mean 178.8 ms, p95 800.5 ms, 16 clients on one B300) - the card itself says these are not standardised leaderboard-hardware measurements, so they are quoted in prose and NOT entered as board latency. ECE is not printed for this run and is left null rather than invented. NOT RANKABLE AGAINST THE BOARD: the catalog's decision_index.jsonl and docs/33 carry editions 0.2.1 and 0.4.1. This run is on 0.3, a third scale, so it is deliberately NOT appended to decision_index.jsonl (that file is only updated from an actual board read) and no rank is claimed; 67.31 is not comparable to the 0.4.1 index values. WHAT IT LOSES, per its own tables: on GPQA Diamond 54.59 vs Jev 1.14 at 75.51, MMLU-Pro 73.65 vs 82.13, CLadder 81.02 vs 88.58, HLE 16.57 vs 19.36, MMLU-Pro and BBH fixed-option both trail Jev 1.14; the card calls HLE near chance and ChessBench, humour preference and consensus ranking weak. It does beat both reference columns broadly else where (BFCL 97.23, CLINC150+OOS 97.08, WinoGrande 95.26, CRUXEval 85.44) - but those reference columns are the labs' published runs, not re-runs, so the card's own warning applies: descriptive cross-run comparison. LICENCE apache-2.0, including its decision readout head.",
+  "notes": "ADDED 2026-11-10 from the HF trending feed (trendingScore 118.5, created 2026-10-17, 1,400 likes). A decision model (task=decision): it returns per-option probabilities for a schema of typed questions in ONE forward pass with no generated text, so chat and refusal benchmarks say nothing about it - it is excluded from the worth-running ranking by construction and belongs in docs/33-decision-models.md. Derived from Qwen/Qwen3.8-27B: the sibling autotrust/JEV-27B tags base_model Qwen/Qwen3.8-27B, and this v1.1 has the same 27,356,728,560-parameter tensor set (identical safetensors total). It does NOT carry a base_model tag of its own, which is why base_model was passed explicitly; every architecture field above is inherited unchanged from the base record models/qwen3-8-27b (64 layers, hybrid Gated DeltaNet with full attention every 4th layer = 16 of 64, hidden 5120, 16 query / 4 KV heads, head_dim 256, 262144 native context). PARAMS: 27.357B from safetensors (all BF16); active equals that on the schema's dense basis, and flops_per_token_active = 2 x 27.781e9 = 5.5562e10 using the base record's active count, matching the convention already used by models/clef and models/jev-27b-vl. Note params_b (27.357) is below active_params_b (27.781) for the same reason as arete-27b: the MTP head is not in the released checkpoint. KV inherits 65,536 B/token = 16 full-attention layers x 2 x 4 KV heads x 256 head_dim x 2 B; the 48 linear-attention layers hold a constant DeltaNet state and are excluded. HARDWARE GATE: passes - 27.357B active (<= 40) and 27.357 x 0.5 = 13.7 GiB at the 4-bit planning figure. Card says serve with MAX_LEN=32768 on an 80 GB card. WHAT THE CARD CLAIMS: public index 67.31 on Decision Index 0.3 (37 benchmarks, 140,178 completed scoreable requests, official kit commit f5a6e4f, vLLM 0.31.0, 1x B300, 16 concurrent clients), with area skill scores Tools 85.19 / Language 73.38 / Retrieval 66.97 / Knowledge 55.16 / Arts 51.08. The card also prints a RAW index of 75.62 and warns explicitly that raw and skill index are different metrics - only 67.31 is recorded here. SELF-REPORTED: the card states 'complete local evaluation using the official evaluation kit, self-reported pending maintainer verification', so every row has vendor_claim true, and the card reports no private/Full score. LATENCY is local and concurrent (median 64.8 ms, mean 178.8 ms, p95 800.5 ms, 16 clients on one B300) - the card itself says these are not standardised leaderboard-hardware measurements, so they are quoted in prose and NOT entered as board latency. ECE is not printed for this run and is left null rather than invented. NOT RANKABLE AGAINST THE BOARD: the catalog's decision_index.jsonl and docs/33 carry editions 0.2.1 and 0.4.1. This run is on 0.3, a third scale, so it is deliberately NOT appended to decision_index.jsonl (that file is only updated from an actual board read) and no rank is claimed; 67.31 is not comparable to the 0.4.1 index values. WHAT IT LOSES, per its own tables: on GPQA Diamond 54.59 vs Jev 1.14 at 75.51, MMLU-Pro 73.65 vs 82.13, CLadder 81.02 vs 88.58, HLE 16.57 vs 19.36, MMLU-Pro and BBH fixed-option both trail Jev 1.14; the card calls HLE near chance and ChessBench, humour preference and consensus ranking weak. It does beat both reference columns broadly else where (BFCL 97.23, CLINC150+OOS 97.08, WinoGrande 95.26, CRUXEval 85.44) - but those reference columns are the labs' published runs, not re-runs, so the card's own warning applies: descriptive cross-run comparison. LICENCE apache-2.0, including its decision readout head. UPDATE 2026-11-15: the 2026-11-12 board has now SCORED this checkpoint on edition 0.4.1, so the 0.3 self-report is no longer the only number and the model is no longer 'not rankable'. Board row: full score 67.95 at rank 27 of 300 (public index 67.32, rank 44), axes Knowledge 55.19 / Language 73.40 / Retrieval 66.97 / Tools 85.19 / Arts 50.99, median 79.9 ms and p95 861.2 ms on the board's RTX PRO 6000 single-request path, ECE 0.0672 at accuracy 0.7817 (Brier 0.3084, n=34411). Those rows are added below with vendor_claim FALSE - they are the board's run, not AutoTrust's. The board records the submitted public 0.3 run as adopted at kit rescore 67.32 with 99.65% decision agreement over 831 rows, and its meta.base_model is vllm-sr/d3 (the checkpoint v1.1 was fine-tuned from), which is one rung below this record's base_model Qwen/Qwen3.8-27B - both are correct: the architecture is inherited from Qwen3.8-27B, the weights are trained on top of d3. The 0.3 card numbers above stay as history and are NOT comparable to the 0.4.1 rows.",
   "status": "verified",
-  "confidence": 0.5,
-  "updated": "2026-11-10",
+  "confidence": 0.8,
+  "updated": "2026-11-15",
   "sources": [
     "hf-autotrust-autotrust-jev-27b-v1-1"
   ],
@@ -179,6 +179,96 @@
       "vendor_claim": true,
       "config": "Same table, 6 indexed benchmarks.",
       "edition": "0.3"
+    },
+    {
+      "name": "Decision Index 0.4.1 full score (balanced_skill)",
+      "score": 67.95,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "decision-index-0-4-1",
+      "vendor_claim": false,
+      "config": "Rank 27 of 300 by full score on the board generated 2026-11-12T12:34:44Z. Chance-corrected (0 = chance, 100 = perfect), 60% private same-skill / 40% private new-domain. This is the board's run of the released checkpoint, not the author's - vendor_claim is therefore FALSE.",
+      "edition": "0.4.1"
+    },
+    {
+      "name": "Decision Index 0.4.1 public index",
+      "score": 67.32,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "decision-index-0-4-1",
+      "vendor_claim": false,
+      "config": "Board public index (rank 44 of 300), the 37-benchmark chance-corrected panel. NOT comparable to the 0.3 card number above despite the near-identical value: different panel and different private/public split.",
+      "edition": "0.4.1"
+    },
+    {
+      "name": "Decision Index 0.4.1 axis: Tools & Automation",
+      "score": 85.19,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "decision-index-0-4-1",
+      "vendor_claim": false,
+      "config": "Board category sub-score, 5 indexed benchmarks. Same value as the card's 0.3 run to two decimals, which is a coincidence of rounding, not a reproduction.",
+      "edition": "0.4.1"
+    },
+    {
+      "name": "Decision Index 0.4.1 axis: Language Understanding",
+      "score": 73.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "decision-index-0-4-1",
+      "vendor_claim": false,
+      "config": "Board category sub-score, 9 indexed benchmarks.",
+      "edition": "0.4.1"
+    },
+    {
+      "name": "Decision Index 0.4.1 axis: Retrieval & Classification",
+      "score": 66.97,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "decision-index-0-4-1",
+      "vendor_claim": false,
+      "config": "Board category sub-score, 6 indexed benchmarks.",
+      "edition": "0.4.1"
+    },
+    {
+      "name": "Decision Index 0.4.1 axis: Knowledge & Reasoning",
+      "score": 55.19,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "decision-index-0-4-1",
+      "vendor_claim": false,
+      "config": "Board category sub-score, 11 indexed benchmarks.",
+      "edition": "0.4.1"
+    },
+    {
+      "name": "Decision Index 0.4.1 axis: Arts & Human Taste",
+      "score": 50.99,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "decision-index-0-4-1",
+      "vendor_claim": false,
+      "config": "Board category sub-score, 6 indexed benchmarks.",
+      "edition": "0.4.1"
+    },
+    {
+      "name": "Decision Index 0.4.1 median latency (ms, lower better)",
+      "score": 79.9,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "decision-index-0-4-1",
+      "vendor_claim": false,
+      "config": "Board single-request measurement on 1x RTX PRO 6000, milliseconds. The fastest median among the eight 0.4.1 rows in docs/33.",
+      "edition": "0.4.1"
+    },
+    {
+      "name": "Decision Index 0.4.1 p95 latency (ms, lower better)",
+      "score": 861.2,
+      "scale": 100,
+      "higher_is_better": false,
+      "source": "decision-index-0-4-1",
+      "vendor_claim": false,
+      "config": "Board p95, milliseconds, same hardware. p95 is 10.8x the median here, the widest tail in the docs/33 table.",
+      "edition": "0.4.1"
     }
   ]
 }
