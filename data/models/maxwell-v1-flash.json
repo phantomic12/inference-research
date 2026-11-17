@@ -1,0 +1,174 @@
+{
+  "id": "maxwell-v1-flash",
+  "type": "model",
+  "name": "Maxwell-V1.0-Flash",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-11-17",
+  "sources": [
+    "maxwell-model-maxwell-v1-flash-model-card",
+    "maxwell-model-maxwell-v1-flash-config-json"
+  ],
+  "family": "maxwell",
+  "vendor": "Maxwell Team",
+  "release_year": 2026,
+  "release_date": "2026-10-13",
+  "architecture": "moe",
+  "params_b": 36.811,
+  "active_params_b": 3.0,
+  "num_experts": 256,
+  "experts_per_token": 12,
+  "shared_expert": true,
+  "hidden_size": 2048,
+  "num_layers": 45,
+  "num_kv_heads": 4,
+  "head_dim": 128,
+  "gqa_ratio": 8,
+  "max_position_embeddings": 262144,
+  "context_scaling": "native to 262144 (card's configured sequence length, and the trained length). config.json max_position_embeddings 524288 with rope_theta 20000000 and no rope_scaling key, so 512K is the RoPE-supported ceiling but not a trained or claimed length",
+  "context_scaling_method": "none-verified",
+  "activation": "silu",
+  "attention_variant": "block-sparse GQA (MBSA): dense attention over a 16K query-position prefix plus 8 local + 8 prefix + up to 16 indexer-selected remote 128-token blocks per KV group, bounded at 4096 tokens of main attention per KV group; full-history KV cache is still kept",
+  "kv_cache_bytes_per_token": 92160,
+  "flops_per_token_active": 6000000000,
+  "open_weights": true,
+  "license": "Apache-2.0",
+  "notes": "ADDED 2026-11-17 from the HF createdAt feed (repo 2026-10-13, 171k downloads, 79 likes - low-traffic launch, not a trending spike). A 35B-total / 3B-active text-only MoE that PASSES THE HARDWARE GATE as an expert-offload target: only 12 of 256 routed experts fire per token, so decode traffic is a small slice of the ~74 GB BF16 checkpoint and the experts can live in system RAM. PARAMS: HF safetensors total 36,810,559,422 BF16, so params_b 36.811 is the measured count, not the card's nameplate. active_params_b 3.0 is the card's own 35B/3B 'both excluding embeddings' figure - not derived here. ARITHMETIC: params_b x 0.5 GiB = 18.4 GiB of weights at 4-bit, so the gate (<=128) passes with wide margin; flops_per_token_active = 2 x 3.0e9 = 6.0e9 is the schema one-pass approximation. GEOMETRY from config.json fetched 2026-11-17: hidden 2048, 45 layers, 32 query heads, 4 kv heads, head_dim 128 (gqa_ratio 8); 256 experts, 12 per token, moe_intermediate_size 512, shared_expert_intermediate_size 1024; mlp_only_layers [0,1,2] so 3 layers are dense FFN and 42 are MoE. KV (bf16): 45 x 4 kv heads x 128 x 2 (K+V) x 2 bytes = 92,160 B/token. The block-sparse attention BOUNDS compute, not storage - the card says the full-history KV cache stays available, so all 45 layers are counted. EXTRA ARCHITECTURE the schema has no field for: Manifold-Constrained Hyper-Connections (enable_hyper_connections true, num_residual_streams 4), a sigmoid router with expert bias, and mtp_num_layers 1. WHY IT EARNED A RECORD - it beats the catalog's best 30-40B / <=6B-active figure on tests measured on the same benchmark, all as VENDOR CLAIMS with no third-party reproduction: LiveCodeBench v6 pass@1 85.66 vs the class's KRAFTON Raon-1 mini preview 81.6; AIME 2025 mean@8 96.25 vs Rio-2.5-Open 93.33 (its pass@8 is a saturated 100.00); MMLU-Pro 85.46 vs Qwen3.5-35B-A3B 85.3 (a 0.16 gap - treat as a tie); MMMLU 92.0 vs Qwen3.5-35B-A3B 85.2; Tau3-Bench 67.37 vs Xing4.0-29B-A4B 64.63. EVERY ONE IS A VENDOR-ONLY COMPARISON and the class-best values are themselves vendor claims from other cards, so the wins are same-test, not same-harness. WHAT IT LOSES, printed on its own card: Terminal-Bench 2.1 58.65 to Ornith-1.5-35B-A3B 67.8; HLE (128K) 24.79 to Axion 1.0-35B 52.8; BrowseComp 76.30 to Sage-A1.5 82.8; DeepSearchQA 83.30 to XYZ-Aquila-mini 89.5; WideSearch 74.40 to XYZ-Aquila-mini 80.8; IFBench 64.80 to Recursive Flint 89.2; IFEval 93.00 to LFM2.5-24B-A2B 96.75. So the win is math (AIME/HMMT/IMO-AnswerBench: mathematical average mean@8 92.61, the best mean@8 in the class) and live code, not agentic terminal work or scale-dependent knowledge. PROSE NUMBERS on the card that are NOT benchmark rows and are not recorded here: MBSA kernel 6.7x faster than dense GQA at 256K, ~26T training tokens, Muon optimizer, 66x storage claim does not appear here (that is MemT).",
+  "benchmarks": [
+    {
+      "name": "AIME 2025",
+      "score": 100.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Card Table 3, column 'Maxwell V1.0-Flash', row 'AIME 2025 (pass@8)'. Class best before this: Rio-2.5-Open 93.33. SATURATED - all three top class models score 100 pass@8, so use the mean@8 row for the real gap."
+    },
+    {
+      "name": "AIME 2025",
+      "score": 96.25,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table, row 'AIME 2025 (mean@8)'. Qwen3.6 35B-A3B 90.00, Gemma-4 26B-A4B 85.83, Nemotron-3.5 Lightning 87.92, Muse Glimmer-30B 92.08. Class best before this 93.33."
+    },
+    {
+      "name": "AIME 2026",
+      "score": 95.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table, row 'AIME 2026 (mean@8)'. Class best before this 83.3 (Clover-35B-A3B-Preview). pass@8 is 96.67, tied with three of the four comparison models."
+    },
+    {
+      "name": "HMMT February 2025",
+      "score": 96.25,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table. Comparison models 89.58 / 82.50 / 85.83 / 91.25. Not a catalog benchmark before this record."
+    },
+    {
+      "name": "IMO-AnswerBench",
+      "score": 86.03,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table. Comparison models 81.25 / 70.00 / 73.25 / 78.62."
+    },
+    {
+      "name": "LiveCodeBench v6",
+      "score": 85.66,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table, row 'LiveCodeBench v6 (pass@1)'. Qwen3.6 35B-A3B 85.32, Gemma-4 26B-A4B 85.96 (LOSES to Gemma here), Nemotron-3.5 Lightning 78.30, Muse Glimmer 76.80. Class best before this 81.6."
+    },
+    {
+      "name": "MMLU-Pro",
+      "score": 85.46,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table, row 'MMLU-Pro (Accuracy)'. Qwen3.6 35B-A3B 85.20, Gemma-4 82.60, Nemotron 81.94, Muse Glimmer 83.16. Beats the class best 85.3 by 0.16 - within noise, treat as a tie."
+    },
+    {
+      "name": "GPQA-Diamond",
+      "score": 86.52,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table. Qwen3.6 86.00, Gemma-4 82.30, Nemotron 75.44, Muse Glimmer 83.50. LOSES the catalog class to Ornith-1.5-35B-A3B 89.2."
+    },
+    {
+      "name": "Terminal-Bench 2.1",
+      "score": 58.65,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table, row 'Terminal-Bench (mean@5)'. Card prose after the table: Harbor framework, Terminus-2 harness, 2h timeout, 256K context, 32K max tokens, temp 1.0, top-p 0.95, top-k 20, interleaved thinking. LOSES to Ornith-1.5-35B-A3B 67.8 - recorded because the card prints it."
+    },
+    {
+      "name": "SWE-Bench-Verified (Claude Code)",
+      "score": 65.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table. Qwen3.6 63.40, Gemma-4 39.20, Nemotron 42.60, Muse Glimmer 47.60. Harness prose: Claude Code 2.1.212, network-isolated, 256K context, <=240 turns, 4h per task. LOSES to Ornith-1.5-35B-A3B 79.0."
+    },
+    {
+      "name": "Tau3-Bench",
+      "score": 67.37,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table. Qwen3.6 64.00, Gemma-4 58.60, Nemotron 58.63, Muse Glimmer 63.20. Class best before this 64.63."
+    },
+    {
+      "name": "HLE",
+      "score": 24.79,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table, row 'HLE (128K context)'. No tools. LOSES to Axion 1.0-35B 52.8 and to Sage-A1.5."
+    },
+    {
+      "name": "BrowseComp",
+      "score": 76.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table. Unasterisked value (no context management). Asterisked 82.20 is 'with context management enabled' and is a different setting. LOSES to Sage-A1.5 82.8."
+    },
+    {
+      "name": "MMMLU",
+      "score": 92.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table, multilingual section. Qwen3.6 89.1, Gemma-4 90.9, Nemotron 87.8, Muse Glimmer 90.7. Class best before this 85.2."
+    },
+    {
+      "name": "IFBench",
+      "score": 64.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "maxwell-model-maxwell-v1-flash-model-card",
+      "vendor_claim": true,
+      "config": "Same table. Qwen3.6 59.60, Gemma-4 79.10, Nemotron 70.80, Muse Glimmer 83.20. LOSES badly to the class best 89.2 (Recursive Flint)."
+    }
+  ]
+}
