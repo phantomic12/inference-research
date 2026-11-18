@@ -1,0 +1,122 @@
+{
+  "id": "nemotron-3-5-bolt-e4b-4gb",
+  "type": "model",
+  "name": "NVIDIA Nemotron 3.5 Bolt E4B 4GB",
+  "status": "verified",
+  "confidence": 0.8,
+  "updated": "2026-11-18",
+  "sources": [
+    "hf-nvidia-nemotron-3-5-bolt-e4b-4gb"
+  ],
+  "family": "nemotron",
+  "vendor": "NVIDIA",
+  "release_year": 2026,
+  "release_date": "2026-10-05",
+  "architecture": "dense",
+  "task": "text-generation",
+  "params_b": 7.996,
+  "active_params_b": 4.0,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 2560,
+  "num_layers": 42,
+  "num_kv_heads": 2,
+  "head_dim": 512,
+  "gqa_ratio": 4.0,
+  "max_position_embeddings": 131072,
+  "context_scaling": null,
+  "context_scaling_method": "native",
+  "activation": "gelu_pytorch_tanh",
+  "attention_variant": "Gemma-4-E4B hybrid: 35 sliding-window layers (512-token window, head_dim 256) + 7 full-attention layers (global_head_dim 512); 18 trailing layers reuse KV (num_kv_shared_layers)",
+  "kv_cache_bytes_per_token": 16384,
+  "flops_per_token_active": 8000000000.0,
+  "open_weights": true,
+  "license": "OpenMDW-1.1 (card license_name openmdw-1.1; Gemma 4 base weights Apache-2.0)",
+  "base_model": "google/gemma-4-E4B-it",
+  "derivative_kind": "rl",
+  "notes": "ADDED 2026-11-18 from the HF trending feed (trendingScore 78, 157k downloads, 510 likes). A post-train (GRPO multi-environment RL via NeMo RL / NeMo Gym) of google/gemma-4-E4B-it, released by NVIDIA as its own checkpoint, so it is a first-class record with base_model set. Card says '8B (4B effective)'; HF safetensors.total on both this repo and the BF16 parent is 7,996,156,490, and the 4B figure is Gemma 4's per-layer-embedding effective count - so params_b = safetensors total and active_params_b = the card's effective count, used as the flops proxy too (no MoE here; the FFN is dense). Serves as the card's headline artifact: this repo carries Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf (4 GB, the reason for the '4GB' in the name), deployable on llama.cpp server-cuda13; the BF16 parent is nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-BF16. Hardware gate passes with room: 8.0B total at 0.5 GiB/B = 4.0 GiB, and the recommended 4-bit artifact is 4 GB on disk. KV BASIS: config.json text_config (read from the parent repo) gives 42 layers, layer_types = 35 sliding_attention + 7 full_attention (full at 5,11,17,23,29,35,41), num_kv_shared_layers 18, num_key_value_heads 2, head_dim 256, global_head_dim 512, sliding_window 512, max_position_embeddings 131,072. KV-producing layers = 42 - 18 = 24, of which 4 are full attention (5,11,17,23), so per-token growth = 2 (K+V) x 4 layers x 2 KV heads x 512 global_head_dim x 2 bytes (bf16) = 16,384 B/token, i.e. 1.00 GiB at 64k. The 20 sliding producers add 2 x 20 x 2 x 256 x 2 = 40,960 B/token but only across a 512-token window (20.0 MiB, fixed), so they do not scale with context. The card services a 64K context (input and output up to 64K) although the config allows 131,072; max_position_embeddings records the config, 64K is what the card claims. KV NOTE: 16 KiB/token is large for this size class - the sibling gemma-4-e2b-it record lands at 6,144 B/token on 3 surviving full producers; E4B cannot match that because 4 full-attention layers survive the KV-sharing cut. Benchmarks are NVIDIA's own NeMo Gym runs, so every row is vendor_claim. CONFIDENCE 0.8: table read directly off the card, no third-party reproduction exists. GAP: the base google/gemma-4-E4B-it is not a catalog record yet (only the E2B sibling is), so base_model points outside data/models.",
+  "benchmarks": [
+    {
+      "name": "MultiChallenge",
+      "score": 53.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-nvidia-nemotron-3-5-bolt-e4b-4gb",
+      "vendor_claim": true,
+      "config": "Card 'Benchmarks' table, BF16 column; base column Gemma4-E4B-it BF16 42.08 (+11.0). Q4_K_M column 55.60 vs base 39.36. NeMo Gym harness, reasoning mode. Beats the best <=9B score already in the catalog on this test (KRAFTON Raon-1 nano 40.5) by 12.6 points, though on a different harness."
+    },
+    {
+      "name": "IHEval",
+      "score": 84.79,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-nvidia-nemotron-3-5-bolt-e4b-4gb",
+      "vendor_claim": true,
+      "config": "Same table, BF16; base Gemma4-E4B-it 67.04 (+17.8). Q4_K_M 82.40 vs 66.61. NeMo Gym, reasoning mode."
+    },
+    {
+      "name": "IFBench",
+      "score": 63.79,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-nvidia-nemotron-3-5-bolt-e4b-4gb",
+      "vendor_claim": true,
+      "config": "Same table, BF16; base Gemma4-E4B-it 42.84 (+20.9). Q4_K_M 64.00 vs 42.67. LOSS on the deployable artifact: Qwen3.5-4B Q4_K_M 66.67 is ahead, and the catalog already holds Granite 4.2 8B 79.33 and NVIDIA Dory 1.0 4B 79 (different harnesses)."
+    },
+    {
+      "name": "RoleMRC",
+      "score": 80.63,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-nvidia-nemotron-3-5-bolt-e4b-4gb",
+      "vendor_claim": true,
+      "config": "Same table, BF16; base Gemma4-E4B-it 74.62 (+6.0). Q4_K_M 79.12 vs 75.24. One of the three rows the card evaluates without reasoning mode."
+    },
+    {
+      "name": "GaRAGe",
+      "score": 42.61,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-nvidia-nemotron-3-5-bolt-e4b-4gb",
+      "vendor_claim": true,
+      "config": "Same table, BF16; base Gemma4-E4B-it 34.73 (+7.9). Q4_K_M 40.73 vs 30.91. NeMo Gym, reasoning mode."
+    },
+    {
+      "name": "Tau2-Bench",
+      "score": 55.1,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-nvidia-nemotron-3-5-bolt-e4b-4gb",
+      "vendor_claim": true,
+      "config": "LOSS, recorded deliberately. Same table, BF16; Qwen3.5-4B 75.06 is far ahead and the catalog's NeoHorse-1-4B records 88.46; Q4_K_M 52.32 vs Qwen3.5-4B Q4_K_M 61.74. It does beat its base Gemma4-E4B-it (38.50 bf16 / 38.72 Q4), so the agentic-tool gap is inherited rather than introduced by the post-train."
+    },
+    {
+      "name": "RULER (64K)",
+      "score": 86.99,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-nvidia-nemotron-3-5-bolt-e4b-4gb",
+      "vendor_claim": true,
+      "config": "LOSS. Same table, BF16; Qwen3.5-4B 95.15 and Nemotron-3-Nano-4B 91.51 are ahead; Q4_K_M 85.76. Non-reasoning mode. Material because this record's KV is 16 KiB/token and the card only services 64K."
+    },
+    {
+      "name": "LongBench v2 (48K)",
+      "score": 50.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-nvidia-nemotron-3-5-bolt-e4b-4gb",
+      "vendor_claim": true,
+      "config": "LOSS. Same table, BF16; Qwen3.5-4B 59.93. Q4_K_M 48.67 vs 58.28."
+    },
+    {
+      "name": "EQ-Bench v3",
+      "score": 39.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-nvidia-nemotron-3-5-bolt-e4b-4gb",
+      "vendor_claim": true,
+      "config": "LOSS to its own base: Gemma4-E4B-it 41.17 (Q4 39.77). One of the three non-reasoning rows. The post-train spends 1.8 points of emotional-intelligence headroom to buy the instruction-following and multi-turn tool rows."
+    }
+  ]
+}
