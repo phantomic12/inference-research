@@ -17,8 +17,8 @@ Within the Decision Index the weight is fixed by the suite, not by us: knowledge
 | 9 | [Sieve 31B v3](https://huggingface.co/sthanika-ai/Sieve-31B-v3) | **71.10** | 61.2 | 71.6 | 76.1 | 86.9 | 62.2 | 232 | 1520 | 0.054 | 31.3B | `google/gemma-4-31B-it` |
 | 11 | [Turion Jev 31B](https://huggingface.co/turion-ai/turion-jev-31b) | **70.47** | 55.4 | 69.9 | 71.2 | 78.7 | 51.3 | 144 | 815 | 0.019 | 31.3B | `google/gemma-4-31B-it` |
 | 14 | [vLLM-SR d3-ultra (Decision 3.0, 27B)](https://huggingface.co/vllm-sr/d3-ultra) | **70.18** | 62.3 | 72.3 | 71.8 | 87.8 | 63.5 | 200 | 674 | 0.067 | 26.1B | `Qwen/Qwen3.8-27B` |
-| 26 | [Perplexity Decider v1.2 (27B)](https://huggingface.co/perplexity-ai/pplx-decider-v1.2) | **67.98** | 55.3 | 71.9 | 68.1 | 85.4 | 56.2 | 144 | 1552 | 0.055 | 26.1B | `Qwen/Qwen3.8-27B` |
-| 27 | [AutoTrust-JEV-27B v1.1](https://huggingface.co/autotrust/AutoTrust-JEV-27B-v1.1) | **67.95** | 55.2 | 73.4 | 67.0 | 85.2 | 51.0 | 80 | 861 | 0.067 | 27.4B | `Qwen/Qwen3.8-27B` |
+| 27 | [Perplexity Decider v1.2 (27B)](https://huggingface.co/perplexity-ai/pplx-decider-v1.2) | **67.98** | 55.3 | 71.9 | 68.1 | 85.4 | 56.2 | 144 | 1552 | 0.055 | 26.1B | `Qwen/Qwen3.8-27B` |
+| 28 | [AutoTrust-JEV-27B v1.1](https://huggingface.co/autotrust/AutoTrust-JEV-27B-v1.1) | **67.95** | 55.2 | 73.4 | 67.0 | 85.2 | 51.0 | 80 | 861 | 0.067 | 27.4B | `Qwen/Qwen3.8-27B` |
 
 `*` = self-reported. 0 of 8 rows are the author's own run and the upstream board has not reproduced them; every other row is board-validated on one NVIDIA RTX PRO 6000.
 
