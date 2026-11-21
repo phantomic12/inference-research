@@ -1,0 +1,180 @@
+{
+ "id": "inkling-2-mini",
+ "type": "model",
+ "name": "Inkling 2 Mini",
+ "status": "verified",
+ "confidence": 0.8,
+ "updated": "2026-11-21",
+ "sources": [
+  "thinking-machines-inkling-2-mini-model-card"
+ ],
+ "family": "inkling",
+ "vendor": "Thinking Machines Lab",
+ "release_year": 2026,
+ "architecture": "moe",
+ "params_b": 26.388,
+ "active_params_b": 3.4,
+ "num_experts": 128,
+ "experts_per_token": 8,
+ "shared_expert": false,
+ "hidden_size": 2304,
+ "num_layers": 24,
+ "num_kv_heads": 8,
+ "head_dim": 128,
+ "gqa_ratio": 3.0,
+ "max_position_embeddings": 1048576,
+ "context_scaling": "Card states a 1M-token context window; config.json declares model_max_length 1048576 with log-scaling RoPE (log_scaling_n_floor 8192, log_scaling_alpha 0.1) on top of relative-position bias terms (d_rel 16, rel_extent 1024). No YaRN/NTK factor is printed.",
+ "activation": "silu",
+ "attention_variant": "hybrid: 20 of 24 layers are sliding-window attention (sliding_window_size 1024), 4 layers are global (local_layer_ids lists the 20 local layers); GQA 24 Q / 8 KV heads at head_dim 128",
+ "kv_cache_bytes_per_token": 16384,
+ "flops_per_token_active": 6800000000.0,
+ "open_weights": true,
+ "license": "apache-2.0",
+ "notes": "ADDED 2026-11-21. New base model, not a derivative: Thinking Machines' second open release (model_type inkling2_loop_text, custom code). safetensors.total 26,388,646,440 BF16 per the HF API (?blobs=true); card prints '26.4B, 3.4B active'. Active-param arithmetic: 24 layers x 8 of 128 routed experts x intermed 1152 with hidden 2304, no shared expert (n_shared_experts 0), so the per-token active count is dominated by attention + 8 expert FFNs; the card does not print the multiplication, so 3.4 is a VENDOR number, not derived here. LOOPING: config loop_config core_start 6, core_end 18, num_passes 3 - the middle 12 layers run three times from the same weights, giving 48 layer applications from 24 layers of weights. The card says each extra pass adds ~1.0B effective active parameters, i.e. 5.4B effective active per token; flops_per_token_active here uses the 3.4B single-pass figure for consistency with the rest of the catalog, so it UNDERSTATES real per-token compute by roughly 1.6x. KV BASIS: 16384 bytes/token = 4 global layers x 8 KV heads x 128 head_dim x 2 (K and V) x 2 bytes. The other 20 layers are sliding-window with window 1024, so their KV saturates at ~1024 tokens and does not grow. NOT ESTABLISHED: whether each of the three loop passes keeps its own KV for the 12 looped layers. If it does, the growing cache triples to ~49 KB/token; the card and config do not say. Distributed as a single ~20GB checkpoint in mixed NVFP4 + MXFP8, and the card names 1x DGX Spark, Apple silicon >= 32GB, or any GPU >= 32GB VRAM as sufficient - which is the reason this record exists despite the 26B total. Card is the only source; every benchmark row is a vendor claim.",
+ "release_date": "2026-11-20",
+ "task": "vision-language",
+ "context_scaling_method": "other",
+ "attention_layer_indices": [
+  5,
+  11,
+  17,
+  23
+ ],
+ "benchmarks": [
+  {
+   "name": "SWE-bench Verified",
+   "score": 79.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "Card HTML benchmark table, column 'Inkling 2 Mini', row 'SWEBench Verified bash only'. Base-comparison column Qwen3.8-27B 77.8, Nemotron 3.5 Super VL 71.1, Gemma 4 31B 46.1, Muse Glimmer 76.0. Harness printed as 'bash only', not the mini-swe-agent scaffold other rows use."
+  },
+  {
+   "name": "SWE-bench Multilingual",
+   "score": 73.7,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "Same table, 'Inkling 2 Mini with bash only'. Qwen3.8-27B 70.0, Nemotron 3.5 Super VL 67.7. Catalog best before this record was 72.7 (sage-a1-5, 35.952B)."
+  },
+  {
+   "name": "DeepSWE v1.1",
+   "score": 48.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "Same table, harness mini-swe-agent v2.4.6. Qwen3.8-27B 42.2, Nemotron 3.5 Super VL 24.7. Catalog best before this record was 46.2 (daisyrose-27b, 27.781B)."
+  },
+  {
+   "name": "LongBench v2",
+   "score": 66.9,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "Same table; Qwen3.8-27B 52.3, Nemotron 3.5 Super VL 62.1, Gemma 4 31B 52.9. Catalog best before this record was 53.3 (spark-x2-6-4b, 4.11B). Harness not printed."
+  },
+  {
+   "name": "BrowseComp",
+   "score": 79.0,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "Same table, 'Inkling 2 Mini with compaction'. Nemotron 3.5 Super VL 78.9, Qwen3.8-27B 61.6. Catalog best before this record was 78.8 (xyz-aquila-mini, 35.1B)."
+  },
+  {
+   "name": "DeepSearchQA",
+   "score": 85.3,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "Same table, 'Inkling 2 Mini with compaction'. Qwen3.8-27B 79.7, Nemotron 3.5 Super VL 77.7. Catalog best before this record was 71.33 (mercury)."
+  },
+  {
+   "name": "MCP Atlas",
+   "score": 82.7,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "Same table, marked Public. Qwen3.8-27B 77.3, Nemotron 3.5 Super VL 67.7, Gemma 4 31B 54.2."
+  },
+  {
+   "name": "JobBench",
+   "score": 49.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "Same table; Qwen3.8-27B 33.4, Nemotron 3.5 Super VL 36.5. Catalog best before this record was 44.8 (nanbeige4-3-33b, 33.1B)."
+  },
+  {
+   "name": "SWE-bench Pro v2 (Hard)",
+   "score": 77.9,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "Same table, harness mini-swe-agent v2.4.6. Qwen3.8-27B 73.8. NOTE: not comparable to qwen3-8-27b's own 61.7 SWE-bench Pro row, which its card reports under Claude Code - different harness and a different benchmark version."
+  },
+  {
+   "name": "AA Index (v5.0)",
+   "score": 20.1,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "Third-party Artificial Analysis index as quoted by the card. Qwen3.8-27B also 20.1 (a tie), Nemotron 3.5 Super VL 13.6, Gemma 4 31B 4.4. AA scores are not percentages; recorded at scale 100 because the card prints them as an index on 0-100."
+  },
+  {
+   "name": "Terminal Bench v2.1",
+   "score": 71.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "LOSS. Same table, 'Inkling 2 Mini in pi v0.83.0'; Qwen3.8-27B 73.0 beats it. Muse Glimmer 51.7, Gemma 4 31B 43.4, Nemotron 3.5 Super VL 60.7."
+  },
+  {
+   "name": "MMMU Pro",
+   "score": 74.9,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "LOSS. Standard 10 options; Qwen3.8-27B 76.3. Card column 'MMMU Pro Standard 10'."
+  },
+  {
+   "name": "HLE-Diamond",
+   "score": 15.2,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "LOSS by 0.1: Qwen3.8-27B 15.3. Within noise at any plausible n, recorded because the card prints it."
+  },
+  {
+   "name": "OmniDocBench v1.6",
+   "score": 92.8,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "LOSS against the catalog's best, not against its own comparison set: Qwen3.8-27B 91.5 and Muse Glimmer 90.4 are both behind it, but xiaomi-ocr-0 holds 96.83."
+  },
+  {
+   "name": "Terminal Bench v4.0",
+   "score": 5.6,
+   "scale": 100,
+   "higher_is_better": true,
+   "source": "thinking-machines-inkling-2-mini-model-card",
+   "vendor_claim": true,
+   "config": "Same table, mini-swe-agent v2.4.6; Qwen3.8-27B 5.6 (tie). Low absolute score is normal for this suite generation - recorded because the card prints it."
+  }
+ ]
+}
