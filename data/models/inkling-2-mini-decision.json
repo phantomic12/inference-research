@@ -1,0 +1,92 @@
+{
+  "id": "inkling-2-mini-decision",
+  "type": "model",
+  "name": "Inkling-2-Mini-Decision",
+  "family": "inkling",
+  "vendor": "eltokh7",
+  "release_year": 2026,
+  "architecture": "moe",
+  "task": "decision",
+  "params_b": 25.607,
+  "active_params_b": 3.4,
+  "num_experts": 128,
+  "experts_per_token": 8,
+  "shared_expert": false,
+  "hidden_size": 2304,
+  "num_layers": 24,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 3.0,
+  "max_position_embeddings": 1048576,
+  "context_scaling": "Inherited unchanged from thinkingmachines/Inkling-2-Mini (config.json max_position_embeddings 1048576). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "hybrid: 20 of 24 layers are sliding-window attention (sliding_window_size 1024), 4 layers are global (local_layer_ids lists the 20 local layers); GQA 24 Q / 8 KV heads at head_dim 128",
+  "layer_types": [],
+  "attention_layer_indices": [
+    5,
+    11,
+    17,
+    23
+  ],
+  "kv_cache_bytes_per_token": 16384,
+  "flops_per_token_active": 6800000000.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "thinkingmachines/Inkling-2-Mini",
+  "derivative_kind": "finetune",
+  "notes": "ADDED 2026-11-23 by the trending sweep. A LoRA post-train of thinkingmachines/Inkling-2-Mini (catalog record `inkling-2-mini`), not a new base: same config.json, same MoE backbone, so architecture/params/kv geometry are inherited from the base record and only the heads are new (LoRA r=32 on attention q/k/v/o/linear ~17.5M params, a 1.2M CoreGateHead halting gate, a 6.0M JointSchemaHead). PARAMS: safetensors.total 25,607,222,784 vs the base's 26,388,646,440, a 781,423,656 delta explained by the card itself - the lm_head and the ~0.43B vision_tower are dropped for text decisioning, which is why 25.6 < 26.4. This is a DECISION model (task=decision): it takes a state plus typed questions (choice/noul/score) and emits per-option probabilities in ONE forward pass with zero reasoning tokens, so chat benchmarks say nothing about it and it is excluded from the worth-running ranking by construction. EVIDENCE, stated honestly: the card does NOT print an Inkling-2-Mini base column on any decision test, and none can exist - the generative base has no decision head, so an absolute base score would require a harness the card never describes. What it does print is (a) self-consistency across loop depth, Loop 1 39.89% -> Loop 3 66.67% on hard-v1/dev (+26.78 pp) and 42.56% -> 66.82% on hard-v1/test, and (b) a same-test cross-model comparator, Kev-9B v1 (9B dense, catalog decision_index dec-kev-9b) at 58.2/58.4 on hard-v1 dev/test against this model's 66.67/66.82 - a +8.4 pp win at 5.4B effective active. The task prompt's 'own column beats the base column' gate is therefore NOT met in the literal sense; the record is justified under the decision-model rule (4c) as a classified contender, with the gap between 'beats a same-size decision model' and 'beats its base' left visible rather than papered over. LOSSES are recorded in benchmarks[]: Kev-27B 86.3 vs 85.56 on decision-v7/test, and Qwen3.5-4B-Hmm 70.9 vs 63.5 on LocalLLaMA/typed-decisions. NOT ON THE DECISION INDEX: the upstream JEV space (multimodalart/jev-decision-index) had not listed it as of 2026-11-23 (lastModified 2026-11-21) and its row in data/decision_index.jsonl was therefore not added - no index, latency or ECE figure is invented here. The card's own GPU numbers are RTX PRO 6000 Blackwell, batch-1, threshold 0.90: 81.4 ms median (97.4 mean) to first decision, 1.68x faster than fixed Loop 3 at -0.07 pp accuracy; these are latency, not a benchmark score, and are quoted only here in notes. Licence apache-2.0, repo created 2026-11-22.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-23",
+  "sources": [
+    "hf-eltokh7-inkling-2-mini-decision"
+  ],
+  "benchmarks": [
+    {
+      "name": "hard-v1 test (untrained OOD decision set)",
+      "score": 66.8,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-eltokh7-inkling-2-mini-decision",
+      "vendor_claim": true,
+      "config": "Card table 'Loop 1 vs Loop 2 vs Loop 3', row hard-v1/test (n=1,088): Loop 3 = 66.82%. Same table/model card prints the comparator Kev-9B v1 (9B dense decision model, catalog decision_index dec-kev-9b) at 58.4 on hard-v1/test and 58.2 on hard-v1/dev, so this is a same-test cross-model win of +8.4 pp at 5.4B active vs 9.7B dense. Harness not printed; all rows are the author's own runs on the author's own splits, so hard-v1 is NOT an independent benchmark."
+    },
+    {
+      "name": "hard-v1 dev (untrained OOD decision set)",
+      "score": 66.67,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-eltokh7-inkling-2-mini-decision",
+      "vendor_claim": true,
+      "config": "Card table, row hard-v1/dev (n=1,083): Loop 3 = 66.67%, up from 39.89% at Loop 1 (+26.78 pp). Comparator Kev-9B v1 printed on the same card at 58.2 (hard-v1/dev). Author's own split, not an independent benchmark."
+    },
+    {
+      "name": "decision-v7 test (routine decisions)",
+      "score": 85.56,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-eltokh7-inkling-2-mini-decision",
+      "vendor_claim": true,
+      "config": "Card table, row decision-v7/test (n=1,440): Loop 3 = 85.56%, +3.27 pp over Loop 1. LOSS recorded: the card prints Kev-27B (27B dense) at 86.3 on the same set, so this model is 0.74 pp behind a 27B while running 5.4B active. Also recorded: re-verified 86.04% (1,239/1,440) after merge_and_unload + causal_conv1d."
+    },
+    {
+      "name": "typed-decisions (LocalLLaMA, test split)",
+      "score": 63.5,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-eltokh7-inkling-2-mini-decision",
+      "vendor_claim": true,
+      "config": "Independent run by the author on Modal A100-80GB, 22 Nov 2026, LocalLLaMA/typed-decisions 'all' config test split (400 cases / 2,000 decisions), zero-shot, scored with the benchmark's own code; default threshold 0.90 = 0.635 accuracy, ECE 0.041, Brier 0.179. LOSS recorded: the catalog's Qwen3.5-4B-Hmm scores 70.9 on typed-decisions (2,000 workflow decisions) and Qwen3.5-4B base 59.6, so this model does NOT beat the size class on this test."
+    },
+    {
+      "name": "MMLU-Pro (partial sample, 3,272 of 12,032)",
+      "score": 53.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-eltokh7-inkling-2-mini-decision",
+      "vendor_claim": true,
+      "config": "Author's own time-boxed run, seeded random 3,272-question sample of TIGER-Lab/MMLU-Pro test, each question asked as one 'choice' question with lettered options. A sample estimate, explicitly NOT a leaderboard score - do not rank against full-set MMLU-Pro rows."
+    }
+  ]
+}
