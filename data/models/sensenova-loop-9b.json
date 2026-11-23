@@ -1,0 +1,93 @@
+{
+  "id": "sensenova-loop-9b",
+  "type": "model",
+  "name": "SenseNova-Loop-9B",
+  "status": "verified",
+  "confidence": 0.65,
+  "updated": "2026-11-23",
+  "sources": [
+    "sensenova-loop-9b-model-card"
+  ],
+  "family": "sensenova-loop",
+  "vendor": "SenseNova (SenseTime)",
+  "release_year": 2026,
+  "release_date": "2026-11-17",
+  "architecture": "other",
+  "task": "vision-language",
+  "params_b": 9.656254576,
+  "active_params_b": 9.656254576,
+  "num_experts": null,
+  "experts_per_token": null,
+  "shared_expert": null,
+  "hidden_size": 4096,
+  "num_layers": 32,
+  "num_kv_heads": 4,
+  "head_dim": 256,
+  "gqa_ratio": 4,
+  "max_position_embeddings": 524288,
+  "context_scaling": "text_config.max_position_embeddings 524288 (512K). The card claims 512K and publishes no separate context-extension recipe; partial_rotary_factor 0.25, so only 64 of the 256 head_dim carry RoPE.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "Looped hybrid decoder. 32 distinct layers with layer_types = [3x linear_attention, 1x full_attention] repeated 8 times; full-attention layers at indices 3,7,11,15,19,23,27,31. The middle block [4,28) is executed twice with shared weights (config loop_settings start 4, end 28, counts [2]), so a forward pass performs 56 layer executions over 32 distinct weight sets. Full attention: 16 query heads / 4 KV heads, head_dim 256. Linear layers keep a fixed-size recurrent state (linear_conv_kernel_dim 4, linear_key_head_dim 128, linear_num_value_heads 32) instead of a per-token cache.",
+  "kv_cache_bytes_per_token": 57344,
+  "flops_per_token_active": 19312509152.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "notes": "ADDED 2026-11-23 by the trending sweep. Unusual architecture: a looped transformer that runs its 24 middle layers twice, so it computes at 56 layers of depth while storing 32 layers of weights - the parameter-efficiency trick this catalog tracks. PARAMS: HF API safetensors.total 9,656,254,576 (9,653,102,832 BF16 + 3,151,744 F32), matching the card's 'approximately 9B total parameters' and its weight-shard total of ~19.4 GB BF16. The card ALSO prints 'approximately 14.6B inference-equivalent parameters'; that is a compute-equivalence figure (56 executed layers from 32 stored), not a weight count, so it is deliberately NOT used for params_b. active_params_b is set equal to params_b because a dense looped model touches every stored weight on every token; flops_per_token_active follows the schema's 2 x active_params_b x 1e9 convention and therefore UNDERCOUNTS this model - real per-token matmul work is closer to 2 x 1.75 x 9.656e9 because 24 of 32 layers run twice. The schema field is left at the standard definition so cross-model comparison stays honest, and the multiplier is recorded here instead. KV BASIS: 57,344 bytes/token = 14 KV-holding layer EXECUTIONS x 4 KV heads x 256 head_dim x 2 (K and V) x 2 bytes BF16. The 14 is the count that matters and it is not 8: of the 8 static full-attention layers, 6 (indices 7,11,15,19,23,27) sit inside the looped block [4,28) and therefore execute twice, so 2 + 6x2 = 14; layers 3 and 31 run once. The 24 linear-attention layers hold a constant-size state, not a per-token cache. CROSS-CHECK against the card's own deployment table, which prints ~10 GiB at 64K and ~12 GiB at 128K with an 8-bit KV cache: that slope is ~32 KiB/token, and 8-bit KV under this 14-execution count is 28,672 B/token (half of 57,344), which matches the card's '~' rounding and leaves the 4.9 GB 4-bit weight footprint as the remainder. A naive 8-layer count would predict half that slope and is inconsistent with the card. HARDWARE GATE: active 9.656B <= 40 and 9.656 x 0.5 GiB = 4.8 GiB <= 128, so it passes. The card states 4-bit weights are ~4.9 GB and 256K multimodal inference needs ~15 GiB, and official AWQ (4-bit) and GGUF (BF16/Q8_0/Q5_K_M/Q4_K_M) weights ship alongside, so it is runnable on a low-VRAM plus large-RAM box. EVIDENCE: the card prints its numbers in prose plus one figure (assets/release_benchmark_iuua.png), not as a markdown table; no harness, agent scaffold or prompt is restated anywhere, so every row in benchmarks[] is an unreproduced vendor claim. It beats this catalog's previous sub-10B best on Terminal-Bench 2.1 (59.55 vs Ornith-1.5-9B 46.2 vanilla / 47.0 Claude Code) - the win that justifies the record. It LOSES NL2Repo to Qwen3.8-27B (41.36 vs 44.60), which is recorded as a row rather than dropped, and its own framing is 'competitive with Qwen3.8-27B', i.e. a 9B matching a 27B rather than beating it outright.",
+  "benchmarks": [
+    {
+      "name": "Terminal-Bench 2.1",
+      "score": 59.55,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "sensenova-loop-9b-model-card",
+      "vendor_claim": true,
+      "config": "Vendor claim at an undocumented configuration. Card prose: 'Terminal-Bench 2.1 from 40.45 to 59.55' (release vs its own Preview); also plotted in assets/release_benchmark_iuua.png. Harness, agent scaffold and attempt count are NOT printed, so this is not directly comparable to catalog rows that state Terminus/Claude Code. On the same test it beats the catalog's former sub-10B best, Ornith-1.5-9B at 46.2 (vanilla) / 47.0 (Claude Code)."
+    },
+    {
+      "name": "GAIA",
+      "score": 69.9,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "sensenova-loop-9b-model-card",
+      "vendor_claim": true,
+      "config": "Vendor claim. Card prose: 'GAIA from 37.86 to 69.90' (release vs Preview). Split (validation vs test) and tool access are NOT printed. No same-test sub-10B comparator exists in this catalog - the only sub-10B GAIA row is MiniCPM5-2B at 88.7 on 'GAIA Text-103', a different subset - so this row is informative but is not claimed as a size-class win."
+    },
+    {
+      "name": "AIDABench",
+      "score": 65.31,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "sensenova-loop-9b-model-card",
+      "vendor_claim": true,
+      "config": "Vendor claim, near-tie. Card prose: 'scores 65.31 versus 65.01' against Qwen3.8-27B on AIDABench. Sub-track weighting (QA vs data visualisation) is not stated. +0.30 points is inside plausible run-to-run noise, so this is recorded as a tie with a 27B, not as a win."
+    },
+    {
+      "name": "AutomationBench",
+      "score": 36.67,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "sensenova-loop-9b-model-card",
+      "vendor_claim": true,
+      "config": "Vendor claim, release-vs-Preview only. Card prose: 'AutomationBench rises from 14.33 to 36.67' and 'matches [Qwen3.8-27B's] 36.67'. The card never names the AutomationBench version or says whether partial credit is used, so this is NOT comparable to the catalog's Ling-3.1-flash 52.5 (Public) or occamy 69.1 (partial credit) rows and must not be ranked against them."
+    },
+    {
+      "name": "BIRD",
+      "score": 72.34,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "sensenova-loop-9b-model-card",
+      "vendor_claim": true,
+      "config": "Vendor claim, release-vs-Preview only. Card prose: 'Its BIRD score of 72.34 is 0.96 percentage points above the Preview's 71.38'. The card gives NO comparison against any other model on BIRD, so this is not evidence of a size-class win. The only other BIRD row in this catalog is Granite 4.2 8B at 41.07 on 'BirdBench', and the split is not established as identical."
+    },
+    {
+      "name": "NL2Repo",
+      "score": 41.36,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "sensenova-loop-9b-model-card",
+      "vendor_claim": true,
+      "config": "Vendor claim, and a LOSS the card prints itself: 'On NL2Repo, it scores 41.36 versus 44.60' for Qwen3.8-27B. Recorded so the regression stays visible. It still beats the catalog's former sub-10B best on the same test (Ornith-1.5-9B 32.4) and sits just under Nanbeige4.3-33B's 53.0 among larger models."
+    }
+  ]
+}
