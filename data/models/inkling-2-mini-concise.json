@@ -1,0 +1,83 @@
+{
+  "id": "inkling-2-mini-concise",
+  "type": "model",
+  "name": "inkling-2-mini-concise",
+  "family": "inkling",
+  "vendor": "autotrust",
+  "release_year": 2026,
+  "architecture": "moe",
+  "task": "vision-language",
+  "params_b": 26.389,
+  "active_params_b": 3.4,
+  "num_experts": 128,
+  "experts_per_token": 8,
+  "shared_expert": false,
+  "hidden_size": 2304,
+  "num_layers": 24,
+  "num_kv_heads": 8,
+  "head_dim": 128,
+  "gqa_ratio": 3.0,
+  "max_position_embeddings": 1048576,
+  "context_scaling": "Inherited unchanged from thinkingmachines/Inkling-2-Mini (config.json max_position_embeddings 1048576). This derivative does not publish a context-extension recipe of its own.",
+  "context_scaling_method": "native",
+  "activation": "silu",
+  "attention_variant": "hybrid: 20 of 24 layers are sliding-window attention (sliding_window_size 1024), 4 layers are global (local_layer_ids lists the 20 local layers); GQA 24 Q / 8 KV heads at head_dim 128",
+  "layer_types": [],
+  "attention_layer_indices": [
+    5,
+    11,
+    17,
+    23
+  ],
+  "kv_cache_bytes_per_token": 16384,
+  "flops_per_token_active": 6800000000.0,
+  "open_weights": true,
+  "license": "apache-2.0",
+  "base_model": "thinkingmachines/Inkling-2-Mini",
+  "derivative_kind": "other",
+  "notes": "ADDED 2026-11-24. NOT a fine-tune in the trained sense, which is why derivative_kind is 'other' rather than the tool's default: the card states there is no training and no fine-tuning data. The edit is a rank-one, gradient-free weight write, W <- W + alpha*n*d''u^T/||u||^2, applied to model.llm.layers.{18..23}.attn.wo_ud.weight (the attention output projection of the six coda layers, which run once per token after the looped core; the looped core at layers 6-17 is untouched). alpha = 0.1, relative change ||dW||/||W|| = 0.14-0.29% per layer. Everything else is byte-identical to thinkingmachines/Inkling-2-Mini, including NVFP4/MXFP8 experts, the DSpark speculator and the vision tower; so the whole architecture half of this record is inherited and 26.389B total / 3.4B active is the BASE's own count, not a new measurement. Parameters 26,388,646,440 from the safetensors index. Hardware gate: passes (3.4B active <= 40, 26.389 x 0.5 = 13.2 GiB <= 128); MoE with 8 of 128 experts routed per token, so it is offload-friendly on the user's low-VRAM/much-RAM box. EVIDENCE HONESTY: the four rows below are all card-sourced and vendor_claim. Three of the four CIs include zero, so the correct reading is 'no significant loss, 6-15% less thinking', not 'beats its base' - the card says exactly that itself. The one row it loses on paper is IFBench 78.3 -> 76.3, and it is recorded. The GPQA/LiveCodeBench gains are +1.5 and +2.3 points with 95% CIs of [-1.0,+4.0] and [-2.9,+7.4]. The card's own scaling table is the real value here: at alpha 0.2 IFBench drops -4.7 and the held-out set falls 36 -> 34 of 39; at 0.5 it loses 6.9 on LiveCodeBench and holds 26/39; at 0.7 everything collapses (-16.7 GPQA, -29.1 LCB, -33.0 IFBench). Do not scale past 0.25. Direction d was measured on 283 MATH-train level-5 traces of this model and screened on MATH-train, confirmed on the listed benchmarks; held-out tasks were never used for selection. Licence apache-2.0, repo created 2026-11-22. Confidence 0.5: single-vendor run, one H200, no third-party reproduction yet.",
+  "status": "verified",
+  "confidence": 0.5,
+  "updated": "2026-11-24",
+  "sources": [
+    "hf-autotrust-inkling-2-mini-concise"
+  ],
+  "benchmarks": [
+    {
+      "name": "GPQA Diamond",
+      "score": 82.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-autotrust-inkling-2-mini-concise",
+      "vendor_claim": true,
+      "config": "Card 'Results' markdown table '| Benchmark | Base | concise (alpha=0.1) | delta accuracy [95% CI] | delta thinking tokens [95% CI] |'. Row 'GPQA Diamond (198 x 2)': Base column 80.8 (unmodified thinkingmachines/Inkling-2-Mini, REAL bf16 run under the same harness) -> concise 82.3, +1.5 [95% CI -1.0, +4.0]. Paired by problem with a 95% bootstrap CI; the interval includes zero, so read this as no significant change rather than a win. Setup printed on the card: vLLM, thinking on (default reasoning_effort 0.9), temperature 0.9, max 32k tokens, one H200."
+    },
+    {
+      "name": "LiveCodeBench v6",
+      "score": 67.4,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-autotrust-inkling-2-mini-concise",
+      "vendor_claim": true,
+      "config": "Same card table, row 'LiveCodeBench v6 (175, 2025-01..04)': Base 65.1 -> concise 67.4, +2.3 [-2.9, +7.4]; also -5.7% thinking tokens and 53 -> 48 truncated at 32k. Same vLLM/H200 harness, base is a real bf16 run of the unmodified model. CI includes zero."
+    },
+    {
+      "name": "IFBench",
+      "score": 76.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-autotrust-inkling-2-mini-concise",
+      "vendor_claim": true,
+      "config": "Same card table, row 'IFBench (300, loose)': Base 78.3 -> concise 76.3, a LOSS of -2.0 [-6.7, +2.3], recorded so the record does not read as a clean sweep. The card itself says the stronger edits (alpha 0.2 and up) start to cost instruction following, which is why this release ships alpha=0.1."
+    },
+    {
+      "name": "13 held-out coding/math/science tasks (pass rate)",
+      "score": 92.3,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "hf-autotrust-inkling-2-mini-concise",
+      "vendor_claim": true,
+      "config": "Same card table, row '13 held-out coding/math/science tasks x 3': Base 35/39 -> concise 36/39, i.e. 92.3% vs 89.7% pass rate (+2.6 points [-5.1, +10.3]) with -13.3% thinking tokens. Held-out tasks were never used for alpha selection per the card."
+    }
+  ]
+}
