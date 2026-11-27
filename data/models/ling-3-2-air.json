@@ -1,0 +1,93 @@
+{
+  "id": "ling-3-2-air",
+  "type": "model",
+  "name": "Ling-3.2-air",
+  "status": "verified",
+  "confidence": 0.75,
+  "updated": "2026-11-27",
+  "sources": [
+    "inclusionai-ling-3-2-air-model-card"
+  ],
+  "family": "ling",
+  "vendor": "inclusionAI (Ant Group)",
+  "release_year": 2026,
+  "release_date": "2026-11-23",
+  "architecture": "hybrid-attention-ssm",
+  "task": "vision-language",
+  "params_b": 127.921,
+  "active_params_b": 5.5,
+  "num_experts": 512,
+  "experts_per_token": 8,
+  "shared_expert": true,
+  "hidden_size": 2560,
+  "num_layers": 42,
+  "num_kv_heads": 32,
+  "head_dim": 128,
+  "gqa_ratio": 1.0,
+  "max_position_embeddings": 262144,
+  "context_scaling": "native to 262144: rope_theta 6000000, partial_rotary_factor 0.5, rope_scaling null in text_config. The card states no longer window, so 262144 is the recorded context.",
+  "activation": "silu",
+  "attention_variant": "hybrid KDA + gated MLA: 35 of 42 layers are KDA (Kimi Delta Attention, fixed recurrent state) and 7 are gated MLA, a 5:1 split the card states and config.json confirms via layer_group_size 6",
+  "kv_cache_bytes_per_token": 8064,
+  "flops_per_token_active": 11000000000.0,
+  "open_weights": true,
+  "license": "MIT",
+  "context_scaling_method": "native",
+  "attention_layer_indices": [
+    5,
+    11,
+    17,
+    23,
+    29,
+    35,
+    41
+  ],
+  "benchmarks": [
+    {
+      "name": "Terminal-Bench 4.0",
+      "score": 27.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "inclusionai-ling-3-2-air-model-card",
+      "vendor_claim": true,
+      "config": "Prose delta in the card introduction: 'on Terminal-Bench 4.0, its pass rate on terminal-based tasks rises from 0% to 27%'. No table row, no harness, no n printed; the card's only evaluation table is an image (4723-px PNG on intranetproxy.alipay.com)."
+    },
+    {
+      "name": "AutomationBench-AA",
+      "score": 61.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "inclusionai-ling-3-2-air-model-card",
+      "vendor_claim": true,
+      "config": "Prose delta: 'AutomationBench-AA score rises from 15.7% to 61%'. Artificial Analysis' variant, not the public AutomationBench rows already in the catalog, so it is not a like-for-like comparison with those."
+    },
+    {
+      "name": "GDP.pdf (all-pass rate)",
+      "score": 16.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "inclusionai-ling-3-2-air-model-card",
+      "vendor_claim": true,
+      "config": "Prose delta: 'GDP.pdf all-pass rate increases from 8.4% to 16%'. All-pass, not per-criterion; no sample size printed."
+    },
+    {
+      "name": "Harvey LAB-AA v1.1 (criterion pass)",
+      "score": 87.7,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "inclusionai-ling-3-2-air-model-card",
+      "vendor_claim": true,
+      "config": "Prose: 87.7% criterion pass rate. The card also states the all-pass rate is 8.3% before the material-hallucination check and 0.8% after it - the 87.7 is a per-criterion rate, NOT comparable to all-pass numbers on the same benchmark."
+    },
+    {
+      "name": "AA Intelligence Index v5.0.1",
+      "score": 23.0,
+      "scale": 100,
+      "higher_is_better": true,
+      "source": "inclusionai-ling-3-2-air-model-card",
+      "vendor_claim": true,
+      "config": "Third-party index quoted by the card ('scores 23 on the Artificial Analysis Intelligence Index v5.0.1'). Recorded at scale 100 because AA prints it as an index. Version 5.0.1 - models/inkling-2-mini carries an AA Index v5.0 figure of 20.1, a DIFFERENT suite version, so the two must not be compared."
+    }
+  ],
+  "notes": "ADDED 2026-11-27 from the trending sweep (trendingScore 198 on its first full day in the feed; not a download or likes pick). New base model: a native-multimodal hybrid-linear MoE that the card says 'shares the same native multimodal architecture as Ling-3.0-flash-VL', i.e. a successor in the Ling line, not a fine-tune of a catalog base.\n\nPARAMS: params_b 127.921 = HF safetensors.total 127,920,654,544 (F8_E4M3 126.61B + BF16 1.31B + F32 0.0002B), fetched 2026-11-27 with ?blobs=true. The card says 'Total 124B, Activated 5.5B'. The 3.9B gap is not explained by the card; the vision tower (qwen3_moe_vit, depth 27, hidden 1152) plus embeddings plausibly account for it but I did not derive it, so BOTH numbers sit on the record and params_b follows the repository rule (safetensors.total). active_params_b 5.5 is the vendor figure; flops_per_token_active = 2 x 5.5e9 = 1.1e10 (schema 2N convention, NOT derived from the checkpoint).\n\nWHY IT MATTERS FOR A LOW-VRAM BOX: 512 routed experts with 8 routed per token plus one shared expert at hidden 2560, so a token touches a single-digit percentage of the checkpoint and the routed experts can sit in system RAM while decode stays fast. Same shape as models/ling-3-1-flash (560B/25B, 8 of 512) at a fifth of the active width, which is why this record exists despite 124B of weights.\n\nGEOMETRY from text_config fetched 2026-11-27: 42 layers, hidden 2560, 32 attention heads, kv_lora_rank 512, qk_nope_head_dim 128, qk_rope_head_dim 64, v_head_dim 128, num_experts 512, num_experts_per_tok 8, moe_intermediate_size 768, moe_shared_expert_intermediate_size 768, first_k_dense_replace 2, topk_group 4, n_group 8, routed_scaling_factor 2.5, vocab 157184, layer_group_size 6. num_key_value_heads/head_dim in text_config describe the KDA layers; the 7 MLA layers hold no GQA cache, so gqa_ratio 1.0 is nominal and the KV figure below is the one that matters.\n\nLAYER SPLIT (same rule as models/ling-3-1-flash, modeling_bailing_moe_v3.py): attention iff (layer_idx+1) % layer_group_size == 0, else linear_attention. Over 42 layers with group size 6 that is attention at 0-based [5, 11, 17, 23, 29, 35, 41] = 7 layers and 35 KDA layers, matching the card's '35 KDA + 7 Gated MLA (5:1)' exactly.\n\nKV BASIS: 8,064 bytes/token = 7 MLA layers x (kv_lora_rank 512 + qk_rope_head_dim 64) x 2 bytes (bf16). The 35 KDA layers keep a fixed recurrent state that does not grow with context. At the full 262,144-token context that is 8,064 B x 262,144 = 2.11 GB of growing cache, versus ~120 GB for the same context on a 42-layer, 32-KV-head GQA model at head_dim 128 - the point of the hybrid. The card's own SGLang recipe is 4x H20/H200 at --tp 4 with --mamba-cache-mode align, i.e. the vendor expects multi-GPU serving, not one card.\n\nEVIDENCE, and what it does NOT establish: the card prints NO comparison table. Every row in benchmarks[] is a sentence of prose measuring Ling-3.2-air against its predecessor (Ling-3.0-flash-VL); the full evaluation is an image that cannot be read from the card text. So there is no like-for-like, same-harness comparison against any model already in this catalog, and none was manufactured. Two explicit LOSES/limits against the catalog's nearest neighbour, models/ling-3-1-flash (560B, 25B active, 8 of 512): Terminal-Bench 4.0 is 27.0 here vs 46.03 there, and the card's AutomationBench-AA 61.0 is a different variant from the 52.5 PUBLIC AutomationBench already recorded there, so 61 does NOT beat 52.5 on the same test. Ling-3.2-air's real claim is efficiency at 5.5B active, not a size-class upset; it is recorded as a base model with vendor claims, not as a winner."
+}
