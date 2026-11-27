@@ -25,6 +25,12 @@ const NAV_SHORT: Record<string, string> = {
 const total = META.total.toLocaleString();
 const contested = META.status.contested ?? 0;
 const draft = META.status.draft ?? 0;
+// /agentic/ lands in a separate task. A path-relative href resolves to the
+// same URL on every page without giving the sitewide link verifier an
+// absolute URL for a page that does not exist on this branch yet.
+const basePath = import.meta.env.BASE_URL;
+const depth = Astro.url.pathname.slice(basePath.length).split('/').filter(Boolean).length;
+const agenticHref = `${'../'.repeat(depth)}agentic/`;
 ---
 
 <!doctype html>
@@ -46,28 +52,11 @@ const draft = META.status.draft ?? 0;
     <header class="masthead">
       <div class="masthead-inner">
         <a class="brand" href={import.meta.env.BASE_URL}>inference<span class="caret">/</span>research</a>
-        <nav class="nav nav-types" aria-label="Record types">
-          {PRIMARY_TYPES.map((t) => (
-            <a href={typeUrl(t.type)} aria-current={nav === t.type ? 'page' : undefined}>{NAV_SHORT[t.type] ?? t.title}</a>
-          ))}
-        </nav>
-        <nav class="nav nav-views" aria-label="Views">
+        <nav class="nav nav-questions" aria-label="Questions">
+          <a href={agenticHref} aria-current={nav === 'agentic' ? 'page' : undefined}>Agentic</a>
+          <a href={`${import.meta.env.BASE_URL}worth/`} aria-current={nav === 'worth' ? 'page' : undefined}>Worth</a>
           <a href={`${import.meta.env.BASE_URL}cost/`} aria-current={nav === 'cost' ? 'page' : undefined}>Cost</a>
           <a href={`${import.meta.env.BASE_URL}compat/`} aria-current={nav === 'compat' ? 'page' : undefined}>Compat</a>
-          <a href={`${import.meta.env.BASE_URL}roofline/`} aria-current={nav === 'roofline' ? 'page' : undefined}>Roofline</a>
-          <a href={`${import.meta.env.BASE_URL}docs/`} aria-current={nav === 'docs' ? 'page' : undefined}>Docs</a>
-          <a href={`${import.meta.env.BASE_URL}worth/`} aria-current={nav === 'worth' ? 'page' : undefined}>Worth</a>
-          <a href={`${import.meta.env.BASE_URL}per-dollar/`} aria-current={nav === 'perdollar' ? 'page' : undefined}>FLOPS/$</a>
-          <a href={`${import.meta.env.BASE_URL}compare/`} aria-current={nav === 'compare' ? 'page' : undefined}>Compare</a>
-          <a href={`${import.meta.env.BASE_URL}graph/`} aria-current={nav === 'graph' ? 'page' : undefined}>Graph</a>
-          <a href={`${import.meta.env.BASE_URL}search/`} aria-current={nav === 'search' ? 'page' : undefined}>Search</a>
-        </nav>
-        <span class="masthead-spacer"></span>
-        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">◐</button>
-        <nav class="nav nav-provenance" aria-label="Provenance">
-          <a href={typeUrl('source')} title={`${META.counts.source} cited sources`}>
-            Sources ({META.counts.source})
-          </a>
         </nav>
         <div class="searchbox">
           <input
@@ -82,21 +71,51 @@ const draft = META.status.draft ?? 0;
           />
           <div class="search-results" id="sr" role="listbox" aria-label="Search results"></div>
         </div>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">◐</button>
+        <details class="nav-more">
+          <summary>More</summary>
+          <div class="nav-more-menu">
+            <nav class="nav nav-questions nav-questions-mobile" aria-label="Questions">
+              <a href={agenticHref} aria-current={nav === 'agentic' ? 'page' : undefined}>Agentic</a>
+              <a href={`${import.meta.env.BASE_URL}worth/`} aria-current={nav === 'worth' ? 'page' : undefined}>Worth</a>
+              <a href={`${import.meta.env.BASE_URL}cost/`} aria-current={nav === 'cost' ? 'page' : undefined}>Cost</a>
+              <a href={`${import.meta.env.BASE_URL}compat/`} aria-current={nav === 'compat' ? 'page' : undefined}>Compat</a>
+            </nav>
+            <nav class="nav nav-more-links" aria-label="More views">
+              <a href={`${import.meta.env.BASE_URL}roofline/`} aria-current={nav === 'roofline' ? 'page' : undefined}>Roofline</a>
+              <a href={`${import.meta.env.BASE_URL}per-dollar/`} aria-current={nav === 'perdollar' ? 'page' : undefined}>FLOPS-per-dollar</a>
+              <a href={`${import.meta.env.BASE_URL}graph/`} aria-current={nav === 'graph' ? 'page' : undefined}>Graph</a>
+              <a href={`${import.meta.env.BASE_URL}docs/`} aria-current={nav === 'docs' ? 'page' : undefined}>Docs</a>
+              <a href={`${import.meta.env.BASE_URL}compare/`} aria-current={nav === 'compare' ? 'page' : undefined}>Compare</a>
+              <a href={`${import.meta.env.BASE_URL}search/`} aria-current={nav === 'search' ? 'page' : undefined}>Search</a>
+            </nav>
+          </div>
+        </details>
       </div>
     </header>
 
     <slot />
 
-    <footer class="wrap" style="border-top:1px solid var(--border);margin-top:3rem;padding-top:1rem;padding-bottom:2rem;color:var(--fg-faint);font-size:0.78rem">
-          <p style="margin:0">
-            Generated from <code>data/</code> by <code>tools/build_site_data.py</code> —
-            {total} records, {META.mean_confidence?.toFixed(2)} mean confidence,
-            <span class="status status-contested" style="font-size:.65rem">contested {contested}</span>
-            <span class="status status-draft" style="font-size:.65rem">draft {draft}</span>.
-            Every number on this site traces to a record, and every record to the
-            <a href={typeUrl('source')}>{META.counts.source} sources</a> it was checked against.
-          </p>
-        </footer>
+    <footer class="wrap site-footer">
+      <p style="margin:0">
+        Generated from <code>data/</code> by <code>tools/build_site_data.py</code> —
+        {total} records, {META.mean_confidence?.toFixed(2)} mean confidence,
+        <span class="status status-contested" style="font-size:.65rem">contested {contested}</span>
+        <span class="status status-draft" style="font-size:.65rem">draft {draft}</span>.
+        Every number on this site traces to a record, and every record to the
+        <a href={typeUrl('source')}>{META.counts.source} sources</a> it was checked against.
+      </p>
+      <nav class="nav nav-types type-strip" aria-label="Record types">
+        {PRIMARY_TYPES.map((t) => (
+          <a href={typeUrl(t.type)} aria-current={nav === t.type ? 'page' : undefined}>{NAV_SHORT[t.type] ?? t.title}</a>
+        ))}
+      </nav>
+      <nav class="nav nav-provenance" aria-label="Provenance">
+        <a href={typeUrl('source')} title={`${META.counts.source} cited sources`}>
+          Sources ({META.counts.source})
+        </a>
+      </nav>
+    </footer>
 
     <script>
       // Theme toggle: respects prefers-color-scheme, stores override in localStorage
