@@ -1,6 +1,16 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { DOCS, META } from '../../lib/data';
+
+type Doc = typeof DOCS[number];
+
+const GROUPS: { kind: Doc['kind']; label: string; desc: string }[] = [
+  { kind: 'reader', label: 'Start here', desc: 'The decision guides: which hardware, engine, quant, or topology to run, and what it costs.' },
+  { kind: 'reference', label: 'Reference', desc: 'Methodology, vocabulary, and compatibility lookups you consult while making a decision.' },
+  { kind: 'ledger', label: 'Engineering ledgers', desc: 'Audit findings, known defects, and citation-integrity records: the debt and integrity log.' },
+];
+
+const byKind = (kind: Doc['kind']): Doc[] => DOCS.filter((d) => d.kind === kind);
 ---
 
 <Base title="Docs" nav="docs" description="Synthesis docs over the inference-research corpus." pf={{ type: 'doc' }}>
@@ -16,16 +26,27 @@ import { DOCS, META } from '../../lib/data';
       </p>
     </div>
 
-    <section class="section">
-      <h2>Decision docs</h2>
-      <div class="doclist">
-        {DOCS.map((d) => (
-          <a class="doccard" href={`/docs/${d.slug}/`}>
-            <span class="t">{d.title.replace(/^\d\d\s+—\s+/, '')}</span>
-            <span class="m">{d.slug} · {d.chars.toLocaleString()} chars</span>
-          </a>
-        ))}
-      </div>
-    </section>
+    {GROUPS.map((g) => (
+      byKind(g.kind).length > 0 ? (
+        <section class="section">
+          <h2 class="grouptitle">{g.label}</h2>
+          <p class="groupdesc">{g.desc}</p>
+          <div class="doclist">
+            {byKind(g.kind).map((d) => (
+              <a class="doccard" href={`/docs/${d.slug}/`}>
+                <span class="t">{d.title.replace(/^\d\d\s+—\s+/, '')}</span>
+                {d.blurb ? <span class="b">{d.blurb}</span> : null}
+              </a>
+            ))}
+          </div>
+        </section>
+      ) : null
+    ))}
   </main>
 </Base>
+
+<style>
+  .grouptitle { font-size: var(--text-lg); }
+  .groupdesc { color: var(--fg-dim); margin: 0 0 var(--space-3); }
+  .doccard .b { display: block; color: var(--fg-dim); font-size: var(--text-sm); line-height: 1.4; }
+</style>

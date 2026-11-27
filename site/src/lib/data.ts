@@ -60,6 +60,8 @@ export interface DocEntry {
   slug: string;
   title: string;
   order: number;
+  kind: 'reader' | 'reference' | 'ledger';
+  blurb: string;
   chars: number;
   markdown: string;
 }

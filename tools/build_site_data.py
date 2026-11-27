@@ -588,21 +588,118 @@ def rewrite_docs(text: str, bare: dict[str, str], records: dict[str, dict],
     return DOC_MD_LINK.sub(doc, body)
 
 
+# Doc-grouping for the docs index. Each slug lands in exactly one reader-facing
+# group; anything not named below defaults to "reference" and is printed as a
+# warning so a new doc cannot silently land in the wrong group.
+DOC_KIND_MAP = {
+    "01-hardware-selection": "reader",
+    "02-flop-map": "reader",
+    "03-engine-selection": "reader",
+    "04-quant-selection": "reader",
+    "05-known-traps": "reader",
+    "08-cost-per-token": "reader",
+    "09-model-memory-envelope": "reader",
+    "11-interconnect-decision": "reader",
+    "12-serving-workflows": "reader",
+    "23-quantization-selection": "reader",
+    "24-metrics-surface-selection": "reader",
+    "27-affordable-35b-fit-matrix": "reader",
+    "28-value-rent-vs-own": "reader",
+    "33-decision-models": "reader",
+    "36-consumer-shortlist": "reader",
+    "06-glossary": "reference",
+    "07-benchmarking-methodology": "reference",
+    "10-testing-methodology": "reference",
+    "13-model-compatibility": "reference",
+    "15-compilers-and-kernel-dsls": "reference",
+    "16-migration-upgrade": "reader",
+    "17-deployment-shape": "reader",
+    "18-reliability": "reader",
+    "19-production-operations": "reader",
+    "20-observability": "reader",
+    "21-deployment-topology": "reader",
+    "22-safety-and-security": "reader",
+    "37-paper-reading-map": "reference",
+    "README": "reader",
+    "14-audit-findings": "ledger",
+    "25-citation-integrity": "ledger",
+    "26-known-defects": "ledger",
+    "35-quant-research-workflow": "ledger",
+    "NOTES": "ledger",
+}
+
+# One-line "read this when..." blurb per doc. Kept under ~90 chars and derived
+# from the doc's title/intro, never from invented claims. Unknown slugs fall
+# back to "" so the card still has somewhere to hang its title.
+DOC_BLURB = {
+    "01-hardware-selection": "Which accelerator for which workload; start here before choosing hardware.",
+    "02-flop-map": "Why inference is slow and which machine property fixes it, sorted by bound_by.",
+    "03-engine-selection": "Which engine on which hardware, leading with what each engine excludes.",
+    "04-quant-selection": "Why weight-only-4bit and W4A4 are different regimes; per-hardware, see 23.",
+    "05-known-traps": "Read before deploying: the silent-corruption gotchas, blocker severity first.",
+    "06-glossary": "Repo vocabulary, one line per term; every id here resolves to a record.",
+    "07-benchmarking-methodology": "Read before quoting any throughput or latency figure in this repo.",
+    "08-cost-per-token": "Joins priced supply records to throughput to get cost per output token.",
+    "09-model-memory-envelope": "Weights, KV, and the weight-vs-KV streaming crossover; all derived, not measured.",
+    "10-testing-methodology": "Differential oracles that catch silent corruption; absence means untested.",
+    "11-interconnect-decision": "When tensor parallelism pays off: the all-reduce crossover batch per fabric.",
+    "12-serving-workflows": "Where serving step time actually goes, and why it moves between workloads.",
+    "13-model-compatibility": "Which model on which engine supports which architecture; unknown is a real answer.",
+    "14-audit-findings": "Mechanical consistency audit of the record set; a ledger of audit issues.",
+    "15-compilers-and-kernel-dsls": "What generates the kernel: compiler, DSL, or template library, and its cost.",
+    "16-migration-upgrade": "When a new GPU generation is worth its price increase for your workload.",
+    "17-deployment-shape": "Single GPU, multi-GPU, or multi-node; the interconnect fabric decides.",
+    "18-reliability": "What will break or degrade silently in production, and what to monitor for it.",
+    "19-production-operations": "Which Kubernetes knobs to set and which serving problems to accept as unsolved.",
+    "20-observability": "Which metrics to alert on, and which percentages are trends, not thresholds.",
+    "21-deployment-topology": "Where the gateway sits and what a cold start actually costs.",
+    "22-safety-and-security": "Serving-level controls: filter placement, isolation, and API leaks.",
+    "23-quantization-selection": "Pick a quant format for a hardware target: format x kernel x engine match.",
+    "24-metrics-surface-selection": "Which of the signals that matter your chosen engine can actually measure.",
+    "25-citation-integrity": "When a source does not contain the number a record cites it for.",
+    "26-known-defects": "Standing ledger of defects a wave found but could not fix in its scope.",
+    "27-affordable-35b-fit-matrix": "Which accelerators hold a ~35B model and what the cheapest one costs.",
+    "28-value-rent-vs-own": "Rent vs own, $/Mtok, joules per token; what the corpus can actually rank.",
+    "33-decision-models": "How to rank decision models by the Decision Index, not chat benchmarks.",
+    "35-quant-research-workflow": "How to answer 'most performant quant' with data that survives rechecking.",
+    "36-consumer-shortlist": "New open-weight models that fit consumer hardware, with the quant to run.",
+    "37-paper-reading-map": "The paper records organized by topic and adoption, made navigable.",
+    "NOTES": "Scratch space for in-progress research; nothing here is authoritative.",
+}
+
+DEFAULT_DOC_KIND = "reference"
+
+
+def _doc_kind(slug: str, unmatched: list[str]) -> str:
+    kind = DOC_KIND_MAP.get(slug)
+    if kind is None:
+        unmatched.append(slug)
+        return DEFAULT_DOC_KIND
+    return kind
+
+
 def load_docs(records: dict[str, dict], bare: dict[str, str]) -> list[dict]:
     d = ROOT / "docs"
     files = [f for f in sorted(d.glob("*.md")) if f.name != "00-index.md"]
     doc_slugs = {f.stem for f in files}
+    unmatched: list[str] = []
     out = []
     for f in files:
         raw = f.read_text(encoding="utf-8")
         m = re.search(r"^#\s+(.+?)\s*$", raw, re.M)
+        kind = _doc_kind(f.stem, unmatched)
         out.append({
             "slug": f.stem,
             "title": (m.group(1).strip() if m else f.stem),
             "order": int(f.stem[:2]) if f.stem[:2].isdigit() else 99,
+            "kind": kind,
+            "blurb": DOC_BLURB.get(f.stem, ""),
             "chars": len(raw),
             "markdown": rewrite_docs(raw, bare, records, doc_slugs),
         })
+    if unmatched:
+        print(f"WARNING: docs with no explicit kind, defaulted to "
+              f"'{DEFAULT_DOC_KIND}': {', '.join(sorted(unmatched))}")
     out.sort(key=lambda x: (x["order"], x["slug"]))
     return out
 
