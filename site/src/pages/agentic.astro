@@ -1,0 +1,214 @@
+---
+import Base from '../layouts/Base.astro';
+import data from '../../public/joined/agentic.json';
+
+const title = 'Agentic Models';
+const description = 'Models with published agentic evidence, ranked by agentic score and filterable by task family, memory fit and evidence quality.';
+
+interface Row {
+  id: string; name: string; agentic: number; coding: number | null;
+  instruction: number | null; knowledge: number | null; axis_count: number | null;
+  thin: boolean; vendor_only: boolean; families: string[];
+  release_year: number | null; active_params_b: number; total_params_b: number;
+  moe: boolean; weights_q4_gib: number; traffic_q4_gib: number; single_user_gib: number;
+  multi_user_gib: number | null; offload_friendly: boolean;
+  quant_retention: { id: string; format: string | null; median_delta_pct: number; rows: number } | null;
+  worth: number | null;
+}
+
+const rows: Row[] = [...data.rows].sort(
+  (a, b) => (b.agentic ?? -1) - (a.agentic ?? -1) || (b.worth ?? -1) - (a.worth ?? -1),
+);
+const score = (v: number | null): string => v == null ? '—' : v.toFixed(1);
+const gib = (v: number | null): string => v == null ? '—' : `${Math.round(v)} GB`;
+const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
+---
+
+<Base title={title} description={description} nav="worth">
+  <main class="wrap" data-pagefind-body>
+    <nav class="breadcrumb">
+      <a href={import.meta.env.BASE_URL}>index</a> / <span>agentic</span>
+    </nav>
+
+    <div class="page-head">
+      <h1>Agentic Models</h1>
+      <p class="sub">
+        Every model with a published agentic benchmark, ranked by that score and
+        narrowed to what can actually run locally. All scores come from the
+        worth-running join; nothing here is recomputed.
+      </p>
+    </div>
+
+    <div class="join-controls" data-agentic-controls>
+      <div class="control">
+        <label for="a-fit">Fits in</label>
+        <select id="a-fit" data-filter="fit">
+          <option value="">anything</option>
+          <option value="16">16 GB</option>
+          <option value="24">24 GB</option>
+          <option value="32">32 GB</option>
+          <option value="48">48 GB</option>
+          <option value="80">80 GB</option>
+          <option value="128">128 GB</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="a-family">Task family</label>
+        <select id="a-family" data-filter="family" multiple size="3" aria-label="Task family: choose one or more">
+          <option value="terminal">terminal</option>
+          <option value="swe">swe</option>
+          <option value="web">web</option>
+          <option value="tool">tool</option>
+          <option value="computer">computer</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="a-offload">Offload</label>
+        <input id="a-offload" type="checkbox" data-filter="offload" />
+      </div>
+      <div class="control">
+        <label for="a-evidence">Evidence</label>
+        <select id="a-evidence" data-filter="evidence">
+          <option value="all">all</option>
+          <option value="independent">independent only</option>
+          <option value="drop-thin">drop thin</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="a-sort">Sort</label>
+        <select id="a-sort" data-filter="sort">
+          <option value="agentic">agentic desc</option>
+          <option value="coding">coding desc</option>
+          <option value="worth">worth desc</option>
+          <option value="size">size asc</option>
+        </select>
+      </div>
+      <span class="control-count" data-count></span>
+    </div>
+
+    <p class="empty-state" data-empty hidden>
+      No models match these filters. In this catalog every published agentic score is a
+      vendor claim, so “independent only” has no rows — choose another evidence setting.
+    </p>
+
+    <div class="cost-table-wrap">
+      <table class="cost-table" data-agentic-table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th class="num">Agentic</th>
+            <th class="num">Coding</th>
+            <th class="num">Fits (4-bit)</th>
+            <th class="num">Read/token</th>
+            <th class="num">Context<br><span class="th-note">knowledge / instr</span></th>
+            <th>Tasks</th>
+            <th class="num">Year</th>
+            <th>Evidence</th>
+          </tr>
+        </thead>
+        <tbody data-agentic-body>
+          {rows.map((r) => (
+            <>
+            <tr
+              data-fit={r.single_user_gib}
+              data-families={r.families.join(' ')}
+              data-offload={r.offload_friendly ? '1' : '0'}
+              data-evidence={evidence(r)}
+              data-thin={r.thin ? '1' : '0'}
+              data-agentic={r.agentic}
+              data-coding={r.coding ?? ''}
+              data-worth={r.worth ?? ''}
+              data-size={r.single_user_gib}
+            >
+              <td>
+                <a href={`${import.meta.env.BASE_URL}r/models/${r.id}/`}>{r.name}</a>
+                <div class="bench-line">
+                  {r.weights_q4_gib} GB weights · {r.moe ? 'MoE, ' : ''}{r.active_params_b}B active
+                  {r.quant_retention ? ` · quant ${r.quant_retention.median_delta_pct.toFixed(1)}%` : ''}
+                </div>
+              </td>
+              <td class="num cost-cell">{score(r.agentic)}</td>
+              <td class="num">{score(r.coding)}</td>
+              <td class="num">{gib(r.single_user_gib)}</td>
+              <td class="num">{gib(r.traffic_q4_gib)}</td>
+              <td class="num" title={`instruction ${score(r.instruction)} · ${r.axis_count ?? '?'} ${r.axis_count === 1 ? 'axis' : 'axes'} of evidence`}>
+                {score(r.knowledge)}<div class="bench-line">I {score(r.instruction)}</div>
+              </td>
+              <td>{r.families.length ? r.families.join(', ') : '—'}</td>
+              <td class="num">{r.release_year ?? '—'}</td>
+              <td>
+                <span class={r.vendor_only ? 'vendor-flag' : undefined}>{evidence(r)}</span>
+                {r.thin && <span class="thin-flag" title="only one or two axes carry discriminating evidence">thin</span>}
+              </td>
+            </tr>
+            {'\n'}
+            </>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <details class="sub">
+      <summary>How the score is computed</summary>
+      <p>
+        The agentic column is one axis of the worth-running score: benchmarks such as
+        Terminal-Bench, SWE-bench, BrowseComp and tau-bench are grouped so one
+        capability counts once, each scored against the best result recorded for that
+        same test here. A benchmark's weight falls as more reporters crowd within five
+        points of the best, and again as its leaders age; a model's own release year
+        discounts the result a second time. Thin evidence is shrunk toward the catalog
+        median. The coding column is the same calculation over coding tests.
+        <em>Fits</em> is the whole 4-bit checkpoint plus the 8k KV cache for one user;
+        <em>Read/token</em> is only the weights a decode step touches, much smaller for a
+        sparse model. Task families come from benchmark names using the same regex table
+        as the published agentic ranking. <em>thin</em> means one or two axes carry the
+        evidence, <em>vendor</em> means the lab reported its own scores, and the quant
+        percentage on a model is a measured third-party retention figure, not a lab claim.
+      </p>
+    </details>
+  </main>
+</Base>
+
+<script>
+  const controls = document.querySelector('[data-agentic-controls]') as HTMLElement;
+  const body = document.querySelector('[data-agentic-body]') as HTMLElement;
+  const allRows = Array.from(body.querySelectorAll<HTMLTableRowElement>('tr[data-agentic]'));
+  const empty = document.querySelector('[data-empty]') as HTMLElement;
+  const count = document.querySelector('[data-count]') as HTMLElement;
+
+  function num(tr: HTMLTableRowElement, key: string): number {
+    const n = Number((tr.dataset as Record<string, string>)[key]);
+    return Number.isFinite(n) ? n : -Infinity;
+  }
+
+  function apply() {
+    const fit = Number((document.querySelector('[data-filter="fit"]') as HTMLSelectElement).value) || Infinity;
+    const family = Array.from((document.querySelector('[data-filter="family"]') as HTMLSelectElement).selectedOptions)
+      .map((o) => o.value);
+    const offload = (document.querySelector('[data-filter="offload"]') as HTMLInputElement).checked;
+    const evidence = (document.querySelector('[data-filter="evidence"]') as HTMLSelectElement).value;
+    const sort = (document.querySelector('[data-filter="sort"]') as HTMLSelectElement).value;
+
+    const shown = allRows.filter((tr) => {
+      if (num(tr, 'fit') > fit) return false;
+      if (family.length && !family.some((f) => (tr.dataset.families || '').split(' ').includes(f))) return false;
+      if (offload && tr.dataset.offload !== '1') return false;
+      if (evidence === 'independent' && tr.dataset.evidence !== 'independent') return false;
+      if (evidence === 'drop-thin' && tr.dataset.thin === '1') return false;
+      return true;
+    });
+
+    const key = sort === 'coding' ? 'coding' : sort === 'worth' ? 'worth' : sort === 'size' ? 'size' : 'agentic';
+    shown.sort((a, b) => sort === 'size'
+      ? num(a, key) - num(b, key)
+      : num(b, key) - num(a, key));
+
+    for (const tr of allRows) tr.hidden = !shown.includes(tr);
+    for (const tr of shown) body.appendChild(tr);
+    empty.hidden = shown.length > 0;
+    count.textContent = `${shown.length} of ${allRows.length} models`;
+  }
+
+  controls.addEventListener('change', apply);
+  apply();
+</script>

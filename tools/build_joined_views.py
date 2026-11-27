@@ -24,6 +24,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from registry import DIRS, TITLES  # noqa: E402
+from build_agentic_view import main as build_agentic  # noqa: E402
 
 # Also need to import from cost_per_token which is in the same directory
 
@@ -1164,6 +1165,12 @@ def main() -> None:
         json.dumps(worth, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     scored = sum(1 for r in worth["rows"] if r["capability"] is not None)
     print(f"  {len(worth['rows'])} runnable models, {scored} with a capability score")
+
+    # The agentic page projects these rows; it must run after worth_running.json
+    # exists, and it re-reads the file rather than taking the in-memory dict so
+    # the two views can never disagree about what was actually written.
+    print("Building agentic view...")
+    build_agentic()
 
     total = sum(f.stat().st_size for f in OUT.rglob("*.json"))
     print(f"\n  {total / 1024:.0f} KB total under {OUT.relative_to(ROOT)}")
