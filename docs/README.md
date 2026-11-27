@@ -31,7 +31,7 @@ source of truth.
 | what to run, alert on, and what breaks in production? | [19-production-operations.md](19-production-operations.md), [18-reliability.md](18-reliability.md) |
 | which metrics to trust, and which engines export them? | [20-observability.md](20-observability.md), then [24-metrics-surface-selection.md](24-metrics-surface-selection.md) |
 | what does the serving system own for safety? | [22-safety-and-security.md](22-safety-and-security.md) |
-| which papers matter for a topic? | [27-paper-reading-map.md](27-paper-reading-map.md) |
+| which papers matter for a topic? | [37-paper-reading-map.md](37-paper-reading-map.md) |
 
 ## Method and integrity
 
