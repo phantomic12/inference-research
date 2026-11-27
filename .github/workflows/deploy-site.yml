@@ -58,6 +58,22 @@ jobs:
         # build made from a broken tree is worse than shipping nothing.
         run: python tools/validate.py --quiet
 
+      - name: Generate ranking docs
+        # These docs are gitignored as "regenerated in CI", so a clean checkout
+        # has none of them. validate.yml regenerates them, but deploy-site.yml
+        # previously did not: load_docs() never saw them and the five pages
+        # 404'd in production. Keep this list in sync with validate.yml and
+        # site/scripts/prebuild.mjs. This must run before `npm run build`
+        # because prebuild's build_site_data.py reads docs/ into docs.json.
+        run: |
+          python tools/index.py
+          python tools/rank_models.py > docs/29-local-model-ranking.md
+          python tools/intelligence_density.py
+          python tools/mine_derivatives.py
+          python tools/decision_ranking.py > docs/33-decision-models.md
+          python tools/agentic_ranking.py
+          python tools/quant_retention.py
+
       - name: Build site
         # prebuild runs tools/build_site_data.py, which reads data/ and docs/
         # from this clean checkout.
