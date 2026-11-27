@@ -252,6 +252,18 @@ g = read("graph/index.html")
 check("graph page embeds node data", "nvidia-h100-sxm" in g)
 check("graph page has canvas", "<canvas" in g)
 
+print("\n=== 9. Every doc slug in the payload has a rendered page ===")
+# The docs in meta.json are what the site links to, so a slug without an
+# index.html is a live 404. Generated docs can disappear from a build when
+# their generator is skipped; a whole-section check names the missing slugs
+# instead of just reporting that some links broke.
+META = Path(__file__).resolve().parent.parent / "src" / "data" / "meta.json"
+DOC_SLUGS = [d["slug"] for d in json.loads(META.read_text(encoding="utf-8"))["docs"]]
+missing_doc_pages = [s for s in DOC_SLUGS if not (DIST / "docs" / s / "index.html").exists()]
+check(f"all {len(DOC_SLUGS)} meta.json doc slugs have a rendered page",
+      not missing_doc_pages,
+      "missing page(s): " + ", ".join(f"docs/{s}/index.html" for s in missing_doc_pages))
+
 print(f"\n{'='*60}\n{ok} passed, {len(fails)} failed")
 for f in fails:
     print("  FAILED:", f)
