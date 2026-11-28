@@ -3,13 +3,13 @@ import Base from '../layouts/Base.astro';
 import data from '../../public/joined/agentic.json';
 
 const title = 'Agentic Models';
-const description = 'Models with published agentic evidence, ranked by agentic score and filterable by task family, memory fit and evidence quality.';
+const description = 'Models with published agentic results, ranked by agentic score and filterable by task family and memory fit.';
 
 interface Row {
   id: string; name: string; agentic: number; coding: number | null;
   agentic_raw: number | null; agentic_prior: number | null; agentic_evidence: number | null;
   instruction: number | null; knowledge: number | null; axis_count: number | null;
-  thin: boolean; vendor_only: boolean; families: string[];
+  thin: boolean; families: string[];
   release_year: number | null; active_params_b: number; total_params_b: number;
   moe: boolean; weights_q4_gib: number; traffic_q4_gib: number; single_user_gib: number;
   multi_user_gib: number | null; offload_friendly: boolean;
@@ -42,7 +42,6 @@ if (prior != null) {
 }
 const kText = k == null ? 'not available' : k.toFixed(1);
 const gib = (v: number | null): string => v == null ? '—' : `${Math.round(v)} GB`;
-const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
 ---
 
 <Base title={title} description={description} nav="agentic">
@@ -61,8 +60,10 @@ const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
     </div>
 
     <p class="claim-notice" role="note">
-      Every model score on this page is the model maker's own published figure.
-      Independent agentic measurement is not in the catalog yet.
+      Every agentic figure on this page is the model maker's own published
+      result: no third-party agentic measurement is in the catalog yet. Read the
+      order as a comparison of vendor-reported figures, not as independent
+      verification that a model finishes long tasks.
     </p>
 
     <section class="how-to-read" aria-labelledby="how-to-read-heading">
@@ -106,14 +107,6 @@ const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
         <input id="a-offload" type="checkbox" data-filter="offload" />
       </div>
       <div class="control">
-        <label for="a-evidence">Evidence</label>
-        <select id="a-evidence" data-filter="evidence">
-          <option value="all">all</option>
-          <option value="independent">independent only</option>
-          <option value="drop-thin">drop thin</option>
-        </select>
-      </div>
-      <div class="control">
         <label for="a-sort">Sort</label>
         <select id="a-sort" data-filter="sort">
           <option value="agentic">agentic desc</option>
@@ -126,8 +119,7 @@ const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
     </div>
 
     <p class="empty-state" data-empty hidden>
-      No models match these filters. In this catalog every published agentic score is a
-      vendor claim, so “independent only” has no rows — choose another evidence setting.
+      No models match these filters. Try a larger memory fit or another task family.
     </p>
 
     <div class="cost-table-wrap">
@@ -142,7 +134,6 @@ const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
             <th class="num">Knowledge<br><span class="th-note">instr in grey</span></th>
             <th>Tasks</th>
             <th class="num">Year</th>
-            <th>Evidence</th>
           </tr>
         </thead>
         <tbody data-agentic-body>
@@ -152,8 +143,6 @@ const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
               data-fit={r.single_user_gib}
               data-families={r.families.join(' ')}
               data-offload={r.offload_friendly ? '1' : '0'}
-              data-evidence={evidence(r)}
-              data-thin={r.thin ? '1' : '0'}
               data-agentic={r.agentic}
               data-coding={r.coding ?? ''}
               data-worth={r.worth ?? ''}
@@ -169,6 +158,7 @@ const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
               <td class="num cost-cell" title={`${score(r.agentic_raw)} raw · shrunk toward the ${score(r.agentic_prior)} median by ${r.agentic_evidence ?? 0} units of evidence`}>
                 {score(r.agentic)}
                 <div class="bench-line">raw {score(r.agentic_raw)} · ev {r.agentic_evidence ?? '—'}</div>
+                {r.thin && <span class="thin-flag" title="only one or two axes carry discriminating evidence">thin</span>}
               </td>
               <td class="num">{score(r.coding)}</td>
               <td class="num">{gib(r.single_user_gib)}</td>
@@ -178,10 +168,6 @@ const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
               </td>
               <td>{r.families.length ? r.families.join(', ') : '—'}</td>
               <td class="num">{r.release_year ?? '—'}</td>
-              <td>
-                <span class={r.vendor_only ? 'vendor-flag' : undefined}>{evidence(r)}</span>
-                {r.thin && <span class="thin-flag" title="only one or two axes carry discriminating evidence">thin</span>}
-              </td>
             </tr>
             {'\n'}
             </>
@@ -204,8 +190,8 @@ const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
         <em>Read/token</em> is only the weights a decode step touches, much smaller for a
         sparse model. Task families come from benchmark names using the same regex table
         as the published agentic ranking. <em>thin</em> means one or two axes carry the
-        evidence, <em>vendor</em> means the lab reported its own scores, and the quant
-        percentage on a model is a measured third-party retention figure, not a lab claim.
+        evidence; the quant percentage on a model is a measured third-party retention
+        figure, not a lab claim.
       </p>
     </details>
   </main>
@@ -228,15 +214,12 @@ const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
     const family = Array.from((document.querySelector('[data-filter="family"]') as HTMLSelectElement).selectedOptions)
       .map((o) => o.value);
     const offload = (document.querySelector('[data-filter="offload"]') as HTMLInputElement).checked;
-    const evidence = (document.querySelector('[data-filter="evidence"]') as HTMLSelectElement).value;
     const sort = (document.querySelector('[data-filter="sort"]') as HTMLSelectElement).value;
 
     const shown = allRows.filter((tr) => {
       if (num(tr, 'fit') > fit) return false;
       if (family.length && !family.some((f) => (tr.dataset.families || '').split(' ').includes(f))) return false;
       if (offload && tr.dataset.offload !== '1') return false;
-      if (evidence === 'independent' && tr.dataset.evidence !== 'independent') return false;
-      if (evidence === 'drop-thin' && tr.dataset.thin === '1') return false;
       return true;
     });
 

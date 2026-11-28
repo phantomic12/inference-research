@@ -13,6 +13,10 @@ projection of worth_running.json: keep the models with an agentic axis, tag
 their task families from the shared table in agentic_ranking.py (the one the
 markdown ranking uses), and carry the existing scores and memory figures into
 an Astro-importable payload. No scores are recomputed.
+
+The /agentic/ page must not advertise an "independent only" filter when no row
+can ever satisfy it; that guard lives here because this script runs on every
+build, before Astro renders the page.
 """
 from __future__ import annotations
 
@@ -23,6 +27,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "site" / "public" / "joined"
+PAGE = ROOT / "site" / "src" / "pages" / "agentic.astro"
 
 # Same directory as the FAMILIES table; importing it here keeps one definition
 # of what "terminal", "swe", "web", "tool" and "computer" mean on the site.
@@ -36,6 +41,46 @@ _FIELDS = (
     "total_params_b", "moe", "weights_q4_gib", "traffic_q4_gib", "single_user_gib", "multi_user_gib",
     "offload_friendly", "quant_retention", "worth",
 )
+
+
+def count_independent_rows(rows: list[dict]) -> int:
+    """Rows carrying at least one non-vendor measurement, per the joined payload."""
+    return sum(1 for r in rows if not bool(r.get("vendor_only", True)))
+
+
+def page_offers_independent_filter(page: Path = PAGE) -> bool:
+    """Does the rendered page expose a control whose value is 'independent'?
+
+    Only the markup before <script> counts: a JS comparison against a stale
+    dataset attribute is not a control a reader can select.
+    """
+    if not page.exists():
+        return False
+    markup = page.read_text(encoding="utf-8").split("<script>", 1)[0]
+    evidence_control = re.search(
+        r"<(?:select|input)\b[^>]*\bdata-filter\s*=\s*['\"]evidence['\"]", markup, re.I)
+    independent_value = re.search(
+        r"<(?:option|input)\b[^>]*\bvalue\s*=\s*['\"]independent['\"]", markup, re.I)
+    independent_control = re.search(
+        r"<(?:select|input)\b[^>]*\bdata-filter\s*=\s*['\"]independent['\"]", markup, re.I)
+    return bool(independent_control or (evidence_control and independent_value))
+
+
+def assert_independent_filter_has_rows(rows: list[dict], page: Path = PAGE) -> None:
+    """Fail the build if the page offers a filter that can only return no rows.
+
+    An 'independent only' control with zero qualifying rows is worse than no
+    control: it implies verification the catalog does not have. Keep the honest
+    prose and remove the control until real third-party agentic evidence exists.
+    """
+    independent = count_independent_rows(rows)
+    if independent == 0 and page_offers_independent_filter(page):
+        raise RuntimeError(
+            f"{page.name} offers an 'independent' filter but all "
+            f"{len(rows)} agentic rows are vendor claims. Remove the control or "
+            "add genuine third-party agentic evidence; a filter that can only "
+            "return an empty table implies verification we do not have."
+        )
 
 
 def build_agentic_rows() -> list[dict]:
@@ -94,6 +139,7 @@ def build_agentic_rows() -> list[dict]:
 
 def main() -> None:
     rows = build_agentic_rows()
+    assert_independent_filter_has_rows(rows)
     OUT.mkdir(parents=True, exist_ok=True)
     out = OUT / "agentic.json"
     out.write_text(
