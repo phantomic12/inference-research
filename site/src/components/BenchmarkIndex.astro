@@ -1,0 +1,139 @@
+---
+import Base from '../layouts/Base.astro';
+import FilterBar from './FilterBar.astro';
+import RecordList from './RecordList.astro';
+import { META, recUrl, statusRank, typeUrl } from '../lib/data';
+import type { Row, TypeInfo } from '../lib/data';
+
+/**
+ * Benchmark type index, split into pages.
+ *
+ * The generic [type]/index.astro route keeps rendering every record for small
+ * types. Benchmark is the one type large enough that a single HTML file was
+ * 4.8 MB, so it uses this paged view instead: one page of rows plus links to
+ * every other page. Every benchmark record still has its own /r/benchmarks/…
+ * page and is linked from exactly one index page.
+ */
+interface Props {
+  info: TypeInfo;
+  /** Every benchmark row; the component slices out the requested page. */
+  rows: Row[];
+  page: number;
+  pageSize: number;
+}
+
+const { info, rows, page, pageSize } = Astro.props;
+
+const SORTS: Record<string, string> = {
+  status: 'status (unresolved first)',
+  'name-asc': 'name A→Z',
+  'name-desc': 'name Z→A',
+  'confidence-asc': 'confidence low→high',
+  'confidence-desc': 'confidence high→low',
+  'updated-asc': 'last verified, oldest first',
+  backrefs: 'most referenced first',
+};
+
+const blurb =
+  'Measurements with their methodology attached. Check measured_by and reproducible before quoting a number — a vendor tok/s and a reproduced tok/s are not the same claim.';
+
+// RecordList sorts contested-first, then by name. Slice the same order here so
+// page 1 starts with the records a reader must not skip.
+const sorted = [...rows].sort((a, b) => {
+  const s = statusRank(a.status) - statusRank(b.status);
+  return s !== 0 ? s : a.name.localeCompare(b.name);
+});
+
+const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+const currentPage = Math.min(Math.max(1, page), pageCount);
+const start = (currentPage - 1) * pageSize;
+const pageRows = sorted.slice(start, start + pageSize);
+const end = Math.min(start + pageSize, rows.length);
+
+const byStatus = META.status_order
+  .map((s) => ({ s, n: rows.filter((r) => r.status === s).length }))
+  .filter((x) => x.n > 0);
+
+const mostCited = [...rows]
+  .filter((r) => r.nbackrefs > 0)
+  .sort((a, b) => b.nbackrefs - a.nbackrefs)
+  .slice(0, 8);
+
+const base = import.meta.env.BASE_URL;
+const pageHref = (p: number) =>
+  p === 1 ? `${base}benchmark/` : `${base}benchmark/${p}/`;
+const pageNumbers = Array.from({ length: pageCount }, (_, i) => i + 1);
+---
+
+<Base
+  title={currentPage === 1 ? info.title : `${info.title} · page ${currentPage} of ${pageCount}`}
+  nav={info.type}
+  description={`Page ${currentPage} of ${pageCount}: ${rows.length.toLocaleString()} ${info.title.toLowerCase()} records. ${blurb.slice(0, 120)}`}
+>
+  <main class="wrap" data-pagefind-body>
+    <nav class="breadcrumb">
+      <a href={base}>index</a> / <span>{info.type}</span>
+      {currentPage > 1 && <> / <span>page {currentPage}</span></>}
+    </nav>
+    <div class="page-head">
+      <h1>
+        {info.title} <span class="hint">({rows.length.toLocaleString()})</span>
+        {currentPage > 1 && <span class="hint"> · page {currentPage} of {pageCount}</span>}
+      </h1>
+      <p class="sub">{blurb}</p>
+      <div class="statusbar">
+        {byStatus.map(({ s, n }) => (
+          <span class={`status status-${s}`}>{s} {n.toLocaleString()}</span>
+        ))}
+        <a class="hint" href={typeUrl('source')}>→ sources ({META.counts.source})</a>
+      </div>
+    </div>
+
+    <p class="hint">
+      Showing {start + 1}–{end} of {rows.length.toLocaleString()} benchmark records,
+      {' '}{pageSize} per page. Filters and sorts apply to this page; every record
+      also has its own page.
+    </p>
+
+    <FilterBar facets={info.facets} sorts={SORTS} target={info.type} />
+    <RecordList listId={info.type} rows={pageRows} />
+
+    <nav class="statusbar" aria-label="Benchmark pages" style="margin-top:1rem">
+      {currentPage > 1 && <a class="tag" href={pageHref(currentPage - 1)}>← previous</a>}
+      {pageNumbers.map((p) =>
+        p === currentPage ? (
+          <span class="tag" aria-current="page">{p}</span>
+        ) : (
+          <a class="tag" href={pageHref(p)}>{p}</a>
+        ),
+      )}
+      {currentPage < pageCount && <a class="tag" href={pageHref(currentPage + 1)}>next →</a>}
+    </nav>
+
+    {currentPage === 1 && mostCited.length > 0 && (
+      <section class="section">
+        <h2>Most referenced</h2>
+        <p class="hint">
+          The records other records point at. Useful as an entry point: a heavily
+          referenced benchmark is one many decisions in this repo assume.
+        </p>
+        <div class="table-scroll" style="margin-top:.6rem">
+          <table>
+            <thead>
+              <tr><th>Record</th><th class="num">Referenced by</th><th class="num">Cites</th></tr>
+            </thead>
+            <tbody>
+              {mostCited.map((r) => (
+                <tr>
+                  <td><a href={recUrl(r.rid)}>{r.name}</a></td>
+                  <td class="num">{r.nbackrefs}</td>
+                  <td class="num">{r.nrefs}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )}
+  </main>
+</Base>
