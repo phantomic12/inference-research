@@ -7,6 +7,7 @@ const description = 'Models with published agentic evidence, ranked by agentic s
 
 interface Row {
   id: string; name: string; agentic: number; coding: number | null;
+  agentic_raw: number | null; agentic_prior: number | null; agentic_evidence: number | null;
   instruction: number | null; knowledge: number | null; axis_count: number | null;
   thin: boolean; vendor_only: boolean; families: string[];
   release_year: number | null; active_params_b: number; total_params_b: number;
@@ -20,6 +21,26 @@ const rows: Row[] = [...data.rows].sort(
   (a, b) => (b.agentic ?? -1) - (a.agentic ?? -1) || (b.worth ?? -1) - (a.worth ?? -1),
 );
 const score = (v: number | null): string => v == null ? '—' : v.toFixed(1);
+
+// The payload carries the shrunk score, raw score, prior and evidence weight on
+// every row. K is the one term of the shrink formula not stored explicitly, so
+// recover it from the published numbers instead of repeating a constant here:
+// shrunk = (raw * w + prior * K) / (w + K)  =>  w * (shrunk - raw) = K * (prior - shrunk).
+const distinctPriors = [...new Set(rows.map((r) => r.agentic_prior).filter((v): v is number => v != null))];
+const prior = distinctPriors.length === 1 ? distinctPriors[0] : null;
+let k: number | null = null;
+if (prior != null) {
+  let numerator = 0;
+  let denominator = 0;
+  for (const r of rows) {
+    if (r.agentic_raw == null || r.agentic_evidence == null) continue;
+    const delta = prior - r.agentic;
+    numerator += r.agentic_evidence * (r.agentic - r.agentic_raw) * delta;
+    denominator += delta * delta;
+  }
+  k = denominator > 0 ? Math.round((numerator / denominator) * 100) / 100 : null;
+}
+const kText = k == null ? 'not available' : k.toFixed(1);
 const gib = (v: number | null): string => v == null ? '—' : `${Math.round(v)} GB`;
 const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
 ---
@@ -38,6 +59,24 @@ const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
         worth-running join; nothing here is recomputed.
       </p>
     </div>
+
+    <p class="claim-notice" role="note">
+      Every model score on this page is the model maker's own published figure.
+      Independent agentic measurement is not in the catalog yet.
+    </p>
+
+    <section class="how-to-read" aria-labelledby="how-to-read-heading">
+      <h2 id="how-to-read-heading">How to read this</h2>
+      <p>
+        The table opens sorted by the adjusted agentic score, highest first; ties break on
+        the worth-running score, and <em>Sort</em> changes the order. A benchmark result is
+        scored against the best result for that test in this catalog. A model backed by one
+        benchmark is thin evidence for a ranking, so its score is pulled toward the catalog
+        median of <strong>{score(prior)}</strong>: the shrink acts as if K = {kText} units of
+        neutral evidence were added. Under each score you can read its raw figure and
+        evidence weight without hovering, so the adjustment is visible.
+      </p>
+    </section>
 
     <div class="join-controls" data-agentic-controls>
       <div class="control">
@@ -127,7 +166,10 @@ const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
                   {r.quant_retention ? ` · quant ${r.quant_retention.median_delta_pct.toFixed(1)}%` : ''}
                 </div>
               </td>
-              <td class="num cost-cell" title={`${score(r.agentic_raw)} raw · shrunk toward the ${score(r.agentic_prior)} median by ${r.agentic_evidence ?? 0} axes of evidence`}>{score(r.agentic)}</td>
+              <td class="num cost-cell" title={`${score(r.agentic_raw)} raw · shrunk toward the ${score(r.agentic_prior)} median by ${r.agentic_evidence ?? 0} units of evidence`}>
+                {score(r.agentic)}
+                <div class="bench-line">raw {score(r.agentic_raw)} · ev {r.agentic_evidence ?? '—'}</div>
+              </td>
               <td class="num">{score(r.coding)}</td>
               <td class="num">{gib(r.single_user_gib)}</td>
               <td class="num">{gib(r.traffic_q4_gib)}</td>
@@ -212,3 +254,44 @@ const evidence = (r: Row): string => r.vendor_only ? 'vendor' : 'independent';
   controls.addEventListener('change', apply);
   apply();
 </script>
+
+<style>
+  /* The vendor-claim notice is the page's most important sentence, so it sits
+     above the filters in the normal flow — never only in a title attribute. */
+  .claim-notice {
+    max-width: 78ch;
+    margin: 0 0 var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    color: var(--fg);
+    font-size: var(--text-md);
+    line-height: 1.5;
+  }
+  .how-to-read {
+    max-width: 78ch;
+    margin: 0 0 var(--space-4);
+    padding-left: var(--space-4);
+    border-left: 3px solid var(--border-strong);
+    color: var(--fg-dim);
+    font-size: var(--text-base);
+    line-height: 1.6;
+  }
+  .how-to-read h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-lg);
+    color: var(--fg);
+  }
+  .how-to-read p { margin: 0; }
+  .how-to-read strong {
+    color: var(--fg);
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+  @media (max-width: 480px) {
+    .claim-notice { padding: var(--space-3); font-size: var(--text-base); }
+    .how-to-read { padding-left: var(--space-3); font-size: var(--text-sm); }
+  }
+</style>
