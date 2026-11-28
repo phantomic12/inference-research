@@ -90,6 +90,21 @@ function worthCell(r: WorthRow): string {
 }
 ---
 
+<style>
+  .copy-link {
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-sunken);
+    border: 1px solid var(--border-strong);
+    color: var(--fg-dim);
+    border-radius: var(--radius-sm);
+    font-family: var(--mono);
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+  .copy-link:hover { color: var(--fg); border-color: var(--accent-dim); }
+  .copy-link:focus-visible { outline: 2px solid var(--accent-dim); outline-offset: 2px; }
+</style>
+
 <Base title={title} description={description} nav="worth">
   <main class="wrap" data-pagefind-body>
     <nav class="breadcrumb">
@@ -198,6 +213,7 @@ function worthCell(r: WorthRow): string {
         </select>
       </div>
       <span class="control-count" data-count></span>
+      <button class="copy-link" type="button" data-copy-link>Copy link</button>
     </div>
 
     <div class="cost-table-wrap">
@@ -286,6 +302,19 @@ function worthCell(r: WorthRow): string {
   const count = document.querySelector('[data-count]') as HTMLElement | null;
   const cov = document.querySelector('[data-quant-cov]') as HTMLElement | null;
 
+  // Filter state lives in the URL so a filtered view is shareable and the back
+  // button works. The values are read from the controls themselves rather than a
+  // parallel object, because the controls are the single source of truth for what
+  // is currently selected — a second copy is how the two drift apart.
+  const controls = {
+    fit: document.querySelector('[data-filter="fit"]') as HTMLSelectElement,
+    users: document.querySelector('[data-filter="users"]') as HTMLSelectElement,
+    offload: document.querySelector('[data-filter="offload"]') as HTMLSelectElement,
+    scored: document.querySelector('[data-filter="scored"]') as HTMLSelectElement,
+  };
+  type FilterKey = keyof typeof controls;
+  const filterKeys = Object.keys(controls) as FilterKey[];
+
   function need(tr: HTMLTableRowElement, users: string): number | null {
     const raw = tr.dataset[users === 'multi' ? 'multi' : 'single'];
     if (raw === undefined || raw === '') return null;
@@ -293,11 +322,53 @@ function worthCell(r: WorthRow): string {
     return Number.isFinite(n) ? n : null;
   }
 
+  function defaults(): Record<FilterKey, string> {
+    return {
+      fit: '', users: 'single', offload: '', scored: 'scored',
+    };
+  }
+
+  function readControls(): Record<FilterKey, string> {
+    const out = {} as Record<FilterKey, string>;
+    for (const key of filterKeys) out[key] = controls[key].value;
+    return out;
+  }
+
+  /** State encoded in the query string, ignoring values no option offers. */
+  function stateFromUrl(): Record<FilterKey, string> {
+    const params = new URLSearchParams(window.location.search);
+    const state = defaults();
+    for (const key of filterKeys) {
+      const value = params.get(key);
+      if (value !== null && [...controls[key].options].some((o) => o.value === value)) {
+        state[key] = value;
+      }
+    }
+    return state;
+  }
+
+  function applyControls(state: Record<FilterKey, string>): void {
+    for (const key of filterKeys) controls[key].value = state[key];
+  }
+
+  /** Write only non-default values, so the plain page keeps a clean URL. */
+  function writeUrlFromControls(): void {
+    const state = readControls();
+    const base = defaults();
+    const params = new URLSearchParams();
+    for (const key of filterKeys) {
+      if (state[key] !== base[key]) params.set(key, state[key]);
+    }
+    const query = params.toString();
+    const url = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
+    window.history.replaceState(window.history.state, '', url);
+  }
+
   function render() {
-    const fit = (document.querySelector('[data-filter="fit"]') as HTMLSelectElement).value;
-    const users = (document.querySelector('[data-filter="users"]') as HTMLSelectElement).value;
-    const offload = (document.querySelector('[data-filter="offload"]') as HTMLSelectElement).value;
-    const scored = (document.querySelector('[data-filter="scored"]') as HTMLSelectElement).value;
+    const fit = controls.fit.value;
+    const users = controls.users.value;
+    const offload = controls.offload.value;
+    const scored = controls.scored.value;
     const cap = fit ? Number(fit) : Infinity;
 
     const shown = rows.filter((tr) => {
@@ -326,6 +397,28 @@ function worthCell(r: WorthRow): string {
     }
   }
 
-  document.querySelector('[data-worth-controls]')?.addEventListener('change', render);
-  render();
+  function applyUrlState(): void {
+    applyControls(stateFromUrl());
+    render();
+  }
+
+  document.querySelector('[data-worth-controls]')?.addEventListener('change', () => {
+    writeUrlFromControls();
+    render();
+  });
+  window.addEventListener('popstate', applyUrlState);
+
+  const copyLink = document.querySelector<HTMLButtonElement>('[data-copy-link]');
+  copyLink?.addEventListener('click', async () => {
+    const original = copyLink.textContent;
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      copyLink.textContent = 'Copied';
+    } catch {
+      copyLink.textContent = 'Copy failed';
+    }
+    window.setTimeout(() => { copyLink.textContent = original; }, 1500);
+  });
+
+  applyUrlState();
 </script>
