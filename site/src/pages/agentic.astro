@@ -14,12 +14,14 @@ interface Row {
   moe: boolean; weights_q4_gib: number; traffic_q4_gib: number; single_user_gib: number;
   multi_user_gib: number | null; offload_friendly: boolean;
   quant_retention: { id: string; format: string | null; median_delta_pct: number; rows: number } | null;
-  worth: number | null;
+  worth: number | null; vendor_only: boolean;
 }
 
 const rows: Row[] = [...data.rows].sort(
   (a, b) => (b.agentic ?? -1) - (a.agentic ?? -1) || (b.worth ?? -1) - (a.worth ?? -1),
 );
+const independentCount = rows.filter((r) => !r.vendor_only).length;
+const total = rows.length;
 const score = (v: number | null): string => v == null ? '—' : v.toFixed(1);
 
 // The payload carries the shrunk score, raw score, prior and evidence weight on
@@ -60,10 +62,13 @@ const gib = (v: number | null): string => v == null ? '—' : `${Math.round(v)} 
     </div>
 
     <p class="claim-notice" role="note">
-      Every agentic figure on this page is the model maker's own published
-      result: no third-party agentic measurement is in the catalog yet. Read the
-      order as a comparison of vendor-reported figures, not as independent
-      verification that a model finishes long tasks.
+      <strong>{independentCount} of {total} models</strong> here carry a
+      third-party agentic measurement — an independent leaderboard that ran its
+      own harness, rather than the model maker reporting on itself. The rest are
+      vendor claims. Where both exist the independent figure is the one scored,
+      which is why some models sit lower than their card implies: an independent
+      harness is usually harsher. Read the order as "does this model finish long
+      tasks", not as a comparison of press releases.
     </p>
 
     <section class="how-to-read" aria-labelledby="how-to-read-heading">
@@ -107,6 +112,13 @@ const gib = (v: number | null): string => v == null ? '—' : `${Math.round(v)} 
         <input id="a-offload" type="checkbox" data-filter="offload" />
       </div>
       <div class="control">
+        <label for="a-evidence">Evidence</label>
+        <select id="a-evidence" data-filter="evidence">
+          <option value="any">any</option>
+          <option value="independent">independent only</option>
+        </select>
+      </div>
+      <div class="control">
         <label for="a-sort">Sort</label>
         <select id="a-sort" data-filter="sort">
           <option value="agentic">agentic desc</option>
@@ -147,6 +159,7 @@ const gib = (v: number | null): string => v == null ? '—' : `${Math.round(v)} 
               data-coding={r.coding ?? ''}
               data-worth={r.worth ?? ''}
               data-size={r.single_user_gib}
+              data-evidence={r.vendor_only ? 'vendor' : 'independent'}
             >
               <td>
                 <a href={`${import.meta.env.BASE_URL}r/models/${r.id}/`}>{r.name}</a>
@@ -214,12 +227,14 @@ const gib = (v: number | null): string => v == null ? '—' : `${Math.round(v)} 
     const family = Array.from((document.querySelector('[data-filter="family"]') as HTMLSelectElement).selectedOptions)
       .map((o) => o.value);
     const offload = (document.querySelector('[data-filter="offload"]') as HTMLInputElement).checked;
+    const evidence = (document.querySelector('[data-filter="evidence"]') as HTMLSelectElement).value;
     const sort = (document.querySelector('[data-filter="sort"]') as HTMLSelectElement).value;
 
     const shown = allRows.filter((tr) => {
       if (num(tr, 'fit') > fit) return false;
       if (family.length && !family.some((f) => (tr.dataset.families || '').split(' ').includes(f))) return false;
       if (offload && tr.dataset.offload !== '1') return false;
+      if (evidence === 'independent' && tr.dataset.evidence !== 'independent') return false;
       return true;
     });
 
