@@ -28,9 +28,9 @@ const hubs = [...degrees.entries()]
   .slice(0, 14)
   .map(([rid, d]) => ({ rid, d, name: names[rid as keyof typeof names]?.n ?? rid }));
 
-// The graph file is fetched by the page rather than inlined: it is the largest
-// single artefact and only this view needs it.
-const payload = JSON.stringify({ nodes: layoutNodes, edges: layoutEdges });
+// The heavy payload is emitted as a separate JSON asset by graph/data.json.ts
+// and fetched by the client. Keeping it out of this document is what makes the
+// page loadable on a phone: the inline copy used to cost 3.4 MB of HTML.
 const TYPE_COLORS: Record<string, string> = {
   accelerator: '#58a6ff', flop: '#bc8cff', engine: '#3fb950', quantization: '#d29922',
   interconnect: '#39c5cf', benchmark: '#f0883e', gotcha: '#f85149', supply: '#a371f7',
@@ -100,6 +100,7 @@ const TYPE_COLORS: Record<string, string> = {
         graph, not a list.
       </p>
       <canvas id="g-canvas" class="graph-canvas"></canvas>
+      <noscript><p class="hint">The interactive map needs JavaScript. The most-connected records are listed above.</p></noscript>
       <div class="graph-legend">
         {[...byType.entries()].sort((a, b) => b[1] - a[1]).map(([t, n]) => (
           <span style={`color:${TYPE_COLORS[t] ?? '#888'}`}>{t} ({n})</span>
@@ -112,15 +113,15 @@ const TYPE_COLORS: Record<string, string> = {
     </section>
   </main>
 
-  <script is:inline define:vars={{ payload, TYPE_COLORS }}>
-    // ---- neighbourhood (string search over the embedded id list) ----------
-    const graphData = JSON.parse(payload);
+  <script is:inline define:vars={{ baseUrl: import.meta.env.BASE_URL, TYPE_COLORS }}>
+    // ---- neighbourhood (string search over the fetched id list) ----------
+    const BASE = baseUrl;
     const outEl = document.getElementById('g-out');
     const input = document.getElementById('g-q');
     const dl = document.getElementById('g-list');
     const countEl = document.getElementById('g-count');
-    const namesMap = JSON.parse(document.getElementById('g-names')?.textContent ?? '{}');
 
+    function initGraph(graphData) {
     const byId = new Map(graphData.nodes.map((n) => [n.i, n]));
     const out = new Map();
     for (const e of graphData.edges) {
@@ -180,14 +181,14 @@ const TYPE_COLORS: Record<string, string> = {
             .map((rid) => {
               const n = byId.get(rid);
               const contested = n && n.s === 'contested' ? ' <span class="status status-contested">contested</span>' : '';
-              return `<li><a href="${import.meta.env.BASE_URL}r/${rid}/">${esc(n ? n.n : rid)}</a>${contested}</li>`;
+              return `<li><a href="${BASE}r/${rid}/">${esc(n ? n.n : rid)}</a>${contested}</li>`;
             })
             .join('');
           const more = list.length > 60 ? `<li class="hint">+ ${list.length - 60} more</li>` : '';
           return `<div class="nb-group"><h4>${esc(k)} (${list.length})</h4><ul>${items}${more}</ul></div>`;
         })
         .join('');
-      outEl.innerHTML = `<div class="nb-group"><h4>${esc(node.i)} — ${esc(node.n)}</h4><ul><li><a href="${import.meta.env.BASE_URL}r/${node.i}/">open record</a></li></ul></div>${sections}`;
+      outEl.innerHTML = `<div class="nb-group"><h4>${esc(node.i)} — ${esc(node.n)}</h4><ul><li><a href="${BASE}r/${node.i}/">open record</a></li></ul></div>${sections}`;
       if (countEl) countEl.textContent = `${node.i} · ${links.length} connections`;
     }
 
@@ -254,7 +255,7 @@ const TYPE_COLORS: Record<string, string> = {
       });
       canvas.addEventListener('mouseleave', () => { mx = -1; my = -1; });
       canvas.addEventListener('click', () => {
-        if (hover >= 0) location.href = `${import.meta.env.BASE_URL}r/${graphData.nodes[hover].i}/`;
+        if (hover >= 0) location.href = `${BASE}r/${graphData.nodes[hover].i}/`;
       });
 
       function tick(it) {
@@ -366,9 +367,23 @@ const TYPE_COLORS: Record<string, string> = {
       }
       frame();
     }
+    }
 
-    void namesMap;
+    // The payload is a separate, cacheable asset. The server-rendered hub table
+    // and legend above stay visible even if this fetch fails.
+    fetch(`${BASE}graph/data.json`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (data && Array.isArray(data.nodes) && Array.isArray(data.edges)) {
+          initGraph(data);
+        }
+      })
+      .catch(() => {
+        if (countEl) countEl.textContent = 'Graph data could not be loaded.';
+        outEl.insertAdjacentHTML('beforeend', '<p class="empty-state">Graph data could not be loaded — reload to try again.</p>');
+      });
   </script>
-
-  <script type="application/json" id="g-names" set:html={JSON.stringify(names)} />
 </Base>
