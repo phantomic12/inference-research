@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
 
 // Static only: no server, no API routes, no adapter. Every page is a file in
 // dist/, and the search index is built from those files by Pagefind.
@@ -15,6 +16,7 @@ export default defineConfig({
   site: 'https://phantomic12.github.io/inference-research',
   base: '/inference-research/',
   trailingSlash: 'always',
+  integrations: [sitemap()],
   build: {
     // 2,049 record pages plus the search index; the default 500-page inline
     // threshold would inline every page's script tag into other pages.
