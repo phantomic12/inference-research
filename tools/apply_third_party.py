@@ -206,8 +206,19 @@ def check_block(
 
 
 def _canon_key(row: dict) -> str:
+    """Identity of a measurement: the test AND the scaffold that ran it.
+
+    Two SWE-bench Verified numbers for the same model are not interchangeable:
+    swebench.com lists Kimi K2 Instruct at 43.8 under ``mini-v1.7.0`` and 65.4
+    under ``OpenHands``. Keying on the benchmark name alone let an incoming row
+    replace a stronger measurement with a weaker one and report it as an
+    improvement in provenance, which understates the model. The harness is part
+    of the measurement, so it is part of the key.
+    """
     name = row.get("name") or ""
-    return _canonical_benchmark(name) or name
+    base = _canonical_benchmark(name) or name
+    harness = (row.get("harness") or "").strip().lower()
+    return f"{base} [{harness}]" if harness else base
 
 
 def _num(value) -> str:
