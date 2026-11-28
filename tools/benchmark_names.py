@@ -127,6 +127,14 @@ def canonical(name: str) -> str | None:
 
     Returns None for non-agentic tests, unparseable names, and empties. A caller
     must treat None as "do not write this row" rather than guessing a name.
+
+    Two rows can legitimately carry the same test name and different scores when
+    they were measured with different harnesses (Kimi K2 reports Terminal-Bench 30
+    on its in-house framework and 25 on Terminus). The harness belongs to the
+    identity when the name states one, so "Terminal-Bench (OpenCode)" and
+    "Terminal-Bench" stay distinct; a maker-internal harness that is not named in
+    the benchmark title cannot be recovered here and is the caller's problem, to be
+    recorded in `config`.
     """
     if not (name or "").strip():
         return None

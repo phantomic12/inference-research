@@ -247,12 +247,19 @@ def main() -> None:
     for a in accepted:
         path = MODELS / f"{a['id']}.json"
         rec = json.loads(path.read_text())
-        existing = {b.get("name") for b in rec.get("benchmarks") or []}
+        # Dedupe on the canonical benchmark name, not the literal one. A model that
+        # already carries "BFCLv3" would otherwise gain "BFCL v3" beside it: the
+        # same test counted twice in the axis, which inflates the score of exactly
+        # the models whose cards happen to be spelled inconsistently.
+        existing = {_canonical_benchmark(b.get("name") or "") or b.get("name")
+                    for b in rec.get("benchmarks") or []}
         added = 0
         for row in a["benchmarks"]:
             if row["name"] in existing:
+                print(f"  skip {a['id']}: '{row['name']}' already present under another spelling")
                 continue
             rec.setdefault("benchmarks", []).append(row)
+            existing.add(row["name"])
             added += 1
         if added:
             rec["updated"] = today
