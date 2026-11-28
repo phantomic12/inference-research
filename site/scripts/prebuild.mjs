@@ -50,15 +50,18 @@ function runTool(rel, { outputTo, expect = [] } = {}) {
 // not exist on a clean checkout. validate.yml and the deploy workflow generate
 // them; a local `npm run build` must do the same. This runs BEFORE
 // build_site_data.py because its load_docs() reads docs/ into docs.json, which
-// is what drives the Astro /docs/[slug] routes. Keep this list in sync with
-// .github/workflows/validate.yml and .github/workflows/deploy-site.yml.
+// is what drives the Astro /docs/[slug] routes. Keep this ORDER in sync with
+// .github/workflows/validate.yml — it is load-bearing: intelligence_density.py
+// and agentic_ranking.py read site/public/joined/worth_running.json, so
+// build_joined_views.py must run before them.
 runTool('tools/index.py', { expect: ['docs/00-index.md'] });
 runTool('tools/rank_models.py', { outputTo: 'docs/29-local-model-ranking.md' });
-runTool('tools/intelligence_density.py', { expect: ['docs/30-intelligence-density.md'] });
-runTool('tools/mine_derivatives.py', { expect: ['docs/32-finetunes-and-quants.md'] });
+runTool('tools/build_joined_views.py', { expect: ['site/public/joined/worth_running.json'] });
 runTool('tools/decision_ranking.py', { outputTo: 'docs/33-decision-models.md' });
+runTool('tools/intelligence_density.py', { expect: ['docs/30-intelligence-density.md'] });
 runTool('tools/agentic_ranking.py', { expect: ['docs/31-agentic-ranking.md'] });
 runTool('tools/quant_retention.py', { expect: ['docs/34-quant-retention.md'] });
+runTool('tools/mine_derivatives.py', { expect: ['docs/32-finetunes-and-quants.md'] });
 
 if (!existsSync(script)) {
   console.error(`[site] ${script} not found — run this from the repo checkout`);
@@ -83,5 +86,3 @@ if (!existsSync(payload)) {
   process.exit(1);
 }
 
-// Also build joined-view data (cost-per-token, compatibility, roofline)
-runTool('tools/build_joined_views.py');

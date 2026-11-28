@@ -62,17 +62,21 @@ jobs:
         # These docs are gitignored as "regenerated in CI", so a clean checkout
         # has none of them. validate.yml regenerates them, but deploy-site.yml
         # previously did not: load_docs() never saw them and the five pages
-        # 404'd in production. Keep this list in sync with validate.yml and
-        # site/scripts/prebuild.mjs. This must run before `npm run build`
-        # because prebuild's build_site_data.py reads docs/ into docs.json.
+        # 404'd in production. Keep the ORDER in sync with validate.yml — it is
+        # load-bearing, not cosmetic: intelligence_density.py and
+        # agentic_ranking.py both read site/public/joined/worth_running.json,
+        # which only exists after Build joined views runs. This whole block must
+        # also precede `npm run build`, because build_site_data.py reads docs/
+        # into docs.json, which drives the Astro /docs/[slug] routes.
         run: |
           python tools/index.py
           python tools/rank_models.py > docs/29-local-model-ranking.md
-          python tools/intelligence_density.py
-          python tools/mine_derivatives.py
+          python tools/build_joined_views.py
           python tools/decision_ranking.py > docs/33-decision-models.md
+          python tools/intelligence_density.py
           python tools/agentic_ranking.py
           python tools/quant_retention.py
+          python tools/mine_derivatives.py
 
       - name: Build site
         # prebuild runs tools/build_site_data.py, which reads data/ and docs/
