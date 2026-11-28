@@ -10,10 +10,10 @@ import json, re, pathlib
 R = pathlib.Path(__file__).resolve().parent.parent
 
 FAMILIES = [
-    ("terminal", r"(?i)terminal|\btb2?\b"),
-    ("swe", r"(?i)swe|deepswe|repo"),
-    ("web", r"(?i)browsecomp|webarena|webvoy|browser|agentic search"),
-    ("tool", r"(?i)tau2|tau-?bench|toolathlon|\bbfcl\b|mcp"),
+    ("terminal", r"(?i)terminal-bench|\btb2?\b"),
+    ("swe", r"(?i)swe-bench|deepswe|multi-swe|\brepo\b"),
+    ("web", r"(?i)browsecomp|webarena|webvoyager|browser|agentic search"),
+    ("tool", r"(?i)tau-?bench|tau\d?-bench|toolathlon|bfcl|mcp"),
     ("computer", r"(?i)osworld|androidworld|agentworld"),
 ]
 MAX_RAM_GIB = 128

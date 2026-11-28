@@ -25,6 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from registry import DIRS, TITLES  # noqa: E402
 from build_agentic_view import main as build_agentic  # noqa: E402
+from benchmark_names import canonical as _canonical_benchmark, family_of  # noqa: E402
 
 # Also need to import from cost_per_token which is in the same directory
 
@@ -312,8 +313,11 @@ _AXES = (
     ("math", ("AIME", "MATH-500", "MATH", "HMMT", "IMO")),
     ("coding", ("SWE-bench", "SWE Bench", "LiveCodeBench", "HumanEval", "SciCode",
                 "ProgramBench", "SWE-Marathon", "DeepSWE")),
-    ("agentic", ("Terminal-Bench", "Terminal Bench", "Tau-Bench", "TAU-Bench",
-                 "Toolathlon", "MCPMark", "BrowseComp", "DeepSearchQA")),
+    # Agentic membership comes from tools/benchmark_names.canonical(), not from a
+    # substring list. A hand-written list drifted from the writer's rules twice:
+    # it knew only six spellings, so BFCL, tau2-bench, OSWorld and WebArena rows
+    # were written to the catalog and then silently scored nothing.
+    ("agentic", None),
     ("knowledge", ("MMLU", "GPQA", "HLE", "SuperGPQA", "CMMLU", "CritPt")),
     ("instruction", ("IFEval", "IFBench", "Arena-Hard", "AlignBench")),
 )
@@ -354,11 +358,53 @@ def _key_hit(key: str, low: str) -> bool:
     return kl in low
 
 
+def _score_key(name: str) -> str:
+    """Grouping key used when counting reporters and scoring a benchmark row.
+
+    Only agentic names are canonicalized. Those are the names whose spellings
+    genuinely fragment in the wild (104 spellings for ~14 tests). Every other axis
+    keeps its exact name, so math/knowledge/instruction scoring is untouched by a
+    rename policy that was designed for agentic evidence.
+    """
+    canon = _canonical_benchmark(name)
+    if canon and family_of(canon) in ("terminal", "web", "tool", "computer"):
+        return canon
+    return name
+
+
+def _agentic_name(name: str) -> bool:
+    """Is this benchmark name agentic *for ranking purposes*?
+
+    SWE-bench is deliberately excluded even though it is agentic in the "an agent
+    runs the loop" sense. It already scores the `coding` axis on every model that
+    reports it, and _axis_for assigns exactly one axis per row, so claiming it
+    here would move it out of `coding` rather than add evidence: /agentic/ would
+    then rank models on patch-applying alone, and a tight code-fixing loop is not
+    evidence that a model can drive a terminal for hours. The families that earn
+    the agentic axis are terminal, web, tool/call, and computer use.
+
+    DeepSearchQA is kept from the previous list because browse/search accuracy on
+    a long-tail question set is web-agent evidence, and its name is not one the
+    canonicalizer maps.
+    """
+    if re.search(r"(?i)deepsearchqa", name or ""):
+        return True
+    fam = family_of(_canonical_benchmark(name))
+    return fam in ("terminal", "web", "tool", "computer")
+
+
 def _axis_for(name):
     low = name.lower()
     if _is_rollup(low):
         return "other"
+    # The agentic axis asks the same question the writer asked: is this a
+    # recognised agentic benchmark? Sharing canonical() means a row cannot be
+    # accepted by the gate and then ignored by the score.
+    if _agentic_name(name):
+        return "agentic"
     for axis, keys in _AXES:
+        if not keys:
+            continue
         for k in keys:
             if _key_hit(k, low):
                 return axis
@@ -368,6 +414,8 @@ def _axis_for(name):
     # flattened on both sides.
     flat = re.sub(r"[-_]", " ", low)
     for axis, keys in _AXES:
+        if not keys:
+            continue
         for k in keys:
             if "-" in k and _key_hit(re.sub(r"[-_]", " ", k), flat):
                 return axis
@@ -522,11 +570,19 @@ def build_worth_running() -> dict:
     # Only a benchmark reported by >=2 models can rank anything. With a single
     # reporter the catalog max IS that model, so the row would read 100 and hand a
     # model a free perfect score for every test only it ran. Count reporters first.
+    #
+    # Agentic names are bucketed by their canonical spelling, not the card's. The
+    # corpus spells the same test 104 ways ("BFCL-v3", "BFCL v3", "BFCLv3"), which
+    # split the reporters of one benchmark into buckets too small to score: BFCL
+    # alone was recorded as six separate names with one or two reporters each, so
+    # real evidence counted for nothing. Only the grouping key changes here; other
+    # axes keep the exact-name behaviour they were tuned with.
     _reporters = {}
     for r in rows:
         for b in r["benchmarks"]:
             if b["name"]:
-                _reporters.setdefault(b["name"], []).append((b["pct"], r.get("release_year")))
+                _reporters.setdefault(_score_key(b["name"]), []).append(
+                    (b["pct"], r.get("release_year")))
 
     # A benchmark can only rank a model to the extent it still SEPARATES models.
     # Measured on the catalog's own distribution: the share of reporters that sit
@@ -575,14 +631,17 @@ def build_worth_running() -> dict:
             continue
         by_axis = {}
         for b in r["benchmarks"]:
-            top = best.get(b["name"])
+            k = _score_key(b["name"])
+            top = best.get(k)
             if not top:
                 continue
             rel = min(b["pct"] / top * 100, 100.0)
-            w = disc.get(b["name"], 0.0)
+            w = disc.get(k, 0.0)
             b["relative"] = round(rel, 1)
             b["discrimination"] = w
             b["saturated"] = w < 0.15
+            if k != b["name"]:
+                b["canonical"] = k
             ax = _axis_for(b["name"])
             if ax == "other":
                 # An incomparable grab-bag (OpenCompass, OCRBench, MMBench...). Shown
@@ -633,6 +692,27 @@ def build_worth_running() -> dict:
     _raw = sorted(r["raw_capability"] for r in rows if r.get("raw_capability") is not None)
     PRIOR = round(_raw[len(_raw) // 2], 1) if _raw else 0.0
     K = 2.0
+
+    # The agentic axis needs the same treatment, for the same reason. It is built
+    # from per-benchmark relative scores, so whichever model leads ANY one agentic
+    # benchmark scores 100 on the axis. 46 of the models with an agentic axis have
+    # exactly one agentic row, so a 3B model with a single strong BFCL number used
+    # to rank level with frontier agents that report five. One test is not a
+    # ranking; shrink it toward the median agentic score by evidence weight, and
+    # keep the unshrunk value in agentic_raw so the adjustment stays visible.
+    _ag = sorted(r["axes"]["agentic"] for r in rows
+                 if (r.get("axes") or {}).get("agentic") is not None)
+    PRIOR_AG = round(_ag[len(_ag) // 2], 1) if _ag else 0.0
+
+    for r in rows:
+        ax = r.get("axes") or {}
+        if ax.get("agentic") is None:
+            continue
+        w = (r.get("axis_weights") or {}).get("agentic", 0.0) or 0.0
+        ax["agentic_raw"] = ax["agentic"]
+        ax["agentic"] = round((ax["agentic"] * w + PRIOR_AG * K) / (w + K), 1)
+        r["agentic_prior"] = PRIOR_AG
+        r["agentic_evidence"] = round(w, 2)
     for r in rows:
         raw, W = r.get("raw_capability"), r.get("evidence_weight") or 0.0
         if raw is None:

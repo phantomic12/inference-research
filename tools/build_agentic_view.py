@@ -30,7 +30,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from agentic_ranking import FAMILIES  # noqa: E402
 
 _FIELDS = (
-    "id", "name", "agentic", "coding", "instruction", "knowledge", "axis_count",
+    "id", "name", "agentic", "agentic_raw", "agentic_prior", "agentic_evidence",
+    "coding", "instruction", "knowledge", "axis_count",
     "thin", "vendor_only", "families", "release_year", "active_params_b",
     "total_params_b", "moe", "weights_q4_gib", "traffic_q4_gib", "single_user_gib", "multi_user_gib",
     "offload_friendly", "quant_retention", "worth",
@@ -53,6 +54,9 @@ def build_agentic_rows() -> list[dict]:
             "id": r.get("id"),
             "name": r.get("name"),
             "agentic": axes["agentic"],
+            "agentic_raw": axes.get("agentic_raw"),
+            "agentic_prior": r.get("agentic_prior"),
+            "agentic_evidence": r.get("agentic_evidence"),
             "coding": axes.get("coding"),
             "instruction": axes.get("instruction"),
             "knowledge": axes.get("knowledge"),
@@ -76,6 +80,14 @@ def build_agentic_rows() -> list[dict]:
     assert all(r["agentic"] is not None for r in out), "an unscored row slipped into the agentic view"
     assert len(out) == len(eligible), "agentic view lost or gained rows during projection"
     assert len(out) >= 40, f"only {len(out)} agentic rows; expected at least 40"
+    # A row with zero agentic evidence weight carries no score: it sits at the
+    # catalog prior and would rank purely on being mentioned. The build must not
+    # ship those, because the page shows the axis as if it were measured.
+    scored = [r for r in out if (r.get("agentic_evidence") or 0) > 0]
+    assert len(scored) == len(out), (
+        f"{len(out) - len(scored)} agentic row(s) have zero evidence weight: "
+        f"{[r['id'] for r in out if (r.get('agentic_evidence') or 0) <= 0][:5]}"
+    )
     assert all(tuple(r) == _FIELDS for r in out), "agentic payload field order changed"
     return out
 
