@@ -1,8 +1,93 @@
 ---
 import Base from '../layouts/Base.astro';
+// `Fragment` is provided by Astro's compiler automatically; importing it
+// explicitly is a duplicate declaration and fails the build (PARSE_ERROR:
+// "Identifier `Fragment` has already been declared").
+import data from '../../public/joined/worth_running.json';
 
 const title = 'Worth Running';
 const description = 'Which models are worth running: capability against system requirements, for one user and for many, and how the state-of-the-art quants change the cost.';
+
+interface WorthRow {
+  id: string;
+  name: string;
+  release_year?: number | null;
+  active_params_b: number;
+  weights_q4_gib: number;
+  traffic_q4_gib: number;
+  kv_8k_gib: number | null;
+  single_user_gib: number;
+  multi_user_gib: number | null;
+  offload_friendly: boolean;
+  worth: number | null;
+  capability: number | null;
+  evidence_weight?: number;
+  recency_factor?: number;
+  hw_factor?: number;
+  worth_pre_fit?: number;
+  raw_capability?: number | null;
+  ranked_axes?: number;
+  bench_count?: number;
+  thin?: boolean;
+  vendor_only?: boolean;
+  footprint_gib?: number | null;
+  benchmarks?: Array<{ name: string; pct: number; relative?: number }>;
+  quant_retention?: {
+    id: string;
+    format: string | null;
+    bucket: string;
+    median_delta_pct: number;
+    rows: number;
+  } | null;
+}
+
+const source = data as { rows: WorthRow[] };
+const rows = source.rows;
+const base = import.meta.env.BASE_URL;
+
+// Mirror the build_agentic_view.py guard: a non-empty joined view that emits
+// zero rows is a build defect, not an acceptable page.
+if (source.rows.length > 0 && rows.length === 0) {
+  throw new Error(`worth view lost all ${source.rows.length} rows during server render`);
+}
+
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function needFor(r: WorthRow, users: string): string {
+  const n = users === 'multi' ? r.multi_user_gib : r.single_user_gib;
+  return n === null ? '—' : `${n} GB`;
+}
+
+function benchLine(r: WorthRow): string {
+  const benches = (r.benchmarks ?? []).map((b) => `${b.name} ${b.relative ?? b.pct}`).join(' · ');
+  const cov = r.bench_count ? `${r.bench_count} ${r.bench_count === 1 ? 'test' : 'tests'} · ` : '';
+  const text = cov + benches;
+  return text ? `<div class="bench-line">${esc(text)}</div>` : '';
+}
+
+function quantCell(r: WorthRow): string {
+  const q = r.quant_retention;
+  if (!q) return '<td class="num">—</td>';
+  const d = q.median_delta_pct;
+  const cls = d <= -5 ? 'quant-bad' : d <= -1 ? 'quant-mid' : 'quant-good';
+  const label = `${d > 0 ? '+' : ''}${d.toFixed(1)}%`;
+  const tip = `${q.id} — ${q.format ?? 'quant'} vs its base, median of ${q.rows} benchmark${q.rows === 1 ? '' : 's'} (${q.bucket}). Card-sourced, not a record claim.`;
+  return `<td class="num ${cls}" title="${esc(tip)}">${label}<div class="bench-line">${esc(q.format ?? '')}</div></td>`;
+}
+
+function worthCell(r: WorthRow): string {
+  const w = r.worth ?? null;
+  let out = w === null ? '—' : w.toFixed(1);
+  if (r.evidence_weight) {
+    const tip = `capability ${r.capability} x recency ${r.recency_factor} (${r.release_year ?? 'undated'}) x fit ${r.hw_factor ?? '—'} = ${w} (${r.worth_pre_fit} before hardware); resident ${r.footprint_gib ?? '—'} GiB for one user at 4-bit; evidence weight ${r.evidence_weight} across ${r.ranked_axes} axes; unshrunk ${r.raw_capability ?? '—'}`;
+    out += `<div class="bench-line" title="${esc(tip)}">cap ${r.capability} · fit ${r.hw_factor ?? '—'}</div>`;
+  }
+  out += r.thin ? ' <span class="thin-flag" title="only one or two axes carry discriminating evidence">thin</span>' : '';
+  out += r.vendor_only ? ' <span class="vendor-flag">vendor</span>' : '';
+  return `<td class="num cost-cell">${out}</td>`;
+}
 ---
 
 <Base title={title} description={description} nav="worth">
@@ -131,7 +216,32 @@ const description = 'Which models are worth running: capability against system r
             <th>Offload</th>
           </tr>
         </thead>
-        <tbody data-worth-body></tbody>
+        <tbody data-worth-body>
+          {rows.map((r) => (
+            <Fragment>
+              <tr
+                class="model-row"
+                data-id={r.id}
+                data-single={r.single_user_gib}
+                data-multi={r.multi_user_gib ?? ''}
+                data-offload={r.offload_friendly ? '1' : '0'}
+                data-scored={(r.worth ?? null) === null ? '0' : '1'}
+                data-quant={r.quant_retention ? '1' : '0'}
+              >
+                <td><a href={`${base}r/models/${r.id}/`}>{r.name}</a><Fragment set:html={benchLine(r)} /></td>
+                <td class="num">{r.release_year ?? '—'}</td>
+                <Fragment set:html={worthCell(r)} />
+                <td class="num">{r.active_params_b}B</td>
+                <td class="num">{r.weights_q4_gib} GB</td>
+                <td class="num">{r.traffic_q4_gib} GB</td>
+                <td class="num">{r.kv_8k_gib === null ? '—' : r.kv_8k_gib + ' GB'}</td>
+                <td class="num cost-cell" data-need-cell>{needFor(r, 'single')}</td>
+                <Fragment set:html={quantCell(r)} />
+                <td>{r.offload_friendly ? 'yes' : '—'}</td>
+              </tr>
+            </Fragment>
+          ))}
+        </tbody>
       </table>
     </div>
 
@@ -171,44 +281,16 @@ const description = 'Which models are worth running: capability against system r
 </Base>
 
 <script>
-  interface Bench { name: string; pct: number; vendor_claim: boolean; }
-  interface Row {
-    id: string; name: string; active_params_b: number; total_params_b: number | null;
-    weights_q4_gib: number; traffic_q4_gib: number; kv_8k_gib: number | null; single_user_gib: number;
-    multi_user_gib: number | null; offload_friendly: boolean;
-    capability: number | null; benchmarks: Bench[]; vendor_only: boolean;
-    bench_count?: number; thin?: boolean; release_year?: number | null;
-    evidence_weight?: number; raw_capability?: number | null; ranked_axes?: number;
-    worth?: number; recency_factor?: number; hw_factor?: number; worth_pre_fit?: number;
-    quant_retention?: {
-      id: string; format: string | null; bucket: string;
-      median_delta_pct: number; rows: number;
-    } | null;
-    quant_retention_basis?: string;
-  }
-
-  const base = import.meta.env.BASE_URL;
   const tbody = document.querySelector('[data-worth-body]') as HTMLElement;
-  let rows: Row[] = [];
+  const rows = Array.from(tbody.querySelectorAll<HTMLTableRowElement>('tr.model-row'));
+  const count = document.querySelector('[data-count]') as HTMLElement | null;
+  const cov = document.querySelector('[data-quant-cov]') as HTMLElement | null;
 
-  function need(r: Row, users: string): number | null {
-    return users === 'multi' ? r.multi_user_gib : r.single_user_gib;
-  }
-
-  function esc(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  // Measured retention, read from a derivative repo's own base-vs-quant table.
-  // Negative always means the quant scored below its base (PPL/KLD sign already applied upstream).
-  function quantCell(r: Row): string {
-    const q = r.quant_retention;
-    if (!q) return '<td class="num">—</td>';
-    const d = q.median_delta_pct;
-    const cls = d <= -5 ? 'quant-bad' : d <= -1 ? 'quant-mid' : 'quant-good';
-    const label = `${d > 0 ? '+' : ''}${d.toFixed(1)}%`;
-    const tip = `${q.id} — ${q.format ?? 'quant'} vs its base, median of ${q.rows} benchmark${q.rows === 1 ? '' : 's'} (${q.bucket}). Card-sourced, not a record claim.`;
-    return `<td class="num ${cls}" title="${esc(tip)}">${label}<div class="bench-line">${esc(q.format ?? '')}</div></td>`;
+  function need(tr: HTMLTableRowElement, users: string): number | null {
+    const raw = tr.dataset[users === 'multi' ? 'multi' : 'single'];
+    if (raw === undefined || raw === '') return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
   }
 
   function render() {
@@ -218,47 +300,32 @@ const description = 'Which models are worth running: capability against system r
     const scored = (document.querySelector('[data-filter="scored"]') as HTMLSelectElement).value;
     const cap = fit ? Number(fit) : Infinity;
 
-    const shown = rows.filter((r) => {
-      if (scored === 'scored' && (r.worth ?? null) === null) return false;
-      if (offload === 'friendly' && !r.offload_friendly) return false;
-      const n = need(r, users);
+    const shown = rows.filter((tr) => {
+      if (scored === 'scored' && tr.dataset.scored !== '1') return false;
+      if (offload === 'friendly' && tr.dataset.offload !== '1') return false;
+      const n = need(tr, users);
       if (n === null || n > cap) return false;
       return true;
     });
+    const visible = new Set(shown);
 
-    tbody.innerHTML = shown.map((r) => {
-      const n = need(r, users);
-      const benches = r.benchmarks.map((b) => `${b.name} ${b.relative ?? b.pct}`).join(' · ');
-      const cov = r.bench_count ? `${r.bench_count} ${r.bench_count === 1 ? 'test' : 'tests'} · ` : '';
-      const flag = r.vendor_only ? ' <span class="vendor-flag">vendor</span>' : '';
-      return `<tr class="model-row">
-        <td><a href="${base}r/models/${r.id}/">${r.name}</a>${benches ? `<div class="bench-line">${cov}${benches}</div>` : ''}</td>
-        <td class="num">${r.release_year ?? '—'}</td>
-        <td class="num cost-cell">${(r.worth ?? null) === null ? '—' : r.worth.toFixed(1)}${r.evidence_weight ? `<div class="bench-line" title="capability ${r.capability} x recency ${r.recency_factor} (${r.release_year ?? 'undated'}) x fit ${r.hw_factor ?? '—'} = ${r.worth} (${r.worth_pre_fit} before hardware); resident ${r.footprint_gib ?? '—'} GiB for one user at 4-bit; evidence weight ${r.evidence_weight} across ${r.ranked_axes} axes; unshrunk ${r.raw_capability ?? '—'}">cap ${r.capability} · fit ${r.hw_factor ?? '—'}</div>` : ''}${r.thin ? ' <span class="thin-flag" title="only one or two axes carry discriminating evidence">thin</span>' : ''}${flag}</td>
-        <td class="num">${r.active_params_b}B</td>
-        <td class="num">${r.weights_q4_gib} GB</td>
-        <td class="num">${r.traffic_q4_gib} GB</td>
-        <td class="num">${r.kv_8k_gib === null ? '—' : r.kv_8k_gib + ' GB'}</td>
-        <td class="num cost-cell">${n === null ? '—' : n + ' GB'}</td>
-        ${quantCell(r)}
-        <td>${r.offload_friendly ? 'yes' : '—'}</td>
-      </tr>`;
-    }).join('');
+    for (const tr of rows) {
+      tr.style.display = visible.has(tr) ? '' : 'none';
+      const needCell = tr.querySelector<HTMLElement>('[data-need-cell]');
+      const text = needCell?.firstChild;
+      if (text) {
+        const n = need(tr, users);
+        text.nodeValue = n === null ? '—' : `${n} GB`;
+      }
+    }
 
-    const counter = document.querySelector('[data-count]');
-    if (counter) counter.textContent = `${shown.length} models`;
-
-    const cov = document.querySelector('[data-quant-cov]');
+    if (count) count.textContent = `${shown.length} models`;
     if (cov) {
-      const withQ = shown.filter((r) => r.quant_retention).length;
+      const withQ = shown.filter((tr) => tr.dataset.quant === '1').length;
       cov.textContent = `${withQ} of ${shown.length}`;
     }
   }
 
   document.querySelector('[data-worth-controls]')?.addEventListener('change', render);
-
-  const resp = await fetch(`${base}joined/worth_running.json`);
-  const data = await resp.json();
-  rows = data.rows;
   render();
 </script>
