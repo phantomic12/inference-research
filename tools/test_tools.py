@@ -3053,5 +3053,82 @@ class TestSourceUrlShape(unittest.TestCase):
         self.assertEqual([], bad, "unfetchable source URLs committed")
 
 
+class TestThirdPartyWriter(unittest.TestCase):
+    """The third-party writer must refuse anything it cannot prove.
+
+    This is the guard that keeps an independent number honest: it accepts a row
+    only with a resolvable source, a canonical benchmark name, a real config, and
+    a score inside that benchmark's scale. Anything else is a rejection, not a
+    guess. Every rejection path is exercised here because a guard nobody tests is
+    a guard that silently stops working.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(TOOLS))
+        import apply_third_party as m
+        cls.m = m
+        cls.sources = m.load_sources()
+        cls.url_re = m.source_url_pattern()
+
+    def _call(self, block):
+        return self.m.check_block(block, self.sources, self.url_re)
+
+    def _block(self, **row_over):
+        row = {"name": "Terminal-Bench 2.1", "score": 88.3, "scale": 100,
+               "vendor_claim": False, "source": "hf-moonshotai-kimi-k3",
+               "config": "independent harness, quoted settings"}
+        row.update(row_over)
+        return {"slug": "kimi-k3", "benchmarks": [row]}
+
+    def test_valid_row_is_accepted(self):
+        clean, fatal, rows = self._call(self._block())
+        self.assertEqual([], fatal)
+        self.assertEqual([], rows)
+        self.assertIsNotNone(clean)
+        self.assertEqual(1, len(clean["benchmarks"]))
+
+    def test_vendor_claim_true_is_rejected(self):
+        _, fatal, rows = self._call(self._block(vendor_claim=True))
+        # The row itself is the thing refused; the block then has no rows left.
+        self.assertTrue(any("vendor_claim" in r for r in rows), rows)
+
+    def test_block_level_vendor_claim_is_rejected(self):
+        b = self._block()
+        b["vendor_claim"] = True
+        _, fatal, _ = self._call(b)
+        self.assertTrue(any("apply_agentic_backfill" in f for f in fatal), fatal)
+
+    def test_unknown_benchmark_name_drops_the_row(self):
+        # With one row and that row invalid there is nothing left, so the block
+        # is also fatal. Assert the ROW reason names the problem, which is what a
+        # researcher needs to see; the block-level message is a consequence.
+        _, fatal, rows = self._call(self._block(name="Totally-Not-A-Bench"))
+        self.assertTrue(any("recognised agentic benchmark" in r for r in rows), rows)
+        self.assertTrue(any("no valid benchmark rows" in f for f in fatal), fatal)
+
+    def test_missing_config_drops_the_row(self):
+        _, _, rows = self._call(self._block(config=""))
+        self.assertTrue(any("config" in r for r in rows), rows)
+
+    def test_nonexistent_source_drops_the_row(self):
+        _, _, rows = self._call(self._block(source="no-such-source-id"))
+        self.assertTrue(any("does not exist" in r for r in rows), rows)
+
+    def test_out_of_scale_score_drops_the_row(self):
+        _, _, rows = self._call(self._block(score=999))
+        self.assertTrue(any("outside" in r for r in rows), rows)
+
+    def test_unknown_model_drops_the_whole_block(self):
+        b = self._block()
+        b["slug"] = "not-a-real-model-in-this-catalog"
+        _, fatal, _ = self._call(b)
+        self.assertTrue(any("no model record" in f for f in fatal), fatal)
+
+    def test_score_inside_scale_but_negative_is_rejected(self):
+        _, _, rows = self._call(self._block(score=-1))
+        self.assertTrue(any("outside" in r for r in rows), rows)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
