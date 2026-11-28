@@ -74,6 +74,10 @@ def _norm(name: str) -> str:
     s = re.sub(r"\btau(\d+)\s+bench\b", r"tau \1 bench", s)
     # Glued acronyms with no version to split on.
     s = re.sub(r"\bmcp ?(atlas|mark)\b", r"mcp \1", s)
+    # "BrowseComp+" glues the plus onto the name; every other spelling ("BrowseComp
+    # Plus", "browsecomp plus") already resolves, so folding it here keeps the one
+    # suite in one bucket instead of silently dropping it as unrecognized.
+    s = re.sub(r"\b(browsecomp)\+", r"\1 plus", s)
     return s
 
 
@@ -168,13 +172,18 @@ def canonical(name: str) -> str | None:
                  rf"(?: (verified|pro|multilingual|lite))?(?: {_VER})?$", stem)
     if m:
         prefix, variant = m.group(1), m.group(2)
+        ver = re.search(_VER, stem)
         if prefix in _SWE_PREFIX:
             out = _SWE_PREFIX[prefix]
-            ver = re.search(_VER, stem)
             if ver and prefix == "deepswe":
                 out += f" {ver.group(0).lstrip('v')}"
         elif variant:
             out = _SWE_VARIANTS.get(variant, f"SWE-bench {variant.capitalize()}")
+            # A version on the variant is the test's identity: SWE-bench Pro V2 and
+            # SWE-bench Pro are different evaluations, and merging them would let a
+            # score from one normalise against the best of the other.
+            if ver:
+                out += f" v{ver.group(0).lstrip('v')}"
         else:
             out = "SWE-bench"
         # The harness is part of the number: Verified with OpenHands and with
