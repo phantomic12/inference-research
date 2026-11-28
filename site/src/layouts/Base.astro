@@ -12,6 +12,10 @@ interface Props {
 }
 
 const { title, description, nav, pf } = Astro.props;
+const metaDescription = description ?? `${title} · inference-research`;
+// Astro.url.pathname includes the configured base. Resolving it against the
+// configured site keeps canonical URLs correct on the deployed subpath.
+const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
 const NAV_SHORT: Record<string, string> = {
   flop: 'FLOPs',
   engine: 'Engines',
@@ -38,6 +42,14 @@ const agenticHref = `${basePath}agentic/`;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title} · inference-research</title>
     {description && <meta name="description" content={description} />}
+    <link rel="canonical" href={canonicalURL.href} />
+    <meta property="og:title" content={`${title} · inference-research`} />
+    <meta property="og:description" content={metaDescription} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL.href} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={`${title} · inference-research`} />
+    <meta name="twitter:description" content={metaDescription} />
     <meta name="color-scheme" content="dark" />
         <!-- Pagefind reads these <meta> tags for the type/status/rid filters on
              /search/, so their values are the record's own fields. -->
