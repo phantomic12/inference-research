@@ -82,7 +82,7 @@
   "notes": "Released 2026-10-12 on Hugging Face (API createdAt; card updated 2026-10-13). Affordable-inference class: 24B total MoE with 2.45B active — under the sub-8B-active bar, and smaller-active than the 35B-A3B reference class. Vendor card: 24.0B total, 2.45B active (the name says A2B), 40 layers of which 30 are double-gated short convolutions and 10 are GQA, 64 experts top-4, vocab 128000 (doubled from LFM2-24B-A2B's 65K via in-place tokenizer expansion), context grown from 32K to 131072. config.json agrees: hidden 2048, heads 32/8 so head_dim = 2048/32 = 64, gqa_ratio 4, intermediate_size 11776 on the 2 dense layers (num_dense_layers 2), moe_intermediate_size 1536, num_experts_per_tok 4, no shared expert, rope_theta 1e7, tie_word_embeddings true. KV (bf16, attention layers only): 10 full_attention layers x 8 kv heads x 64 head_dim x 2 x 2 bytes = 20480 B/token = 20 KiB/token. flops_per_token_active = 2 x 2.45e9 = 4.9e9, the schema approximation; hybrid conv blocks mean the real matmul count is not exactly 2*active_params. THROUGHPUT (vendor_claim, card): 184 tok/s on an Apple M5 Max, and up to 21K aggregate output tok/s on one NVIDIA B300 (SGLang 0.5.22, BF16, 1024 in / 256 out, concurrency sweep). Card also claims ~1.7x faster than comparable MoEs on-device and LiveClaw 48.09 vs Qwen3.6-35B-A3B 38.19 — vendor numbers, not independently measured here. Text-only; always-on <think> in the chat template. Base checkpoint is LiquidAI/LFM2.5-24B-A2B-Base (created 2026-10-09, same shape). License is the LFM Open License, not Apache.",
   "status": "verified",
   "confidence": 0.86,
-  "updated": "2026-10-19",
+  "updated": "2026-11-28",
   "sources": [
     "hf-lfm2-5-24b-a2b",
     "lfm2-5-24b-a2b-hf",
@@ -234,6 +234,33 @@
       "source": "hf-lfm2-5-24b-a2b",
       "vendor_claim": true,
       "config": "Card figure (4x4 benchmark grid), purple bar = LFM2.5-24B-A2B. The figure is not the only carrier: the card republishes the same 16 numbers as an HTML table, and every value here was verified character-exact against that table, so this is TEXT-CONFIRMED rather than a by-eye read. AA-Omniscience is an index on a -100..100 scale that penalises hallucination, hence negative; recorded with scale 100. SWE-Bench Verified was run on the OpenCode harness, as labelled in the card."
+    },
+    {
+      "name": "WebArena-Verified",
+      "score": 26.75,
+      "scale": 100.0,
+      "higher_is_better": true,
+      "source": "hf-LiquidAI-LFM2.5-24B-A2B",
+      "vendor_claim": true,
+      "config": "vLLM; temperature=0.6, top_p=0.95, max_turns=40, no max output tokens"
+    },
+    {
+      "name": "SWE-bench Verified (opencode)",
+      "score": 51.0,
+      "scale": 100.0,
+      "higher_is_better": true,
+      "source": "hf-LiquidAI-LFM2.5-24B-A2B",
+      "vendor_claim": true,
+      "config": "vLLM; other evals temperature=0.6, max output tokens=32768"
+    },
+    {
+      "name": "tau3-bench Banking",
+      "score": 8.04,
+      "scale": 100.0,
+      "higher_is_better": true,
+      "source": "hf-LiquidAI-LFM2.5-24B-A2B",
+      "vendor_claim": true,
+      "config": "official user model GPT-5.2 (low reasoning) with default BM25 retrieval; temperature=0, max output tokens=16384 per turn"
     }
   ],
   "release_date": "2026-10-12"

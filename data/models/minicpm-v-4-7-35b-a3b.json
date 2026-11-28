@@ -82,7 +82,7 @@
   "notes": "Open-weight multimodal MoE, first MoE in the MiniCPM-V series. HF createdAt 2026-10-07, inside the watcher 7-day window as of 2026-10-17. text_config model_type qwen3_5_moe_text: LLM geometry matches Qwen3.5-35B-A3B (hidden 2048, 40 layers, 16 Q / 2 KV heads, head_dim 256, 256 experts, 8 per token, shared expert intermediate 512, moe intermediate 512). layer_types is 30 linear_attention + 10 full_attention, full_attention_interval 4, full attention at indices 3, 7, 11, 15, 19, 23, 27, 31, 35, 39. partial_rotary_factor 0.25, rope_theta 1e7, mrope interleaved (mrope_section [11, 11, 10]). rope_scaling is absent, so context_scaling is null and context_scaling_method is mrope. vocab 248144, mtp_num_hidden_layers 1, linear_conv_kernel_dim 4, linear_num_key_heads 16, linear_num_value_heads 32, linear key/value head dim 128. KV CACHE: 10 full-attention layers x 2 kv heads x head_dim 256 x 2 x 2 bytes = 20,480 B/token. The 30 linear-attention layers hold a fixed recurrent state, so this is the growing cache only. FLOPS: flops_per_token_active = 2 x 3e9 = 6e9 uses the vendor 3B activated figure; the 3B is the 35B-A3B nameplate, not a count derived here. safetensors total is 35.213B BF16, close to the 35B nameplate. Vision: SigLIP-style encoder, 27 layers, hidden 1152, 16 heads, patch 14, image_size 980, intermediate 4304, gelu_pytorch_tanh, insert_layer_id 6 (vision features injected at LLM layer 6), downsample_mode 16x. The card claims mixed 4x/16x visual token compression via LLaVA-UHD v4 intra-ViT early compression. ON-DEVICE (vendor_claim): the card states 13+ tokens/s decode with 3 GB of memory on iPhone 17 Pro Max, via Lookahead Expert Scheduling (prefetch only; token-level routing unchanged), fine-grained layer-wise quantization, and DSpark speculative sampling. The card also claims a higher overall Instruct-mode score in less inference time than Qwen3.6-35B-A3B; those numbers are in images, not in the card text, so they are not copied here. Apache-2.0. The card says it serves in SGLang, vLLM, llama.cpp, and Ollama.",
   "status": "verified",
   "confidence": 0.85,
-  "updated": "2026-11-01",
+  "updated": "2026-11-28",
   "sources": [
     "hf-minicpm-v-4-7-35b-a3b",
     "minicpm-v-4-7-35b-a3b-hf",
@@ -628,6 +628,24 @@
       "source": "minicpm-v-4-7-github",
       "vendor_claim": true,
       "config": "Card figure assets/overall_performance_35ba3b_instruct.png (the table behind the image, read off the picture not text). This is MiniCPM-V 4.7's OWN 16x visual-token-compression column: a second column of the same table the 4x rows came from, never recorded before. Read by eye, caveat +-0.5. The 4x column was re-read in the same pass and reproduced every checked value exactly (MMBench 91.72, MMStar 80.67, MMMU 80.22, MathVista 88.00), which pins the column alignment -- a whole-column offset would have broken all four. Cost of 16x: STEM and OCR degrade on every row, but General barely moves (MMBench 91.72->90.87, MMStar 80.67->80.13) and CharXiv reasoning loses the most (75.60->69.20, -6.4)."
+    },
+    {
+      "name": "BFCL v4",
+      "score": 60.06,
+      "scale": 100.0,
+      "higher_is_better": true,
+      "source": "openbmb-minicpm-v-4-7-language-chart",
+      "vendor_claim": true,
+      "config": "Instruct mode (chart footnote); 35B-A3B column; read from figure, +-0.5."
+    },
+    {
+      "name": "tau2-bench",
+      "score": 84.65,
+      "scale": 100.0,
+      "higher_is_better": true,
+      "source": "openbmb-minicpm-v-4-7-language-chart",
+      "vendor_claim": true,
+      "config": "Instruct mode (chart footnote); 35B-A3B column; read from figure, +-0.5."
     }
   ],
   "release_date": "2026-10-07"
