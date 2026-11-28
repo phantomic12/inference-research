@@ -535,6 +535,19 @@ def run(types: list[str], quiet: bool, budget: int | None = None,
             # outstanding, so it is not part of the budget.
             rep.check(sid in bare,
                       f"{rid}: cites unknown id {sid!r} (need data/sources/{sid}.json)")
+        # A benchmark row's own `source` is a citation too, and it is the one a
+        # reader follows to check a number. It was never resolved here, so 23
+        # agentic rows shipped pointing at source ids that do not exist -- the
+        # audit could only call them UNVERIFIABLE. Same rule, same severity.
+        for b in rec.get("benchmarks") or []:
+            if not isinstance(b, dict):
+                continue
+            bsrc = b.get("source")
+            if not bsrc:
+                continue
+            rep.check(bsrc in bare,
+                      f"{rid}: benchmark {b.get('name')!r} cites unknown source id "
+                      f"{bsrc!r} (need data/sources/{bsrc}.json)")
         for field in REF_FIELDS.get(t, {}):
             values = ref_values(rec.get(field))
             if not values and field in NULLABLE_REF_FIELDS:

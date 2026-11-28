@@ -106,9 +106,23 @@ def collect(paths: list[Path]) -> tuple[list[dict], list[tuple[str, str]], list[
     return blocks, rejected, files
 
 
-def check_block(block: dict, queue: dict[str, dict]) -> tuple[dict | None, list[str]]:
+def existing_source_ids() -> set[str]:
+    """Ids already committed under data/sources/, without their .json suffix."""
+    return {p.stem for p in SOURCES.glob("*.json")}
+
+
+def minted_source_ids(block: dict) -> set[str]:
+    """The ids this block would mint, after _unique_source_id namespacing."""
+    return {_unique_source_id(s.get("id") or "") for s in (block.get("sources") or []) if s.get("id")}
+
+
+def check_block(block: dict, queue: dict[str, dict],
+                existing: set[str] | None = None,
+                minted: set[str] | None = None) -> tuple[dict | None, list[str]]:
     """Return (clean_benchmark_rows, problems). Any problem rejects the whole model."""
     problems = []
+    existing = existing_source_ids() if existing is None else existing
+    minted = minted_source_ids(block) if minted is None else minted
     slug = (block.get("slug") or "").strip()
     model_id = slugify(slug)
     if model_id not in queue:
@@ -143,6 +157,16 @@ def check_block(block: dict, queue: dict[str, dict]) -> tuple[dict | None, list[
             continue
         if not src:
             problems.append(f"'{name}' has no source")
+            continue
+        # An id that resolves to neither an existing source record nor one this
+        # block mints is a dangling citation: the row would ship pointing at
+        # nothing, and the audit could never verify it. Resolve at write time --
+        # that is the only moment the minted set is knowable.
+        if src not in existing and src not in minted:
+            problems.append(
+                f"'{name}' cites source '{src}', which is neither an existing "
+                f"source record nor one of this block's sources[] ids"
+            )
             continue
         kept.append({
             "name": name,
@@ -203,6 +227,9 @@ def main() -> None:
     args = ap.parse_args()
 
     queue = load_queue()
+    # Snapshot once: a write later in this run must not change what earlier
+    # blocks are allowed to cite.
+    _existing = existing_source_ids()
     blocks, rejected_files, files = collect(args.paths)
     print(f"read {len(files)} file(s): {len(blocks)} model block(s)")
     for name, why in rejected_files:
@@ -210,7 +237,7 @@ def main() -> None:
 
     accepted, all_problems = [], []
     for b in blocks:
-        clean, problems = check_block(b, queue)
+        clean, problems = check_block(b, queue, _existing, minted_source_ids(b))
         if problems:
             all_problems.append((b.get("_file"), b.get("slug"), problems))
         if clean and clean["benchmarks"]:
