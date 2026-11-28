@@ -3012,5 +3012,46 @@ class TestActiveFlopsConstant(Harness):
         self.assertIn("2 * active_params_b * 1e9", schema)
 
 
+class TestSourceUrlShape(unittest.TestCase):
+    """A source marked verified must carry a URL that could actually be fetched.
+
+    A redaction placeholder reached two layers of the pipeline: the JSON schema
+    accepted any string, so `https://huggingface.README.md` (with the org/repo
+    eaten) validated as `status: verified` and shipped to the live site. Reading
+    the record back is what caught it, weeks later and by a subagent.
+    """
+
+    SCHEMA = ROOT / "schemas" / "source.schema.json"
+
+    def test_pattern_rejects_a_placeholder(self):
+        pat = json.loads(self.SCHEMA.read_text())["properties"]["url"]["pattern"]
+        for bad in (
+            "https://huggingface.[SECRET_1].md",   # redaction placeholder
+            "https://example.com/a b",             # literal space
+            "not-a-url",
+            "ftp://example.com/x",
+        ):
+            self.assertIsNone(re.match(pat, bad), f"should reject {bad!r}")
+
+    def test_pattern_accepts_real_urls(self):
+        pat = json.loads(self.SCHEMA.read_text())["properties"]["url"]["pattern"]
+        for good in (
+            "https://huggingface.co/Qwen/Qwen3-8B/raw/main/README.md",
+            "https://arxiv.org/abs/2505.09388",
+            "https://en.wikipedia.org/wiki/Biren_Technology",
+            "http://example.com/x?y=1&z=2",
+        ):
+            self.assertIsNotNone(re.match(pat, good), f"should accept {good!r}")
+
+    def test_no_record_in_the_corpus_holds_an_unfetchable_url(self):
+        pat = json.loads(self.SCHEMA.read_text())["properties"]["url"]["pattern"]
+        bad = []
+        for f in sorted((ROOT / "data" / "sources").glob("*.json")):
+            url = json.loads(f.read_text()).get("url")
+            if isinstance(url, str) and re.match(pat, url) is None:
+                bad.append(f"{f.stem}: {url!r}")
+        self.assertEqual([], bad, "unfetchable source URLs committed")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
