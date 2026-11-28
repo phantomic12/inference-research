@@ -3053,5 +3053,69 @@ class TestSourceUrlShape(unittest.TestCase):
         self.assertEqual([], bad, "unfetchable source URLs committed")
 
 
+class TestCacheProvenanceBoundary(unittest.TestCase):
+    """The tracked/ignored boundary must keep evidence readable and hide scratch."""
+
+    PAYLOADS = tuple(f"batch-{i:02d}.json" for i in range(11)) + ("retry-both.json",)
+
+    @staticmethod
+    def _git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["git", "-C", str(ROOT), *args],
+            capture_output=True, text=True,
+        )
+
+    def assert_tracked(self, rel: str) -> None:
+        result = self._git("ls-files", "--error-unmatch", "--", rel)
+        self.assertEqual(0, result.returncode,
+                         f"{rel} must be tracked: {result.stderr.strip()}")
+
+    def assert_not_ignored(self, rel: str) -> None:
+        result = self._git("check-ignore", "--no-index", "-q", "--", rel)
+        self.assertEqual(1, result.returncode,
+                         f"{rel} must not match .gitignore")
+
+    def assert_ignored(self, rel: str) -> None:
+        result = self._git("check-ignore", "--no-index", "-q", "--", rel)
+        self.assertEqual(0, result.returncode,
+                         f"{rel} must match .gitignore")
+
+    def test_result_payloads_are_tracked_and_not_ignored(self):
+        for name in self.PAYLOADS:
+            rel = f"cache/agentic-backfill/results/{name}"
+            self.assert_tracked(rel)
+            self.assert_not_ignored(rel)
+
+    def test_applier_input_is_tracked_and_not_ignored(self):
+        rel = "cache/agentic-backfill/queue.json"
+        self.assert_tracked(rel)
+        self.assert_not_ignored(rel)
+
+    def test_generated_fanout_scaffolding_is_ignored(self):
+        for rel in (
+            "cache/agentic-backfill/shard-01.json",
+            "cache/agentic-backfill/task-01.txt",
+            "cache/agentic-backfill/retry-01.txt",
+        ):
+            self.assert_ignored(rel)
+
+    def test_explicit_cache_inputs_in_tools_are_tracked(self):
+        path_literal = re.compile(
+            r"ROOT\s*/\s*['\"]cache['\"]\s*/\s*"
+            r"['\"]agentic-backfill['\"]\s*/\s*['\"]([^'\"]+)['\"]"
+        )
+        refs = set()
+        for source in sorted(TOOLS.glob("*.py")):
+            refs.update(
+                f"cache/agentic-backfill/{name}"
+                for name in path_literal.findall(source.read_text(encoding="utf-8"))
+            )
+        self.assertIn("cache/agentic-backfill/queue.json", refs,
+                      "the applier's queue input was not found in tool source")
+        for rel in sorted(refs):
+            self.assert_tracked(rel)
+            self.assert_not_ignored(rel)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
