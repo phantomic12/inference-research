@@ -3192,5 +3192,159 @@ class TestThirdPartyWriter(unittest.TestCase):
         self.assertTrue(any("outside" in r for r in rows), rows)
 
 
+class TestAuditAgenticRows(unittest.TestCase):
+    """The permanent source audit must be offline-testable and URL-honest.
+
+    The throwaway audit's genuine data errors were visible only after
+    normalising precision and the percent/fraction convention (83.2 in the row
+    where the paper printed 51.4); its UNVERIFIABLEs came from URLs corrupted by
+    redaction placeholders in source records. Both paths are covered below with
+    a fixture, without any network call.
+    """
+
+    @staticmethod
+    def _mod():
+        sys.path.insert(0, str(TOOLS))
+        import audit_agentic_rows as a  # noqa: PLC0415
+        return a
+
+    def _setup(self, url="https://example.invalid/real"):
+        a = self._mod()
+        td = tempfile.TemporaryDirectory()
+        self.addCleanup(td.cleanup)
+        root = Path(td.name)
+        sources = root / "data" / "sources"
+        sources.mkdir(parents=True)
+        (sources / "fixture-source.json").write_text(
+            json.dumps({"id": "fixture-source", "url": url}), encoding="utf-8")
+        self.text, self.calls = "", []
+
+        def fetcher(fetch_url):
+            self.calls.append(fetch_url)
+            return self.text, "text"
+
+        return a, sources, fetcher
+
+    @staticmethod
+    def _rows(**overrides):
+        row = {
+            "name": "SWE-bench Multilingual", "score": 70.2, "scale": 100,
+            "source": "fixture-source",
+            # Deliberately wrong: a URL inside a row must never be fetched.
+            "url": "https://row-embedded.invalid/should-not-be-used",
+        }
+        row.update(overrides)
+        return [("fixture-model", "Fixture Model", row)]
+
+    def _one(self, a, sources, fetcher, text, **overrides):
+        self.text = text
+        return a.audit_rows(self._rows(**overrides), sources_dir=sources,
+                            fetcher=fetcher)[0]
+
+    def test_exact_and_trailing_zero_forms_pass(self):
+        a, sources, fetcher = self._setup()
+        for text in ("| SWE-bench Multilingual | 70.2 |", "reported 70.20 percent"):
+            res = self._one(a, sources, fetcher, text)
+            self.assertEqual(res["status"], a.PASS, text)
+            self.assertIn("as stored", res["matched_interpretation"])
+
+    def test_fraction_form_passes_and_names_the_interpretation(self):
+        a, sources, fetcher = self._setup()
+        res = self._one(a, sources, fetcher, "overall score 0.702 on the suite")
+        self.assertEqual(res["status"], a.PASS)
+        self.assertIn("fraction", res["matched_interpretation"])
+        self.assertIn("0.702", res["snippet"])
+
+    def test_absent_score_is_mismatch_not_pass(self):
+        a, sources, fetcher = self._setup()
+        res = self._one(a, sources, fetcher, "overall score 83.2 on the suite")
+        self.assertEqual(res["status"], a.MISMATCH)
+        self.assertIsNone(res["matched_interpretation"])
+
+    def test_scale_one_score_matches_percent_form(self):
+        a, sources, fetcher = self._setup()
+        res = self._one(a, sources, fetcher, "score = 70.2%", score=0.702, scale=1)
+        self.assertEqual(res["status"], a.PASS)
+        self.assertIn("percent", res["matched_interpretation"])
+
+    def test_number_token_boundary_does_not_match_a_substring(self):
+        a, sources, fetcher = self._setup()
+        res = self._one(a, sources, fetcher, "unrelated figure 170.2")
+        self.assertEqual(res["status"], a.MISMATCH)
+
+    def test_row_embedded_url_is_ignored_in_favour_of_source_record(self):
+        a, sources, fetcher = self._setup()
+        self._one(a, sources, fetcher, "70.2")
+        self.assertEqual(self.calls, ["https://example.invalid/real"])
+
+    def test_missing_source_record_is_unverifiable_without_fetching(self):
+        a, sources, fetcher = self._setup()
+        self.text = "70.2"
+        res = a.audit_rows(
+            self._rows(source="no-such-source"), sources_dir=sources,
+            fetcher=fetcher)[0]
+        self.assertEqual(res["status"], a.UNVERIFIABLE)
+        self.assertEqual(self.calls, [])
+
+    def test_redaction_placeholder_url_is_unverifiable_without_fetching(self):
+        a, sources, fetcher = self._setup(url="https://example.invalid/broken[1].md")
+        self.text = "70.2"
+        res = a.audit_rows(self._rows(), sources_dir=sources, fetcher=fetcher)[0]
+        self.assertEqual(res["status"], a.UNVERIFIABLE)
+        self.assertIn("redaction placeholder", res["detail"])
+        self.assertEqual(self.calls, [])
+
+    def test_fetch_failure_is_unverifiable(self):
+        a, sources, _ = self._setup()
+
+        def broken(_url):
+            raise a.FetchError("network down")
+
+        res = a.audit_rows(self._rows(), sources_dir=sources, fetcher=broken)[0]
+        self.assertEqual(res["status"], a.UNVERIFIABLE)
+        self.assertIn("network down", res["detail"])
+
+    def test_one_fetch_per_url_even_with_several_rows(self):
+        a, sources, fetcher = self._setup()
+        self.text = "70.2 and 80.3"
+        rows = self._rows() + self._rows(name="tau2-bench", score=80.3)
+        res = a.audit_rows(rows, sources_dir=sources, fetcher=fetcher)
+        self.assertEqual([r["status"] for r in res], [a.PASS, a.PASS])
+        self.assertEqual(self.calls, ["https://example.invalid/real"])
+
+    def test_non_agentic_rows_are_not_collected(self):
+        a = self._mod()
+        td = tempfile.TemporaryDirectory()
+        self.addCleanup(td.cleanup)
+        models = Path(td.name) / "data" / "models"
+        models.mkdir(parents=True)
+        (models / "fake.json").write_text(json.dumps({
+            "id": "fake", "name": "Fake",
+            "benchmarks": [{"name": "MMLU-Pro", "score": 70.2, "source": "x"}],
+        }), encoding="utf-8")
+        self.assertEqual(list(a.iter_rows(models_dir=models)), [])
+
+    def test_transient_fetch_failures_are_retried_five_times(self):
+        from unittest import mock  # noqa: PLC0415
+        from urllib.error import URLError  # noqa: PLC0415
+        a = self._mod()
+        error = URLError("temporary")
+        with mock.patch.object(a.urllib.request, "urlopen", side_effect=error) as opener, \
+                mock.patch.object(a.time, "sleep"):
+            with self.assertRaises(a.FetchError) as caught:
+                a.fetch_source("https://example.invalid/real")
+        self.assertEqual(opener.call_count, 5)
+        self.assertIn("after 5 attempt", str(caught.exception))
+
+    def test_counts_are_exact(self):
+        a, sources, fetcher = self._setup()
+        self.text = "70.2"
+        rows = self._rows() + self._rows(name="tau2-bench", score=99.9) + \
+            self._rows(name="BFCL", score=1.0, source="missing-source")
+        results = a.audit_rows(rows, sources_dir=sources, fetcher=fetcher)
+        self.assertEqual(a.counts(results),
+                         {a.PASS: 1, a.MISMATCH: 1, a.UNVERIFIABLE: 1})
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
