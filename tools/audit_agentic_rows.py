@@ -209,12 +209,38 @@ def _close(a: float, b: float) -> bool:
     return magnitude > 0 and diff / magnitude <= _TOL_REL
 
 
+def visible_text(html: str) -> str:
+    """Strip markup so a match lands in rendered text, not in SVG path data.
+
+    A model card is mostly HTML, and a numeric-looking substring inside an icon's
+    ``d="M70.71 37a3.25..."`` attribute is not a published score. Without this the
+    audit reports PASS on coordinates: a false negative on the row's real value
+    becomes a false positive, which is the worse failure for an audit whose whole
+    job is to catch fabricated numbers. Table cells survive because their text
+    content is kept; attribute values do not.
+    """
+    # Drop elements whose content is never a score.
+    html = re.sub(r"<(script|style|svg|noscript)\b[^>]*>.*?</\1>", " ", html,
+                  flags=re.S | re.I)
+    # Turn cell/row boundaries into separators so "79.7</td><td>" does not glue
+    # two numbers into one token.
+    html = re.sub(r"</(td|th|tr|li|p|div|h\d)>", " | ", html, flags=re.I)
+    # Remove every remaining tag (this also removes attribute values).
+    html = re.sub(r"<[^>]+>", " ", html)
+    # Decode the entities that commonly wrap table content, then normalise space.
+    for ent, ch in (("&nbsp;", " "), ("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"),
+                    ("&#39;", "'"), ("&quot;", '"')):
+        html = html.replace(ent, ch)
+    return re.sub(r"\s+", " ", html)
+
+
 def compare(text: str, score: float, scale: float | None = 100) -> dict:
     """Pure, network-free core: does the fetched text contain this score?
 
     Returns PASS with the interpretation and a context snippet, or MISMATCH.
     Presence is necessary, not sufficient -- the snippet is for a human to read.
     """
+    text = visible_text(text)
     found = [(float(m.group(0)), m.start(), m.end()) for m in _NUMBER.finditer(text)]
     result = {
         "score": float(score),

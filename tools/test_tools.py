@@ -3115,6 +3115,60 @@ class TestCacheProvenanceBoundary(unittest.TestCase):
         for rel in sorted(refs):
             self.assert_tracked(rel)
             self.assert_not_ignored(rel)
+class TestBenchmarkRowSourceResolves(unittest.TestCase):
+    """Every benchmark row's source id must resolve to a real source record.
+
+    validate.py resolved a record's ``sources[]`` list but never the ``source`` on
+    a benchmark row -- the citation a reader follows to check a number. 23 agentic
+    rows shipped citing ids that did not exist, validated clean, and could only be
+    marked UNVERIFIABLE by an audit. The writer had the same hole: it required the
+    id to be non-empty but never resolved it. Both are checked here against the
+    real catalog, because the bug is only visible in aggregate.
+    """
+
+    def test_catalog_has_no_dangling_benchmark_source(self):
+        bare = {q.stem for q in (ROOT / "data" / "sources").glob("*.json")}
+        dangling = []
+        for path in (ROOT / "data" / "models").glob("*.json"):
+            rec = json.loads(path.read_text())
+            for b in rec.get("benchmarks") or []:
+                src = b.get("source")
+                if src and src not in bare:
+                    dangling.append(f"{rec.get('id')}: {b.get('name')} -> {src}")
+        self.assertEqual([], dangling,
+                         "dangling benchmark citations:\n  " + "\n  ".join(dangling))
+
+    def test_writer_rejects_a_dangling_citation(self):
+        sys.path.insert(0, str(TOOLS))
+        import apply_agentic_backfill as m
+        block = {
+            "slug": "kimi-k2",
+            "benchmarks": [{"name": "Terminal-Bench 2.1", "score": 25.0, "scale": 100,
+                            "source": "no-such-source-id", "config": "quoted"}],
+            "sources": [{"id": "hf-moonshotai-kimi-k2-instruct",
+                         "url": "https://huggingface.co/moonshotai/Kimi-K2-Instruct"}],
+        }
+        clean, problems = m.check_block(block, m.load_queue(),
+                                        m.existing_source_ids(),
+                                        m.minted_source_ids(block))
+        self.assertEqual([], (clean or {}).get("benchmarks", []))
+        self.assertTrue(any("neither an existing" in p for p in problems), problems)
+
+    def test_writer_accepts_a_citation_the_block_mints(self):
+        sys.path.insert(0, str(TOOLS))
+        import apply_agentic_backfill as m
+        block = {"slug": "kimi-k2",
+                 "benchmarks": [{"name": "Terminal-Bench 2.1", "score": 25.0, "scale": 100,
+                                 "source": "brand-new-leaderboard", "config": "quoted"}],
+                 "sources": [{"id": "brand-new-leaderboard",
+                              "url": "https://example.org/leaderboard"}]}
+        clean, problems = m.check_block(block, m.load_queue(),
+                                        m.existing_source_ids(),
+                                        m.minted_source_ids(block))
+        self.assertEqual([], problems)
+        self.assertEqual(1, len(clean["benchmarks"]))
+
+
 class TestThirdPartyWriter(unittest.TestCase):
     """The third-party writer must refuse anything it cannot prove.
 
